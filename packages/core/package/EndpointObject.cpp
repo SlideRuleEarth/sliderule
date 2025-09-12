@@ -288,10 +288,11 @@ const char* EndpointObject::code2str (code_t code)
         case Not_Found:                 return "Not Found";
         case Method_Not_Allowed:        return "Method Not Allowed";
         case Request_Timeout:           return "Request Timeout";
+        case Internal_Server_Error:     return "Internal Server Error";
         case Method_Not_Implemented:    return "Method Not Implemented";
         default:                        break;
     }
-    return "Bad Request";
+    return "Error";
 }
 
 /*----------------------------------------------------------------------------

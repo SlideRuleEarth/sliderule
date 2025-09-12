@@ -75,10 +75,7 @@ void initopendata(void)
     RasterObject::registerRaster(LUA_META_GLOBAL_CANOPY_1METER_RASTER_NAME, MetaGlobalCanopy1meterRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_OPENDATA_LIBNAME, opendata_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_OPENDATA_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_OPENDATA_LIBNAME, opendata_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_OPENDATA_LIBNAME, LIBID);

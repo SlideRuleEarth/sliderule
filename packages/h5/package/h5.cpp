@@ -213,10 +213,7 @@ void inith5 (void)
     H5File::init();
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_H5_LIBNAME, h5_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_H5_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_H5_LIBNAME, h5_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_H5_LIBNAME, LIBID);

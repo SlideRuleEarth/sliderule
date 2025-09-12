@@ -48,9 +48,6 @@ const char* LuaEngine::LUA_SELFKEY = "__this";
 const char* LuaEngine::LUA_TRACEID = "__traceid";
 const char* LuaEngine::LUA_CONFDIR = "__confdir";
 
-List<LuaEngine::libInitEntry_t> LuaEngine::libInitTable;
-Mutex LuaEngine::libInitTableMutex;
-
 List<LuaEngine::pkgInitEntry_t> LuaEngine::pkgInitTable;
 Mutex LuaEngine::pkgInitTableMutex;
 
@@ -174,55 +171,30 @@ void LuaEngine::init(void)
  *----------------------------------------------------------------------------*/
 void LuaEngine::deinit(void)
 {
-    /* Free memory stored in pkgInitTable list */
+    /* Free memory stored pkgInitTable list */
     pkgInitTableMutex.lock();
     {
-        const int num_pkgs = pkgInitTable.length();
-        for(int i = 0; i < num_pkgs; i++)
+        const int num_libs = pkgInitTable.length();
+        for(int i = 0; i < num_libs ; i++)
         {
-            delete [] pkgInitTable[i].pkg_name;
-            delete [] pkgInitTable[i].pkg_version;
+            delete [] pkgInitTable[i].name;
+            delete [] pkgInitTable[i].version;
         }
     }
     pkgInitTableMutex.unlock();
-
-    /* Free memory stored libInitTable list */
-    libInitTableMutex.lock();
-    {
-        const int num_libs = libInitTable.length();
-        for(int i = 0; i < num_libs ; i++)
-        {
-            delete [] libInitTable[i].lib_name;
-        }
-    }
-    libInitTableMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------
  * extend
  *----------------------------------------------------------------------------*/
-void LuaEngine::extend(const char* lib_name, luaOpenLibFunc lib_func)
-{
-    libInitTableMutex.lock();
-    {
-        libInitEntry_t entry;
-        entry.lib_name = StringLib::duplicate(lib_name);
-        entry.lib_func = lib_func;
-        libInitTable.add(entry);
-    }
-    libInitTableMutex.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * extend
- *----------------------------------------------------------------------------*/
-void LuaEngine::indicate(const char* pkg_name, const char* pkg_version)
+void LuaEngine::extend(const char* name, luaOpenLibFunc function, const char* version)
 {
     pkgInitTableMutex.lock();
     {
         pkgInitEntry_t entry;
-        entry.pkg_name = StringLib::duplicate(pkg_name);
-        entry.pkg_version = StringLib::duplicate(pkg_version);
+        entry.name = StringLib::duplicate(name);
+        entry.function = function;
+        entry.version = StringLib::duplicate(version);
         pkgInitTable.add(entry);
     }
     pkgInitTableMutex.unlock();
@@ -243,7 +215,7 @@ const char** LuaEngine::getPkgList(void)
             pkg_list = new const char* [num_pkgs + 1];
             for(int i = 0; i < num_pkgs; i++)
             {
-                pkg_list[i] = StringLib::duplicate(pkgInitTable[i].pkg_name);
+                pkg_list[i] = StringLib::duplicate(pkgInitTable[i].name);
             }
             pkg_list[num_pkgs] = NULL; // null terminate list
         }
@@ -552,14 +524,28 @@ void LuaEngine::setObject (const char* name, void* val)
 /*----------------------------------------------------------------------------
  * getResult
  *----------------------------------------------------------------------------*/
-const char* LuaEngine::getResult (void)
+const char* LuaEngine::getResult (bool* in_error)
 {
-    if(lua_isstring(L, 1))
+    if(in_error != NULL)
     {
-        return lua_tostring(L, 1);
+        if( (lua_gettop(L) >= 2) && // the lua context has a variable for the error status
+            (lua_isboolean(L, 2)) ) // the variable is of the boolean type
+        {
+            *in_error = !lua_toboolean(L, 2); // set the error status
+        }
+        else
+        {
+            *in_error = false; // default to no error if not provided
+        }
     }
 
-    return NULL;
+    if( (lua_gettop(L) >= 1) && // the lua context has a variable for the results
+        lua_isstring(L, 1) )    // the result variable is a string
+    {
+        return lua_tostring(L, 1); // return results
+    }
+
+    return NULL; // return null to indicate results were no obtainable
 }
 
 /******************************************************************************
@@ -656,15 +642,15 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_settable(l, LUA_REGISTRYINDEX); /* registry[LUA_SELFKEY] = this */
 
     /* Register Application Libraries */
-    libInitTableMutex.lock();
+    pkgInitTableMutex.lock();
     {
-        for(int i = 0; i < libInitTable.length(); i++)
+        for(int i = 0; i < pkgInitTable.length(); i++)
         {
-            luaL_requiref(l, libInitTable[i].lib_name, libInitTable[i].lib_func, 1);
+            luaL_requiref(l, pkgInitTable[i].name, pkgInitTable[i].function, 1);
             lua_pop(l, 1);
         }
     }
-    libInitTableMutex.unlock();
+    pkgInitTableMutex.unlock();
 
     /* Register Package Versions */
     pkgInitTableMutex.lock();
@@ -672,8 +658,8 @@ lua_State* LuaEngine::createState(luaStepHook hook)
         for(int i = 0; i < pkgInitTable.length(); i++)
         {
             char pkg_name[MAX_STR_SIZE];
-            StringLib::format(pkg_name, MAX_STR_SIZE, "__%s__", pkgInitTable[i].pkg_name);
-            lua_pushstring(l, pkgInitTable[i].pkg_version);
+            StringLib::format(pkg_name, MAX_STR_SIZE, "__%s__", pkgInitTable[i].name);
+            lua_pushstring(l, pkgInitTable[i].version);
             lua_setglobal(l, pkg_name);
         }
     }
@@ -693,7 +679,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setglobal(l, LUA_CONFDIR);
 
     /* Set Starting Lua Path */
-    const FString lpath("%s/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
+    const FString lpath("%s/ext/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
     lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5

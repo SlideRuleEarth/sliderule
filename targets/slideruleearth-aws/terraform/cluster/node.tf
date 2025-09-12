@@ -38,7 +38,7 @@ resource "aws_launch_template" "sliderule_template" {
     mkdir -p /data/ATL13
     aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
     aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
-    aws s3 cp s3://sliderule/config/ /plugin/ --recursive --exclude "*" --include "*.so"
+    aws s3 cp s3://sliderule/plugins/ /plugins/ --recursive
     aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-node.yml ./docker-compose.yml
     docker-compose -p cluster up --detach
   EOF

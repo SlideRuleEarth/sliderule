@@ -32,5 +32,6 @@ COPY --from=buildenv /usr/local /usr/local
 # configure any new shared libraries
 RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
 
-# set entrypoint to bash shell (expect it to be overridden)
-ENTRYPOINT ["/bin/sh"]
+# set entrypoint
+COPY docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]

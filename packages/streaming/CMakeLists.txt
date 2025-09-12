@@ -83,5 +83,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/georesource.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/proxy.lua
     DESTINATION
-        ${CONFDIR}
+        ${CONFDIR}/ext
 )

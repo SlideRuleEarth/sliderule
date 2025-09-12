@@ -467,7 +467,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                             StringLib::printify(reinterpret_cast<char*>(info.buffer), info.index);
                             mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
                         }
-                        mlog(CRITICAL, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
+                        mlog(ERROR, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
                     }
 
                     /* Get Request Completed */
@@ -477,15 +477,15 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                 {
                     if(info.index > 0)
                     {
-                        mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
+                        mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
                     }
                     else if(res == CURLE_OPERATION_TIMEDOUT)
                     {
-                        mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                        mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
                     }
                     else // unexpected issue
                     {
-                        mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                        mlog(ERROR, "cURL call failed (%d) for request: %s", res, key_ptr);
                     }
                     OsApi::performIOTimeout();
                     break; // re-initialize headers (with potentially updated range) and try again
@@ -508,7 +508,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL fixed request to S3 failed");
+        throw RunTimeException(ERROR, RTE_FAILURE, "cURL fixed request to S3 failed");
     }
 
     /* Return Success */
@@ -582,7 +582,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                     mlog(INFO, "%s", reinterpret_cast<const char*>(rsps));
                     delete [] *data; // clean up memory
                     *data = NULL;
-                    mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                    mlog(ERROR, "S3 get returned http error <%ld>", http_code);
                 }
 
                 /* Request Completed */
@@ -590,16 +590,16 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
             }
             else if(!rsps_set.empty())
             {
-                mlog(CRITICAL, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
+                mlog(ERROR, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
                 rsps_set.clear(); // try again
             }
             else if(res == CURLE_OPERATION_TIMEDOUT)
             {
-                mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
             }
             else
             {
-                mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                mlog(ERROR, "cURL call failed (%d) for request: %s", res, key_ptr);
                 OsApi::performIOTimeout();
             }
         }
@@ -620,7 +620,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL streaming request to S3 failed");
+        throw RunTimeException(ERROR, RTE_FAILURE, "cURL streaming request to S3 failed");
     }
 
     /* Return Success */
@@ -673,7 +673,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
                     else
                     {
                         /* Request Failed */
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                        mlog(ERROR, "S3 get returned http error <%ld>", http_code);
                     }
 
                     /* Request Completed */
@@ -681,16 +681,16 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
                 }
                 else if(data.size > 0)
                 {
-                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
+                    mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
                     rqst_complete = true; // fail outright, no retry
                 }
                 else if(res == CURLE_OPERATION_TIMEDOUT)
                 {
-                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                    mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
                 }
                 else
                 {
-                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                    mlog(ERROR, "cURL call failed (%d) for request: %s", res, key_ptr);
                     OsApi::performIOTimeout();
                 }
             }
@@ -705,7 +705,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     else
     {
         char err_buf[256];
-        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
+        mlog(ERROR, "Failed to open destination file %s for writing: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
     /* Clean Up Headers */
@@ -714,7 +714,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL file request to S3 failed");
+        throw RunTimeException(ERROR, RTE_FAILURE, "cURL file request to S3 failed");
     }
 
     /* Return Success */
@@ -772,7 +772,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
                     else
                     {
                         /* Request Failed */
-                        mlog(CRITICAL, "S3 put returned http error <%ld>", http_code);
+                        mlog(ERROR, "S3 put returned http error <%ld>", http_code);
                     }
 
                     /* Request Completed */
@@ -780,16 +780,16 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
                 }
                 else if(data.size > 0)
                 {
-                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
+                    mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
                     rqst_complete = true;
                 }
                 else if(res == CURLE_OPERATION_TIMEDOUT)
                 {
-                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                    mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
                 }
                 else
                 {
-                    mlog(CRITICAL, "cURL call failed (%d) for put request: %s", res, key_ptr);
+                    mlog(ERROR, "cURL call failed (%d) for put request: %s", res, key_ptr);
                     OsApi::performIOTimeout();
                 }
             }
@@ -807,13 +807,13 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     else
     {
         char err_buf[256];
-        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
+        mlog(ERROR, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL file request to S3 failed");
+        throw RunTimeException(ERROR, RTE_FAILURE, "cURL file request to S3 failed");
     }
 
     /* Return Success */
@@ -941,7 +941,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read %s/%s", bucket, key);
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to read %s/%s", bucket, key);
         }
     }
     catch(const RunTimeException& e)
@@ -984,7 +984,7 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to upload %s/%s", bucket, key);
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to upload %s/%s", bucket, key);
         }
     }
     catch(const RunTimeException& e)

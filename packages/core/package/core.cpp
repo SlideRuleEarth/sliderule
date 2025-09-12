@@ -275,13 +275,10 @@ void initcore (void)
     LuaLibraryTime::ltime_init();
 
     /* Add Lua Extensions */
-    LuaEngine::extend(LuaLibraryMsg::LUA_MSGLIBNAME, LuaLibraryMsg::luaopen_msglib);
-    LuaEngine::extend(LuaLibrarySys::LUA_SYSLIBNAME, LuaLibrarySys::luaopen_syslib);
-    LuaEngine::extend(LuaLibraryTime::LUA_TIMELIBNAME, LuaLibraryTime::luaopen_timelib);
-    LuaEngine::extend(LUA_CORE_LIBNAME, core_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CORE_LIBNAME, LIBID);
+    LuaEngine::extend(LuaLibraryMsg::LUA_MSGLIBNAME, LuaLibraryMsg::luaopen_msglib, LIBID);
+    LuaEngine::extend(LuaLibrarySys::LUA_SYSLIBNAME, LuaLibrarySys::luaopen_syslib, LIBID);
+    LuaEngine::extend(LuaLibraryTime::LUA_TIMELIBNAME, LuaLibraryTime::luaopen_timelib, LIBID);
+    LuaEngine::extend(LUA_CORE_LIBNAME, core_open, LIBID);
 
     /* Print Status */
     print2term("%s package initialized (%s)\n", LUA_CORE_LIBNAME, LIBID);

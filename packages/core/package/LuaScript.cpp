@@ -66,9 +66,10 @@ int LuaScript::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* script = getLuaString(L, 1);
         const char* arg = getLuaString(L, 2, true, NULL);
+        const bool as_endpoint = getLuaBoolean(L, 3, true, false);
 
         /* Return Lua Script Object */
-        return createLuaObject(L, new LuaScript(L, script, arg));
+        return createLuaObject(L, new LuaScript(L, script, arg, as_endpoint));
     }
     catch(const RunTimeException& e)
     {
@@ -80,16 +81,20 @@ int LuaScript::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
+LuaScript::LuaScript(lua_State* L, const char* script, const char* arg, bool as_endpoint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(script);
+
+    /* Check if Executing as Endpoint */
+    const char* prefix = "ext";
+    if(as_endpoint) prefix = "api";
 
     /* Sanitize */
     if(script[0] != ' ' && script[0] != '/')
     {
         const char* safe_filename = StringLib::replace(script, "..", "_");
-        const FString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename);
+        const FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, prefix, PATH_DELIMETER, safe_filename);
         engine = new LuaEngine(safe_pathname.c_str(), arg, traceId, LuaEngine::abortHook, false);
         delete [] safe_filename;
     }

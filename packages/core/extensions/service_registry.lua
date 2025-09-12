@@ -31,7 +31,7 @@ while sys.alive() do
             sys.wait(5)
         end
     else
-        sys.log(core.ERROR, "Aborting registration to service <"..service..">: system unhealthy")
+        sys.log(core.CRITICAL, "Aborting registration to service <"..service..">: system unhealthy")
         sys.wait(30)
     end
 end

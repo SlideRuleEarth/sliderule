@@ -83,10 +83,7 @@ void initpgc(void)
     RasterObject::registerRaster(LUA_REMA_DEM_STRIPS_RASTER_NAME, RemaDemStripsRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_PGC_LIBNAME, pgc_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_PGC_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_PGC_LIBNAME, pgc_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_PGC_LIBNAME, LIBID);

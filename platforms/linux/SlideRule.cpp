@@ -149,6 +149,7 @@ static bool app_signal_abort = false;
 static plugin_list_t loaded_plugins;
 #ifdef CUSTOM_ALLOCATOR
 static std::atomic<uint64_t> allocCount = {0};
+static std::atomic<size_t> allocBytes = {0};
 #endif
 
 /******************************************************************************
@@ -170,25 +171,39 @@ void __stack_chk_fail(void)
 void* operator new(size_t size)
 {
     allocCount++;
-    return malloc(size);
+    size_t block_size = size + sizeof(size_t);
+    size_t* size_ptr = reinterpret_cast<size_t*>(malloc(block_size));
+    *size_ptr = block_size; // store block size at beginning of block
+    allocBytes += block_size;
+    uint8_t* mem_ptr = reinterpret_cast<uint8_t*>(size_ptr) + sizeof(size_t);
+    return mem_ptr;
 }
 
 void operator delete(void* ptr)
 {
     allocCount--;
-    free(ptr);
+    uint8_t* mem_ptr = reinterpret_cast<uint8_t*>(ptr);
+    size_t* size_ptr = reinterpret_cast<size_t*>(mem_ptr - sizeof(size_t));
+    size_t block_size = *size_ptr;
+    allocBytes -= block_size;
+    free(mem_ptr - sizeof(size_t));
 }
 
 void operator delete(void* ptr, size_t size)
 {
     (void)size;
     allocCount--;
-    free(ptr);
+    uint8_t* mem_ptr = reinterpret_cast<uint8_t*>(ptr);
+    size_t* size_ptr = reinterpret_cast<size_t*>(mem_ptr - sizeof(size_t));
+    size_t block_size = *size_ptr;
+    allocBytes -= block_size;
+    free(mem_ptr - sizeof(size_t));
 }
 
 void displayCount(void)
 {
-    print2term("ALLOCATED: %ld\n", (long)allocCount);
+    double mgbytes = static_cast<double>(allocBytes) / 1000000.0;
+    print2term("ALLOCATED: %ld blocks, %.3lf bytes\n", (long)allocCount, mgbytes);
 }
 #endif
 
@@ -249,7 +264,7 @@ static void ldplugins(void)
 
     /* Load All Plugins from Configuration Directory */
     DIR *dir;
-    if((dir = opendir(PLUGINDIR)) != NULL)
+    if((dir = opendir(CONFDIR)) != NULL)
     {
         const struct dirent *ent;
         while((ent = readdir(dir)) != NULL)  // NOLINT(concurrency-mt-unsafe)
@@ -264,7 +279,7 @@ static void ldplugins(void)
             /* Load Plugin */
             print2term("Loading plugin %s ... ", plugin_name);
             char plugin_path[MAX_STR_SIZE];
-            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", PLUGINDIR, PATH_DELIMETER, plugin_name);
+            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFDIR, PATH_DELIMETER, plugin_name);
             curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
             if(!curr_plugin->plugin)
             {

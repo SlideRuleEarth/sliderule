@@ -101,10 +101,7 @@ void initgedi (void)
     RasterObject::registerRaster(LUA_GEDI_L04B_RASTER_NAME,                 GediRaster::createL4DataRaster);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEDI_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_GEDI_LIBNAME, LIBID);

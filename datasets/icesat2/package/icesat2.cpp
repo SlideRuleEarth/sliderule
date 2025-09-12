@@ -163,10 +163,7 @@ void initicesat2 (void)
     RasterObject::registerRaster(MeritRaster::ASSET_NAME, MeritRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_ICESAT2_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_ICESAT2_LIBNAME, LIBID);

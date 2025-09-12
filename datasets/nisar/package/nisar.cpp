@@ -73,10 +73,7 @@ void initnisar(void)
     RasterObject::registerRaster(LUA_NISAR_L2_DATASET_NAME, NisarDataset::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_NISAR_LIBNAME, nisar_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_NISAR_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_NISAR_LIBNAME, nisar_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_NISAR_LIBNAME, LIBID);

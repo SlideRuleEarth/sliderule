@@ -127,14 +127,11 @@ void initccsds (void)
     CcsdsRecord::initCcsdsRecord();
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_CCSDS_LIBNAME, ccsds_open);
+    LuaEngine::extend(LUA_CCSDS_LIBNAME, ccsds_open, LIBID);
 
     /* Install Add On Functions */
     RecordDispatcher::addKeyCalcFunc(CDS_KEY_CALC_NAME, calcCdsTime);
     LuaLibraryMsg::lmsg_addtype(CCSDS_RECORD_CLASS, CCSDS_RECORD_PREFIX, createCcsdsRec, associateCcsdsRec);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CCSDS_LIBNAME, LIBID);
 
     /* Print Status */
     print2term("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, LIBID);
