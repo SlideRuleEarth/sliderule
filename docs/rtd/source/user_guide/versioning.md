@@ -79,14 +79,14 @@ The SlideRule executable version (called the Library Version in the code) is the
 
 where:
 * X is the major version; when incremented it indicates a break in backward compatibility.
-* Y is the minor version; when incremented it indicates new or significatly changed functionality
+* Y is the minor version; when incremented it indicates new or significantly changed functionality
 * Z is the patch version; when incremented it indicates a bug fix with no changes in the intended functionality of the system
 
 The SlideRule executable is packaged into a Docker container, tagged with the semantic version, which is built at the same time the library and executable is built. For all practical purposes, the building of the SlideRule executable and the building of the SlideRule Docker container image can be thought of as the same thing; the same code base and build information applies to both.  In other words, the Docker container image is the final output of, and method of packaging for, the SlideRule executable.
 
 #### Build Information (`build`)
 
-The build information is a string that indentifies the configuration of the SlideRule software build.  There are three pieces of information contained in the build information string, separated by commas:
+The build information is a string that identifies the configuration of the SlideRule software build.  There are three pieces of information contained in the build information string, separated by commas:
 * The git commit identifier of the code used to build the SlideRule library
 * The operating system base image used to build the SlideRule library
 * The wall-clock time when the SlideRule library was built
