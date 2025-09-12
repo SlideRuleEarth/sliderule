@@ -4,7 +4,7 @@ Contains code to run maintenance functions on the cluster
 
 # Notice
 
-Code heavily based on. https://github.com/kingsoftgames/certbot-lambda/tree/master. Copyright information included below.
+Code heavily based on https://github.com/kingsoftgames/certbot-lambda/tree/master. Copyright information included below.
 
 MIT License
 

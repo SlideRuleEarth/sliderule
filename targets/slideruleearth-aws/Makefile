@@ -51,6 +51,7 @@ MONITOR_STAGE_DIR = $(STAGE)/monitor
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
+CERTBOT_STAGE_DIR = $(STAGE)/certbot
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
@@ -125,7 +126,7 @@ buildenv: ## run the build environment docker container
 	docker run \
 		-it \
 		--network host \
-		--user $(id -u):$(id -g) \
+		--user $(shell id -u):$(shell id -g) \
 		-v $(shell realpath ~/.ssh):/root/.ssh \
 		-v $(ROOT):$(ROOT) \
 		-v /data:/data \
@@ -358,15 +359,24 @@ static-website: ## build and update static website
 # Certbot Targets
 ########################
 
-certbot-package: ## create the lambda python package for the certbot
-	cd terraform/certbot/python && ./package.sh
+certbot-create:
+	-rm -Rf $(CERTBOT_STAGE_DIR)
+	mkdir -p $(CERTBOT_STAGE_DIR)
+	docker run -it --rm \
+		-v $(CERTBOT_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package certbot certbot-dns-route53"
+	cp terraform/certbot/python/main.py $(CERTBOT_STAGE_DIR)/package/
+	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
 
-certbot-deploy: certbot-package ## deploy certbot using terraform; needs DOMAIN
+certbot-deploy: ## deploy certbot using terraform; needs DOMAIN
 	cd terraform/certbot && terraform init
 	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
 	cd terraform/certbot && terraform apply
 
-certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAIN
+certbot-destroy: ## destroy certbot using terraform; needs DOMAIN
 	cd terraform/certbot && terraform init
 	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
 	cd terraform/certbot && terraform destroy
