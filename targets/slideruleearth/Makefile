@@ -219,8 +219,8 @@ manager-docker: ## build manager docker image; uses VERSION
 	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
 	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(MANAGER_STAGE_DIR)/manager
-	cp $(ROOT)/applications/manager/*.py $(MANAGER_STAGE_DIR)/manager
-	cp $(ROOT)/applications/manager/*.sql $(MANAGER_STAGE_DIR)/manager
+	cp $(ROOT)/applications/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
+	cp $(ROOT)/applications/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
 	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
 
 manager-run: ## run manager locally; uses VERSION
