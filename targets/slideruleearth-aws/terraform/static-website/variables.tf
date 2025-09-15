@@ -1,12 +1,12 @@
 
 variable "domain" {
-    description = "domain name e.g. testsliderule.org"
-    # Must provide on cmd line
+  description = "domain name"
+  default     = "slideruleearth.io"
 }
 
 variable "domain_root" {
-    description = "domain name without TLD e.g. testsliderule"
-    # Must provide on cmd line
+  description = "domain name without TLD"
+  default     = "slideruleearth"
 }
 
 variable "cost_grouping" {

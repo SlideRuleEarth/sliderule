@@ -28,8 +28,7 @@ resource "aws_instance" "ilb" {
       export DOMAIN=${var.domain}
       export ILB_IMAGE=${var.container_repo}/ilb:${var.cluster_version}
       mkdir -p /etc/ssl/private
-      aws s3 cp s3://sliderule/config/slideruleearth.io.pem /etc/ssl/private/slideruleearth.io.pem
-      aws s3 cp s3://sliderule/config/testsliderule.org.pem /etc/ssl/private/testsliderule.org.pem
+      aws s3 cp s3://sliderule/config/${domain}.pem /etc/ssl/private/${domain}.pem
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-ilb.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF
