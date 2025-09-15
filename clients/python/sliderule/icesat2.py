@@ -99,8 +99,9 @@ def init (url=Session.PUBLIC_URL, verbose=False, max_resources=earthdata.DEFAULT
         >>> from sliderule import icesat2
         >>> icesat2.init()
     '''
-    sliderule.init(url, verbose=verbose, loglevel=loglevel, organization=organization, desired_nodes=desired_nodes, time_to_live=time_to_live, bypass_dns=bypass_dns, rethrow=rethrow)
+    status = sliderule.init(url, verbose=verbose, loglevel=loglevel, organization=organization, desired_nodes=desired_nodes, time_to_live=time_to_live, bypass_dns=bypass_dns, rethrow=rethrow)
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
+    return status
 
 #
 #  ATL06

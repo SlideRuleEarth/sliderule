@@ -127,6 +127,8 @@ def init (
         status = check_version(plugins=plugins)
     except Exception as e:
         logger.error(f'Version check failed: {e}')
+        if rethrow:
+            raise
         status = False
     return status
 

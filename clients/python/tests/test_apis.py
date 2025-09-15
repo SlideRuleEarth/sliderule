@@ -103,6 +103,7 @@ class TestInitialization:
     def test_init_badurl(self):
         with pytest.raises( (sliderule.session.FatalError) ):
             icesat2.init('incorrect.org:8877', rethrow=True)
+        assert icesat2.init('incorrect.org:8877', rethrow=False) == False
 
     def test_set_badurl(self):
         sliderule.init() # resets session state
