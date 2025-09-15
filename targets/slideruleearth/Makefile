@@ -165,7 +165,8 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
-	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
+	cp docker/ilb/* $(ILB_STAGE_DIR)
+	cp $(ROOT)/applications/ilb/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
@@ -185,20 +186,20 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-lock: ## update dependencies of ams
-	cd docker/asset-metadata-service && conda-lock -p linux-$(ARCH) -f environment.yml
-	cd docker/asset-metadata-service && conda-lock render -p linux-$(ARCH)
+	cd docker/asm && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/asm/environment.yml
+	cd docker/asm && conda-lock render -p linux-$(ARCH)
 
 ams-docker: ## build ams docker image; uses VERSION
 	-rm -Rf $(AMS_STAGE_DIR)
 	mkdir -p $(AMS_STAGE_DIR)
-	cp docker/asset-metadata-service/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
-	cp docker/asset-metadata-service/conda-* $(AMS_STAGE_DIR)
-	cp docker/asset-metadata-service/pyproject.toml $(AMS_STAGE_DIR)
-	cp docker/asset-metadata-service/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp docker/asm/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
+	cp docker/asm/conda-* $(AMS_STAGE_DIR)
+	cp docker/asm/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp $(ROOT)/applications/asm/pyproject.toml $(AMS_STAGE_DIR)
 	cp $(ROOT)/version.txt $(AMS_STAGE_DIR)
 	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(AMS_STAGE_DIR)/ams
-	cp docker/asset-metadata-service/ams/*.py $(AMS_STAGE_DIR)/ams
+	cp $(ROOT)/applications/asm/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ams:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-run: ## run ams locally; uses VERSION
@@ -393,8 +394,8 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth/docker/asset-metadata-service/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth/docker/asset-metadata-service/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth/docker/asm/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/asm/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
@@ -424,7 +425,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
 	- cd $(ROOT)/targets/slideruleearth/docker/manager && ./clean.sh
-	- cd $(ROOT)/targets/slideruleearth/docker/asset-metadata-service && ./clean.sh
+	- cd $(ROOT)/applications/asm && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml

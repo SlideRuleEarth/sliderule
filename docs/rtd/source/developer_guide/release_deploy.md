@@ -48,7 +48,7 @@ cd sliderule/clients/nodejs && make login
 ```bash
 conda env create -f clients/python/environment.yml # creates sliderule environment
 conda env create -f targets/slideruleearth/docker/manager/environment.yml # creates manager environment
-conda env create -f targets/slideruleearth/docker/asset-metadata-service/environment.yml # creates ams environment
+conda env create -f applications/asm/environment.yml # creates ams environment
 conda env list # lists what conda environments are available
 ```
 ## Guide
@@ -76,7 +76,7 @@ make test
 
 * Run the `ams` PyTests. The Asset Metadata Service (AMS) application has its own set of pytests that run under the `ams` conda environment and test the basic functionality and APIs of the *ams* container.
 
-From `sliderule/targets/slideruleearth/docker/asset-metadata-service`
+From `sliderule/applications/asm`
 ```bash
 make test
 ```
