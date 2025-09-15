@@ -186,27 +186,27 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-lock: ## update dependencies of ams
-	cd docker/asm && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/asm/environment.yml
-	cd docker/asm && conda-lock render -p linux-$(ARCH)
+	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
+	cd docker/ams && conda-lock render -p linux-$(ARCH)
 
 ams-docker: ## build ams docker image; uses VERSION
 	-rm -Rf $(AMS_STAGE_DIR)
 	mkdir -p $(AMS_STAGE_DIR)
-	cp docker/asm/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
-	cp docker/asm/conda-* $(AMS_STAGE_DIR)
-	cp docker/asm/docker-entrypoint.sh $(AMS_STAGE_DIR)
-	cp $(ROOT)/applications/asm/pyproject.toml $(AMS_STAGE_DIR)
+	cp docker/ams/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
+	cp docker/ams/conda-* $(AMS_STAGE_DIR)
+	cp docker/ams/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp $(ROOT)/applications/ams/pyproject.toml $(AMS_STAGE_DIR)
 	cp $(ROOT)/version.txt $(AMS_STAGE_DIR)
 	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(AMS_STAGE_DIR)/ams
-	cp $(ROOT)/applications/asm/ams/*.py $(AMS_STAGE_DIR)/ams
+	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ams:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-run: ## run ams locally; uses VERSION
 	docker run -it -p 8060:8060 --rm --name ams $(ECR)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
 
 manager-lock: ## update dependencies of manager
-	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/manager && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/manager/environment.yml
 	cd docker/manager && conda-lock render -p linux-$(ARCH)
 
 manager-docker: ## build manager docker image; uses VERSION
@@ -214,13 +214,13 @@ manager-docker: ## build manager docker image; uses VERSION
 	mkdir -p $(MANAGER_STAGE_DIR)
 	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
 	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
-	cp docker/manager/pyproject.toml $(MANAGER_STAGE_DIR)
 	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
+	cp $(ROOT)/applications/manager/pyproject.toml $(MANAGER_STAGE_DIR)
 	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
 	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(MANAGER_STAGE_DIR)/manager
-	cp docker/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
-	cp docker/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
+	cp $(ROOT)/applications/manager/*.py $(MANAGER_STAGE_DIR)/manager
+	cp $(ROOT)/applications/manager/*.sql $(MANAGER_STAGE_DIR)/manager
 	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
 
 manager-run: ## run manager locally; uses VERSION
@@ -394,8 +394,8 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth/docker/asm/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth/docker/asm/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
@@ -424,8 +424,8 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
-	- cd $(ROOT)/targets/slideruleearth/docker/manager && ./clean.sh
-	- cd $(ROOT)/applications/asm && ./clean.sh
+	- cd $(ROOT)/applications/manager && ./clean.sh
+	- cd $(ROOT)/applications/ams && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml
@@ -437,6 +437,7 @@ distclean: ## fully remove all non-version controlled files and directories
 TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua cloud
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
+AMSTEST ?= # specific ams tests and additional pytest options can be supplied here
 MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here
 
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
@@ -453,8 +454,11 @@ pytest: ## run python client tests; needs special conda environment
 jest: ## run node.js client self tests
 	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) TEST=$(JEST)
 
+amstest: ## run ams tests; needs special conda environment
+	make -C $(ROOT)applications/ams test TEST=$(AMSTEST)
+
 mngrtest: ## run manager tests; needs special conda environment
-	make -C docker/manager test TEST=$(MNGRTEST)
+	make -C $(ROOT)applications/manager test TEST=$(MNGRTEST)
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)

@@ -47,7 +47,7 @@ cd sliderule/clients/nodejs && make login
 * Verify the presence of the conda environments needed to run the different pytest suites: `sliderule`, `manager`, `ams`.
 ```bash
 conda env create -f clients/python/environment.yml # creates sliderule environment
-conda env create -f targets/slideruleearth/docker/manager/environment.yml # creates manager environment
+conda env create -f applications/manager/environment.yml # creates manager environment
 conda env create -f applications/ams/environment.yml # creates ams environment
 conda env list # lists what conda environments are available
 ```
@@ -69,7 +69,7 @@ make selftest
 
 * Run the `manager` PyTests. The manager application has its own set of pytests that run under the `manager` conda environment and test the basic functionality and APIs of the *manager* container.
 
-From `sliderule/targets/slideruleearth/docker/manager`
+From `sliderule/applications/manager`
 ```bash
 make test
 ```
