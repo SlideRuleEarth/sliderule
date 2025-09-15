@@ -42,10 +42,10 @@ jobs:
           auto-update-conda: true
           auto-activate-base: false
           activate-environment: ams
-          environment-file: targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml
+          environment-file: targets/slideruleearth/docker/asset-metadata-service/environment.yml
 
       - name: Run AMS tests with coverage
         shell: bash -l {0}
-        working-directory: targets/slideruleearth-aws/docker/asset-metadata-service
+        working-directory: targets/slideruleearth/docker/asset-metadata-service
         run: |
           make test

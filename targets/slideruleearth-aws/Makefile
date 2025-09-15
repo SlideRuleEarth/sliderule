@@ -120,7 +120,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
 
 buildenv: ## run the build environment docker container
 	docker run \
@@ -391,11 +391,11 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth/docker/asset-metadata-service/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/asset-metadata-service/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
@@ -423,8 +423,8 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
-	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
-	- cd $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth/docker/manager && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth/docker/asset-metadata-service && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml
@@ -433,7 +433,7 @@ distclean: ## fully remove all non-version controlled files and directories
 # Test Targets
 ########################
 
-TEST ?= $(ROOT)/targets/slideruleearth-aws/test_runner.lua cloud
+TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua cloud
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
 MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here

@@ -25,11 +25,11 @@ jobs:
 
     - name: Build sliderule
       run: |
-       cd sliderule/targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth
        make config-debug
        make
 
     - name: Run test
       run: |
-       cd sliderule/targets/slideruleearth-aws
-       make selftest TEST=../../targets/slideruleearth-aws/test_runner.lua
+       cd sliderule/targets/slideruleearth
+       make selftest TEST=../../targets/slideruleearth/test_runner.lua

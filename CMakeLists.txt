@@ -400,7 +400,7 @@ endif()
 # Targets #
 
 if(${USE_SLIDERULEEARTH_TARGET})
-    add_subdirectory (targets/slideruleearth-aws)
+    add_subdirectory (targets/slideruleearth)
 endif()
 
 # Installation #

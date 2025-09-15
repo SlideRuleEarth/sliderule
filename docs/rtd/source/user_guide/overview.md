@@ -73,7 +73,7 @@ When making a request, there are two ways to specify what data needs to be proce
 For example, the ICESat-2 ATL03 data hosted by the NSIDC is a single asset in SlideRule (it is identified simply as `icesat2`).  All of the ATL03 data is stored in the NASA Cumulus S3 bucket, is stored as HDF5 files that use the H5Coro driver, and requires Earthdata Login credentials to read.
 :::
 
-Typically, for each endpoint, there is a default _asset_ which makes sense to use and the user does not need to worry about it.  But in some cases, a user may wish to override the default _asset_ and specify exactly where the data should be read from.  When that happens, the `asset` parameter in the parameter structure is used.  To find the full list of assets supported by SlideRule, see the [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth-aws/asset_directory.csv) in our GitHub repository.
+Typically, for each endpoint, there is a default _asset_ which makes sense to use and the user does not need to worry about it.  But in some cases, a user may wish to override the default _asset_ and specify exactly where the data should be read from.  When that happens, the `asset` parameter in the parameter structure is used.  To find the full list of assets supported by SlideRule, see the [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth/asset_directory.csv) in our GitHub repository.
 
 ### Area of Interest
 

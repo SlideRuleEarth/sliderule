@@ -5,7 +5,7 @@ FROM $repo/sliderule-buildenv:latest AS buildenv
 COPY sliderule /sliderule
 
 # build and install sliderule application
-WORKDIR /sliderule/targets/slideruleearth-aws
+WORKDIR /sliderule/targets/slideruleearth
 RUN make config-release INSTALLDIR=/usr/local && make
 
 # install project specific files
