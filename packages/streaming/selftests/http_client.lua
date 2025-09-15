@@ -12,7 +12,7 @@ print('\n------------------\nTest01: Return\n------------------')
 
 local rsps, code, status = client:request("GET", "/source/version", "{}")
 local rsps_table = json.decode(rsps)
-runner.assert(rsps_table["server"]["packages"][1] == "core")
+runner.assert(rsps_table["server"]["packages"][1] == "msg")
 runner.assert(code == 200)
 runner.assert(status)
 
