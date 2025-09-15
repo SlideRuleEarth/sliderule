@@ -52,18 +52,18 @@ MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
-STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
-STATIC_WEB_STAGE_DIR = $(STAGE)/website
-STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-STATIC_WEB_ASSET_DIR ?= /data/web
+WEBSITE_SOURCE_DIR = $(ROOT)/docs
+WEBSITE_STAGE_DIR = $(STAGE)/website
+WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
+WEBSITE_ASSET_DIR ?= /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
-STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
-STATIC_WEB_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(STATIC_WEB_CONDA_ENV)
+WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
+WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
 
 VERSION ?= latest
 ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
@@ -305,56 +305,56 @@ public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN
 	cd terraform/dns && terraform destroy
 
 ########################
-# Static Website Targets
+# Website Targets
 ########################
 
-static-website-render-notebooks: ## execute the notebooks used in the documentation
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(STATIC_WEB_ASSET_DIR)/boulder_watershed.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(STATIC_WEB_ASSET_DIR)/phoreal.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(STATIC_WEB_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl13_access.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl24_access.ipynb --debug
+website-render-notebooks: ## execute the notebooks used in the documentation
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(WEBSITE_ASSET_DIR)/phoreal.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(WEBSITE_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(WEBSITE_ASSET_DIR)/atl13_access.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(WEBSITE_ASSET_DIR)/atl24_access.ipynb --debug
 
-static-website-docker: ## make the static website docker image; needs VERSION
-	rm -Rf $(STATIC_WEB_STAGE_DIR)
-	mkdir -p $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR) --exclude build --exclude stage
-	cp $(STATIC_WEB_ASSET_DIR)/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
-	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
-	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:$(VERSION) $(DOCKER_PLATFORM) .
+website-docker: ## make the website docker image; needs VERSION
+	rm -Rf $(WEBSITE_STAGE_DIR)
+	mkdir -p $(WEBSITE_STAGE_DIR)
+	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(WEBSITE_STAGE_DIR)
+	cp -R $(WEBSITE_SOURCE_DIR)/jekyll $(WEBSITE_STAGE_DIR)
+	rsync -a $(ROOT) $(WEBSITE_STAGE_DIR) --exclude build --exclude stage
+	cp $(WEBSITE_ASSET_DIR)/* $(WEBSITE_STAGE_DIR)/rtd/source/assets
+	cp docker/website/Dockerfile.$(ARCH) $(WEBSITE_STAGE_DIR)/Dockerfile
+	cp docker/website/nginx.conf $(WEBSITE_STAGE_DIR)
+	cp docker/website/docker-entrypoint.sh $(WEBSITE_STAGE_DIR)
+	cd $(WEBSITE_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/website:$(VERSION) $(DOCKER_PLATFORM) .
 
-static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 4000:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+website-run: ## locally run the website; needs VERSION
+	docker run -it -p 4000:4000 --rm --name website $(ECR)/website:$(VERSION)
 
-static-website-export: ## export static website to local host directory; needs VERSION
-	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
-	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+website-export: ## export website to local host directory; needs VERSION
+	-rm -Rf $(WEBSITE_EXPORT_DIR)
+	mkdir -p $(WEBSITE_EXPORT_DIR)
+	docker run -it --entrypoint /bin/bash  -v ./docker/website:/host -v $(WEBSITE_EXPORT_DIR):/output --rm --name website $(ECR)/website:$(VERSION) /host/export_dist.sh
 
-static-website-live-update: static-website-export # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+website-live-update: website-export # Update the website docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
-static-website-deploy: ## deploy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+website-deploy: ## deploy website using terraform; needs DOMAIN
+	cd terraform/website && terraform init
+	cd terraform/website && terraform workspace select $(DOMAIN)-website || terraform workspace new $(DOMAIN)-website
+	cd terraform/website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+website-destroy: ## destroy website using terraform; needs DOMAIN
+	cd terraform/website && terraform init
+	cd terraform/website && terraform workspace select $(DOMAIN)-website || terraform workspace new $(DOMAIN)-website
+	cd terraform/website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-static-website: ## build and update static website
-	make static-website-render-notebooks
-	make static-website-docker
-	make static-website-live-update
+website: ## build and update website
+	make website-render-notebooks
+	make website-docker
+	make website-live-update
 
 ########################
 # Certbot Targets
@@ -416,7 +416,7 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/manager:$(VERSION)
 	- docker image rm $(ECR)/ams:$(VERSION)
-	- docker image rm $(ECR)/static-website:$(VERSION)
+	- docker image rm $(ECR)/website:$(VERSION)
 	- docker system prune -f
 
 distclean: ## fully remove all non-version controlled files and directories
