@@ -21,7 +21,7 @@ Logs and metrics for the cluster are maintained by the [Monitor](https://github.
 
 The heart of the SlideRule system is an instantiation of the core [SlideRule](https://github.com/SlideRuleEarth/sliderule/tree/main/targets/slideruleearth/docker/sliderule) framework on each node in the cluster.  The core framework contains internally developed code that accepts processing requests from clients, reads externally hosted science datasets, executes algorithms on the data, and returns results back to the clients.
 
-Running alongside the core framework container on each node is an [Asset Metadata Service (AMS)](https://github.com/SlideRuleEarth/sliderule/tree/main/applications/asm). The AMS is responsible for maintaining selected metadata catalogs of Earth science datasets used by SlideRule and for responding to temporal/spatial queries.
+Running alongside the core framework container on each node is an [Asset Metadata Service (AMS)](https://github.com/SlideRuleEarth/sliderule/tree/main/applications/ams). The AMS is responsible for maintaining selected metadata catalogs of Earth science datasets used by SlideRule and for responding to temporal/spatial queries.
 
 SlideRule relies heavily on external services for querying metadata for Earth science data.  Specifically, NASA's [Common Metadata Repository](https://www.earthdata.nasa.gov/about/esdis/eosdis/cmr) and USGS's [The National Map](https://www.usgs.gov/programs/national-geospatial-program/national-map) are used for many of the datasets supported by SlideRule.  These metadata services point to resources in AWS S3 that are directly accessed by SlideRule when fulfilling processing requests.
 

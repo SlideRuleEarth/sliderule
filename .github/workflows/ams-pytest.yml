@@ -42,10 +42,10 @@ jobs:
           auto-update-conda: true
           auto-activate-base: false
           activate-environment: ams
-          environment-file: applications/asm/environment.yml
+          environment-file: applications/ams/environment.yml
 
       - name: Run AMS tests with coverage
         shell: bash -l {0}
-        working-directory: applications/asm
+        working-directory: applications/ams
         run: |
           make test
