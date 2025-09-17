@@ -361,7 +361,7 @@ website: ## build and update website
 # Certbot Targets
 ########################
 
-certbot-create:
+certbot-create: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
 	mkdir -p $(CERTBOT_STAGE_DIR)
 	docker run -it --rm \
@@ -387,7 +387,7 @@ certbot-destroy: ## destroy certbot using terraform; needs DOMAIN
 # Provisioner Targets
 ########################
 
-provisioner-create:
+provisioner-create: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	docker run -it --rm \
@@ -395,7 +395,7 @@ provisioner-create:
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.11 \
-		-c "pip install --target /host/package sliderule"
+		-c "pip install --target /host/package requests"
 	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
@@ -410,7 +410,9 @@ provisioner-destroy: ## destroy provisioner using terraform; needs DOMAIN
 	cd terraform/provisioner && terraform destroy -var lambda_zipfile=$(PROVISIONER_STAGE_DIR)/provisioner.zip
 
 provisioner-run: ## invokes the provisioner lambda function and displays the response
-	aws lambda invoke --function-name Provisioner --payload '{"domain": "$(DOMAIN)", "version": "$(VERSION)"}' | jq
+	echo '{"domain":"$(DOMAIN)","version":"$(VERSION)"}' > /tmp/payload.json
+	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
 
 ########################
 # Release Target
