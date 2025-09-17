@@ -52,6 +52,7 @@ MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
+PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
 WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
@@ -369,18 +370,47 @@ certbot-create:
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.11 \
 		-c "pip install --target /host/package certbot certbot-dns-route53"
-	cp terraform/certbot/python/main.py $(CERTBOT_STAGE_DIR)/package/
+	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
 	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
 
 certbot-deploy: ## deploy certbot using terraform; needs DOMAIN
 	cd terraform/certbot && terraform init
 	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform apply
+	cd terraform/certbot && terraform apply -var lambda_zipfile=$(CERTBOT_STAGE_DIR)/certbot.zip
 
 certbot-destroy: ## destroy certbot using terraform; needs DOMAIN
 	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform destroy
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform destroy -var lambda_zipfile=$(CERTBOT_STAGE_DIR)/certbot.zip
+
+########################
+# Provisioner Targets
+########################
+
+provisioner-create:
+	-rm -Rf $(PROVISIONER_STAGE_DIR)
+	mkdir -p $(PROVISIONER_STAGE_DIR)
+	docker run -it --rm \
+		-v $(PROVISIONER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package sliderule"
+	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
+	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
+
+provisioner-deploy: ## deploy provisioner using terraform; needs DOMAIN
+	cd terraform/provisioner && terraform init
+	cd terraform/provisioner && terraform workspace select $(DOMAIN)-provisioner || terraform workspace new $(DOMAIN)-provisioner
+	cd terraform/provisioner && terraform apply -var lambda_zipfile=$(PROVISIONER_STAGE_DIR)/provisioner.zip
+
+provisioner-destroy: ## destroy provisioner using terraform; needs DOMAIN
+	cd terraform/provisioner && terraform init
+	cd terraform/provisioner && terraform workspace select $(DOMAIN)-provisioner || terraform workspace new $(DOMAIN)-provisioner
+	cd terraform/provisioner && terraform destroy -var lambda_zipfile=$(PROVISIONER_STAGE_DIR)/provisioner.zip
+
+provisioner-run: ## invokes the provisioner lambda function and displays the response
+	aws lambda invoke --function-name Provisioner --payload '{"domain": "$(DOMAIN)", "version": "$(VERSION)"}' | jq
 
 ########################
 # Release Target

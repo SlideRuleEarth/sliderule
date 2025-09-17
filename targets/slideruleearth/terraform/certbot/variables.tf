@@ -1,3 +1,10 @@
+
+# required
+variable "lambda_zipfile" {
+  description = "The code and environment for the lambda function"
+  type        = string
+}
+
 variable "domains" {
   description = "A list of domains to provision certificates. Can contain wildcard domains like *.example.com"
   type        = list(string)

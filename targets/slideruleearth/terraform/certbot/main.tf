@@ -61,7 +61,7 @@ locals {
   certbot_domains = join(",", var.domains)
 
   lambda_handler  = "main.lambda_handler"
-  lambda_filename = "${path.module}/../../../../stage/certbot/certbot.zip"
+  lambda_filename = var.lambda_zipfile
   lambda_hash     = filebase64sha256(local.lambda_filename)
   lambda_description = "Run certbot to generate new certificates"
 

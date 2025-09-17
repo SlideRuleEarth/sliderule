@@ -1,25 +1,25 @@
 # IAM Role
 resource "aws_iam_role" "lambda" {
-    name = "sliderule-certbot-iam-role"
+    name = "provisioner-iam-role"
     assume_role_policy = file("assume-role-policy.json")
 }
 
 # Custom Managed Logs Policy
 resource "aws_iam_policy" "logs" {
-  name   = "sliderule-certbot-logs-iam-policy"
+  name   = "provisioner-logs-iam-policy"
   policy = file("logs-policy.json")
 }
 
 # Custom Managed S3 Policy
 resource "aws_iam_policy" "s3" {
-  name   = "sliderule-certbot-s3-iam-policy"
+  name   = "provisioner-s3-iam-policy"
   policy = file("s3-policy.json")
 }
 
-# Custom Managed Certbot Policy
-resource "aws_iam_policy" "certbot" {
-  name   = "sliderule-certbot-iam-policy"
-  policy = file("certbot-policy.json")
+# Custom Managed Provisioner Policy
+resource "aws_iam_policy" "provisioner" {
+  name   = "provisioner-iam-policy"
+  policy = file("provisioner-policy.json")
 }
 
 # Attach Custom Logs Policy
@@ -34,8 +34,8 @@ resource "aws_iam_role_policy_attachment" "s3" {
   policy_arn = aws_iam_policy.s3.arn
 }
 
-# Attach Custom Certbot Policy
-resource "aws_iam_role_policy_attachment" "certbot" {
+# Attach Custom Provisioner Policy
+resource "aws_iam_role_policy_attachment" "provisioner" {
   role       = aws_iam_role.lambda.id
-  policy_arn = aws_iam_policy.certbot.arn
+  policy_arn = aws_iam_policy.provisioner.arn
 }
