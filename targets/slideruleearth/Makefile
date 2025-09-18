@@ -361,7 +361,7 @@ website: ## build and update website
 # Certbot Targets
 ########################
 
-certbot-create: ## create the certbot lambda zipfile
+certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
 	mkdir -p $(CERTBOT_STAGE_DIR)
 	docker run -it --rm \
@@ -373,21 +373,31 @@ certbot-create: ## create the certbot lambda zipfile
 	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
 	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
 
-certbot-deploy: ## deploy certbot using terraform; needs DOMAIN
-	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform apply -var lambda_zipfile=$(CERTBOT_STAGE_DIR)/certbot.zip
+certbot-describe: ## status the creation/deletion of the certbot function
+	aws cloudformation describe-stack-events \
+		--stack-name certbot
 
-certbot-destroy: ## destroy certbot using terraform; needs DOMAIN
-	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform destroy -var lambda_zipfile=$(CERTBOT_STAGE_DIR)/certbot.zip
+certbot-create: ## creates the lambda certbot function
+	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://sliderule/lambdas/certbot.zip
+	aws cloudformation create-stack \
+		--stack-name 	certbot \
+		--template-body file://cloudformation/certbot/resources.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--parameters 	ParameterKey=LambdaBucket,ParameterValue=sliderule \
+						ParameterKey=LambdaZipFile,ParameterValue=lambdas/certbot.zip
+	aws cloudformation wait stack-create-complete --stack-name certbot
+
+certbot-delete: ## deletes the lambda certbot function
+	aws s3 rm s3://sliderule/lambdas/certbot.zip
+	aws cloudformation delete-stack \
+		--stack-name certbot
+	aws cloudformation wait stack-delete-complete --stack-name certbot
 
 ########################
 # Provisioner Targets
 ########################
 
-provisioner-create: ## create the provisioner lambda zipfile
+provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	docker run -it --rm \
@@ -399,22 +409,12 @@ provisioner-create: ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
-provisioner-deploy: ## deploy provisioner using terraform; needs DOMAIN
-	cd terraform/provisioner && terraform init
-	cd terraform/provisioner && terraform workspace select $(DOMAIN)-provisioner || terraform workspace new $(DOMAIN)-provisioner
-	cd terraform/provisioner && terraform apply -var lambda_zipfile=$(PROVISIONER_STAGE_DIR)/provisioner.zip
-
-provisioner-destroy: ## destroy provisioner using terraform; needs DOMAIN
-	cd terraform/provisioner && terraform init
-	cd terraform/provisioner && terraform workspace select $(DOMAIN)-provisioner || terraform workspace new $(DOMAIN)-provisioner
-	cd terraform/provisioner && terraform destroy -var lambda_zipfile=$(PROVISIONER_STAGE_DIR)/provisioner.zip
-
 provisioner-run: ## invokes the provisioner lambda function and displays the response
 	echo '{"domain":"$(DOMAIN)","version":"$(VERSION)"}' > /tmp/payload.json
 	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
 
-provisioner-create-stack: ## creates the lambda provisioner function
+provisioner-create: ## creates the lambda provisioner function
 	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://sliderule/lambdas/provisioner.zip
 	aws cloudformation create-stack \
 		--stack-name 	provisioner \
@@ -425,7 +425,7 @@ provisioner-create-stack: ## creates the lambda provisioner function
 						ParameterKey=LambdaZipFile,ParameterValue=lambdas/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
-provisioner-delete-stack: ## deletes the lambda provisioner function
+provisioner-delete: ## deletes the lambda provisioner function
 	aws s3 rm s3://sliderule/lambdas/provisioner.zip
 	aws cloudformation delete-stack \
 		--stack-name provisioner

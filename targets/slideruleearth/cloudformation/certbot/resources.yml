@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: SlideRule Certbot Lambda
+Parameters:
+  LambdaBucket:
+    Type: String
+    Description: "S3 bucket containing the Lambda zip and supporting resources"
+  LambdaZipFile:
+    Type: String
+    Description: "S3 key for the Lambda zip (e.g. lambdas/certbot.zip)"
+
+Resources:
+
+  ## IAM Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ## Logs Policy
+  LambdaLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref LambdaExecutionRole
+      PolicyName: "sliderule-certbot-logs-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "arn:aws:logs:*:*:*"
+
+  ## S3 Policy
+  LambdaS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref LambdaExecutionRole
+      PolicyName: "sliderule-certbot-s3-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !Sub "arn:aws:s3:::${LambdaBucket}"
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub "arn:aws:s3:::${LambdaBucket}/config/*"
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Sub "arn:aws:s3:::${LambdaBucket}/config/*"
+
+  ## Route53 Policy
+  LambdaRoute53Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref LambdaExecutionRole
+      PolicyName: "sliderule-certbot-route53-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - route53:ListHostedZones
+              - route53:GetChange
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - route53:ChangeResourceRecordSets
+            Resource:
+              - "arn:aws:route53:::hostedzone/Z0526045IQLILBFI9THF"
+
+  ## Lambda Function
+  CertbotLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: Certbot_Runner
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: "python3.11"
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_handler
+      Description: "Run certbot to generate new certificates"
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          EMAILS: "jp.swinski@nasa.gov"
+          DOMAINS: "*.slideruleearth.io"
+          DNS_PLUGIN: "dns-route53"
+          S3_BUCKET: !Ref LambdaBucket
+          S3_PREFIX: "config"
+          S3_REGION: "us-west-2"
+    DependsOn:
+      - LambdaLogsPolicy
+      - LambdaS3Policy
+      - LambdaRoute53Policy
+
+  ## EventBridge (CloudWatch Events) Rule to run certbot on a schedule
+  CertbotScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Triggers certbot to run on a regular schedule."
+      ScheduleExpression: "cron(0 16 L * ? *)"
+      State: ENABLED
+      Targets:
+        - Id: CertbotLambdaTarget
+          Arn: !GetAtt CertbotLambda.Arn
+          Input: "{}"
+
+  ## Permission for EventBridge to invoke the Lambda
+  CertbotSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CertbotLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt CertbotScheduleRule.Arn

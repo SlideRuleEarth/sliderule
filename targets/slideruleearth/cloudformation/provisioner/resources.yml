@@ -1,7 +1,19 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: SlideRule Provisioner Lambda
+Parameters:
+  ContainerRegistry:
+    Type: String
+    Description: Container registry to use
+  LambdaBucket:
+    Type: String
+    Description: S3 bucket containing the lambda zipfile
+  LambdaZipFile:
+    Type: String
+    Description: Zipfile containing the lambda function code
 
 Resources:
+
+  ## Lambda Function
   ProvisionerLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -21,6 +33,7 @@ Resources:
         Variables:
           CONTAINER_REGISTRY: !Ref ContainerRegistry
 
+  ## Lambda Role
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -33,14 +46,3 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-Parameters:
-  ContainerRegistry:
-    Type: String
-    Description: Container registry to use
-  LambdaBucket:
-    Type: String
-    Description: S3 bucket containing the lambda zipfile
-  LambdaZipFile:
-    Type: String
-    Description: Zipfile containing the lambda function code
