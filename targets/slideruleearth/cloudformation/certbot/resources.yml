@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: SlideRule Certbot Lambda
 Parameters:
-  LambdaBucket:
+  ProjectBucket:
     Type: String
     Description: "S3 bucket containing the Lambda zip and supporting resources"
   LambdaZipFile:
@@ -57,17 +57,17 @@ Resources:
             Action:
               - s3:ListBucket
             Resource:
-              - !Sub "arn:aws:s3:::${LambdaBucket}"
+              - !Sub "arn:aws:s3:::${ProjectBucket}"
           - Effect: Allow
             Action:
               - s3:GetObject
             Resource:
-              - !Sub "arn:aws:s3:::${LambdaBucket}/config/*"
+              - !Sub "arn:aws:s3:::${ProjectBucket}/config/*"
           - Effect: Allow
             Action:
               - s3:PutObject
             Resource:
-              - !Sub "arn:aws:s3:::${LambdaBucket}/config/*"
+              - !Sub "arn:aws:s3:::${ProjectBucket}/config/*"
 
   ## Route53 Policy
   LambdaRoute53Policy:
@@ -105,14 +105,14 @@ Resources:
       Handler: main.lambda_handler
       Description: "Run certbot to generate new certificates"
       Code:
-        S3Bucket: !Ref LambdaBucket
+        S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
           EMAILS: "jp.swinski@nasa.gov"
           DOMAINS: "*.slideruleearth.io"
           DNS_PLUGIN: "dns-route53"
-          S3_BUCKET: !Ref LambdaBucket
+          S3_BUCKET: !Ref ProjectBucket
           S3_PREFIX: "config"
           S3_REGION: "us-west-2"
     DependsOn:

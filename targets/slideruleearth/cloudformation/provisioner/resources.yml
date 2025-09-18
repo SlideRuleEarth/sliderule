@@ -4,7 +4,7 @@ Parameters:
   ContainerRegistry:
     Type: String
     Description: Container registry to use
-  LambdaBucket:
+  ProjectBucket:
     Type: String
     Description: S3 bucket containing the lambda zipfile
   LambdaZipFile:
@@ -27,7 +27,7 @@ Resources:
       Handler: main.lambda_handler
       Description: SlideRule Provisioner
       Code:
-        S3Bucket: !Ref LambdaBucket
+        S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:

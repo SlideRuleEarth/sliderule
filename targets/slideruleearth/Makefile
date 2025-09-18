@@ -383,7 +383,8 @@ certbot-create: ## creates the lambda certbot function
 		--stack-name 	certbot \
 		--template-body file://cloudformation/certbot/resources.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--parameters 	ParameterKey=LambdaBucket,ParameterValue=sliderule \
+		--region 		us-west-2 \
+		--parameters 	ParameterKey=ProjectBucket,ParameterValue=sliderule \
 						ParameterKey=LambdaZipFile,ParameterValue=lambdas/certbot.zip
 	aws cloudformation wait stack-create-complete --stack-name certbot
 
@@ -420,8 +421,9 @@ provisioner-create: ## creates the lambda provisioner function
 		--stack-name 	provisioner \
 		--template-body file://cloudformation/provisioner/resources.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		us-west-2 \
 		--parameters 	ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
-						ParameterKey=LambdaBucket,ParameterValue=sliderule \
+						ParameterKey=ProjectBucket,ParameterValue=sliderule \
 						ParameterKey=LambdaZipFile,ParameterValue=lambdas/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 

@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "EC2 Image Builder pipeline for sliderule-base-image"
+Parameters:
+  ProjectBucket:
+    Type: String
+    Description: "S3 bucket containing the Lambda zip and supporting resources"
+  Version:
+    Type: String
+    Description: "SlideRule version corresponding to this AMI"
+    Default: "latest"
+
+Resources:
+
+  ImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - imagebuilder.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: ImageBuilderS3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}"
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/cf/*"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ImageBuilderRole
+
+  InfrastructureConfig:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: "sliderule-infra"
+      InstanceTypes: ["t4g.micro"]
+      InstanceProfileName: !Ref InstanceProfile
+      TerminateInstanceOnFailure: true
+
+  DistributionConfig:
+    Type: AWS::ImageBuilder::DistributionConfiguration
+    Properties:
+      Name: "sliderule-distribution-config"
+      Distributions:
+        - Region: !Ref AWS::Region
+          AmiDistributionConfiguration:
+            Name: !Sub "sliderule-arm-${Version}"
+            Description: "SlideRule Base AMI"
+            AmiTags:
+              Project: SlideRule
+              Base: AL2023-Minimal
+
+  InstallSoftwareComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: "sliderule-base-install"
+      Platform: "Linux"
+      Version: "1.0.0"
+      Data: !Sub |
+        name: InstallDockerNodeExporterPromtail
+        description: Install Docker, Node Exporter, Promtail, LogCLI
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: UpdateSystem
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - sudo dnf -y upgrade
+                    - sudo dnf install -y awscli
+
+              - name: InstallDocker
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - sudo dnf -y install docker
+                    - sudo usermod -aG docker ec2-user
+                    - wget https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
+                    - sudo mv docker-compose-linux-aarch64 /usr/local/bin/docker-compose
+                    - sudo chmod +x /usr/local/bin/docker-compose
+
+              - name: InstallNodeExporter
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-arm64.tar.gz
+                    - tar -xvzf node_exporter-1.8.2.linux-arm64.tar.gz
+                    - sudo mv node_exporter-1.8.2.linux-arm64/node_exporter /usr/local/bin/node_exporter
+                    - sudo aws s3 cp s3://${ProjectBucket}/cf/node_exporter.service /etc/systemd/system/node_exporter.service
+                    - sudo systemctl daemon-reload
+                    - sudo systemctl enable node_exporter.service
+
+              - name: InstallPromtail
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - wget https://github.com/grafana/loki/releases/download/v2.9.9/promtail-linux-arm64.zip
+                    - unzip promtail-linux-arm64.zip
+                    - sudo mv promtail-linux-arm64 /usr/local/bin/promtail
+                    - sudo aws s3 cp s3://${ProjectBucket}/cf/promtail.yml /etc/promtail.yml
+                    - sudo aws s3 cp s3://${ProjectBucket}/cf/promtail.service /etc/systemd/system/promtail.service
+                    - sudo systemctl daemon-reload
+                    - sudo systemctl enable promtail.service
+
+              - name: InstallLogcli
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - wget https://github.com/grafana/loki/releases/download/v2.9.9/logcli-linux-arm64.zip
+                    - unzip logcli-linux-arm64.zip
+                    - sudo mv logcli-linux-arm64 /usr/local/bin/logcli
+
+              - name: Cleanup
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - sudo dnf -y clean all
+
+  ImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      Name: "sliderule-base-recipe"
+      Version: "1.0.0"
+      ParentImage: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-arm64}}"
+      Components:
+        - ComponentArn: !Ref InstallSoftwareComponent
+
+  ImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Name: "sliderule-base-pipeline"
+      ImageRecipeArn: !Ref ImageRecipe
+      InfrastructureConfigurationArn: !Ref InfrastructureConfig
+      DistributionConfigurationArn: !Ref DistributionConfig
+      Status: ENABLED
