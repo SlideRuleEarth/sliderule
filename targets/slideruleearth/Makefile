@@ -414,6 +414,23 @@ provisioner-run: ## invokes the provisioner lambda function and displays the res
 	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
 
+provisioner-create-stack: ## creates the lambda provisioner function
+	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://sliderule/lambdas/provisioner.zip
+	aws cloudformation create-stack \
+		--stack-name 	provisioner \
+		--template-body file://cloudformation/provisioner/resources.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--parameters 	ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=LambdaBucket,ParameterValue=sliderule \
+						ParameterKey=LambdaZipFile,ParameterValue=lambdas/provisioner.zip
+	aws cloudformation wait stack-create-complete --stack-name provisioner
+
+provisioner-delete-stack: ## deletes the lambda provisioner function
+	aws s3 rm s3://sliderule/lambdas/provisioner.zip
+	aws cloudformation delete-stack \
+		--stack-name provisioner
+	aws cloudformation wait stack-delete-complete --stack-name provisioner
+
 ########################
 # Release Target
 ########################

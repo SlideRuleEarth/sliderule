@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Provisioner Lambda
+
+Resources:
+  ProvisionerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: Provisioner
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.11
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_handler
+      Description: SlideRule Provisioner
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          CONTAINER_REGISTRY: !Ref ContainerRegistry
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Parameters:
+  ContainerRegistry:
+    Type: String
+    Description: Container registry to use
+  LambdaBucket:
+    Type: String
+    Description: S3 bucket containing the lambda zipfile
+  LambdaZipFile:
+    Type: String
+    Description: Zipfile containing the lambda function code
