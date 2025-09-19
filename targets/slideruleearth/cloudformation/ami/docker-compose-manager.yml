@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  manager:
+    image: ${MANAGER_IMAGE}
+    network_mode: "host"
+    restart: always
+    pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /data:/data
+    environment:
+      - IS_PUBLIC=$IS_PUBLIC
+      - MANAGER_SECRET_SALT=$MANAGER_SECRET_SALT
+      - MANAGER_API_KEY=$MANAGER_API_KEY
+      - DUCKDB_LOCAL_FILE=$DUCKDB_LOCAL_FILE
+      - DUCKDB_REMOTE_FILE=$DUCKDB_REMOTE_FILE
+      - ORCHESTRATOR=http://10.0.1.5:8050
+    labels:
+      - autoheal=true
+  autoheal:
+    image: willfarrell/autoheal:latest
+    tty: true
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

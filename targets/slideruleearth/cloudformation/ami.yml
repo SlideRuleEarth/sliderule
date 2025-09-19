@@ -3,7 +3,10 @@ Description: "EC2 Image Builder pipeline for sliderule-base-image"
 Parameters:
   ProjectBucket:
     Type: String
-    Description: "S3 bucket containing the Lambda zip and supporting resources"
+    Description: "S3 bucket containing the supporting resources"
+  ProjectFolder:
+    Type: String
+    Description: "S3 folder containing the supporting resources"
   Version:
     Type: String
     Description: "SlideRule version corresponding to this AMI"
@@ -26,7 +29,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       Policies:
-        - PolicyName: ImageBuilderS3Access
+        - PolicyName: ImageBuilderComponentAccess
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -36,7 +39,13 @@ Resources:
                   - s3:ListBucket
                 Resource:
                   - !Sub "arn:aws:s3:::${ProjectBucket}"
-                  - !Sub "arn:aws:s3:::${ProjectBucket}/cf/*"
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/*"
+              - Effect: Allow
+                Action:
+                  - imagebuilder:GetComponent
+                  - imagebuilder:ListComponents
+                Resource:
+                  - !Sub "arn:aws:imagebuilder:${AWS::Region}:${AWS::AccountId}:component/*"
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -59,21 +68,26 @@ Resources:
       Distributions:
         - Region: !Ref AWS::Region
           AmiDistributionConfiguration:
-            Name: !Sub "sliderule-arm-${Version}"
+            Name: !Sub "sliderule-arm-{{ imagebuilder:buildDate }}" # ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
             Description: "SlideRule Base AMI"
             AmiTags:
               Project: SlideRule
               Base: AL2023-Minimal
+            LaunchPermissionConfiguration:
+              UserIds:
+                - !Ref AWS::AccountId
+            TargetAccountIds:
+              - !Ref AWS::AccountId
 
   InstallSoftwareComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
       Name: "sliderule-base-install"
       Platform: "Linux"
-      Version: "1.0.0"
+      Version: !Ref Version
       Data: !Sub |
-        name: InstallDockerNodeExporterPromtail
-        description: Install Docker, Node Exporter, Promtail, LogCLI
+        name: InstallNodeDependencies
+        description: "Install system dependencies for each SlideRule node"
         schemaVersion: 1.0
         phases:
           - name: build
@@ -83,8 +97,7 @@ Resources:
                 inputs:
                   commands:
                     - sudo dnf -y upgrade
-                    - sudo dnf install -y awscli
-
+                    - sudo dnf install -y awscli unzip
               - name: InstallDocker
                 action: ExecuteBash
                 inputs:
@@ -94,7 +107,6 @@ Resources:
                     - wget https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
                     - sudo mv docker-compose-linux-aarch64 /usr/local/bin/docker-compose
                     - sudo chmod +x /usr/local/bin/docker-compose
-
               - name: InstallNodeExporter
                 action: ExecuteBash
                 inputs:
@@ -102,10 +114,9 @@ Resources:
                     - wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-arm64.tar.gz
                     - tar -xvzf node_exporter-1.8.2.linux-arm64.tar.gz
                     - sudo mv node_exporter-1.8.2.linux-arm64/node_exporter /usr/local/bin/node_exporter
-                    - sudo aws s3 cp s3://${ProjectBucket}/cf/node_exporter.service /etc/systemd/system/node_exporter.service
+                    - sudo aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/node_exporter.service /etc/systemd/system/node_exporter.service
                     - sudo systemctl daemon-reload
                     - sudo systemctl enable node_exporter.service
-
               - name: InstallPromtail
                 action: ExecuteBash
                 inputs:
@@ -113,11 +124,10 @@ Resources:
                     - wget https://github.com/grafana/loki/releases/download/v2.9.9/promtail-linux-arm64.zip
                     - unzip promtail-linux-arm64.zip
                     - sudo mv promtail-linux-arm64 /usr/local/bin/promtail
-                    - sudo aws s3 cp s3://${ProjectBucket}/cf/promtail.yml /etc/promtail.yml
-                    - sudo aws s3 cp s3://${ProjectBucket}/cf/promtail.service /etc/systemd/system/promtail.service
+                    - sudo aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/promtail.yml /etc/promtail.yml
+                    - sudo aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/promtail.service /etc/systemd/system/promtail.service
                     - sudo systemctl daemon-reload
                     - sudo systemctl enable promtail.service
-
               - name: InstallLogcli
                 action: ExecuteBash
                 inputs:
@@ -125,7 +135,6 @@ Resources:
                     - wget https://github.com/grafana/loki/releases/download/v2.9.9/logcli-linux-arm64.zip
                     - unzip logcli-linux-arm64.zip
                     - sudo mv logcli-linux-arm64 /usr/local/bin/logcli
-
               - name: Cleanup
                 action: ExecuteBash
                 inputs:
@@ -136,10 +145,10 @@ Resources:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
       Name: "sliderule-base-recipe"
-      Version: "1.0.0"
-      ParentImage: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-arm64}}"
+      Version: !Ref Version
+      ParentImage: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-arm64}}"
       Components:
-        - ComponentArn: !Ref InstallSoftwareComponent
+        - ComponentArn: !GetAtt InstallSoftwareComponent.Arn
 
   ImagePipeline:
     Type: AWS::ImageBuilder::ImagePipeline
@@ -149,3 +158,10 @@ Resources:
       InfrastructureConfigurationArn: !Ref InfrastructureConfig
       DistributionConfigurationArn: !Ref DistributionConfig
       Status: ENABLED
+
+Outputs:
+  ImagePipelineArn:
+    Description: "ARN of the Sliderule Base Image Pipeline"
+    Value: !Ref ImagePipeline
+    Export:
+      Name: SlideruleBaseImagePipelineArn
