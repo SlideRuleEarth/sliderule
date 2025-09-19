@@ -235,21 +235,22 @@ manager-run: ## run manager locally; uses VERSION
 # AMI Targets
 ########################
 
+AMI_DATE = $(shell date +'%Y.%d.%-m')
 AMI_ID = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:us-west-2:742127912612:image/sliderule-base-recipe/$(VERSION) \
+	--image-build-version-arn arn:aws:imagebuilder:us-west-2:742127912612:image/sliderule-base-recipe/$(AMI_DATE) \
 	--region us-west-2 \
 	--query 'image.outputResources.amis[0].image' \
 	--output text)
 
 AMI_NAME = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:us-west-2:742127912612:image/sliderule-base-recipe/$(VERSION) \
+	--image-build-version-arn arn:aws:imagebuilder:us-west-2:742127912612:image/sliderule-base-recipe/$(AMI_DATE) \
 	--region us-west-2 \
 	--query 'image.outputResources.amis[0].name' \
 	--output text)
 
 PIPELINE_ARN = "arn:aws:imagebuilder:us-west-2:742127912612:image-pipeline/sliderule-base-pipeline"
 
-ami-pipeline-create: ## create EC2 Image Builder pipeline; needs VERSION
+ami-pipeline-create: ## create EC2 Image Builder pipeline
 	aws s3 cp cloudformation/ami/ $(CLOUDFORMATION_PATH)/ --recursive
 	aws cloudformation create-stack \
 		--stack-name 	ami \
@@ -257,7 +258,8 @@ ami-pipeline-create: ## create EC2 Image Builder pipeline; needs VERSION
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-west-2 \
 		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(CLOUDFORMATION_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(CLOUDFORMATION_FOLDER)
+						ParameterKey=ProjectFolder,ParameterValue=$(CLOUDFORMATION_FOLDER) \
+						ParameterKey=AmiDate,ParameterValue=$(AMI_DATE)
 	aws cloudformation wait stack-create-complete --stack-name ami
 
 ami-pipeline-describe: ## status the creation/deletion of the EC2 Image Builder pipeline
@@ -274,7 +276,7 @@ ami-pipeline-status:
 
 ami-publish: ## publish AMI to SSM
 	aws ssm put-parameter \
-    	--name "/ami/sliderule/arm/latest" \
+    	--name "/ami/sliderule/arm/$(VERSION)" \
     	--type "String" \
     	--value "$(AMI_ID)" \
     	--overwrite

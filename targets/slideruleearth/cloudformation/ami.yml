@@ -7,10 +7,9 @@ Parameters:
   ProjectFolder:
     Type: String
     Description: "S3 folder containing the supporting resources"
-  Version:
+  AmiDate:
     Type: String
-    Description: "SlideRule version corresponding to this AMI"
-    Default: "latest"
+    Description: "Date string Y.M.D for versioning the pipeline"
 
 Resources:
 
@@ -84,7 +83,7 @@ Resources:
     Properties:
       Name: "sliderule-base-install"
       Platform: "Linux"
-      Version: !Ref Version
+      Version: !Ref AmiDate
       Data: !Sub |
         name: InstallNodeDependencies
         description: "Install system dependencies for each SlideRule node"
@@ -145,7 +144,7 @@ Resources:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
       Name: "sliderule-base-recipe"
-      Version: !Ref Version
+      Version: !Ref AmiDate
       ParentImage: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-arm64}}"
       Components:
         - ComponentArn: !GetAtt InstallSoftwareComponent.Arn
