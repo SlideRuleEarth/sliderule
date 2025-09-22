@@ -1,0 +1,436 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Cluster
+
+##############################
+Parameters:
+
+  DomainName:
+    Type: String
+
+  ClusterName:
+    Type: String
+
+  Organization:
+    Type: String
+
+  AvailabilityZone:
+    Type: String
+
+  PublicCIDRBlock:
+    Type: String
+
+  VpcCIDRBlock:
+    Type: String
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+  ProjectBucket:
+    Type: String
+
+  ProjectFolder:
+    Type: String
+
+  ContainerRepo:
+    Type: String
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+
+  ManagerIP:
+    Type: String
+
+  IlbIP:
+    Type: String
+
+  MonitorIP:
+    Type: String
+
+  NodeDesiredCapacity:
+    Type: Number
+
+  NodeMinCapacity:
+    Type: Number
+
+  NodeMaxCapacity:
+    Type: Number
+
+##############################
+Resources:
+
+  #
+  # Cluster Network
+  #
+
+  SlideruleVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDRBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-vpc"
+
+  SlideruleSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SlideruleVPC
+      CidrBlock: "10.0.0.0/16"
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref AvailabilityZone
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-subnet"
+
+  SlideruleIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-gateway"
+
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref SlideruleIGW
+      VpcId: !Ref SlideruleVPC
+
+  SlideruleRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SlideruleVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-route"
+
+  SlideruleRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref SlideruleRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref SlideruleIGW
+
+  RouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SlideruleSubnet
+      RouteTableId: !Ref SlideruleRouteTable
+
+  #
+  # IAM Roles
+  #
+
+  ClusterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ClusterName}-iam-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+
+  S3ManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${ClusterName}-iams3-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: ["s3:ListBucket"]
+            Resource:
+              - arn:aws:s3:::sliderule
+              - arn:aws:s3:::pgc-opendata-dems
+              - arn:aws:s3:::prd-tnm
+              - arn:aws:s3:::esa-worldcover
+              - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
+              - arn:aws:s3:::dataforgood-fb-data
+          - Effect: Allow
+            Action: ["s3:GetObject"]
+            Resource:
+              - arn:aws:s3:::sliderule/*
+              - arn:aws:s3:::pgc-opendata-dems/*
+              - arn:aws:s3:::prd-tnm/*
+              - arn:aws:s3:::esa-worldcover/*
+              - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
+              - arn:aws:s3:::dataforgood-fb-data/*
+          - Effect: Allow
+            Action: ["s3:PutObject"]
+            Resource:
+              - arn:aws:s3:::sliderule/data/manager/*
+              - arn:aws:s3:::sliderule-public/*
+
+  EC2ManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${ClusterName}-iamec2-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstances
+              - ec2:TerminateInstances
+            Resource: "*"
+
+  AttachS3Policy:
+    Type: AWS::IAM::RolePolicyAttachment
+    Properties:
+      Role: !Ref ClusterRole
+      PolicyArn: !Ref S3ManagedPolicy
+
+  AttachEC2Policy:
+    Type: AWS::IAM::RolePolicyAttachment
+    Properties:
+      Role: !Ref ClusterRole
+      PolicyArn: !Ref EC2ManagedPolicy
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${ClusterName}-iam-profile"
+      Roles: [!Ref ClusterRole]
+
+  #
+  # Security Groups
+  #
+
+  MonitorSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Monitor Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3100
+          ToPort: 3100
+          CidrIp: !Ref VpcCIDRBlock
+        - IpProtocol: tcp
+          FromPort: 8040
+          ToPort: 8040
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-monitor-sg"
+
+  IlbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ILB Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref PublicCIDRBlock
+        - IpProtocol: tcp
+          FromPort: 8050
+          ToPort: 8050
+          CidrIp: !Ref VpcCIDRBlock
+        - IpProtocol: tcp
+          FromPort: 9100
+          ToPort: 9100
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-ilb-sg"
+
+  ManagerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Manager Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8030
+          ToPort: 8030
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-manager-sg"
+
+  SlideruleSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Sliderule app SG
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 9081
+          ToPort: 9081
+          CidrIp: !Ref VpcCIDRBlock
+        - IpProtocol: tcp
+          FromPort: 9100
+          ToPort: 9100
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-sliderule-sg"
+
+  #
+  # ILB
+  #
+
+  ILBInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: c8g.large
+      SubnetId: !Ref SubnetId
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: !Ref InstanceProfileName
+      PrivateIpAddress: !Ref IlbIP
+      SecurityGroupIds:
+        - !Ref IlbSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-ilb"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRepo}
+          export IS_PUBLIC=false
+          export ORGANIZATION=${Organization}
+          export DOMAIN=${Domain}
+          # (rest of your ILB bootstrap - copy from original user_data)
+
+  #
+  # Manager
+  #
+
+  ManagerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: r8g.large
+      SubnetId: !Ref SubnetId
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: !Ref InstanceProfileName
+      PrivateIpAddress: !Ref ManagerIP
+      SecurityGroupIds: [ !Ref ManagerSecurityGroupId ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-manager"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo ${ClusterName} > ./clustername.txt
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRepo}
+          # (rest of your manager bootstrap)
+
+  #
+  # Monitor
+  #
+
+  MonitorInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: c8g.large
+      SubnetId: !Ref SubnetId
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: !Ref InstanceProfileName
+      PrivateIpAddress: !Ref MonitorIP
+      SecurityGroupIds:
+        - !Ref MonitorSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub "${Organization}-monitor"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo ${ClusterName} > ./clustername.txt
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRepo}
+          # (rest of monitor bootstrap)
+
+  #
+  # Autoscaling Group
+  #
+
+  SlideruleLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref LaunchTemplateImageId
+        InstanceType: t4g.2xlarge
+        KeyName: !Ref KeyPairName
+        IamInstanceProfile:
+          Name: !Ref InstanceProfileName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 100
+              VolumeType: gp2
+              DeleteOnTermination: true
+        NetworkInterfaces:
+          - AssociatePublicIpAddress: true
+            DeviceIndex: 0
+      LaunchTemplateName: !Sub "${ClusterName}-lt"
+
+  SlideruleASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: [ !Ref SubnetId ]
+      DesiredCapacity: !Ref NodeDesiredCapacity
+      MinSize: !Ref NodeMinCapacity
+      MaxSize: !Ref NodeMaxCapacity
+      LaunchTemplate:
+        LaunchTemplateId: !Ref SlideruleLaunchTemplate
+        Version: !GetAtt SlideruleLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: !Sub "${ClusterName}-node"
+          PropagateAtLaunch: true
+        - Key: Owner
+          Value: SlideRule
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: !Sub "cluster-${ClusterName}"
+          PropagateAtLaunch: true
+
+  #
+  # Route53
+  #
+
+  IlbRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${DomainName}."   # ensure trailing dot or you can pass HostedZoneId instead
+      Name: !Sub "${ClusterName}.${DomainName}"
+      Type: A
+      TTL: "300"
+      ResourceRecords:
+        - !Ref IlbIP

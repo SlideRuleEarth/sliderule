@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Route53 A record for an organization subdomain"
+Parameters:
+  DomainName:
+    Type: String
+    Description: "The base domain (e.g. slideruleearth.io)"
+  Organization:
+    Type: String
+    Description: "The organization subdomain (e.g., org)"
+  PublicIp:
+    Type: String
+    Description: "The public IPv4 address"
+  HostedZoneId:
+    Type: String
+    Description: "Existing Route53 hosted zone ID"
+Resources:
+  OrgARecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Ref DomainName
+      Name: !Sub "${Organization}.${DomainName}"
+      Type: A
+      TTL: "300"
+      ResourceRecords:
+        - !Ref PublicIp

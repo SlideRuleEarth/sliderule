@@ -70,8 +70,11 @@ CLOUDFORMATION_BUCKET = sliderule
 CLOUDFORMATION_FOLDER = cf
 CLOUDFORMATION_PATH = s3://$(CLOUDFORMATION_BUCKET)/$(CLOUDFORMATION_FOLDER)
 
+AWS_ACCOUNT = 742127912612
+AWS_REGION = us-west-2
+
 VERSION ?= latest
-ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
+ECR ?= $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 GHCR ?= ghcr.io/slideruleearth
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
@@ -235,23 +238,21 @@ manager-run: ## run manager locally; uses VERSION
 # AMI Targets
 ########################
 
-AMI_DATE = $(shell date +'%Y.%d.%-m')
+AMI_DATE = $(shell date +'%Y.%-m.%d')
+
 AMI_ID = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:us-west-2:742127912612:image/sliderule-base-recipe/$(AMI_DATE) \
+	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
 	--region us-west-2 \
 	--query 'image.outputResources.amis[0].image' \
 	--output text)
 
 AMI_NAME = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:us-west-2:742127912612:image/sliderule-base-recipe/$(AMI_DATE) \
+	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
 	--region us-west-2 \
 	--query 'image.outputResources.amis[0].name' \
 	--output text)
 
-PIPELINE_ARN = "arn:aws:imagebuilder:us-west-2:742127912612:image-pipeline/sliderule-base-pipeline"
-
 ami-pipeline-create: ## create EC2 Image Builder pipeline
-	aws s3 cp cloudformation/ami/ $(CLOUDFORMATION_PATH)/ --recursive
 	aws cloudformation create-stack \
 		--stack-name 	ami \
 		--template-body file://cloudformation/ami.yml \
@@ -267,24 +268,25 @@ ami-pipeline-describe: ## status the creation/deletion of the EC2 Image Builder 
 		--stack-name ami
 
 ami-pipeline-start: ## run EC2 Image Builder pipeline to create an AMI
+	aws s3 cp cloudformation/ami/ $(CLOUDFORMATION_PATH)/ --recursive
 	aws imagebuilder start-image-pipeline-execution \
-   		--image-pipeline-arn $(PIPELINE_ARN) \
+   		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
     	--region us-west-2
 
 ami-pipeline-status:
 	@echo $(AMI_NAME)
 
-ami-publish: ## publish AMI to SSM
+ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
+	aws cloudformation delete-stack \
+		--stack-name ami
+	aws cloudformation wait stack-delete-complete --stack-name ami
+
+ami-image-publish: ## publish AMI image name to SSM
 	aws ssm put-parameter \
     	--name "/ami/sliderule/arm/$(VERSION)" \
     	--type "String" \
     	--value "$(AMI_ID)" \
     	--overwrite
-
-ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
-	aws cloudformation delete-stack \
-		--stack-name ami
-	aws cloudformation wait stack-delete-complete --stack-name ami
 
 ########################
 # Cluster Targets
