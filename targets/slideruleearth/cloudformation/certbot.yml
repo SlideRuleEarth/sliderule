@@ -3,10 +3,10 @@ Description: SlideRule Certbot Lambda
 Parameters:
   ProjectBucket:
     Type: String
-    Description: "S3 bucket containing the Lambda zip and supporting resources"
+  ProjectFolder:
+    Type: String
   LambdaZipFile:
     Type: String
-    Description: "S3 key for the Lambda zip (e.g. lambdas/certbot.zip)"
 
 Resources:
 
@@ -62,12 +62,12 @@ Resources:
             Action:
               - s3:GetObject
             Resource:
-              - !Sub "arn:aws:s3:::${ProjectBucket}/config/*"
+              - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/*"
           - Effect: Allow
             Action:
               - s3:PutObject
             Resource:
-              - !Sub "arn:aws:s3:::${ProjectBucket}/config/*"
+              - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/*"
 
   ## Route53 Policy
   LambdaRoute53Policy:
@@ -113,7 +113,7 @@ Resources:
           DOMAINS: "*.slideruleearth.io"
           DNS_PLUGIN: "dns-route53"
           S3_BUCKET: !Ref ProjectBucket
-          S3_PREFIX: "config"
+          S3_PREFIX: !Ref ProjectFolder
           S3_REGION: "us-west-2"
     DependsOn:
       - LambdaLogsPolicy

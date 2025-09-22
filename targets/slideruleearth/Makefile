@@ -66,9 +66,9 @@ INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
 WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
 
-CLOUDFORMATION_BUCKET = sliderule
-CLOUDFORMATION_FOLDER = cf
-CLOUDFORMATION_PATH = s3://$(CLOUDFORMATION_BUCKET)/$(CLOUDFORMATION_FOLDER)
+PROJECT_BUCKET = sliderule
+PROJECT_FOLDER = cf
+CLOUDFORMATION_PATH = s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)
 
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
@@ -258,20 +258,14 @@ ami-pipeline-create: ## create EC2 Image Builder pipeline
 		--template-body file://cloudformation/ami.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-west-2 \
-		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(CLOUDFORMATION_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(CLOUDFORMATION_FOLDER) \
+		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=AmiDate,ParameterValue=$(AMI_DATE)
 	aws cloudformation wait stack-create-complete --stack-name ami
 
 ami-pipeline-describe: ## status the creation/deletion of the EC2 Image Builder pipeline
 	aws cloudformation describe-stack-events \
 		--stack-name ami
-
-ami-pipeline-start: ## run EC2 Image Builder pipeline to create an AMI
-	aws s3 cp cloudformation/ami/ $(CLOUDFORMATION_PATH)/ --recursive
-	aws imagebuilder start-image-pipeline-execution \
-   		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
-    	--region us-west-2
 
 ami-pipeline-status:
 	@echo $(AMI_NAME)
@@ -280,6 +274,12 @@ ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
 	aws cloudformation delete-stack \
 		--stack-name ami
 	aws cloudformation wait stack-delete-complete --stack-name ami
+
+ami-image-build: ## run EC2 Image Builder pipeline to create an AMI
+	aws s3 cp cloudformation/ami/ $(CLOUDFORMATION_PATH)/ --recursive
+	aws imagebuilder start-image-pipeline-execution \
+   		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
+    	--region us-west-2
 
 ami-image-publish: ## publish AMI image name to SSM
 	aws ssm put-parameter \
@@ -445,8 +445,9 @@ certbot-create: ## creates the lambda certbot function
 		--template-body file://cloudformation/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-west-2 \
-		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(CLOUDFORMATION_BUCKET) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(CLOUDFORMATION_FOLDER)/certbot.zip
+		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
 	aws cloudformation wait stack-create-complete --stack-name certbot
 
 certbot-delete: ## deletes the lambda certbot function
@@ -488,8 +489,8 @@ provisioner-create: ## creates the lambda provisioner function
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-west-2 \
 		--parameters 	ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
-						ParameterKey=ProjectBucket,ParameterValue=$(CLOUDFORMATION_BUCKET) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(CLOUDFORMATION_FOLDER)/provisioner.zip
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
 provisioner-delete: ## deletes the lambda provisioner function

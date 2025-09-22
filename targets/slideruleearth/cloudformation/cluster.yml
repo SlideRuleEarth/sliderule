@@ -4,7 +4,7 @@ Description: SlideRule Cluster
 ##############################
 Parameters:
 
-  DomainName:
+  Domain:
     Type: String
 
   ClusterName:
@@ -13,50 +13,53 @@ Parameters:
   Organization:
     Type: String
 
-  AvailabilityZone:
-    Type: String
-
-  PublicCIDRBlock:
-    Type: String
-
-  VpcCIDRBlock:
-    Type: String
-
-  VpcId:
-    Type: AWS::EC2::VPC::Id
-
-  SubnetId:
-    Type: AWS::EC2::Subnet::Id
-
   ProjectBucket:
     Type: String
 
   ProjectFolder:
     Type: String
 
+  ProjectPublicBucket:
+    Type: String
+
   ContainerRepo:
     Type: String
 
-  KeyPairName:
-    Type: AWS::EC2::KeyPair::KeyName
+  #
+  # Constants
+  #
 
   ManagerIP:
     Type: String
-
-  IlbIP:
-    Type: String
+    Default: "10.0.1.3"
 
   MonitorIP:
     Type: String
+    Default: "10.0.1.4"
 
-  NodeDesiredCapacity:
-    Type: Number
+  IlbIP:
+    Type: String
+    Default: "10.0.1.5"
 
-  NodeMinCapacity:
-    Type: Number
+  AvailabilityZone:
+    Type: String
+    Default: "us-west-2d"
 
-  NodeMaxCapacity:
+  PublicCIDRBlock:
+    Type: String
+    Default: "0.0.0.0/0"
+
+  VpcCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+
+  NodeCapacity:
     Type: Number
+    Default: 7
+
+  ImageId:
+    Type: String
+    Default: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
 
 ##############################
 Resources:
@@ -73,7 +76,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-vpc"
+          Value: !Sub "${ClusterName}-vpc"
 
   SlideruleSubnet:
     Type: AWS::EC2::Subnet
@@ -84,14 +87,14 @@ Resources:
       AvailabilityZone: !Ref AvailabilityZone
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-subnet"
+          Value: !Sub "${ClusterName}-subnet"
 
   SlideruleIGW:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-gateway"
+          Value: !Sub "${ClusterName}-gateway"
 
   AttachIGW:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -170,8 +173,8 @@ Resources:
           - Effect: Allow
             Action: ["s3:PutObject"]
             Resource:
-              - arn:aws:s3:::sliderule/data/manager/*
-              - arn:aws:s3:::sliderule-public/*
+              - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/manager/*"
+              - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
 
   EC2ManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -201,7 +204,6 @@ Resources:
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: !Sub "${ClusterName}-iam-profile"
       Roles: [!Ref ClusterRole]
 
   #
@@ -212,120 +214,146 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Monitor Security Group
-      VpcId: !Ref VpcId
+      VpcId: !Ref SlideruleVPC
       SecurityGroupIngress:
+        # Loki (from Promtail)
         - IpProtocol: tcp
           FromPort: 3100
           ToPort: 3100
           CidrIp: !Ref VpcCIDRBlock
+        # NGINX (from HAProxy)
         - IpProtocol: tcp
           FromPort: 8040
           ToPort: 8040
           CidrIp: !Ref VpcCIDRBlock
       SecurityGroupEgress:
+        # ALL
         - IpProtocol: -1
           FromPort: 0
           ToPort: 0
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-monitor-sg"
+          Value: !Sub "${ClusterName}-monitor-sg"
 
   IlbSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: ILB Security Group
-      VpcId: !Ref VpcId
+      VpcId: !Ref SlideruleVPC
       SecurityGroupIngress:
+        # HAProxy
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
           CidrIp: !Ref PublicCIDRBlock
+        # Orchestrator (from HAProxy)
         - IpProtocol: tcp
           FromPort: 8050
           ToPort: 8050
           CidrIp: !Ref VpcCIDRBlock
+        # Node Exporter (from Prometheus)
         - IpProtocol: tcp
           FromPort: 9100
           ToPort: 9100
           CidrIp: !Ref VpcCIDRBlock
       SecurityGroupEgress:
+        # ALL
         - IpProtocol: -1
           FromPort: 0
           ToPort: 0
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-ilb-sg"
+          Value: !Sub "${ClusterName}-ilb-sg"
 
   ManagerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Manager Security Group
-      VpcId: !Ref VpcId
+      VpcId: !Ref SlideruleVPC
       SecurityGroupIngress:
+        # Manager (from HAProxy)
         - IpProtocol: tcp
           FromPort: 8030
           ToPort: 8030
           CidrIp: !Ref VpcCIDRBlock
       SecurityGroupEgress:
+        # ALL
         - IpProtocol: -1
           FromPort: 0
           ToPort: 0
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-manager-sg"
+          Value: !Sub "${ClusterName}-manager-sg"
 
   SlideruleSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Sliderule app SG
-      VpcId: !Ref VpcId
+      VpcId: !Ref SlideruleVPC
       SecurityGroupIngress:
+        # SlideRule (from HAProxy)
         - IpProtocol: tcp
           FromPort: 9081
           ToPort: 9081
           CidrIp: !Ref VpcCIDRBlock
+        # Node Exporter (from Prometheus)
         - IpProtocol: tcp
           FromPort: 9100
           ToPort: 9100
           CidrIp: !Ref VpcCIDRBlock
       SecurityGroupEgress:
+        # ALL
         - IpProtocol: -1
           FromPort: 0
           ToPort: 0
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-sliderule-sg"
+          Value: !Sub "${ClusterName}-sliderule-sg"
 
   #
   # ILB
   #
 
-  ILBInstance:
+  IlbInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref ImageId
       InstanceType: c8g.large
-      SubnetId: !Ref SubnetId
-      KeyName: !Ref KeyPairName
-      IamInstanceProfile: !Ref InstanceProfileName
+      AvailabilityZone: !Ref AvailabilityZone
+      IamInstanceProfile: !Ref InstanceProfile
+      SubnetId: !Ref SlideruleSubnet
       PrivateIpAddress: !Ref IlbIP
       SecurityGroupIds:
         - !Ref IlbSecurityGroupId
+      SourceDestCheck: true
+      Monitoring: false
+      AssociatePublicIpAddress: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-ilb"
+          Value: !Sub "${ClusterName}-ilb"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRepo}
-          export IS_PUBLIC=false
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+          export OAUTH_HMAC_SECRET='${local.secrets.jwt_secret_key}'
+          export IS_PUBLIC=${var.is_public}
           export ORGANIZATION=${Organization}
           export DOMAIN=${Domain}
-          # (rest of your ILB bootstrap - copy from original user_data)
+          export ILB_IMAGE=${ContainerRepo}/ilb:${Version}
+          mkdir -p /etc/ssl/private
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-ilb.yml ./docker-compose.yml
+          docker-compose -p cluster up --detach
 
   #
   # Manager
@@ -336,20 +364,42 @@ Resources:
     Properties:
       ImageId: !Ref ImageId
       InstanceType: r8g.large
-      SubnetId: !Ref SubnetId
-      KeyName: !Ref KeyPairName
-      IamInstanceProfile: !Ref InstanceProfileName
+      AvailabilityZone: !Ref AvailabilityZone
+      SubnetId: !Ref SlideruleSubnet
+      IamInstanceProfile: !Ref InstanceProfile
       PrivateIpAddress: !Ref ManagerIP
       SecurityGroupIds: [ !Ref ManagerSecurityGroupId ]
+      SourceDestCheck: true
+      Monitoring: false
+      AssociatePublicIpAddress: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-manager"
+          Value: !Sub "${ClusterName}-manager"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
           echo ${ClusterName} > ./clustername.txt
-          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRepo}
-          # (rest of your manager bootstrap)
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+          export IS_PUBLIC=${var.is_public}
+          export DOMAIN=${Domain}
+          export MANAGER_SECRET_SALT='${local.secrets.manager_secret_salt}'
+          export MANAGER_API_KEY='${local.secrets.manager_api_key}'
+          export DUCKDB_LOCAL_FILE='/data/manager-${ClusterName}.db'
+          export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Organization}-${Version}.db'
+          export MANAGER_IMAGE=${ContainerRepo}/manager:${ClusterVersion}
+          mkdir /data
+          aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-manager.yml ./docker-compose.yml
+          docker-compose -p cluster up --detach
 
   #
   # Monitor
@@ -360,21 +410,36 @@ Resources:
     Properties:
       ImageId: !Ref ImageId
       InstanceType: c8g.large
-      SubnetId: !Ref SubnetId
-      KeyName: !Ref KeyPairName
-      IamInstanceProfile: !Ref InstanceProfileName
+      AvailabilityZone: !Ref AvailabilityZone
+      SubnetId: !Ref SlideruleSubnet
+      IamInstanceProfile: !Ref InstanceProfile
       PrivateIpAddress: !Ref MonitorIP
       SecurityGroupIds:
         - !Ref MonitorSecurityGroupId
+      SourceDestCheck: true
+      Monitoring: false
+      AssociatePublicIpAddress: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-monitor"
+          Value: !Sub "${ClusterName}-monitor"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
           echo ${ClusterName} > ./clustername.txt
-          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRepo}
-          # (rest of monitor bootstrap)
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+          export CLIENT_ID='${local.secrets.client_id}'
+          export CLIENT_SECRET='${local.secrets.client_secret}'
+          export DOMAIN=${Domain}
+          export MONITOR_IMAGE=${ContainerRepo}/monitor:${Version}
+          export PROXY_IMAGE=${ContainerRepo}/proxy:${Version}
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-monitor.yml ./docker-compose.yml
+          docker-compose -p cluster up --detach
 
   #
   # Autoscaling Group
@@ -383,42 +448,60 @@ Resources:
   SlideruleLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
+      LaunchTemplateName: !Sub "${ClusterName}-lt"
       LaunchTemplateData:
-        ImageId: !Ref LaunchTemplateImageId
+        ImageId: !Ref ImageId
         InstanceType: t4g.2xlarge
-        KeyName: !Ref KeyPairName
         IamInstanceProfile:
           Name: !Ref InstanceProfileName
-        BlockDeviceMappings:
-          - DeviceName: /dev/xvda
-            Ebs:
-              VolumeSize: 100
-              VolumeType: gp2
-              DeleteOnTermination: true
         NetworkInterfaces:
           - AssociatePublicIpAddress: true
             DeviceIndex: 0
-      LaunchTemplateName: !Sub "${ClusterName}-lt"
+            Groups:
+              - !Ref SecurityGroupId
+        BlockDeviceMappings:
+          - DeviceName: "/dev/xvda"
+            Ebs:
+              VolumeSize: !Ref ClusterVolumeSize
+              VolumeType: gp2
+              DeleteOnTermination: true
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            export ENVIRONMENT_VERSION=${EnvironmentVersion}
+            export IPV4=$(hostname -I | awk '{print $1}')
+            export ORGANIZATION=${Organization}
+            export CLUSTER=${ClusterName}
+            export IS_PUBLIC=${var.is_public}
+            export SLIDERULE_IMAGE=${ContainerRepo}/sliderule:${Version}
+            export AMS_IMAGE=${ContainerRepo}/ams:${Version}
+            export PROVISIONING_SYSTEM="https://ps.${Domain}"
+            export CONTAINER_REGISTRY=${ContainerRepo}
+            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+            mkdir -p /data/ATL13
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13_mappings.json /data/ATL13/atl13_mappings.json
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/inland_water_body.db /data/ATL13/inland_water_body.db
+            aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-node.yml ./docker-compose.yml
+            docker-compose -p cluster up --detach
 
-  SlideruleASG:
+  SlideruleAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      VPCZoneIdentifier: [ !Ref SubnetId ]
-      DesiredCapacity: !Ref NodeDesiredCapacity
-      MinSize: !Ref NodeMinCapacity
-      MaxSize: !Ref NodeMaxCapacity
+      AutoScalingGroupName: !Sub "${ClusterName}-asg"
+      MinSize: !Ref NodeCapacity
+      MaxSize: !Ref NodeCapacity
+      DesiredCapacity: !Ref NodeCapacity
+      VPCZoneIdentifier:
+        - !Ref SubnetId
+      HealthCheckType: EC2
+      CapacityRebalance: true
       LaunchTemplate:
         LaunchTemplateId: !Ref SlideruleLaunchTemplate
         Version: !GetAtt SlideruleLaunchTemplate.LatestVersionNumber
       Tags:
         - Key: Name
           Value: !Sub "${ClusterName}-node"
-          PropagateAtLaunch: true
-        - Key: Owner
-          Value: SlideRule
-          PropagateAtLaunch: true
-        - Key: Project
-          Value: !Sub "cluster-${ClusterName}"
           PropagateAtLaunch: true
 
   #
@@ -428,9 +511,9 @@ Resources:
   IlbRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneName: !Sub "${DomainName}."   # ensure trailing dot or you can pass HostedZoneId instead
-      Name: !Sub "${ClusterName}.${DomainName}"
+      HostedZoneName: !Sub "${Domain}."   # ensure trailing dot or you can pass HostedZoneId instead
+      Name: !Sub "${ClusterName}.${Domain}"
       Type: A
       TTL: "300"
       ResourceRecords:
-        - !Ref IlbIP
+        - !GetAtt IlbInstance.PublicIp
