@@ -55,37 +55,30 @@ PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
 WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
-WEBSITE_ASSET_DIR ?= /data/web
+WEBSITE_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
-WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
-WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
-
 PROJECT_PUBLIC_BUCKET = sliderule-public
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
-CLOUDFORMATION_PATH = s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)
-
-PUBLIC_IP ?= # output from cluster-create
-ORGANIZATION ?= sliderule
-COLOR ?= grey
-
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
+ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
+MYIP = $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
+ARCH = $(shell arch)
+
+DOMAIN ?= slideruleearth.io
+ORGANIZATION ?= sliderule
 VERSION ?= latest
-ECR ?= $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
+
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
-ARCH ?= $(shell arch)
-DOMAIN ?= slideruleearth.io
-DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
-MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 
@@ -285,7 +278,7 @@ ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
 	aws cloudformation wait stack-delete-complete --stack-name ami
 
 ami-image-build: ## run EC2 Image Builder pipeline to create an AMI
-	aws s3 cp cloudformation/ami/ $(CLOUDFORMATION_PATH)/ --recursive
+	aws s3 cp cloudformation/ami/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive
 	aws imagebuilder start-image-pipeline-execution \
    		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
     	--region us-west-2
@@ -301,6 +294,11 @@ ami-image-publish: ## publish AMI image name to SSM
 # Deployment Targets
 ########################
 
+PUBLIC_IP ?= 127.0.0.1 # output from cluster-create
+COLOR ?= grey
+IS_PUBLIC ?= False
+NODE_CAPACITY ?= 1
+
 cluster-create: ## create a cluster in AWS
 	aws cloudformation create-stack \
 		--stack-name 	$(ORGANIZATION)-$(COLOR)-cluster \
@@ -309,7 +307,7 @@ cluster-create: ## create a cluster in AWS
 		--region 		us-west-2 \
 		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
 						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
-						ParameterKey=IsPublic,ParameterValue=False \
+						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=ClusterName,ParameterValue=$(ORGANIZATION)-$(COLOR) \
 						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
@@ -317,7 +315,7 @@ cluster-create: ## create a cluster in AWS
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRepo,ParameterValue=$(ECR) \
-						ParameterKey=NodeCapacity,ParameterValue=1
+						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
 	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
 cluster-describe: ## status the creation/deletion of the certbot function
@@ -353,6 +351,9 @@ ZONE_ID=$(shell aws route53 list-hosted-zones-by-name \
 			--query "HostedZones[0].Id" \
 			--output text | sed 's|/hostedzone/||')
 
+WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
+WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
+
 website-render-notebooks: ## execute the notebooks used in the documentation
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa.ipynb --debug
@@ -385,6 +386,8 @@ website-export: ## export website to local host directory; needs VERSION
 website-live-update: website-export # Update the website docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
+
+DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 
 website-deploy: ## deploy website using terraform; needs DOMAIN
 	cd terraform/website && terraform init
@@ -438,7 +441,7 @@ certbot-describe: ## status the creation/deletion of the certbot function
 	aws cloudformation describe-stack-events --stack-name certbot
 
 certbot-create: ## creates the lambda certbot function
-	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip $(CLOUDFORMATION_PATH)/certbot.zip
+	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
 	aws cloudformation create-stack \
 		--stack-name 	certbot \
 		--template-body file://cloudformation/certbot.yml \
@@ -450,7 +453,7 @@ certbot-create: ## creates the lambda certbot function
 	aws cloudformation wait stack-create-complete --stack-name certbot
 
 certbot-delete: ## deletes the lambda certbot function
-	aws s3 rm $(CLOUDFORMATION_PATH)/certbot.zip
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
 	aws cloudformation delete-stack --stack-name certbot
 	aws cloudformation wait stack-delete-complete --stack-name certbot
 
@@ -479,7 +482,7 @@ provisioner-run: ## invokes the provisioner lambda function and displays the res
 	cat /tmp/response.json | jq
 
 provisioner-create: ## creates the lambda provisioner function
-	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip $(CLOUDFORMATION_PATH)/provisioner.zip
+	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation create-stack \
 		--stack-name 	provisioner \
 		--template-body file://cloudformation/provisioner.yml \
@@ -491,7 +494,7 @@ provisioner-create: ## creates the lambda provisioner function
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
 provisioner-delete: ## deletes the lambda provisioner function
-	aws s3 rm $(CLOUDFORMATION_PATH)/provisioner.zip
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
 
