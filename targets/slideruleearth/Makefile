@@ -314,7 +314,7 @@ cluster-create: ## create a cluster in AWS
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
-						ParameterKey=ContainerRepo,ParameterValue=$(ECR) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
 	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
@@ -471,6 +471,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 		public.ecr.aws/lambda/python:3.11 \
 		-c "pip install --target /host/package requests"
 	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
+	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
 provisioner-describe: ## status the creation/deletion of the provisioner function

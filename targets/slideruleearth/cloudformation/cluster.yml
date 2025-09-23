@@ -31,7 +31,7 @@ Parameters:
   ProjectPublicBucket:
     Type: String
 
-  ContainerRepo:
+  ContainerRegistry:
     Type: String
 
   NodeCapacity:
@@ -338,13 +338,13 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export OAUTH_HMAC_SECRET=$(echo $SECRET | jq -r .jwt_secret_key)
           export IS_PUBLIC=${IsPublic}
           export ORGANIZATION=${Organization}
           export DOMAIN=${Domain}
-          export ILB_IMAGE=${ContainerRepo}/ilb:${Version}
+          export ILB_IMAGE=${ContainerRegistry}/ilb:${Version}
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-ilb.yml ./docker-compose.yml
@@ -383,7 +383,7 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           echo ${ClusterName} > ./clustername.txt
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export IS_PUBLIC=${IsPublic}
           export DOMAIN=${Domain}
@@ -391,7 +391,7 @@ Resources:
           export MANAGER_API_KEY=$(echo $SECRET | jq -r .manager_api_key)
           export DUCKDB_LOCAL_FILE='/data/manager-${ClusterName}.db'
           export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Organization}-${Version}.db'
-          export MANAGER_IMAGE=${ContainerRepo}/manager:${Version}
+          export MANAGER_IMAGE=${ContainerRegistry}/manager:${Version}
           mkdir /data
           aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
@@ -433,13 +433,13 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           echo ${ClusterName} > ./clustername.txt
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
           export CLIENT_SECRET=$(echo $SECRET | jq -r .client_secret)
           export DOMAIN=${Domain}
-          export MONITOR_IMAGE=${ContainerRepo}/monitor:${Version}
-          export PROXY_IMAGE=${ContainerRepo}/proxy:${Version}
+          export MONITOR_IMAGE=${ContainerRegistry}/monitor:${Version}
+          export PROXY_IMAGE=${ContainerRegistry}/proxy:${Version}
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-monitor.yml ./docker-compose.yml
           docker-compose -p cluster up --detach
 
@@ -475,11 +475,11 @@ Resources:
             export ORGANIZATION=${Organization}
             export CLUSTER=${ClusterName}
             export IS_PUBLIC=${IsPublic}
-            export SLIDERULE_IMAGE=${ContainerRepo}/sliderule:${Version}
-            export AMS_IMAGE=${ContainerRepo}/ams:${Version}
+            export SLIDERULE_IMAGE=${ContainerRegistry}/sliderule:${Version}
+            export AMS_IMAGE=${ContainerRegistry}/ams:${Version}
             export PROVISIONING_SYSTEM="https://ps.${Domain}"
-            export CONTAINER_REGISTRY=${ContainerRepo}
-            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
+            export CONTAINER_REGISTRY=${ContainerRegistry}
+            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
             mkdir -p /data/ATL13
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13_mappings.json /data/ATL13/atl13_mappings.json
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/inland_water_body.db /data/ATL13/inland_water_body.db
