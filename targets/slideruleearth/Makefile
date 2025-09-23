@@ -7,7 +7,6 @@
 #           The user must have up-to-date aws credentials
 #     * Docker
 #           The user must be logged into the AWS Elastic Container Registry (ECR)
-#           The user must be logged into the GitHub Container Registry (GHCR)
 #     * Terraform & Packer
 #           The binaries are sufficient, but pay close attention to the local package versions
 #     * Node.js
@@ -60,7 +59,6 @@ WEBSITE_ASSET_DIR ?= /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
-
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
 WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
@@ -71,12 +69,15 @@ PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
 CLOUDFORMATION_PATH = s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)
 
+PUBLIC_IP ?= # output from cluster-create
+ORGANIZATION ?= sliderule
+COLOR ?= grey
+
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 
 VERSION ?= latest
 ECR ?= $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
-GHCR ?= ghcr.io/slideruleearth
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
@@ -88,10 +89,6 @@ ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --lo
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 RUNNER ?= # e.g. valgrind
-
-ORGANIZATION ?= sliderule
-PUBLIC_IP ?= # output from public-cluster-deploy
-COLOR ?=
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -154,13 +151,9 @@ buildenv-docker: ## build sliderule build environment docker image
 	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
-	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
 buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
-
-buildenv-docker-push-github: ## push build environment docker image to GitHub registry
-	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -235,6 +228,22 @@ manager-docker: ## build manager docker image; uses VERSION
 manager-run: ## run manager locally; uses VERSION
 	docker run -it -p 8040:8040 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
 
+cluster-docker: ## build all cluster docker images
+	make sliderule-docker
+	make ilb-docker
+	make proxy-docker
+	make monitor-docker
+	make manager-docker
+	make ams-docker
+
+cluster-docker-push: ## push all cluster images to docker container registries
+	docker push $(ECR)/sliderule:$(VERSION)
+	docker push $(ECR)/ilb:$(VERSION)
+	docker push $(ECR)/proxy:$(VERSION)
+	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/manager:$(VERSION)
+	docker push $(ECR)/ams:$(VERSION)
+
 ########################
 # AMI Targets
 ########################
@@ -290,114 +299,47 @@ ami-image-publish: ## publish AMI image name to SSM
     	--overwrite
 
 ########################
-# Cluster Targets
+# Deployment Targets
 ########################
 
-cluster-docker: ## build all cluster docker images
-	make sliderule-docker
-	make ilb-docker
-	make proxy-docker
-	make monitor-docker
-	make manager-docker
-	make ams-docker
-
-cluster-docker-push: ## push all cluster images to docker container registries
-	docker push $(ECR)/sliderule:$(VERSION)
-	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/proxy:$(VERSION)
-	docker push $(ECR)/monitor:$(VERSION)
-	docker push $(ECR)/manager:$(VERSION)
-	docker push $(ECR)/ams:$(VERSION)
-
-cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
-
-cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
-	-rm -Rf $(TF_STAGE_DIR)
-	mkdir -p $(TF_STAGE_DIR)
-	cp terraform/cluster/*.* $(TF_STAGE_DIR)
-	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
-	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
-	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
-
-cluster: ## build all targets related to a cluster deployment and push to aws; needs VERSION
-	make cluster-docker
-	make cluster-docker-push
-	make cluster-build-packer
-	make cluster-upload-terraform
-
-cluster-test-public:
-	@if [ -z "$(ORGANIZATION)" ] || [ "$(ORGANIZATION)" = "sliderule" ]; then \
-		echo "Error: ORGANIZATION must be provided and cannot be the same as the public cluster"; \
-		exit 1; \
-	fi
-
-cluster-create: cluster-test-public ## create a cluster in AWS
+cluster-create: ## create a cluster in AWS
 	aws cloudformation create-stack \
-		--stack-name 	$(ORGANIZATION)-cluster \
+		--stack-name 	$(ORGANIZATION)-$(COLOR)-cluster \
 		--template-body file://cloudformation/cluster.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-west-2 \
 		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
-						ParameterKey=EnvironmentVersion,ParameterValue=$(VERSION) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=IsPublic,ParameterValue=False \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=ClusterName,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=ClusterName,ParameterValue=$(ORGANIZATION)-$(COLOR) \
 						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRepo,ParameterValue=$(ECR) \
 						ParameterKey=NodeCapacity,ParameterValue=1
-	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
 cluster-describe: ## status the creation/deletion of the certbot function
-	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
 cluster-delete: ## deletes the lambda certbot function
-	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-cluster
-	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-$(COLOR)-cluster
+	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-########################
-# Deployment Targets
-########################
+cluster-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
+	aws cloudformation deploy \
+		--stack-name 	dns \
+		--template-body file://cloudformation/dns.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		us-west-2 \
+		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=PublicIp,ParameterValue=$(PUBLIC_IP)
 
-public-cluster-test-color:
-	@if [ -z "$(COLOR)" ]; then \
-		echo "Error: COLOR must be set to green or blue"; \
-		exit 1; \
-	fi
-
-public-cluster-test-ip:
-	@if [ -z "$(PUBLIC_IP)" ]; then \
-		echo "Error: PUBLIC_IP must be provided"; \
-		exit 1; \
-	fi
-
-public-cluster-status: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, uses DOMAIN
-	cd terraform/cluster && terraform init
-	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform plan -refresh-only && terraform show
-
-public-cluster-deploy: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, VERSION, uses DOMAIN, ORGANIZATION, ENVVER
-	cd terraform/cluster && terraform init
-	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform apply -var is_public=True -var cluster_name=$(ORGANIZATION)-$(COLOR) -var domain=$(DOMAIN) -var cluster_version=$(VERSION) -var organization_name=$(ORGANIZATION) -var environment_version=$(ENVVER)
-
-public-cluster-destroy: public-cluster-test-color ## destroy public using terraform; needs COLOR, uses DOMAIN
-	cd terraform/cluster && terraform init
-	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform destroy
-
-public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
-	cd terraform/dns && terraform init
-	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION) || terraform workspace new dns-$(DOMAIN)-$(ORGANIZATION)
-	cd terraform/dns && terraform apply -var domain=$(DOMAIN) -var organization=$(ORGANIZATION) -var public_ip=$(PUBLIC_IP)
-
-public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
-	cd terraform/dns && terraform init
-	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION)
-	cd terraform/dns && terraform destroy
+cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
+	aws cloudformation delete-stack --stack-name dns
 
 ########################
 # Website Targets
@@ -468,8 +410,7 @@ certbot-build: ## create the certbot lambda zipfile
 	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
 
 certbot-describe: ## status the creation/deletion of the certbot function
-	aws cloudformation describe-stack-events \
-		--stack-name certbot
+	aws cloudformation describe-stack-events --stack-name certbot
 
 certbot-create: ## creates the lambda certbot function
 	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip $(CLOUDFORMATION_PATH)/certbot.zip
@@ -485,8 +426,7 @@ certbot-create: ## creates the lambda certbot function
 
 certbot-delete: ## deletes the lambda certbot function
 	aws s3 rm $(CLOUDFORMATION_PATH)/certbot.zip
-	aws cloudformation delete-stack \
-		--stack-name certbot
+	aws cloudformation delete-stack --stack-name certbot
 	aws cloudformation wait stack-delete-complete --stack-name certbot
 
 ########################
@@ -506,8 +446,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
 provisioner-describe: ## status the creation/deletion of the provisioner function
-	aws cloudformation describe-stack-events \
-		--stack-name provisioner
+	aws cloudformation describe-stack-events --stack-name provisioner
 
 provisioner-run: ## invokes the provisioner lambda function and displays the response
 	echo '{"domain":"$(DOMAIN)","version":"$(VERSION)"}' > /tmp/payload.json
@@ -528,8 +467,7 @@ provisioner-create: ## creates the lambda provisioner function
 
 provisioner-delete: ## deletes the lambda provisioner function
 	aws s3 rm $(CLOUDFORMATION_PATH)/provisioner.zip
-	aws cloudformation delete-stack \
-		--stack-name provisioner
+	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
 
 ########################
@@ -551,14 +489,14 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
-	make cluster
+	make cluster-docker
+	make cluster-docker-push
 
 ########################
 # Clean Up Targets
 ########################
 
 docker-clean: ## clean out old version of docker images; needs VERSION
-	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
