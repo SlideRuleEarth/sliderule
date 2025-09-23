@@ -4,6 +4,12 @@ Description: SlideRule Cluster
 ##############################
 Parameters:
 
+  Version:
+    Type: String
+
+  IsPublic:
+    Type: String
+
   Domain:
     Type: String
 
@@ -130,7 +136,6 @@ Resources:
   ClusterRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${ClusterName}-iam-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -144,62 +149,51 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
         - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
-
-  S3ManagedPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: !Sub "${ClusterName}-iams3-policy"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action: ["s3:ListBucket"]
-            Resource:
-              - arn:aws:s3:::sliderule
-              - arn:aws:s3:::pgc-opendata-dems
-              - arn:aws:s3:::prd-tnm
-              - arn:aws:s3:::esa-worldcover
-              - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
-              - arn:aws:s3:::dataforgood-fb-data
-          - Effect: Allow
-            Action: ["s3:GetObject"]
-            Resource:
-              - arn:aws:s3:::sliderule/*
-              - arn:aws:s3:::pgc-opendata-dems/*
-              - arn:aws:s3:::prd-tnm/*
-              - arn:aws:s3:::esa-worldcover/*
-              - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
-              - arn:aws:s3:::dataforgood-fb-data/*
-          - Effect: Allow
-            Action: ["s3:PutObject"]
-            Resource:
-              - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/manager/*"
-              - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
-
-  EC2ManagedPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: !Sub "${ClusterName}-iamec2-policy"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - ec2:DescribeInstances
-              - ec2:TerminateInstances
-            Resource: "*"
-
-  AttachS3Policy:
-    Type: AWS::IAM::RolePolicyAttachment
-    Properties:
-      Role: !Ref ClusterRole
-      PolicyArn: !Ref S3ManagedPolicy
-
-  AttachEC2Policy:
-    Type: AWS::IAM::RolePolicyAttachment
-    Properties:
-      Role: !Ref ClusterRole
-      PolicyArn: !Ref EC2ManagedPolicy
+      Policies:
+        - PolicyName: !Sub "${ClusterName}-secrets-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:slideruleearth.io/secrets-*
+        - PolicyName: !Sub "${ClusterName}-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:ListBucket"]
+                Resource:
+                  - arn:aws:s3:::sliderule
+                  - arn:aws:s3:::pgc-opendata-dems
+                  - arn:aws:s3:::prd-tnm
+                  - arn:aws:s3:::esa-worldcover
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
+                  - arn:aws:s3:::dataforgood-fb-data
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - arn:aws:s3:::sliderule/*
+                  - arn:aws:s3:::pgc-opendata-dems/*
+                  - arn:aws:s3:::prd-tnm/*
+                  - arn:aws:s3:::esa-worldcover/*
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
+                  - arn:aws:s3:::dataforgood-fb-data/*
+              - Effect: Allow
+                Action: ["s3:PutObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/manager/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+        - PolicyName: !Sub "${ClusterName}-ec2-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:TerminateInstances
+                Resource: "*"
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -328,10 +322,14 @@ Resources:
       SubnetId: !Ref SlideruleSubnet
       PrivateIpAddress: !Ref IlbIP
       SecurityGroupIds:
-        - !Ref IlbSecurityGroupId
+        - !Ref IlbSG
       SourceDestCheck: true
       Monitoring: false
-      AssociatePublicIpAddress: true
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          Groups:
+            - !Ref SlideruleSG
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -345,8 +343,9 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
-          export OAUTH_HMAC_SECRET='${local.secrets.jwt_secret_key}'
-          export IS_PUBLIC=${var.is_public}
+          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
+          export OAUTH_HMAC_SECRET=$(echo $SECRET | jq -r .jwt_secret_key)
+          export IS_PUBLIC=${IsPublic}
           export ORGANIZATION=${Organization}
           export DOMAIN=${Domain}
           export ILB_IMAGE=${ContainerRepo}/ilb:${Version}
@@ -368,10 +367,10 @@ Resources:
       SubnetId: !Ref SlideruleSubnet
       IamInstanceProfile: !Ref InstanceProfile
       PrivateIpAddress: !Ref ManagerIP
-      SecurityGroupIds: [ !Ref ManagerSecurityGroupId ]
+      SecurityGroupIds:
+        - !Ref ManagerSG
       SourceDestCheck: true
       Monitoring: false
-      AssociatePublicIpAddress: true
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -386,13 +385,14 @@ Resources:
           #!/bin/bash
           echo ${ClusterName} > ./clustername.txt
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
-          export IS_PUBLIC=${var.is_public}
+          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
+          export IS_PUBLIC=${IsPublic}
           export DOMAIN=${Domain}
-          export MANAGER_SECRET_SALT='${local.secrets.manager_secret_salt}'
-          export MANAGER_API_KEY='${local.secrets.manager_api_key}'
+          export MANAGER_SECRET_SALT=$(echo $SECRET | jq -r .manager_secret_salt)
+          export MANAGER_API_KEY=$(echo $SECRET | jq -r .manager_api_key)
           export DUCKDB_LOCAL_FILE='/data/manager-${ClusterName}.db'
           export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Organization}-${Version}.db'
-          export MANAGER_IMAGE=${ContainerRepo}/manager:${ClusterVersion}
+          export MANAGER_IMAGE=${ContainerRepo}/manager:${Version}
           mkdir /data
           aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
@@ -415,10 +415,9 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       PrivateIpAddress: !Ref MonitorIP
       SecurityGroupIds:
-        - !Ref MonitorSecurityGroupId
+        - !Ref MonitorSG
       SourceDestCheck: true
       Monitoring: false
-      AssociatePublicIpAddress: true
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -433,8 +432,9 @@ Resources:
           #!/bin/bash
           echo ${ClusterName} > ./clustername.txt
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRepo}
-          export CLIENT_ID='${local.secrets.client_id}'
-          export CLIENT_SECRET='${local.secrets.client_secret}'
+          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
+          export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
+          export CLIENT_SECRET=$(echo $SECRET | jq -r .client_secret)
           export DOMAIN=${Domain}
           export MONITOR_IMAGE=${ContainerRepo}/monitor:${Version}
           export PROXY_IMAGE=${ContainerRepo}/proxy:${Version}
@@ -453,17 +453,17 @@ Resources:
         ImageId: !Ref ImageId
         InstanceType: t4g.2xlarge
         IamInstanceProfile:
-          Name: !Ref InstanceProfileName
+          Name: !Ref InstanceProfile
         NetworkInterfaces:
           - AssociatePublicIpAddress: true
             DeviceIndex: 0
             Groups:
-              - !Ref SecurityGroupId
+              - !Ref SlideruleSG
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
             Ebs:
-              VolumeSize: !Ref ClusterVolumeSize
-              VolumeType: gp2
+              VolumeSize: 100
+              VolumeType: gp3
               DeleteOnTermination: true
         UserData:
           Fn::Base64: !Sub |
@@ -472,7 +472,7 @@ Resources:
             export IPV4=$(hostname -I | awk '{print $1}')
             export ORGANIZATION=${Organization}
             export CLUSTER=${ClusterName}
-            export IS_PUBLIC=${var.is_public}
+            export IS_PUBLIC=${IsPublic}
             export SLIDERULE_IMAGE=${ContainerRepo}/sliderule:${Version}
             export AMS_IMAGE=${ContainerRepo}/ams:${Version}
             export PROVISIONING_SYSTEM="https://ps.${Domain}"
@@ -493,7 +493,7 @@ Resources:
       MaxSize: !Ref NodeCapacity
       DesiredCapacity: !Ref NodeCapacity
       VPCZoneIdentifier:
-        - !Ref SubnetId
+        - !Ref SlideruleSubnet
       HealthCheckType: EC2
       CapacityRebalance: true
       LaunchTemplate:
