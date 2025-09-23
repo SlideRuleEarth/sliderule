@@ -87,7 +87,6 @@ DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
-DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 RUNNER ?= # e.g. valgrind
 
 CLANG_VER ?= ""
@@ -345,6 +344,15 @@ cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGAN
 # Website Targets
 ########################
 
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
+					--query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" \
+					--output text)
+
+ZONE_ID=$(shell aws route53 list-hosted-zones-by-name \
+			--dns-name slideruleearth.io \
+			--query "HostedZones[0].Id" \
+			--output text | sed 's|/hostedzone/||')
+
 website-render-notebooks: ## execute the notebooks used in the documentation
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa.ipynb --debug
@@ -387,6 +395,23 @@ website-destroy: ## destroy website using terraform; needs DOMAIN
 	cd terraform/website && terraform init
 	cd terraform/website && terraform workspace select $(DOMAIN)-website || terraform workspace new $(DOMAIN)-website
 	cd terraform/website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+website-create: ## create website stack
+	aws cloudformation create-stack \
+		--stack-name 	website \
+		--template-body file://cloudformation/website.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		us-west-2 \
+		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=HostedZoneId,ParameterValue=$(ZONE_ID)
+	aws cloudformation wait stack-create-complete --stack-name website
+
+website-describe: ## status the creation/deletion of the website
+	aws cloudformation describe-stack-events --stack-name website
+
+website-delete: ## deletes the website stack
+	aws cloudformation delete-stack --stack-name website
+	aws cloudformation wait stack-delete-complete --stack-name website
 
 website: ## build and update website
 	make website-render-notebooks

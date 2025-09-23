@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFront static website with custom domain, headers policy, and URI rewrite
+
+Parameters:
+
+  Domain:
+    Type: String
+
+  HostedZoneId:
+    Type: String
+
+Resources:
+
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref Domain
+
+  WebsiteBucketPublicAccessBlock:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub "${WebsiteBucket.Arn}/*"
+            Principal:
+              AWS: !GetAtt CloudFrontOAI.S3CanonicalUserId
+
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "OAI for ${Domain}"
+
+  SecurityHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${Domain}-security-headers"
+        SecurityHeadersConfig:
+          ContentTypeOptions: { Override: true }
+          FrameOptions: { FrameOption: DENY, Override: true }
+          ReferrerPolicy: { ReferrerPolicy: same-origin, Override: true }
+          XSSProtection: { ModeBlock: true, Protection: true, Override: true }
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Preload: true
+            Override: true
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: !Sub >
+              frame-ancestors 'none';
+              default-src 'none';
+              img-src 'self' data:;
+              script-src 'self' 'unsafe-inline';
+              style-src 'self' 'unsafe-inline';
+              style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+              object-src 'none';
+              font-src 'self' https://cdn.jsdelivr.net;
+              connect-src 'self' https://*.${Domain};
+            Override: true
+
+  RemoveWebFromUriFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${Domain}-remove-web"
+      FunctionConfig:
+        Comment: "Removes /web prefix and ensures index.html resolution"
+        Runtime: cloudfront-js-1.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+
+          if (uri.startsWith('/web')) {
+            request.uri = uri.replace('/web', '');
+          }
+          if (request.uri.endsWith('/')) {
+            request.uri += 'index.html';
+          } else if (!request.uri.includes('.')) {
+            request.uri += '/index.html';
+          }
+          return request;
+        }
+
+  ##############################################
+  # ACM Certificate with DNS Validation
+  ##############################################
+  WebsiteCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref Domain
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref Domain
+          HostedZoneId: !Ref HostedZoneId
+
+  MyCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref Domain
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref Domain
+          HostedZoneId: !Ref HostedZoneId
+
+  # DNS validation record (automatically created in the right hosted zone)
+  WebsiteCertificateValidationRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !GetAtt WebsiteCertificate.DomainValidationOptions.0.ResourceRecordName
+      Type: !GetAtt WebsiteCertificate.DomainValidationOptions.0.ResourceRecordType
+      TTL: 60
+      ResourceRecords:
+        - !GetAtt WebsiteCertificate.DomainValidationOptions.0.ResourceRecordValue
+
+  WebsiteCertificateValidation:
+    Type: AWS::CertificateManager::CertificateValidation
+    Properties:
+      CertificateArn: !Ref WebsiteCertificate
+      ValidationRecordFqdns:
+        - !Ref WebsiteCertificateValidationRecord
+
+  ##############################################
+  # CloudFront Distribution
+  ##############################################
+  WebsiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Aliases:
+          - !Ref Domain
+        DefaultRootObject: "index.html"
+        PriceClass: PriceClass_200
+        IPV6Enabled: true
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies: { Forward: none }
+          MinTTL: 0
+          DefaultTTL: 3600
+          MaxTTL: 86400
+          ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt RemoveWebFromUriFunction.FunctionARN
+        ViewerCertificate:
+          AcmCertificateArn: !Ref WebsiteCertificate
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1
+
+  ##############################################
+  # Route53 Record to CloudFront
+  ##############################################
+  WebsiteDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref Domain
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt WebsiteDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2 # CloudFront fixed zone ID
+
