@@ -34,6 +34,9 @@ Parameters:
   ContainerRepo:
     Type: String
 
+  NodeCapacity:
+    Type: Number
+
   #
   # Constants
   #
@@ -62,19 +65,11 @@ Parameters:
     Type: String
     Default: "10.0.0.0/16"
 
-  NodeCapacity:
-    Type: Number
-    Default: 7
-
-  ImageId:
-    Type: String
-    Default: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
-
 ##############################
 Resources:
 
   #
-  # Cluster Network
+  # Network
   #
 
   SlideruleVPC:
@@ -318,21 +313,19 @@ Resources:
   IlbInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref ImageId
+      ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
       InstanceType: c8g.large
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
-      SubnetId: !Ref SlideruleSubnet
-      PrivateIpAddress: !Ref IlbIP
-      SecurityGroupIds:
-        - !Ref IlbSG
       SourceDestCheck: true
       Monitoring: false
       NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          Groups:
-            - !Ref SlideruleSG
+        - DeviceIndex: 0
+          PrivateIpAddress: !Ref IlbIP
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref SlideruleSubnet
+          GroupSet:
+            - !Ref IlbSG
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -364,16 +357,19 @@ Resources:
   ManagerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref ImageId
+      ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
       InstanceType: r8g.large
       AvailabilityZone: !Ref AvailabilityZone
-      SubnetId: !Ref SlideruleSubnet
       IamInstanceProfile: !Ref InstanceProfile
-      PrivateIpAddress: !Ref ManagerIP
-      SecurityGroupIds:
-        - !Ref ManagerSG
       SourceDestCheck: true
       Monitoring: false
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          PrivateIpAddress: !Ref ManagerIP
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref SlideruleSubnet
+          GroupSet:
+            - !Ref ManagerSG
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -411,16 +407,19 @@ Resources:
   MonitorInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref ImageId
+      ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
       InstanceType: c8g.large
       AvailabilityZone: !Ref AvailabilityZone
-      SubnetId: !Ref SlideruleSubnet
       IamInstanceProfile: !Ref InstanceProfile
-      PrivateIpAddress: !Ref MonitorIP
-      SecurityGroupIds:
-        - !Ref MonitorSG
       SourceDestCheck: true
       Monitoring: false
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          PrivateIpAddress: !Ref MonitorIP
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref SlideruleSubnet
+          GroupSet:
+            - !Ref MonitorSG
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -453,7 +452,7 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub "${ClusterName}-lt"
       LaunchTemplateData:
-        ImageId: !Ref ImageId
+        ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
         InstanceType: t4g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile

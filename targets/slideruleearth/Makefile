@@ -66,6 +66,7 @@ INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
 WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
 
+PROJECT_PUBLIC_BUCKET = sliderule-public
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
 CLOUDFORMATION_PATH = s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)
@@ -324,6 +325,38 @@ cluster: ## build all targets related to a cluster deployment and push to aws; n
 	make cluster-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
+
+cluster-test-public:
+	@if [ -z "$(ORGANIZATION)" ] || [ "$(ORGANIZATION)" = "sliderule" ]; then \
+		echo "Error: ORGANIZATION must be provided and cannot be the same as the public cluster"; \
+		exit 1; \
+	fi
+
+cluster-create: cluster-test-public ## create a cluster in AWS
+	aws cloudformation create-stack \
+		--stack-name 	$(ORGANIZATION)-cluster \
+		--template-body file://cloudformation/cluster.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		us-west-2 \
+		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(VERSION) \
+						ParameterKey=IsPublic,ParameterValue=False \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=ClusterName,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=ContainerRepo,ParameterValue=$(ECR) \
+						ParameterKey=NodeCapacity,ParameterValue=1
+	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-cluster
+
+cluster-describe: ## status the creation/deletion of the certbot function
+	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-cluster
+
+cluster-delete: ## deletes the lambda certbot function
+	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-cluster
 
 ########################
 # Deployment Targets
@@ -598,3 +631,4 @@ help: ## That's me!
 	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
 	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
 	@echo MYIP: $(MYIP)
+	@echo ECR: $(ECR)
