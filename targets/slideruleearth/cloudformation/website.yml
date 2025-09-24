@@ -16,7 +16,7 @@ Resources:
     Properties:
       BucketName: !Ref Domain
 
-  WebsiteBucketPublicAccessBlock:
+  WebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref WebsiteBucket
@@ -27,7 +27,16 @@ Resources:
             Action: s3:GetObject
             Resource: !Sub "${WebsiteBucket.Arn}/*"
             Principal:
-              AWS: !GetAtt CloudFrontOAI.S3CanonicalUserId
+              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+
+  WebsiteBucketAccessBlock:
+    Type: AWS::S3::BucketPublicAccessBlock
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      BlockPublicAcls: true
+      BlockPublicPolicy: true
+      IgnorePublicAcls: true
+      RestrictPublicBuckets: true
 
   CloudFrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
@@ -39,7 +48,7 @@ Resources:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
       ResponseHeadersPolicyConfig:
-        Name: !Sub "${Domain}-security-headers"
+        Name: !Sub "${Domain}-${AWS::StackName}-security-headers"
         SecurityHeadersConfig:
           ContentTypeOptions: { Override: true }
           FrameOptions: { FrameOption: DENY, Override: true }
@@ -86,9 +95,6 @@ Resources:
           return request;
         }
 
-  ##############################################
-  # ACM Certificate with DNS Validation
-  ##############################################
   WebsiteCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
@@ -98,16 +104,6 @@ Resources:
         - DomainName: !Ref Domain
           HostedZoneId: !Ref HostedZoneId
 
-  MyCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: !Ref Domain
-      ValidationMethod: DNS
-      DomainValidationOptions:
-        - DomainName: !Ref Domain
-          HostedZoneId: !Ref HostedZoneId
-
-  # DNS validation record (automatically created in the right hosted zone)
   WebsiteCertificateValidationRecord:
     Type: AWS::Route53::RecordSet
     Properties:
@@ -125,9 +121,6 @@ Resources:
       ValidationRecordFqdns:
         - !Ref WebsiteCertificateValidationRecord
 
-  ##############################################
-  # CloudFront Distribution
-  ##############################################
   WebsiteDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -161,11 +154,8 @@ Resources:
         ViewerCertificate:
           AcmCertificateArn: !Ref WebsiteCertificate
           SslSupportMethod: sni-only
-          MinimumProtocolVersion: TLSv1
+          MinimumProtocolVersion: TLSv1.2_2021
 
-  ##############################################
-  # Route53 Record to CloudFront
-  ##############################################
   WebsiteDNSRecord:
     Type: AWS::Route53::RecordSet
     Properties:

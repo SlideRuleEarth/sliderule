@@ -391,12 +391,12 @@ DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 
 website-deploy: ## deploy website using terraform; needs DOMAIN
 	cd terraform/website && terraform init
-	cd terraform/website && terraform workspace select $(DOMAIN)-website || terraform workspace new $(DOMAIN)-website
+	cd terraform/website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 website-destroy: ## destroy website using terraform; needs DOMAIN
 	cd terraform/website && terraform init
-	cd terraform/website && terraform workspace select $(DOMAIN)-website || terraform workspace new $(DOMAIN)-website
+	cd terraform/website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 website-create: ## create website stack
