@@ -15,6 +15,11 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref Domain
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   WebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -29,15 +34,6 @@ Resources:
             Principal:
               CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
 
-  WebsiteBucketAccessBlock:
-    Type: AWS::S3::BucketPublicAccessBlock
-    Properties:
-      Bucket: !Ref WebsiteBucket
-      BlockPublicAcls: true
-      BlockPublicPolicy: true
-      IgnorePublicAcls: true
-      RestrictPublicBuckets: true
-
   CloudFrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
@@ -48,7 +44,7 @@ Resources:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
       ResponseHeadersPolicyConfig:
-        Name: !Sub "${Domain}-${AWS::StackName}-security-headers"
+        Name: !Sub "${AWS::StackName}-security-headers"
         SecurityHeadersConfig:
           ContentTypeOptions: { Override: true }
           FrameOptions: { FrameOption: DENY, Override: true }
@@ -75,7 +71,7 @@ Resources:
   RemoveWebFromUriFunction:
     Type: AWS::CloudFront::Function
     Properties:
-      Name: !Sub "${Domain}-remove-web"
+      Name: !Sub "${AWS::StackName}-remove-web"
       FunctionConfig:
         Comment: "Removes /web prefix and ensures index.html resolution"
         Runtime: cloudfront-js-1.0
@@ -103,23 +99,6 @@ Resources:
       DomainValidationOptions:
         - DomainName: !Ref Domain
           HostedZoneId: !Ref HostedZoneId
-
-  WebsiteCertificateValidationRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneId: !Ref HostedZoneId
-      Name: !GetAtt WebsiteCertificate.DomainValidationOptions.0.ResourceRecordName
-      Type: !GetAtt WebsiteCertificate.DomainValidationOptions.0.ResourceRecordType
-      TTL: 60
-      ResourceRecords:
-        - !GetAtt WebsiteCertificate.DomainValidationOptions.0.ResourceRecordValue
-
-  WebsiteCertificateValidation:
-    Type: AWS::CertificateManager::CertificateValidation
-    Properties:
-      CertificateArn: !Ref WebsiteCertificate
-      ValidationRecordFqdns:
-        - !Ref WebsiteCertificateValidationRecord
 
   WebsiteDistribution:
     Type: AWS::CloudFront::Distribution
