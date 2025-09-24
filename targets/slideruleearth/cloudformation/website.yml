@@ -46,26 +46,25 @@ Resources:
       ResponseHeadersPolicyConfig:
         Name: !Sub "${AWS::StackName}-security-headers"
         SecurityHeadersConfig:
-          ContentTypeOptions: { Override: true }
-          FrameOptions: { FrameOption: DENY, Override: true }
-          ReferrerPolicy: { ReferrerPolicy: same-origin, Override: true }
-          XSSProtection: { ModeBlock: true, Protection: true, Override: true }
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: same-origin
+            Override: true
+          XSSProtection:
+            ModeBlock: true
+            Protection: true
+            Override: true
           StrictTransportSecurity:
             AccessControlMaxAgeSec: 63072000
             IncludeSubdomains: true
             Preload: true
             Override: true
           ContentSecurityPolicy:
-            ContentSecurityPolicy: !Sub >
-              frame-ancestors 'none';
-              default-src 'none';
-              img-src 'self' data:;
-              script-src 'self' 'unsafe-inline';
-              style-src 'self' 'unsafe-inline';
-              style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline';
-              object-src 'none';
-              font-src 'self' https://cdn.jsdelivr.net;
-              connect-src 'self' https://*.${Domain};
+            ContentSecurityPolicy: !Sub "frame-ancestors 'none'; default-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline'; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.${Domain}"
             Override: true
 
   RemoveWebFromUriFunction:
@@ -79,7 +78,6 @@ Resources:
         function handler(event) {
           var request = event.request;
           var uri = request.uri;
-
           if (uri.startsWith('/web')) {
             request.uri = uri.replace('/web', '');
           }
