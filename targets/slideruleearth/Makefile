@@ -362,6 +362,12 @@ CFFUNC_ID = $(shell aws cloudformation describe-stacks \
   	--query "Stacks[0].Outputs[?OutputKey=='FunctionARN'].OutputValue" \
 	--output text)
 
+CFFUNC_ETAG = $(shell aws cloudfront describe-function \
+	--region us-east-1 \
+	--name cffunc-uri-rewrite \
+	--query 'ETag' \
+	--output text)
+
 website-render-notebooks: ## execute the notebooks used in the documentation
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa.ipynb --debug
@@ -404,6 +410,9 @@ website-cffunc-create: ## create the uri rewrite function for cloudfront
 
 website-cffunc-describe: ## create the uri rewrite function for cloudfront
 	aws cloudformation describe-stack-events --region us-east-1 --stack-name cffunc
+
+website-cffunc-publish: ## publish the cloudfront function
+	aws cloudfront publish-function --region us-east-1 --name cffunc-uri-rewrite --if-match $(CFFUNC_ETAG)
 
 website-cffunc-delete: ## deletes the uri rewrite function for cloudfront
 	aws cloudformation delete-stack --region us-east-1 --stack-name cffunc
