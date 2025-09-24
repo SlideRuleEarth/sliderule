@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: CloudFront static website with custom domain, headers policy, and URI rewrite
+Description: CloudFront static website with custom domain and headers policy
 
 Parameters:
 
@@ -9,28 +9,24 @@ Parameters:
   HostedZoneId:
     Type: String
 
-Resources:
+  ProjectWebsiteBucket:
+    Type: String
 
-  WebsiteBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref Domain
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+  CloudFrontFunctionARN:
+    Type: String
+
+Resources:
 
   WebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref WebsiteBucket
+      Bucket: !Ref ProjectWebsiteBucket
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Action: s3:GetObject
-            Resource: !Sub "${WebsiteBucket.Arn}/*"
+            Resource:  !Sub "arn:aws:s3:::${ProjectWebsiteBucket}/*"
             Principal:
               CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
 
@@ -67,28 +63,6 @@ Resources:
             ContentSecurityPolicy: !Sub "frame-ancestors 'none'; default-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline'; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.${Domain}"
             Override: true
 
-  RemoveWebFromUriFunction:
-    Type: AWS::CloudFront::Function
-    Properties:
-      Name: !Sub "${AWS::StackName}-remove-web"
-      FunctionConfig:
-        Comment: "Removes /web prefix and ensures index.html resolution"
-        Runtime: cloudfront-js-1.0
-      FunctionCode: |
-        function handler(event) {
-          var request = event.request;
-          var uri = request.uri;
-          if (uri.startsWith('/web')) {
-            request.uri = uri.replace('/web', '');
-          }
-          if (request.uri.endsWith('/')) {
-            request.uri += 'index.html';
-          } else if (!request.uri.includes('.')) {
-            request.uri += '/index.html';
-          }
-          return request;
-        }
-
   WebsiteCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
@@ -110,7 +84,7 @@ Resources:
         IPV6Enabled: true
         Origins:
           - Id: S3Origin
-            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            DomainName: !Sub "${ProjectWebsiteBucket}.s3.${AWS::Region}.amazonaws.com"
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
         DefaultCacheBehavior:
@@ -127,7 +101,7 @@ Resources:
           ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
           FunctionAssociations:
             - EventType: viewer-request
-              FunctionARN: !GetAtt RemoveWebFromUriFunction.FunctionARN
+              FunctionARN: !Ref CloudFrontFunctionARN
         ViewerCertificate:
           AcmCertificateArn: !Ref WebsiteCertificate
           SslSupportMethod: sni-only

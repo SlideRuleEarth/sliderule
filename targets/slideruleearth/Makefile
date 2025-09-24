@@ -59,11 +59,13 @@ WEBSITE_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
+
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
-PROJECT_PUBLIC_BUCKET = sliderule-public
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
+PROJECT_PUBLIC_BUCKET = sliderule-public
+PROJECT_WEBSITE_BUCKET = sliderule-website
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
@@ -343,16 +345,22 @@ cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGAN
 ########################
 
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
-					--query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" \
-					--output text)
+	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" \
+	--output text)
 
 ZONE_ID=$(shell aws route53 list-hosted-zones-by-name \
-			--dns-name slideruleearth.io \
-			--query "HostedZones[0].Id" \
-			--output text | sed 's|/hostedzone/||')
+	--dns-name slideruleearth.io \
+	--query "HostedZones[0].Id" \
+	--output text | sed 's|/hostedzone/||')
 
 WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
 WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
+
+CFFUNC_ID = $(shell aws cloudformation describe-stacks \
+	--stack-name cffunc \
+	--region us-east-1 \
+  	--query "Stacks[0].Outputs[?OutputKey=='FunctionARN'].OutputValue" \
+	--output text)
 
 website-render-notebooks: ## execute the notebooks used in the documentation
 	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
@@ -384,37 +392,41 @@ website-export: ## export website to local host directory; needs VERSION
 	docker run -it --entrypoint /bin/bash  -v ./docker/website:/host -v $(WEBSITE_EXPORT_DIR):/output --rm --name website $(ECR)/website:$(VERSION) /host/export_dist.sh
 
 website-live-update: website-export # Update the website docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(PROJECT_WEBSITE_BUCKET) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
-DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
+website-cffunc-create: ## create the uri rewrite function for cloudfront
+	aws cloudformation create-stack \
+		--stack-name 	cffunc \
+		--region		us-east-1 \
+		--template-body file://cloudformation/cffunc.yml
+	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name cffunc
 
-website-deploy: ## deploy website using terraform; needs DOMAIN
-	cd terraform/website && terraform init
-	cd terraform/website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+website-cffunc-describe: ## create the uri rewrite function for cloudfront
+	aws cloudformation describe-stack-events --region us-east-1 --stack-name cffunc
 
-website-destroy: ## destroy website using terraform; needs DOMAIN
-	cd terraform/website && terraform init
-	cd terraform/website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+website-cffunc-delete: ## deletes the uri rewrite function for cloudfront
+	aws cloudformation delete-stack --region us-east-1 --stack-name cffunc
+	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name cffunc
 
 website-create: ## create website stack
 	aws cloudformation create-stack \
 		--stack-name 	website \
 		--template-body file://cloudformation/website.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		us-west-2 \
+		--region 		us-east-1 \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=HostedZoneId,ParameterValue=$(ZONE_ID)
-	aws cloudformation wait stack-create-complete --stack-name website
+						ParameterKey=HostedZoneId,ParameterValue=$(ZONE_ID) \
+						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET) \
+						ParameterKey=CloudFrontFunctionARN,ParameterValue=$(CFFUNC_ID)
+	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name website
 
 website-describe: ## status the creation/deletion of the website
-	aws cloudformation describe-stack-events --stack-name website
+	aws cloudformation describe-stack-events --region us-east-1 --stack-name website
 
 website-delete: ## deletes the website stack
-	aws cloudformation delete-stack --stack-name website
-	aws cloudformation wait stack-delete-complete --stack-name website
+	aws cloudformation delete-stack --region us-east-1 --stack-name website
+	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name website
 
 website: ## build and update website
 	make website-render-notebooks
@@ -587,15 +599,31 @@ perfssbtest: ## run strips serial and batch performance test comparing results
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
 
 ########################
-# Help Target
+# Help Targets
 ########################
 
-help: ## That's me!
-	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
-	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@echo ENVVER:$(ENVVER)
-	@echo DOMAIN: $(DOMAIN)
-	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
-	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
-	@echo MYIP: $(MYIP)
+environment: ## echo the environment variables
+	@echo INSTALLDIR: $(INSTALLDIR)
+	@echo PROJECT_BUCKET: $(PROJECT_BUCKET)
+	@echo PROJECT_FOLDER: $(PROJECT_FOLDER)
+	@echo PROJECT_PUBLIC_BUCKET: $(PROJECT_PUBLIC_BUCKET)
+	@echo PROJECT_WEBSITE_BUCKET: $(PROJECT_WEBSITE_BUCKET)
+	@echo AWS_ACCOUNT: $(AWS_ACCOUNT)
+	@echo AWS_REGION: $(AWS_REGION)
 	@echo ECR: $(ECR)
+	@echo MYIP: $(MYIP)
+	@echo ENVVER: $(ENVVER)
+	@echo ARCH: $(ARCH)
+	@echo DOMAIN: $(DOMAIN)
+	@echo ORGANIZATION: $(ORGANIZATION)
+	@echo VERSION: $(VERSION)
+	@echo DOCKEROPTS: $(DOCKEROPTS)
+	@echo BUILDX: $(BUILDX)
+	@echo DOCKER_PLATFORM: $(DOCKER_PLATFORM)
+	@echo USERCFG: $(USERCFG)
+	@echo RUNNER: $(RUNNER)
+	@echo DEBUG_CFG: $(DEBUG_CFG)
+	@echo RELEASE_CFG: $(RELEASE_CFG)
+
+help: ## That's me!
+	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
