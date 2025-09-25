@@ -46,6 +46,7 @@
 const char* UT_String::LUA_META_NAME = "UT_String";
 const struct luaL_Reg UT_String::LUA_META_TABLE[] = {
     {"replace",     testReplace},
+    {"find",        testFind},
     {NULL,          NULL}
 };
 
@@ -112,6 +113,55 @@ int UT_String::testReplace(lua_State* L)
     char* test3 = StringLib::replace("This is a long $1 and I am $2 sure if this $1 will work or $2", oldtxt, newtxt, 2);
     ut_assert(lua_obj, StringLib::match(test3, "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3);
     delete [] test3;
+
+    // return success or failure
+    lua_pushboolean(L, ut_status(lua_obj));
+    return 1;
+}
+
+/*--------------------------------------------------------------------------------------
+ * testFind
+ *--------------------------------------------------------------------------------------*/
+int UT_String::testFind(lua_State* L)
+{
+    UT_String* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_String*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    ut_initialize(lua_obj);
+    char* test_str;
+
+    // Find beginning of string
+    test_str = StringLib::find("Hello World", "Hello");
+    ut_assert(lua_obj, StringLib::match(test_str, "Hello World"), "Failed to find beginning of string: %s", test_str);
+
+    // Find middle of string
+    test_str = StringLib::find("Hello World", "o W");
+    ut_assert(lua_obj, StringLib::match(test_str, "o World"), "Failed to find middle of string: %s", test_str);
+
+    // Find end of string
+    test_str = StringLib::find("Hello World", "World");
+    ut_assert(lua_obj, StringLib::match(test_str, "World"), "Failed to find end of string: %s", test_str);
+
+    // Don't find off the end of the string
+    test_str = StringLib::find("Hello World", "World War");
+    ut_assert(lua_obj, test_str == NULL, "Failed to not find string: %s", test_str);
+
+    // Don't find random string
+    test_str = StringLib::find("Hello World", "Waldo");
+    ut_assert(lua_obj, test_str == NULL, "Failed to not find string: %s", test_str);
+
+    // Don't find off the beginning of the string
+    test_str = StringLib::find("Hello World", "Oh Hello");
+    ut_assert(lua_obj, test_str == NULL, "Failed to not find string: %s", test_str);
 
     // return success or failure
     lua_pushboolean(L, ut_status(lua_obj));

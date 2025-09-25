@@ -69,6 +69,7 @@ class UT_String: public UnitTest
             ~UT_String          (void) override = default;
 
 	static int  testReplace     (lua_State* L);
+	static int  testFind        (lua_State* L);
 };
 
 #endif  /* __ut_string__ */
