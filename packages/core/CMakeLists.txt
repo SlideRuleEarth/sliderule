@@ -66,14 +66,14 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.cpp
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Dictionary.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Field.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_List.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_MsgQ.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Ordering.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_String.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Table.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_TimeLib.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_Dictionary.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_Field.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_List.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_MsgQ.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_Ordering.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_String.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_Table.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_TimeLib.cpp>
 )
 
 # includes
@@ -81,6 +81,7 @@ target_include_directories (slideruleLib
     PUBLIC
         $<INSTALL_INTERFACE:${INCDIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/unittests>
 )
 
 # header install
@@ -139,14 +140,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.h
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Dictionary.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Field.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_List.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_MsgQ.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Ordering.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_String.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Table.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_TimeLib.h>
     DESTINATION
         ${INCDIR}
 )

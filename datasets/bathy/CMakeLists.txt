@@ -15,13 +15,14 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySignalStrength.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_BathyRefractionCorrector.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_BathyRefractionCorrector.cpp>
 )
 
 target_include_directories (slideruleLib
     PUBLIC
         $<INSTALL_INTERFACE:${INCDIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/package
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/unittests>
 )
 
 install (
@@ -37,7 +38,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySignalStrength.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_BathyRefractionCorrector.h>
     DESTINATION
         ${INCDIR}
 )
