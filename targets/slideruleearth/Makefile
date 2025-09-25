@@ -7,8 +7,6 @@
 #           The user must have up-to-date aws credentials
 #     * Docker
 #           The user must be logged into the AWS Elastic Container Registry (ECR)
-#     * Terraform & Packer
-#           The binaries are sufficient, but pay close attention to the local package versions
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
 #     * conda-lock
@@ -101,7 +99,7 @@ RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += $(COMMON_CFG)
 
 ########################
-# Build Targets
+# Local Build Targets
 ########################
 
 all: sliderule
@@ -137,6 +135,10 @@ buildenv: ## run the build environment docker container
 		--rm \
 		--name buildenv \
 		$(ECR)/sliderule-buildenv:$(VERSION)
+
+########################
+# Docker Build Targets
+########################
 
 buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -246,13 +248,13 @@ AMI_DATE = $(shell date +'%Y.%-m.%d')
 
 AMI_ID = $(shell aws imagebuilder get-image \
 	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
-	--region us-west-2 \
+	--region $(AWS_REGION) \
 	--query 'image.outputResources.amis[0].image' \
 	--output text)
 
 AMI_NAME = $(shell aws imagebuilder get-image \
 	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
-	--region us-west-2 \
+	--region $(AWS_REGION) \
 	--query 'image.outputResources.amis[0].name' \
 	--output text)
 
@@ -261,7 +263,7 @@ ami-pipeline-create: ## create EC2 Image Builder pipeline
 		--stack-name 	ami \
 		--template-body file://cloudformation/ami.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		us-west-2 \
+		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=AmiDate,ParameterValue=$(AMI_DATE)
@@ -283,7 +285,7 @@ ami-image-build: ## run EC2 Image Builder pipeline to create an AMI
 	aws s3 cp cloudformation/ami/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive
 	aws imagebuilder start-image-pipeline-execution \
    		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
-    	--region us-west-2
+    	--region $(AWS_REGION)
 
 ami-image-publish: ## publish AMI image name to SSM
 	aws ssm put-parameter \
@@ -306,7 +308,7 @@ cluster-create: ## create a cluster in AWS
 		--stack-name 	$(ORGANIZATION)-$(COLOR)-cluster \
 		--template-body file://cloudformation/cluster.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		us-west-2 \
+		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
 						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
@@ -332,13 +334,33 @@ cluster-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses 
 		--stack-name 	dns \
 		--template-body file://cloudformation/dns.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		us-west-2 \
+		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
 						ParameterKey=PublicIp,ParameterValue=$(PUBLIC_IP)
 
 cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
 	aws cloudformation delete-stack --stack-name dns
+
+
+CLUSTER_PARMS = '{\
+	"Version": "$(VERSION)",\
+	"IsPublic": "$(IS_PUBLIC)",\
+	"Domain": "$(DOMAIN)",\
+	"Organization": "$(ORGANIZATION)",\
+	"Color": "$(COLOR)",\
+	"ProjectBucket": "$(PROJECT_BUCKET)",\
+	"ProjectFolder": "$(PROJECT_FOLDER)",\
+	"ProjectPublicBucket": "$(PROJECT_PUBLIC_BUCKET)",\
+	"ContainerRegistry": "$(ECR)",\
+	"NodeCapacity": "$(NODE_CAPACITY)",\
+	"Region": "$(AWS_REGION)"\
+}'
+
+deploy-cluster:
+	echo $(CLUSTER_PARMS) > /tmp/request.json
+#	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/request.json /tmp/response.json
+#	cat /tmp/response.json | jq
 
 ########################
 # Website Targets
@@ -467,7 +489,7 @@ certbot-create: ## creates the lambda certbot function
 		--stack-name 	certbot \
 		--template-body file://cloudformation/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		us-west-2 \
+		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
@@ -509,8 +531,9 @@ provisioner-create: ## creates the lambda provisioner function
 		--stack-name 	provisioner \
 		--template-body file://cloudformation/provisioner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		us-west-2 \
+		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner

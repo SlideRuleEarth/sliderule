@@ -3,37 +3,34 @@ Description: SlideRule Provisioner Lambda
 Parameters:
   ContainerRegistry:
     Type: String
-    Description: Container registry to use
+  EnvironmentVersion:
+    Type: String
   ProjectBucket:
     Type: String
-    Description: S3 bucket containing the lambda zipfile
   LambdaZipFile:
     Type: String
-    Description: Zipfile containing the lambda function code
-
 Resources:
-
   ## Lambda Function
   ProvisionerLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: Provisioner
+      FunctionName: provisioner-deploy
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
       Runtime: python3.11
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_handler
-      Description: SlideRule Provisioner
+      Handler: main.lambda_deploy
+      Description: DEPLOY(cluster)
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
           CONTAINER_REGISTRY: !Ref ContainerRegistry
-
-  ## Lambda Role
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+  ## IAM Role
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:

@@ -4,19 +4,24 @@ import os
 import json
 import boto3
 
-def lambda_handler(event, context):
+#
+# DEPLOY(cluster)
+#
+def lambda_deploy(event, context):
 
     # initialize response status
     status = {"Status": False}
 
     try:
-        # parse user supplied parameters
+        # get environment and user supplied parameters
         parms = json.loads(event)
+        environment_version = os.environ['ENVIRONMENT_VERSION']
+        container_registry = os.environ['CONTAINER_REGISTRY']
 
         # build parameters for stack creation
         Parameters = [
             {"ParameterKey": "Version", "ParameterValue": parms["Version"]},
-            {"ParameterKey": "EnvironmentVersion", "ParameterValue": parms["EnvironmentVersion"]},
+            {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
             {"ParameterKey": "IsPublic", "ParameterValue": parms["IsPublic"]},
             {"ParameterKey": "Domain", "ParameterValue": parms["Domain"]},
             {"ParameterKey": "ClusterName", "ParameterValue": f'{parms["Organization"]}-{parms["Color"]}'},
