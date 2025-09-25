@@ -29,9 +29,9 @@ do
     for i = 1, #samplingAlgs do
         local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlgs[i], radius=radius}))
         local tbl, err = dem:sample(lon, lat, height)
-        if err ~= 0 then
-            print(string.format("======> FAILED to read",lon, lat))
-        else
+        runner.assert(err == 0, string.format("failed to read: %f %f", lon, lat))
+        runner.assert(#tbl > 0, string.format("failed to return any samples: %f %f", lon, lat))
+        if (err == 0 and #tbl > 0) then
             local el, file
             for j, v in ipairs(tbl) do
                 el = v["value"]
@@ -42,7 +42,6 @@ do
                     runner.assert(el > minElevation)
                 end
             end
-            print(string.format("%16s %16.9f", samplingAlgs[i], el))
         end
     end
     print('\n-------------------------------------------------')
