@@ -118,7 +118,12 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                     return false;
                 }
             }
-            const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, h5tc, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            const hid_t plist_id = H5Pcreate(H5P_DATASET_CREATE);
+            const hsize_t chunk_dims[1] = { MIN(number_of_elements, 10000) };
+            H5Pset_chunk(plist_id, 1, chunk_dims);
+            H5Pset_deflate(plist_id, 4); // Enable gzip compression, level 4 (1=fastest, 9=best)
+            if(dataset.data_type == RecordObject::INT8 || dataset.data_type == RecordObject::UINT8) H5Pset_shuffle(plist_id); // Enable shuffle
+            const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, h5tc, dataspace_id, H5P_DEFAULT, plist_id, H5P_DEFAULT);
             const herr_t status = H5Dwrite(dataset_id, h5tw, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
             if(status < 0)
             {
@@ -127,6 +132,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             }
             if(dataset.data_type == RecordObject::STRING) H5Tclose(h5tc);
             H5Sclose(dataspace_id);
+            H5Pclose(plist_id);
             hid_stack.push(dataset_id);
         }
         else if(dataset.dataset_type == SCALAR)
