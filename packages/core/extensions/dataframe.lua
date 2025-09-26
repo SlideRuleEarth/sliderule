@@ -52,10 +52,10 @@ local function get_resources(rqst, q, userlog)
             userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> retrieved %d resources", q, #rsps))
             return RC_SUCCESS, rsps
         elseif rc == earthdata.RSPS_TRUNCATED then
-            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed query... response truncated: %s", q, rsps))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed query... response truncated: %s", q, rsps))
             return RC_EARTHDATA_FAILURE, nil
         elseif rc == earthdata.UNSUPPORTED then
-            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed query... unsupported dataset: %s", q, rsps))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed query... unsupported dataset: %s", q, rsps))
             return RC_EARTHDATA_FAILURE, nil
         else -- retry
             userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed attempt %d <%d>: %s", q, attempt, rc, rsps))
