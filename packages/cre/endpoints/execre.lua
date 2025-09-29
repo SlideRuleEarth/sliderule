@@ -35,23 +35,30 @@ local container_parms = {
     container_command = string.format("%s %s/%s %s/%s", command, crenv.container_sandbox_mount, input, crenv.container_sandbox_mount, output),
     timeout = timeout
 }
-local container = runner.execute(crenv, container_parms, { [input] = parms }, _rqst.rspq)
+local container = runner.execute(crenv, container_parms, { [input] = parms })
 runner.wait(container, timeout)
-runner.cleanup(crenv)
 
 -------------------------------------------------------
--- return results
+-- read results
 -------------------------------------------------------
-local f, err = io.open(string.format("%s/%s", crenv.host_sandbox_directory, output), "r")
+local response = {}
+local output_filename = string.format("%s/%s", crenv.host_sandbox_directory, output)
+local f, err = io.open(output_filename, "r")
 if f then
     local data = f:read()
     f:close()
     local status, results = pcall(json.decode, data)
     if status then
-        return results
+        response = results
     else
-        return { message = string.format("error decoding json: %s", results)}
+        response = { status = false, result = string.format("error decoding json: %s", results)}
     end
 else
-    return { message = string.format("error opening result file: %s", err) }
+    response = { status = false, result = string.format("error opening result file: %s", err) }
 end
+
+-------------------------------------------------------
+-- return
+-------------------------------------------------------
+runner.cleanup(crenv)
+return json.encode(response)
