@@ -38,6 +38,8 @@
 #include <filesystem>
 #include <sstream>
 #include <iostream>
+#include <array>
+#include <memory>
 
 #include "ContainerRunner.h"
 #include "OsApi.h"
@@ -232,13 +234,17 @@ void* ContainerRunner::controlThread (void* parm)
     if(check_http_code < EndpointObject::OK || check_http_code >= EndpointObject::Bad_Request)
     {
         alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Pulling container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), check_http_code, check_response);
+        string auth = authenticateToDocker();
+        const FString* registry_auth = new const FString("X-Registry-Auth: %s", auth.c_str());
+        headers.add(registry_auth);
         const FString pull_url("http://localhost/%s/images/create?fromImage=%s", api_version, cr->parms->container_image.value.c_str());
         const char* pull_response = NULL;
-        const long pull_http_code = CurlLib::request(EndpointObject::GET, check_url.c_str(), NULL, &check_response, NULL, false, false, cr->parms->timeout.value, &headers, unix_socket);
+        const long pull_http_code = CurlLib::request(EndpointObject::POST, pull_url.c_str(), NULL, &pull_response, NULL, false, false, cr->parms->timeout.value, &headers, unix_socket);
+        if(pull_http_code < EndpointObject::OK || pull_http_code >= EndpointObject::Bad_Request)
+        {
+            alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to pull container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), pull_http_code, pull_response);
+        }
     }
-
-//    curl --unix-socket /var/run/docker.sock -X POST "http://localhost/images/create?fromImage=alpine&tag=latest"
-//    curl --unix-socket /var/run/docker.sock http://localhost/images/alpine:latest/json
 
     /* Build Container Command Parameter */
     string token;
@@ -464,33 +470,38 @@ void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size,
         delete [] message;
     }
 }
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <array>
-/*----------------------------------------------------------------------------
- * pullContainerImage
- *----------------------------------------------------------------------------*/
-bool ContainerRunner::pullContainerImage (const char* image_name)
-{
-    // execute command
-    FString cmd("aws ecr get-login-password --region us-west-2")
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-    if(!pipe) return false;
 
-    // read output
-    string password;
-    std::array<char, 128> buffer;
-    while(fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        password += buffer.data();
+/*----------------------------------------------------------------------------
+ * authenticateToDocker
+ *----------------------------------------------------------------------------*/
+string ContainerRunner::authenticateToDocker (void)
+{
+    string auth;
+
+    // execute command
+    FString cmd("aws ecr get-login-password --region us-west-2");
+    std::unique_ptr<FILE, decltype(&pclose)> shell(popen(cmd.c_str(), "r"), pclose);
+    if(shell)
+    {
+        // read output
+        string password;
+        std::array<char, 128> buffer;
+        while(fgets(buffer.data(), buffer.size(), shell.get()) != nullptr) {
+            password += buffer.data();
+        }
+
+        // trim newline at the end
+        if(!password.empty() && password.back() == '\n') password.pop_back();
+
+        // build authentication header
+        FString auth_json("{\"username\":\"AWS\",\"password\":\"%s\",\"serveraddress\":\"742127912612.dkr.ecr.us-west-2.amazonaws.com\"}", password.c_str());
+        int length = auth_json.length();
+        const char* auth_b64 = StringLib::b64encode(auth_json.c_str(), &length);
+
+        // return authentication string
+        auth = auth_b64;
+        delete [] auth_b64;
     }
 
-    // trim newline at the end
-    if(!password.empty() && password.back() == '\n') password.pop_back();
-
-    // build authentication header
-    FString auth_json("{\"username\":\"AWS\",\"password\":\"%s\",\"serveraddress\":\"742127912612.dkr.ecr.us-west-2.amazonaws.com\"}", password.c_str());
-    int length = auth_json.length();
-    const char* auth_b64 = StringLib::b64encode(auth_json.c_str(), &length);
-        ' | base64 | tr -d '\n')
+    return auth;
 }

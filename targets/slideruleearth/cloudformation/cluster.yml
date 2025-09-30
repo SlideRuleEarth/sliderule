@@ -164,6 +164,7 @@ Resources:
                 Action: ["s3:ListBucket"]
                 Resource:
                   - arn:aws:s3:::sliderule
+                  - arn:aws:s3:::sliderule-public
                   - arn:aws:s3:::pgc-opendata-dems
                   - arn:aws:s3:::prd-tnm
                   - arn:aws:s3:::esa-worldcover
@@ -173,6 +174,7 @@ Resources:
                 Action: ["s3:GetObject"]
                 Resource:
                   - arn:aws:s3:::sliderule/*
+                  - arn:aws:s3:::sliderule-public/*
                   - arn:aws:s3:::pgc-opendata-dems/*
                   - arn:aws:s3:::prd-tnm/*
                   - arn:aws:s3:::esa-worldcover/*
