@@ -303,7 +303,7 @@ COLOR ?= grey
 IS_PUBLIC ?= False
 NODE_CAPACITY ?= 1
 
-cluster-create: ## create a cluster in AWS
+deployment-create: ## create a cluster in AWS
 	aws cloudformation create-stack \
 		--stack-name 	$(ORGANIZATION)-$(COLOR)-cluster \
 		--template-body file://cloudformation/cluster.yml \
@@ -322,14 +322,14 @@ cluster-create: ## create a cluster in AWS
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
 	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-cluster-describe: ## status the creation/deletion of the certbot function
+deployment-describe: ## status the creation/deletion of the certbot function
 	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-cluster-delete: ## deletes the lambda certbot function
+deployment-delete: ## deletes the lambda certbot function
 	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-cluster-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
+deployment-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
 	aws cloudformation deploy \
 		--stack-name 	dns \
 		--template-body file://cloudformation/dns.yml \
@@ -339,9 +339,8 @@ cluster-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses 
 						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
 						ParameterKey=PublicIp,ParameterValue=$(PUBLIC_IP)
 
-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
+deployment-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
 	aws cloudformation delete-stack --stack-name dns
-
 
 CLUSTER_PARMS = '{\
 	"Version": "$(VERSION)",\
@@ -357,7 +356,7 @@ CLUSTER_PARMS = '{\
 	"Region": "$(AWS_REGION)"\
 }'
 
-deploy-cluster:
+deployment-invoke:
 	echo $(CLUSTER_PARMS) > /tmp/request.json
 #	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/request.json /tmp/response.json
 #	cat /tmp/response.json | jq

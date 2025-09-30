@@ -93,6 +93,7 @@ class ContainerRunner: public LuaObject
                         ~ContainerRunner        (void) override;
         static void*    controlThread           (void* parm);
         static void     processContainerLogs    (const char* buffer, int buffer_size, const char* id);
+        static bool     pullContainerImage      (const char* image_name);
 };
 
 #endif  /* __container_runner__ */

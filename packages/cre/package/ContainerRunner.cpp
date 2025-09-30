@@ -225,6 +225,21 @@ void* ContainerRunner::controlThread (void* parm)
     const FString* content_type = new const FString("Content-Type: application/json");
     headers.add(content_type);
 
+    /* Check for Image (and Pull If Necessary) */
+    const FString check_url("http://localhost/%s/images/%s/json", api_version, cr->parms->container_image.value.c_str());
+    const char* check_response = NULL;
+    const long check_http_code = CurlLib::request(EndpointObject::GET, check_url.c_str(), NULL, &check_response, NULL, false, false, cr->parms->timeout.value, &headers, unix_socket);
+    if(check_http_code < EndpointObject::OK || check_http_code >= EndpointObject::Bad_Request)
+    {
+        alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Pulling container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), check_http_code, check_response);
+        const FString pull_url("http://localhost/%s/images/create?fromImage=%s", api_version, cr->parms->container_image.value.c_str());
+        const char* pull_response = NULL;
+        const long pull_http_code = CurlLib::request(EndpointObject::GET, check_url.c_str(), NULL, &check_response, NULL, false, false, cr->parms->timeout.value, &headers, unix_socket);
+    }
+
+//    curl --unix-socket /var/run/docker.sock -X POST "http://localhost/images/create?fromImage=alpine&tag=latest"
+//    curl --unix-socket /var/run/docker.sock http://localhost/images/alpine:latest/json
+
     /* Build Container Command Parameter */
     string token;
     vector<string> tokens;
@@ -397,7 +412,7 @@ void* ContainerRunner::controlThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * controlThread
+ * processContainerLogs
  *----------------------------------------------------------------------------*/
 void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size, const char* id)
 {
@@ -448,4 +463,34 @@ void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size,
         /* Clean Up */
         delete [] message;
     }
+}
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <array>
+/*----------------------------------------------------------------------------
+ * pullContainerImage
+ *----------------------------------------------------------------------------*/
+bool ContainerRunner::pullContainerImage (const char* image_name)
+{
+    // execute command
+    FString cmd("aws ecr get-login-password --region us-west-2")
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if(!pipe) return false;
+
+    // read output
+    string password;
+    std::array<char, 128> buffer;
+    while(fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        password += buffer.data();
+    }
+
+    // trim newline at the end
+    if(!password.empty() && password.back() == '\n') password.pop_back();
+
+    // build authentication header
+    FString auth_json("{\"username\":\"AWS\",\"password\":\"%s\",\"serveraddress\":\"742127912612.dkr.ecr.us-west-2.amazonaws.com\"}", password.c_str());
+    int length = auth_json.length();
+    const char* auth_b64 = StringLib::b64encode(auth_json.c_str(), &length);
+        ' | base64 | tr -d '\n')
 }
