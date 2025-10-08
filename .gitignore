@@ -1,6 +1,9 @@
 .vscode/
 .DS_Store
 
+.github/
+.github/workflows/
+
 # excces nc file
 *.nc
 
