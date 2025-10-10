@@ -38,7 +38,7 @@
 
 #include "GeoRaster.h"
 
-/****************************************************************************
+/******************************************************************************
  * USGS3DEP 1METER GTI DEM RASTER CLASS
  ******************************************************************************/
 
@@ -71,11 +71,12 @@ class Usgs3dep1meterGtiDemRaster: public GeoRaster
                          1,                   /* elevationBandNum */
                          GdalRaster::NO_BAND, /* maskBandNum      */
                          NULL,                /* overrideGeoTransform */
-                         overrideTargetCRS) {}
+                        //  overrideTargetCRS) {}
+                         NULL) {}
 
                ~Usgs3dep1meterGtiDemRaster (void) = default;
 
-        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);
+        // static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);
 
         /*--------------------------------------------------------------------
          * Data

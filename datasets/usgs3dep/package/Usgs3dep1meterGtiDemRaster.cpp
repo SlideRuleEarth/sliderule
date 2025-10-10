@@ -52,50 +52,50 @@
  * the constructor for Usgs3dep10meterDemRaster should set it as parms->proj_pipeline
  * and the rest of the code should stay as is, including this method.
  *----------------------------------------------------------------------------*/
-OGRErr Usgs3dep1meterGtiDemRaster::overrideTargetCRS(OGRSpatialReference& target, const void* param)
-{
-    static_cast<void>(param);
-    OGRErr ogrerr   = OGRERR_FAILURE;
-    int northFlag   = 0;
-    const int utm   = target.GetUTMZone(&northFlag);
+// OGRErr Usgs3dep1meterGtiDemRaster::overrideTargetCRS(OGRSpatialReference& target, const void* param)
+// {
+//     static_cast<void>(param);
+//     OGRErr ogrerr   = OGRERR_FAILURE;
+//     int northFlag   = 0;
+//     const int utm   = target.GetUTMZone(&northFlag);
 
-    // target.dumpReadable();
-    mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
+//     // target.dumpReadable();
+//     mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
 
-    /* Must be north */
-    if(northFlag==0)
-    {
-        mlog(ERROR, "Failed to override target CRS, UTM %d%s detected", utm, northFlag?"N":"S");
-        return ogrerr;
-    }
+//     /* Must be north */
+//     if(northFlag==0)
+//     {
+//         mlog(ERROR, "Failed to override target CRS, UTM %d%s detected", utm, northFlag?"N":"S");
+//         return ogrerr;
+//     }
 
-    const int MIN_UTM = 1;
-    const int MAX_UTM = 60;
+//     const int MIN_UTM = 1;
+//     const int MAX_UTM = 60;
 
-    if(utm < MIN_UTM || utm > MAX_UTM)
-    {
-        mlog(ERROR, "Failed to override target CRS, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
-        return ogrerr;
-    }
+//     if(utm < MIN_UTM || utm > MAX_UTM)
+//     {
+//         mlog(ERROR, "Failed to override target CRS, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
+//         return ogrerr;
+//     }
 
-    const int NAVD88_HEIGHT_EPSG          = 5703;
-    const int NAD83_2011_UTM_ZONE_1N_EPSG = 6330;
+//     const int NAVD88_HEIGHT_EPSG          = 5703;
+//     const int NAD83_2011_UTM_ZONE_1N_EPSG = 6330;
 
-    const int epsg = NAD83_2011_UTM_ZONE_1N_EPSG + utm - 1;
-    mlog(DEBUG, "New EPSG: %d", epsg);
+//     const int epsg = NAD83_2011_UTM_ZONE_1N_EPSG + utm - 1;
+//     mlog(DEBUG, "New EPSG: %d", epsg);
 
-    OGRSpatialReference horizontal;
-    OGRSpatialReference vertical;
+//     OGRSpatialReference horizontal;
+//     OGRSpatialReference vertical;
 
-    const OGRErr er1 = horizontal.importFromEPSG(epsg);
-    const OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
-    const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
+//     const OGRErr er1 = horizontal.importFromEPSG(epsg);
+//     const OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
+//     const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
-    if(er1 == OGRERR_NONE && er2 == OGRERR_NONE && er3 == OGRERR_NONE)
-    {
-        ogrerr = OGRERR_NONE;
-    }
-    else mlog(ERROR, "Failed to overried target CRS");
+//     if(er1 == OGRERR_NONE && er2 == OGRERR_NONE && er3 == OGRERR_NONE)
+//     {
+//         ogrerr = OGRERR_NONE;
+//     }
+//     else mlog(ERROR, "Failed to overried target CRS");
 
-    return ogrerr;
-}
+//     return ogrerr;
+// }

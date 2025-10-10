@@ -36,6 +36,7 @@
 #include "RasterSample.h"
 #include "GdalRaster.h"
 #include "RasterObject.h"
+#include <filesystem>
 
 #ifdef __aws__
 #include "aws.h"
@@ -129,11 +130,23 @@ void GdalRaster::open(void)
 
     try
     {
+        namespace fs = std::filesystem;
+        const fs::path oldCwd = fs::current_path();
+        bool isGti = (fileName.length() >= 4 && fileName.substr(fileName.length() - 4) == ".gti") ? true : false;
+        if(isGti)
+        {
+            const fs::path gtiPath = fileName;
+            const fs::path gtiDir = gtiPath.parent_path();
+            fs::current_path(gtiDir);
+        }
+
         dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
         if(dset == NULL)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open raster: %s:", fileName.c_str());
 
         mlog(DEBUG, "Opened %s", fileName.c_str());
+
+        if(isGti) fs::current_path(oldCwd);
 
         const int bandCount = dset->GetRasterCount();
         if (bandCount == 0)

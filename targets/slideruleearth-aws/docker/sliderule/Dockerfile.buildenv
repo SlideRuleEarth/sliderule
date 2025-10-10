@@ -115,7 +115,8 @@ RUN git clone https://github.com/OSGeo/gdal.git && \
     git checkout $VERSION && \
     mkdir -p /build/gdal && \
     cd /build/gdal && \
-    cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF -DGDAL_USE_HDF5=ON -DGDAL_ENABLE_HDF5_GLOBAL_LOCK=OFF && \
+    cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF -DGDAL_USE_HDF5=ON -DGDAL_ENABLE_HDF5_GLOBAL_LOCK=OFF \
+                -DGDAL_USE_PARQUET=ON -DGDAL_USE_ARROW=ON -DGDAL_USE_SQLITE3=ON -DGDAL_USE_GEOPACKAGE=ON -DGDAL_USE_CURL=ON && \
     make -j8 install && \
     ldconfig
 
