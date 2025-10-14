@@ -23,7 +23,7 @@ for line in io.lines(poifile) do
 end
 
 ----------------------------------------------------------------------
--- helper to run one batch pass and return exec‑time & failures
+-- helper to run one batch pass and return exec‑time & total results
 ----------------------------------------------------------------------
 local function run_batch(dem, lons, lats, heights)
     local t0 = time.latch()
@@ -84,47 +84,42 @@ local loops = 3  -- how many times to repeat each test
 
 -- Raster
 local demType = "usgs3dep-1meter-dem"
-
 print(string.format(
     "\n--------------------------------------------------------------------------\n"..
-    "%s test 1 meter regular (%d pts) %d loops\n"..
+    "%s test 1 meter index raster method (%d pts) %d loops\n"..
     "--------------------------------------------------------------------------", demType, numPoints, loops))
-local time_no, fail_no
+local time_no, results
 for pass = 1, loops do
     print(string.format("Pass %d/%d", pass, loops))
     local dem_no = geo.raster(geo.parms{
         asset   = demType,
         catalog = contents               -- no slope_aspect key
     })
-    time_no, fail_no = run_batch(dem_no, lons, lats, heights)
+    time_no, results = run_batch(dem_no, lons, lats, heights)
 end
 print(string.format(
-    "After %d runs 1m regular: last exec‑time = %.3f s, failures = %d",
-    loops, time_no, fail_no))
+    "After %d runs 1m regular: last exec‑time = %.3f s, all results = %d",
+    loops, time_no, results))
 
 -- Repeat for 1 meter GTI
 
 local demType = "usgs3dep-1meter-gti-dem"
-
-----------------------------------------------------------------------
--- 1) slope_aspect enabled
-----------------------------------------------------------------------
 print(string.format(
     "\n--------------------------------------------------------------------------\n"..
-    "%s test 1 meter GTI (%d pts) %d loops\n"..
+    "%s test 1 meter GTI driver (%d pts) %d loops\n"..
     "--------------------------------------------------------------------------", demType, numPoints, loops))
-local time_sa, fail_sa
+local time_sa, results_gti
 for pass = 1, loops do
     print(string.format("Pass %d/%d", pass, loops))
     local dem_sa = geo.raster(geo.parms{
         asset              = demType,
         catalog            = contents
     })
-    time_sa, fail_sa = run_batch(dem_sa, lons, lats, heights)
+    time_sa, results_gti= run_batch(dem_sa, lons, lats, heights)
 end
 print(string.format(
-    "After %d runs 1m GTI: last exec‑time = %.3f s, failures = %d",
-    loops, time_sa, fail_sa))
+    "After %d runs 1m GTI: last exec‑time = %.3f s, all results = %d",
+    loops, time_sa, results_gti))
 
 
 sys.quit(0)
