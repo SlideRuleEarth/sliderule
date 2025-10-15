@@ -73,18 +73,6 @@ RUN git clone https://github.com/OSGeo/PROJ.git && \
     make install && \
     ldconfig
 
-# install geotiff dependency
-RUN git clone https://github.com/OSGeo/libgeotiff.git && \
-    cd libgeotiff && \
-    VERSION=`curl -s https://api.github.com/repos/OSGeo/libgeotiff/releases/latest | jq '.tag_name' | tr -d "\""` && \
-    git checkout $VERSION && \
-    mkdir -p /build/geotiff && \
-    cd /build/geotiff && \
-    cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release && \
-    make -j8 && \
-    make install && \
-    ldconfig
-
 # install geos dependency
 RUN git clone https://github.com/libgeos/geos.git && \
     cd geos && \
@@ -116,6 +104,29 @@ RUN git clone https://github.com/OSGeo/gdal.git && \
     mkdir -p /build/gdal && \
     cd /build/gdal && \
     cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF -DGDAL_USE_HDF5=ON -DGDAL_ENABLE_HDF5_GLOBAL_LOCK=OFF && \
+    make -j8 install && \
+    ldconfig
+
+# install geotiff dependency (must be built after GDAL)
+RUN git clone https://github.com/OSGeo/libgeotiff.git && \
+    cd libgeotiff && \
+    VERSION=`curl -s https://api.github.com/repos/OSGeo/libgeotiff/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/geotiff && \
+    cd /build/geotiff && \
+    cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release && \
+    make -j8 && \
+    make install && \
+    ldconfig
+
+# install pdal dependency (must be built after GDAL and libgeotiff)
+RUN git clone https://github.com/PDAL/PDAL.git && \
+    cd PDAL && \
+    VERSION=`curl -s https://api.github.com/repos/PDAL/PDAL/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/pdal && \
+    cd /build/pdal && \
+    cmake /PDAL -DCMAKE_BUILD_TYPE=Release && \
     make -j8 install && \
     ldconfig
 
