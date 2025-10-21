@@ -18,6 +18,7 @@ local RC_ARROW_FAILURE = -3
 local RC_PARQUET_FAILURE = -4
 local RC_NO_RESOURCES = -5
 local RC_SEND_FAILURE = -6
+local RC_POINTCLOUD_FAILURE = -7
 
 --
 -- populate_catalogs
@@ -172,7 +173,27 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     -- Return to User
     local rc = RC_SUCCESS
     local result = nil
-    if parms:witharrow() then
+    if parms:withpointcloud() then
+        local las_pkg = las
+        if not las_pkg then
+            las_pkg = require("las")
+        end
+
+        local las_dataframe = las_pkg and las_pkg.dataframe and las_pkg.dataframe(parms, df) or nil
+        if not las_dataframe then
+            userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to create point cloud dataframe", rspq))
+            return RC_POINTCLOUD_FAILURE
+        end
+
+        local las_filename = las_dataframe:export()
+        if not las_filename then
+            userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to export LAS/LAZ output", rspq))
+            return RC_POINTCLOUD_FAILURE
+        end
+
+        local status = core.send2user(las_filename, parms, rspq)
+        if not status then rc = RC_SEND_FAILURE end
+    elseif parms:witharrow() then
         -- Create Arrow DataFrame
         local arrow_dataframe = arrow.dataframe(parms, df)
         if not arrow_dataframe then
