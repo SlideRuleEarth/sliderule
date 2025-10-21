@@ -120,6 +120,14 @@ void OutputFields::fromLua (lua_State* L, int index)
             {
                 path_suffix = ".h5";
             }
+            else if(format == LAS)
+            {
+                path_suffix = ".las";
+            }
+            else if(format == LAZ)
+            {
+                path_suffix = ".laz";
+            }
             if(!path.value.empty() && (path.value[0] != '\0'))
             {
                 path = FString("%s%s/%s", path_prefix, asset->getPath(), path.value.c_str()).c_str();
@@ -157,6 +165,8 @@ string convertToJson(const OutputFields::format_t& v)
         case OutputFields::GEOPARQUET:   return "\"geoparquet\"";
         case OutputFields::CSV:          return "\"csv\"";
         case OutputFields::H5:           return "\"h5\"";
+        case OutputFields::LAS:          return "\"las\"";
+        case OutputFields::LAZ:          return "\"laz\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid format: %d", static_cast<int>(v));
     }
 }
@@ -173,6 +183,8 @@ int convertToLua(lua_State* L, const OutputFields::format_t& v)
         case OutputFields::GEOPARQUET:   lua_pushstring(L, "geoparquet");    break;
         case OutputFields::CSV:          lua_pushstring(L, "csv");           break;
         case OutputFields::H5:           lua_pushstring(L, "h5");            break;
+        case OutputFields::LAS:          lua_pushstring(L, "las");           break;
+        case OutputFields::LAZ:          lua_pushstring(L, "laz");           break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid format: %d", static_cast<int>(v));
     }
 
@@ -196,6 +208,8 @@ void convertFromLua(lua_State* L, int index, OutputFields::format_t& v)
         else if(StringLib::match(str, "geoparquet"))    v = OutputFields::GEOPARQUET;
         else if(StringLib::match(str, "csv"))           v = OutputFields::CSV;
         else if(StringLib::match(str, "h5"))            v = OutputFields::H5;
+        else if(StringLib::match(str, "las"))           v = OutputFields::LAS;
+        else if(StringLib::match(str, "laz"))           v = OutputFields::LAZ;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "format is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))
@@ -203,4 +217,3 @@ void convertFromLua(lua_State* L, int index, OutputFields::format_t& v)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "format is an invalid type: %d", lua_type(L, index));
     }
 }
-
