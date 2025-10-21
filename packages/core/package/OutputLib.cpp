@@ -420,6 +420,14 @@ bool OutputLib::isArrow (OutputFields::format_t fmt)
 }
 
 /*----------------------------------------------------------------------------
+ * isPointCloud -
+ *----------------------------------------------------------------------------*/
+bool OutputLib::isPointCloud (OutputFields::format_t fmt)
+{
+    return (fmt == OutputFields::LAS) || (fmt == OutputFields::LAZ);
+}
+
+/*----------------------------------------------------------------------------
  * luaSend2User -
  *----------------------------------------------------------------------------*/
 int OutputLib::luaSend2User (lua_State* L)
