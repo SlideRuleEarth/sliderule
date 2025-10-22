@@ -890,10 +890,10 @@ class Session:
             if rec["__rectype"] == 'arrowrec.meta':
                 if filename in session.arrow_file_table:
                     raise FatalError(f'File transfer already in progress for {filename}')
-                logger.info(f'Writing arrow file: {filename}')
+                logger.info(f'Writing output file: {filename}')
                 session.arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
             elif rec["__rectype"] == 'arrowrec.eof':
-                logger.info(f'Checksum of arrow file: {rec["checksum"]}')
+                logger.info(f'Checksum of output file: {rec["checksum"]}')
             else: # rec["__rectype"] == 'arrowrec.data'
                 data = rec['data']
                 file = session.arrow_file_table[filename]
@@ -901,7 +901,7 @@ class Session:
                 file["progress"] += len(data)
                 if file["progress"] >= file["size"]:
                     file["fp"].close()
-                    logger.info(f'Closing arrow file: {filename}')
+                    logger.info(f'Closing output file: {filename}')
                     del session.arrow_file_table[filename]
         except Exception as e:
             raise FatalError(f'Failed to process arrow file: {e}')

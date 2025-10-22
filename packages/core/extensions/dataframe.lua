@@ -177,6 +177,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         local las_pkg = las
         if not las_pkg then
             las_pkg = require("las")
+            las = las_pkg
         end
 
         local las_dataframe = las_pkg and las_pkg.dataframe and las_pkg.dataframe(parms, df) or nil
