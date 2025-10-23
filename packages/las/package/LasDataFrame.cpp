@@ -125,7 +125,7 @@ int LasDataFrame::luaExport (lua_State* L)
 
         const char* tmp_name = OutputLib::getUniqueFileName("las");
         std::string default_filename = tmp_name ? tmp_name : "/tmp/las.bin";
-        if(tmp_name) delete [] tmp_name;
+        delete [] tmp_name;
 
         const char* default_extension = (default_format == OutputFields::LAZ) ? ".laz" : ".las";
         const size_t dot_pos = default_filename.find_last_of('.');
@@ -174,7 +174,7 @@ int LasDataFrame::luaExport (lua_State* L)
         pdal::PointViewPtr view;
         if(!crs.empty())
         {
-            pdal::SpatialReference srs(crs);
+            const pdal::SpatialReference srs(crs);
             table.setSpatialReference(srs);
             view = pdal::PointViewPtr(new pdal::PointView(table, srs));
         }
