@@ -178,7 +178,7 @@ int LasDataFrame::luaExport (lua_State* L)
             table.setSpatialReference(srs);
         }
 
-        pdal::PointViewPtr view = pdal::PointViewPtr(new pdal::PointView(table, srs));
+        const pdal::PointViewPtr view = pdal::PointViewPtr(new pdal::PointView(table, srs));
 
         for(long i = 0; i < num_points; i++)
         {
