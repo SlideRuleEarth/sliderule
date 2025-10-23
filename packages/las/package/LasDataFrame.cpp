@@ -170,18 +170,15 @@ int LasDataFrame::luaExport (lua_State* L)
         if(time_column) layout->registerDim(pdal::Dimension::Id::GpsTime);
         table.finalize();
 
+        pdal::SpatialReference srs;
         const std::string& crs = dataframe->getCRS();
-        pdal::PointViewPtr view;
         if(!crs.empty())
         {
-            const pdal::SpatialReference srs(crs);
+            srs = pdal::SpatialReference(crs);
             table.setSpatialReference(srs);
-            view = pdal::PointViewPtr(new pdal::PointView(table, srs));
         }
-        else
-        {
-            view = pdal::PointViewPtr(new pdal::PointView(table));
-        }
+
+        pdal::PointViewPtr view = pdal::PointViewPtr(new pdal::PointView(table, srs));
 
         for(long i = 0; i < num_points; i++)
         {
@@ -212,9 +209,22 @@ int LasDataFrame::luaExport (lua_State* L)
             writer_options.add("compression", "laszip");
         }
 
+        // Force modern LAS 1.4 format that supports CRS/WKT
+        writer_options.add("minor_version", 4);
+        writer_options.add("dataformat_id", 6);
+
+        // Explicitly write the WKT2. Ensures CRS is recognized by laspy/pyproj.
+        if (!srs.empty())
+        {
+            writer_options.add("a_srs", srs.getWKT2());
+        }
+
+        // Forward all metadata (ensures CRS propagates)
+        writer_options.add("forward", "all");
+
         pdal::StageFactory factory;
         pdal::Stage* writer_stage = factory.createStage("writers.las");
-        if(writer_stage == nullptr)
+        if(writer_stage == NULL)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to create PDAL writers.las stage");
         }

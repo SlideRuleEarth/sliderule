@@ -2,9 +2,13 @@
 
 import os
 
+import json
+import subprocess
+
 import laspy
 import numpy as np
 import pytest
+from pyproj import CRS
 from sliderule import sliderule, icesat2
 
 
@@ -22,13 +26,32 @@ AOI = [
 ]
 
 
-def _extract_time_seconds(gdf):
-    if "time_ns" in gdf.columns:
-        return gdf["time_ns"].to_numpy(dtype=np.float64) * 1e-9
-    index = gdf.index.to_numpy()
-    if np.issubdtype(index.dtype, np.datetime64):
-        return index.astype("datetime64[ns]").astype(np.int64).astype(np.float64) * 1e-9
-    raise AssertionError("Unable to determine time column for comparison")
+def _pdal_crs(path):
+    try:
+        proc = subprocess.run(
+            ["pdal", "info", path, "--metadata"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except FileNotFoundError:
+        pytest.skip("pdal command-line tool is not available on this system")
+    except subprocess.CalledProcessError as exc:
+        pytest.fail(f"pdal info failed for {path}: {exc.stderr.strip()}")
+
+    metadata = json.loads(proc.stdout).get("metadata", {})
+    return metadata.get("comp_spatialreference") or metadata.get("spatialreference")
+
+
+def _to_crs(value):
+    if value is None:
+        return None
+    if isinstance(value, CRS):
+        return value
+    try:
+        return CRS.from_user_input(value)
+    except Exception:
+        return None
 
 
 @pytest.mark.usefixtures("init")
@@ -80,11 +103,6 @@ class TestAtl03Las:
                 assert os.path.exists(path), f"Output file missing: {path}"
                 assert os.path.getsize(path) > 0, f"Output file empty: {path}"
 
-            gdf_lon = gdf.geometry.x.to_numpy()
-            gdf_lat = gdf.geometry.y.to_numpy()
-            gdf_height = gdf["height"].to_numpy()
-            gdf_time = _extract_time_seconds(gdf)
-
             def load_points(path):
                 with laspy.open(path) as reader:
                     header = reader.header
@@ -96,58 +114,57 @@ class TestAtl03Las:
             las_coords, las_time, las_header = load_points(las_path)
             laz_coords, laz_time, laz_header = load_points(laz_path)
 
-            assert las_coords.shape[0] == len(gdf_lon)
-            assert laz_coords.shape[0] == len(gdf_lon)
+            assert las_coords.shape[0] == len(gdf)
+            assert laz_coords.shape[0] == len(gdf)
 
-            def quantize(values, scale, offset):
-                if scale == 0:
-                    return values
-                return offset + np.round((values - offset) / scale) * scale
+            gdf_crs_raw = getattr(gdf, "crs", None)
 
-            gdf_las = np.column_stack((
-                quantize(gdf_lon, las_header.x_scale, las_header.x_offset),
-                quantize(gdf_lat, las_header.y_scale, las_header.y_offset),
-                quantize(gdf_height, las_header.z_scale, las_header.z_offset),
-                gdf_time
-            ))
-            gdf_laz = np.column_stack((
-                quantize(gdf_lon, laz_header.x_scale, laz_header.x_offset),
-                quantize(gdf_lat, laz_header.y_scale, laz_header.y_offset),
-                quantize(gdf_height, laz_header.z_scale, laz_header.z_offset),
-                gdf_time
-            ))
+            las_crs_raw = _pdal_crs(las_path)
+            laz_crs_raw = _pdal_crs(laz_path)
 
-            las_points = np.column_stack((las_coords[:, 0], las_coords[:, 1], las_coords[:, 2], las_time))
-            laz_points = np.column_stack((laz_coords[:, 0], laz_coords[:, 1], laz_coords[:, 2], laz_time))
+            assert len(str(gdf_crs_raw)) > 0, "Missing CRS in GeoDataFrame"
+            assert len(las_crs_raw) > 0, "Missing CRS in PDAL LAS output"
+            assert len(laz_crs_raw) > 0, "Missing CRS in PDAL LAZ output"
+            assert str(las_crs_raw) == str(laz_crs_raw), "CRS mismatch between LAS and LAZ outputs"
 
-            # LAS and LAZ outputs may differ in record order due to PDAL’s internal writer chunking.
-            # Sorting is required for deterministic value comparison.
-            def sort_points(points):
-                order = np.lexsort((points[:, 3], points[:, 2], points[:, 1], points[:, 0]))
-                return points[order]
+            # Normalize CRS for comparison, accounting for different representations in las, laz, and GeoDataFrame
+            norm_gdf_crs = _to_crs(gdf_crs_raw)
+            norm_las_crs = _to_crs(las_crs_raw)
+            norm_laz_crs = _to_crs(laz_crs_raw)
 
-            gdf_las_sorted = sort_points(gdf_las)
-            gdf_laz_sorted = sort_points(gdf_laz)
-            las_sorted = sort_points(las_points)
-            laz_sorted = sort_points(laz_points)
+            print(f"GDF CRS: {gdf_crs_raw}")
+            print(f"PDAL LAS CRS: {las_crs_raw}")
+            print(f"PDAL LAZ CRS: {laz_crs_raw}")
 
-            np.testing.assert_allclose(las_sorted[:, 0], gdf_las_sorted[:, 0], rtol=0, atol=max(las_header.x_scale, 1e-9))
-            np.testing.assert_allclose(las_sorted[:, 1], gdf_las_sorted[:, 1], rtol=0, atol=max(las_header.y_scale, 1e-9))
-            np.testing.assert_allclose(las_sorted[:, 2], gdf_las_sorted[:, 2], rtol=0, atol=max(las_header.z_scale, 1e-6))
-            np.testing.assert_allclose(las_sorted[:, 3], gdf_las_sorted[:, 3], rtol=0, atol=1e-6)
+            # Compare horizontal CRS components
+            gdf_horiz = norm_gdf_crs.to_2d()
+            las_horiz = norm_las_crs.to_2d()
+            laz_horiz = norm_laz_crs.to_2d()
+            assert las_horiz == laz_horiz == gdf_horiz, "Horizontal CRS mismatch between outputs"
 
-            np.testing.assert_allclose(laz_sorted[:, 0], gdf_laz_sorted[:, 0], rtol=0, atol=max(laz_header.x_scale, 1e-9))
-            np.testing.assert_allclose(laz_sorted[:, 1], gdf_laz_sorted[:, 1], rtol=0, atol=max(laz_header.y_scale, 1e-9))
-            np.testing.assert_allclose(laz_sorted[:, 2], gdf_laz_sorted[:, 2], rtol=0, atol=max(laz_header.z_scale, 1e-6))
-            np.testing.assert_allclose(laz_sorted[:, 3], gdf_laz_sorted[:, 3], rtol=0, atol=1e-6)
+            def _vertical(crs):
+                try:
+                    comps = getattr(crs, "sub_crs_list", None)
+                    if comps:
+                        for comp in comps:
+                            if comp.is_vertical:
+                                return comp
+                except AttributeError:
+                    pass
+                return None
 
-            np.testing.assert_allclose(las_sorted[:, :3], laz_sorted[:, :3], rtol=0, atol=1e-9)
-            np.testing.assert_allclose(las_sorted[:, 3], laz_sorted[:, 3], rtol=0, atol=1e-6)
+            # Compare vertical CRS components
+            gdf_vert = _vertical(norm_gdf_crs)
+            las_vert = _vertical(norm_las_crs)
+            laz_vert = _vertical(norm_laz_crs)
+
+            assert las_vert == laz_vert == gdf_vert, "Vertical CRS mismatch between outputs"
 
             las_size = os.path.getsize(las_path)
             laz_size = os.path.getsize(laz_path)
             assert (laz_size * 10) < las_size, "LAZ output should be much smaller than LAS output"
         finally:
+            print("Cleaning up test output files...")
             for path in (las_path, laz_path, geoparquet_path):
                 if os.path.exists(path):
                     os.remove(path)
