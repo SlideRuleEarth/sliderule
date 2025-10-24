@@ -48,6 +48,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cmath>
+#include <limits>
 #include <string>
 
 /******************************************************************************
@@ -60,6 +62,94 @@ const struct luaL_Reg LasDataFrame::LUA_META_TABLE[] = {
     {"export",  luaExport},
     {NULL,      NULL}
 };
+
+
+/******************************************************************************
+* computeLasScale() template helper function
+*
+* LAS files do not store coordinate values (X, Y, Z) as floating-point numbers.
+* Instead, each coordinate is stored as a 32-bit signed integer that is scaled
+* and offset according to the LAS header values:
+*
+*     ActualValue = (StoredInt32 * scale) + offset
+*
+* The "scale" determines numeric precision (smaller scales = higher precision),
+* while the "offset" anchors the coordinate range so that all points fit safely
+* within the ±2,147,483,647 limit of a signed 32-bit integer.
+*
+* This function computes the smallest possible LAS scale factor for a given
+* data column such that all finite values fit in the 32-bit integer range,
+* maximizing precision without overflow.  The offset is set to the minimum
+* finite value in the column so that stored integers are non-negative and
+* centered near zero.
+*
+* For example, a longitude column spanning only 0.01° at a scale of 1e-9
+* results in sub-centimeter precision and comfortably fits in the LAS range.
+*
+* Note: GPS time in LAS is stored as a 64-bit floating-point (double) value
+* in seconds, so it is written directly without scale/offset quantization.
+* Only spatial dimensions (X, Y, Z) are integer-scaled.
+*
+* This approach preserves the full available precision of the input doubles
+* (and floats) while ensuring the output conforms to the LAS specification
+* and can be read by all compliant tools.
+******************************************************************************/
+
+namespace
+{
+    template<typename T>
+    double computeLasScale(const FieldColumn<T>* column, double fallback_scale, double& offset)
+    {
+        offset = 0.0;
+        if(column == NULL) return fallback_scale;
+
+        const long length = column->length();
+        bool have_finite_value = false;
+        double min_value = 0.0;
+        double max_value = 0.0;
+
+        for(long i = 0; i < length; ++i)
+        {
+            const double value = static_cast<double>((*column)[i]);
+            if(!std::isfinite(value)) continue;
+
+            if(!have_finite_value)
+            {
+                min_value = value;
+                max_value = value;
+                have_finite_value = true;
+            }
+            else
+            {
+                min_value = std::min(min_value, value);
+                max_value = std::max(max_value, value);
+            }
+        }
+
+        if(!have_finite_value)
+        {
+            offset = 0.0;
+            return fallback_scale;
+        }
+
+        offset = min_value;
+        const double range = max_value - min_value;
+        if(range <= 0.0 || !std::isfinite(range))
+            return fallback_scale;
+
+        // Ensure range fits within 32-bit LAS integer range
+        constexpr double max_int = static_cast<double>(std::numeric_limits<int32_t>::max()) - 1.0;
+        double scale = range / max_int;
+
+        // Clamp to reasonable lower bound
+        if(scale < 1e-12 || !std::isfinite(scale))
+            scale = fallback_scale;
+
+        // Slightly nudge upward to avoid rounding to zero
+        scale = std::nextafter(scale, std::numeric_limits<double>::infinity());
+        return scale;
+    }
+}
 
 /******************************************************************************
  * CLASS METHODS
@@ -194,10 +284,24 @@ int LasDataFrame::luaExport (lua_State* L)
             if(time_column)
             {
                 const time8_t t = (*time_column)[i];
-                const double gps_seconds = static_cast<double>(t.nanoseconds) * 1e-9;
+
+                // Convert UNIX nanoseconds to GPS seconds (LAS-compliant)
+                const int64_t gps_millisecs = TimeLib::sys2gpstime(t.nanoseconds / 1000);
+                const double gps_seconds = static_cast<double>(gps_millisecs) * 1e-3;
                 view->setField(pdal::Dimension::Id::GpsTime, idx, gps_seconds);
             }
         }
+
+        const double fallback_double_scale = static_cast<double>(std::numeric_limits<double>::epsilon());
+        const double fallback_float_scale = static_cast<double>(std::numeric_limits<float>::epsilon());
+
+        double offset_x = 0.0;
+        double offset_y = 0.0;
+        double offset_z = 0.0;
+
+        const double scale_x = computeLasScale(x_column, fallback_double_scale, offset_x);
+        const double scale_y = computeLasScale(y_column, fallback_double_scale, offset_y);
+        const double scale_z = computeLasScale(z_column, fallback_float_scale, offset_z);
 
         pdal::BufferReader reader;
         reader.addView(view);
@@ -213,14 +317,15 @@ int LasDataFrame::luaExport (lua_State* L)
         writer_options.add("minor_version", 4);
         writer_options.add("dataformat_id", 6);
 
-        // Explicitly write the WKT2. Ensures CRS is recognized by laspy/pyproj.
-        if (!srs.empty())
-        {
-            writer_options.add("a_srs", srs.getWKT2());
-        }
-
-        // Forward all metadata (ensures CRS propagates)
         writer_options.add("forward", "all");
+
+        // Set computed scale/offset values for coordinate fields
+        writer_options.add("scale_x", scale_x);
+        writer_options.add("scale_y", scale_y);
+        writer_options.add("scale_z", scale_z);
+        writer_options.add("offset_x", offset_x);
+        writer_options.add("offset_y", offset_y);
+        writer_options.add("offset_z", offset_z);
 
         pdal::StageFactory factory;
         pdal::Stage* writer_stage = factory.createStage("writers.las");

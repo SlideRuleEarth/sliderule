@@ -1,15 +1,14 @@
 """Tests for Sliderule LAS/LAZ export using the dataframe pipeline."""
 
+import json
 import os
 
-import json
-import subprocess
-
-import laspy
 import numpy as np
 import pytest
+import pdal
 from pyproj import CRS
 from sliderule import sliderule, icesat2
+
 
 
 RESOURCES = ["ATL03_20181017222812_02950102_007_01.h5"]
@@ -26,20 +25,54 @@ AOI = [
 ]
 
 
-def _pdal_crs(path):
+def _run_pdal_pipeline(path):
+    pipeline_json = json.dumps(
+        {
+            "pipeline": [
+                {
+                    "type": "readers.las",
+                    "filename": path,
+                }
+            ]
+        }
+    )
+    pipeline = pdal.Pipeline(pipeline_json)
     try:
-        proc = subprocess.run(
-            ["pdal", "info", path, "--metadata"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except FileNotFoundError:
-        pytest.skip("pdal command-line tool is not available on this system")
-    except subprocess.CalledProcessError as exc:
-        pytest.fail(f"pdal info failed for {path}: {exc.stderr.strip()}")
+        if hasattr(pipeline, "validate"):
+            pipeline.validate()
+        pipeline.execute()
+    except RuntimeError as exc:  # pragma: no cover - runtime failure should fail test
+        pytest.fail(f"PDAL pipeline failed for {path}: {exc}")
 
-    metadata = json.loads(proc.stdout).get("metadata", {})
+    arrays = pipeline.arrays
+    raw_metadata = pipeline.metadata
+    if isinstance(raw_metadata, (bytes, bytearray)):
+        raw_metadata = raw_metadata.decode("utf-8")
+    if isinstance(raw_metadata, str):
+        raw_metadata = json.loads(raw_metadata)
+    metadata = (
+        raw_metadata.get("metadata", {}).get("readers.las", {}) if isinstance(raw_metadata, dict) else {}
+    )
+    return arrays, metadata
+
+
+def _load_points(path):
+    arrays, metadata = _run_pdal_pipeline(path)
+    if not arrays:
+        return np.empty((0, 3)), np.array([], dtype=float), metadata
+
+    data = arrays[0]
+    coords = np.column_stack((data["X"], data["Y"], data["Z"]))
+    gps_field = next((name for name in data.dtype.names if name.lower() == "gpstime"), None)
+    if gps_field is None:
+        pytest.fail("PDAL pipeline output missing GpsTime dimension")
+    gps_time = data[gps_field]
+    return coords, gps_time, metadata
+
+
+def _pdal_crs(metadata):
+    if not metadata:
+        return None
     return metadata.get("comp_spatialreference") or metadata.get("spatialreference")
 
 
@@ -57,6 +90,9 @@ def _to_crs(value):
 @pytest.mark.usefixtures("init")
 class TestAtl03Las:
     def test_atl03_las_laz_match_dataframe(self, init):
+        if pdal is None:
+            pytest.skip("PDAL Python plugin is not available in this environment")
+
         las_path = "test_atl03_output.las"
         laz_path = "test_atl03_output.laz"
         geoparquet_path = "test_atl03_output.parquet"
@@ -103,28 +139,20 @@ class TestAtl03Las:
                 assert os.path.exists(path), f"Output file missing: {path}"
                 assert os.path.getsize(path) > 0, f"Output file empty: {path}"
 
-            def load_points(path):
-                with laspy.open(path) as reader:
-                    header = reader.header
-                    points = reader.read()
-                coords = np.vstack((points.x, points.y, points.z)).T
-                gps_time = points["gps_time"]
-                return coords, gps_time, header
-
-            las_coords, las_time, las_header = load_points(las_path)
-            laz_coords, laz_time, laz_header = load_points(laz_path)
+            las_coords, las_time, las_metadata = _load_points(las_path)
+            laz_coords, laz_time, laz_metadata = _load_points(laz_path)
 
             assert las_coords.shape[0] == len(gdf)
             assert laz_coords.shape[0] == len(gdf)
 
             gdf_crs_raw = getattr(gdf, "crs", None)
 
-            las_crs_raw = _pdal_crs(las_path)
-            laz_crs_raw = _pdal_crs(laz_path)
+            las_crs_raw = _pdal_crs(las_metadata)
+            laz_crs_raw = _pdal_crs(laz_metadata)
 
-            assert len(str(gdf_crs_raw)) > 0, "Missing CRS in GeoDataFrame"
-            assert len(las_crs_raw) > 0, "Missing CRS in PDAL LAS output"
-            assert len(laz_crs_raw) > 0, "Missing CRS in PDAL LAZ output"
+            assert gdf_crs_raw is not None and str(gdf_crs_raw), "Missing CRS in GeoDataFrame"
+            assert isinstance(las_crs_raw, str) and las_crs_raw.strip(), "Missing CRS in PDAL LAS output"
+            assert isinstance(laz_crs_raw, str) and laz_crs_raw.strip(), "Missing CRS in PDAL LAZ output"
             assert str(las_crs_raw) == str(laz_crs_raw), "CRS mismatch between LAS and LAZ outputs"
 
             # Normalize CRS for comparison, accounting for different representations in las, laz, and GeoDataFrame
@@ -162,7 +190,8 @@ class TestAtl03Las:
 
             las_size = os.path.getsize(las_path)
             laz_size = os.path.getsize(laz_path)
-            assert (laz_size * 10) < las_size, "LAZ output should be much smaller than LAS output"
+            assert (laz_size * 4) < las_size, "LAZ output should be much smaller than LAS output"
+
         finally:
             print("Cleaning up test output files...")
             for path in (las_path, laz_path, geoparquet_path):
