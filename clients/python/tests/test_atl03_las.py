@@ -87,6 +87,54 @@ def _to_crs(value):
         return None
 
 
+def _extract_gdf_coords(gdf):
+    if len(gdf) == 0:
+        return np.empty((0, 3), dtype=float)
+    geometry = gdf.geometry
+    x = geometry.x.to_numpy(dtype=float)
+    y = geometry.y.to_numpy(dtype=float)
+    if "height" in gdf:
+        z = gdf["height"].to_numpy(dtype=float)
+    else:
+        z = np.array(
+            [
+                geom.z if getattr(geom, "has_z", False) else np.nan
+                for geom in geometry
+            ],
+            dtype=float,
+        )
+        if np.isnan(z).any():
+            pytest.fail("GeoDataFrame missing height column and geometry is not 3D")
+    return np.column_stack((x, y, z))
+
+
+def _sorted_coords(coords, time=None, decimals=8):
+    coords = np.asarray(coords, dtype=np.float64)
+    if coords.size == 0:
+        if time is None:
+            return coords
+        return coords, np.asarray(time, dtype=np.float64)
+    coords = np.round(coords, decimals=decimals)
+    if time is None:
+        structured = np.empty(coords.shape[0], dtype=[("x", float), ("y", float), ("z", float)])
+        structured["x"] = coords[:, 0]
+        structured["y"] = coords[:, 1]
+        structured["z"] = coords[:, 2]
+        order = np.argsort(structured, order=("x", "y", "z"))
+        return coords[order]
+    time_arr = np.round(np.asarray(time, dtype=np.float64), decimals=decimals)
+    structured = np.empty(
+        coords.shape[0],
+        dtype=[("x", float), ("y", float), ("z", float), ("t", float)],
+    )
+    structured["x"] = coords[:, 0]
+    structured["y"] = coords[:, 1]
+    structured["z"] = coords[:, 2]
+    structured["t"] = time_arr
+    order = np.argsort(structured, order=("x", "y", "z", "t"))
+    return coords[order], time_arr[order]
+
+
 @pytest.mark.usefixtures("init")
 class TestAtl03Las:
     def test_atl03_las_laz_match_dataframe(self, init):
@@ -146,6 +194,28 @@ class TestAtl03Las:
             assert laz_coords.shape[0] == len(gdf)
 
             gdf_crs_raw = getattr(gdf, "crs", None)
+            gdf_coords = _extract_gdf_coords(gdf)
+
+            # Sort all point clouds into a consistent XYZ order so we are comparing like-for-like
+            # despite PDAL's ingestion ordering and the GeoDataFrame's time-index sorting.
+            gdf_coords_sorted = _sorted_coords(gdf_coords)
+            las_coords_sorted, las_time_sorted = _sorted_coords(las_coords, las_time)
+            laz_coords_sorted, laz_time_sorted = _sorted_coords(laz_coords, laz_time)
+
+            np.testing.assert_allclose(
+                las_coords_sorted, gdf_coords_sorted, rtol=0.0, atol=3.2e-3, equal_nan=True
+            )
+            np.testing.assert_allclose(
+                laz_coords_sorted, gdf_coords_sorted, rtol=0.0, atol=3.2e-3, equal_nan=True
+            )
+            np.testing.assert_allclose(
+                laz_coords_sorted, las_coords_sorted, rtol=0.0, atol=3.2e-3, equal_nan=True
+            )
+
+            # las/laz time should match exactly since it is stored as double precision GPS Time in seconds
+            np.testing.assert_allclose(
+                laz_time_sorted, las_time_sorted, rtol=0.0, atol=1e-9, equal_nan=True
+            )
 
             las_crs_raw = _pdal_crs(las_metadata)
             laz_crs_raw = _pdal_crs(laz_metadata)
