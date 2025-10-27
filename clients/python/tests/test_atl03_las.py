@@ -138,9 +138,6 @@ def _sorted_coords(coords, time=None, decimals=8):
 @pytest.mark.usefixtures("init")
 class TestAtl03Las:
     def test_atl03_las_laz_match_dataframe(self, init):
-        if pdal is None:
-            pytest.skip("PDAL Python plugin is not available in this environment")
-
         las_path = "test_atl03_output.las"
         laz_path = "test_atl03_output.laz"
         geoparquet_path = "test_atl03_output.parquet"
@@ -260,7 +257,9 @@ class TestAtl03Las:
 
             las_size = os.path.getsize(las_path)
             laz_size = os.path.getsize(laz_path)
-            assert (laz_size * 4) < las_size, "LAZ output should be much smaller than LAS output"
+            compression_ratio = las_size / laz_size
+            assert compression_ratio > 4.0, f"Unexpectedly low compression ratio: {compression_ratio:.2f}"
+
 
         finally:
             print("Cleaning up test output files...")

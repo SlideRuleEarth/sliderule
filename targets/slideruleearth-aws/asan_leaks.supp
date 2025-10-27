@@ -1,0 +1,9 @@
+# Ignore PDAL PoissonFilter static strdup leak
+#
+# The leak originates inside PDAL's bundled Poisson surface reconstruction support, specifically in vendor/kazhdan/Ply.h,
+# where the static face_props array initializes its name field by calling _strdup("vertex_indices") during module registration.
+# Because that memory is never freed, AddressSanitizer flags it as a 15-byte leak when the process exits under ASAN.
+# It is a one-time allocation that never grows and lives for the lifetime of the executable.
+
+leak:PoissonFilter.cpp
+
