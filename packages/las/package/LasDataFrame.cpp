@@ -38,19 +38,8 @@
 #include "OutputLib.h"
 
 #include <pdal/PointTable.hpp>
-#include <pdal/PointView.hpp>
-#include <pdal/PointLayout.hpp>
-#include <pdal/Dimension.hpp>
-#include <pdal/Options.hpp>
-#include <pdal/SpatialReference.hpp>
 #include <pdal/StageFactory.hpp>
 #include <pdal/io/BufferReader.hpp>
-
-#include <algorithm>
-#include <cstdint>
-#include <cmath>
-#include <limits>
-#include <string>
 
 /******************************************************************************
  * STATIC DATA
@@ -287,7 +276,7 @@ int LasDataFrame::luaExport (lua_State* L)
 
                 // Convert UNIX nanoseconds to GPS seconds (LAS-compliant)
                 const int64_t gps_millisecs = TimeLib::sys2gpstime(t.nanoseconds / 1000);
-                const double gps_seconds = static_cast<double>(gps_millisecs) * 1e-3;
+                const double gps_seconds = static_cast<double>(gps_millisecs) / 1000.0;
                 view->setField(pdal::Dimension::Id::GpsTime, idx, gps_seconds);
             }
         }
