@@ -86,7 +86,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         static int luaGetLength (lua_State* L);
         static int luaHasOutput (lua_State* L);
         static int luaHasArrowOutput (lua_State* L);
-        static int luaHasPointCloudOutput (lua_State* L);
+        static int luaHasLasOutput (lua_State* L);
         static int luaGetSamplers (lua_State* L);
         static int luaWithSamplers (lua_State* L);
         static int luaSetCatalog (lua_State* L);

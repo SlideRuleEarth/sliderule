@@ -54,7 +54,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"length",      luaGetLength},
     {"hasoutput",   luaHasOutput},
     {"witharrow",   luaHasArrowOutput},
-    {"withpointcloud", luaHasPointCloudOutput},
+    {"withlas",      luaHasLasOutput},
     {"samplers",    luaGetSamplers},
     {"withsamplers",luaWithSamplers},
     {"setcatalog",  luaSetCatalog},
@@ -299,14 +299,14 @@ int RequestFields::luaHasArrowOutput (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaHasPointCloudOutput
+ * luaHasLasOutput
  *----------------------------------------------------------------------------*/
-int RequestFields::luaHasPointCloudOutput (lua_State* L)
+int RequestFields::luaHasLasOutput (lua_State* L)
 {
     try
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
-        lua_pushboolean(L, OutputLib::isPointCloud(lua_obj->output.format.value));
+        lua_pushboolean(L, OutputLib::isLas(lua_obj->output.format.value));
     }
     catch(const RunTimeException& e)
     {

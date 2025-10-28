@@ -420,9 +420,9 @@ bool OutputLib::isArrow (OutputFields::format_t fmt)
 }
 
 /*----------------------------------------------------------------------------
- * isPointCloud -
+ * isLas -
  *----------------------------------------------------------------------------*/
-bool OutputLib::isPointCloud (OutputFields::format_t fmt)
+bool OutputLib::isLas (OutputFields::format_t fmt)
 {
     return (fmt == OutputFields::LAS) || (fmt == OutputFields::LAZ);
 }
