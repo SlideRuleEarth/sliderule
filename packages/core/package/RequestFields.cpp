@@ -54,6 +54,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"length",      luaGetLength},
     {"hasoutput",   luaHasOutput},
     {"witharrow",   luaHasArrowOutput},
+    {"withlas",      luaHasLasOutput},
     {"samplers",    luaGetSamplers},
     {"withsamplers",luaWithSamplers},
     {"setcatalog",  luaSetCatalog},
@@ -287,6 +288,25 @@ int RequestFields::luaHasArrowOutput (lua_State* L)
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
         lua_pushboolean(L, OutputLib::isArrow(lua_obj->output.format.value));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving field: %s", e.what());
+        lua_pushboolean(L, false);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaHasLasOutput
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaHasLasOutput (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        lua_pushboolean(L, OutputLib::isLas(lua_obj->output.format.value));
     }
     catch(const RunTimeException& e)
     {

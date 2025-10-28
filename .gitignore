@@ -1,6 +1,9 @@
 .vscode/
 .DS_Store
 
+.github/copilot-instructions.md
+
+
 # excces nc file
 *.nc
 

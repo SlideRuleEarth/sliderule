@@ -69,7 +69,9 @@ class OutputFields: public FieldDictionary
             PARQUET = 2,
             GEOPARQUET = 3,
             CSV = 4,
-            H5 = 5
+            H5 = 5,
+            LAS = 6,
+            LAZ = 7
         } format_t;
 
         /*--------------------------------------------------------------------

@@ -149,6 +149,7 @@ option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 
 # Package Options #
 
+option (USE_LAS_PACKAGE "Include the PDAL LAS package" ON)
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" ON)
 option (USE_AWS_PACKAGE "Include the AWS package" ON)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
@@ -310,6 +311,10 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR}
 # Add Packages #
 
 add_subdirectory (packages/core)
+
+if(${USE_LAS_PACKAGE})
+    add_subdirectory (packages/las)
+endif()
 
 if(${USE_ARROW_PACKAGE})
     add_subdirectory (packages/arrow)

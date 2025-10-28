@@ -39,6 +39,10 @@
 #include "LuaObject.h"
 #include "OsApi.h"
 
+#ifdef __las__
+#include "las.h"
+#endif
+
 #ifdef __arrow__
 #include "arrow.h"
 #endif
@@ -359,6 +363,10 @@ int main (int argc, char* argv[])
     /* Initialize Built-In Packages */
     initcore();
 
+    #ifdef __las__
+        initlas();
+    #endif
+
     #ifdef __arrow__
         initarrow();
     #endif
@@ -554,6 +562,10 @@ int main (int argc, char* argv[])
 
     #ifdef __arrow__
         deinitarrow();
+    #endif
+
+    #ifdef __las__
+        deinitlas();
     #endif
 
     const int errors = geterrors();

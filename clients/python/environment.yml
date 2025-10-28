@@ -21,4 +21,5 @@ dependencies:
   - shapely
   - tk
   - xyzservices
+  - python-pdal
   - sliderule

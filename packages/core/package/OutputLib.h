@@ -112,6 +112,7 @@ struct OutputLib
     static void        renameFile   (const char* oldName, const char* newName);
     static bool        fileExists   (const char* fileName);
     static bool        isArrow      (OutputFields::format_t fmt);
+    static bool        isLas        (OutputFields::format_t fmt);
 
     static int         luaSend2User (lua_State* L);
 };

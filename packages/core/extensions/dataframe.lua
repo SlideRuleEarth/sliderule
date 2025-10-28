@@ -7,6 +7,7 @@
 --
 local earthdata = require("earth_data_query")
 local json = require("json")
+local las = require("las")
 
 --
 -- Constants
@@ -18,6 +19,7 @@ local RC_ARROW_FAILURE = -3
 local RC_PARQUET_FAILURE = -4
 local RC_NO_RESOURCES = -5
 local RC_SEND_FAILURE = -6
+local RC_LAS_FAILURE = -7
 
 --
 -- populate_catalogs
@@ -172,7 +174,23 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     -- Return to User
     local rc = RC_SUCCESS
     local result = nil
-    if parms:witharrow() then
+    if parms:withlas() then
+        local las_dataframe = las.dataframe(parms, df)
+        if not las_dataframe then
+            userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to create LAS dataframe", rspq))
+            return RC_LAS_FAILURE
+        end
+
+        local las_filename = las_dataframe:export()
+        if not las_filename then
+            userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to export LAS/LAZ output", rspq))
+            return RC_LAS_FAILURE
+        end
+
+        -- Send Las File to User
+        local status = core.send2user(las_filename, parms, rspq)
+        if not status then rc = RC_SEND_FAILURE end
+    elseif parms:witharrow() then
         -- Create Arrow DataFrame
         local arrow_dataframe = arrow.dataframe(parms, df)
         if not arrow_dataframe then
