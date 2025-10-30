@@ -91,7 +91,7 @@ class Atl03Reader: public LuaObject
             uint8_t         atl08_class;    // ATL08 classification
             int8_t          atl03_cnf;      // ATL03 confidence level
             int8_t          quality_ph;     // ATL03 photon quality
-            uint8_t         yapc_score;     // YAPC weight of photon
+            uint16_t        yapc_score;     // YAPC weight of photon
         } photon_t;
 
         /* Extent Record */
@@ -177,7 +177,8 @@ class Atl03Reader: public LuaObject
                 Atl03Data           (const info_t* info, const Region& region);
                 ~Atl03Data          (void);
 
-                bool                read_yapc;
+                bool                read_yapc006;
+                bool                read_yapc007;
 
                 H5Array<int8_t>     sc_orient;
                 H5Array<float>      velocity_sc;
@@ -190,7 +191,8 @@ class Atl03Reader: public LuaObject
                 H5Array<float>      h_ph;
                 H5Array<int8_t>     signal_conf_ph;
                 H5Array<int8_t>     quality_ph;
-                H5Array<uint8_t>    weight_ph; // yapc
+                H5Array<uint8_t>    weight006_ph; // yapc from release 006
+                H5Array<uint16_t>   weight007_ph; // yapc from release 007
                 H5Array<double>     lat_ph;
                 H5Array<double>     lon_ph;
                 H5Array<double>     delta_time;
