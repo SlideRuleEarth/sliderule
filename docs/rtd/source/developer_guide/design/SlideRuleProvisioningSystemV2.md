@@ -1,4 +1,4 @@
-# SlideRule Provisioning System (SPS)
+# SlideRule Provisioning System (SPS) Version 2
 
 ## Authentication
 

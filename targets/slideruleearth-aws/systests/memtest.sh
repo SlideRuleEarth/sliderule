@@ -2,8 +2,8 @@
 
 logfile=memtest.log
 progname=sliderule
-testscript="targets/slideruleearth-aws/systests/test_runner.lua"
-valgrind_suppressions="targets/slideruleearth-aws/systests/memtest.supp"
+testscript="targets/slideruleearth/systests/test_runner.lua"
+valgrind_suppressions="targets/slideruleearth/systests/memtest.supp"
 valgrind_options="--leak-check=full --show-leak-kinds=all --show-reachable=yes --track-origins=yes --track-fds=yes --log-file=${logfile} --suppressions=${valgrind_suppressions}"
 
 printf "\nStarting memory test, valgrind output redirected to %s\n\n" $logfile

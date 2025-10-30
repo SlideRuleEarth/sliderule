@@ -182,7 +182,7 @@ option (USE_NISAR_DATASET "Include the NISAR dataset" ON)
 
 # Target Options #
 
-option (USE_SLIDERULEEARTH_TARGET "Include slideruleearth.io target configuration" ON)
+option (USE_SLIDERULEEARTH_TARGET "Include slideruleearth target configuration" ON)
 
 # Version Information #
 
@@ -405,7 +405,7 @@ endif()
 # Targets #
 
 if(${USE_SLIDERULEEARTH_TARGET})
-    add_subdirectory (targets/slideruleearth-aws)
+    add_subdirectory (targets/slideruleearth)
 endif()
 
 # Installation #

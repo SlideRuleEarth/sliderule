@@ -1,0 +1,171 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "EC2 Image Builder pipeline for sliderule-base-image"
+Parameters:
+  ProjectBucket:
+    Type: String
+    Description: "S3 bucket containing the supporting resources"
+  ProjectFolder:
+    Type: String
+    Description: "S3 folder containing the supporting resources"
+  AmiDate:
+    Type: String
+    Description: "Date string Y.M.D for versioning the pipeline"
+
+Resources:
+
+  ImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - imagebuilder.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: ImageBuilderComponentAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}"
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/*"
+              - Effect: Allow
+                Action:
+                  - imagebuilder:GetComponent
+                  - imagebuilder:ListComponents
+                Resource:
+                  - !Sub "arn:aws:imagebuilder:${AWS::Region}:${AWS::AccountId}:component/*"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ImageBuilderRole
+
+  InfrastructureConfig:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: "sliderule-infra"
+      InstanceTypes: ["t4g.micro"]
+      InstanceProfileName: !Ref InstanceProfile
+      TerminateInstanceOnFailure: true
+      Logging:
+        S3Logs:
+          S3BucketName: !Ref ProjectBucket
+          S3KeyPrefix: !Sub "${ProjectFolder}/logs/"
+
+  DistributionConfig:
+    Type: AWS::ImageBuilder::DistributionConfiguration
+    Properties:
+      Name: "sliderule-distribution-config"
+      Distributions:
+        - Region: !Ref AWS::Region
+          AmiDistributionConfiguration:
+            Name: !Sub "sliderule-arm-{{ imagebuilder:buildDate }}" # ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
+            Description: "SlideRule Base AMI"
+            AmiTags:
+              Project: SlideRule
+              Base: AL2023-Minimal
+            LaunchPermissionConfiguration:
+              UserIds:
+                - !Ref AWS::AccountId
+            TargetAccountIds:
+              - !Ref AWS::AccountId
+
+  InstallSoftwareComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: "sliderule-base-install"
+      Platform: "Linux"
+      Version: !Ref AmiDate
+      Data: !Sub |
+        name: InstallNodeDependencies
+        description: "Install system dependencies for each SlideRule node"
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: UpdateSystem
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - sudo dnf -y upgrade
+                    - sudo dnf install -y unzip wget
+              - name: InstallDocker
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - sudo dnf -y install docker
+                    - sudo usermod -aG docker ec2-user
+                    - wget https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
+                    - sudo mv docker-compose-linux-aarch64 /usr/local/bin/docker-compose
+                    - sudo chmod +x /usr/local/bin/docker-compose
+              - name: InstallNodeExporter
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-arm64.tar.gz
+                    - tar -xvzf node_exporter-1.8.2.linux-arm64.tar.gz
+                    - sudo mv node_exporter-1.8.2.linux-arm64/node_exporter /usr/local/bin/node_exporter
+                    - sudo aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/node_exporter.service /etc/systemd/system/node_exporter.service
+                    - sudo systemctl daemon-reload
+                    - sudo systemctl enable node_exporter.service
+              - name: InstallPromtail
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - wget https://github.com/grafana/loki/releases/download/v2.9.9/promtail-linux-arm64.zip
+                    - unzip promtail-linux-arm64.zip
+                    - sudo mv promtail-linux-arm64 /usr/local/bin/promtail
+                    - sudo aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/promtail.yml /etc/promtail.yml
+                    - sudo aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/promtail.service /etc/systemd/system/promtail.service
+                    - sudo systemctl daemon-reload
+                    - sudo systemctl enable promtail.service
+              - name: InstallLogcli
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - wget https://github.com/grafana/loki/releases/download/v2.9.9/logcli-linux-arm64.zip
+                    - unzip logcli-linux-arm64.zip
+                    - sudo mv logcli-linux-arm64 /usr/local/bin/logcli
+              - name: Cleanup
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - sudo dnf -y clean all
+
+  ImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      Name: "sliderule-base-recipe"
+      Version: !Ref AmiDate
+      ParentImage: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}"
+      Components:
+        - ComponentArn: !GetAtt InstallSoftwareComponent.Arn
+
+  ImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Name: "sliderule-base-pipeline"
+      ImageRecipeArn: !Ref ImageRecipe
+      InfrastructureConfigurationArn: !Ref InfrastructureConfig
+      DistributionConfigurationArn: !Ref DistributionConfig
+      Status: ENABLED
+
+Outputs:
+  ImagePipelineArn:
+    Description: "ARN of the Sliderule Base Image Pipeline"
+    Value: !Ref ImagePipeline
+    Export:
+      Name: SlideruleBaseImagePipelineArn

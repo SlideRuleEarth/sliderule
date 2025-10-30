@@ -28,7 +28,7 @@ jobs:
 
     - name: Upload Cluster Terraform
       run: |
-       cd sliderule/targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth
        make cluster-upload-terraform VERSION=unstable
 
     - name: Set Up Docker Buildx
@@ -44,15 +44,10 @@ jobs:
 
     - name: Build Cluster Containers
       run: |
-       cd sliderule/targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth
        make BUILDX=buildx DOCKER_PLATFORM="--platform linux/arm64" DOCKEROPTS=--load ARCH=aarch64 cluster-docker VERSION=unstable
 
     - name: Push Cluster Containers
       run: |
-       cd sliderule/targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth
        make cluster-docker-push VERSION=unstable
-
-#    - name: Build AMI
-#      run: |
-#       cd targets/slidruleearth-aws
-#       make cluster-build-packer

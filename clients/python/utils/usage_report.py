@@ -44,7 +44,7 @@ parser.add_argument('--localdir',           type=str,               default="/da
 parser.add_argument('--verbose',            action='store_true',    default=False)
 parser.add_argument('--apikey',             type=str,               default="")
 parser.add_argument('--export',             action='store_true',    default=False)
-parser.add_argument('--imports',            nargs='+', type=str,    default=[]) # s3://sliderule/data/manager/manager-developers-latest.db
+parser.add_argument('--imports',            nargs='+', type=str,    default=[]) # s3://sliderule/cf/manager/manager-developers-latest.db
 args,_ = parser.parse_known_args()
 
 # Initialize Organization

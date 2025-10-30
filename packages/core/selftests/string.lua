@@ -10,6 +10,7 @@ end
 
 local ut_string = core.ut_string()
 runner.assert(ut_string:replace())
+runner.assert(ut_string:find())
 
 -- Report Results --
 

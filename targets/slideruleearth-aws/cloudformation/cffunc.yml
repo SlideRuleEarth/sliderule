@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFront function for URI rewrite
+Resources:
+  UriFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${AWS::StackName}-uri-rewrite"
+      FunctionConfig:
+        Comment: "Removes /web prefix and ensures index.html resolution"
+        Runtime: cloudfront-js-1.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri.startsWith('/web')) {
+            request.uri = uri.replace('/web', '');
+          }
+          if (request.uri.endsWith('/')) {
+            request.uri += 'index.html';
+          } else if (!request.uri.includes('.')) {
+            request.uri += '/index.html';
+          }
+          return request;
+        }
+Outputs:
+  FunctionARN:
+    Description: "ARN of the CloudFront function"
+    Value: !GetAtt UriFunction.FunctionARN

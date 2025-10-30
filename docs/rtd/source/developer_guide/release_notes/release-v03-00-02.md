@@ -10,7 +10,7 @@ Version description of the v3.0.2 release of ICESat-2 SlideRule.
 
 - The internal git repository structure of the SlideRule project has changed and is now a monorepo.  All future GitHub Issues and Discussions are encouraged to take place under the `sliderule` repository.  The `sliderule-python` repo still exists and holds the Jupyter Notebook examples and Voila demo.
   * The sliderule-python repo Python client code is now in `sliderule/clients/python`
-  * The sliderule-build-and-deploy repo infrastructure code for the cluster is now in `sliderule/targets/slideruleearth-aws`
+  * The sliderule-build-and-deploy repo infrastructure code for the cluster is now in `sliderule/targets/slideruleearth`
   * The sliderule-docs repo documentation code is now in `sliderule/docs`
 
 - Each deployed cluster (both private and public) now include their own Grafana/Prometheus/Loki monitoring stack and static Read-The-Docs documentation website.  These services are behind an authentication client which uses the SlideRule Provisioning System as an identity provider.  To get access to these new services, users must have active accounts in the SlideRule Provisioning System and be members of the cluster they are attempting to access.

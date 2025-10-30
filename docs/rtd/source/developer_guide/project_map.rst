@@ -70,7 +70,7 @@ The SlideRule project consists of one main repository with a few supporting repo
 
     - `documentation <https://github.com/SlideRuleEarth/sliderule/tree/main/docs>`_: source for our static website and user documentation
 
-    - `infrastructure <https://github.com/SlideRuleEarth/sliderule/tree/main/targets/slideruleearth-aws>`_: infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud
+    - `infrastructure <https://github.com/SlideRuleEarth/sliderule/tree/main/targets/slideruleearth>`_: infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud
 
   * The `sliderule-python <https://github.com/SlideRuleEarth/sliderule-python>`_ repository includes example Jupyter notebooks for using SlideRule to perform common science data analysis workflows
 

@@ -7,9 +7,6 @@
 #           The user must have up-to-date aws credentials
 #     * Docker
 #           The user must be logged into the AWS Elastic Container Registry (ECR)
-#           The user must be logged into the GitHub Container Registry (GHCR)
-#     * Terraform & Packer
-#           The binaries are sufficient, but pay close attention to the local package versions
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
 #     * conda-lock
@@ -52,37 +49,38 @@ MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
-STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
-STATIC_WEB_STAGE_DIR = $(STAGE)/website
-STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-STATIC_WEB_ASSET_DIR ?= /data/web
+PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
+WEBSITE_SOURCE_DIR = $(ROOT)/docs
+WEBSITE_STAGE_DIR = $(STAGE)/website
+WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
+WEBSITE_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
-STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
-STATIC_WEB_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(STATIC_WEB_CONDA_ENV)
+PROJECT_BUCKET = sliderule
+PROJECT_FOLDER = cf
+PROJECT_PUBLIC_BUCKET = sliderule-public
+PROJECT_WEBSITE_BUCKET = sliderule-website
+AWS_ACCOUNT = 742127912612
+AWS_REGION = us-west-2
+ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
+MYIP = $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
+ARCH = $(shell arch)
+
+DOMAIN ?= slideruleearth.io
+ORGANIZATION ?= sliderule
 VERSION ?= latest
-ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
-GHCR ?= ghcr.io/slideruleearth
+
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
-ARCH ?= $(shell arch)
-DOMAIN ?= slideruleearth.io
-DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
-MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
-DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 RUNNER ?= # e.g. valgrind
-
-ORGANIZATION ?= sliderule
-PUBLIC_IP ?= # output from public-cluster-deploy
-COLOR ?=
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -101,7 +99,7 @@ RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += $(COMMON_CFG)
 
 ########################
-# Build Targets
+# Local Build Targets
 ########################
 
 all: sliderule
@@ -120,7 +118,11 @@ sliderule: ## build the server using the local configuration
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
+<<<<<<< HEAD
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False ASAN_OPTIONS="detect_leaks=1" LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth-aws/asan_leaks.supp" $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
+=======
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
+>>>>>>> portable-2
 
 buildenv: ## run the build environment docker container
 	docker run \
@@ -138,6 +140,10 @@ buildenv: ## run the build environment docker container
 		--name buildenv \
 		$(ECR)/sliderule-buildenv:$(VERSION)
 
+########################
+# Docker Build Targets
+########################
+
 buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
@@ -145,13 +151,9 @@ buildenv-docker: ## build sliderule build environment docker image
 	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
-	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
 buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
-
-buildenv-docker-push-github: ## push build environment docker image to GitHub registry
-	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -165,7 +167,8 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
-	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
+	cp docker/ilb/* $(ILB_STAGE_DIR)
+	cp $(ROOT)/applications/ilb/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
@@ -185,27 +188,27 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-lock: ## update dependencies of ams
-	cd docker/asset-metadata-service && conda-lock -p linux-$(ARCH) -f environment.yml
-	cd docker/asset-metadata-service && conda-lock render -p linux-$(ARCH)
+	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
+	cd docker/ams && conda-lock render -p linux-$(ARCH)
 
 ams-docker: ## build ams docker image; uses VERSION
 	-rm -Rf $(AMS_STAGE_DIR)
 	mkdir -p $(AMS_STAGE_DIR)
-	cp docker/asset-metadata-service/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
-	cp docker/asset-metadata-service/conda-* $(AMS_STAGE_DIR)
-	cp docker/asset-metadata-service/pyproject.toml $(AMS_STAGE_DIR)
-	cp docker/asset-metadata-service/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp docker/ams/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
+	cp docker/ams/conda-* $(AMS_STAGE_DIR)
+	cp docker/ams/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp $(ROOT)/applications/ams/pyproject.toml $(AMS_STAGE_DIR)
 	cp $(ROOT)/version.txt $(AMS_STAGE_DIR)
 	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(AMS_STAGE_DIR)/ams
-	cp docker/asset-metadata-service/ams/*.py $(AMS_STAGE_DIR)/ams
+	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ams:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-run: ## run ams locally; uses VERSION
 	docker run -it -p 8060:8060 --rm --name ams $(ECR)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
 
 manager-lock: ## update dependencies of manager
-	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/manager && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/manager/environment.yml
 	cd docker/manager && conda-lock render -p linux-$(ARCH)
 
 manager-docker: ## build manager docker image; uses VERSION
@@ -213,21 +216,17 @@ manager-docker: ## build manager docker image; uses VERSION
 	mkdir -p $(MANAGER_STAGE_DIR)
 	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
 	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
-	cp docker/manager/pyproject.toml $(MANAGER_STAGE_DIR)
 	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
+	cp $(ROOT)/applications/manager/pyproject.toml $(MANAGER_STAGE_DIR)
 	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
 	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(MANAGER_STAGE_DIR)/manager
-	cp docker/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
-	cp docker/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
+	cp $(ROOT)/applications/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
+	cp $(ROOT)/applications/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
 	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
 
 manager-run: ## run manager locally; uses VERSION
 	docker run -it -p 8040:8040 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
-
-########################
-# Cluster Targets
-########################
 
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker
@@ -245,121 +244,234 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/manager:$(VERSION)
 	docker push $(ECR)/ams:$(VERSION)
 
-cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
+########################
+# AMI Targets
+########################
 
-cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
-	-rm -Rf $(TF_STAGE_DIR)
-	mkdir -p $(TF_STAGE_DIR)
-	cp terraform/cluster/*.* $(TF_STAGE_DIR)
-	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
-	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
-	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
+AMI_DATE = $(shell date +'%Y.%-m.%d')
 
-cluster: ## build all targets related to a cluster deployment and push to aws; needs VERSION
-	make cluster-docker
-	make cluster-docker-push
-	make cluster-build-packer
-	make cluster-upload-terraform
+AMI_ID = $(shell aws imagebuilder get-image \
+	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
+	--region $(AWS_REGION) \
+	--query 'image.outputResources.amis[0].image' \
+	--output text)
+
+AMI_NAME = $(shell aws imagebuilder get-image \
+	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
+	--region $(AWS_REGION) \
+	--query 'image.outputResources.amis[0].name' \
+	--output text)
+
+ami-pipeline-create: ## create EC2 Image Builder pipeline
+	aws cloudformation create-stack \
+		--stack-name 	ami \
+		--template-body file://cloudformation/ami.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=AmiDate,ParameterValue=$(AMI_DATE)
+	aws cloudformation wait stack-create-complete --stack-name ami
+
+ami-pipeline-describe: ## status the creation/deletion of the EC2 Image Builder pipeline
+	aws cloudformation describe-stack-events \
+		--stack-name ami
+
+ami-pipeline-status:
+	@echo $(AMI_NAME)
+
+ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
+	aws cloudformation delete-stack \
+		--stack-name ami
+	aws cloudformation wait stack-delete-complete --stack-name ami
+
+ami-image-build: ## run EC2 Image Builder pipeline to create an AMI
+	aws s3 cp cloudformation/ami/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive
+	aws imagebuilder start-image-pipeline-execution \
+   		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
+    	--region $(AWS_REGION)
+
+ami-image-publish: ## publish AMI image name to SSM
+	aws ssm put-parameter \
+    	--name "/ami/sliderule/arm/$(VERSION)" \
+    	--type "String" \
+    	--value "$(AMI_ID)" \
+    	--overwrite
 
 ########################
 # Deployment Targets
 ########################
 
-public-cluster-test-color:
-	@if [ -z "$(COLOR)" ]; then \
-		echo "Error: COLOR must be set to green or blue"; \
-		exit 1; \
-	fi
+PUBLIC_IP ?= 127.0.0.1 # output from cluster-create
+COLOR ?= grey
+IS_PUBLIC ?= False
+NODE_CAPACITY ?= 1
 
-public-cluster-test-ip:
-	@if [ -z "$(PUBLIC_IP)" ]; then \
-		echo "Error: PUBLIC_IP must be provided"; \
-		exit 1; \
-	fi
+deployment-create: ## create a cluster in AWS
+	aws cloudformation create-stack \
+		--stack-name 	$(ORGANIZATION)-$(COLOR)-cluster \
+		--template-body file://cloudformation/cluster.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=ClusterName,ParameterValue=$(ORGANIZATION)-$(COLOR) \
+						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
+	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-public-cluster-status: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, uses DOMAIN
-	cd terraform/cluster && terraform init
-	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform plan -refresh-only && terraform show
+deployment-describe: ## status the creation/deletion of the certbot function
+	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-public-cluster-deploy: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, VERSION, uses DOMAIN, ORGANIZATION, ENVVER
-	cd terraform/cluster && terraform init
-	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform apply -var is_public=True -var cluster_name=$(ORGANIZATION)-$(COLOR) -var domain=$(DOMAIN) -var cluster_version=$(VERSION) -var organization_name=$(ORGANIZATION) -var environment_version=$(ENVVER)
+deployment-delete: ## deletes the lambda certbot function
+	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-$(COLOR)-cluster
+	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-public-cluster-destroy: public-cluster-test-color ## destroy public using terraform; needs COLOR, uses DOMAIN
-	cd terraform/cluster && terraform init
-	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform destroy
+deployment-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
+	aws cloudformation deploy \
+		--stack-name 	dns \
+		--template-body file://cloudformation/dns.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=PublicIp,ParameterValue=$(PUBLIC_IP)
 
-public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
-	cd terraform/dns && terraform init
-	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION) || terraform workspace new dns-$(DOMAIN)-$(ORGANIZATION)
-	cd terraform/dns && terraform apply -var domain=$(DOMAIN) -var organization=$(ORGANIZATION) -var public_ip=$(PUBLIC_IP)
+deployment-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
+	aws cloudformation delete-stack --stack-name dns
 
-public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
-	cd terraform/dns && terraform init
-	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION)
-	cd terraform/dns && terraform destroy
+CLUSTER_PARMS = '{\
+	"Version": "$(VERSION)",\
+	"IsPublic": "$(IS_PUBLIC)",\
+	"Domain": "$(DOMAIN)",\
+	"Organization": "$(ORGANIZATION)",\
+	"Color": "$(COLOR)",\
+	"ProjectBucket": "$(PROJECT_BUCKET)",\
+	"ProjectFolder": "$(PROJECT_FOLDER)",\
+	"ProjectPublicBucket": "$(PROJECT_PUBLIC_BUCKET)",\
+	"ContainerRegistry": "$(ECR)",\
+	"NodeCapacity": "$(NODE_CAPACITY)",\
+	"Region": "$(AWS_REGION)"\
+}'
+
+deployment-invoke:
+	echo $(CLUSTER_PARMS) > /tmp/request.json
+#	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/request.json /tmp/response.json
+#	cat /tmp/response.json | jq
 
 ########################
-# Static Website Targets
+# Website Targets
 ########################
 
-static-website-render-notebooks: ## execute the notebooks used in the documentation
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(STATIC_WEB_ASSET_DIR)/boulder_watershed.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(STATIC_WEB_ASSET_DIR)/phoreal.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(STATIC_WEB_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl13_access.ipynb --debug
-	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl24_access.ipynb --debug
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
+	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" \
+	--output text)
 
-static-website-docker: ## make the static website docker image; needs VERSION
-	rm -Rf $(STATIC_WEB_STAGE_DIR)
-	mkdir -p $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR) --exclude build --exclude stage
-	cp $(STATIC_WEB_ASSET_DIR)/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
-	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
-	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:$(VERSION) $(DOCKER_PLATFORM) .
+ZONE_ID=$(shell aws route53 list-hosted-zones-by-name \
+	--dns-name slideruleearth.io \
+	--query "HostedZones[0].Id" \
+	--output text | sed 's|/hostedzone/||')
 
-static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 4000:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
+WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
 
-static-website-export: ## export static website to local host directory; needs VERSION
-	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
-	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+CFFUNC_ID = $(shell aws cloudformation describe-stacks \
+	--stack-name cffunc \
+	--region us-east-1 \
+  	--query "Stacks[0].Outputs[?OutputKey=='FunctionARN'].OutputValue" \
+	--output text)
 
-static-website-live-update: static-website-export # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+CFFUNC_ETAG = $(shell aws cloudfront describe-function \
+	--region us-east-1 \
+	--name cffunc-uri-rewrite \
+	--query 'ETag' \
+	--output text)
+
+website-render-notebooks: ## execute the notebooks used in the documentation
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(WEBSITE_ASSET_DIR)/phoreal.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(WEBSITE_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(WEBSITE_ASSET_DIR)/atl13_access.ipynb --debug
+	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(WEBSITE_ASSET_DIR)/atl24_access.ipynb --debug
+
+website-docker: ## make the website docker image; needs VERSION
+	rm -Rf $(WEBSITE_STAGE_DIR)
+	mkdir -p $(WEBSITE_STAGE_DIR)
+	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(WEBSITE_STAGE_DIR)
+	cp -R $(WEBSITE_SOURCE_DIR)/jekyll $(WEBSITE_STAGE_DIR)
+	rsync -a $(ROOT) $(WEBSITE_STAGE_DIR) --exclude build --exclude stage
+	cp $(WEBSITE_ASSET_DIR)/* $(WEBSITE_STAGE_DIR)/rtd/source/assets
+	cp docker/website/Dockerfile.$(ARCH) $(WEBSITE_STAGE_DIR)/Dockerfile
+	cp docker/website/nginx.conf $(WEBSITE_STAGE_DIR)
+	cp docker/website/docker-entrypoint.sh $(WEBSITE_STAGE_DIR)
+	cd $(WEBSITE_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/website:$(VERSION) $(DOCKER_PLATFORM) .
+
+website-run: ## locally run the website; needs VERSION
+	docker run -it -p 4000:4000 --rm --name website $(ECR)/website:$(VERSION)
+
+website-export: ## export website to local host directory; needs VERSION
+	-rm -Rf $(WEBSITE_EXPORT_DIR)
+	mkdir -p $(WEBSITE_EXPORT_DIR)
+	docker run -it --entrypoint /bin/bash  -v ./docker/website:/host -v $(WEBSITE_EXPORT_DIR):/output --rm --name website $(ECR)/website:$(VERSION) /host/export_dist.sh
+
+website-live-update: website-export # Update the website docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(PROJECT_WEBSITE_BUCKET) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
-static-website-deploy: ## deploy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+website-cffunc-create: ## create the uri rewrite function for cloudfront
+	aws cloudformation create-stack \
+		--stack-name 	cffunc \
+		--region		us-east-1 \
+		--template-body file://cloudformation/cffunc.yml
+	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name cffunc
 
-static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+website-cffunc-describe: ## create the uri rewrite function for cloudfront
+	aws cloudformation describe-stack-events --region us-east-1 --stack-name cffunc
 
-static-website: ## build and update static website
-	make static-website-render-notebooks
-	make static-website-docker
-	make static-website-live-update
+website-cffunc-publish: ## publish the cloudfront function
+	aws cloudfront publish-function --region us-east-1 --name cffunc-uri-rewrite --if-match $(CFFUNC_ETAG)
+
+website-cffunc-delete: ## deletes the uri rewrite function for cloudfront
+	aws cloudformation delete-stack --region us-east-1 --stack-name cffunc
+	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name cffunc
+
+website-create: ## create website stack
+	aws cloudformation create-stack \
+		--stack-name 	website \
+		--template-body file://cloudformation/website.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		us-east-1 \
+		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=HostedZoneId,ParameterValue=$(ZONE_ID) \
+						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET) \
+						ParameterKey=CloudFrontFunctionARN,ParameterValue=$(CFFUNC_ID)
+	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name website
+
+website-describe: ## status the creation/deletion of the website
+	aws cloudformation describe-stack-events --region us-east-1 --stack-name website
+
+website-delete: ## deletes the website stack
+	aws cloudformation delete-stack --region us-east-1 --stack-name website
+	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name website
+
+website: ## build and update website
+	make website-render-notebooks
+	make website-docker
+	make website-live-update
 
 ########################
 # Certbot Targets
 ########################
 
-certbot-create:
+certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
 	mkdir -p $(CERTBOT_STAGE_DIR)
 	docker run -it --rm \
@@ -368,18 +480,71 @@ certbot-create:
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.11 \
 		-c "pip install --target /host/package certbot certbot-dns-route53"
-	cp terraform/certbot/python/main.py $(CERTBOT_STAGE_DIR)/package/
+	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
 	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
 
-certbot-deploy: ## deploy certbot using terraform; needs DOMAIN
-	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform apply
+certbot-describe: ## status the creation/deletion of the certbot function
+	aws cloudformation describe-stack-events --stack-name certbot
 
-certbot-destroy: ## destroy certbot using terraform; needs DOMAIN
-	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform destroy
+certbot-create: ## creates the lambda certbot function
+	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
+	aws cloudformation create-stack \
+		--stack-name 	certbot \
+		--template-body file://cloudformation/certbot.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
+	aws cloudformation wait stack-create-complete --stack-name certbot
+
+certbot-delete: ## deletes the lambda certbot function
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
+	aws cloudformation delete-stack --stack-name certbot
+	aws cloudformation wait stack-delete-complete --stack-name certbot
+
+########################
+# Provisioner Targets
+########################
+
+provisioner-build: ## create the provisioner lambda zipfile
+	-rm -Rf $(PROVISIONER_STAGE_DIR)
+	mkdir -p $(PROVISIONER_STAGE_DIR)
+	docker run -it --rm \
+		-v $(PROVISIONER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package requests"
+	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
+	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
+	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
+
+provisioner-describe: ## status the creation/deletion of the provisioner function
+	aws cloudformation describe-stack-events --stack-name provisioner
+
+provisioner-run: ## invokes the provisioner lambda function and displays the response
+	echo '{"domain":"$(DOMAIN)","version":"$(VERSION)"}' > /tmp/payload.json
+	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+provisioner-create: ## creates the lambda provisioner function
+	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
+	aws cloudformation create-stack \
+		--stack-name 	provisioner \
+		--template-body file://cloudformation/provisioner.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
+	aws cloudformation wait stack-create-complete --stack-name provisioner
+
+provisioner-delete: ## deletes the lambda provisioner function
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
+	aws cloudformation delete-stack --stack-name provisioner
+	aws cloudformation wait stack-delete-complete --stack-name provisioner
 
 ########################
 # Release Target
@@ -391,23 +556,23 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
-	make cluster
+	make cluster-docker
+	make cluster-docker-push
 
 ########################
 # Clean Up Targets
 ########################
 
 docker-clean: ## clean out old version of docker images; needs VERSION
-	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
@@ -415,7 +580,7 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/manager:$(VERSION)
 	- docker image rm $(ECR)/ams:$(VERSION)
-	- docker image rm $(ECR)/static-website:$(VERSION)
+	- docker image rm $(ECR)/website:$(VERSION)
 	- docker system prune -f
 
 distclean: ## fully remove all non-version controlled files and directories
@@ -423,8 +588,8 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
-	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
-	- cd $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service && ./clean.sh
+	- cd $(ROOT)/applications/manager && ./clean.sh
+	- cd $(ROOT)/applications/ams && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml
@@ -433,9 +598,10 @@ distclean: ## fully remove all non-version controlled files and directories
 # Test Targets
 ########################
 
-TEST ?= $(ROOT)/targets/slideruleearth-aws/test_runner.lua cloud
+TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua cloud
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
+AMSTEST ?= # specific ams tests and additional pytest options can be supplied here
 MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here
 
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
@@ -452,8 +618,11 @@ pytest: ## run python client tests; needs special conda environment
 jest: ## run node.js client self tests
 	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) TEST=$(JEST)
 
+amstest: ## run ams tests; needs special conda environment
+	make -C $(ROOT)applications/ams test TEST=$(AMSTEST)
+
 mngrtest: ## run manager tests; needs special conda environment
-	make -C docker/manager test TEST=$(MNGRTEST)
+	make -C $(ROOT)applications/manager test TEST=$(MNGRTEST)
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
@@ -465,14 +634,37 @@ perfssbtest: ## run strips serial and batch performance test comparing results
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
 
 ########################
-# Help Target
+# Help Targets
 ########################
 
-help: ## That's me!
-	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
-	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@echo ENVVER:$(ENVVER)
+environment: ## echo the environment variables
+	@echo INSTALLDIR: $(INSTALLDIR)
+	@echo PROJECT_BUCKET: $(PROJECT_BUCKET)
+	@echo PROJECT_FOLDER: $(PROJECT_FOLDER)
+	@echo PROJECT_PUBLIC_BUCKET: $(PROJECT_PUBLIC_BUCKET)
+	@echo PROJECT_WEBSITE_BUCKET: $(PROJECT_WEBSITE_BUCKET)
+	@echo AWS_ACCOUNT: $(AWS_ACCOUNT)
+	@echo AWS_REGION: $(AWS_REGION)
+	@echo ECR: $(ECR)
+	@echo MYIP: $(MYIP)
+	@echo ENVVER: $(ENVVER)
+	@echo ARCH: $(ARCH)
 	@echo DOMAIN: $(DOMAIN)
+<<<<<<< HEAD
 	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
 	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
 	@echo MYIP: $(MYIP)
+=======
+	@echo ORGANIZATION: $(ORGANIZATION)
+	@echo VERSION: $(VERSION)
+	@echo DOCKEROPTS: $(DOCKEROPTS)
+	@echo BUILDX: $(BUILDX)
+	@echo DOCKER_PLATFORM: $(DOCKER_PLATFORM)
+	@echo USERCFG: $(USERCFG)
+	@echo RUNNER: $(RUNNER)
+	@echo DEBUG_CFG: $(DEBUG_CFG)
+	@echo RELEASE_CFG: $(RELEASE_CFG)
+
+help: ## That's me!
+	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+>>>>>>> portable-2

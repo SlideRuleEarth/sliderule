@@ -29,23 +29,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __container_runner__
-#define __container_runner__
+#ifndef __ut_string__
+#define __ut_string__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "MsgQ.h"
-#include "LuaObject.h"
-#include "CreFields.h"
+#include "UnitTest.h"
 
 /******************************************************************************
- * CONTAINER RUNNER CLASS
+ * CLASS
  ******************************************************************************/
 
-class ContainerRunner: public LuaObject
+class UT_String: public UnitTest
 {
     public:
 
@@ -53,47 +50,26 @@ class ContainerRunner: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
-
-        static const int RESULT_SIGNAL = 0;
-        static const int WAIT_TIMEOUT = 30;
-
-        static const char* SANDBOX_MOUNT;
-        static const char* HOST_DIRECTORY;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static int          luaList             (lua_State* L);
-        static int          luaCreateUnique     (lua_State* L);
-        static int          luaDeleteUnique     (lua_State* L);
+        static int  luaCreate   (lua_State* L);
 
     private:
 
         /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        bool            active;
-        Thread*         controlPid;
-        Publisher*      outQ;
-        const char*     hostSandboxDirectory;
-        Cond            resultLock;
-        CreFields*      parms;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ContainerRunner         (lua_State* L, CreFields* _parms, const char* host_shared_directory, const char* outq_name);
-                        ~ContainerRunner        (void) override;
-        static void*    controlThread           (void* parm);
-        static void     processContainerLogs    (const char* buffer, int buffer_size, const char* id);
-        static string   authenticateToDocker    (void);
+    explicit UT_String          (lua_State* L);
+            ~UT_String          (void) override = default;
+
+	static int  testReplace     (lua_State* L);
+	static int  testFind        (lua_State* L);
 };
 
-#endif  /* __container_runner__ */
+#endif  /* __ut_string__ */

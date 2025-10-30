@@ -41,6 +41,7 @@ install (
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/lscre.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/execre.lua
     DESTINATION
         ${CONFDIR}/api
 )
