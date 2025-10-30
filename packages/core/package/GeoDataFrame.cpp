@@ -1933,7 +1933,6 @@ int GeoDataFrame::luaRun  (lua_State* L)
     {
         mlog(e.level(), "Error attaching runner: %s", e.what());
         if(runner) runner->releaseLuaObject();
-        status = false;
     }
 
     return returnLuaStatus(L, status);
