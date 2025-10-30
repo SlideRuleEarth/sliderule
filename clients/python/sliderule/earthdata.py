@@ -55,9 +55,9 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
-    "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
-    "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "007",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "007",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "007",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
     "ATL09":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
     "ATL13":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": {".h5"},    "collections": [],                                 "url": None},
     "ATL24":                                               {"provider": "NSIDC_CPRD",  "version": "001",  "api": "cmr",   "formats": {".h5"},    "collections": [],                                 "url": None},
@@ -835,6 +835,11 @@ def search(parm, resources=None):
 
     # Initialize CMR Keyword Arguments
     cmr_kwargs = {}
+
+    # Pull Out Version (if specified)
+    if "cmr" in parm:
+        if "version" in parm["cmr"]:
+            cmr_kwargs["version"] = parm["cmr"]["version"]
 
     # Pull Out Polygon
     if "ignore_poly_for_cmr" not in parm or not parm["ignore_poly_for_cmr"]:
