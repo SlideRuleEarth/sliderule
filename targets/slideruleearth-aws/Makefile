@@ -118,11 +118,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
-<<<<<<< HEAD
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False ASAN_OPTIONS="detect_leaks=1" LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth-aws/asan_leaks.supp" $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
-=======
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
->>>>>>> portable-2
 
 buildenv: ## run the build environment docker container
 	docker run \
@@ -650,11 +646,6 @@ environment: ## echo the environment variables
 	@echo ENVVER: $(ENVVER)
 	@echo ARCH: $(ARCH)
 	@echo DOMAIN: $(DOMAIN)
-<<<<<<< HEAD
-	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
-	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
-	@echo MYIP: $(MYIP)
-=======
 	@echo ORGANIZATION: $(ORGANIZATION)
 	@echo VERSION: $(VERSION)
 	@echo DOCKEROPTS: $(DOCKEROPTS)
@@ -667,4 +658,3 @@ environment: ## echo the environment variables
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
->>>>>>> portable-2
