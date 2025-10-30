@@ -234,7 +234,7 @@ void* ContainerRunner::controlThread (void* parm)
     if(check_http_code < EndpointObject::OK || check_http_code >= EndpointObject::Bad_Request)
     {
         alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Pulling container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), check_http_code, check_response);
-        string auth = authenticateToDocker();
+        const string auth = authenticateToDocker();
         const FString* registry_auth = new const FString("X-Registry-Auth: %s", auth.c_str());
         headers.add(registry_auth);
         const FString pull_url("http://localhost/%s/images/create?fromImage=%s", api_version, cr->parms->container_image.value.c_str());
@@ -479,8 +479,8 @@ string ContainerRunner::authenticateToDocker (void)
     string auth;
 
     // execute command
-    FString cmd("aws ecr get-login-password --region us-west-2");
-    std::unique_ptr<FILE, decltype(&pclose)> shell(popen(cmd.c_str(), "r"), pclose);
+    const FString cmd("aws ecr get-login-password --region us-west-2");
+    const std::unique_ptr<FILE, decltype(&pclose)> shell(popen(cmd.c_str(), "r"), pclose);
     if(shell)
     {
         // read output
@@ -494,7 +494,7 @@ string ContainerRunner::authenticateToDocker (void)
         if(!password.empty() && password.back() == '\n') password.pop_back();
 
         // build authentication header
-        FString auth_json("{\"username\":\"AWS\",\"password\":\"%s\",\"serveraddress\":\"742127912612.dkr.ecr.us-west-2.amazonaws.com\"}", password.c_str());
+        const FString auth_json("{\"username\":\"AWS\",\"password\":\"%s\",\"serveraddress\":\"742127912612.dkr.ecr.us-west-2.amazonaws.com\"}", password.c_str());
         int length = auth_json.length();
         const char* auth_b64 = StringLib::b64encode(auth_json.c_str(), &length);
 

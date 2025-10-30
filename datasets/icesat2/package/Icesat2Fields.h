@@ -39,6 +39,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "RequestFields.h"
+#include "GeoDataFrame.h"
 #include "FieldElement.h"
 #include "FieldEnumeration.h"
 #include "FieldDictionary.h"
@@ -495,12 +496,23 @@ class Icesat2Fields: public RequestFields
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
-        static void loadCRSFiles(void);
+        // CRS support
+        static const char* crsITRF2014()        { static string crs = GeoDataFrame::loadCRSFile("EPSG7912.projjson");         return crs.c_str(); }
+        static const char* crsITRF2014_EGM08()  { static string crs = GeoDataFrame::loadCRSFile("EPSG7912_EGM08.projjson");   return crs.c_str(); }
+        static const char* crsITRF2020()        { static string crs = GeoDataFrame::loadCRSFile("EPSG9989.projjson");         return crs.c_str(); }
+        static const char* crsITRF2020_EGM08()  { static string crs = GeoDataFrame::loadCRSFile("EPSG9989_EGM08.projjson");   return crs.c_str(); }
 
-        static const char* crsITRF2014()       { return crs_ITRF2014.c_str(); }
-        static const char* crsITRF2014_EGM08() { return crs_ITRF2014_EGM08.c_str(); }
-        static const char* crsITRF2020()       { return crs_ITRF2020.c_str(); }
-        static const char* crsITRF2020_EGM08() { return crs_ITRF2020_EGM08.c_str(); }
+        // default ITRF CRS selection
+        static const char* defaultITRF(int release) {
+            if(release <= 6) return crsITRF2014();
+            else return crsITRF2020();
+        }
+
+        // default EGM CRS selection
+        static const char* defaultEGM(int release) {
+            if(release <= 6) return crsITRF2014_EGM08();
+            else return crsITRF2020_EGM08();
+        }
 
         /*--------------------------------------------------------------------
          * Data
@@ -551,17 +563,6 @@ class Icesat2Fields: public RequestFields
         virtual ~Icesat2Fields  (void) override = default;
 
         static int luaStage (lua_State* L);
-
-    private:
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static string crs_ITRF2014;
-        static string crs_ITRF2014_EGM08;
-        static string crs_ITRF2020;
-        static string crs_ITRF2020_EGM08;
-
 };
 
 /******************************************************************************

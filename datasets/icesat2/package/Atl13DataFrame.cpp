@@ -105,7 +105,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt},
         {"granule",                 &granule}
     },
-    Icesat2Fields::crsITRF2014_EGM08()),
+    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),

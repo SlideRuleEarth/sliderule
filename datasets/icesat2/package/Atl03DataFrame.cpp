@@ -117,7 +117,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt},
         {"granule",             &granule}
     },
-    Icesat2Fields::crsITRF2014()),
+    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -169,7 +169,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     }
 
     /* Set CRS */
-    if(useGeoid) crs = Icesat2Fields::crsITRF2014_EGM08();
+    if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();

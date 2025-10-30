@@ -76,8 +76,9 @@ class MathLib
         typedef enum {
             UNSPECIFIED_DATUM = 0,
             ITRF2014 = 1,
-            EGM08 = 2,
-            NAVD88 = 3,
+            ITRF2020 = 2,
+            EGM08 = 3,
+            NAVD88 = 4,
         } datum_t;
 
         /* Cartesian Coordinate */
