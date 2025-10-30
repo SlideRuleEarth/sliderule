@@ -1893,7 +1893,7 @@ int GeoDataFrame::luaGetCRS (lua_State* L)
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaRun  (lua_State* L)
 {
-    bool status = true;
+    bool status = false;
     GeoDataFrame::FrameRunner* runner = NULL;
 
     try
@@ -1926,6 +1926,7 @@ int GeoDataFrame::luaRun  (lua_State* L)
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "run queue post failed: %d", post_state);
             }
+            status = true;
         }
     }
     catch(const RunTimeException& e)
