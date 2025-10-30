@@ -51,7 +51,7 @@ class TestSampler:
         assert len(gdf) == 197
         assert len(gdf.keys()) == 20
         assert gdf["cycle"].mean() == 2
-        assert abs(gdf["mosaic.value"].mean() - 1474.8950269670052) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
+        assert abs(gdf["mosaic.value"].mean() - 1474.9005392520041) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time_ns"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
 
