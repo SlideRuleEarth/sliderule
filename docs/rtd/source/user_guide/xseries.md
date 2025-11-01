@@ -215,7 +215,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 
 |Parameter|Description|Units|Default|
 |---------|-----------|-----|-------|
-|asset|Source data asset, see [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth-aws/asset_directory.csv)|string|api specific|
+|asset|Source data asset, see [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth/asset_directory.csv)|string|api specific|
 |resources|List of granule/tile file names to process|list of strings||
 |poly|List of latitudes and longitudes defining the area of interest|list of lat/lon dictionaries||
 |proj|Projection of area of interest|0:North Polar, 1:South Polar, 2:Plate Carree|Plate Carree|

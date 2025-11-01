@@ -93,6 +93,7 @@ class ContainerRunner: public LuaObject
                         ~ContainerRunner        (void) override;
         static void*    controlThread           (void* parm);
         static void     processContainerLogs    (const char* buffer, int buffer_size, const char* id);
+        static string   authenticateToDocker    (void);
 };
 
 #endif  /* __container_runner__ */

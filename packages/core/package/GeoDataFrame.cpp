@@ -34,6 +34,11 @@
  ******************************************************************************/
 
 #include <regex>
+#include <fstream>
+#include <sstream>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
@@ -813,6 +818,34 @@ const Dictionary<GeoDataFrame::column_entry_t>& GeoDataFrame::getColumns(void) c
 const Dictionary<GeoDataFrame::meta_entry_t>& GeoDataFrame::getMeta(void) const
 {
     return metaFields.fields;
+}
+
+/*----------------------------------------------------------------------------
+ * loadCRSFile
+ *----------------------------------------------------------------------------*/
+string GeoDataFrame::loadCRSFile(const char* crsFile)
+{
+    // build the full path to the crs file
+    std::stringstream crsPath;
+    crsPath << CONFDIR << PATH_DELIMETER << crsFile;
+
+    // read the contents of the file
+    const std::ifstream f(crsPath.str());
+    assert(f.is_open());
+    std::ostringstream contents;
+    contents << f.rdbuf();
+
+    // serialize into a compact JSON string
+    rapidjson::Document doc;
+    doc.Parse(contents.str().c_str());
+    assert(!doc.HasParseError());
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    // return compact crs
+    mlog(INFO, "Loaded CRS file: %s", crsFile);
+    return buffer.GetString();
 }
 
 /*----------------------------------------------------------------------------
@@ -1860,7 +1893,7 @@ int GeoDataFrame::luaGetCRS (lua_State* L)
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaRun  (lua_State* L)
 {
-    bool status = true;
+    bool status = false;
     GeoDataFrame::FrameRunner* runner = NULL;
 
     try
@@ -1893,13 +1926,13 @@ int GeoDataFrame::luaRun  (lua_State* L)
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "run queue post failed: %d", post_state);
             }
+            status = true;
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error attaching runner: %s", e.what());
         if(runner) runner->releaseLuaObject();
-        status = false;
     }
 
     return returnLuaStatus(L, status);

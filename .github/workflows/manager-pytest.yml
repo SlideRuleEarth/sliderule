@@ -43,7 +43,7 @@ jobs:
           auto-update-conda: true
           auto-activate-base: false
           activate-environment: manager
-          environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
+          environment-file: applications/manager/environment.yml
 
       - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
@@ -59,13 +59,13 @@ jobs:
 
       - name: Initialize manager database
         shell: bash -l {0}
-        working-directory: targets/slideruleearth-aws/docker/manager
+        working-directory: applications/manager
         run: |
           # Build the DuckDB database
           make init
 
       - name: Run manager tests with coverage
         shell: bash -l {0}
-        working-directory: targets/slideruleearth-aws/docker/manager
+        working-directory: applications/manager
         run: |
           make test

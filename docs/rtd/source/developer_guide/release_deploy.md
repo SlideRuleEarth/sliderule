@@ -47,8 +47,8 @@ cd sliderule/clients/nodejs && make login
 * Verify the presence of the conda environments needed to run the different pytest suites: `sliderule`, `manager`, `ams`.
 ```bash
 conda env create -f clients/python/environment.yml # creates sliderule environment
-conda env create -f targets/slideruleearth-aws/docker/manager/environment.yml # creates manager environment
-conda env create -f targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml # creates ams environment
+conda env create -f applications/manager/environment.yml # creates manager environment
+conda env create -f applications/ams/environment.yml # creates ams environment
 conda env list # lists what conda environments are available
 ```
 ## Guide
@@ -59,7 +59,7 @@ conda env list # lists what conda environments are available
 
 * Run the `Lua` selftest, which executes all of the component level test scripts with `address sanitizer` enabled.
 
-From `sliderule/targets/slideruleearth-aws`
+From `sliderule/targets/slideruleearth`
 ```bash
 make distclean
 make config-debug
@@ -69,14 +69,14 @@ make selftest
 
 * Run the `manager` PyTests. The manager application has its own set of pytests that run under the `manager` conda environment and test the basic functionality and APIs of the *manager* container.
 
-From `sliderule/targets/slideruleearth-aws/docker/manager`
+From `sliderule/applications/manager`
 ```bash
 make test
 ```
 
 * Run the `ams` PyTests. The Asset Metadata Service (AMS) application has its own set of pytests that run under the `ams` conda environment and test the basic functionality and APIs of the *ams* container.
 
-From `sliderule/targets/slideruleearth-aws/docker/asset-metadata-service`
+From `sliderule/applications/ams`
 ```bash
 make test
 ```
@@ -85,12 +85,12 @@ make test
 
 * Run a debug version of the sliderule server code locally. Make sure the `ilb`, `manager`, and `ams` containers are running in the background.
 
-From `sliderule/targets/slideruleearth-aws`
+From `sliderule/targets/slideruleearth`
 ```bash
 docker compose up ilb manager ams -d
 ```
 
-From `sliderule/targets/slideruleearth-aws`
+From `sliderule/targets/slideruleearth`
 ```bash
 make distclean
 make config-debug
@@ -121,7 +121,7 @@ Prior to a full release, it is good to test the full deployment to a private clu
 
 * Build the latest code base and deploy it to a private cluster (typically `developers`).
 
-From `sliderule/targets/slideruleearth-aws`
+From `sliderule/targets/slideruleearth`
 ```bash
 make cluster-docker
 make cluster-docker-push
@@ -160,7 +160,7 @@ python utils/baseline.py --organization developers
 
 #### (4) Create New Release
 
-From `sliderule/targets/slideruleearth-aws`
+From `sliderule/targets/slideruleearth`
 ```bash
 make release VERSION=<version>
 ```
@@ -188,7 +188,7 @@ Note - when a new release is created, there is a GitHub action that automaticall
 
 * Check which color the live cluster is running as. Only one of the colors should have actively deployed resources in AWS.  Consider the active color as the live cluster, and use the inactive color for the new cluster.
 
-From `sliderule/targets/slideruleearth-aws/`
+From `sliderule/targets/slideruleearth/`
 ```bash
 make public-cluster-status COLOR=green
 make public-cluster-status COLOR=blue
@@ -196,7 +196,7 @@ make public-cluster-status COLOR=blue
 
 * Deploy the new release as the _new_ cluster color. The `<new>` is the _new_ color identified in the step above.  The `<new release version>` is the version of the code that is to be deployed.
 
-From `sliderule/targets/slideruleearth-aws/`
+From `sliderule/targets/slideruleearth/`
 ```bash
 make public-cluster-deploy COLOR=<new> VERSION=<new release version>
 ```
@@ -218,7 +218,7 @@ ORGANIZATION=sliderule-<new> make test
 
 * Switch to the _new_ cluster by pointing the `sliderule.slideruleearth.io` domain to the newly deployed cluster.  The `<ip>` address supplied in the command is the `ilb_ip_address` output from the deployment of the _new_ cluster.
 
-From `sliderule/targets/slideruleearth-aws/`
+From `sliderule/targets/slideruleearth/`
 ```bash
 make public-cluster-go-live PUBLIC_IP=<ip>
 ```
@@ -233,7 +233,7 @@ python utils/usage_report.py --organization sliderule-<color>
 
 * Destroy the old cluster. The `<old>` color is the color of the old cluster that we want to now destroy.
 
-from `sliderule/targets/slideruleearth-aws/`
+from `sliderule/targets/slideruleearth/`
 ```bash
 make public-cluster-destroy COLOR=<old>
 ```

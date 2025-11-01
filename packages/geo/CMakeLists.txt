@@ -41,14 +41,15 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoRtree.cpp
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSubset.cpp>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSample.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_RasterSubset.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_RasterSample.cpp>
     )
 
 target_include_directories (slideruleLib
     PUBLIC
         $<INSTALL_INTERFACE:${INCDIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/unittests>
 )
 
 install (
@@ -68,8 +69,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoRtree.h
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSubset.h>
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSample.h>
     DESTINATION
         ${INCDIR}
 )

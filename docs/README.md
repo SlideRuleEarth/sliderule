@@ -99,12 +99,12 @@ The SlideRule **website** can be built and hosted locally for development purpos
 
 ### Build Instructions for docker container
 
-To build, in the slideruleearth-aws target directory:
+To build, in the slideruleearth target directory:
 ```bash
-$ make static-website-docker
+$ make website-docker
 ```
 
 To run locally (exposed as http://localhost:4000) in the root of the repository:
 ```bash
-$ make static-website-run
+$ make website-run
 ```

@@ -1,0 +1,37 @@
+ARG repo
+FROM $repo/sliderule-buildenv:latest AS buildenv
+
+# copy sliderule source repository
+COPY sliderule /sliderule
+
+# build and install sliderule application
+WORKDIR /sliderule/targets/slideruleearth
+RUN make config-release INSTALLDIR=/usr/local && make
+
+# install project specific files
+COPY config.json /usr/local/etc/sliderule/
+
+# install runtime dependencies
+FROM amazonlinux:2023 AS runtime
+RUN dnf update \
+  && dnf install -y \
+  readline \
+  lua \
+  openssl \
+  libtiff \
+  zlib \
+  zstd \
+  gmp \
+  libomp \
+  && dnf clean all \
+  && rm -rf /var/cache/yum
+
+# copy sliderule installation from buildenv
+COPY --from=buildenv /usr/local /usr/local
+
+# configure any new shared libraries
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
+
+# set entrypoint
+COPY docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]

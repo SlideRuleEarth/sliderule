@@ -240,7 +240,7 @@ char* StringLib::copy(char* dst, const char* src, int _size)
 /*----------------------------------------------------------------------------
  * find
  *
- *  returns -1 if string not found
+ *  returns NULL if string not found
  *----------------------------------------------------------------------------*/
 char* StringLib::find(const char* big, const char* little)
 {
@@ -251,7 +251,16 @@ char* StringLib::find(const char* big, const char* little)
     {
         for(int i=0; i<=(big_len - little_len); i++)
         {
-            if((big[i] == little[0]) && StringLib::match(&big[i], little))
+            bool match = true;
+            for(int j=0; j<little_len; j++)
+            {
+                if(big[i+j] != little[j])
+                {
+                    match = false;
+                    break;
+                }
+            }
+            if(match)
             {
                 return const_cast<char*>(&big[i]);
             }

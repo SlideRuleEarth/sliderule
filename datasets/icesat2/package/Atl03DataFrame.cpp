@@ -117,7 +117,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt},
         {"granule",             &granule}
     },
-    Icesat2Fields::crsITRF2014()),
+    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -134,7 +134,8 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf03(_hdf03),
     hdf08(_hdf08),
     hdf24(_hdf24),
-    useYapc(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version == 0) && (parms->granuleFields.version.value >= 6)),
+    useYapc006(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version == 0) && (parms->granuleFields.version.value == 6)),
+    useYapc007(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version == 0) && (parms->granuleFields.version.value >= 7)),
     useGeoid(parms->datum == MathLib::EGM08)
 {
     assert(_parms);
@@ -168,7 +169,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     }
 
     /* Set CRS */
-    if(useGeoid) crs = Icesat2Fields::crsITRF2014_EGM08();
+    if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();
@@ -463,7 +464,8 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     h_ph                (df->hdf03, FString("%s/%s", df->beam, "heights/h_ph").c_str(),                 0, aoi.first_photon,  aoi.num_photons),
     signal_conf_ph      (df->hdf03, FString("%s/%s", df->beam, "heights/signal_conf_ph").c_str(),       df->signalConfColIndex, aoi.first_photon,  aoi.num_photons),
     quality_ph          (df->hdf03, FString("%s/%s", df->beam, "heights/quality_ph").c_str(),           0, aoi.first_photon,  aoi.num_photons),
-    weight_ph           (df->useYapc ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
+    weight006_ph        (df->useYapc006 ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
+    weight007_ph        (df->useYapc007 ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
     lat_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lat_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
     lon_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lon_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
     delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, aoi.first_photon,  aoi.num_photons),
@@ -486,7 +488,8 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     h_ph.join(df->readTimeoutMs, true);
     signal_conf_ph.join(df->readTimeoutMs, true);
     quality_ph.join(df->readTimeoutMs, true);
-    if(df->useYapc) weight_ph.join(df->readTimeoutMs, true);
+    if(df->useYapc006) weight006_ph.join(df->readTimeoutMs, true);
+    if(df->useYapc007) weight007_ph.join(df->readTimeoutMs, true);
     lat_ph.join(df->readTimeoutMs, true);
     lon_ph.join(df->readTimeoutMs, true);
     delta_time.join(df->readTimeoutMs, true);
@@ -888,10 +891,18 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Set and Check YAPC Score */
-            uint8_t yapc_score = 0;
-            if(df->useYapc) // read from atl03 granule
+            uint16_t yapc_score = 0;
+            if(df->useYapc006) // read from atl03 granule release 006
             {
-                yapc_score = atl03.weight_ph[current_photon];
+                yapc_score = atl03.weight006_ph[current_photon];
+                if(yapc_score < parms.yapc.score)
+                {
+                    continue;
+                }
+            }
+            else if(df->useYapc007) // read from atl03 granule release 007
+            {
+                yapc_score = atl03.weight007_ph[current_photon];
                 if(yapc_score < parms.yapc.score)
                 {
                     continue;

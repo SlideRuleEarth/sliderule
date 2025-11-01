@@ -1,0 +1,124 @@
+version: "3.9"
+services:
+  sliderule:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule:latest
+    container_name: sliderule
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /data:/data
+      - /plugins:/plugins
+    environment:
+      - IPV4=127.0.0.1
+      - ORCHESTRATOR=http://127.0.0.1:8050
+      - MANAGER=http://127.0.0.1:8030
+      - AMS=http://127.0.0.1:9082
+      - IS_PUBLIC=False
+      - ORGANIZATION=localhost
+      - CLUSTER=localhost
+      - PROVISIONING_SYSTEM=https://ps.localhost
+      - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
+      - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
+    labels:
+      - autoheal=true
+    healthcheck:
+      test: curl -f -X GET -d "{}" http://localhost:9081/source/health
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
+  ilb:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ilb:latest
+    container_name: ilb
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - ./:/haproxy
+      - /etc/ssl/private:/etc/ssl/private
+    environment:
+      - ORGANIZATION=localhost
+      - IS_PUBLIC=True
+    labels:
+      - autoheal=true
+    healthcheck:
+      test: curl -f http://localhost:8050/discovery/health
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
+  monitor:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest
+    container_name: monitor
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+  proxy:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/proxy:latest
+    container_name: proxy
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    volumes:
+      - /etc/ssl/private:/etc/ssl/private
+    environment:
+      - CLIENT_ID=$CLIENT_ID
+      - CLIENT_SECRET=$CLIENT_SECRET
+      - DOMAIN=$DOMAIN
+      - REDIRECT_URI_SCHEME=http
+  ams:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ams:latest
+    container_name: ams
+    network_mode: "host"
+    restart: always
+    pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /data:/data
+  manager:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/manager:latest
+    container_name: manager
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /data:/data # manager.db
+    environment:
+      - IS_PUBLIC=True
+      - DUCKDB_REMOTE_FILE=s3://sliderule/cf/manager/manager-localhost-latest.db
+      - ORCHESTRATOR=http://127.0.0.1:8050
+      - RATELIMIT_WEEKLY_COUNT=$RATELIMIT_WEEKLY_COUNT
+      - RATELIMIT_BACKOFF_COUNT=$RATELIMIT_BACKOFF_COUNT
+      - RATELIMIT_BACKOFF_PERIOD=$RATELIMIT_BACKOFF_PERIOD
+  autoheal:
+    image: willfarrell/autoheal:latest
+    container_name: autoheal
+    tty: true
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

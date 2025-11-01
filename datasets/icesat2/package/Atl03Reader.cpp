@@ -61,7 +61,7 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
     {"atl08_class",     RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"atl03_cnf",       RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX}
+    {"yapc_score",      RecordObject::UINT16,   offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX}
 };
 
 const char* Atl03Reader::exRecType = "atl03rec";
@@ -472,7 +472,8 @@ void Atl03Reader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    read_yapc           (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value >= 6)),
+    read_yapc006        (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value == 6)),
+    read_yapc007        (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value >= 7)),
     sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
     velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
@@ -484,7 +485,8 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     h_ph                (info->reader->context, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->context, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),       info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->reader->context, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),           0, region.first_photon,  region.num_photons),
-    weight_ph           (read_yapc ? info->reader->context : NULL, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    weight006_ph        (read_yapc006 ? info->reader->context : NULL, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    weight007_ph        (read_yapc007 ? info->reader->context : NULL, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
     lat_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),               0, region.first_photon,  region.num_photons),
     lon_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),               0, region.first_photon,  region.num_photons),
     delta_time          (info->reader->context, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),           0, region.first_photon,  region.num_photons),
@@ -548,7 +550,8 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         h_ph.join(info->reader->read_timeout_ms, true);
         signal_conf_ph.join(info->reader->read_timeout_ms, true);
         quality_ph.join(info->reader->read_timeout_ms, true);
-        if(read_yapc) weight_ph.join(info->reader->read_timeout_ms, true);
+        if(read_yapc006) weight006_ph.join(info->reader->read_timeout_ms, true);
+        if(read_yapc007) weight007_ph.join(info->reader->read_timeout_ms, true);
         lat_ph.join(info->reader->read_timeout_ms, true);
         lon_ph.join(info->reader->read_timeout_ms, true);
         delta_time.join(info->reader->read_timeout_ms, true);
@@ -1383,7 +1386,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         }
 
                         /* Set and Check YAPC Score */
-                        uint8_t yapc_score = 0;
+                        uint16_t yapc_score = 0;
                         if(yapc.score) // dynamically calculated
                         {
                             yapc_score = yapc[current_photon];
@@ -1392,9 +1395,17 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 break;
                             }
                         }
-                        else if(atl03.read_yapc) // read from atl03 granule
+                        else if(atl03.read_yapc006) // read from atl03 granule release 006
                         {
-                            yapc_score = atl03.weight_ph[current_photon];
+                            yapc_score = atl03.weight006_ph[current_photon];
+                            if(yapc_score < parms->yapc.score)
+                            {
+                                break;
+                            }
+                        }
+                        else if(atl03.read_yapc007) // read from atl03 granule release 007
+                        {
+                            yapc_score = atl03.weight007_ph[current_photon];
                             if(yapc_score < parms->yapc.score)
                             {
                                 break;

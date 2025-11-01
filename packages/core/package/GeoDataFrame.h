@@ -208,6 +208,7 @@ class GeoDataFrame: public LuaObject, public Field
         const Dictionary<column_entry_t>&   getColumns  (void) const;
         const Dictionary<meta_entry_t>&     getMeta     (void) const;
 
+        static string       loadCRSFile                 (const char* crsFile);
         static string       extractColumnName           (const string& column_description);
         static column_op_t  extractColumnOperation      (const string& column_description);
         static void         createAncillaryColumns      (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields);

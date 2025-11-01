@@ -37,19 +37,6 @@
 #include "Icesat2Fields.h"
 #include "FieldDictionary.h"
 #include "LuaObject.h"
-#include <fstream>
-#include <sstream>
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-string Icesat2Fields::crs_ITRF2014;
-string Icesat2Fields::crs_ITRF2014_EGM08;
-string Icesat2Fields::crs_ITRF2020;
-string Icesat2Fields::crs_ITRF2020_EGM08;
 
 /******************************************************************************
  * METHODS
@@ -502,67 +489,6 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
         }
     }
 
-}
-
-/*----------------------------------------------------------------------------
- * loadCRSFile
- *----------------------------------------------------------------------------*/
-static bool loadCRSFile(string& str, const string& crsPath)
-{
-    const std::ifstream f(crsPath);
-    if(!f) return false;
-
-    std::ostringstream ss;
-    ss << f.rdbuf();
-    str = ss.str();
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * loadCRSFiles - Loads all required CRS files.
- *----------------------------------------------------------------------------*/
-void Icesat2Fields::loadCRSFiles(void)
-{
-    if(!crs_ITRF2014.empty()) return; // already loaded
-
-    struct CRSInfo
-    {
-        string* target;
-        const char* filename;
-    };
-
-    const CRSInfo crsList[] =
-    {
-        { &crs_ITRF2014,       "EPSG7912.projjson" },
-        { &crs_ITRF2014_EGM08, "EPSG7912_EGM08.projjson" },
-        { &crs_ITRF2020,       "EPSG9989.projjson" },
-        { &crs_ITRF2020_EGM08, "EPSG9989_EGM08.projjson" },
-    };
-
-    for(const auto& entry : crsList)
-    {
-        string contents;
-        std::stringstream ss;
-        ss << CONFDIR << PATH_DELIMETER << entry.filename;
-
-        if(!loadCRSFile(contents, ss.str()))
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", ss.str().c_str());
-
-        // Serialize into a compact JSON string
-        rapidjson::Document doc;
-        doc.Parse(contents.c_str());
-
-        if(doc.HasParseError())
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "JSON parse error in %s", ss.str().c_str());
-
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        doc.Accept(writer);
-
-        *entry.target = buffer.GetString();
-
-        mlog(INFO, "Loaded CRS file: %s", entry.filename);
-    }
 }
 
 /*----------------------------------------------------------------------------

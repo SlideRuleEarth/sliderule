@@ -48,7 +48,7 @@ jobs:
 
     # Build SlideRule
     - run: |
-       cd sliderule/targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth
        make config-release
        make
 
