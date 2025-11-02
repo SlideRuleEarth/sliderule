@@ -247,7 +247,7 @@ cluster-docker-push: ## push all cluster images to docker container registries
 AMI_DATE = $(shell date +'%Y.%-m.%d')
 
 AMI_ID = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
+	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/2025.9.22/2 \
 	--region $(AWS_REGION) \
 	--query 'image.outputResources.amis[0].image' \
 	--output text)
@@ -322,15 +322,15 @@ deployment-create: ## create a cluster in AWS
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
 	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-deployment-describe: ## status the creation/deletion of the certbot function
+deployment-describe: ## status the creation/deletion of the cluster
 	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
-deployment-delete: ## deletes the lambda certbot function
+deployment-delete: ## deletes the cluster
 	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-$(COLOR)-cluster
 
 deployment-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
-	aws cloudformation deploy \
+	aws cloudformation create-stack \
 		--stack-name 	dns \
 		--template-body file://cloudformation/dns.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
