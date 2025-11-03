@@ -260,7 +260,15 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         /* Parse Request */
         const string http_header(buf);
         header_list = StringLib::split(http_header.c_str(), http_header.length(), '\r');
+        if(header_list == NULL || header_list->length() == 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "empty HTTP request line");
+        }
         request_line = StringLib::split((*header_list)[0]->c_str(), (*header_list)[0]->length(), ' ');
+        if(request_line == NULL || request_line->length() < 3)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "malformed HTTP request line");
+        }
 
         const char* verb_str = (*request_line)[0]->c_str();
         const char* url_str = (*request_line)[1]->c_str();
