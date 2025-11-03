@@ -707,14 +707,14 @@ int CurlLib::luaDownload (lua_State* L)
 void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, int* size)
 {
     /* Get Total Response Size */
-    int total_rsps_size = 0;
+    size_t total_rsps_size = 0;
     for(int i = 0; i < rsps_set->length(); i++)
     {
         total_rsps_size += rsps_set->get(i).size;
     }
 
     /* Allocate and Populate Total Response */
-    int total_rsps_index = 0;
+    size_t total_rsps_index = 0;
     char* total_rsps = new char [total_rsps_size + 1];
     for(int i = 0; i < rsps_set->length(); i++)
     {
@@ -725,7 +725,7 @@ void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, in
     total_rsps[total_rsps_index] = '\0';
 
     /* Return Response */
-    if(size) *size = total_rsps_index;
+    if(size) *size = static_cast<int>(total_rsps_index);
     if(response) *response = total_rsps;
     else delete [] total_rsps;
 }
@@ -736,17 +736,17 @@ void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, in
 size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     parser_t* parser = static_cast<parser_t*>(userp);
-    int32_t bytes_to_process = static_cast<int32_t>(size * nmemb);
+    size_t bytes_to_process = size * nmemb;
     const uint8_t* input_data = static_cast<const uint8_t*>(buffer);
-    uint32_t input_index = 0;
+    size_t input_index = 0;
 
     while((!parser->active || *parser->active) && (bytes_to_process > 0))
     {
         if(parser->rec_size == 0) // record header
         {
-            const int32_t hdr_bytes_needed = RECOBJ_HDR_SIZE - parser->hdr_index;
-            const int32_t hdr_bytes_to_process = MIN(hdr_bytes_needed, bytes_to_process);
-            for(int i = 0; i < hdr_bytes_to_process; i++) parser->hdr_buf[parser->hdr_index++] = input_data[input_index++];
+            const size_t hdr_bytes_needed = RECOBJ_HDR_SIZE - parser->hdr_index;
+            const size_t hdr_bytes_to_process = MIN(hdr_bytes_needed, bytes_to_process);
+            for(size_t i = 0; i < hdr_bytes_to_process; i++) parser->hdr_buf[parser->hdr_index++] = input_data[input_index++];
             bytes_to_process -= hdr_bytes_to_process;
 
             // check header complete
@@ -775,8 +775,8 @@ size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void 
         }
         else // record body
         {
-            const int32_t rec_bytes_needed = parser->rec_size - parser->rec_index;
-            const int32_t rec_bytes_to_process = MIN(rec_bytes_needed, bytes_to_process);
+            const size_t rec_bytes_needed = parser->rec_size - parser->rec_index;
+            const size_t rec_bytes_to_process = MIN(rec_bytes_needed, bytes_to_process);
             memcpy(&parser->rec_buf[parser->rec_index], &input_data[input_index], rec_bytes_to_process);
             parser->rec_index += rec_bytes_to_process;
             input_index += rec_bytes_to_process;
@@ -817,7 +817,20 @@ size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void 
 size_t CurlLib::postData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     Publisher* outq = static_cast<Publisher*>(userp);
-    return outq->postCopy(buffer, size * nmemb, DATA_TIMEOUT * 1000);
+    const size_t total_bytes = size * nmemb;
+    size_t posted = 0;
+    const uint8_t* bytes = static_cast<const uint8_t*>(buffer);
+    while(posted < total_bytes)
+    {
+        const size_t chunk = MIN(static_cast<size_t>(INT_MAX), total_bytes - posted);
+        const int status = outq->postCopy(&bytes[posted], static_cast<int>(chunk), DATA_TIMEOUT * 1000);
+        if(status < 0)
+        {
+            return posted;
+        }
+        posted += chunk;
+    }
+    return total_bytes;
 }
 
 /*----------------------------------------------------------------------------
