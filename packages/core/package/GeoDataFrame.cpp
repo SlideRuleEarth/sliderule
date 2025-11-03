@@ -222,6 +222,7 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     /* Latch Start Time */
     const double start = TimeLib::latchtime();
     const uint64_t key = (dataframe->getKey() << 32) | key_space;
+    bool status = true;
 
     try
     {
@@ -232,13 +233,14 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     {
         Publisher pubq(rspq);
         alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "request <%s> failed to send dataframe: %s", rspq, e.what());
+        status = false;
     }
 
     /* Update Run Time */
     updateRunTime(TimeLib::latchtime() - start);
 
     /* Success */
-    return true;
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -1761,14 +1763,14 @@ int GeoDataFrame::luaReceive(lua_State* L)
         // that subsequent posts to the message queue are not dropped
         info->ready_signal.lock();
         {
-            if(!info->ready)
+            while(!info->ready)                // wait until the receive thread flips ready or the timeout expires
             {
-                if(info->ready_signal.wait(0, timeout))
+                if(!info->ready_signal.wait(0, timeout))
                 {
-                    // success
-                    status = info->ready;
+                    break;                     // timeout or wait error
                 }
             }
+            status = info->ready;              // success only if the thread set ready=true
         }
         info->ready_signal.unlock();
     }
