@@ -44,6 +44,7 @@
 #include <string>
 
 #include "MathLib.h"
+#include "Mutex.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -73,28 +74,46 @@ const int MathLib::B64INDEX[256] =
  *----------------------------------------------------------------------------*/
 double MathLib::FFT(double result[], const int input[], unsigned long size)
 {
-	static complex_t frequency_spectrum[MAXFREQSPEC];
+
+    static Mutex fft_mutex;
+
+    /* Protect shared frequency_spectrum buffer so concurrent FFT calls cannot clobber it */
+    fft_mutex.lock();
+
+    /* Check for FFT Size Limit */
+    if(size > MAXFREQSPEC)
+    {
+        fft_mutex.unlock();
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "FFT size %lu exceeds maximum %d", size, MAXFREQSPEC);
+    }
+
+    /* Check for Power of Two Size */
+    if(size == 0 || (size & (size - 1)) != 0)
+    {
+        fft_mutex.unlock();
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "FFT size %lu is not a power of two", size);
+    }
+
+    static complex_t frequency_spectrum[MAXFREQSPEC];
     double maxvalue = 0.0;
 
-    /* Zero out Frequency Spectrum - Since Size not power of two */
     memset(frequency_spectrum, 0, sizeof(frequency_spectrum));
 
-	/* Load Data into Complex Array */
-	for(unsigned long k = 0; k < size; k++)
-	{
-		frequency_spectrum[k].r = (double)input[k];
-//		frequency_spectrum[k].i = 0.0;
-	}
+    /* Load Data into Complex Array */
+    for(unsigned long k = 0; k < size; k++)
+    {
+        frequency_spectrum[k].r = (double)input[k];
+    }
 
-	/* Perform FFT */
-	bitReverse(frequency_spectrum, size);
-	freqCorrelation(frequency_spectrum, size, 1);
+    /* Perform FFT */
+    bitReverse(frequency_spectrum, size);
+    freqCorrelation(frequency_spectrum, size, 1);
 
     /* Zero First Value - (Remove DC Component */
     result[0] = 0.0;
     result[size / 2] = 0.0;
 
-	/* Populate Polar Form */
+    /* Populate Polar Form */
     for(unsigned long k = 1; k < size / 2; k++)
     {
         result[k] = getPolarMagnitude(frequency_spectrum[k].r, frequency_spectrum[k].i);
@@ -103,6 +122,8 @@ double MathLib::FFT(double result[], const int input[], unsigned long size)
         if(result[k] > maxvalue) maxvalue = result[k];
         if(result[k + (size / 2)] > maxvalue) maxvalue = result[k + (size / 2)];
     }
+
+    fft_mutex.unlock();
 
     /* Return Maximum Value */
     return maxvalue;
@@ -179,6 +200,14 @@ MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
     {
         /* Calculate r */
         const double r = sqrt((p.x*p.x) + (p.y*p.y));
+
+        /* Point (0,0) is exactly on the pole; return pole latitude and avoid dividing by r == 0 */
+        if(r == 0.0)
+        {
+            c.lon = 0.0;
+            c.lat = projection == SOUTH_POLAR ? -90.0 : 90.0;
+            return c;
+        }
 
         /* Calculate o */
         double o = 0.0;
@@ -270,7 +299,15 @@ bool MathLib::inpoly (point_t* poly, int len, point_t point)
     int c = 0;
     for (int i = 0, j = len - 1; i < len; j = i++)
     {
-        const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x;
+        const double dy = poly[j].y - poly[i].y;
+
+        /* Skip horizontal edges to avoid divide-by-zero in x_extent calculation */
+        if(fabs(dy) < 1e-12)
+        {
+            continue;
+        }
+
+        const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / dy + poly[i].x;
         if( ((poly[i].y > point.y) != (poly[j].y > point.y)) && (point.x < x_extent) ) c = !c;
     }
 
