@@ -1,5 +1,5 @@
 ==================
-SlideRule Releases
+Release Notes
 ==================
 
 
