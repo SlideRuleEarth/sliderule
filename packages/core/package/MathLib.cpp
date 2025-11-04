@@ -44,7 +44,6 @@
 #include <string>
 
 #include "MathLib.h"
-#include "Mutex.h"
 
 /******************************************************************************
  * STATIC DATA
