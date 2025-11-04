@@ -234,21 +234,18 @@ MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *----------------------------------------------------------------------------*/
-bool MathLib::inpoly (point_t* poly, int len, point_t point)
+bool MathLib::inpoly(point_t* poly, int len, point_t point)
 {
     int c = 0;
     for (int i = 0, j = len - 1; i < len; j = i++)
     {
-        const double dy = poly[j].y - poly[i].y;
-
-        /* Skip horizontal edges to avoid divide-by-zero in x_extent calculation */
-        if(fabs(dy) < 1e-12)
+        /* Only consider edges that cross the horizontal ray */
+        if((poly[i].y > point.y) != (poly[j].y > point.y))
         {
-            continue;
+            const double dy = poly[j].y - poly[i].y; // guaranteed non-zero by guard above
+            const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / dy + poly[i].x;
+            if(point.x < x_extent) c = !c;
         }
-
-        const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / dy + poly[i].x;
-        if( ((poly[i].y > point.y) != (poly[j].y > point.y)) && (point.x < x_extent) ) c = !c;
     }
 
     /* Return Inclusion
