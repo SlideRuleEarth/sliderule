@@ -1716,14 +1716,14 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
         {
             status = DUPLICATE_DEF;
         }
+
+        /* Add Fields */
+        for(int i = 0; status == SUCCESS_DEF && i < num_fields; i++)
+        {
+            status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].elements, fields[i].exttype, fields[i].flags);
+        }
     }
     defMut.unlock();
-
-    /* Add Fields */
-    for(int i = 0; status == SUCCESS_DEF && i < num_fields; i++)
-    {
-        status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].elements, fields[i].exttype, fields[i].flags);
-    }
 
     /* Return Definition and Status */
     if(rec_def) *rec_def = def;
