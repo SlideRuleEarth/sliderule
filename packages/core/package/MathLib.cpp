@@ -70,66 +70,6 @@ const int MathLib::B64INDEX[256] =
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * FFT
- *----------------------------------------------------------------------------*/
-double MathLib::FFT(double result[], const int input[], unsigned long size)
-{
-
-    static Mutex fft_mutex;
-
-    /* Protect shared frequency_spectrum buffer so concurrent FFT calls cannot clobber it */
-    fft_mutex.lock();
-
-    /* Check for FFT Size Limit */
-    if(size > MAXFREQSPEC)
-    {
-        fft_mutex.unlock();
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "FFT size %lu exceeds maximum %d", size, MAXFREQSPEC);
-    }
-
-    /* Check for Power of Two Size */
-    if(size == 0 || (size & (size - 1)) != 0)
-    {
-        fft_mutex.unlock();
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "FFT size %lu is not a power of two", size);
-    }
-
-    static complex_t frequency_spectrum[MAXFREQSPEC];
-    double maxvalue = 0.0;
-
-    memset(frequency_spectrum, 0, sizeof(frequency_spectrum));
-
-    /* Load Data into Complex Array */
-    for(unsigned long k = 0; k < size; k++)
-    {
-        frequency_spectrum[k].r = (double)input[k];
-    }
-
-    /* Perform FFT */
-    bitReverse(frequency_spectrum, size);
-    freqCorrelation(frequency_spectrum, size, 1);
-
-    /* Zero First Value - (Remove DC Component */
-    result[0] = 0.0;
-    result[size / 2] = 0.0;
-
-    /* Populate Polar Form */
-    for(unsigned long k = 1; k < size / 2; k++)
-    {
-        result[k] = getPolarMagnitude(frequency_spectrum[k].r, frequency_spectrum[k].i);
-        result[k + (size / 2)] = getPolarPhase(frequency_spectrum[k].r, frequency_spectrum[k].i);
-
-        if(result[k] > maxvalue) maxvalue = result[k];
-        if(result[k + (size / 2)] > maxvalue) maxvalue = result[k + (size / 2)];
-    }
-
-    fft_mutex.unlock();
-
-    /* Return Maximum Value */
-    return maxvalue;
-}
-
-/*----------------------------------------------------------------------------
  * coord2point
  *----------------------------------------------------------------------------*/
 MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)

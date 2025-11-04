@@ -103,7 +103,6 @@ class MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static double       FFT                 (double result[], const int input[], unsigned long size);
         static point_t      coord2point         (coord_t c, proj_t projection);
         static coord_t      point2coord         (point_t p, proj_t projection);
         static bool         inpoly              (point_t* poly, int len, point_t point);
