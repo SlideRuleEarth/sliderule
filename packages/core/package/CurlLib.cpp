@@ -817,20 +817,7 @@ size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void 
 size_t CurlLib::postData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     Publisher* outq = static_cast<Publisher*>(userp);
-    const size_t total_bytes = size * nmemb;
-    size_t posted = 0;
-    const uint8_t* bytes = static_cast<const uint8_t*>(buffer);
-    while(posted < total_bytes)
-    {
-        const size_t chunk = MIN(static_cast<size_t>(INT_MAX), total_bytes - posted);
-        const int status = outq->postCopy(&bytes[posted], static_cast<int>(chunk), DATA_TIMEOUT * 1000);
-        if(status < 0)
-        {
-            return posted;
-        }
-        posted += chunk;
-    }
-    return total_bytes;
+    return outq->postCopy(buffer, size * nmemb, DATA_TIMEOUT * 1000);
 }
 
 /*----------------------------------------------------------------------------
