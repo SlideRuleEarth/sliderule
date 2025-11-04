@@ -42,7 +42,6 @@ class MathLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAXFREQSPEC = 8192;
         static const int LOG2DATASIZE = 13;
         static const double EARTHRADIUS;
         static const char* B64CHARS;
