@@ -288,8 +288,9 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
                 StringLib::replace(oldest_filename, PATH_DELIMETER, '#');
                 const FString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename);
                 remove(oldest_filepath.c_str());
+                cacheLookUp.remove(oldest_key->c_str());
                 cacheFiles.remove(index);
-                delete [] oldest_filename;
+                delete[] oldest_filename;
             }
         }
 
