@@ -1763,14 +1763,17 @@ int GeoDataFrame::luaReceive(lua_State* L)
         // that subsequent posts to the message queue are not dropped
         info->ready_signal.lock();
         {
-            while(!info->ready)                // wait until the receive thread flips ready or the timeout expires
+            if(!info->ready)
             {
-                if(!info->ready_signal.wait(0, timeout))
+                if(info->ready_signal.wait(0, timeout))
                 {
-                    break;                     // timeout or wait error
+                    status = info->ready;          // thread signalled us; success only if it set ready=true
                 }
             }
-            status = info->ready;              // success only if the thread set ready=true
+            else
+            {
+                status = true;                     // thread set ready before we acquired the lock
+            }
         }
         info->ready_signal.unlock();
     }
