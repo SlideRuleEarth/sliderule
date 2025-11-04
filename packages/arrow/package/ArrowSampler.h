@@ -44,6 +44,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "OutputFields.h"
 #include "RequestFields.h"
@@ -118,7 +120,7 @@ class ArrowSampler: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                          active;
+        std::atomic<bool>             active;
         Thread*                       mainPid;
         RequestFields*                rqstParms;
         const OutputFields&            parms;

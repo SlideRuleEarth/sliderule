@@ -155,14 +155,14 @@ void* ArrowSampler::mainThread(void* parm)
     /* Get samples for all user RasterObjects */
     for(batch_sampler_t* sampler : s->batchSamplers)
     {
-        if(s->active)
+        if(s->active.load())
         {
             const double t = TimeLib::latchtime();
             sampler->robj->getSamples(sampler->obj->points, sampler->samples);
             mlog(INFO, "getSamples time: %.3lf", TimeLib::latchtime() - t);
 
             /* batchSampling can take minutes, check active again */
-            if(s->active)
+            if(s->active.load())
                 s->impl->processSamples(sampler);
         }
 
@@ -172,7 +172,7 @@ void* ArrowSampler::mainThread(void* parm)
 
     try
     {
-        if(s->active)
+        if(s->active.load())
         {
             s->impl->createOutpuFiles();
 
@@ -287,7 +287,7 @@ ArrowSampler::ArrowSampler(lua_State* L, RequestFields* rqst_parms, const char* 
         impl->processInputFile(input_file, points);
 
         /* Start Main Thread */
-        active = true;
+        active.store(true);
         mainPid = new Thread(mainThread, this);
     }
     catch(const RunTimeException& e)
@@ -310,7 +310,7 @@ ArrowSampler::~ArrowSampler(void)
  *----------------------------------------------------------------------------*/
 void ArrowSampler::Delete(void)
 {
-    active = false;
+    active.store(false);
     delete mainPid;
 
     for(batch_sampler_t* sampler : batchSamplers)
