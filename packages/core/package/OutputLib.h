@@ -109,7 +109,7 @@ struct OutputLib
     static char*       createMetadataFileName   (const char* fileName);
 
     static void        removeFile   (const char* fileName);
-    static void        renameFile   (const char* oldName, const char* newName);
+    static bool        renameFile   (const char* oldName, const char* newName);
     static bool        fileExists   (const char* fileName);
     static bool        isArrow      (OutputFields::format_t fmt);
     static bool        isLas        (OutputFields::format_t fmt);
