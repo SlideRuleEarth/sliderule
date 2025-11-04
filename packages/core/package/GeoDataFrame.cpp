@@ -222,7 +222,6 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     /* Latch Start Time */
     const double start = TimeLib::latchtime();
     const uint64_t key = (dataframe->getKey() << 32) | key_space;
-    bool status = true;
 
     try
     {
@@ -233,14 +232,13 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     {
         Publisher pubq(rspq);
         alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "request <%s> failed to send dataframe: %s", rspq, e.what());
-        status = false;
     }
 
     /* Update Run Time */
     updateRunTime(TimeLib::latchtime() - start);
 
     /* Success */
-    return status;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
