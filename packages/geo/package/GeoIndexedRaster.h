@@ -147,7 +147,7 @@ class GeoIndexedRaster: public RasterObject
             Thread*             thread;
             cacheitem_t*        entry;
             Cond                sync;
-            bool                run;
+            std::atomic<bool>   run;
             explicit Reader(GeoIndexedRaster* _obj);
             ~Reader(void);
         } reader_t;

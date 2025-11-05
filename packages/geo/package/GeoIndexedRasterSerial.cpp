@@ -64,7 +64,7 @@ GeoIndexedRaster::Reader::~Reader (void)
 {
     sync.lock();
     {
-        run = false; /* Set run flag to false */
+        run.store(false); /* Set run flag to false */
         sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
     }
     sync.unlock();
@@ -378,12 +378,12 @@ void* GeoIndexedRaster::serialReaderThread(void *param)
 {
     reader_t *reader = static_cast<reader_t*>(param);
 
-    while(reader->run)
+    while(reader->run.load())
     {
         reader->sync.lock();
         {
             /* Wait for raster to work on */
-            while((reader->entry == NULL) && reader->run)
+            while((reader->entry == NULL) && reader->run.load())
                 reader->sync.wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
         }
         reader->sync.unlock();
