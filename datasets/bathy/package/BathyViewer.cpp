@@ -299,20 +299,29 @@ int BathyViewer::luaCounts (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    const BathyViewer* lua_obj = NULL;
+    BathyViewer* lua_obj = NULL;
 
     try
     {
         /* Get Self */
         lua_obj = dynamic_cast<BathyViewer*>(getLuaSelf(L, 1));
 
+        /* Snapshot counts under lock to avoid races with worker threads */
+        lua_obj->threadMut.lock();
+        const int64_t total_photons = lua_obj->totalPhotons;
+        const int64_t photons_in_mask = lua_obj->totalPhotonsInMask;
+        const int64_t total_segments = lua_obj->totalSegments;
+        const int64_t segments_in_mask = lua_obj->totalSegmentsInMask;
+        const int64_t total_errors = lua_obj->totalErrors;
+        lua_obj->threadMut.unlock();
+
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "total_photons", lua_obj->totalPhotons);
-        LuaEngine::setAttrInt(L, "photons_in_mask", lua_obj->totalPhotonsInMask);
-        LuaEngine::setAttrInt(L, "total_segments", lua_obj->totalSegments);
-        LuaEngine::setAttrInt(L, "segments_in_mask", lua_obj->totalSegmentsInMask);
-        LuaEngine::setAttrInt(L, "total_errors", lua_obj->totalErrors);
+        LuaEngine::setAttrInt(L, "total_photons", total_photons);
+        LuaEngine::setAttrInt(L, "photons_in_mask", photons_in_mask);
+        LuaEngine::setAttrInt(L, "total_segments", total_segments);
+        LuaEngine::setAttrInt(L, "segments_in_mask", segments_in_mask);
+        LuaEngine::setAttrInt(L, "total_errors", total_errors);
 
         /* Set Success */
         status = true;
