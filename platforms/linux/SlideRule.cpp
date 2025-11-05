@@ -149,7 +149,7 @@ typedef struct plugin_node {
  ******************************************************************************/
 
 static bool app_immediate_abort = false;
-static bool app_signal_abort = false;
+static std::atomic<bool> app_signal_abort{false};
 static plugin_list_t loaded_plugins;
 #ifdef CUSTOM_ALLOCATOR
 static std::atomic<uint64_t> allocCount = {0};
@@ -246,7 +246,7 @@ static void* signal_thread (void* parm)
             break;
         }
 
-        if(app_signal_abort)
+        if(app_signal_abort.load())
         {
             break; // exit thread for clean up
         }
@@ -572,7 +572,7 @@ int main (int argc, char* argv[])
     deinitcore();
 
     /* Exit Thread Managing Signals */
-    app_signal_abort = true;
+    app_signal_abort.store(true);
     pthread_kill(signal_pid, SIGINT);
     pthread_join(signal_pid, NULL);
 
