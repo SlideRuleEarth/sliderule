@@ -221,7 +221,7 @@ GeoIndexedRaster::BatchReader::~BatchReader(void)
 {
     sync.lock();
     {
-        run = false; /* Set run flag to false */
+        run.store(false); /* Set run flag to false */
         sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
     }
     sync.unlock();
@@ -340,12 +340,12 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 {
     batch_reader_t *breader = static_cast<batch_reader_t*>(param);
 
-    while(breader->run)
+    while(breader->run.load())
     {
         breader->sync.lock();
         {
             /* Wait for raster to work on */
-            while((breader->uraster == NULL) && breader->run)
+            while((breader->uraster == NULL) && breader->run.load())
                 breader->sync.wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
         }
         breader->sync.unlock();
