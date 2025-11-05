@@ -67,6 +67,14 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
 {
     List<hid_t> hid_stack;
 
+    const auto cleanup_stack = [&hid_stack]() {
+        while(!hid_stack.empty())
+        {
+            close_hid(hid_stack.top());
+            hid_stack.pop();
+        }
+    };
+
     const hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     hid_stack.push(file_id);
 
@@ -128,6 +136,10 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             if(status < 0)
             {
                 mlog(CRITICAL, "Failed to write variable %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
+                if(dataset.data_type == RecordObject::STRING) H5Tclose(h5tc);
+                H5Sclose(dataspace_id);
+                H5Pclose(plist_id);
+                cleanup_stack();
                 return false;
             }
             if(dataset.data_type == RecordObject::STRING) H5Tclose(h5tc);
@@ -177,6 +189,9 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             if(status < 0)
             {
                 mlog(CRITICAL, "Failed to write scalar %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
+                if(dataset.data_type == RecordObject::STRING) H5Tclose(datatype_id);
+                H5Sclose(dataspace_id);
+                cleanup_stack();
                 return false;
             }
             if(dataset.data_type == RecordObject::STRING) H5Tclose(datatype_id);
