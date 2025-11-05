@@ -77,7 +77,7 @@ typedef struct sockaddr     client_address_t;
  * STATIC DATA
  ******************************************************************************/
 
-bool SockLib::signal_exit = false;
+std::atomic<bool> SockLib::signal_exit{false};
 char SockLib::local_host_name[HOST_STR_LEN];
 
 /******************************************************************************
@@ -109,7 +109,7 @@ void SockLib::deinit(void)
  *----------------------------------------------------------------------------*/
 void SockLib::signalexit(void)
 {
-    signal_exit = true;
+    signal_exit.store(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -156,7 +156,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
         {
             server_socket = accept(listen_socket, NULL, NULL);
         }
-    } while(server_socket == INVALID_RC && block && *block && !signal_exit);
+    } while(server_socket == INVALID_RC && block && *block && !signal_exit.load());
 
     /* Close Listen Socket */
     sockclose(listen_socket);
@@ -826,7 +826,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
                     dlog("Failed to connect socket to %s:%s... %s", host, serv, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                     OsApi::performIOTimeout();
                 }
-            } while(status < 0 && block && *block && !signal_exit);
+            } while(status < 0 && block && *block && !signal_exit.load());
 
             /* Check Connection */
             if(status < 0)  close(sock);

@@ -32,6 +32,8 @@
 #ifndef __sock_lib__
 #define __sock_lib__
 
+#include <atomic>
+
 /******************************************************************************
  * SOCKET LIBRARY CLASS
  ******************************************************************************/
@@ -61,7 +63,7 @@ class SockLib
 
     private:
 
-        static bool         signal_exit;
+        static std::atomic<bool> signal_exit;
         static char         local_host_name[HOST_STR_LEN];
 
         static int          sockcreate          (int type, const char* ip_addr, int port, bool is_server, const bool* block);
