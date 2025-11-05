@@ -130,6 +130,13 @@ Timer::Timer(timerHandler_t handler, int period_ms)
  *----------------------------------------------------------------------------*/
 Timer::~Timer()
 {
+    /* Disarm timer before removing handler */
+    struct itimerspec its = {};
+    timer_settime(timerid, 0, &its, NULL);
+
+    /* Delete Timer */
+    timer_delete(timerid);
+
     /* Unset Signal ID */
     sigmut.lock();
     {
@@ -137,9 +144,6 @@ Timer::~Timer()
         signum--;
     }
     sigmut.unlock();
-
-    /* Delete Timer */
-    timer_delete(timerid);
 }
 
 /*----------------------------------------------------------------------------
@@ -150,5 +154,12 @@ void Timer::_handler (int sig, siginfo_t *si, void *uc)
     (void)si;
     (void)uc;
 
-    sighdl[sig - SIGRTMIN]();
+    /* Timer destructors clear their slot before signals are fully drained.
+     * Grab a snapshot of the handler and tolerate NULL so late signals no-op. */
+    const int index = sig - SIGRTMIN;
+    if(index >= 0 && index < MAX_TIMERS)
+    {
+        timerHandler_t handler = sighdl[index];
+        if(handler) handler();
+    }
 }
