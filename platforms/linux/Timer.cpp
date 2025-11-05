@@ -131,7 +131,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
 Timer::~Timer()
 {
     /* Disarm timer before removing handler */
-    struct itimerspec its = {};
+    const struct itimerspec its = {};
     timer_settime(timerid, 0, &its, NULL);
 
     /* Delete Timer */

@@ -103,7 +103,6 @@ class BathyGranule: public LuaObject, public FieldDictionary
          *--------------------------------------------------------------------*/
 
         std::atomic<bool>           active;
-        bool                        activeForAlerts;
         Thread*                     pid;
         BathyFields*                parmsPtr;
         const BathyFields&          parms;

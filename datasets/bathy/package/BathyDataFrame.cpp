@@ -145,7 +145,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
     beam(beam_str),
     active(false),
-    activeForAlerts(false),
     pid(NULL),
     parmsPtr(_parms),
     parms(*_parms),
@@ -188,14 +187,13 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
 
         /* Create Reader */
         active.store(true);
-        activeForAlerts = true;
         pid = new Thread(subsettingThread, this);
     }
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &activeForAlerts, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &activeForAlerts, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
 
         /* Indicate End of Data */
         signalComplete();
@@ -208,7 +206,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
 BathyDataFrame::~BathyDataFrame (void)
 {
     active.store(false);
-    activeForAlerts = false;
     delete pid;
 
     delete rqstQ;
@@ -752,7 +749,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.activeForAlerts, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
+        alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
         dataframe.inError = true;
     }
 

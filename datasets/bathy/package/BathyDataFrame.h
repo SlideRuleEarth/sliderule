@@ -211,7 +211,6 @@ class BathyDataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         std::atomic<bool>           active;
-        bool                        activeForAlerts;
         Thread*                     pid;
         BathyFields*                parmsPtr;
         const BathyFields&          parms;
@@ -240,7 +239,6 @@ class BathyDataFrame: public GeoDataFrame
             BathyDataFrame(BathyFields* _parms):
                 GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Fields::crsITRF2014_EGM08()),
                 active(false),
-                activeForAlerts(false),
                 pid(NULL),
                 parmsPtr(_parms),
                 parms(*_parms),

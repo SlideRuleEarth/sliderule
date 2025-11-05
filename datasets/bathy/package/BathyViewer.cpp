@@ -117,7 +117,7 @@ BathyViewer::BathyViewer (lua_State* L, Icesat2Fields* _parms):
     bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
 
     /* Initialize Readers */
-    active = true;
+    active.store(true);
     numComplete = 0;
     memset(readerPid, 0, sizeof(readerPid));
 
@@ -170,7 +170,7 @@ BathyViewer::BathyViewer (lua_State* L, Icesat2Fields* _parms):
  *----------------------------------------------------------------------------*/
 BathyViewer::~BathyViewer (void)
 {
-    active = false;
+    active.store(false);
 
     for(int pid = 0; pid < threadCount; pid++)
     {
@@ -224,7 +224,7 @@ void* BathyViewer::subsettingThread (void* parm)
 
         /* Traverse All Segments In Dataset */
         int32_t current_segment = 0; // index into the segment rate variables
-        while(reader->active && (current_segment < region.segment_ph_cnt.size))
+        while(reader->active.load() && (current_segment < region.segment_ph_cnt.size))
         {
             /* Get Y Coordinate */
             const double degrees_of_latitude = region.segment_lat[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LAT;
