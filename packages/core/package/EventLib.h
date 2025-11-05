@@ -171,25 +171,14 @@ class EventLib
 
         static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
-        template<typename BoolLike, typename... Args>
+        // Template overload ONLY for std::atomic<bool>*
+        template<typename BoolLike, typename... Args, typename = std::enable_if_t<std::is_same_v<BoolLike, std::atomic<bool>>>>
         static bool sendAlert(event_level_t lvl, int code, void* rspsq, const BoolLike* active, const char* errmsg, Args&&... args)
         {
             bool active_val = true;
+            if (active) active_val = active->load(std::memory_order_relaxed);
 
-            if constexpr (std::is_same_v<BoolLike, std::atomic<bool>>)
-            {
-                if (active) active_val = active->load(std::memory_order_relaxed);
-            }
-            else if constexpr (std::is_same_v<BoolLike, bool>)
-            {
-                if (active) active_val = *active;
-            }
-            else
-            {
-                static_assert(std::is_same_v<BoolLike, bool> ||std::is_same_v<BoolLike, std::atomic<bool>>, "active must be bool or std::atomic<bool>");
-            }
-
-            // Forward to the actual implementation
+            // Explicitly call the non-template version that takes const bool*
             return EventLib::sendAlert(lvl, code, rspsq, &active_val, errmsg, std::forward<Args>(args)...);
         }
 
