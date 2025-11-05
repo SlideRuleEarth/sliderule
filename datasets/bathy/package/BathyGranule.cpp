@@ -136,6 +136,9 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03,
         {"sc_orient",           &sc_orient},
         {"sc_orient_time",      &sc_orient_time}
     }),
+    active(false),
+    activeForAlerts(false),
+    pid(NULL),
     parmsPtr(_parms),
     parms(*_parms),
     rqstQ(rqstq_name),
@@ -148,14 +151,17 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03,
         EventLib::stashId (traceId);
 
         /* Start Reader Thread */
-        active = true;
+        active.store(true);
+        activeForAlerts = true;
         pid = new Thread(readingThread, this);
     }
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &activeForAlerts, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &activeForAlerts, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        active.store(false);
+        activeForAlerts = false;
 
         /* Indicate End of Data */
         signalComplete();
@@ -167,7 +173,8 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03,
  *----------------------------------------------------------------------------*/
 BathyGranule::~BathyGranule (void)
 {
-    active = false;
+    active.store(false);
+    activeForAlerts = false;
     delete pid;
     hdf03->releaseLuaObject();
     parmsPtr->releaseLuaObject();
@@ -262,7 +269,9 @@ void* BathyGranule::readingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), &granule.rqstQ, &granule.active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        alert(e.level(), e.code(), &granule.rqstQ, &granule.activeForAlerts, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        granule.active.store(false);
+        granule.activeForAlerts = false;
     }
 
     /* Mark Completion */
