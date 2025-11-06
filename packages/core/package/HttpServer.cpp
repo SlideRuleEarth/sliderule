@@ -33,8 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
 #include "HttpServer.h"
 #include "OsApi.h"
 #include "EventLib.h"
@@ -95,7 +93,7 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
 
-    active = true;
+    active.store(true);
     listening = false;
     listenerPid = new Thread(listenerThread, this);
 }
@@ -105,7 +103,7 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
  *----------------------------------------------------------------------------*/
 HttpServer::~HttpServer(void)
 {
-    active = false;
+    active.store(false);
     delete listenerPid;
     delete [] ipAddr;
 }
@@ -335,7 +333,7 @@ void* HttpServer::listenerThread(void* parm)
 {
     HttpServer* s = static_cast<HttpServer*>(parm);
 
-    while(s->active)
+    while(s->active.load())
     {
         /* Start Http Server */
         const int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, static_cast<void*>(s), &(s->listening));
@@ -345,7 +343,7 @@ void* HttpServer::listenerThread(void* parm)
             s->listening = false;
 
             /* Restart Http Server */
-            if(s->active)
+            if(s->active.load())
             {
                 mlog(INFO, "Attempting to restart http server: %s", s->getName());
                 OsApi::sleep(5.0); // wait five seconds to prevent spin
