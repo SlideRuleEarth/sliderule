@@ -38,6 +38,7 @@
 
 #include "OsApi.h"
 #include <atomic>
+#include <cstdarg>
 
 /******************************************************************************
  * DEFINES
@@ -173,18 +174,6 @@ class EventLib
         template<typename Flag>
         struct FlagOps;
 
-        template<>
-        struct FlagOps<bool>
-        {
-            static bool load(const bool* p) { return p ? *p : true; }
-        };
-
-        template<>
-        struct FlagOps<std::atomic<bool>>
-        {
-            static bool load(const std::atomic<bool>* p) { return p ? p->load(std::memory_order_relaxed) : true; }
-        };
-
         template<typename Flag>
         static bool sendAlert_impl(event_level_t lvl, int code, void* rspsq, const Flag* active, const char* formatted_msg);
 
@@ -210,6 +199,30 @@ class EventLib
 
         static std::atomic<uint32_t> trace_id;
         static Thread::key_t trace_key;
+};
+
+
+/* ---------------------------------------------------------
+ * FlagOps specializations
+ * (must be OUTSIDE the class — namespace scope!)
+ * --------------------------------------------------------- */
+
+template<>
+struct EventLib::FlagOps<bool>
+{
+    static bool load(const bool* p)
+    {
+        return p ? *p : true;
+    }
+};
+
+template<>
+struct EventLib::FlagOps<std::atomic<bool>>
+{
+    static bool load(const std::atomic<bool>* p)
+    {
+        return p ? p->load(std::memory_order_relaxed) : true;
+    }
 };
 
 #endif  /* __eventlib__ */
