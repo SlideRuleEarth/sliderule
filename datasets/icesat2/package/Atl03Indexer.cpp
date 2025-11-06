@@ -158,7 +158,7 @@ Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<string>* _resource
    indexRec.clear();
 
     /* Initialize Indexers */
-    active = true;
+    active.store(true);
     numComplete = 0;
     threadCount = num_threads;
     indexerPid = new Thread* [threadCount];
@@ -177,7 +177,7 @@ Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<string>* _resource
 Atl03Indexer::~Atl03Indexer (void)
 {
     /* Clean Up Threads */
-    active = false;
+    active.store(false);
     for(int t = 0; t < threadCount; t++)
     {
         if(indexerPid[t]) delete indexerPid[t];
@@ -286,7 +286,7 @@ void* Atl03Indexer::indexerThread (void* parm)
                 uint8_t* rec_buf = NULL;
                 const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
                 int post_status = MsgQ::STATE_ERROR;
-                while(indexer->active && (post_status = indexer->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) <= 0)
+                while(indexer->active.load() && (post_status = indexer->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) <= 0)
                 {
                     mlog(DEBUG, "Atl03 indexer failed to post to stream %s: %d", indexer->outQ->getName(), post_status);
                 }

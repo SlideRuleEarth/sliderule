@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
@@ -104,7 +106,7 @@ class Atl24Granule: public LuaObject, public FieldDictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                        active;
+        std::atomic<bool>           active;
         Thread*                     pid;
         Icesat2Fields*              parmsPtr;
         const Icesat2Fields&        parms;

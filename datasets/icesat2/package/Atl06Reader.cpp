@@ -164,7 +164,7 @@ Atl06Reader::Atl06Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
     stats.extents_retried   = 0;
 
     /* Initialize Readers */
-    active = true;
+    active.store(true);
     numComplete = 0;
     memset(readerPid, 0, sizeof(readerPid));
 
@@ -218,7 +218,7 @@ Atl06Reader::Atl06Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
  *----------------------------------------------------------------------------*/
 Atl06Reader::~Atl06Reader (void)
 {
-    active = false;
+    active.store(false);
 
     for(int pid = 0; pid < threadCount; pid++)
     {
@@ -495,7 +495,7 @@ void* Atl06Reader::subsettingThread (void* parm)
         int batch_index = 0;
 
         /* Loop Through Each Segment */
-        for(long segment = 0; reader->active && segment < region.num_segments; segment++)
+        for(long segment = 0; reader->active.load() && segment < region.num_segments; segment++)
         {
             /* Check for Inclusion Mask */
             if(region.inclusion_ptr)
@@ -588,7 +588,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                 }
 
                 /* Post Record */
-                while(reader->active && (post_status = reader->outQ->postRef(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+                while(reader->active.load() && (post_status = reader->outQ->postRef(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
                 {
                     local_stats.extents_retried++;
                 }
@@ -645,7 +645,7 @@ void* Atl06Reader::subsettingThread (void* parm)
             if(reader->sendTerminator)
             {
                 int status = MsgQ::STATE_TIMEOUT;
-                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                while(reader->active.load() && (status == MsgQ::STATE_TIMEOUT))
                 {
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)

@@ -155,7 +155,7 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     EventLib::stashId (traceId);
 
     /* Kickoff Reader Thread */
-    active = true;
+    active.store(true);
     readerPid = new Thread(subsettingThread, this);
 }
 
@@ -164,7 +164,7 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
  *----------------------------------------------------------------------------*/
 Atl24DataFrame::~Atl24DataFrame (void)
 {
-    active = false;
+    active.store(false);
     delete readerPid;
     delete [] beam;
     delete outQ;
@@ -448,7 +448,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
 
         /* Traverse All Photons In Dataset */
         int32_t current_photon = -1;
-        while(df->active && (++current_photon < atl24.class_ph.size))
+        while(df->active.load() && (++current_photon < atl24.class_ph.size))
         {
             /* Check AreaOfInterest Mask */
             if(aoi.inclusion_ptr)

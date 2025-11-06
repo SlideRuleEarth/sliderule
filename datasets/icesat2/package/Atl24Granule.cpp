@@ -152,7 +152,7 @@ Atl24Granule::Atl24Granule (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf2
         EventLib::stashId (traceId);
 
         /* Start Reader Thread */
-        active = true;
+        active.store(true);
         pid = new Thread(readingThread, this);
     }
     catch(const RunTimeException& e)
@@ -171,7 +171,7 @@ Atl24Granule::Atl24Granule (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf2
  *----------------------------------------------------------------------------*/
 Atl24Granule::~Atl24Granule (void)
 {
-    active = false;
+    active.store(false);
     delete pid;
     hdf24->releaseLuaObject();
     parmsPtr->releaseLuaObject();

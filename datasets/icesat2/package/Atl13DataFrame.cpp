@@ -141,7 +141,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     EventLib::stashId (traceId);
 
     /* Kickoff Reader Thread */
-    active = true;
+    active.store(true);
     readerPid = new Thread(subsettingThread, this);
 }
 
@@ -150,7 +150,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
  *----------------------------------------------------------------------------*/
 Atl13DataFrame::~Atl13DataFrame (void)
 {
-    active = false;
+    active.store(false);
     delete readerPid;
     delete [] beam;
     delete outQ;
@@ -398,7 +398,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 
         /* Traverse All Photons In Dataset */
         int32_t current_segment = -1;
-        while(df->active && (++current_segment < aoi.numSegments))
+        while(df->active.load() && (++current_segment < aoi.numSegments))
         {
             /* Check AreaOfInterest Mask */
             if(aoi.inclusionPtr)

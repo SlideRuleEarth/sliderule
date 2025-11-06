@@ -196,7 +196,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     EventLib::stashId (traceId);
 
     /* Kickoff Reader Thread */
-    active = true;
+    active.store(true);
     readerPid = new Thread(subsettingThread, this);
 }
 
@@ -205,7 +205,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::~Atl03DataFrame (void)
 {
-    active = false;
+    active.store(false);
     delete readerPid;
     delete [] beam;
     delete outQ;
@@ -806,7 +806,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         int32_t background_index = 0;
 
         /* Traverse All Photons In Dataset */
-        while(df->active && (++current_photon < atl03.dist_ph_along.size))
+        while(df->active.load() && (++current_photon < atl03.dist_ph_along.size))
         {
             /* Go to Photon's Segment */
             current_count++;
