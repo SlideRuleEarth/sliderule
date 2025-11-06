@@ -129,7 +129,7 @@ CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, List<string>& inq_n
     stopTime = 0;
 
     /* Create Thread */
-    active = true;
+    active.store(true);
     pid = new Thread(processorThread, this);
 }
 
@@ -138,7 +138,7 @@ CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, List<string>& inq_n
  *----------------------------------------------------------------------------*/
 CcsdsPacketInterleaver::~CcsdsPacketInterleaver(void)
 {
-    active = false;
+    active.store(false);
     delete pid;
     delete outQ;
 }
@@ -178,7 +178,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
 
     /* Loop While Read Active */
     int num_valid = num_inputs;
-    while(processor->active && num_valid > 0)
+    while(processor->active.load() && num_valid > 0)
     {
         /* Read Packets */
         for(int i = 0; i < num_inputs; i++)
@@ -243,7 +243,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
         if(earliest_pkt >= 0)
         {
             int status = MsgQ::STATE_TIMEOUT;
-            while(processor->active && status == MsgQ::STATE_TIMEOUT)
+            while(processor->active.load() && status == MsgQ::STATE_TIMEOUT)
             {
                 status = processor->outQ->postCopy(pkt_refs[earliest_pkt].data, pkt_refs[earliest_pkt].size, SYS_TIMEOUT);
                 if(status > 0)
@@ -258,7 +258,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                 else
                 {
                     mlog(CRITICAL, "Failed to post to %s... exiting interleaver!", processor->outQ->getName());
-                    processor->active = false;
+                    processor->active.store(false);
                 }
             }
         }
