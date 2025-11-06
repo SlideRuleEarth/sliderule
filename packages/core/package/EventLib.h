@@ -169,18 +169,38 @@ class EventLib
 
         static bool             sendTlm         (event_level_t lvl, const tlm_input_t& tlm);
 
-        static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
+        /* flag loader helper */
+        template<typename Flag>
+        struct FlagOps;
 
-        // Template overload ONLY for std::atomic<bool>*
-        template<typename BoolLike, typename... Args, typename = std::enable_if_t<std::is_same_v<BoolLike, std::atomic<bool>>>>
-        static bool sendAlert(event_level_t lvl, int code, void* rspsq, const BoolLike* active, const char* errmsg, Args&&... args)
+        template<>
+        struct FlagOps<bool>
         {
-            bool active_val = true;
-            if (active) active_val = active->load(std::memory_order_relaxed);
+            static bool load(const bool* p) { return p ? *p : true; }
+        };
 
-            // Explicitly call the non-template version that takes const bool*
-            return EventLib::sendAlert(lvl, code, rspsq, &active_val, errmsg, std::forward<Args>(args)...);
+        template<>
+        struct FlagOps<std::atomic<bool>>
+        {
+            static bool load(const std::atomic<bool>* p) { return p ? p->load(std::memory_order_relaxed) : true; }
+        };
+
+        template<typename Flag>
+        static bool sendAlert_impl(event_level_t lvl, int code, void* rspsq, const Flag* active, const char* formatted_msg);
+
+        template<typename Flag>
+        static bool sendAlert(event_level_t lvl, int code, void* rspsq, const Flag* active, const char* errmsg, ...)
+        {
+            char text[EventLib::MAX_ALERT_STR];
+            va_list args;
+            va_start(args, errmsg);
+            vsnprintf(text, sizeof(text), errmsg, args);
+            va_end(args);
+            return sendAlert_impl<Flag>(lvl, code, rspsq, active, text);
         }
+
+        static bool sendAlert(event_level_t lvl, int code, void* rspsq, std::nullptr_t active, const char* errmsg, ...);
+
 
     private:
 

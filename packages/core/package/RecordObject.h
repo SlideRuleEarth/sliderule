@@ -248,7 +248,16 @@ class RecordObject
         /* Overloaded Methods */
         virtual bool            deserialize         (unsigned char* buffer, int size);
         virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
-        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true, int timeout=SYS_TIMEOUT, serialMode_t mode=TAKE_OWNERSHIP);
+
+        template<typename Flag>
+        bool post(Publisher* outq, int size = 0, const Flag* active = nullptr, bool verbose = false, int timeout = SYS_TIMEOUT, serialMode_t mode = ALLOCATE);
+
+        bool post(Publisher* outq, int size, std::nullptr_t active, bool verbose = false, int timeout = SYS_TIMEOUT, serialMode_t mode = ALLOCATE);
+
+        bool post(Publisher* outq, int size, const bool* active) { return post<bool>(outq, size, active); }
+        bool post(Publisher* outq, int size) { return post<bool>(outq, size, nullptr); }
+        bool post(Publisher* outq) { return post<bool>(outq, 0, nullptr); }
+
 
         /* Attribute Methods */
         bool                    isRecordType        (const char* rec_type) const;
