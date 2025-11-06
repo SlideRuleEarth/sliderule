@@ -269,7 +269,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 /*----------------------------------------------------------------------------
  * postAsRecord - SlideRule Native Protocol
  *----------------------------------------------------------------------------*/
-long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active, hdrs_t* headers)
+long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const std::atomic<bool>* active, hdrs_t* headers)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -740,7 +740,7 @@ size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void 
     const uint8_t* input_data = static_cast<const uint8_t*>(buffer);
     size_t input_index = 0;
 
-    while((!parser->active || *parser->active) && (bytes_to_process > 0))
+    while((!parser->active || parser->active->load(std::memory_order_relaxed)) && (bytes_to_process > 0))
     {
         if(parser->rec_size == 0) // record header
         {
@@ -787,7 +787,7 @@ size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void 
             {
                 // post record
                 int post_status = MsgQ::STATE_TIMEOUT;
-                while((!parser->active || *parser->active) && post_status == MsgQ::STATE_TIMEOUT)
+                while((!parser->active || parser->active->load(std::memory_order_relaxed)) && post_status == MsgQ::STATE_TIMEOUT)
                 {
                     post_status = parser->outq->postRef(parser->rec_buf, parser->rec_size, SYS_TIMEOUT);
                     // reset body
