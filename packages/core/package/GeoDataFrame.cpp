@@ -1004,7 +1004,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
  *----------------------------------------------------------------------------*/
 GeoDataFrame::~GeoDataFrame(void)
 {
-    active = false;
+    active.store(false);
     delete receivePid;
     delete runPid;
 
@@ -1394,7 +1394,7 @@ void* GeoDataFrame::receiveThread (void* parm)
     try
     {
         // while receiving messages
-        while(info->dataframe->active && !complete)
+        while(info->dataframe->active.load() && !complete)
         {
             const int recv_status = inq.receiveRef(ref, SYS_TIMEOUT);
 
@@ -1544,7 +1544,7 @@ void* GeoDataFrame::runThread (void* parm)
     assert(parm);
     GeoDataFrame* dataframe = static_cast<GeoDataFrame*>(parm);
     bool complete = false;
-    while(dataframe->active)
+    while(dataframe->active.load())
     {
         if(!complete)
         {
@@ -1563,7 +1563,7 @@ void* GeoDataFrame::runThread (void* parm)
                     {
                         // exit loop on error
                         mlog(CRITICAL, "error encountered in frame runner: %s", runner->getType());
-                        dataframe->active = false;
+                        dataframe->active.store(false);
                     }
 
                     // release frame runner
@@ -1572,7 +1572,7 @@ void* GeoDataFrame::runThread (void* parm)
                 else
                 {
                     // exit loop on termination
-                    dataframe->active = false;
+                    dataframe->active.store(false);
                 }
             }
         }

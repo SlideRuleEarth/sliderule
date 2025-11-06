@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "MsgQ.h"
@@ -309,7 +311,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         string                      crs;
 
-        bool                        active;
+        std::atomic<bool>           active;
         Thread*                     receivePid;
         Thread*                     runPid;
         Publisher                   pubRunQ;
