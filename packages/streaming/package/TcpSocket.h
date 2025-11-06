@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "DeviceObject.h"
@@ -78,7 +80,7 @@ class TcpSocket: public DeviceObject
         char*       ip_addr;
         int         port;
         char*       config; // <ip_address>:<port>
-        bool        alive;
+        std::atomic<bool> alive;
         Thread*     connector;
         bool        is_server;
         bool        die_on_disconnect;

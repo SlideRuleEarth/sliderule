@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "MsgQ.h"
 #include "Table.h"
 #include "OsApi.h"
@@ -148,7 +150,7 @@ class ClusterSocket: public TcpSocket
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                            connecting;
+        std::atomic<bool>               connecting;
         Thread*                         connector;
         Table<read_connection_t*, int>  read_connections;
         Table<write_connection_t*, int> write_connections;

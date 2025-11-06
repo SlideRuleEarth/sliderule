@@ -98,7 +98,7 @@ TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     /* Set Server Options */
     is_server = _server;
     die_on_disconnect = _die_on_disconnect;
-    alive = true;
+    alive.store(true);
 
     /* Start Connection */
     if(block)
@@ -148,7 +148,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
     /* Set Server Options */
     is_server = false;
     die_on_disconnect = false;
-    alive = true;
+    alive.store(true);
 
     /* Set Connection Parameters */
     connector = NULL;
@@ -160,7 +160,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
 TcpSocket::~TcpSocket(void)
 {
     /* Kill Listener... so it doesn't automatically reconnect */
-    alive = false;
+    alive.store(false);
     delete connector;
     TcpSocket::closeConnection();
     delete [] ip_addr;
@@ -210,7 +210,7 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
 
     /* Send Data */
     int c = 0;
-    while(c < len && alive)
+    while(c < len && alive.load())
     {
         const int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
         if(ret > 0)
@@ -301,7 +301,7 @@ void* TcpSocket::connectionThread(void* parm)
     socket->sock = INVALID_RC;
     bool connected_once = false;
 
-    while(socket->alive)
+    while(socket->alive.load())
     {
         if(socket->sock < 0)
         {

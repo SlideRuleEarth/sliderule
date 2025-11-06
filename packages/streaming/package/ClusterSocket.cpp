@@ -122,7 +122,7 @@ ClusterSocket::ClusterSocket(lua_State* L, const char* _ip_addr, int _port, role
     }
 
     spin_block = false;
-    connecting = true;
+    connecting.store(true);
     connector = new Thread(connectionThread, this);
 }
 
@@ -131,7 +131,7 @@ ClusterSocket::ClusterSocket(lua_State* L, const char* _ip_addr, int _port, role
  *----------------------------------------------------------------------------*/
 ClusterSocket::~ClusterSocket(void)
 {
-    connecting = false;
+    connecting.store(false);
     delete connector;
 
     delete [] sockqname;
@@ -180,7 +180,7 @@ bool ClusterSocket::isConnected(int num_connections)
  *----------------------------------------------------------------------------*/
 void ClusterSocket::closeConnection(void)
 {
-    connecting = false;
+    connecting.store(false);
 }
 
 /*----------------------------------------------------------------------------
