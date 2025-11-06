@@ -89,7 +89,7 @@ MsgBridge::MsgBridge(lua_State* L, const char* inputq_name, const char* outputq_
     outQ = new Publisher(outputq_name);
 
     /* Create Thread Pool */
-    active = true;
+    active.store(true);
     pid = new Thread(bridgeThread, this);
 }
 
@@ -98,7 +98,7 @@ MsgBridge::MsgBridge(lua_State* L, const char* inputq_name, const char* outputq_
  *----------------------------------------------------------------------------*/
 MsgBridge::~MsgBridge(void)
 {
-    active = false;
+    active.store(false);
     delete pid;
     delete inQ;
     delete outQ;
@@ -116,7 +116,7 @@ void* MsgBridge::bridgeThread(void* parm)
     MsgBridge* bridge = static_cast<MsgBridge*>(parm);
 
     /* Loop Forever */
-    while(bridge->active)
+    while(bridge->active.load())
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
@@ -130,13 +130,13 @@ void* MsgBridge::bridgeThread(void* parm)
             if(len > 0)
             {
                 int status = MsgQ::STATE_TIMEOUT;
-                while(bridge->active && status == MsgQ::STATE_TIMEOUT)
+                while(bridge->active.load() && status == MsgQ::STATE_TIMEOUT)
                 {
                     status = bridge->outQ->postCopy(msg, len, SYS_TIMEOUT);
                     if(status < 0)
                     {
                         mlog(CRITICAL, "Failed (%d) bridge from %s to %s... exiting!", status, bridge->inQ->getName(), bridge->outQ->getName());
-                        bridge->active = false;
+                        bridge->active.store(false);
                     }
                 }
             }
@@ -144,7 +144,7 @@ void* MsgBridge::bridgeThread(void* parm)
             {
                 /* Terminating Message */
                 mlog(DEBUG, "Terminator received on %s, exiting bridge", bridge->inQ->getName());
-                bridge->active = false; // breaks out of loop
+                bridge->active.store(false); // breaks out of loop
             }
 
             /* Dereference Message */
@@ -154,7 +154,7 @@ void* MsgBridge::bridgeThread(void* parm)
         {
             /* Break Out on Failure */
             mlog(CRITICAL, "Failed queue receive on %s with error %d", bridge->inQ->getName(), recv_status);
-            bridge->active = false; // breaks out of loop
+            bridge->active.store(false); // breaks out of loop
         }
     }
 
