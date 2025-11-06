@@ -181,7 +181,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     memset(nodes, 0, sizeof(OrchestratorLib::Node*) * numResources); // set all to NULL
 
     /* Proxy Active */
-    active = true;
+    active.store(true);
 
     /* Create Proxy Threads */
     rqstPub = new Publisher(NULL, NULL, PROXY_QUEUE_DEPTH);
@@ -202,7 +202,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
 EndpointProxy::~EndpointProxy (void)
 {
     /* Join and Delete Threads */
-    active = false;
+    active.store(false);
     for(int i = 0; i < numProxyThreads; i++)
     {
         delete proxyPids[i];
@@ -302,7 +302,7 @@ void* EndpointProxy::collatorThread (void* parm)
 
     alert(INFO, RTE_STATUS, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
 
-    while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
+    while(proxy->active.load() && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
     {
         /* Get Available Nodes */
         const int resources_to_process = proxy->numResources - current_resource;
@@ -325,7 +325,7 @@ void* EndpointProxy::collatorThread (void* parm)
 
                 /* Post Request to Proxy Threads */
                 int status = MsgQ::STATE_TIMEOUT;
-                while(proxy->active && (status == MsgQ::STATE_TIMEOUT))
+                while(proxy->active.load() && (status == MsgQ::STATE_TIMEOUT))
                 {
                     status = proxy->rqstPub->postCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
                     if(status < 0)
@@ -351,14 +351,14 @@ void* EndpointProxy::collatorThread (void* parm)
         else
         {
             mlog(CRITICAL, "Unable to reach orchestrator... abandoning proxy request!");
-            proxy->active = false;
+            proxy->active.store(false);
         }
     }
 
     /* Check if All Resources Completed */
     proxy->completion.lock();
     {
-        while(proxy->active && (proxy->numResourcesComplete < proxy->numResources))
+        while(proxy->active.load() && (proxy->numResourcesComplete < proxy->numResources))
         {
             proxy->completion.wait(0, SYS_TIMEOUT);
         }
@@ -369,7 +369,7 @@ void* EndpointProxy::collatorThread (void* parm)
     if(proxy->sendTerminator)
     {
         int status = MsgQ::STATE_TIMEOUT;
-        while(proxy->active && (status == MsgQ::STATE_TIMEOUT))
+        while(proxy->active.load() && (status == MsgQ::STATE_TIMEOUT))
         {
             status = proxy->outQ->postCopy("", 0, SYS_TIMEOUT);
             if(status < 0)
@@ -398,7 +398,7 @@ void* EndpointProxy::proxyThread (void* parm)
     const FString* content_type_header = new const FString("x-forwarded-for: %s", proxy->sourceIP ? proxy->sourceIP : "0.0.0.0");
     headers.add(content_type_header);
 
-    while(proxy->active)
+    while(proxy->active.load())
     {
         /* Receive Request */
         int current_resource;
@@ -446,7 +446,7 @@ void* EndpointProxy::proxyThread (void* parm)
                 if(!valid && attempts > 0)
                 {
                     mlog(CRITICAL, "Retrying processing resource [%d out of %d]: %s", current_resource + 1, proxy->numResources, resource);
-                    while(proxy->active && (proxy->outQ->getSubCnt() > 0) && !node)
+                    while(proxy->active.load() && (proxy->outQ->getSubCnt() > 0) && !node)
                     {
                         vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout, proxy->locksPerNode);
                         if(nodes)

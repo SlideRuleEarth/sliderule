@@ -37,6 +37,8 @@
  ******************************************************************************/
 
 #include "LuaObject.h"
+#include <atomic>
+
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "OrchestratorLib.h"
@@ -77,7 +79,7 @@ class EndpointProxy: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    active;
+        std::atomic<bool>       active;
         Publisher*              rqstPub;
         Subscriber*             rqstSub;
         Thread**                proxyPids;
