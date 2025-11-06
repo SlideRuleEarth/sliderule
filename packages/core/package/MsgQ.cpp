@@ -75,14 +75,14 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             msgQ->front             = NULL;
             msgQ->back              = NULL;
             msgQ->name              = StringLib::duplicate(name);
-            msgQ->len               = 0;
+            msgQ->len.store(0, std::memory_order_relaxed);
             msgQ->max_data_size     = data_size;
             msgQ->soo_count         = 0;
             msgQ->free_func         = free_func;
             msgQ->locknblock        = new Cond(NUMSIGS);
-            msgQ->state             = STATE_OKAY;
+            msgQ->state.store(STATE_OKAY, std::memory_order_relaxed);
             msgQ->attachments       = 1;
-            msgQ->subscriptions     = 0;
+            msgQ->subscriptions.store(0, std::memory_order_relaxed);
             msgQ->max_subscribers   = MSGQ_DEFAULT_SUBSCRIBERS;
             msgQ->free_blocks       = 0;
 
@@ -161,7 +161,7 @@ MsgQ::~MsgQ()
  *----------------------------------------------------------------------------*/
 int MsgQ::getCount(void)
 {
-    return msgQ->len;
+    return msgQ->len.load(std::memory_order_relaxed);
 }
 
 /*----------------------------------------------------------------------------
@@ -185,7 +185,7 @@ const char* MsgQ::getName(void)
  *----------------------------------------------------------------------------*/
 int MsgQ::getSubCnt(void)
 {
-    return msgQ->subscriptions;
+    return msgQ->subscriptions.load(std::memory_order_relaxed);
 }
 
 /*----------------------------------------------------------------------------
@@ -193,7 +193,7 @@ int MsgQ::getSubCnt(void)
  *----------------------------------------------------------------------------*/
 int MsgQ::getState(void)
 {
-    return msgQ->state;
+    return msgQ->state.load(std::memory_order_relaxed);
 }
 
 /*----------------------------------------------------------------------------
@@ -206,7 +206,7 @@ bool MsgQ::isFull(void)
         return false;
     }
 
-    return (msgQ->len >= msgQ->depth);
+    return (msgQ->len.load(std::memory_order_relaxed) >= msgQ->depth);
 }
 
 /*----------------------------------------------------------------------------
@@ -226,17 +226,21 @@ void MsgQ::init(void)
  *----------------------------------------------------------------------------*/
 void MsgQ::deinit(void)
 {
-    global_queue_t curr_q;
-    const char* curr_name = queues.first(&curr_q);
-    while(curr_name)
+    listmut.lock();
     {
-        delete [] curr_q.queue->name;
-        delete [] curr_q.queue->free_block_stack;
-        delete [] curr_q.queue->subscriber_type;
-        delete [] curr_q.queue->curr_nodes;
-        delete curr_q.queue;
-        curr_name = queues.next(&curr_q);
+        global_queue_t curr_q;
+        const char* curr_name = queues.first(&curr_q);
+        while(curr_name)
+        {
+            delete [] curr_q.queue->name;
+            delete [] curr_q.queue->free_block_stack;
+            delete [] curr_q.queue->subscriber_type;
+            delete [] curr_q.queue->curr_nodes;
+            delete curr_q.queue;
+            curr_name = queues.next(&curr_q);
+        }
     }
+    listmut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -244,7 +248,10 @@ void MsgQ::deinit(void)
  *----------------------------------------------------------------------------*/
 bool MsgQ::existQ(const char* qname)
 {
-    return queues.find(qname);
+    listmut.lock();
+    const bool exists = queues.find(qname);
+    listmut.unlock();
+    return exists;
 }
 
 /*----------------------------------------------------------------------------
@@ -252,7 +259,10 @@ bool MsgQ::existQ(const char* qname)
  *----------------------------------------------------------------------------*/
 int MsgQ::numQ(void)
 {
-    return queues.length();
+    listmut.lock();
+    const int count = queues.length();
+    listmut.unlock();
+    return count;
 }
 
 /*----------------------------------------------------------------------------
@@ -261,27 +271,32 @@ int MsgQ::numQ(void)
 int MsgQ::listQ(queueDisplay_t* list, int list_size)
 {
     int j = 0;
-    global_queue_t curr_q;
-    const char* curr_name = queues.first(&curr_q);
-    while(curr_name)
+    listmut.lock();
     {
-        if(j >= list_size) break;
-        list[j].name = curr_q.queue->name;
-        list[j].len = curr_q.queue->len;
-        list[j].subscriptions = curr_q.queue->subscriptions;
-        switch(curr_q.queue->state)
+        global_queue_t curr_q;
+        const char* curr_name = queues.first(&curr_q);
+        while(curr_name)
         {
-            case STATE_OKAY         : list[j].state = "OKAY";       break;
-            case STATE_TIMEOUT      : list[j].state = "TIMEOUT";    break;
-            case STATE_FULL         : list[j].state = "FULL";       break;
-            case STATE_SIZE_ERROR   : list[j].state = "ERRSIZE";    break;
-            case STATE_ERROR        : list[j].state = "ERROR";      break;
-            case STATE_EMPTY        : list[j].state = "EMPTY";      break;
-            default                 : list[j].state = "UNKNOWN";    break;
+            if(j >= list_size) break;
+            list[j].name = curr_q.queue->name;
+            list[j].len = curr_q.queue->len.load(std::memory_order_relaxed);
+            list[j].subscriptions = curr_q.queue->subscriptions.load(std::memory_order_relaxed);
+            const int queue_state = curr_q.queue->state.load(std::memory_order_relaxed);
+            switch(queue_state)
+            {
+                case STATE_OKAY         : list[j].state = "OKAY";       break;
+                case STATE_TIMEOUT      : list[j].state = "TIMEOUT";    break;
+                case STATE_FULL         : list[j].state = "FULL";       break;
+                case STATE_SIZE_ERROR   : list[j].state = "ERRSIZE";    break;
+                case STATE_ERROR        : list[j].state = "ERROR";      break;
+                case STATE_EMPTY        : list[j].state = "EMPTY";      break;
+                default                 : list[j].state = "UNKNOWN";    break;
+            }
+            j++;
+            curr_name = queues.next(&curr_q);
         }
-        j++;
-        curr_name = queues.next(&curr_q);
     }
+    listmut.unlock();
     return j;
 }
 
@@ -415,102 +430,116 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             /* size is too big */
             post_state = STATE_SIZE_ERROR;
         }
-        else if(msgQ->subscriptions <= 0)
+        else
         {
-            /* don't post messages to a queue with no subscribers */
-            post_state = STATE_NO_SUBSCRIBERS;
-        }
-        else if(timeout != IO_CHECK)
-        {
-            /* wait for room in queue */
-            while(isFull())
+            int subscriptions = msgQ->subscriptions.load(std::memory_order_relaxed);
+            if(subscriptions <= 0)
             {
-                if(!msgQ->locknblock->wait(READY2POST, timeout))
+                /* don't post messages to a queue with no subscribers */
+                post_state = STATE_NO_SUBSCRIBERS;
+            }
+            else if(timeout != IO_CHECK)
+            {
+                /* wait for room in queue */
+                while(isFull())
                 {
-                    post_state = STATE_TIMEOUT;
-                    break;
+                    if(!msgQ->locknblock->wait(READY2POST, timeout))
+                    {
+                        post_state = STATE_TIMEOUT;
+                        break;
+                    }
                 }
             }
-        }
-        else if(isFull())
-        {
-            /* post check on full queue */
-            post_state = STATE_FULL;
-        }
-
-        /* if state is okay proceed with enqueue */
-        if(post_state == STATE_OKAY)
-        {
-            /* Allocate Memory for Node */
-            int memory_needed = sizeof(queue_node_t);
-            if(copy)
+            else if(isFull())
             {
-                memory_needed += data_size;
-                if(secondary_data)
-                {
-                    memory_needed += secondary_size;
-                }
+                /* post check on full queue */
+                post_state = STATE_FULL;
             }
 
-            /* create temp node */
-            queue_node_t* temp = reinterpret_cast<queue_node_t*>(new char [memory_needed]);
-
-            /* perform copy if queue is a copy queue */
-            if(copy)
+            /* if state is okay proceed with enqueue */
+            if(post_state == STATE_OKAY)
             {
-                temp->data = reinterpret_cast<char*>(temp) + sizeof(queue_node_t);
-                memcpy(temp->data, data, data_size);
-                if(secondary_data)
+                /* subscribers may have changed while waiting */
+                subscriptions = msgQ->subscriptions.load(std::memory_order_relaxed);
+                if(subscriptions <= 0)
                 {
-                    memcpy(temp->data + data_size, secondary_data, secondary_size);
-                }
-            }
-            else
-            {
-                temp->data = reinterpret_cast<char*>(data);
-            }
-
-            /* construct node to be added */
-            temp->mask = mask + secondary_size;
-            temp->next = NULL; // for queue
-            temp->refs = msgQ->subscriptions;
-
-            /* place temp node into queue */
-            if(msgQ->back == NULL)  msgQ->front = temp;
-            else                    msgQ->back->next = temp;
-            msgQ->back = temp;
-
-            /* update subscribers */
-            for(int i = 0; i < msgQ->max_subscribers; i++)
-            {
-                /* modify current node if necessary */
-                if( (msgQ->subscriber_type[i] != UNSUBSCRIBED) &&
-                    (msgQ->curr_nodes[i] == NULL) )
-                {
-                    msgQ->curr_nodes[i] = temp;
+                    post_state = STATE_NO_SUBSCRIBERS;
                 }
             }
 
-            /* increment queue size */
-            msgQ->len++;
+            if(post_state == STATE_OKAY)
+            {
+                /* Allocate Memory for Node */
+                int memory_needed = sizeof(queue_node_t);
+                if(copy)
+                {
+                    memory_needed += data_size;
+                    if(secondary_data)
+                    {
+                        memory_needed += secondary_size;
+                    }
+                }
 
-            /* trigger ready */
-            msgQ->locknblock->signal(READY2RECV);
-        }
-        else if(post_state == STATE_NO_SUBSCRIBERS && copy)
-        {
-            /* The STATE_NO_SUBSCRIBERS error is only raised when passing by
-             * reference because the publisher message queue object does not
-             * own the ability to dereference the data being attempted
-             * to be posted (that is a function of the subscriber); so the
-             * poster must handle the deallocation on a failed post in this
-             * case. No error is raised when posting by copy since the poster
-             * has no responsibility in either case (success or failure). */
-            post_state = STATE_OKAY;
+                /* create temp node */
+                queue_node_t* temp = reinterpret_cast<queue_node_t*>(new char [memory_needed]);
+
+                /* perform copy if queue is a copy queue */
+                if(copy)
+                {
+                    temp->data = reinterpret_cast<char*>(temp) + sizeof(queue_node_t);
+                    memcpy(temp->data, data, data_size);
+                    if(secondary_data)
+                    {
+                        memcpy(temp->data + data_size, secondary_data, secondary_size);
+                    }
+                }
+                else
+                {
+                    temp->data = reinterpret_cast<char*>(data);
+                }
+
+                /* construct node to be added */
+                temp->mask = mask + secondary_size;
+                temp->next = NULL; // for queue
+                temp->refs = subscriptions;
+
+                /* place temp node into queue */
+                if(msgQ->back == NULL)  msgQ->front = temp;
+                else                    msgQ->back->next = temp;
+                msgQ->back = temp;
+
+                /* update subscribers */
+                for(int i = 0; i < msgQ->max_subscribers; i++)
+                {
+                    /* modify current node if necessary */
+                    if( (msgQ->subscriber_type[i] != UNSUBSCRIBED) &&
+                        (msgQ->curr_nodes[i] == NULL) )
+                    {
+                        msgQ->curr_nodes[i] = temp;
+                    }
+                }
+
+                /* increment queue size */
+                msgQ->len.fetch_add(1, std::memory_order_relaxed);
+
+                /* trigger ready */
+                msgQ->locknblock->signal(READY2RECV);
+            }
+            else if(post_state == STATE_NO_SUBSCRIBERS && copy)
+            {
+                /* The STATE_NO_SUBSCRIBERS error is only raised when passing by
+                 * reference because the publisher message queue object does not
+                 * own the ability to dereference the data being attempted
+                 * to be posted (that is a function of the subscriber); so the
+                 * poster must handle the deallocation on a failed post in this
+                 * case. No error is raised when posting by copy since the poster
+                 * has no responsibility in either case (success or failure). */
+                post_state = STATE_OKAY;
+            }
         }
 
         /* set queue state */
-        msgQ->state = post_state;
+        msgQ->state.store(post_state, std::memory_order_relaxed);
 
         /* if still room wake up other publishers */
         if(!isFull())
@@ -561,7 +590,7 @@ Subscriber::~Subscriber()
         const bool space_reclaimed = reclaim_nodes(true);
 
         /* Clean up Remaining Free Blocks */
-        if(msgQ->subscriptions == 1)
+        if(msgQ->subscriptions.load(std::memory_order_relaxed) == 1)
         {
             if(msgQ->free_blocks > 0)
             {
@@ -583,7 +612,7 @@ Subscriber::~Subscriber()
         /* Unregister */
         if(msgQ->subscriber_type[id] == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count--;
         msgQ->subscriber_type[id] = UNSUBSCRIBED;
-        msgQ->subscriptions--;
+        msgQ->subscriptions.fetch_sub(1, std::memory_order_relaxed);
 
         /* Signal Publishers */
         if(space_reclaimed)
@@ -776,7 +805,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
         }
 
         /* set queue state */
-        msgQ->state = ref.state;
+        msgQ->state.store(ref.state, std::memory_order_relaxed);
 
         /* signal publishers */
         if(space_reclaimed)
@@ -856,7 +885,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
         }
 
         /* decrement queue length */
-        msgQ->len--;
+        msgQ->len.fetch_sub(1, std::memory_order_relaxed);
         space_reclaimed = true;
     }
 
@@ -872,7 +901,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
     {
         /* Check Need to Resize */
         const int old_max_subscribers = msgQ->max_subscribers;
-        if(msgQ->subscriptions >= msgQ->max_subscribers)
+        if(msgQ->subscriptions.load(std::memory_order_relaxed) >= msgQ->max_subscribers)
         {
             msgQ->max_subscribers *= 2;
         }
@@ -919,7 +948,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
                 id = i;
                 msgQ->subscriber_type[id] = type;
                 if(type == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count++;
-                msgQ->subscriptions++;
+                msgQ->subscriptions.fetch_add(1, std::memory_order_relaxed);
                 break;
             }
         }
