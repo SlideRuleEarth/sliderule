@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "TcpSocket.h"
@@ -116,7 +118,7 @@ class HttpClient: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                            active;
+        std::atomic<bool>               active;
         Thread*                         requestPid;
         Publisher*                      requestPub;
         TcpSocket*                      sock;

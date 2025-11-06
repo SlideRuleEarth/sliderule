@@ -33,8 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
 #include "HttpClient.h"
 #include "EndpointObject.h"
 #include "LuaEngine.h"
@@ -90,7 +88,7 @@ int HttpClient::luaCreate (lua_State* L)
 HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    active = true;
+    active.store(true);
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
     sock = initializeSocket(ipAddr, port);
@@ -107,7 +105,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     // Initial Settings
-    active = false;
+    active.store(false);
     ipAddr = NULL;
     port = -1;
 
@@ -132,7 +130,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
                     long val;
                     if(StringLib::str2long(_port_str, &val))
                     {
-                        active = true;
+                        active.store(true);
                         ipAddr = StringLib::duplicate(_ip_addr);
                         port = val;
                     }
@@ -158,7 +156,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
  *----------------------------------------------------------------------------*/
 HttpClient::~HttpClient(void)
 {
-    active = false;
+    active.store(false);
     delete requestPid;
     delete requestPub;
     delete [] ipAddr;
@@ -340,7 +338,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         bool    headers_complete        = false;
         bool    response_complete       = false;
 
-        while(active && !response_complete)
+        while(active.load() && !response_complete)
         {
             int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
             const uint32_t sock_trace_id = start_trace(DEBUG, trace_id, "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
@@ -514,7 +512,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         if(chunk_remaining <= 0)
                         {
                             int post_status = MsgQ::STATE_TIMEOUT;
-                            while(rsps.size && active && post_status == MsgQ::STATE_TIMEOUT)
+                            while(rsps.size && active.load() && post_status == MsgQ::STATE_TIMEOUT)
                             {
                                 post_status = outq->postRef(rsps.response, rsps.size, SYS_TIMEOUT);
                                 if(post_status < 0)
@@ -725,7 +723,7 @@ void* HttpClient::requestThread(void* parm)
     HttpClient* client = static_cast<HttpClient*>(parm);
     Subscriber* request_sub = new Subscriber(*(client->requestPub));
 
-    while(client->active)
+    while(client->active.load())
     {
         rqst_t rqst;
         const int recv_status = request_sub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
