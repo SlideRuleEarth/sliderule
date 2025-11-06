@@ -38,6 +38,8 @@
 
 #include "OsApi.h"
 #include "MsgQ.h"
+#include <atomic>
+
 #include "LuaObject.h"
 #include "CreFields.h"
 
@@ -78,12 +80,12 @@ class ContainerRunner: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            active;
-        Thread*         controlPid;
-        Publisher*      outQ;
-        const char*     hostSandboxDirectory;
-        Cond            resultLock;
-        CreFields*      parms;
+        std::atomic<bool>   active;
+        Thread*             controlPid;
+        Publisher*          outQ;
+        const char*         hostSandboxDirectory;
+        Cond                resultLock;
+        CreFields*          parms;
 
         /*--------------------------------------------------------------------
          * Methods

@@ -195,7 +195,7 @@ ContainerRunner::ContainerRunner (lua_State* L, CreFields* _parms, const char* h
 
     parms = _parms;
     if(outq_name) outQ = new Publisher(outq_name);
-    active = true;
+    active.store(true);
     controlPid = new Thread(controlThread, this);
 }
 
@@ -204,7 +204,7 @@ ContainerRunner::ContainerRunner (lua_State* L, CreFields* _parms, const char* h
  *----------------------------------------------------------------------------*/
 ContainerRunner::~ContainerRunner (void)
 {
-    active = false;
+    active.store(false);
     delete controlPid;
     delete outQ;
     delete [] hostSandboxDirectory;
