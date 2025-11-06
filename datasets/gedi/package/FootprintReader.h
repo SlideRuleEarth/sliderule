@@ -125,7 +125,7 @@ class FootprintReader: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    active;
+        std::atomic<bool>       active;
         Thread*                 readerPid[GediFields::NUM_BEAMS];
         Mutex                   threadMut;
         int                     threadCount;
@@ -212,7 +212,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
     batchData = reinterpret_cast<batch_t*>(batchRecord.getRecordData());
 
     /* Initialize Readers */
-    active = true;
+    active.store(true, std::memory_order_relaxed);
     numComplete = 0;
     threadCount = 0;
     memset(readerPid, 0, sizeof(readerPid));
@@ -263,7 +263,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
 template <class footprint_t>
 FootprintReader<footprint_t>::~FootprintReader (void)
 {
-    active = false;
+    active.store(false, std::memory_order_relaxed);
 
     for(int i = 0; i < GediFields::NUM_BEAMS; i++)
     {
@@ -523,7 +523,7 @@ void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
         const int size = batchIndex * sizeof(footprint_t);
         const int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
         int post_status = MsgQ::STATE_TIMEOUT;
-        while( active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+        while(active.load(std::memory_order_relaxed) && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT));
         if(post_status > 0)
         {
             local_stats->footprints_sent += batchIndex;
@@ -552,7 +552,7 @@ void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
 
         /* Post Record */
         int post_status = MsgQ::STATE_TIMEOUT;
-        while(active && (post_status = outQ->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+        while(active.load(std::memory_order_relaxed) && (post_status = outQ->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
         {
             local_stats->footprints_retried++;
         }

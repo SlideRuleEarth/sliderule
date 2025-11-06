@@ -189,7 +189,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         local_stats.footprints_read = region.num_footprints;
 
         /* Traverse All Footprints In Dataset */
-        for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
+        for(long footprint = 0; reader->active.load(std::memory_order_relaxed) && footprint < region.num_footprints; footprint++)
         {
             /* Check Degrade Filter */
             if(parms->degrade_filter)
@@ -309,7 +309,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             if(reader->sendTerminator)
             {
                 int status = MsgQ::STATE_TIMEOUT;
-                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                while(reader->active.load(std::memory_order_relaxed) && (status == MsgQ::STATE_TIMEOUT))
                 {
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
