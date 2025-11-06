@@ -115,7 +115,7 @@ void SockLib::signalexit(void)
 /*----------------------------------------------------------------------------
  * sockstream
  *----------------------------------------------------------------------------*/
-int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const bool* block)
+int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const std::atomic<bool>* block)
 {
     /* Create initial socket */
     const int sock = sockcreate(SOCK_STREAM, ip_addr, port, is_server, block);
@@ -156,7 +156,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
         {
             server_socket = accept(listen_socket, NULL, NULL);
         }
-    } while(server_socket == INVALID_RC && block && *block && !signal_exit.load());
+    } while(server_socket == INVALID_RC && block && block->load() && !signal_exit.load());
 
     /* Close Listen Socket */
     sockclose(listen_socket);
@@ -191,7 +191,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
 /*----------------------------------------------------------------------------
  * sockdatagram
  *----------------------------------------------------------------------------*/
-int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, const bool* block, const char* multicast_group)
+int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, const std::atomic<bool>* block, const char* multicast_group)
 {
     /* Create initial socket */
     const int sock = sockcreate(SOCK_DGRAM, ip_addr, port, is_server, block);
@@ -398,7 +398,7 @@ void SockLib::sockclose(int fd)
 /*----------------------------------------------------------------------------
  * startserver
  *----------------------------------------------------------------------------*/
-int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const bool* active, void* parm, bool* listening)
+int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* listening)
 {
     int status = 0;
 
@@ -442,7 +442,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         try
         {
             /* Loop While Active */
-            while(*active)
+            while(active && active->load())
             {
                 /* Build Polling Flags */
                 for(int j = 1; j < num_sockets; j++)
@@ -636,7 +636,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 /*----------------------------------------------------------------------------
  * startclient
  *----------------------------------------------------------------------------*/
-int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const bool* active, void* parm, bool* connected)
+int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* connected)
 {
     /* Initialize Connection Variables */
     bool _connected = false;
@@ -645,7 +645,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
     struct pollfd polllist[1];
 
     /* Loop While Active */
-    while(*active)
+    while(active && active->load())
     {
         /* Build Poll Events */
         on_poll(0, &polllist[0].events, parm);
@@ -750,7 +750,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
 /*----------------------------------------------------------------------------
  * sockcreate
  *----------------------------------------------------------------------------*/
-int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server, const bool* block)
+int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server, const std::atomic<bool>* block)
 {
     struct addrinfo     hints;
     struct addrinfo*    result;
@@ -826,7 +826,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
                     dlog("Failed to connect socket to %s:%s... %s", host, serv, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                     OsApi::performIOTimeout();
                 }
-            } while(status < 0 && block && *block && !signal_exit.load());
+            } while(status < 0 && block && block->load() && !signal_exit.load());
 
             /* Check Connection */
             if(status < 0)  close(sock);

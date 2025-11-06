@@ -52,21 +52,21 @@ class SockLib
         static void         init                (void); // initializes library
         static void         deinit              (void); // de-initializes library
         static void         signalexit          (void); // de-initializes library
-        static int          sockstream          (const char* ip_addr, int port, bool is_server, const bool* block);
-        static int          sockdatagram        (const char* ip_addr, int port, bool is_server, const bool* block, const char* multicast_group);
+        static int          sockstream          (const char* ip_addr, int port, bool is_server, const std::atomic<bool>* block);
+        static int          sockdatagram        (const char* ip_addr, int port, bool is_server, const std::atomic<bool>* block, const char* multicast_group);
         static int          socksend            (int fd, const void* buf, int size, int timeout);
         static int          sockrecv            (int fd, void* buf, int size, int timeout);
         static int          sockinfo            (int fd, char** local_ipaddr, int* local_port, char** remote_ipaddr, int* remote_port);
         static void         sockclose           (int fd);
-        static int          startserver         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const bool* active, void* parm, bool* listening=NULL);
-        static int          startclient         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const bool* active, void* parm, bool* connected=NULL);
+        static int          startserver         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* listening=NULL);
+        static int          startclient         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* connected=NULL);
 
     private:
 
         static std::atomic<bool> signal_exit;
         static char         local_host_name[HOST_STR_LEN];
 
-        static int          sockcreate          (int type, const char* ip_addr, int port, bool is_server, const bool* block);
+        static int          sockcreate          (int type, const char* ip_addr, int port, bool is_server, const std::atomic<bool>* block);
         static int          sockoptions         (int socket_fd, bool reuse, bool tcp);
         static int          sockkeepalive       (int socket_fd, int idle=60, int cnt=12, int intvl=5);
         static int          sockreuse           (int socket_fd);

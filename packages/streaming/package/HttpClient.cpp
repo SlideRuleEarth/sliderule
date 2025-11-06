@@ -33,6 +33,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "HttpClient.h"
 #include "EndpointObject.h"
 #include "LuaEngine.h"
@@ -210,7 +212,7 @@ int HttpClient::getPort (void) const
  *----------------------------------------------------------------------------*/
 TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
 {
-    const bool block = false;
+    const std::atomic<bool> block(false);
     return new TcpSocket(NULL, _ip_addr, _port, false, &block, false);
 }
 
