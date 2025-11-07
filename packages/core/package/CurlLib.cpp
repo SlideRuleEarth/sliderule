@@ -817,7 +817,15 @@ size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void 
 size_t CurlLib::postData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     Publisher* outq = static_cast<Publisher*>(userp);
-    return outq->postCopy(buffer, size * nmemb, DATA_TIMEOUT * 1000);
+    const size_t total_bytes = size * nmemb;
+
+    if(total_bytes > 0)
+    {
+        const int status = outq->postCopy(buffer, static_cast<int>(total_bytes), DATA_TIMEOUT * 1000);
+        if(status == MsgQ::STATE_OKAY) return total_bytes;
+    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
