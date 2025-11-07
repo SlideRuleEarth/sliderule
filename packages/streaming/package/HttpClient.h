@@ -120,6 +120,7 @@ class HttpClient: public LuaObject
 
         std::atomic<bool>               active;
         Thread*                         requestPid;
+        std::atomic<bool>               subscriberReady;
         Publisher*                      requestPub;
         TcpSocket*                      sock;
         char*                           ipAddr;
