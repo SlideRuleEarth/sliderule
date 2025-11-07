@@ -157,9 +157,6 @@ void Timer::_handler (int sig, siginfo_t *si, void *uc)
     /* Timer destructors clear their slot before signals are fully drained.
      * Grab a snapshot of the handler and tolerate NULL so late signals no-op. */
     const int index = sig - SIGRTMIN;
-    if(index >= 0 && index < MAX_TIMERS)
-    {
-        timerHandler_t handler = sighdl[index];
-        if(handler) handler();
-    }
+    timerHandler_t handler = sighdl[index];
+    if(handler) handler();
 }
