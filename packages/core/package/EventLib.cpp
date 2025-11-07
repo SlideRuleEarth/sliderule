@@ -44,7 +44,6 @@
 #include "List.h"
 
 #include <cstdarg>
-#include <atomic>
 
 /******************************************************************************
  * FILE DATA
@@ -346,8 +345,7 @@ bool EventLib::sendTlm (event_level_t lvl, const tlm_input_t& tlm)
 /*----------------------------------------------------------------------------
  * sendAlert
  *----------------------------------------------------------------------------*/
-template<typename Flag>
-bool EventLib::sendAlert_impl(event_level_t lvl, int code, void* rspsq, const Flag* active, const char* formatted_msg)
+bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const std::atomic<bool>* active, const char* errmsg, ...)
 {
     /* Return Here If Nothing to Do */
     if(lvl < SystemConfig::settings().alertLevel.value) return true;
@@ -358,48 +356,28 @@ bool EventLib::sendAlert_impl(event_level_t lvl, int code, void* rspsq, const Fl
     event->code     = code;
     event->level    = (int32_t)lvl;
 
-    /* Copy already formatted text */
-    StringLib::copy(event->text, formatted_msg, EventLib::MAX_ALERT_STR);
+    /* Build Message */
+    va_list args;
+    va_start(args, errmsg);
+    const int vlen = vsnprintf(event->text, MAX_ALERT_STR - 1, errmsg, args);
+    const int text_size = MAX(MIN(vlen + 1, MAX_ALERT_STR), 1);
+    event->text[text_size - 1] = '\0';
+    va_end(args);
 
     /* Log Alert */
     mlog(static_cast<event_level_t>(event->level), "<alert=%d> %s", event->code, event->text);
 
-    /* Extract active pointer */
-    const bool active_val = EventLib::FlagOps<Flag>::load(active);
-    const Flag* active_ptr = active_val ? active : nullptr;
-
     /* Post to Event Q
      *  - must allocate here so that the record is still owned for the call to
      *    post it below. */
-    bool status = record.post(outq, 0, active_ptr, false, SYS_TIMEOUT, RecordObject::ALLOCATE);
+    bool status = record.post(outq, 0, active, false, SYS_TIMEOUT, RecordObject::ALLOCATE);
 
     /* Post to Response Q */
     if(rspsq)
     {
         Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
-        status = status && record.post(rspsq_ptr, 0, active_ptr);
+        status = status && record.post(rspsq_ptr, 0, active);
     }
 
     return status;
 }
-
-
-bool EventLib::sendAlert(event_level_t lvl, int code, void* rspsq, std::nullptr_t active_null, const char* errmsg, ...)
-{
-    (void)active_null;
-
-    /* Format message here (safe: same stack frame) */
-    char text[EventLib::MAX_ALERT_STR];
-    va_list args;
-    va_start(args, errmsg);
-    vsnprintf(text, sizeof(text), errmsg, args);
-    va_end(args);
-
-    /* Forward nullptr as a bool-flag type */
-    return sendAlert_impl<bool>(lvl, code, rspsq, static_cast<const bool*>(nullptr), text);
-}
-
-/* Force generation of required template instantiations for EventLib::sendAlert */
-template bool EventLib::sendAlert_impl<bool>(event_level_t, int, void*, const bool*, const char*);
-template bool EventLib::sendAlert_impl<std::atomic<bool>>(event_level_t, int, void*, const std::atomic<bool>*, const char*);
-

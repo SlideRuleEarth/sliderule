@@ -370,8 +370,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
  *  - to call this function multiple times for a given record, the mode must
  *    be set to ALLOCATE
  *----------------------------------------------------------------------------*/
-template<typename Flag>
-bool RecordObject::post(Publisher* outq, int size, const Flag* active, bool verbose, int timeout, serialMode_t mode)
+bool RecordObject::post(Publisher* outq, int size, const std::atomic<bool>* active, bool verbose, int timeout, serialMode_t mode)
 {
     bool status = true;
 
@@ -379,11 +378,10 @@ bool RecordObject::post(Publisher* outq, int size, const Flag* active, bool verb
     uint8_t* rec_buf = NULL;
     const int rec_bytes = serialize(&rec_buf, mode, size);
 
-    /* Post Record — use FlagOps to load bool vs atomic */
+    /* Post Record */
     int post_status = MsgQ::STATE_TIMEOUT;
-
-    while (EventLib::FlagOps<Flag>::load(active) &&
-           ((post_status = outq->postRef(rec_buf, rec_bytes, timeout)) == MsgQ::STATE_TIMEOUT));
+    while(  (!active || active->load(std::memory_order_acquire)) &&
+            ((post_status = outq->postRef(rec_buf, rec_bytes, timeout)) == MsgQ::STATE_TIMEOUT) );
 
     /* Handle Status */
     if(post_status <= 0)
@@ -395,17 +393,6 @@ bool RecordObject::post(Publisher* outq, int size, const Flag* active, bool verb
 
     return status;
 }
-
-bool RecordObject::post(Publisher* outq, int size, std::nullptr_t, bool verbose, int timeout, serialMode_t mode)
-{
-    /* Treat NULL exactly like "no active flag" */
-    const bool* active = nullptr;
-    return post<bool>(outq, size, active, verbose, timeout, mode);
-}
-
-/* Force generation of required template instantiations for RecordObject::post<> */
-template bool RecordObject::post<bool>(Publisher*, int, const bool*, bool, int, serialMode_t);
-template bool RecordObject::post<std::atomic<bool>>(Publisher*, int, const std::atomic<bool>*, bool, int, serialMode_t);
 
 /*----------------------------------------------------------------------------
  * isRecordType

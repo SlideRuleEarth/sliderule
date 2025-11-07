@@ -38,7 +38,6 @@
 
 #include "OsApi.h"
 #include <atomic>
-#include <cstdarg>
 
 /******************************************************************************
  * DEFINES
@@ -170,26 +169,7 @@ class EventLib
 
         static bool             sendTlm         (event_level_t lvl, const tlm_input_t& tlm);
 
-        /* flag loader helper */
-        template<typename Flag>
-        struct FlagOps;
-
-        template<typename Flag>
-        static bool sendAlert_impl(event_level_t lvl, int code, void* rspsq, const Flag* active, const char* formatted_msg);
-
-        template<typename Flag>
-        static bool sendAlert(event_level_t lvl, int code, void* rspsq, const Flag* active, const char* errmsg, ...)
-        {
-            char text[EventLib::MAX_ALERT_STR];
-            va_list args;
-            va_start(args, errmsg);
-            vsnprintf(text, sizeof(text), errmsg, args);
-            va_end(args);
-            return sendAlert_impl<Flag>(lvl, code, rspsq, active, text);
-        }
-
-        static bool sendAlert(event_level_t lvl, int code, void* rspsq, std::nullptr_t active, const char* errmsg, ...);
-
+        static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const std::atomic<bool>* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
     private:
 
@@ -199,30 +179,6 @@ class EventLib
 
         static std::atomic<uint32_t> trace_id;
         static Thread::key_t trace_key;
-};
-
-
-/* ---------------------------------------------------------
- * FlagOps specializations
- * (must be OUTSIDE the class — namespace scope!)
- * --------------------------------------------------------- */
-
-template<>
-struct EventLib::FlagOps<bool>
-{
-    static bool load(const bool* p)
-    {
-        return p ? *p : true;
-    }
-};
-
-template<>
-struct EventLib::FlagOps<std::atomic<bool>>
-{
-    static bool load(const std::atomic<bool>* p)
-    {
-        return p ? p->load(std::memory_order_relaxed) : true;
-    }
 };
 
 #endif  /* __eventlib__ */
