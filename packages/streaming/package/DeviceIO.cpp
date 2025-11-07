@@ -69,12 +69,12 @@ DeviceIO::DeviceIO(lua_State* L, DeviceObject* _device):
     assert(_device);
 
     /* Initialize Thread */
-    ioActive            = false;
+    ioActive.store(false, std::memory_order_relaxed);
     ioThread            = NULL;
 
     /* Initialize Parameters */
     device              = _device;
-    dieOnDisconnect     = true;
+    dieOnDisconnect.store(true, std::memory_order_relaxed);
     blockCfg            = SYS_TIMEOUT;
 
     /* Initialize Counters */
@@ -235,7 +235,7 @@ int DeviceIO::luaDieOnDisconnect(lua_State* L)
 
         /* Get Parameters */
         const bool enable = getLuaBoolean(L, 2);
-        lua_obj->dieOnDisconnect = enable;
+        lua_obj->dieOnDisconnect.store(enable, std::memory_order_relaxed);
 
         /* Set Success */
         status = true;
