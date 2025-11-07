@@ -43,6 +43,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointObject.h"
+#include "Mutex.h"
 
 /******************************************************************************
  * HTTP SERVER CLASS
@@ -144,6 +145,7 @@ class HttpServer: public LuaObject
         Table<Connection*, int>         connections;
 
         Dictionary<RouteEntry*>         routeTable;
+        Mutex                           routeTableMut;
 
         char*                           ipAddr;
         int                             port;

@@ -530,7 +530,13 @@ int HttpServer::onRead(int fd)
             const char* path = connection->request->path;
             try
             {
-                EndpointObject* endpoint = routeTable[path]->route;
+                EndpointObject* endpoint;
+                routeTableMut.lock();
+                {
+                    endpoint = routeTable[path]->route;
+                }
+                routeTableMut.unlock();
+
                 connection->streaming = endpoint->handleRequest(connection->request);
                 connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             }
@@ -783,7 +789,12 @@ int HttpServer::luaAttach (lua_State* L)
 
         /* Add Route to Table */
         RouteEntry* entry = new RouteEntry(endpoint);
-        status = lua_obj->routeTable.add(url, entry, true);
+        lua_obj->routeTableMut.lock();
+        {
+            status = lua_obj->routeTable.add(url, entry, true);
+        }
+        lua_obj->routeTableMut.unlock();
+
         if(!status) delete entry;
     }
     catch(const RunTimeException& e)
