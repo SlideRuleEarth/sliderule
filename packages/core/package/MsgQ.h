@@ -157,7 +157,7 @@ class MsgQ
             std::atomic<int>        subscriptions;                      // number of subscribers on this queue
             int                     max_subscribers;                    // current allocation of subscriber-based buffers
             subscriber_type_t*      subscriber_type;                    // [max_subscribers] type of subscription for the id
-            queue_node_t**          curr_nodes;                         // [max_subscribers] used for subscriptions
+            std::atomic<queue_node_t*>* curr_nodes;                     // [max_subscribers] used for subscriptions
             char**                  free_block_stack;                   // [free_stack_size] optimization of memory usage: deallocate in groups
             int                     free_blocks;                        // current number of blocks of free_block_stack
         } message_queue_t;
