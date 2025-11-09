@@ -191,7 +191,7 @@ void HttpServer::Connection::initialize (const char* _name)
     /* Create Unique ID for Request */
     name = StringLib::duplicate(_name);
     id = new char [REQUEST_ID_LEN];
-    const long cnt = requestId++;
+    const uint64_t cnt = requestId.fetch_add(1, std::memory_order_relaxed);
     StringLib::format(id, REQUEST_ID_LEN, "%s.%ld", name, cnt);
 
     /* Start Trace */

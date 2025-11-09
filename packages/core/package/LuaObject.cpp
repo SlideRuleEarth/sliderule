@@ -74,7 +74,7 @@ LuaObject::~LuaObject (void)
     globalMut.unlock();
 
     /* Count Object */
-    numObjects--;
+    numObjects.fetch_sub(1, std::memory_order_relaxed);
 }
 
 /*----------------------------------------------------------------------------
@@ -233,7 +233,7 @@ LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_t
         if(StringLib::match(object_type, user_data->luaObj->ObjectType))
         {
             lua_obj = user_data->luaObj;
-            user_data->luaObj->referenceCount++;
+            user_data->luaObj->referenceCount.fetch_add(1, std::memory_order_relaxed);
         }
         else
         {
@@ -310,7 +310,7 @@ void LuaObject::getGlobalObjects (vector<object_info_t>& globals)
             const object_info_t info = {
                 .objName = object_name,
                 .objType = global_object.lua_obj->getType(),
-                .refCnt = global_object.lua_obj->referenceCount
+                .refCnt = global_object.lua_obj->referenceCount.load(std::memory_order_relaxed)
             };
             globals.push_back(info);
             object_name = globalObjects.next(&global_object);
@@ -343,7 +343,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
     }
 
     /* Bump Reference Count */
-    lua_obj->referenceCount++;
+    lua_obj->referenceCount.fetch_add(1, std::memory_order_relaxed);
 
     /* Return User Data to Lua */
     lua_obj->userData->luaObj = lua_obj;
@@ -366,7 +366,7 @@ LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_t
             if(StringLib::match(obj->getType(), object_type))
             {
                 lua_obj = obj;
-                lua_obj->referenceCount++;
+                lua_obj->referenceCount.fetch_add(1, std::memory_order_relaxed);
             }
         }
         catch(const RunTimeException& e)
@@ -385,7 +385,7 @@ void LuaObject::referenceLuaObject (LuaObject* lua_obj)
 {
     globalMut.lock();
     {
-        lua_obj->referenceCount++;
+        lua_obj->referenceCount.fetch_add(1, std::memory_order_relaxed);
     }
     globalMut.unlock();
 }
@@ -398,13 +398,13 @@ bool LuaObject::releaseLuaObject (void)
     bool is_delete_pending = false;
 
     /* Decrement Reference Count */
-    referenceCount--;
-    if(referenceCount == 0)
+    const long prev = referenceCount.fetch_sub(1, std::memory_order_relaxed);
+    if(prev == 1)
     {
         mlog(DEBUG, "Delete on release for object %s/%s", getType(), getName());
         is_delete_pending = true;
     }
-    else if(referenceCount < 0)
+    else if(prev <= 0)
     {
         mlog(CRITICAL, "Unmatched object release %s of type %s detected", getName(), getType());
     }
@@ -464,7 +464,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     }
 
     /* Count Object */
-    numObjects++;
+    numObjects.fetch_add(1, std::memory_order_relaxed);
 
     /* Start Trace */
     traceId = start_trace(DEBUG, engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
@@ -544,10 +544,10 @@ int LuaObject::luaDelete (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                const int count = lua_obj->referenceCount--;
-                mlog(DEBUG, "Garbage collecting object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                const long count = lua_obj->referenceCount.fetch_sub(1, std::memory_order_relaxed);
+                mlog(DEBUG, "Garbage collecting object %s/%s <%ld>", lua_obj->getType(), lua_obj->getName(), count);
 
-                if(lua_obj->referenceCount == 0)
+                if(count == 1)
                 {
                     /* Delete Object */
                     delete lua_obj;
@@ -555,7 +555,7 @@ int LuaObject::luaDelete (lua_State* L)
                 }
                 else
                 {
-                    mlog(DEBUG, "Delaying delete on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                    mlog(DEBUG, "Delaying delete on referenced object %s/%s <%ld>", lua_obj->getType(), lua_obj->getName(), count);
                     lua_obj->userData = NULL; // user data is now out of scope
                 }
             }
@@ -593,10 +593,10 @@ int LuaObject::luaDestroy (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                const int count = lua_obj->referenceCount--;
-                mlog(DEBUG, "Destroying object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                const long count = lua_obj->referenceCount.fetch_sub(1, std::memory_order_relaxed);
+                mlog(DEBUG, "Destroying object %s/%s <%ld>", lua_obj->getType(), lua_obj->getName(), count);
 
-                if(lua_obj->referenceCount == 0)
+                if(count == 1)
                 {
                     /* Delete Object */
                     delete lua_obj;
@@ -604,7 +604,7 @@ int LuaObject::luaDestroy (lua_State* L)
                 }
                 else
                 {
-                    mlog(DEBUG, "Delaying destroy on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                    mlog(DEBUG, "Delaying destroy on referenced object %s/%s <%ld>", lua_obj->getType(), lua_obj->getName(), count);
                 }
             }
             else
@@ -654,7 +654,7 @@ int LuaObject::luaName(lua_State* L)
                      *  this make the object global as there will now be an additional reference
                      *  to this object without a corresponding lua variable that will get
                      *  garbage collected */
-                    lua_obj->referenceCount++;
+                    lua_obj->referenceCount.fetch_add(1, std::memory_order_relaxed);
 
                     /* Associate Name */
                     lua_obj->ObjectName = StringLib::duplicate(name);
@@ -752,4 +752,3 @@ int LuaObject::luaWaitOn(lua_State* L)
     /* Return Completion Status */
     return returnLuaStatus(L, status);
 }
-
