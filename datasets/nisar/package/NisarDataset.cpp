@@ -352,7 +352,7 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
     {
         auto it = transformCache.find(cacheKey);
         if (it == transformCache.end())
-            transformCache[layerPrefix] = {gtf[0], gtf[1], gtf[2], gtf[3], gtf[4], gtf[5]};
+            transformCache[cacheKey] = {gtf[0], gtf[1], gtf[2], gtf[3], gtf[4], gtf[5]};
     }
     transfMutex.unlock();
 #endif
@@ -429,7 +429,7 @@ OGRErr NisarDataset::overrideTargetCRS(OGRSpatialReference& target, const void* 
     {
         auto it = crsCache.find(cacheKey);
         if (it == crsCache.end())
-            crsCache[pixelOffsetGroup] = epsg;
+            crsCache[cacheKey] = epsg;
     }
     crsMutex.unlock();
 
