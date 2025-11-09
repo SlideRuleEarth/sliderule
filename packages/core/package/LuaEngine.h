@@ -156,7 +156,7 @@ class LuaEngine
         lua_State*                      L;      // lua state variable
 
         uint64_t                        engineId;
-        bool                            engineActive;
+        std::atomic<bool>               engineActive;
         bool                            engineInError;
         Thread*                         engineThread;
         Cond                            engineSignal;

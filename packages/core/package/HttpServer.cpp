@@ -94,7 +94,7 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
     port = _port;
 
     active.store(true);
-    listening = false;
+    listening.store(false, std::memory_order_release);
     listenerPid = new Thread(listenerThread, this);
 }
 
@@ -340,7 +340,7 @@ void* HttpServer::listenerThread(void* parm)
         if(status < 0)
         {
             mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
-            s->listening = false;
+            s->listening.store(false, std::memory_order_release);
 
             /* Restart Http Server */
             if(s->active.load())
@@ -825,7 +825,7 @@ int HttpServer::luaUntilUp (lua_State* L)
         /* Wait Until Http Server Started */
         do
         {
-            status = lua_obj->listening;
+            status = lua_obj->listening.load(std::memory_order_acquire);
             if(status) break;
             if(timeout > 0) timeout--;
             OsApi::performIOTimeout();

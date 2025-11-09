@@ -42,6 +42,7 @@
 #include "MsgQ.h"
 #include "RecordObject.h"
 #include "OsApi.h"
+#include <atomic>
 
 /******************************************************************************
  * RECORD DISPATCHER CLASS
@@ -130,8 +131,8 @@ class RecordDispatcher: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    dispatcherActive;
-        bool                    abortOnTimeout;
+        std::atomic<bool>       dispatcherActive;
+        std::atomic<bool>       abortOnTimeout;
         Thread**                threadPool;
         int                     numThreads;
         int                     threadsComplete;

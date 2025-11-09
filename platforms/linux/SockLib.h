@@ -58,8 +58,8 @@ class SockLib
         static int          sockrecv            (int fd, void* buf, int size, int timeout);
         static int          sockinfo            (int fd, char** local_ipaddr, int* local_port, char** remote_ipaddr, int* remote_port);
         static void         sockclose           (int fd);
-        static int          startserver         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* listening=NULL);
-        static int          startclient         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* connected=NULL);
+        static int          startserver         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, std::atomic<bool>* listening=NULL);
+        static int          startclient         (const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, std::atomic<bool>* connected=NULL);
 
     private:
 

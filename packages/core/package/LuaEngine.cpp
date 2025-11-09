@@ -88,10 +88,10 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
     pInfo->argv[pInfo->argc] = NULL;
 
     /* Start Lua Thread */
-    engineActive = false;
+    engineActive.store(false, std::memory_order_release);
     if(!paused)
     {
-        engineActive = true;
+        engineActive.store(true, std::memory_order_release);
         engineThread = new Thread(protectedThread, pInfo);
     }
 }
@@ -118,10 +118,10 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
     dInfo->arg    = StringLib::duplicate(arg);
 
     /* Start Script Thread */
-    engineActive = false;
+    engineActive.store(false, std::memory_order_release);
     if(!paused)
     {
-        engineActive = true;
+        engineActive.store(true, std::memory_order_release);
         engineThread = new Thread(directThread, dInfo);
     }
 }
@@ -131,7 +131,7 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
  *----------------------------------------------------------------------------*/
 LuaEngine::~LuaEngine(void)
 {
-    engineActive = false;
+    engineActive.store(false, std::memory_order_release);
     delete engineThread;
 
     /* Close Lua State */
@@ -369,7 +369,7 @@ void LuaEngine::abortHook (lua_State* l, lua_Debug *ar)
     {
         luaL_error(l, "Unable to access Lua engine - aborting!");
     }
-    else if(!li->engineActive)
+    else if(!li->engineActive.load(std::memory_order_acquire))
     {
         char error_msg[512];
         StringLib::format(error_msg, 256, "Lua engine no longer active - exiting script <%s>", li->dInfo != NULL ? li->dInfo->script : li->pInfo->argv[0]);
@@ -402,17 +402,17 @@ bool LuaEngine::executeEngine(int timeout_ms)
 
     engineSignal.lock();
     {
-        if(!engineActive)
+        if(!engineActive.load(std::memory_order_acquire))
         {
             /* Execute Engine */
             if(mode == PROTECTED_MODE)
             {
-                engineActive = true;
+                engineActive.store(true, std::memory_order_release);
                 engineThread = new Thread(protectedThread, pInfo);
             }
             else if(mode == DIRECT_MODE)
             {
-                engineActive = true;
+                engineActive.store(true, std::memory_order_release);
                 engineThread = new Thread(directThread, dInfo);
                 if(timeout_ms != IO_CHECK)
                 {
@@ -424,7 +424,7 @@ bool LuaEngine::executeEngine(int timeout_ms)
              * completion is true if engine no longer active
              * and if there are no errors
              */
-            status = (!engineActive) && (!engineInError);
+            status = (!engineActive.load(std::memory_order_acquire)) && (!engineInError);
 
             /* Reset Error State */
             engineInError = false;
@@ -440,7 +440,7 @@ bool LuaEngine::executeEngine(int timeout_ms)
  *----------------------------------------------------------------------------*/
 bool LuaEngine::isActive(void) const
 {
-    return engineActive;
+    return engineActive.load(std::memory_order_acquire);
 }
 
 /*----------------------------------------------------------------------------
@@ -880,7 +880,7 @@ int LuaEngine::pushline (int firstline)
     size_t l;
     const char* prmt = getprompt(firstline);
 
-    if(!engineActive) return 0; // exit REPL
+    if(!engineActive.load(std::memory_order_acquire)) return 0; // exit REPL
     char* b = readline(prmt);
 
     if (b == NULL) return 0;  /* no input (prompt will be popped by caller) */

@@ -398,7 +398,7 @@ void SockLib::sockclose(int fd)
 /*----------------------------------------------------------------------------
  * startserver
  *----------------------------------------------------------------------------*/
-int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* listening)
+int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, std::atomic<bool>* listening)
 {
     int status = 0;
 
@@ -420,7 +420,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
             polllist[0].fd = listen_socket;
             polllist[0].events = POLLIN; // start out listening for new connections
             polllist[0].revents = 0;
-            if(listening) *listening = true;
+            if(listening) listening->store(true, std::memory_order_release);
         }
         else
         {
@@ -608,7 +608,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
         /* Close Listening Socket */
         sockclose(listen_socket);
-        if(listening) *listening = false;
+        if(listening) listening->store(false, std::memory_order_release);
     }
 
     /* Disconnect Existing Connections (*/
@@ -636,7 +636,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 /*----------------------------------------------------------------------------
  * startclient
  *----------------------------------------------------------------------------*/
-int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, bool* connected)
+int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const std::atomic<bool>* active, void* parm, std::atomic<bool>* connected)
 {
     /* Initialize Connection Variables */
     bool _connected = false;
@@ -676,7 +676,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                 dlog("Client socket <%d> connection made to %s:%d", client_socket, ip_addr ? ip_addr : "0.0.0.0", port);
                 polllist[0].fd = client_socket;
                 _connected = true;
-                if(connected) *connected = true;
+                if(connected) connected->store(true, std::memory_order_release);
                 num_sockets++;
             }
             else // error connected
@@ -739,7 +739,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             if(!valid_fd)
             {
                 _connected = false;
-                if(connected) *connected = false;
+                if(connected) connected->store(false, std::memory_order_release);
             }
         }
     }
