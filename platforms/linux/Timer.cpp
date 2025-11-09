@@ -53,7 +53,7 @@
 
 Mutex Timer::sigmut;
 int Timer::signum = 0;
-Timer::timerHandler_t Timer::sighdl[MAX_TIMERS] = {0};
+std::atomic<Timer::timerHandler_t> Timer::sighdl[MAX_TIMERS] = {};
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -72,10 +72,10 @@ Timer::Timer(timerHandler_t handler, int period_ms)
         {
             for(int i = 0; i < MAX_TIMERS; i++)
             {
-                if(sighdl[i] == NULL)
+                if(sighdl[i].load(std::memory_order_acquire) == NULL)
                 {
                     index = i;
-                    sighdl[index] = handler;
+                    sighdl[index].store(handler, std::memory_order_release);
                     signum++;
                     sigid = SIGRTMIN + index;
                     break;
@@ -140,7 +140,7 @@ Timer::~Timer()
     /* Unset Signal ID */
     sigmut.lock();
     {
-        sighdl[index] = NULL;
+        sighdl[index].store(NULL, std::memory_order_release);
         signum--;
     }
     sigmut.unlock();
@@ -157,6 +157,6 @@ void Timer::_handler (int sig, siginfo_t *si, void *uc)
     /* Timer destructors clear their slot before signals are fully drained.
      * Grab a snapshot of the handler and tolerate NULL so late signals no-op. */
     const int index = sig - SIGRTMIN;
-    timerHandler_t handler = sighdl[index];
+    timerHandler_t handler = sighdl[index].load(std::memory_order_acquire);
     if(handler) handler();
 }

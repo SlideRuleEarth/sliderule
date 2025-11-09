@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "Mutex.h"
+#include <atomic>
 
 #include <signal.h>
 
@@ -58,7 +59,7 @@ class Timer
         static const int MAX_TIMERS = 32;
         static int signum;
         static Mutex sigmut;
-        static timerHandler_t sighdl[MAX_TIMERS];
+        static std::atomic<timerHandler_t> sighdl[MAX_TIMERS];
 
         timer_t timerid;
         int     index;
