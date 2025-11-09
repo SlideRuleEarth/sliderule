@@ -578,7 +578,7 @@ void* LuaEngine::protectedThread (void* parm)
         }
 
         /* Set Inactive */
-        p->engine->engineActive = false;
+        p->engine->engineActive.store(false, std::memory_order_release);
         p->engine->engineSignal.signal(ENGINE_EXIT_SIGNAL);
     }
     p->engine->engineSignal.unlock();
@@ -618,7 +618,7 @@ void* LuaEngine::directThread (void* parm)
         }
 
         /* Set Inactive */
-        d->engine->engineActive = false;
+        d->engine->engineActive.store(false, std::memory_order_release);
         d->engine->engineSignal.signal(ENGINE_EXIT_SIGNAL);
     }
     d->engine->engineSignal.unlock();
@@ -784,7 +784,7 @@ int LuaEngine::readlinecb(void)
 {
     if(lua_readline_interpreter)
     {
-        if(!lua_readline_interpreter->engineActive)
+        if(!lua_readline_interpreter->engineActive.load(std::memory_order_acquire))
         {
             /* Push control-d onto input buffer
              * ... this is used for interactive mode to terminate
