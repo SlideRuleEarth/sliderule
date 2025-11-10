@@ -821,8 +821,16 @@ int HttpClient::luaRequest (lua_State* L)
              * - Resetting here guarantees we launch a fresh worker that will re-establish the subscription */
             if(lua_obj->requestPid && !lua_obj->subscriberReady.load(std::memory_order_acquire))
             {
+                /*
+                 * The previous worker thread exists but has not established its Subscriber yet
+                 * (subscriberReady == false). Deleting a joinable thread here would block
+                 * forever because the worker's loop runs while(active == true).
+                 * Gracefully stop the worker first so join can complete.
+                 */
+                lua_obj->active.store(false, std::memory_order_release);
                 delete lua_obj->requestPid;
                 lua_obj->requestPid = NULL;
+                lua_obj->active.store(true, std::memory_order_release); // re-enable for new worker
                 lua_obj->subscriberReady.store(false, std::memory_order_relaxed);
             }
 
