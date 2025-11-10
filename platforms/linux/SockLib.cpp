@@ -355,9 +355,16 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     /* Populate Local IP Address */
     if(local_ipaddr)
     {
-        *local_ipaddr = new char[17];
-        strncpy(*local_ipaddr, inet_ntoa(local_addr.sin_addr), 16); // NOLINT(concurrency-mt-unsafe)
-        (*local_ipaddr)[15] = '\0';
+        /*
+         * Use inet_ntop rather than inet_ntoa to avoid the thread-unsafe
+         * static buffer returned by inet_ntoa. Concurrent calls to inet_ntoa
+         * can overwrite the returned pointer before strncpy completes.
+         */
+        *local_ipaddr = new char[INET_ADDRSTRLEN];
+        if(!inet_ntop(AF_INET, &local_addr.sin_addr, *local_ipaddr, INET_ADDRSTRLEN))
+        {
+            snprintf(*local_ipaddr, INET_ADDRSTRLEN, "%s", "0.0.0.0");
+        }
     }
 
     /* Populate Local Port */
@@ -369,9 +376,14 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     /* Populate Remote IP Address */
     if(remote_ipaddr)
     {
-        *remote_ipaddr = new char[17];
-        strncpy(*remote_ipaddr, inet_ntoa(remote_addr.sin_addr), 16); // NOLINT(concurrency-mt-unsafe)
-        (*remote_ipaddr)[15] = '\0';
+        /*
+         * Use inet_ntop for thread-safety; see note above for rationale.
+         */
+        *remote_ipaddr = new char[INET_ADDRSTRLEN];
+        if(!inet_ntop(AF_INET, &remote_addr.sin_addr, *remote_ipaddr, INET_ADDRSTRLEN))
+        {
+            snprintf(*remote_ipaddr, INET_ADDRSTRLEN, "%s", "0.0.0.0");
+        }
     }
 
     /* Populate Remote Port */
