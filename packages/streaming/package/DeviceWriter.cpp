@@ -130,13 +130,13 @@ void* DeviceWriter::writerThread (void* parm)
                     bytes_sent = dw->device->writeBuffer(ref.data, ref.size);
                     if(bytes_sent > 0)
                     {
-                        dw->bytesProcessed += bytes_sent;
-                        dw->packetsProcessed += 1;
+                        dw->bytesProcessed.fetch_add(bytes_sent, std::memory_order_relaxed);
+                        dw->packetsProcessed.fetch_add(1, std::memory_order_relaxed);
                     }
                     else if(bytes_sent != TIMEOUT_RC)
                     {
-                        dw->bytesDropped += ref.size;
-                        dw->packetsDropped += 1;
+                        dw->bytesDropped.fetch_add(ref.size, std::memory_order_relaxed);
+                        dw->packetsDropped.fetch_add(1, std::memory_order_relaxed);
 
                         char err_buf[256];
                         mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message

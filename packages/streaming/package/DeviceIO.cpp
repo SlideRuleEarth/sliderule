@@ -109,16 +109,20 @@ int DeviceIO::luaLogPktStats(lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "processed (bytes)", lua_obj->bytesProcessed);
-        LuaEngine::setAttrInt(L, "dropped (bytes)", lua_obj->bytesProcessed);
-        LuaEngine::setAttrInt(L, "processed (packets)", lua_obj->packetsProcessed);
-        LuaEngine::setAttrInt(L, "dropped (packets)", lua_obj->packetsDropped);
+        const int bproc = lua_obj->bytesProcessed.load(std::memory_order_relaxed);
+        const int bdrop = lua_obj->bytesDropped.load(std::memory_order_relaxed);
+        const int pproc = lua_obj->packetsProcessed.load(std::memory_order_relaxed);
+        const int pdrop = lua_obj->packetsDropped.load(std::memory_order_relaxed);
+        LuaEngine::setAttrInt(L, "processed (bytes)", bproc);
+        LuaEngine::setAttrInt(L, "dropped (bytes)", bdrop);
+        LuaEngine::setAttrInt(L, "processed (packets)", pproc);
+        LuaEngine::setAttrInt(L, "dropped (packets)", pdrop);
 
         /* Log Stats */
-        mlog(lvl, "processed (bytes):   %d", lua_obj->bytesProcessed);
-        mlog(lvl, "dropped (bytes):     %d", lua_obj->bytesDropped);
-        mlog(lvl, "processed (packets): %d", lua_obj->packetsProcessed);
-        mlog(lvl, "dropped (packets):   %d", lua_obj->packetsDropped);
+        mlog(lvl, "processed (bytes):   %d", bproc);
+        mlog(lvl, "dropped (bytes):     %d", bdrop);
+        mlog(lvl, "processed (packets): %d", pproc);
+        mlog(lvl, "dropped (packets):   %d", pdrop);
 
         /* Set Success */
         status = true;

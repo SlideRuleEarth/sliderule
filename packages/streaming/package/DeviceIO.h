@@ -69,10 +69,10 @@ class DeviceIO: public LuaObject
         DeviceObject*     device;
         std::atomic<bool> dieOnDisconnect;
         int               blockCfg;
-        int               bytesProcessed;
-        int               bytesDropped;
-        int               packetsProcessed;
-        int               packetsDropped;
+        std::atomic<int>  bytesProcessed;
+        std::atomic<int>  bytesDropped;
+        std::atomic<int>  packetsProcessed;
+        std::atomic<int>  packetsDropped;
 
         /*--------------------------------------------------------------------
          * Methods

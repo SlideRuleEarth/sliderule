@@ -130,13 +130,13 @@ void* DeviceReader::readerThread (void* parm)
             /* Update Statistics */
             if(post_status > 0)
             {
-                dr->bytesProcessed += bytes;
-                dr->packetsProcessed += 1;
+                dr->bytesProcessed.fetch_add(bytes, std::memory_order_relaxed);
+                dr->packetsProcessed.fetch_add(1, std::memory_order_relaxed);
             }
             else
             {
-                dr->bytesDropped += bytes;
-                dr->packetsDropped += 1;
+                dr->bytesDropped.fetch_add(bytes, std::memory_order_relaxed);
+                dr->packetsDropped.fetch_add(1, std::memory_order_relaxed);
             }
         }
         else if(bytes != TIMEOUT_RC)
