@@ -183,7 +183,7 @@ bool TcpSocket::isConnected(int num_connections)
  *----------------------------------------------------------------------------*/
 void TcpSocket::closeConnection(void)
 {
-    int fd = sock.exchange(INVALID_RC, std::memory_order_acq_rel);
+    const int fd = sock.exchange(INVALID_RC, std::memory_order_acq_rel);
     if(fd != INVALID_RC)
     {
         mlog(DEBUG, "Closing connection on socket: %s:%d", ip_addr, port);
@@ -204,7 +204,7 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
 
     /* Timeout If Not Connected*/
-    int fd = sock.load(std::memory_order_acquire);
+    const int fd = sock.load(std::memory_order_acquire);
     if(fd < 0)
     {
         OsApi::performIOTimeout();
@@ -242,7 +242,7 @@ int TcpSocket::readBuffer(void* buf, int len, int timeout)
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
 
     /* Timeout If Not Connected*/
-    int fd = sock.load(std::memory_order_acquire);
+    const int fd = sock.load(std::memory_order_acquire);
     if(fd < 0)
     {
         OsApi::performIOTimeout();
