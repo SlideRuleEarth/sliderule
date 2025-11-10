@@ -76,7 +76,7 @@ class TcpSocket: public DeviceObject
          * Data
          *--------------------------------------------------------------------*/
 
-        int         sock;
+        std::atomic<int> sock;
         char*       ip_addr;
         int         port;
         char*       config; // <ip_address>:<port>
