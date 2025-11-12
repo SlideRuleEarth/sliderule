@@ -256,7 +256,10 @@ int MsgQ::listQ(queueDisplay_t* list, int list_size)
             list[j].name = curr_q.queue->name;
             list[j].len = curr_q.queue->len;
             list[j].subscriptions = curr_q.queue->subscriptions;
-            switch(curr_q.queue->state)
+            curr_q.queue->locknblock->lock();
+            const int state = curr_q.queue->state;
+            curr_q.queue->locknblock->unlock();
+            switch(state)
             {
                 case STATE_OKAY:        list[j].state = "OKAY";       break;
                 case STATE_TIMEOUT:     list[j].state = "TIMEOUT";    break;

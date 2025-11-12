@@ -262,7 +262,10 @@ int EndpointProxy::luaCompleteResources (lua_State* L)
     try
     {
         EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
-        lua_pushinteger(L, lua_obj->numResourcesComplete);
+        lua_obj->completion.lock();
+        const int num_resources_complete = lua_obj->numResourcesComplete;
+        lua_obj->completion.unlock();
+        lua_pushinteger(L, num_resources_complete);
     }
     catch(const RunTimeException& e)
     {
