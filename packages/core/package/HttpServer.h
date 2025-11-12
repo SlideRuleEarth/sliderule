@@ -138,12 +138,13 @@ class HttpServer: public LuaObject
 
         static std::atomic<uint64_t>    requestId;
 
-        bool                            active;
-        bool                            listening;
+        std::atomic<bool>               active;
+        std::atomic<bool>               listening;
         Thread*                         listenerPid;
         Table<Connection*, int>         connections;
 
         Dictionary<RouteEntry*>         routeTable;
+        Mutex                           routeTableMut;
 
         char*                           ipAddr;
         int                             port;

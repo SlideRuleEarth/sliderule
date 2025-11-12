@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "CommandableObject.h"
 #include "MsgQ.h"
 #include "TcpSocket.h"
@@ -128,7 +130,7 @@ class CosmosInterface: public CommandableObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    interfaceActive;
+        std::atomic<bool>       interfaceActive;
         int                     maxConnections;
 
         // telemetry connections

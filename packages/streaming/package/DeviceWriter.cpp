@@ -79,7 +79,7 @@ DeviceWriter::DeviceWriter(lua_State* L, DeviceObject* _device, const char* inq_
     if(inq_name)
     {
         inq = new Subscriber(inq_name);
-        ioActive = true;
+        ioActive.store(true, std::memory_order_release);
         ioThread = new Thread(writerThread, this);
     }
 }
@@ -90,10 +90,10 @@ DeviceWriter::DeviceWriter(lua_State* L, DeviceObject* _device, const char* inq_
 DeviceWriter::~DeviceWriter(void)
 {
     /* Prevent Double Death */
-    dieOnDisconnect = false;
+    dieOnDisconnect.store(false, std::memory_order_relaxed);
 
     /* Stop Thread */
-    ioActive = false;
+    ioActive.store(false, std::memory_order_release);
     delete ioThread;
 
     /* Delete Input Stream */
@@ -112,7 +112,7 @@ void* DeviceWriter::writerThread (void* parm)
     DeviceWriter* dw = static_cast<DeviceWriter*>(parm);
 
     /* Read Loop */
-    while(dw->ioActive)
+    while(dw->ioActive.load(std::memory_order_acquire))
     {
         /* Read Bytes */
         Subscriber::msgRef_t ref;
@@ -125,27 +125,27 @@ void* DeviceWriter::writerThread (void* parm)
             {
                 /* Send Message */
                 int bytes_sent = 0;
-                while(bytes_sent <= 0 && dw->ioActive)
+                while(bytes_sent <= 0 && dw->ioActive.load(std::memory_order_acquire))
                 {
                     bytes_sent = dw->device->writeBuffer(ref.data, ref.size);
                     if(bytes_sent > 0)
                     {
-                        dw->bytesProcessed += bytes_sent;
-                        dw->packetsProcessed += 1;
+                        dw->bytesProcessed.fetch_add(bytes_sent, std::memory_order_relaxed);
+                        dw->packetsProcessed.fetch_add(1, std::memory_order_relaxed);
                     }
                     else if(bytes_sent != TIMEOUT_RC)
                     {
-                        dw->bytesDropped += ref.size;
-                        dw->packetsDropped += 1;
+                        dw->bytesDropped.fetch_add(ref.size, std::memory_order_relaxed);
+                        dw->packetsDropped.fetch_add(1, std::memory_order_relaxed);
 
                         char err_buf[256];
                         mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
 
                         /* Handle Non-Timeout Errors */
-                        if(dw->dieOnDisconnect)
+                        if(dw->dieOnDisconnect.load(std::memory_order_acquire))
                         {
                             mlog(INFO, "... closing connection and exiting writer!");
-                            dw->ioActive = false; // breaks out of loop
+                            dw->ioActive.store(false, std::memory_order_release); // breaks out of loop
                         }
                         else
                         {
@@ -160,7 +160,7 @@ void* DeviceWriter::writerThread (void* parm)
             {
                 /* Received Terminating Message */
                 mlog(DEBUG, "Terminator received on %s, exiting device writer", dw->inq->getName());
-                dw->ioActive = false; // breaks out of loop
+                dw->ioActive.store(false, std::memory_order_release); // breaks out of loop
             }
 
             /* Dereference Message */
@@ -169,7 +169,7 @@ void* DeviceWriter::writerThread (void* parm)
         else if(status != MsgQ::STATE_TIMEOUT)
         {
             mlog(CRITICAL, "encountered a fatal error (%d) reading from input stream %s, exiting writer!", status, dw->inq->getName());
-            dw->ioActive = false; // breaks out of loop
+            dw->ioActive.store(false, std::memory_order_release); // breaks out of loop
         }
         else // TIMEOUT
         {

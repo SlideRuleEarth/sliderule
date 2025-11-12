@@ -132,7 +132,7 @@ CosmosInterface::CosmosInterface(CommandProcessor* cmd_proc, const char* obj_nam
     assert(tlm_ip);
     assert(cmd_ip);
 
-    interfaceActive = true;
+    interfaceActive.store(true);
     maxConnections = max_connections;
 
     /* Telemetry Connection Initialization */
@@ -157,7 +157,7 @@ CosmosInterface::CosmosInterface(CommandProcessor* cmd_proc, const char* obj_nam
  *----------------------------------------------------------------------------*/
 CosmosInterface::~CosmosInterface(void)
 {
-    interfaceActive = false;
+    interfaceActive.store(false);
 
     delete tlmListenerPid;
     delete cmdListenerPid;
@@ -263,7 +263,7 @@ void* CosmosInterface::telemetryThread (void* parm)
     unsigned char* buffer = new unsigned char[MAX_PACKET_SIZE + HEADER_SIZE];
     memcpy(buffer, SYNC_PATTERN, SYNC_SIZE);
 
-    while(ci->interfaceActive)
+    while(ci->interfaceActive.load())
     {
         /* ReceivePacket */
         const int bytes = rqst->sub->receiveCopy(&buffer[HEADER_SIZE], MAX_PACKET_SIZE, SYS_TIMEOUT);
@@ -307,7 +307,7 @@ void* CosmosInterface::commandThread (void* parm)
 
     unsigned char* packet_buf = new unsigned char[MAX_PACKET_SIZE];
 
-    while(rqst->ci->interfaceActive)
+    while(rqst->ci->interfaceActive.load())
     {
         /* Read Header */
         if(header_index != HEADER_SIZE)
@@ -368,7 +368,7 @@ void* CosmosInterface::commandThread (void* parm)
                 {
                     /* Post Packet */
                     int status = MsgQ::STATE_TIMEOUT;
-                    while(rqst->ci->interfaceActive && status == MsgQ::STATE_TIMEOUT)
+                    while(rqst->ci->interfaceActive.load() && status == MsgQ::STATE_TIMEOUT)
                     {
                         status = rqst->pub->postCopy(&packet_buf[0], packet_size, SYS_TIMEOUT);
                         if(status < 0)

@@ -76,11 +76,11 @@ int TcpSocket::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server, const bool* block, bool _die_on_disconnect):
+TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server, const std::atomic<bool>* block, bool _die_on_disconnect):
     DeviceObject(L, DUPLEX)
 {
     /* Initial Socket Parameters */
-    sock    = INVALID_RC;
+    sock.store(INVALID_RC, std::memory_order_relaxed);
     ip_addr = NULL;
     port    = _port;
 
@@ -98,14 +98,15 @@ TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     /* Set Server Options */
     is_server = _server;
     die_on_disconnect = _die_on_disconnect;
-    alive = true;
+    alive.store(true);
 
     /* Start Connection */
     if(block)
     {
         connector = NULL;
-        sock = SockLib::sockstream(ip_addr, port, is_server, block);
-        if(sock >= 0) mlog(DEBUG, "Connection [%d] established to %s:%d", sock, ip_addr, port);
+        const int newfd = SockLib::sockstream(ip_addr, port, is_server, block);
+        sock.store(newfd, std::memory_order_release);
+        if(newfd >= 0) mlog(DEBUG, "Connection [%d] established to %s:%d", newfd, ip_addr, port);
     }
     else
     {
@@ -122,12 +123,13 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
     DeviceObject(L, _role)
 {
     /* Initial Parameters */
-    sock = _sock;
+    sock.store(_sock, std::memory_order_release);
 
     /* Get Socket Info */
     if(_ip_addr == NULL)
     {
-        if(SockLib::sockinfo(sock, NULL, &port, &ip_addr, NULL) < 0)
+        const int fd = sock.load(std::memory_order_acquire);
+        if(SockLib::sockinfo(fd, NULL, &port, &ip_addr, NULL) < 0)
         {
             mlog(CRITICAL, "Unable to obtain socket information");
             ip_addr = NULL;
@@ -148,7 +150,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
     /* Set Server Options */
     is_server = false;
     die_on_disconnect = false;
-    alive = true;
+    alive.store(true);
 
     /* Set Connection Parameters */
     connector = NULL;
@@ -160,7 +162,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
 TcpSocket::~TcpSocket(void)
 {
     /* Kill Listener... so it doesn't automatically reconnect */
-    alive = false;
+    alive.store(false);
     delete connector;
     TcpSocket::closeConnection();
     delete [] ip_addr;
@@ -173,7 +175,7 @@ TcpSocket::~TcpSocket(void)
 bool TcpSocket::isConnected(int num_connections)
 {
     (void)num_connections;
-    return (sock >= 0);
+    return (sock.load(std::memory_order_acquire) >= 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -181,11 +183,11 @@ bool TcpSocket::isConnected(int num_connections)
  *----------------------------------------------------------------------------*/
 void TcpSocket::closeConnection(void)
 {
-    if(sock != INVALID_RC)
+    const int fd = sock.exchange(INVALID_RC, std::memory_order_acq_rel);
+    if(fd != INVALID_RC)
     {
         mlog(DEBUG, "Closing connection on socket: %s:%d", ip_addr, port);
-        SockLib::sockclose(sock);
-        sock = INVALID_RC;
+        SockLib::sockclose(fd);
     }
 }
 
@@ -202,7 +204,8 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
 
     /* Timeout If Not Connected*/
-    if(!isConnected())
+    const int fd = sock.load(std::memory_order_acquire);
+    if(fd < 0)
     {
         OsApi::performIOTimeout();
         return TIMEOUT_RC;
@@ -210,9 +213,9 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
 
     /* Send Data */
     int c = 0;
-    while(c < len && alive)
+    while(c < len && alive.load())
     {
-        const int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
+        const int ret = SockLib::socksend(fd, &cbuf[c], len - c, timeout);
         if(ret > 0)
         {
             c += ret;
@@ -239,14 +242,15 @@ int TcpSocket::readBuffer(void* buf, int len, int timeout)
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
 
     /* Timeout If Not Connected*/
-    if(!isConnected())
+    const int fd = sock.load(std::memory_order_acquire);
+    if(fd < 0)
     {
         OsApi::performIOTimeout();
         return TIMEOUT_RC;
     }
 
     /* Receive Data */
-    const int ret = SockLib::sockrecv(sock, buf, len, timeout);
+    const int ret = SockLib::sockrecv(fd, buf, len, timeout);
     if(ret < 0)
     {
         closeConnection();
@@ -261,7 +265,7 @@ int TcpSocket::readBuffer(void* buf, int len, int timeout)
  *----------------------------------------------------------------------------*/
 int TcpSocket::getUniqueId (void)
 {
-    return sock;
+    return sock.load(std::memory_order_acquire);
 }
 
 /*----------------------------------------------------------------------------
@@ -298,12 +302,12 @@ int TcpSocket::getPort (void) const
 void* TcpSocket::connectionThread(void* parm)
 {
     TcpSocket* socket = static_cast<TcpSocket*>(parm);
-    socket->sock = INVALID_RC;
+    socket->sock.store(INVALID_RC, std::memory_order_release);
     bool connected_once = false;
 
-    while(socket->alive)
+    while(socket->alive.load())
     {
-        if(socket->sock < 0)
+        if(socket->sock.load(std::memory_order_acquire) < 0)
         {
             /* Check Die On Disconnect */
             if(connected_once && socket->die_on_disconnect)
@@ -313,10 +317,11 @@ void* TcpSocket::connectionThread(void* parm)
             }
 
             /* Make Connection */
-            socket->sock = SockLib::sockstream(socket->ip_addr, socket->port, socket->is_server, &socket->alive);
+            const int newfd = SockLib::sockstream(socket->ip_addr, socket->port, socket->is_server, &socket->alive);
+            socket->sock.store(newfd, std::memory_order_release);
 
             /* Handle Connection Outcome */
-            if(socket->sock < 0)
+            if(newfd < 0)
             {
                 mlog(INFO, "Unable to establish tcp connection to %s:%d... retrying", socket->ip_addr, socket->port);
             }

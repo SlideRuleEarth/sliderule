@@ -61,7 +61,7 @@ Monitor::Monitor(lua_State* L, event_level_t level, const char* eventq_name, con
     eventLevel(level)
 {
     /* Initialize Event Monitor Thread*/
-    active = true;
+    active.store(true);
     inQ = new Subscriber(eventq_name);
     pid = new Thread(monitorThread, this);
     recType = StringLib::duplicate(rec_type);
@@ -85,7 +85,7 @@ Monitor::~Monitor(void)
  *----------------------------------------------------------------------------*/
 void Monitor::stopMonitor(void)
 {
-    active = false;
+    active.store(false);
     delete pid;
 }
 
@@ -101,7 +101,7 @@ void* Monitor::monitorThread (void* parm)
     Monitor* monitor = static_cast<Monitor*>(parm);
 
     /* Loop Forever */
-    while(monitor->active)
+    while(monitor->active.load())
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
@@ -136,7 +136,7 @@ void* Monitor::monitorThread (void* parm)
             {
                 /* Terminating Message */
                 mlog(DEBUG, "Terminator received on %s, exiting monitor", monitor->inQ->getName());
-                monitor->active = false; // breaks out of loop
+                monitor->active.store(false); // breaks out of loop
             }
 
             /* Dereference Message */
@@ -146,7 +146,7 @@ void* Monitor::monitorThread (void* parm)
         {
             /* Break Out on Failure */
             mlog(CRITICAL, "Failed queue receive on %s with error %d", monitor->inQ->getName(), recv_status);
-            monitor->active = false; // breaks out of loop
+            monitor->active.store(false); // breaks out of loop
         }
     }
 

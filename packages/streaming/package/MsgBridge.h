@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
@@ -76,10 +78,10 @@ class MsgBridge: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            active;
-        Thread*         pid;
-        Subscriber*     inQ;
-        Publisher*      outQ;
+        std::atomic<bool> active;
+        Thread*           pid;
+        Subscriber*       inQ;
+        Publisher*        outQ;
 
         /*--------------------------------------------------------------------
          * Methods

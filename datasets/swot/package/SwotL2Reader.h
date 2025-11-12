@@ -153,7 +153,7 @@ class SwotL2Reader: public LuaObject
 
         H5Coro::Context*        context;
         Region*                 region;
-        bool                    active;
+        std::atomic<bool>       active;
         Thread**                varPid;
         Thread*                 geoPid;
         Mutex                   threadMut;

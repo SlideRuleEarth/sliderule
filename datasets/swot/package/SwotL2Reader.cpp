@@ -135,8 +135,8 @@ SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _pa
     outQ(NULL)
 {
     /* Initialize Reader */
-    parms       = _parms;
-    active      = true;
+    parms = _parms;
+    active.store(true);
     numComplete = 0;
     threadCount = 0;
 
@@ -195,7 +195,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _pa
         mlog(CRITICAL, "Failed to create SWOT reader");
 
         /* Terminate */
-        active = false;
+        active.store(false);
         checkComplete();
     }
 }
@@ -205,7 +205,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _pa
  *----------------------------------------------------------------------------*/
 SwotL2Reader::~SwotL2Reader (void)
 {
-    active = false;
+    active.store(false);
 
     delete geoPid;
     for(int i = 0; i < threadCount - 1; i++)
@@ -413,7 +413,7 @@ void* SwotL2Reader::geoThread (void* parm)
     unsigned char* rec_buf;
     const int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE);
     int post_status = MsgQ::STATE_TIMEOUT;
-    while( reader->active && ((post_status = reader->outQ->postCopy(rec_buf, rec_size, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+    while(reader->active.load() && ((post_status = reader->outQ->postCopy(rec_buf, rec_size, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT));
     if(post_status <= 0)
     {
         mlog(CRITICAL, "Failed (%d) to post geo record for %s", post_status, reader->resource);
@@ -466,7 +466,7 @@ void* SwotL2Reader::varThread (void* parm)
             unsigned char* rec_buf;
             const int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(var_rec_t) + results.datasize);
             int post_status = MsgQ::STATE_TIMEOUT;
-            while( reader->active && ((post_status = reader->outQ->postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) )
+            while(reader->active.load() && ((post_status = reader->outQ->postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT))
             {
                 local_stats.variables_retried++;
             }

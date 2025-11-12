@@ -90,11 +90,12 @@ int HttpClient::luaCreate (lua_State* L)
 HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    active = true;
+    active.store(true);
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
     sock = initializeSocket(ipAddr, port);
     requestPub = new Publisher(NULL);
+    requestSub = NULL;
     requestPid = NULL;
     rqstBuf = new char [MAX_RQST_BUF_LEN];
     rspsBuf = new char [MAX_RSPS_BUF_LEN];
@@ -107,7 +108,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     // Initial Settings
-    active = false;
+    active.store(false);
     ipAddr = NULL;
     port = -1;
 
@@ -132,7 +133,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
                     long val;
                     if(StringLib::str2long(_port_str, &val))
                     {
-                        active = true;
+                        active.store(true);
                         ipAddr = StringLib::duplicate(_ip_addr);
                         port = val;
                     }
@@ -144,8 +145,9 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     // Create Socket Connection
     sock = initializeSocket(ipAddr, port);
 
-    // Create Request Queue and Thread
+    // Initialize Request Queue and Thread for Lua Operations
     requestPub = new Publisher(NULL);
+    requestSub = NULL;
     requestPid = NULL;
 
     // Allocate Buffers
@@ -158,8 +160,9 @@ HttpClient::HttpClient(lua_State* L, const char* url):
  *----------------------------------------------------------------------------*/
 HttpClient::~HttpClient(void)
 {
-    active = false;
+    active.store(false);
     delete requestPid;
+    delete requestSub;
     delete requestPub;
     delete [] ipAddr;
     delete sock;
@@ -212,7 +215,7 @@ int HttpClient::getPort (void) const
  *----------------------------------------------------------------------------*/
 TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
 {
-    const bool block = false;
+    const std::atomic<bool> block(false);
     return new TcpSocket(NULL, _ip_addr, _port, false, &block, false);
 }
 
@@ -340,7 +343,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         bool    headers_complete        = false;
         bool    response_complete       = false;
 
-        while(active && !response_complete)
+        while(active.load() && !response_complete)
         {
             int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
             const uint32_t sock_trace_id = start_trace(DEBUG, trace_id, "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
@@ -514,7 +517,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         if(chunk_remaining <= 0)
                         {
                             int post_status = MsgQ::STATE_TIMEOUT;
-                            while(rsps.size && active && post_status == MsgQ::STATE_TIMEOUT)
+                            while(rsps.size && active.load() && post_status == MsgQ::STATE_TIMEOUT)
                             {
                                 post_status = outq->postRef(rsps.response, rsps.size, SYS_TIMEOUT);
                                 if(post_status < 0)
@@ -718,17 +721,16 @@ const char* HttpClient::parseChunkHeaderLine (int start, int term)
 }
 
 /*----------------------------------------------------------------------------
- * requestThread
+ * luaRequestThread
  *----------------------------------------------------------------------------*/
-void* HttpClient::requestThread(void* parm)
+void* HttpClient::luaRequestThread(void* parm)
 {
     HttpClient* client = static_cast<HttpClient*>(parm);
-    Subscriber* request_sub = new Subscriber(*(client->requestPub));
 
-    while(client->active)
+    while(client->active.load())
     {
         rqst_t rqst;
-        const int recv_status = request_sub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
+        const int recv_status = client->requestSub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
         if(recv_status > 0)
         {
             try
@@ -749,8 +751,6 @@ void* HttpClient::requestThread(void* parm)
             break;
         }
     }
-
-    delete request_sub;
 
     return NULL;
 }
@@ -807,20 +807,25 @@ int HttpClient::luaRequest (lua_State* L)
                 .verb = verb,
                 .resource = StringLib::duplicate(resource),
                 .data = StringLib::duplicate(data),
-                .outq = new Publisher(outq_name)
+                .outq = new Publisher(outq_name),
             };
 
             /* Create Request Thread Upon First Request */
             if(!lua_obj->requestPid)
             {
-                lua_obj->requestPid = new Thread(requestThread, lua_obj);
-                // TODO: need signaling for when subscriber comes up...
-                // otherwise the post below will return error that there
-                // are no subscribers
+                lua_obj->requestSub = new Subscriber(*(lua_obj->requestPub));
+                lua_obj->requestPid = new Thread(luaRequestThread, lua_obj);
             }
 
             /* Post Request */
             status = lua_obj->requestPub->postCopy(&rqst, sizeof(rqst_t)) > 0;
+            if(!status)
+            {
+                /* Clean Up on Failure, worker thread won't see request and will not clean up */
+                delete [] rqst.resource;
+                delete [] rqst.data;
+                delete rqst.outq;
+            }
         }
     }
     catch(const RunTimeException& e)

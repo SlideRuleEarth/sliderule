@@ -44,7 +44,6 @@
 #include "List.h"
 
 #include <cstdarg>
-#include <atomic>
 
 /******************************************************************************
  * FILE DATA
@@ -346,7 +345,7 @@ bool EventLib::sendTlm (event_level_t lvl, const tlm_input_t& tlm)
 /*----------------------------------------------------------------------------
  * sendAlert
  *----------------------------------------------------------------------------*/
-bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
+bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const std::atomic<bool>* active, const char* errmsg, ...)
 {
     /* Return Here If Nothing to Do */
     if(lvl < SystemConfig::settings().alertLevel.value) return true;

@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "MsgQ.h"
@@ -110,7 +112,7 @@ class Atl03Indexer: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            active;
+        std::atomic<bool>   active;
         Thread**        indexerPid;
         Mutex           threadMut;
         int             threadCount;

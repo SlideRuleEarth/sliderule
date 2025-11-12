@@ -41,6 +41,8 @@
 #include "H5Dense.h"
 #include "H5Coro.h"
 
+#include <atomic>
+
 using H5Coro::range_t;
 using H5Coro::Context;
 using H5Coro::Future;
@@ -64,11 +66,11 @@ typedef struct {
  * STATIC DATA
  ******************************************************************************/
 
-static Publisher*   rqstPub = NULL;
-static Subscriber*  rqstSub = NULL;
-static bool         readerActive = false;
-static Thread**     readerPids = NULL;
-static int          threadPoolSize = 0;
+static Publisher*           rqstPub = NULL;
+static Subscriber*          rqstSub = NULL;
+static std::atomic<bool>    readerActive{false};
+static Thread**             readerPids = NULL;
+static int                  threadPoolSize = 0;
 
 /******************************************************************************
  * FUTURE METHODS
@@ -413,7 +415,7 @@ void H5Coro::init (int num_threads)
 
     if(num_threads > 0)
     {
-        readerActive = true;
+        readerActive.store(true);
         rqstSub = new Subscriber(*rqstPub);
         threadPoolSize = num_threads;
         readerPids = new Thread* [threadPoolSize];
@@ -424,7 +426,7 @@ void H5Coro::init (int num_threads)
     }
     else
     {
-        readerActive = false;
+        readerActive.store(false);
         rqstSub = NULL;
         threadPoolSize = 0;
         readerPids = NULL;
@@ -436,9 +438,9 @@ void H5Coro::init (int num_threads)
  *----------------------------------------------------------------------------*/
 void H5Coro::deinit (void)
 {
-    if(readerActive)
+    if(readerActive.load())
     {
-        readerActive = false;
+        readerActive.store(false);
         for(int t = 0; t < threadPoolSize; t++)
         {
             delete readerPids[t];
@@ -755,7 +757,7 @@ void* H5Coro::readerThread (void* parm)
 {
     (void)parm;
 
-    while(readerActive)
+    while(readerActive.load())
     {
         read_rqst_t rqst;
         const int recv_status = rqstSub->receiveCopy(&rqst, sizeof(read_rqst_t), SYS_TIMEOUT);

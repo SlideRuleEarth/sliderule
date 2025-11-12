@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "DeviceObject.h"
@@ -54,7 +56,7 @@ class TcpSocket: public DeviceObject
 
         static int          luaCreate           (lua_State* L);
 
-                            TcpSocket           (lua_State* L, const char* _ip_addr, int _port, bool _server, const bool* block, bool _die_on_disconnect);
+                            TcpSocket           (lua_State* L, const char* _ip_addr, int _port, bool _server, const std::atomic<bool>* block, bool _die_on_disconnect);
                             TcpSocket           (lua_State* L, int _sock, const char* _ip_addr=NULL, int _port=0, role_t _role=DUPLEX);
                             ~TcpSocket          (void) override;
 
@@ -74,11 +76,11 @@ class TcpSocket: public DeviceObject
          * Data
          *--------------------------------------------------------------------*/
 
-        int         sock;
+        std::atomic<int> sock;
         char*       ip_addr;
         int         port;
         char*       config; // <ip_address>:<port>
-        bool        alive;
+        std::atomic<bool> alive;
         Thread*     connector;
         bool        is_server;
         bool        die_on_disconnect;

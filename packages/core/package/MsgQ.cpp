@@ -161,7 +161,7 @@ MsgQ::~MsgQ()
  *----------------------------------------------------------------------------*/
 int MsgQ::getCount(void)
 {
-    return msgQ->len;
+    return msgQ->len.load();
 }
 
 /*----------------------------------------------------------------------------
@@ -185,28 +185,7 @@ const char* MsgQ::getName(void)
  *----------------------------------------------------------------------------*/
 int MsgQ::getSubCnt(void)
 {
-    return msgQ->subscriptions;
-}
-
-/*----------------------------------------------------------------------------
- * getState
- *----------------------------------------------------------------------------*/
-int MsgQ::getState(void)
-{
-    return msgQ->state;
-}
-
-/*----------------------------------------------------------------------------
- * isFull
- *----------------------------------------------------------------------------*/
-bool MsgQ::isFull(void)
-{
-    if(msgQ->depth == CFG_DEPTH_INFINITY)
-    {
-        return false;
-    }
-
-    return (msgQ->len >= msgQ->depth);
+    return msgQ->subscriptions.load();
 }
 
 /*----------------------------------------------------------------------------
@@ -244,7 +223,10 @@ void MsgQ::deinit(void)
  *----------------------------------------------------------------------------*/
 bool MsgQ::existQ(const char* qname)
 {
-    return queues.find(qname);
+    listmut.lock();
+    const bool found = queues.find(qname);
+    listmut.unlock();
+    return found;
 }
 
 /*----------------------------------------------------------------------------
@@ -252,7 +234,10 @@ bool MsgQ::existQ(const char* qname)
  *----------------------------------------------------------------------------*/
 int MsgQ::numQ(void)
 {
-    return queues.length();
+    listmut.lock();
+    const int count = queues.length();
+    listmut.unlock();
+    return count;
 }
 
 /*----------------------------------------------------------------------------
@@ -262,27 +247,47 @@ int MsgQ::listQ(queueDisplay_t* list, int list_size)
 {
     int j = 0;
     global_queue_t curr_q;
-    const char* curr_name = queues.first(&curr_q);
-    while(curr_name)
+    listmut.lock();
     {
-        if(j >= list_size) break;
-        list[j].name = curr_q.queue->name;
-        list[j].len = curr_q.queue->len;
-        list[j].subscriptions = curr_q.queue->subscriptions;
-        switch(curr_q.queue->state)
+        const char* curr_name = queues.first(&curr_q);
+        while(curr_name)
         {
-            case STATE_OKAY         : list[j].state = "OKAY";       break;
-            case STATE_TIMEOUT      : list[j].state = "TIMEOUT";    break;
-            case STATE_FULL         : list[j].state = "FULL";       break;
-            case STATE_SIZE_ERROR   : list[j].state = "ERRSIZE";    break;
-            case STATE_ERROR        : list[j].state = "ERROR";      break;
-            case STATE_EMPTY        : list[j].state = "EMPTY";      break;
-            default                 : list[j].state = "UNKNOWN";    break;
+            if(j >= list_size) break;
+            list[j].name = curr_q.queue->name;
+            list[j].len = curr_q.queue->len;
+            list[j].subscriptions = curr_q.queue->subscriptions;
+            curr_q.queue->locknblock->lock();
+            const int state = curr_q.queue->state;
+            curr_q.queue->locknblock->unlock();
+            switch(state)
+            {
+                case STATE_OKAY:        list[j].state = "OKAY";       break;
+                case STATE_TIMEOUT:     list[j].state = "TIMEOUT";    break;
+                case STATE_FULL:        list[j].state = "FULL";       break;
+                case STATE_SIZE_ERROR:  list[j].state = "ERRSIZE";    break;
+                case STATE_ERROR:       list[j].state = "ERROR";      break;
+                case STATE_EMPTY:       list[j].state = "EMPTY";      break;
+                default:                list[j].state = "UNKNOWN";    break;
+            }
+            j++;
+            curr_name = queues.next(&curr_q);
         }
-        j++;
-        curr_name = queues.next(&curr_q);
     }
+    listmut.unlock();
     return j;
+}
+
+/*----------------------------------------------------------------------------
+ * is_full
+ *----------------------------------------------------------------------------*/
+bool MsgQ::is_full(void)
+{
+    if(msgQ->depth == CFG_DEPTH_INFINITY)
+    {
+        return false;
+    }
+
+    return (msgQ->len.load() >= msgQ->depth);
 }
 
 /******************************************************************************
@@ -415,7 +420,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             /* size is too big */
             post_state = STATE_SIZE_ERROR;
         }
-        else if(msgQ->subscriptions <= 0)
+        else if(msgQ->subscriptions.load() <= 0)
         {
             /* don't post messages to a queue with no subscribers */
             post_state = STATE_NO_SUBSCRIBERS;
@@ -423,7 +428,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
         else if(timeout != IO_CHECK)
         {
             /* wait for room in queue */
-            while(isFull())
+            while(is_full())
             {
                 if(!msgQ->locknblock->wait(READY2POST, timeout))
                 {
@@ -432,7 +437,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
                 }
             }
         }
-        else if(isFull())
+        else if(is_full())
         {
             /* post check on full queue */
             post_state = STATE_FULL;
@@ -473,7 +478,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             /* construct node to be added */
             temp->mask = mask + secondary_size;
             temp->next = NULL; // for queue
-            temp->refs = msgQ->subscriptions;
+            temp->refs = msgQ->subscriptions.load();
 
             /* place temp node into queue */
             if(msgQ->back == NULL)  msgQ->front = temp;
@@ -492,7 +497,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             }
 
             /* increment queue size */
-            msgQ->len++;
+            msgQ->len.fetch_add(1);
 
             /* trigger ready */
             msgQ->locknblock->signal(READY2RECV);
@@ -513,7 +518,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
         msgQ->state = post_state;
 
         /* if still room wake up other publishers */
-        if(!isFull())
+        if(!is_full())
         {
             msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
         }
@@ -561,7 +566,7 @@ Subscriber::~Subscriber()
         const bool space_reclaimed = reclaim_nodes(true);
 
         /* Clean up Remaining Free Blocks */
-        if(msgQ->subscriptions == 1)
+        if(msgQ->subscriptions.load() == 1)
         {
             if(msgQ->free_blocks > 0)
             {
@@ -583,7 +588,7 @@ Subscriber::~Subscriber()
         /* Unregister */
         if(msgQ->subscriber_type[id] == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count--;
         msgQ->subscriber_type[id] = UNSUBSCRIBED;
-        msgQ->subscriptions--;
+        msgQ->subscriptions.fetch_sub(1);
 
         /* Signal Publishers */
         if(space_reclaimed)
@@ -648,14 +653,6 @@ void Subscriber::drain(bool with_delete)
         }
     }
     msgQ->locknblock->unlock();
-}
-
-/*----------------------------------------------------------------------------
- * isEmpty
- *----------------------------------------------------------------------------*/
-bool Subscriber::isEmpty(void)
-{
-    return (msgQ->curr_nodes[id] == NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -728,7 +725,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
         if(timeout != IO_CHECK)
         {
             /* wait for message to be posted */
-            while(isEmpty())
+            while(msgQ->curr_nodes[id] == NULL) // is empty
             {
                 if(!msgQ->locknblock->wait(READY2RECV, timeout))
                 {
@@ -737,7 +734,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
                 }
             }
         }
-        else if(isEmpty())
+        else if(msgQ->curr_nodes[id] == NULL) // is empty
         {
             /* receive check on empty queue */
             ref.state = STATE_EMPTY;
@@ -798,7 +795,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
     bool space_reclaimed = false;
 
     /* handle subscribers of opportunity */
-    if(msgQ->soo_count > 0 && isFull())
+    if(msgQ->soo_count > 0 && is_full())
     {
         for(int i = 0; i < msgQ->max_subscribers; i++)
         {
@@ -856,7 +853,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
         }
 
         /* decrement queue length */
-        msgQ->len--;
+        msgQ->len.fetch_sub(1);
         space_reclaimed = true;
     }
 
@@ -872,7 +869,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
     {
         /* Check Need to Resize */
         const int old_max_subscribers = msgQ->max_subscribers;
-        if(msgQ->subscriptions >= msgQ->max_subscribers)
+        if(msgQ->subscriptions.load() >= msgQ->max_subscribers)
         {
             msgQ->max_subscribers *= 2;
         }
@@ -919,7 +916,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
                 id = i;
                 msgQ->subscriber_type[id] = type;
                 if(type == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count++;
-                msgQ->subscriptions++;
+                msgQ->subscriptions.fetch_add(1);
                 break;
             }
         }

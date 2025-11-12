@@ -169,8 +169,8 @@ RecordDispatcher::RecordDispatcher( lua_State* L, const char* inputq_name,
     inQ = new Subscriber(inputq_name, type);
 
     /* Create Thread Pool */
-    dispatcherActive = false;
-    abortOnTimeout = false;
+    dispatcherActive.store(false, std::memory_order_release);
+    abortOnTimeout.store(false, std::memory_order_release);
     threadPool = new Thread* [numThreads];
     for(int i = 0; i < numThreads; i++) threadPool[i] = NULL;
 }
@@ -180,7 +180,7 @@ RecordDispatcher::RecordDispatcher( lua_State* L, const char* inputq_name,
  *----------------------------------------------------------------------------*/
 RecordDispatcher::~RecordDispatcher(void)
 {
-    dispatcherActive = false;
+    dispatcherActive.store(false, std::memory_order_release);
     for(int i = 0; i < numThreads; i++)
     {
         delete threadPool[i];
@@ -225,7 +225,7 @@ int RecordDispatcher::luaRun(lua_State* L)
         RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Start Threads */
-        lua_obj->dispatcherActive = true;
+        lua_obj->dispatcherActive.store(true, std::memory_order_release);
         for(int i = 0; i < lua_obj->numThreads; i++)
         {
             lua_obj->threadPool[i] = new Thread(dispatcherThread, lua_obj);
@@ -261,7 +261,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         dispatch            = dynamic_cast<DispatchObject*>(getLuaObject(L, 2, DispatchObject::OBJECT_TYPE));
 
         /* Check if Active */
-        if(lua_obj->dispatcherActive)
+        if(lua_obj->dispatcherActive.load(std::memory_order_acquire))
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Cannot attach %s to a running dispatcher", dispatch->getName());
         }
@@ -405,7 +405,7 @@ int RecordDispatcher::luaAbortOnTimeout (lua_State* L)
         RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Abort On Timeout */
-        lua_obj->abortOnTimeout = true;
+        lua_obj->abortOnTimeout.store(true, std::memory_order_release);
 
         /* Set Success */
         status = true;
@@ -431,7 +431,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
     RecordDispatcher* dispatcher = static_cast<RecordDispatcher*>(parm);
 
     /* Loop Forever */
-    while(dispatcher->dispatcherActive)
+    while(dispatcher->dispatcherActive.load(std::memory_order_acquire))
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
@@ -477,7 +477,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
             {
                 /* Terminating Message */
                 mlog(DEBUG, "Terminator received on %s, exiting dispatcher", dispatcher->inQ->getName());
-                dispatcher->dispatcherActive = false; // breaks out of loop
+                dispatcher->dispatcherActive.store(false, std::memory_order_release); // breaks out of loop
             }
 
             /* Dereference Message */
@@ -494,9 +494,9 @@ void* RecordDispatcher::dispatcherThread(void* parm)
             }
 
             /* Check if Aborting on Timeout */
-            if(dispatcher->abortOnTimeout)
+            if(dispatcher->abortOnTimeout.load(std::memory_order_acquire))
             {
-                dispatcher->dispatcherActive = false;
+                dispatcher->dispatcherActive.store(false, std::memory_order_release);
                 break;
             }
         }
@@ -504,7 +504,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         {
             /* Break Out on Failure */
             mlog(CRITICAL, "Failed queue receive on %s with error %d", dispatcher->inQ->getName(), recv_status);
-            dispatcher->dispatcherActive = false; // breaks out of loop
+            dispatcher->dispatcherActive.store(false, std::memory_order_release); // breaks out of loop
         }
     }
 

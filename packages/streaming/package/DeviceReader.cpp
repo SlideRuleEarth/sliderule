@@ -79,7 +79,7 @@ DeviceReader::DeviceReader(lua_State* L, DeviceObject* _device, const char* outq
     if(outq_name)
     {
         outq = new Publisher(outq_name);
-        ioActive = true;
+        ioActive.store(true, std::memory_order_release);
         ioThread = new Thread(readerThread, this);
     }
 }
@@ -90,10 +90,10 @@ DeviceReader::DeviceReader(lua_State* L, DeviceObject* _device, const char* outq
 DeviceReader::~DeviceReader(void)
 {
     /* Prevent Double Death */
-    dieOnDisconnect = false;
+    dieOnDisconnect.store(false, std::memory_order_relaxed);
 
     /* Stop Thread */
-    ioActive = false;
+    ioActive.store(false, std::memory_order_release);
     delete ioThread;
 
     /* Delete Output Queue */
@@ -114,7 +114,7 @@ void* DeviceReader::readerThread (void* parm)
     unsigned char* buf = new unsigned char [io_maxsize];
 
     /* Read Loop */
-    while(dr->ioActive)
+    while(dr->ioActive.load(std::memory_order_acquire))
     {
         /* Read Device */
         const int bytes = dr->device->readBuffer(buf, io_maxsize);
@@ -122,7 +122,7 @@ void* DeviceReader::readerThread (void* parm)
         {
             /* Post Message */
             int post_status = MsgQ::STATE_ERROR;
-            while(dr->ioActive && (post_status = dr->outq->postCopy(buf, bytes, dr->blockCfg)) <= 0)
+            while(dr->ioActive.load(std::memory_order_acquire) && (post_status = dr->outq->postCopy(buf, bytes, dr->blockCfg)) <= 0)
             {
                 mlog(ERROR, "Device reader unable to post to stream %s: %d", dr->outq->getName(), post_status);
             }
@@ -130,23 +130,23 @@ void* DeviceReader::readerThread (void* parm)
             /* Update Statistics */
             if(post_status > 0)
             {
-                dr->bytesProcessed += bytes;
-                dr->packetsProcessed += 1;
+                dr->bytesProcessed.fetch_add(bytes, std::memory_order_relaxed);
+                dr->packetsProcessed.fetch_add(1, std::memory_order_relaxed);
             }
             else
             {
-                dr->bytesDropped += bytes;
-                dr->packetsDropped += 1;
+                dr->bytesDropped.fetch_add(bytes, std::memory_order_relaxed);
+                dr->packetsDropped.fetch_add(1, std::memory_order_relaxed);
             }
         }
         else if(bytes != TIMEOUT_RC)
         {
             /* Handle Non-Timeout Errors */
-            if(dr->dieOnDisconnect)
+            if(dr->dieOnDisconnect.load(std::memory_order_acquire))
             {
                 if(bytes == SHUTDOWN_RC)    mlog(DEBUG, "shutting down device and exiting reader");
                 else                        mlog(CRITICAL, "failed to read device (%d)... closing connection and exiting reader!", bytes);
-                dr->ioActive = false; // breaks out of loop
+                dr->ioActive.store(false, std::memory_order_release); // breaks out of loop
             }
             else
             {

@@ -42,7 +42,6 @@ class MathLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAXFREQSPEC = 8192;
         static const int LOG2DATASIZE = 13;
         static const double EARTHRADIUS;
         static const char* B64CHARS;
@@ -103,7 +102,6 @@ class MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static double       FFT                 (double result[], const int input[], unsigned long size);
         static point_t      coord2point         (coord_t c, proj_t projection);
         static coord_t      point2coord         (point_t p, proj_t projection);
         static bool         inpoly              (point_t* poly, int len, point_t point);

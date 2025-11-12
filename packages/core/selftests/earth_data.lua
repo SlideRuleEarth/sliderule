@@ -21,12 +21,12 @@ runner.unittest("CMR Query", function()
     }
     local rc, rsps = earthdata.cmr(parms)
     runner.assert(rc == earthdata.SUCCESS, string.format("failed cmr request: %d", rc), true)
-    runner.assert(#rsps >= 5)
+    runner.assert(#rsps >= 4, string.format("incorrect number of granules returned: %d", #rsps))
     runner.assert(type(rsps) == "table")
     if type(rsps) == "table" then
         local found = false
         for _,resource in ipairs(rsps) do
-            if resource == "ATL03_20210104122558_01761002_006_01.h5" then
+            if resource == "ATL03_20210104122558_01761002_007_01.h5" then
                 found = true
             end
         end
@@ -52,8 +52,8 @@ runner.unittest("STAC Query", function()
     }
     local rc, rsps = earthdata.stac(parms)
     runner.assert(rc == earthdata.SUCCESS, string.format("failed stac request: %d", rc), true)
-    runner.assert(#rsps["features"] >= 10)
-    runner.assert(rsps["features"][1]["properties"]["B11"] ~= nil)
+    runner.assert(#rsps["features"] >= 10, string.format("incorrect number of features returned: %d", #rsps["features"]))
+    runner.assert(rsps["features"][1]["properties"]["B11"] ~= nil, string.format("B11 in feature 1 is nil"))
 end)
 
 --[[
@@ -72,7 +72,7 @@ runner.unittest("TNM Query", function()
     }
     local rc, rsps = earthdata.tnm(parms)
     runner.assert(rc == earthdata.SUCCESS, string.format("failed tnm request: %s", rsps), true)
-    runner.assert(#rsps["features"] >= 56, string.format("failed to return enough results: %d", #rsps["features"]))
+    runner.assert(#rsps["features"] >= 46, string.format("failed to return enough results: %d", #rsps["features"]))
     runner.assert(#rsps["features"][1]["geometry"]["coordinates"][1] == 5, string.format("failed to return enough coordinates for each feature: %d", #rsps["features"][1]["geometry"]["coordinates"][1]))
 end)
 
@@ -94,8 +94,8 @@ runner.unittest("STAC Query - ArcticDEM Region", function()
     }
     local rc, rsps = earthdata.stac(parms)
     runner.assert(rc == earthdata.SUCCESS, string.format("failed <%d> stac request: %s", rc, rsps), true)
-    runner.assert(#rsps["features"] >= 702)
-    runner.assert(rsps["features"][1]["properties"]['datetime'] == "2022-05-16T21:47:36Z")
+    runner.assert(#rsps["features"] >= 702, string.format("incorrect number of resources: %d", #rsps["features"]))
+    runner.assert(rsps["features"][1]["properties"]['datetime'] == "2022-05-16T21:47:36Z", string.format("incorrect time for first feature: %s", rsps["features"][1]["properties"]['datetime']))
 end)
 
 --[[

@@ -127,8 +127,7 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath,
              (_path[6] == '/'))
     {
         /* Rename File - very fast if both files are on the same partition */
-        renameFile(fileName, &_path[7]);
-        status = true;
+        status = renameFile(fileName, &_path[7]);
     }
     else
     {
@@ -381,17 +380,23 @@ void OutputLib::removeFile(const char* fileName)
 /*----------------------------------------------------------------------------
  * renameFile
  *----------------------------------------------------------------------------*/
-void OutputLib::renameFile (const char* oldName, const char* newName)
+bool OutputLib::renameFile (const char* oldName, const char* newName)
 {
-    if(std::filesystem::exists(oldName))
+    if(!std::filesystem::exists(oldName))
     {
-        const int rc = std::rename(oldName, newName);
-        if(rc != 0)
-        {
-            char err_buf[256];
-            mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, oldName, newName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
-        }
+        mlog(CRITICAL, "Failed to rename file %s to %s: source does not exist", oldName, newName);
+        return false;
     }
+
+    const int rc = std::rename(oldName, newName);
+    if(rc != 0)
+    {
+        char err_buf[256];
+        mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, oldName, newName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+        return false;
+    }
+
+    return true;
 }
 
 /*----------------------------------------------------------------------------

@@ -69,46 +69,6 @@ const int MathLib::B64INDEX[256] =
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * FFT
- *----------------------------------------------------------------------------*/
-double MathLib::FFT(double result[], const int input[], unsigned long size)
-{
-	static complex_t frequency_spectrum[MAXFREQSPEC];
-    double maxvalue = 0.0;
-
-    /* Zero out Frequency Spectrum - Since Size not power of two */
-    memset(frequency_spectrum, 0, sizeof(frequency_spectrum));
-
-	/* Load Data into Complex Array */
-	for(unsigned long k = 0; k < size; k++)
-	{
-		frequency_spectrum[k].r = (double)input[k];
-//		frequency_spectrum[k].i = 0.0;
-	}
-
-	/* Perform FFT */
-	bitReverse(frequency_spectrum, size);
-	freqCorrelation(frequency_spectrum, size, 1);
-
-    /* Zero First Value - (Remove DC Component */
-    result[0] = 0.0;
-    result[size / 2] = 0.0;
-
-	/* Populate Polar Form */
-    for(unsigned long k = 1; k < size / 2; k++)
-    {
-        result[k] = getPolarMagnitude(frequency_spectrum[k].r, frequency_spectrum[k].i);
-        result[k + (size / 2)] = getPolarPhase(frequency_spectrum[k].r, frequency_spectrum[k].i);
-
-        if(result[k] > maxvalue) maxvalue = result[k];
-        if(result[k + (size / 2)] > maxvalue) maxvalue = result[k + (size / 2)];
-    }
-
-    /* Return Maximum Value */
-    return maxvalue;
-}
-
-/*----------------------------------------------------------------------------
  * coord2point
  *----------------------------------------------------------------------------*/
 MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)
@@ -179,6 +139,14 @@ MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
     {
         /* Calculate r */
         const double r = sqrt((p.x*p.x) + (p.y*p.y));
+
+        /* Point (0,0) is exactly on the pole; return pole latitude and avoid dividing by r == 0 */
+        if(r == 0.0)
+        {
+            c.lon = 0.0;
+            c.lat = projection == SOUTH_POLAR ? -90.0 : 90.0;
+            return c;
+        }
 
         /* Calculate o */
         double o = 0.0;
@@ -265,13 +233,18 @@ MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *----------------------------------------------------------------------------*/
-bool MathLib::inpoly (point_t* poly, int len, point_t point)
+bool MathLib::inpoly(point_t* poly, int len, point_t point)
 {
     int c = 0;
     for (int i = 0, j = len - 1; i < len; j = i++)
     {
-        const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x;
-        if( ((poly[i].y > point.y) != (poly[j].y > point.y)) && (point.x < x_extent) ) c = !c;
+        /* Only consider edges that cross the horizontal ray */
+        if((poly[i].y > point.y) != (poly[j].y > point.y))
+        {
+            const double dy = poly[j].y - poly[i].y; // guaranteed non-zero by guard above
+            const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / dy + poly[i].x;
+            if(point.x < x_extent) c = !c;
+        }
     }
 
     /* Return Inclusion

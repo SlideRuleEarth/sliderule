@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "GeoDataFrame.h"
 #include "MsgQ.h"
 #include "OsApi.h"
@@ -237,7 +239,7 @@ class Atl03DataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
+        std::atomic<bool>   active;
         Thread*             readerPid;
         const int           readTimeoutMs;
         int                 signalConfColIndex;

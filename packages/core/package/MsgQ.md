@@ -1,7 +1,7 @@
 ## Class: MsgQ
 
-**Path**:       `packages/core`  
-**Modules**:    `MsgQ.cpp, MsgQ.h`  
+**Path**:       `packages/core`
+**Modules**:    `MsgQ.cpp, MsgQ.h`
 **Anchors**:    [Description](#description) | [Application Programming Interface](#application-programming-interface) | [Examples](#examples)
 
 ### Description
@@ -128,12 +128,6 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 `int MsgQ::getDepth (void)` : Returns the maximum number of objects that can be queued in the message queue
 
 `const char* MsgQ::getName (void)` : Returns the name of the message queue as a pointer reference to the internal stored name.  No deallocation of the return value is necessary.  The return value should be treated as read-only.  Null indicates a private queue.
-
-`int MsgQ::getState (void)` : Returns the current state of the message queue.  See the STATE_* definitions above.
-
-`bool MsgQ::isFull (void)` : Returns true if the message queue is currently full and cannot enqueue any additional objects.
-
-`bool Subscriber::isEmpty (void)` : Returns true if the message queue's subscription is currently empty - i.e. no further objects can be read from the subsription to the message queue until new objects are enqueued.
 
 `void* Subscriber::getData (long _handle)` : Returns a pointer to the queued object specified by the _handle.  This function is to be rarely used, and only in extreme cases where the memory utilization of a large sequence of queues must be carefully and explicitly managed.  For example, it is sometimes the case that a large set of data needs to be maintained in a queue (e.g. long integration times for image sets), but while that data is queued, a different re-ordering or indexing of the data needs to be performed.  It can be helpful to let the management of the memory be left to the queue, and re-index the data via the handles.  This function enables that kind of scenario by providing a means at getting to the data via only the handle.
 

@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "List.h"
@@ -78,7 +80,7 @@ class CcsdsPacketInterleaver: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
+        std::atomic<bool>   active;
         Thread*             pid;
         List<Subscriber*>   inQs;
         Publisher*          outQ;

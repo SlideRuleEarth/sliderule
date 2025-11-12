@@ -146,7 +146,7 @@ Atl03Viewer::Atl03Viewer (lua_State* L, const char* outq_name, Icesat2Fields* _p
     stats.extents_retried   = 0;
 
     /* Initialize Readers */
-    active = true;
+    active.store(true);
     numComplete = 0;
     memset(readerPid, 0, sizeof(readerPid));
 
@@ -200,7 +200,7 @@ Atl03Viewer::Atl03Viewer (lua_State* L, const char* outq_name, Icesat2Fields* _p
  *----------------------------------------------------------------------------*/
 Atl03Viewer::~Atl03Viewer (void)
 {
-    active = false;
+    active.store(false);
 
     for(int pid = 0; pid < threadCount; pid++)
     {
@@ -435,7 +435,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
         const uint32_t max_segments_per_extent = 256;
 
         /* Loop Through Each Segment */
-        for(long s = 0; reader->active && s < region.num_segments; s++)
+        for(long s = 0; reader->active.load() && s < region.num_segments; s++)
         {
             /* Skip segments with zero photon count */
             if(region.segment_ph_cnt[s] == 0) continue;
@@ -507,7 +507,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
             if(reader->sendTerminator)
             {
                 int status = MsgQ::STATE_TIMEOUT;
-                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                while(reader->active.load() && (status == MsgQ::STATE_TIMEOUT))
                 {
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
@@ -544,7 +544,7 @@ void Atl03Viewer::postRecord (RecordObject& record, stats_t& local_stats)
     uint8_t* rec_buf = NULL;
     const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
     int post_status = MsgQ::STATE_TIMEOUT;
-    while(active && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+    while(active.load() && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
     {
         local_stats.extents_retried++;
     }

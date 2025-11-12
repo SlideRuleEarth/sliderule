@@ -50,6 +50,8 @@
 #include "GeoDataFrame.h"
 #include "BathyMask.h"
 
+#include <atomic>
+
 /******************************************************************************
  * CLASS
  ******************************************************************************/
@@ -208,7 +210,7 @@ class BathyDataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                        active;
+        std::atomic<bool>           active;
         Thread*                     pid;
         BathyFields*                parmsPtr;
         const BathyFields&          parms;

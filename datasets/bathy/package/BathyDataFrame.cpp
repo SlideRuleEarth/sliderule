@@ -144,13 +144,17 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
     beam(beam_str),
+    active(false),
+    pid(NULL),
     parmsPtr(_parms),
     parms(*_parms),
     bathyMask(_mask),
     hdf03(_hdf03),
     hdf09(_hdf09),
     rqstQ(NULL),
-    readTimeoutMs(parms.readTimeout.value * 1000)
+    signalConfColIndex(0),
+    readTimeoutMs(parms.readTimeout.value * 1000),
+    valid(false)
 {
     /* Create Request Queue Publisher (if supplied) */
     if(rqstq_name) rqstQ = new Publisher(rqstq_name);
@@ -182,7 +186,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         EventLib::stashId (traceId);
 
         /* Create Reader */
-        active = true;
+        active.store(true);
         pid = new Thread(subsettingThread, this);
     }
     catch(const RunTimeException& e)
@@ -201,7 +205,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
  *----------------------------------------------------------------------------*/
 BathyDataFrame::~BathyDataFrame (void)
 {
-    active = false;
+    active.store(false);
     delete pid;
 
     delete rqstQ;
@@ -557,7 +561,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         }
 
         /* Traverse All Photons In Dataset */
-        while(dataframe.active && (current_photon < atl03.dist_ph_along.size))
+        while(dataframe.active.load() && (current_photon < atl03.dist_ph_along.size))
         {
             /* Go to Photon's Segment */
             photon_in_segment++;

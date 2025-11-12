@@ -59,7 +59,7 @@ MsgProcessor::MsgProcessor(lua_State* L, const char* inq_name, const char* meta_
     inQ = new Subscriber(inq_name);
 
     /* Create Threads */
-    processorActive = false;
+    processorActive.store(false, std::memory_order_relaxed);
     thread = NULL;
 }
 
@@ -101,7 +101,7 @@ bool MsgProcessor::handleTimeout(void)
  *----------------------------------------------------------------------------*/
 bool MsgProcessor::isActive(void) const
 {
-    return processorActive;
+    return processorActive.load(std::memory_order_acquire);
 }
 
 /*----------------------------------------------------------------------------
@@ -127,7 +127,7 @@ void MsgProcessor::flush(void)
  *----------------------------------------------------------------------------*/
 void MsgProcessor::start(void)
 {
-    processorActive = true;
+    processorActive.store(true, std::memory_order_release);
     thread = new Thread(processorThread, this);
 }
 
@@ -136,8 +136,9 @@ void MsgProcessor::start(void)
  *----------------------------------------------------------------------------*/
 void MsgProcessor::stop(void)
 {
-    processorActive = false;
+    processorActive.store(false, std::memory_order_release);
     delete thread;
+    thread = NULL;
 }
 
 /******************************************************************************
@@ -161,7 +162,7 @@ void* MsgProcessor::processorThread(void* parm)
     }
 
     /* Loop While Read Active */
-    while(processor->processorActive && !self_delete)
+    while(processor->processorActive.load(std::memory_order_acquire) && !self_delete)
     {
         /* Read Bytes */
         Subscriber::msgRef_t ref;

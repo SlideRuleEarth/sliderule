@@ -44,6 +44,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "RequestFields.h"
@@ -148,7 +150,7 @@ class ArrowBuilder: public LuaObject
         Thread*             builderPid;
         RequestFields*      rqstParms;
         const OutputFields&  parms;
-        bool                active;
+        std::atomic<bool>   active;
         Subscriber*         inQ;
         const char*         recType;
         const char*         timeKey;

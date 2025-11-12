@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "TcpSocket.h"
@@ -116,8 +118,9 @@ class HttpClient: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                            active;
-        Thread*                         requestPid;
+        std::atomic<bool>               active;
+        Thread*                         requestPid; // only used by lua
+        Subscriber*                     requestSub; // only used by lua
         Publisher*                      requestPub;
         TcpSocket*                      sock;
         char*                           ipAddr;
@@ -137,8 +140,7 @@ class HttpClient: public LuaObject
         hdr_kv_t        parseHeaderLine     (int start, int term);
         const char*     parseChunkHeaderLine(int start, int term);
 
-        static void*    requestThread       (void* parm);
-
+        static void*    luaRequestThread    (void* parm);
         static int      luaRequest          (lua_State* L);
         static int      luaConnected        (lua_State* L);
 };

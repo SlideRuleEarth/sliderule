@@ -40,6 +40,8 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 
+#include <atomic>
+
 /******************************************************************************
  * MSG PROCESSOR CLASS
  ******************************************************************************/
@@ -80,7 +82,7 @@ class MsgProcessor: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            processorActive;
+        std::atomic<bool> processorActive;
         Thread*         thread;
 
         Subscriber*     inQ;

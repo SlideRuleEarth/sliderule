@@ -136,30 +136,18 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03,
         {"sc_orient",           &sc_orient},
         {"sc_orient_time",      &sc_orient_time}
     }),
+    pid(NULL),
     parmsPtr(_parms),
     parms(*_parms),
     rqstQ(rqstq_name),
     readTimeoutMs(parms.readTimeout.value * 1000),
     hdf03(_hdf03)
 {
-    try
-    {
-        /* Set Thread Specific Trace ID for H5Coro */
-        EventLib::stashId (traceId);
+    /* Set Thread Specific Trace ID for H5Coro */
+    EventLib::stashId (traceId);
 
-        /* Start Reader Thread */
-        active = true;
-        pid = new Thread(readingThread, this);
-    }
-    catch(const RunTimeException& e)
-    {
-        /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-
-        /* Indicate End of Data */
-        signalComplete();
-    }
+    /* Start Reader Thread */
+    pid = new Thread(readingThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -167,7 +155,6 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03,
  *----------------------------------------------------------------------------*/
 BathyGranule::~BathyGranule (void)
 {
-    active = false;
     delete pid;
     hdf03->releaseLuaObject();
     parmsPtr->releaseLuaObject();
@@ -262,7 +249,7 @@ void* BathyGranule::readingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), &granule.rqstQ, &granule.active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        alert(e.level(), e.code(), &granule.rqstQ, NULL, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
     }
 
     /* Mark Completion */

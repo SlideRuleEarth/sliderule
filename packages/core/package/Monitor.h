@@ -37,6 +37,8 @@
  ******************************************************************************/
 
 #include "MsgQ.h"
+#include <atomic>
+
 #include "OsApi.h"
 #include "LuaObject.h"
 
@@ -86,10 +88,10 @@ class Monitor: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            active;
-        Thread*         pid;
-        Subscriber*     inQ;
-        const char*     recType;
+        std::atomic<bool> active;
+        Thread*           pid;
+        Subscriber*       inQ;
+        const char*       recType;
 };
 
 #endif  /* __monitor__ */

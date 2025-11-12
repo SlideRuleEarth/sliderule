@@ -172,7 +172,7 @@ class Atl03Viewer: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
+        std::atomic<bool>   active;
         Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;

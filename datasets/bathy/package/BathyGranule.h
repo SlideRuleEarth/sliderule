@@ -100,7 +100,6 @@ class BathyGranule: public LuaObject, public FieldDictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                        active;
         Thread*                     pid;
         BathyFields*                parmsPtr;
         const BathyFields&          parms;

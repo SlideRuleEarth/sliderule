@@ -169,7 +169,7 @@ class EventLib
 
         static bool             sendTlm         (event_level_t lvl, const tlm_input_t& tlm);
 
-        static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
+        static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const std::atomic<bool>* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
     private:
 

@@ -169,7 +169,14 @@ int Asset::luaDrivers (lua_State* L)
     lua_newtable(L);
 
     char** driver_names = NULL;
-    const int num_drivers = ioDrivers.getKeys(&driver_names);
+    int num_drivers = 0;
+
+    ioDriverMut.lock();
+    {
+        num_drivers = ioDrivers.getKeys(&driver_names);
+    }
+    ioDriverMut.unlock();
+
     for(int i = 0; i < num_drivers; i++)
     {
         lua_pushstring(L, driver_names[i]);

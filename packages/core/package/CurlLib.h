@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
 #include "EndpointObject.h"
 #include "OsApi.h"
@@ -74,7 +76,7 @@ class CurlLib
                                              hdrs_t* headers=NULL, const char* unix_socket=NULL, hdrs_t* rsps_headers=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
         static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator,
-                                             int timeout, const bool* active=NULL, hdrs_t* headers=NULL);
+                                             int timeout, const std::atomic<bool>* active=NULL, hdrs_t* headers=NULL);
         static int          getHeaders      (lua_State* L, int index, hdrs_t& header_list);
         static int          luaGet          (lua_State* L);
         static int          luaPut          (lua_State* L);
@@ -111,7 +113,7 @@ class CurlLib
             uint8_t*    rec_buf;
             Publisher*  outq;
             const char* url;
-            const bool* active;
+            const std::atomic<bool>* active;
         } parser_t;
 
         /*--------------------------------------------------------------------

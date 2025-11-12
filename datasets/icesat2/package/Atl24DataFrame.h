@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "GeoDataFrame.h"
 #include "LuaObject.h"
 #include "MsgQ.h"
@@ -159,7 +161,7 @@ class Atl24DataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
+        std::atomic<bool>   active;
         Thread*             readerPid;
         const int           readTimeoutMs;
         const char*         beam;

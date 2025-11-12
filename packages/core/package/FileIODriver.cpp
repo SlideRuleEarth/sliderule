@@ -62,7 +62,7 @@ Asset::IODriver* FileIODriver::create (const Asset* _asset, const char* resource
 int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     /* Seek to New Position */
-    if(fseek(ioFile, pos, SEEK_SET) != 0)
+    if(fseeko(ioFile, static_cast<off_t>(pos), SEEK_SET) != 0)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to go to I/O position: 0x%lx", pos);
     }

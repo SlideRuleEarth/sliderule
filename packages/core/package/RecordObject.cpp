@@ -370,7 +370,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
  *  - to call this function multiple times for a given record, the mode must
  *    be set to ALLOCATE
  *----------------------------------------------------------------------------*/
-bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verbose, int timeout, serialMode_t mode)
+bool RecordObject::post(Publisher* outq, int size, const std::atomic<bool>* active, bool verbose, int timeout, serialMode_t mode)
 {
     bool status = true;
 
@@ -380,7 +380,7 @@ bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verb
 
     /* Post Record */
     int post_status = MsgQ::STATE_TIMEOUT;
-    while(  (!active || (*active)) &&
+    while(  (!active || active->load(std::memory_order_acquire)) &&
             ((post_status = outq->postRef(rec_buf, rec_bytes, timeout)) == MsgQ::STATE_TIMEOUT) );
 
     /* Handle Status */

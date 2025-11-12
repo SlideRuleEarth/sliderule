@@ -33,8 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
 #include "HttpServer.h"
 #include "OsApi.h"
 #include "EventLib.h"
@@ -95,8 +93,8 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
     ipAddr = StringLib::duplicate(_ip_addr);
     port = _port;
 
-    active = true;
-    listening = false;
+    active.store(true);
+    listening.store(false, std::memory_order_release);
     listenerPid = new Thread(listenerThread, this);
 }
 
@@ -105,7 +103,7 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
  *----------------------------------------------------------------------------*/
 HttpServer::~HttpServer(void)
 {
-    active = false;
+    active.store(false);
     delete listenerPid;
     delete [] ipAddr;
 }
@@ -193,7 +191,7 @@ void HttpServer::Connection::initialize (const char* _name)
     /* Create Unique ID for Request */
     name = StringLib::duplicate(_name);
     id = new char [REQUEST_ID_LEN];
-    const long cnt = requestId++;
+    const uint64_t cnt = requestId.fetch_add(1, std::memory_order_relaxed);
     StringLib::format(id, REQUEST_ID_LEN, "%s.%ld", name, cnt);
 
     /* Start Trace */
@@ -260,7 +258,15 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         /* Parse Request */
         const string http_header(buf);
         header_list = StringLib::split(http_header.c_str(), http_header.length(), '\r');
+        if(header_list == NULL || header_list->length() == 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "empty HTTP request line");
+        }
         request_line = StringLib::split((*header_list)[0]->c_str(), (*header_list)[0]->length(), ' ');
+        if(request_line == NULL || request_line->length() < 3)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "malformed HTTP request line");
+        }
 
         const char* verb_str = (*request_line)[0]->c_str();
         const char* url_str = (*request_line)[1]->c_str();
@@ -327,17 +333,17 @@ void* HttpServer::listenerThread(void* parm)
 {
     HttpServer* s = static_cast<HttpServer*>(parm);
 
-    while(s->active)
+    while(s->active.load())
     {
         /* Start Http Server */
         const int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, static_cast<void*>(s), &(s->listening));
         if(status < 0)
         {
             mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
-            s->listening = false;
+            s->listening.store(false, std::memory_order_release);
 
             /* Restart Http Server */
-            if(s->active)
+            if(s->active.load())
             {
                 mlog(INFO, "Attempting to restart http server: %s", s->getName());
                 OsApi::sleep(5.0); // wait five seconds to prevent spin
@@ -524,7 +530,13 @@ int HttpServer::onRead(int fd)
             const char* path = connection->request->path;
             try
             {
-                EndpointObject* endpoint = routeTable[path]->route;
+                EndpointObject* endpoint;
+                routeTableMut.lock();
+                {
+                    endpoint = routeTable[path]->route;
+                }
+                routeTableMut.unlock();
+
                 connection->streaming = endpoint->handleRequest(connection->request);
                 connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             }
@@ -777,7 +789,12 @@ int HttpServer::luaAttach (lua_State* L)
 
         /* Add Route to Table */
         RouteEntry* entry = new RouteEntry(endpoint);
-        status = lua_obj->routeTable.add(url, entry, true);
+        lua_obj->routeTableMut.lock();
+        {
+            status = lua_obj->routeTable.add(url, entry, true);
+        }
+        lua_obj->routeTableMut.unlock();
+
         if(!status) delete entry;
     }
     catch(const RunTimeException& e)
@@ -808,7 +825,7 @@ int HttpServer::luaUntilUp (lua_State* L)
         /* Wait Until Http Server Started */
         do
         {
-            status = lua_obj->listening;
+            status = lua_obj->listening.load(std::memory_order_acquire);
             if(status) break;
             if(timeout > 0) timeout--;
             OsApi::performIOTimeout();

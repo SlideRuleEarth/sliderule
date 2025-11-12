@@ -78,12 +78,11 @@ class ContainerRunner: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            active;
-        Thread*         controlPid;
-        Publisher*      outQ;
-        const char*     hostSandboxDirectory;
-        Cond            resultLock;
-        CreFields*      parms;
+        Thread*             controlPid;
+        Publisher*          outQ;
+        const char*         hostSandboxDirectory;
+        Cond                resultLock;
+        CreFields*          parms;
 
         /*--------------------------------------------------------------------
          * Methods

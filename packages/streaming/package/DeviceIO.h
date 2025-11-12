@@ -40,6 +40,8 @@
 #include "LuaObject.h"
 #include "DeviceObject.h"
 
+#include <atomic>
+
 /******************************************************************************
  * DEVICE I/O CLASS
  ******************************************************************************/
@@ -62,15 +64,15 @@ class DeviceIO: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool            ioActive;
-        Thread*         ioThread;
-        DeviceObject*   device;
-        bool            dieOnDisconnect;
-        int             blockCfg;
-        int             bytesProcessed;
-        int             bytesDropped;
-        int             packetsProcessed;
-        int             packetsDropped;
+        std::atomic<bool> ioActive;
+        Thread*           ioThread;
+        DeviceObject*     device;
+        std::atomic<bool> dieOnDisconnect;
+        int               blockCfg;
+        std::atomic<int>  bytesProcessed;
+        std::atomic<int>  bytesDropped;
+        std::atomic<int>  packetsProcessed;
+        std::atomic<int>  packetsDropped;
 
         /*--------------------------------------------------------------------
          * Methods

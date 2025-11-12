@@ -314,7 +314,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
     impl = new ArrowBuilderImpl(this);
 
     /* Start Builder Thread */
-    active = true;
+    active.store(true);
     builderPid = new Thread(builderThread, this);
 }
 
@@ -323,7 +323,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
  *----------------------------------------------------------------------------*/
 ArrowBuilder::~ArrowBuilder(void)
 {
-    active = false;
+    active.store(false);
     delete builderPid;
     rqstParms->releaseLuaObject();
     delete[] dataFile;
@@ -352,7 +352,7 @@ void* ArrowBuilder::builderThread(void* parm)
     EventLib::stashId(trace_id);
 
     /* Loop Forever */
-    while(builder->active)
+    while(builder->active.load())
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
@@ -476,7 +476,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     if(!status)
                     {
                         alert(INFO, RTE_FAILURE, builder->outQ, NULL, "Failed to process record batch for %s", builder->parms.path.value.c_str());
-                        builder->active = false; // breaks out of loop
+                        builder->active.store(false); // breaks out of loop
                     }
                     builder->recordBatch.clear();
                     row_cnt = 0;
@@ -486,7 +486,7 @@ void* ArrowBuilder::builderThread(void* parm)
             {
                 /* Terminating Message */
                 mlog(DEBUG, "Terminator received on %s, exiting parquet builder", builder->inQ->getName());
-                builder->active = false; // breaks out of loop
+                builder->active.store(false); // breaks out of loop
                 builder->inQ->dereference(ref); // terminator is not batched, so must dereference here
             }
         }
@@ -494,7 +494,7 @@ void* ArrowBuilder::builderThread(void* parm)
         {
             /* Break Out on Failure */
             mlog(CRITICAL, "Failed queue receive on %s with error %d", builder->inQ->getName(), recv_status);
-            builder->active = false; // breaks out of loop
+            builder->active.store(false); // breaks out of loop
         }
     }
 
