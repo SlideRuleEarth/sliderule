@@ -290,7 +290,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
                 remove(oldest_filepath.c_str());
                 cacheLookUp.remove(oldest_key->c_str());
                 cacheFiles.remove(index);
-                delete[] oldest_filename;
+                delete [] oldest_filename;
             }
         }
 

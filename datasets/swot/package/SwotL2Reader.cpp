@@ -135,7 +135,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _pa
     outQ(NULL)
 {
     /* Initialize Reader */
-    parms       = _parms;
+    parms = _parms;
     active.store(true);
     numComplete = 0;
     threadCount = 0;

@@ -146,24 +146,11 @@ Atl24Granule::Atl24Granule (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf2
     readTimeoutMs(parms.readTimeout.value * 1000),
     hdf24(_hdf24)
 {
-    try
-    {
-        /* Set Thread Specific Trace ID for H5Coro */
-        EventLib::stashId (traceId);
+    /* Set Thread Specific Trace ID for H5Coro */
+    EventLib::stashId (traceId);
 
-        /* Start Reader Thread */
-        active.store(true);
-        pid = new Thread(readingThread, this);
-    }
-    catch(const RunTimeException& e)
-    {
-        /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-
-        /* Indicate End of Data */
-        signalComplete();
-    }
+    /* Start Reader Thread */
+    pid = new Thread(readingThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -171,7 +158,6 @@ Atl24Granule::Atl24Granule (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf2
  *----------------------------------------------------------------------------*/
 Atl24Granule::~Atl24Granule (void)
 {
-    active.store(false);
     delete pid;
     hdf24->releaseLuaObject();
     parmsPtr->releaseLuaObject();
@@ -282,7 +268,7 @@ void* Atl24Granule::readingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), &granule.rqstQ, &granule.active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        alert(e.level(), e.code(), &granule.rqstQ, NULL, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
     }
 
     /* Mark Completion */

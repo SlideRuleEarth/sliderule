@@ -116,7 +116,7 @@ MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char
     dataField           = StringLib::duplicate(_data_field);
     idFilter            = _id_filter;
     fieldFilter         = NULL;
-    outQ                = new Publisher(outq_name, freeSerialBuffer);
+    outQ                = new Publisher(outq_name);
 }
 
 /*----------------------------------------------------------------------------
@@ -128,17 +128,6 @@ MetricDispatch::~MetricDispatch(void)
     delete idFilter;
     delete fieldFilter;
     delete outQ;
-}
-
-/*----------------------------------------------------------------------------
- * freeSerialBuffer  -
- *
- *   Notes: Passed to constructor of outQ
- *----------------------------------------------------------------------------*/
-void MetricDispatch::freeSerialBuffer(void* obj, void* parm)
-{
-    (void)parm;
-    delete [] static_cast<char*>(obj);
 }
 
 /*----------------------------------------------------------------------------

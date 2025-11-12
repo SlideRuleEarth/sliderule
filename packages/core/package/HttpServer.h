@@ -43,7 +43,6 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointObject.h"
-#include "Mutex.h"
 
 /******************************************************************************
  * HTTP SERVER CLASS

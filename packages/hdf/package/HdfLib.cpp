@@ -93,6 +93,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             if(number_of_elements <= 0)
             {
                 mlog(CRITICAL, "Invalid variable supplied: %s of size %ld bytes and type %d", dataset.name, dataset.size, dataset.data_type);
+                cleanup_stack();
                 return false;
             }
             hsize_t dims[1] = {number_of_elements};
@@ -123,6 +124,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 default:
                 {
                     mlog(CRITICAL, "Invalid variable type supplied for %s: %d", dataset.name, dataset.data_type);
+                    cleanup_stack();
                     return false;
                 }
             }
@@ -133,18 +135,15 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             if(dataset.data_type == RecordObject::INT8 || dataset.data_type == RecordObject::UINT8) H5Pset_shuffle(plist_id); // Enable shuffle
             const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, h5tc, dataspace_id, H5P_DEFAULT, plist_id, H5P_DEFAULT);
             const herr_t status = H5Dwrite(dataset_id, h5tw, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
-            if(status < 0)
-            {
-                mlog(CRITICAL, "Failed to write variable %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
-                if(dataset.data_type == RecordObject::STRING) H5Tclose(h5tc);
-                H5Sclose(dataspace_id);
-                H5Pclose(plist_id);
-                cleanup_stack();
-                return false;
-            }
             if(dataset.data_type == RecordObject::STRING) H5Tclose(h5tc);
             H5Sclose(dataspace_id);
             H5Pclose(plist_id);
+            if(status < 0)
+            {
+                mlog(CRITICAL, "Failed to write variable %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
+                cleanup_stack();
+                return false;
+            }
             hid_stack.push(dataset_id);
         }
         else if(dataset.dataset_type == SCALAR)
@@ -154,6 +153,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             if(number_of_elements <= 0)
             {
                 mlog(CRITICAL, "Invalid scalar supplied: %s of size %ld bytes and type %d", dataset.name, dataset.size, dataset.data_type);
+                cleanup_stack();
                 return false;
             }
             const hid_t dataspace_id = H5Screate(H5S_SCALAR);
@@ -181,21 +181,20 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 default:
                 {
                     mlog(CRITICAL, "Invalid scalar type supplied for %s: %d", dataset.name, dataset.data_type);
+                    cleanup_stack();
                     return false;
                 }
             }
             const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, datatype_id, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
             const herr_t status = H5Dwrite(dataset_id, datatype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
+            if(dataset.data_type == RecordObject::STRING) H5Tclose(datatype_id);
+            H5Sclose(dataspace_id);
             if(status < 0)
             {
                 mlog(CRITICAL, "Failed to write scalar %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
-                if(dataset.data_type == RecordObject::STRING) H5Tclose(datatype_id);
-                H5Sclose(dataspace_id);
                 cleanup_stack();
                 return false;
             }
-            if(dataset.data_type == RecordObject::STRING) H5Tclose(datatype_id);
-            H5Sclose(dataspace_id);
             hid_stack.push(dataset_id);
         }
         else if(dataset.dataset_type == ATTRIBUTE)
@@ -224,6 +223,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 default:
                 {
                     mlog(CRITICAL, "Invalid atttribute type supplied for %s: %d", dataset.name, dataset.data_type);
+                    cleanup_stack();
                     return false;
                 }
             }
@@ -240,11 +240,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             hid_stack.pop();
         }
     }
-    while(!hid_stack.empty())
-    {
-        close_hid(hid_stack.top());
-        hid_stack.pop();
-    }
+    cleanup_stack();
     return true;
 }
 

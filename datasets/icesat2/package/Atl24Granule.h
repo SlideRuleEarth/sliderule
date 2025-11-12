@@ -106,7 +106,6 @@ class Atl24Granule: public LuaObject, public FieldDictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        std::atomic<bool>           active;
         Thread*                     pid;
         Icesat2Fields*              parmsPtr;
         const Icesat2Fields&        parms;

@@ -20,10 +20,10 @@ client:destroy()
 client = streaming.http("127.0.0.1", 9081)
 rsps, code, status = client:request("GET", "/source/health", "{}")
 runner.assert(status == true, "failed to remain healthy after invalid requests")
+client:destroy()
 
 -- Clean Up --
 
-client:destroy()
 server:destroy()
 
 -- Report Results --

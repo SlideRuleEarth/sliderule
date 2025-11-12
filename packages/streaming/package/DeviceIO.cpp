@@ -70,12 +70,12 @@ DeviceIO::DeviceIO(lua_State* L, DeviceObject* _device):
 
     /* Initialize Thread */
     ioActive.store(false, std::memory_order_relaxed);
-    ioThread            = NULL;
+    ioThread = NULL;
 
     /* Initialize Parameters */
-    device              = _device;
+    device = _device;
     dieOnDisconnect.store(true, std::memory_order_relaxed);
-    blockCfg            = SYS_TIMEOUT;
+    blockCfg = SYS_TIMEOUT;
 
     /* Initialize Counters */
     bytesProcessed      = 0;

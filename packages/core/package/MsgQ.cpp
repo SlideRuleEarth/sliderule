@@ -95,11 +95,11 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
 
             // Create subscriber arrays
             msgQ->subscriber_type = new subscriber_type_t [msgQ->max_subscribers];
-            msgQ->curr_nodes = new std::atomic<queue_node_t*> [msgQ->max_subscribers];
+            msgQ->curr_nodes = new queue_node_t* [msgQ->max_subscribers];
             for(int i = 0; i < msgQ->max_subscribers; i++)
             {
                 msgQ->subscriber_type[i] = UNSUBSCRIBED;
-                msgQ->curr_nodes[i].store(NULL);
+                msgQ->curr_nodes[i] = NULL;
             }
 
             // Register message queue with non-null name
@@ -189,27 +189,6 @@ int MsgQ::getSubCnt(void)
 }
 
 /*----------------------------------------------------------------------------
- * getState
- *----------------------------------------------------------------------------*/
-int MsgQ::getState(void)
-{
-    return msgQ->state.load();
-}
-
-/*----------------------------------------------------------------------------
- * isFull
- *----------------------------------------------------------------------------*/
-bool MsgQ::isFull(void)
-{
-    if(msgQ->depth == CFG_DEPTH_INFINITY)
-    {
-        return false;
-    }
-
-    return (msgQ->len.load() >= msgQ->depth);
-}
-
-/*----------------------------------------------------------------------------
  * init
  *
  *  assumed thread safe context
@@ -268,30 +247,44 @@ int MsgQ::listQ(queueDisplay_t* list, int list_size)
 {
     int j = 0;
     global_queue_t curr_q;
-
     listmut.lock();
-    const char* curr_name = queues.first(&curr_q);
-    while(curr_name)
     {
-        if(j >= list_size) break;
-        list[j].name = curr_q.queue->name;
-        list[j].len = curr_q.queue->len.load();
-        list[j].subscriptions = curr_q.queue->subscriptions.load();
-        switch(curr_q.queue->state.load())
+        const char* curr_name = queues.first(&curr_q);
+        while(curr_name)
         {
-            case STATE_OKAY         : list[j].state = "OKAY";       break;
-            case STATE_TIMEOUT      : list[j].state = "TIMEOUT";    break;
-            case STATE_FULL         : list[j].state = "FULL";       break;
-            case STATE_SIZE_ERROR   : list[j].state = "ERRSIZE";    break;
-            case STATE_ERROR        : list[j].state = "ERROR";      break;
-            case STATE_EMPTY        : list[j].state = "EMPTY";      break;
-            default                 : list[j].state = "UNKNOWN";    break;
+            if(j >= list_size) break;
+            list[j].name = curr_q.queue->name;
+            list[j].len = curr_q.queue->len;
+            list[j].subscriptions = curr_q.queue->subscriptions;
+            switch(curr_q.queue->state)
+            {
+                case STATE_OKAY:        list[j].state = "OKAY";       break;
+                case STATE_TIMEOUT:     list[j].state = "TIMEOUT";    break;
+                case STATE_FULL:        list[j].state = "FULL";       break;
+                case STATE_SIZE_ERROR:  list[j].state = "ERRSIZE";    break;
+                case STATE_ERROR:       list[j].state = "ERROR";      break;
+                case STATE_EMPTY:       list[j].state = "EMPTY";      break;
+                default:                list[j].state = "UNKNOWN";    break;
+            }
+            j++;
+            curr_name = queues.next(&curr_q);
         }
-        j++;
-        curr_name = queues.next(&curr_q);
     }
     listmut.unlock();
     return j;
+}
+
+/*----------------------------------------------------------------------------
+ * is_full
+ *----------------------------------------------------------------------------*/
+bool MsgQ::is_full(void)
+{
+    if(msgQ->depth == CFG_DEPTH_INFINITY)
+    {
+        return false;
+    }
+
+    return (msgQ->len.load() >= msgQ->depth);
 }
 
 /******************************************************************************
@@ -432,7 +425,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
         else if(timeout != IO_CHECK)
         {
             /* wait for room in queue */
-            while(isFull())
+            while(is_full())
             {
                 if(!msgQ->locknblock->wait(READY2POST, timeout))
                 {
@@ -441,7 +434,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
                 }
             }
         }
-        else if(isFull())
+        else if(is_full())
         {
             /* post check on full queue */
             post_state = STATE_FULL;
@@ -494,9 +487,9 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             {
                 /* modify current node if necessary */
                 if( (msgQ->subscriber_type[i] != UNSUBSCRIBED) &&
-                    (msgQ->curr_nodes[i].load() == NULL) )
+                    (msgQ->curr_nodes[i] == NULL) )
                 {
-                    msgQ->curr_nodes[i].store(temp);
+                    msgQ->curr_nodes[i] = temp;
                 }
             }
 
@@ -519,10 +512,10 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
         }
 
         /* set queue state */
-        msgQ->state.store(post_state);
+        msgQ->state = post_state;
 
         /* if still room wake up other publishers */
-        if(!isFull())
+        if(!is_full())
         {
             msgQ->locknblock->signal(READY2POST, Cond::NOTIFY_ONE);
         }
@@ -561,7 +554,7 @@ Subscriber::~Subscriber()
     msgQ->locknblock->lock();
     {
         /* Dereference All Nodes */
-        queue_node_t* node = msgQ->curr_nodes[id].load();
+        queue_node_t* node = msgQ->curr_nodes[id];
         while(node != NULL)
         {
             node->refs--;
@@ -587,7 +580,7 @@ Subscriber::~Subscriber()
                 msgQ->free_blocks = 0;
             }
         }
-        msgQ->curr_nodes[id].store(NULL);
+        msgQ->curr_nodes[id] = NULL;
 
         /* Unregister */
         if(msgQ->subscriber_type[id] == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count--;
@@ -642,14 +635,14 @@ void Subscriber::drain(bool with_delete)
     msgQ->locknblock->lock();
     {
         /* Dereference All Nodes */
-        queue_node_t* node = msgQ->curr_nodes[id].load();
+        queue_node_t* node = msgQ->curr_nodes[id];
         while(node != NULL)
         {
             node->refs--;
             node = node->next;
         }
         const bool space_reclaimed = reclaim_nodes(with_delete);
-        msgQ->curr_nodes[id].store(NULL);
+        msgQ->curr_nodes[id] = NULL;
 
         if(space_reclaimed)
         {
@@ -657,14 +650,6 @@ void Subscriber::drain(bool with_delete)
         }
     }
     msgQ->locknblock->unlock();
-}
-
-/*----------------------------------------------------------------------------
- * isEmpty
- *----------------------------------------------------------------------------*/
-bool Subscriber::isEmpty(void)
-{
-    return (msgQ->curr_nodes[id].load() == NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -737,7 +722,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
         if(timeout != IO_CHECK)
         {
             /* wait for message to be posted */
-            while(isEmpty())
+            while(msgQ->curr_nodes[id] == NULL) // is empty
             {
                 if(!msgQ->locknblock->wait(READY2RECV, timeout))
                 {
@@ -746,7 +731,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
                 }
             }
         }
-        else if(isEmpty())
+        else if(msgQ->curr_nodes[id] == NULL) // is empty
         {
             /* receive check on empty queue */
             ref.state = STATE_EMPTY;
@@ -756,8 +741,8 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
         if(ref.state == STATE_OKAY)
         {
             /* update queue status*/
-            queue_node_t* node = msgQ->curr_nodes[id].load();
-            msgQ->curr_nodes[id].store(node->next);
+            queue_node_t* node = msgQ->curr_nodes[id];
+            msgQ->curr_nodes[id] = node->next;
             const int node_size = node->mask & ~MSGQ_COPYQ_MASK;
 
             /* perform dequeue */
@@ -785,7 +770,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
         }
 
         /* set queue state */
-        msgQ->state.store(ref.state);
+        msgQ->state = ref.state;
 
         /* signal publishers */
         if(space_reclaimed)
@@ -807,36 +792,32 @@ bool Subscriber::reclaim_nodes(bool delete_data)
     bool space_reclaimed = false;
 
     /* handle subscribers of opportunity */
-    if(msgQ->soo_count > 0 && isFull())
+    if(msgQ->soo_count > 0 && is_full())
     {
         for(int i = 0; i < msgQ->max_subscribers; i++)
         {
             /* only drop data on subscriber of opportunity that is holding up queue */
-            if(msgQ->subscriber_type[i] == SUBSCRIBER_OF_OPPORTUNITY)
+            if( (msgQ->subscriber_type[i] == SUBSCRIBER_OF_OPPORTUNITY) &&
+                (msgQ->curr_nodes[i] == msgQ->front) )
             {
-                queue_node_t* subscriber_node = msgQ->curr_nodes[i].load();
-                if(subscriber_node == msgQ->front)
+                /* dereference nodes until ref transition...
+                 * it is possible that a subscriber of confidence is also
+                 * holding up the queue, and the below code will still
+                 * dereference subscriber of opportunity nodes, up to the
+                 * entire contents of the queue; this is intentional as
+                 * a subscriber of opportunity has no guarantee of data
+                 * being delivered if it has gotten behind to the point
+                 * where it is pointing to the last node in the queue -
+                 * in other words, if a subscriber of opportunity wants
+                 * to guarantee that data isn't dropped being delivered
+                 * to it, then it must make sure it never gets behind to
+                 * the point where it is pointing to the last node in the
+                 * queue */
+                const int starting_ref_count = msgQ->curr_nodes[i]->refs;
+                while(msgQ->curr_nodes[i] && (msgQ->curr_nodes[i]->refs == starting_ref_count))
                 {
-                    /* dereference nodes until ref transition...
-                     * it is possible that a subscriber of confidence is also
-                     * holding up the queue, and the below code will still
-                     * dereference subscriber of opportunity nodes, up to the
-                     * entire contents of the queue; this is intentional as
-                     * a subscriber of opportunity has no guarantee of data
-                     * being delivered if it has gotten behind to the point
-                     * where it is pointing to the last node in the queue -
-                     * in other words, if a subscriber of opportunity wants
-                     * to guarantee that data isn't dropped being delivered
-                     * to it, then it must make sure it never gets behind to
-                     * the point where it is pointing to the last node in the
-                     * queue */
-                    const int starting_ref_count = subscriber_node->refs;
-                    while(subscriber_node && (subscriber_node->refs == starting_ref_count))
-                    {
-                        subscriber_node->refs--;
-                        subscriber_node = subscriber_node->next;
-                    }
-                    msgQ->curr_nodes[i].store(subscriber_node);
+                    msgQ->curr_nodes[i]->refs--;
+                    msgQ->curr_nodes[i] = msgQ->curr_nodes[i]->next;
                 }
             }
         }
@@ -894,26 +875,26 @@ void Subscriber::init_subscriber(subscriber_type_t type)
         if(msgQ->max_subscribers != old_max_subscribers)
         {
             /* Allocate Room for Larger Number of Subscriptions */
-            subscriber_type_t*              new_subscribed = new subscriber_type_t [msgQ->max_subscribers];
-            std::atomic<queue_node_t*>*     new_curr_nodes = new std::atomic<queue_node_t*> [msgQ->max_subscribers];
+            subscriber_type_t*  new_subscribed = new subscriber_type_t [msgQ->max_subscribers];
+            queue_node_t**      new_curr_nodes = new queue_node_t* [msgQ->max_subscribers];
 
             /* Zero Out Upper Half of Arrays */
             for(int i = old_max_subscribers; i < msgQ->max_subscribers; i++)
             {
                 new_subscribed[i] = UNSUBSCRIBED;
-                new_curr_nodes[i].store(NULL);
+                new_curr_nodes[i] = NULL;
             }
 
             /* Copy In Current Values */
             for(int i = 0; i < old_max_subscribers; i++)
             {
                 new_subscribed[i] = msgQ->subscriber_type[i];
-                new_curr_nodes[i].store(msgQ->curr_nodes[i].load());
+                new_curr_nodes[i] = msgQ->curr_nodes[i];
             }
 
             /* Save Off Old Arrays */
-            subscriber_type_t* old_subscribed          = msgQ->subscriber_type;
-            std::atomic<queue_node_t*>* old_curr_nodes = msgQ->curr_nodes;
+            subscriber_type_t* old_subscribed   = msgQ->subscriber_type;
+            queue_node_t** old_curr_nodes       = msgQ->curr_nodes;
 
             /* Swap Pointers */
             msgQ->subscriber_type = new_subscribed;

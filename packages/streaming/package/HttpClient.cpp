@@ -95,8 +95,8 @@ HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
     port = _port;
     sock = initializeSocket(ipAddr, port);
     requestPub = new Publisher(NULL);
+    requestSub = NULL;
     requestPid = NULL;
-    subscriberReady.store(false, std::memory_order_relaxed);
     rqstBuf = new char [MAX_RQST_BUF_LEN];
     rspsBuf = new char [MAX_RSPS_BUF_LEN];
 }
@@ -145,10 +145,10 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     // Create Socket Connection
     sock = initializeSocket(ipAddr, port);
 
-    // Create Request Queue and Thread
+    // Initialize Request Queue and Thread for Lua Operations
     requestPub = new Publisher(NULL);
+    requestSub = NULL;
     requestPid = NULL;
-    subscriberReady.store(false, std::memory_order_relaxed);
 
     // Allocate Buffers
     rqstBuf = new char [MAX_RQST_BUF_LEN];
@@ -162,7 +162,7 @@ HttpClient::~HttpClient(void)
 {
     active.store(false);
     delete requestPid;
-    subscriberReady.store(false, std::memory_order_relaxed);
+    delete requestSub;
     delete requestPub;
     delete [] ipAddr;
     delete sock;
@@ -721,18 +721,16 @@ const char* HttpClient::parseChunkHeaderLine (int start, int term)
 }
 
 /*----------------------------------------------------------------------------
- * requestThread
+ * luaRequestThread
  *----------------------------------------------------------------------------*/
-void* HttpClient::requestThread(void* parm)
+void* HttpClient::luaRequestThread(void* parm)
 {
     HttpClient* client = static_cast<HttpClient*>(parm);
-    Subscriber* request_sub = new Subscriber(*(client->requestPub));
-    client->subscriberReady.store(true, std::memory_order_release);
 
     while(client->active.load())
     {
         rqst_t rqst;
-        const int recv_status = request_sub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
+        const int recv_status = client->requestSub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
         if(recv_status > 0)
         {
             try
@@ -753,9 +751,6 @@ void* HttpClient::requestThread(void* parm)
             break;
         }
     }
-
-    delete request_sub;
-    client->subscriberReady.store(false, std::memory_order_release);
 
     return NULL;
 }
@@ -812,52 +807,14 @@ int HttpClient::luaRequest (lua_State* L)
                 .verb = verb,
                 .resource = StringLib::duplicate(resource),
                 .data = StringLib::duplicate(data),
-                .outq = new Publisher(outq_name)
+                .outq = new Publisher(outq_name),
             };
-
-            /* Restart worker when subscriber flag is false:
-             * - The previous thread may have crashed or exited before building its Subscriber
-             * - Without at least one subscriber, MsgQ::postCopy will return STATE_NO_SUBSCRIBERS and silently drop requests
-             * - Resetting here guarantees we launch a fresh worker that will re-establish the subscription */
-            if(lua_obj->requestPid && !lua_obj->subscriberReady.load(std::memory_order_acquire))
-            {
-                /*
-                 * The previous worker thread exists but has not established its Subscriber yet
-                 * (subscriberReady == false). Deleting a joinable thread here would block
-                 * forever because the worker's loop runs while(active == true).
-                 * Gracefully stop the worker first so join can complete.
-                 */
-                lua_obj->active.store(false, std::memory_order_release);
-                delete lua_obj->requestPid;
-                lua_obj->requestPid = NULL;
-                lua_obj->active.store(true, std::memory_order_release); // re-enable for new worker
-                lua_obj->subscriberReady.store(false, std::memory_order_relaxed);
-            }
 
             /* Create Request Thread Upon First Request */
             if(!lua_obj->requestPid)
             {
-                lua_obj->subscriberReady.store(false, std::memory_order_relaxed);
-                lua_obj->requestPid = new Thread(requestThread, lua_obj);
-
-                /* Wait for subscriber to be ready (bounded to 5 seconds) */
-                const int MAX_WAIT_ITER = 5;
-                int wait_iter = 0;
-                while(!lua_obj->subscriberReady.load(std::memory_order_acquire) && (wait_iter++ < MAX_WAIT_ITER))
-                {
-                    OsApi::performIOTimeout();
-                }
-
-                if(!lua_obj->subscriberReady.load(std::memory_order_acquire))
-                {
-                    mlog(CRITICAL, "HTTP client request thread failed to start subscriber");
-                    delete lua_obj->requestPid;
-                    lua_obj->requestPid = NULL;
-                    delete [] rqst.resource;
-                    delete [] rqst.data;
-                    delete rqst.outq;
-                    return returnLuaStatus(L, false, num_rets);
-                }
+                lua_obj->requestSub = new Subscriber(*(lua_obj->requestPub));
+                lua_obj->requestPid = new Thread(luaRequestThread, lua_obj);
             }
 
             /* Post Request */

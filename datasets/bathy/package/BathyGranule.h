@@ -43,8 +43,6 @@
 #include "H5Object.h"
 #include "BathyFields.h"
 
-#include <atomic>
-
 /******************************************************************************
  * CLASS
  ******************************************************************************/
@@ -102,7 +100,6 @@ class BathyGranule: public LuaObject, public FieldDictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        std::atomic<bool>           active;
         Thread*                     pid;
         BathyFields*                parmsPtr;
         const BathyFields&          parms;
