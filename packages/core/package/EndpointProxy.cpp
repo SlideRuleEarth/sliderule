@@ -167,7 +167,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     endpoint    = StringLib::duplicate(_endpoint);
     parameters  = StringLib::duplicate(_parameters);
     sourceIP    = StringLib::duplicate(_source_ip);
-    outQ        = new Publisher(_outq_name, Publisher::defaultFree, numProxyThreads);
+    outQ        = new Publisher(_outq_name, numProxyThreads);
 
     /* Populate Resources Array */
     resources = new const char* [numResources];
@@ -184,7 +184,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     active.store(true);
 
     /* Create Proxy Threads */
-    rqstPub = new Publisher(NULL, NULL, PROXY_QUEUE_DEPTH);
+    rqstPub = new Publisher(NULL, PROXY_QUEUE_DEPTH);
     rqstSub = new Subscriber(*rqstPub);
     proxyPids = new Thread* [numProxyThreads];
     for(int t = 0; t < numProxyThreads; t++)

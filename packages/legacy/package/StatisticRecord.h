@@ -125,8 +125,6 @@ class StatisticRecord: public CommandableObject, public RecordObject
         int             attachCmd           (int argc, char argv[][MAX_CMD_SIZE]);
         int             clearCmd            (int argc, char argv[][MAX_CMD_SIZE]);
         int             setRateCmd          (int argc, char argv[][MAX_CMD_SIZE]);
-
-        static void     freePost            (void* obj, void* parm);
 };
 
 /******************************************************************************
@@ -350,7 +348,7 @@ int StatisticRecord<T>::attachCmd(int argc, char argv[][MAX_CMD_SIZE])
     const char* name = StringLib::checkNullStr(argv[0]);
     if(name)
     {
-        outQ = new Publisher(name, freePost);
+        outQ = new Publisher(name);
     }
 
     return 0;
@@ -405,17 +403,6 @@ int StatisticRecord<T>::setRateCmd(int argc, char argv[][MAX_CMD_SIZE])
     }
 
     return 0;
-}
-
-/*----------------------------------------------------------------------------
- * freePost
- *----------------------------------------------------------------------------*/
-template <class T>
-void StatisticRecord<T>::freePost(void* obj, void* parm)
-{
-    (void)parm;
-    unsigned char* mem = reinterpret_cast<unsigned char*>(obj);
-    delete [] mem;
 }
 
 #endif  /* __statistics_record__ */

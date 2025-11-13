@@ -121,7 +121,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-con
      */
 
     /* Create Publisher */
-    Publisher* pubq = new Publisher(unit_test_parms.qname, NULL, unit_test_parms.qdepth);
+    Publisher* pubq = new Publisher(unit_test_parms.qname, unit_test_parms.qdepth);
 
     /* Create Subscriber */
     Subscriber* subq = new Subscriber(unit_test_parms.qname);
@@ -312,7 +312,7 @@ int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert
     ut_initialize(lua_obj);
 
     /* Create Performance Test Data Structures */
-    Publisher* p = new Publisher("testq_03", NULL);
+    Publisher* p = new Publisher("testq_03");
     unsigned long sequence = 0;
 
     /* Iterate Over Number of Subscribers */
@@ -568,7 +568,7 @@ void* UT_MsgQ::publisherThread(void* parm)
 
     /* Create Queue */
     randomDelay(100);
-    Publisher* q = new Publisher(unit_test_parms->qname, NULL, unit_test_parms->qdepth);
+    Publisher* q = new Publisher(unit_test_parms->qname, unit_test_parms->qdepth);
     mlog(INFO, "Publisher thread %d created on queue %s", unit_test_parms->threadid, unit_test_parms->qname);
 
     /* Loop */

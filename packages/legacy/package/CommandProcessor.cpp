@@ -72,11 +72,11 @@ CommandProcessor::CommandProcessor(const char* cmdq_name): CommandableObject(thi
     executed_commands   = 0;
     rejected_commands   = 0;
 
-    cmdq_publisher      = new Publisher(cmdq_name, NULL, MsgQ::CFG_DEPTH_STANDARD, MAX_CMD_SIZE);
+    cmdq_publisher      = new Publisher(cmdq_name, MsgQ::CFG_DEPTH_STANDARD, MAX_CMD_SIZE);
     cmdq_subscriber     = new Subscriber(cmdq_name);
 
     char priq_name[MAX_STR_SIZE];
-    priq_publisher      = new Publisher(StringLib::format(priq_name, MAX_STR_SIZE, "%s%s", cmdq_name, PRIORITY_Q_SUFFIX), NULL, MsgQ::CFG_DEPTH_STANDARD, MAX_CMD_SIZE);
+    priq_publisher      = new Publisher(StringLib::format(priq_name, MAX_STR_SIZE, "%s%s", cmdq_name, PRIORITY_Q_SUFFIX), MsgQ::CFG_DEPTH_STANDARD, MAX_CMD_SIZE);
     priq_subscriber     = new Subscriber(priq_name);
 
     stopwatch_time      = 0.0;

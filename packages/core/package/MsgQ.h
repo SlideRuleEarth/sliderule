@@ -75,8 +75,6 @@ class MsgQ
             int         subscriptions;
         } queueDisplay_t;
 
-        typedef void (*free_func_t) (void* obj, void* parm);
-
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -96,8 +94,8 @@ class MsgQ
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        MsgQ            (const char* name, free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
+        explicit        MsgQ            (const char* name, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+                        MsgQ            (const MsgQ& existing_q);
                         ~MsgQ           (void);
 
                 int     getCount        (void);
@@ -148,7 +146,6 @@ class MsgQ
             std::atomic<int>        len;                                // current number of items queue is holding
             int                     max_data_size;                      // maximum size of an item that is allowed to be queued
             int                     soo_count;                          // the number of subscriber of opportunities subscribed to this queue
-            free_func_t             free_func;                          // call-back to delete data when nodes reclaimed
             Cond*                   locknblock;                         // conditional "signal" when queue has data to be read or able to be written
             int                     state;                              // state of queue
             int                     attachments;                        // number of publishers and subscribers on this queue
@@ -189,8 +186,8 @@ class Publisher: public MsgQ
 
         static const int MAX_POSTED_STR = 1024;
 
-        explicit    Publisher       (const char* name, MsgQ::free_func_t free_func=defaultFree, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-        explicit    Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=defaultFree);
+        explicit    Publisher       (const char* name, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit    Publisher       (const MsgQ& existing_q);
                     ~Publisher      (void);
 
 
@@ -198,8 +195,6 @@ class Publisher: public MsgQ
         int         postCopy        (const void* data, int size, int timeout=IO_CHECK);
         int         postCopy        (const void* data, int size, const void* secondary_data, int secondary_size, int timeout=IO_CHECK);
         int         postString      (const char* format_string, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
-
-        static void defaultFree     (void* obj, void* parm);
 
     private:
 

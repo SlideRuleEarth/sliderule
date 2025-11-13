@@ -281,7 +281,7 @@ ArrowSampler::ArrowSampler(lua_State* L, RequestFields* rqst_parms, const char* 
 
         /* Initialize Queues */
         const int qdepth = 0x4000000;   // 64MB
-        outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
+        outQ = new Publisher(outq_name, qdepth);
 
         /* Process Input File */
         impl->processInputFile(input_file, points);

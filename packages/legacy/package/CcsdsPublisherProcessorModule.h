@@ -53,7 +53,6 @@ class CcsdsPublisherProcessorModule: public CcsdsProcessorModule
          *--------------------------------------------------------------------*/
 
         static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
-        static void freePkt (void* obj, void* parm);
 
     private:
 

@@ -117,7 +117,7 @@ CcsdsPacketProcessor::CcsdsPacketProcessor(CommandProcessor* cmd_proc, const cha
     }
 
     /* Create and Start Parser Threads */
-    pubAvailQ = new Publisher(NULL, freeWorker, numWorkerThreads, sizeof(workerThread_t));
+    pubAvailQ = new Publisher(NULL, numWorkerThreads, sizeof(int));
     subAvailQ = new Subscriber(*pubAvailQ);
     workerThreads = new Thread* [numWorkerThreads];
     workerThreadPool = new workerThread_t[numWorkerThreads];
@@ -127,10 +127,11 @@ CcsdsPacketProcessor::CcsdsPacketProcessor(CommandProcessor* cmd_proc, const cha
         workerThreadPool[i].processor = NULL;
         workerThreadPool[i].segments = NULL;
         workerThreadPool[i].numpkts = 0;
+        workerThreadPool[i].index = i;
         workerThreadPool[i].availq = pubAvailQ;
 
         workerThreads[i] = new Thread(workerThread, &workerThreadPool[i]);
-        pubAvailQ->postRef(&workerThreadPool[i], sizeof(workerThread_t));
+        pubAvailQ->postCopy(&workerThreadPool[i].index, sizeof(int));
     }
 
     /* Initialize Packet Parsing Data */
@@ -428,7 +429,7 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
         worker->segments = NULL; // informs resetProcessing() that segments has been freed
 
         /* Make Available Again */
-        const int status = worker->availq->postRef(worker, sizeof(workerThread_t));
+        const int status = worker->availq->postCopy(&worker->index, sizeof(int));
         if(status <= 0)
         {
             mlog(CRITICAL, "Failed to post available worker ...exiting thread!");
@@ -509,12 +510,11 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                 }
 
                 /* Grab Available Worker */
-                Subscriber::msgRef_t ref;
-                const int status = subAvailQ->receiveRef(ref, 5000); // wait for five seconds
+                int worker_index;
+                const int status = subAvailQ->receiveCopy(&worker_index, sizeof(int), 5000); // wait for five seconds
                 if(status > 0)
                 {
-                    subAvailQ->dereference(ref, false); // free up memory in message queue, but don't delete the worker
-                    workerThread_t* worker = static_cast<workerThread_t*>(ref.data);
+                    workerThread_t* worker = &workerThreadPool[worker_index];
 
                     /* Configure Worker */
                     worker->processor   = pktProcessor[apid].processor;
