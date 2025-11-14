@@ -34,11 +34,13 @@ import numpy
 import tempfile
 import json
 import geopandas
+import pdal
 from shapely.geometry import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
 from datetime import datetime
 from sliderule import version
 from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError, RetryRequest
+from pyproj import CRS
 
 try:
     from sklearn.cluster import KMeans
@@ -768,6 +770,124 @@ def getvalues(data, dtype, size, num_elements=0):
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
     return values
 
+###############################################################################
+# LAS/LAZ Utilities
+###############################################################################
+
+#
+# Load LAS/LAZ File into GeoDataFrame
+#
+def load_las(path):
+    '''
+    Load a LAS/LAZ file into a GeoDataFrame using PDAL.
+
+    Parameters
+    ----------
+        path:               str or os.PathLike
+                            path to the LAS/LAZ file to load
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        GeoDataFrame containing the LAS/LAZ contents (metadata stored in attrs)
+    '''
+    path = os.fspath(path)
+    arrays, metadata = _read_las_arrays(path)
+    return _arrays_to_geodataframe(arrays, metadata, path)
+
+def _las_spatial_reference(metadata):
+    if not isinstance(metadata, dict):
+        return None
+    for key in ["comp_spatialreference", "spatialreference"]:
+        value = metadata.get(key)
+        if value:
+            return value
+    return None
+
+def _read_las_arrays(path):
+    pipeline_json = json.dumps({"pipeline": [{"type": "readers.las", "filename": path}]})
+    pipeline = pdal.Pipeline(pipeline_json)
+    try:
+        if hasattr(pipeline, "validate"):
+            pipeline.validate()
+        pipeline.execute()
+    except RuntimeError as exc:
+        raise FatalError(f'failed to load LAS/LAZ file {path}: {exc}') from exc
+    arrays = list(pipeline.arrays)
+    metadata = _normalize_pdal_metadata(pipeline.metadata)
+    return arrays, metadata
+
+def _normalize_pdal_metadata(raw_metadata):
+    metadata = raw_metadata
+    if isinstance(metadata, (bytes, bytearray)):
+        metadata = metadata.decode('utf-8')
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except Exception as exc:
+            logger.debug(f'Unable to parse PDAL metadata JSON: {exc}')
+            return {}
+    if isinstance(metadata, dict):
+        node = metadata.get('metadata')
+        if isinstance(node, dict):
+            readers = node.get('readers.las')
+            if isinstance(readers, dict):
+                return readers
+        return metadata
+    return {}
+
+def _select_column(columns, candidates):
+    for candidate in candidates:
+        cand_lower = candidate.lower()
+        for column in columns:
+            if column.lower() == cand_lower:
+                return column
+    return None
+
+def _arrays_to_geodataframe(arrays, metadata, path):
+    # Helper to attach LAS metadata to any GeoDataFrame
+    def attach_las_metadata(gdf):
+        gdf.attrs["las_path"] = path
+        gdf.attrs["pdal_metadata"] = metadata
+        spatial_ref = _las_spatial_reference(metadata)
+        if spatial_ref:
+            gdf.attrs["las_spatialreference"] = spatial_ref
+        vlrs = metadata.get("vlrs")
+        if isinstance(vlrs, (list, dict)):
+            gdf.attrs["las_vlrs"] = vlrs
+        return gdf
+
+    if not arrays:
+        gdf = emptyframe()
+        attach_las_metadata(gdf)
+        return gdf
+
+    # Merge PDAL arrays
+    record = arrays[0] if len(arrays) == 1 else numpy.concatenate(arrays)
+    df = geopandas.pd.DataFrame({name: record[name] for name in record.dtype.names})
+
+    # Coordinate fields
+    x_col = _select_column(df.columns, ["X", "longitude", "lon"])
+    y_col = _select_column(df.columns, ["Y", "latitude", "lat"])
+    z_col = _select_column(df.columns, ["Z", "height", "h"])
+
+    if not (x_col and y_col and z_col):
+        raise FatalError(f"missing coordinate fields in LAS/LAZ file: {path}")
+
+    # Geometry and CRS
+    geometry = geopandas.points_from_xy(df[x_col], df[y_col], df[z_col])
+    spatial_ref = _las_spatial_reference(metadata)
+    crs = CRS.from_user_input(spatial_ref)
+
+    # Build GeoDataFrame
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=crs)
+
+    # Add height column if needed
+    if "height" not in gdf.columns and z_col.lower() != "height":
+        gdf["height"] = geopandas.pd.Series(df[z_col], index=gdf.index)
+
+    attach_las_metadata(gdf)
+    return gdf
+
 #
 # Process Output File
 #
@@ -803,25 +923,29 @@ def procoutputfile(parm, rsps):
             local_file = geopandas.pd.read_feather(path) # Feather
         elif output["format"] == "csv":
             local_file = geopandas.pd.read_csv(path) # CSV
+        elif output["format"] == "las" or output["format"] == "laz":
+            local_file = load_las(path)
         else:
             raise FatalError('unsupported output format: %s' % (output["format"]))
 
-        # Read metadata from file
-        try:
-            # Imports needed just to read metadata
-            import pyarrow.parquet as pq
-            import ctypes
-            import json
-            # pull out metadata
-            metadata = pq.read_metadata(path)
-            for key in metadata.metadata:
-                if key in [b'ARROW:schema', b'pandas', b'geo']:
-                    continue
-                metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
-                local_file.attrs[key.decode('ascii')] = json.loads(metadata_str)
-        except Exception as e:
-            # could fail for a multitude of reasons; just log and move on
-            logger.debug(f'Failed to read metadata from {path}: {e}')
+        # Only read Parquet metadata for Parquet or GeoParquet
+        if output["format"] in ("parquet", "geoparquet"):
+            # Read metadata from file
+            try:
+                # Imports needed just to read metadata
+                import pyarrow.parquet as pq
+                import ctypes
+                import json
+                # pull out metadata
+                metadata = pq.read_metadata(path)
+                for key in metadata.metadata:
+                    if key in [b'ARROW:schema', b'pandas', b'geo']:
+                        continue
+                    metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
+                    local_file.attrs[key.decode('ascii')] = json.loads(metadata_str)
+            except Exception as e:
+                # could fail for a multitude of reasons; just log and move on
+                logger.debug(f'Failed to read metadata from {path}: {e}')
 
     # Return back to caller either path or opened dataframe
     return local_file
