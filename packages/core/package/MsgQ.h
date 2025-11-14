@@ -39,8 +39,6 @@
 #include "OsApi.h"
 #include "Dictionary.h"
 
-#include <atomic>
-
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
@@ -143,13 +141,13 @@ class MsgQ
             queue_node_t*           back;                               // queue in
             const char*             name;                               // name of the message queue
             int                     depth;                              // maximum number of items queue can hold
-            std::atomic<int>        len;                                // current number of items queue is holding
+            int                     len;                                // current number of items queue is holding
             int                     max_data_size;                      // maximum size of an item that is allowed to be queued
             int                     soo_count;                          // the number of subscriber of opportunities subscribed to this queue
             Cond*                   locknblock;                         // conditional "signal" when queue has data to be read or able to be written
             int                     state;                              // state of queue
             int                     attachments;                        // number of publishers and subscribers on this queue
-            std::atomic<int>        subscriptions;                      // number of subscribers on this queue
+            int                     subscriptions;                      // number of subscribers on this queue
             int                     max_subscribers;                    // current allocation of subscriber-based buffers
             subscriber_type_t*      subscriber_type;                    // [max_subscribers] type of subscription for the id
             queue_node_t**          curr_nodes;                         // [max_subscribers] used for subscriptions
