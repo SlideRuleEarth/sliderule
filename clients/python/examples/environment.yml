@@ -13,22 +13,23 @@ dependencies:
   - ipyleaflet
   - jupyterlab
   - jupyterlab_widgets
-  - matplotlib
+  - h5coro
   - ipympl
+  - matplotlib
   - numpy
   - pandas
   - pip
+  - pyarrow
   - pyproj
   - pytables
   - pytest
   - python
+  - python-pdal
   - requests
   - scikit-learn
   - scipy
   - setuptools_scm
   - shapely
+  - sliderule
   - tk
   - xyzservices
-  - pyarrow
-  - python-pdal
-  - sliderule
