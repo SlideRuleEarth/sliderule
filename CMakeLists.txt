@@ -149,7 +149,6 @@ option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 
 # Package Options #
 
-option (USE_LAS_PACKAGE "Include the PDAL LAS package" ON)
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" ON)
 option (USE_AWS_PACKAGE "Include the AWS package" ON)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
@@ -157,6 +156,7 @@ option (USE_CRE_PACKAGE "Include the container runtime environment package" ON)
 option (USE_GEO_PACKAGE "Include the geospatial library (GDAL) package" ON)
 option (USE_H5_PACKAGE "Include the H5Coro package" ON)
 option (USE_HDF_PACKAGE "Include the HDFGroup package" OFF)
+option (USE_LAS_PACKAGE "Include the PDAL LAS package" ON)
 option (USE_LEGACY_PACKAGE "Include the legacy (CommandProcessor) package" OFF)
 option (USE_STREAMING_PACKAGE "Include the streaming (RecordDispatcher) package" ON)
 

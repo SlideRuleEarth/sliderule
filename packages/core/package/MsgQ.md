@@ -79,9 +79,6 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 
 `MsgQ::queueDisplay_t` : Defines a description structure for a queue that can be used to display information about the queue.  The **_name_** provides the name of the queue.  The **_len_** provides the number of objects that are queued.  The **_state_** is the current state of the queue.  The **_subscriptions_** is the number of subscribers that are attached to the queue.
 
-`MsgQ::free_func_t` : Defines a pointer to a function that frees the queued object.  All publishers that post by reference must also specify a free function that is used by the message queue to free the resources associated with the object once all references to the object have been dereferenced.  Publishers that post by copy do not need to specify such a function since the memory is allocated internally as an array of bytes.
-
-
 #### Methods
 
 | | | |
@@ -93,17 +90,15 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 
 ##### MsgQ
 
-`MsgQ::MsgQ (const char* name, MsgQ::free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Base constructor for message queues.  Except in rare cases when the characteristics of a message queue need to be established before any subscribers or publishers are created, this constructor should not be directly called.  Instead the Subscriber or Publisher constructors should be called which will in turn call this constructor with the appropriate settings.
+`MsgQ::MsgQ (const char* name, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Base constructor for message queues.  Except in rare cases when the characteristics of a message queue need to be established before any subscribers or publishers are created, this constructor should not be directly called.  Instead the Subscriber or Publisher constructors should be called which will in turn call this constructor with the appropriate settings.
 
 * **name** - the name of the message queue, null if a private queue
-* **free_func** - the function used to free queued objects after they have been fully dereferenced
 * **depth** - the maximum number of objects that can be queued at one time in the message queue
 * **data_size** - the maximum size of the object that can be queued in the message queue
 
-`MsgQ::MsgQ (const MsgQ& existing_q, MsgQ::free_func_t free_func=NULL)` : Base constructor for message queues where the underlying queue already exists.  This supports private message queues created from the Publisher and Subscriber class constructors.
+`MsgQ::MsgQ (const MsgQ& existing_q)` : Base constructor for message queues where the underlying queue already exists.  This supports private message queues created from the Publisher and Subscriber class constructors.
 
 * **existing_q** - an existing message queue
-* **free_func** - the function used to free queued objects after they have been fully dereferenced
 
 `MsgQ::~MsgQ (void)` : Base destructor for all message queues.  Handles freeing resources associated with message queue once all subscribers and publishers have detached.
 
@@ -133,17 +128,15 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 
 ##### Publisher
 
-`Publisher::Publisher (const char* name, MsgQ::free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Constructor for the Publisher class.  This will create a publishing attachment to the specified message queue.  If the queue does not exist, it will create the queue with the parameters specified.  If the queue does exist, the parameters specified will be ignored and the attachment will proceed.
+`Publisher::Publisher (const char* name, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Constructor for the Publisher class.  This will create a publishing attachment to the specified message queue.  If the queue does not exist, it will create the queue with the parameters specified.  If the queue does exist, the parameters specified will be ignored and the attachment will proceed.
 
 * **name** - the name of the message queue
-* **free_func** - the function used to free queued objects after they have been fully dereferenced
 * **depth** - the maximum number of objects that can be queued at one time in the message queue
 * **data_size** - the maximum size of the object that can be queued in the message queue
 
-`Publisher::Publisher (const MsgQ& existing_q, MsgQ::free_func_t free_func=NULL)` : Constructor for Publisher class where the underlying queue already exists.  This supports private message queues created by other Publishers or Subscribers.
+`Publisher::Publisher (const MsgQ& existing_q)` : Constructor for Publisher class where the underlying queue already exists.  This supports private message queues created by other Publishers or Subscribers.
 
 * **existing_q** - an existing message queue
-* **free_func** - the function used to free queued objects after they have been fully dereferenced
 
 `Publisher::~Publisher (void)` : Destructor for the Publisher class.  Detaches the publisher from the message queue, frees resources associated with the publisher only, and then calls the MsgQ destructor.
 
@@ -211,13 +204,13 @@ _Returns_ - the function will return the state of the message queue at the time 
 `bool Subscriber::dereference (msgRef_t& ref, bool with_delete=true)` : Dereferences the queued object identified by the _ref_ structure.  When receiving a message by reference, this call MUST be made to free the resources associated with the message.
 
 * **ref** - a reference to a msgRef_t structure.  The contents of the structure will be read by the function and used to properly dereference the associated queue node.  Limited error checking can be performed on this parameter; therefore, passing an invalid ref structure will cause unknown (e.g. but almost certainly) bad behaviors.
-* **with_delete** - if true (which is the default), then the message queue resources and data associated with the queued object will be freed (by calling the associated free_func for the latter).  If false, then only the message queue resources associated with the queued object will be freed, and the queued object itself will be left alone.
+* **with_delete** - if true (which is the default), then the message queue resources and data associated with the queued object will be freed.  If false, then only the message queue resources associated with the queued object will be freed, and the queued object itself will be left alone.
 
 _Returns_ - true on success, false on failure.  Currently, there is no condition which causes it to fail.
 
 `void Subscriber::drain (bool with_delete=true)` : All messages in the message queue still waiting to be read by the subscriber are immediately derferenced as if the subscriber had read the entire queue.  The subscriber is moved up to the top of message queue and returned an empty view of the queue.
 
-* **with_delete** - if true (which is the default), then the message queue resources and data associated with the queued objects will be freed (by calling the associated free_func for the latter).  If false, then only the message queue resources associated with the queued objects will be freed, and the queued object itself will be left alone.
+* **with_delete** - if true (which is the default), then the message queue resources and data associated with the queued objects will be freed.  If false, then only the message queue resources associated with the queued objects will be freed, and the queued object itself will be left alone.
 
 ##### Receive Copy
 
@@ -234,8 +227,7 @@ _Returns_ - the function will return the size of the data object dequeued and co
 
 #### Example - Post By Reference
 ```cpp
-    void my_free_func(void* obj, void* parm) { delete [] (unsigned char*) obj; }
-    Publisher* myq = new Publisher("myq_name", my_free_func);
+    Publisher* myq = new Publisher("myq_name");
     unsigned char* buf = new unsigned char[MY_BUF_SIZE];
     int status = myq->postRef(buf, MY_BUF_SIZE, 1000);
     if(status <= 0) delete [] buf;

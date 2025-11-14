@@ -55,7 +55,7 @@ Mutex MsgQ::listmut;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_size)
+MsgQ::MsgQ(const char* name, int depth, int data_size)
 {
     /* Create Queue */
     listmut.lock();
@@ -64,9 +64,6 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
         {
             msgQ = queues[name].queue; // exception thrown here if name is null or not found
             msgQ->attachments++; // if found, then another attachment is made
-            // set free function to support publishers later establishing a
-            // free function on a queue created by a subscriber
-            if(!msgQ->free_func && free_func) msgQ->free_func = free_func;
         }
         catch(RunTimeException& e)
         {
@@ -78,7 +75,6 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             msgQ->len               = 0;
             msgQ->max_data_size     = data_size;
             msgQ->soo_count         = 0;
-            msgQ->free_func         = free_func;
             msgQ->locknblock        = new Cond(NUMSIGS);
             msgQ->state             = STATE_OKAY;
             msgQ->attachments       = 1;
@@ -113,15 +109,12 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-MsgQ::MsgQ(const MsgQ& existing_q, free_func_t free_func)
+MsgQ::MsgQ(const MsgQ& existing_q)
 {
     listmut.lock();
     {
         msgQ = existing_q.msgQ;
         msgQ->attachments++;
-        // set free function to support publishers later establishing a
-        // free function on a queue created by a subscriber
-        if(!msgQ->free_func && free_func) msgQ->free_func = free_func;
     }
     listmut.unlock();
 }
@@ -161,7 +154,10 @@ MsgQ::~MsgQ()
  *----------------------------------------------------------------------------*/
 int MsgQ::getCount(void)
 {
-    return msgQ->len.load();
+    msgQ->locknblock->lock();
+    const int count = msgQ->len;
+    msgQ->locknblock->unlock();
+    return count;
 }
 
 /*----------------------------------------------------------------------------
@@ -185,7 +181,10 @@ const char* MsgQ::getName(void)
  *----------------------------------------------------------------------------*/
 int MsgQ::getSubCnt(void)
 {
-    return msgQ->subscriptions.load();
+    msgQ->locknblock->lock();
+    const int sub_cnt = msgQ->subscriptions;
+    msgQ->locknblock->unlock();
+    return sub_cnt;
 }
 
 /*----------------------------------------------------------------------------
@@ -253,12 +252,14 @@ int MsgQ::listQ(queueDisplay_t* list, int list_size)
         while(curr_name)
         {
             if(j >= list_size) break;
-            list[j].name = curr_q.queue->name;
-            list[j].len = curr_q.queue->len;
-            list[j].subscriptions = curr_q.queue->subscriptions;
             curr_q.queue->locknblock->lock();
+            const int len = curr_q.queue->len;
+            const int subscriptions = curr_q.queue->subscriptions;
             const int state = curr_q.queue->state;
             curr_q.queue->locknblock->unlock();
+            list[j].name = curr_q.queue->name;
+            list[j].len = len;
+            list[j].subscriptions = subscriptions;
             switch(state)
             {
                 case STATE_OKAY:        list[j].state = "OKAY";       break;
@@ -287,7 +288,7 @@ bool MsgQ::is_full(void)
         return false;
     }
 
-    return (msgQ->len.load() >= msgQ->depth);
+    return (msgQ->len >= msgQ->depth);
 }
 
 /******************************************************************************
@@ -297,14 +298,14 @@ bool MsgQ::is_full(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Publisher::Publisher(const char* name, MsgQ::free_func_t free_func, int depth, int data_size): MsgQ(name, free_func, depth, data_size)
+Publisher::Publisher(const char* name, int depth, int data_size): MsgQ(name, depth, data_size)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Publisher::Publisher (const MsgQ& existing_q, MsgQ::free_func_t free_func): MsgQ(existing_q, free_func)
+Publisher::Publisher (const MsgQ& existing_q): MsgQ(existing_q)
 {
 }
 
@@ -317,9 +318,8 @@ Publisher::~Publisher() = default;
  * postRef
  *
  *  Assumptions:
- *  1. free_func != NULL
- *  2. data != NULL
- *  3. size > 0
+ *  1. data != NULL
+ *  2. size > 0
  *----------------------------------------------------------------------------*/
 int Publisher::postRef(void* data, int size, int timeout)
 {
@@ -393,15 +393,6 @@ int Publisher::postString(const char* format_string, ...)
 }
 
 /*----------------------------------------------------------------------------
- * defaultFree
- *----------------------------------------------------------------------------*/
-void Publisher::defaultFree(void* obj, void* parm)
-{
-    (void)parm;
-    delete[] reinterpret_cast<char*>(obj);
-}
-
-/*----------------------------------------------------------------------------
  * post
  *----------------------------------------------------------------------------*/
 int Publisher::post(void* data, unsigned int mask, const void* secondary_data, unsigned int secondary_size, int timeout)
@@ -420,7 +411,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             /* size is too big */
             post_state = STATE_SIZE_ERROR;
         }
-        else if(msgQ->subscriptions.load() <= 0)
+        else if(msgQ->subscriptions <= 0)
         {
             /* don't post messages to a queue with no subscribers */
             post_state = STATE_NO_SUBSCRIBERS;
@@ -478,7 +469,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             /* construct node to be added */
             temp->mask = mask + secondary_size;
             temp->next = NULL; // for queue
-            temp->refs = msgQ->subscriptions.load();
+            temp->refs = msgQ->subscriptions;
 
             /* place temp node into queue */
             if(msgQ->back == NULL)  msgQ->front = temp;
@@ -497,7 +488,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             }
 
             /* increment queue size */
-            msgQ->len.fetch_add(1);
+            msgQ->len++;
 
             /* trigger ready */
             msgQ->locknblock->signal(READY2RECV);
@@ -536,7 +527,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Subscriber::Subscriber(const char* name, subscriber_type_t type, int depth, int data_size): MsgQ(name, NULL, depth, data_size)
+Subscriber::Subscriber(const char* name, subscriber_type_t type, int depth, int data_size): MsgQ(name, depth, data_size)
 {
     init_subscriber(type);
 }
@@ -544,7 +535,7 @@ Subscriber::Subscriber(const char* name, subscriber_type_t type, int depth, int 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Subscriber::Subscriber(const MsgQ& existing_q, subscriber_type_t type): MsgQ(existing_q, NULL)
+Subscriber::Subscriber(const MsgQ& existing_q, subscriber_type_t type): MsgQ(existing_q)
 {
     init_subscriber(type);
 }
@@ -566,7 +557,7 @@ Subscriber::~Subscriber()
         const bool space_reclaimed = reclaim_nodes(true);
 
         /* Clean up Remaining Free Blocks */
-        if(msgQ->subscriptions.load() == 1)
+        if(msgQ->subscriptions == 1)
         {
             if(msgQ->free_blocks > 0)
             {
@@ -575,8 +566,7 @@ Subscriber::~Subscriber()
                     queue_node_t* temp = reinterpret_cast<queue_node_t*>(msgQ->free_block_stack[i]);
                     if((temp->mask & MSGQ_COPYQ_MASK) == 0)
                     {
-                        if(msgQ->free_func) (*msgQ->free_func)(temp->data, NULL);
-                        else                assert(msgQ->free_func);
+                        delete [] temp->data;
                     }
                     delete [] msgQ->free_block_stack[i];
                 }
@@ -588,7 +578,7 @@ Subscriber::~Subscriber()
         /* Unregister */
         if(msgQ->subscriber_type[id] == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count--;
         msgQ->subscriber_type[id] = UNSUBSCRIBED;
-        msgQ->subscriptions.fetch_sub(1);
+        msgQ->subscriptions--;
 
         /* Signal Publishers */
         if(space_reclaimed)
@@ -844,8 +834,10 @@ bool Subscriber::reclaim_nodes(bool delete_data)
                 queue_node_t* temp = reinterpret_cast<queue_node_t*>(msgQ->free_block_stack[i]);
                 if((temp->mask & MSGQ_COPYQ_MASK) == 0)
                 {
-                    if(msgQ->free_func && delete_data)  (*msgQ->free_func)(temp->data, NULL);
-                    else                                assert(msgQ->free_func);
+                    if(delete_data)
+                    {
+                        delete [] temp->data;
+                    }
                 }
                 delete [] msgQ->free_block_stack[i];
             }
@@ -853,7 +845,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
         }
 
         /* decrement queue length */
-        msgQ->len.fetch_sub(1);
+        msgQ->len--;
         space_reclaimed = true;
     }
 
@@ -869,7 +861,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
     {
         /* Check Need to Resize */
         const int old_max_subscribers = msgQ->max_subscribers;
-        if(msgQ->subscriptions.load() >= msgQ->max_subscribers)
+        if(msgQ->subscriptions >= msgQ->max_subscribers)
         {
             msgQ->max_subscribers *= 2;
         }
@@ -916,7 +908,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
                 id = i;
                 msgQ->subscriber_type[id] = type;
                 if(type == SUBSCRIBER_OF_OPPORTUNITY) msgQ->soo_count++;
-                msgQ->subscriptions.fetch_add(1);
+                msgQ->subscriptions++;
                 break;
             }
         }

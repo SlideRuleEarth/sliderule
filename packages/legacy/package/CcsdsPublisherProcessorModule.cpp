@@ -61,16 +61,6 @@ CommandableObject* CcsdsPublisherProcessorModule::createObject(CommandProcessor*
     return new CcsdsPublisherProcessorModule(cmd_proc, name, pubq_name);
 }
 
-/*----------------------------------------------------------------------------
- * freePkt
- *----------------------------------------------------------------------------*/
-void CcsdsPublisherProcessorModule::freePkt(void* obj, void* parm)
-{
-    (void)parm;
-    unsigned char* pkt = reinterpret_cast<unsigned char*>(obj);
-    delete [] pkt;
-}
-
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -82,7 +72,7 @@ CcsdsPublisherProcessorModule::CcsdsPublisherProcessorModule(CommandProcessor* c
     CcsdsProcessorModule(cmd_proc, obj_name)
 {
     assert(pubq_name);
-    pubQ = new Publisher(pubq_name, freePkt);
+    pubQ = new Publisher(pubq_name);
 
     concatSegments = false;
     checkLength = false;

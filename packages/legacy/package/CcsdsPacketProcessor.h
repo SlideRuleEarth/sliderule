@@ -90,6 +90,7 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
             List<CcsdsSpacePacket*>*    segments;   // passed from pktProcessor_t
             unsigned int                numpkts;
             unsigned int                tries;      // 0 is infinite
+            int                         index;
             Sem                         runsem;
             Publisher*                  availq;
         } workerThread_t;

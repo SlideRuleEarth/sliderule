@@ -307,7 +307,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
 
     /* Initialize Queues */
     const int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
-    outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
+    outQ = new Publisher(outq_name, qdepth);
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Allocate Implementation */

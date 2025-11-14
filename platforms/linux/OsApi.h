@@ -139,7 +139,8 @@ typedef enum {
     RTE_NOT_ENOUGH_MEMORY       = -6,
     RTE_SCRIPT_DOES_NOT_EXIST   = -7,
     RTE_UNAUTHORIZED            = -8,
-    RTE_DID_NOT_COMPLETE        = -9
+    RTE_DID_NOT_COMPLETE        = -9,
+    RTE_TOO_MANY_RESOURCES      = -10
 } alert_code_t;
 
 /* Ordered Key */
