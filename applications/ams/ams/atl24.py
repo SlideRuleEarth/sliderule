@@ -39,53 +39,65 @@ def init_app(app):
 ####################
 
 #
+# Check State
+#
+def check_state(state):
+    if not state['WHERE']:
+        state['WHERE'] = True
+        return 'WHERE'
+    else:
+        return 'AND'
+
+#
 # Build Time Query
 #
-def build_time_query():
+def build_time_query(state):
     t0 = request.args.get('t0')
     t1 = request.args.get('t1')
     if t0 != None and t1 != None:
-        return f"WHERE begin_time BETWEEN '{t0}' AND '{t1}'"
+        return f"{check_state(state)} begin_time BETWEEN '{t0}' AND '{t1}'"
     elif t0 != None:
-        return f"WHERE begin_time >= '{t0}'"
+        return f"{check_state(state)} begin_time >= '{t0}'"
     elif t1 != None:
-        return f"WHERE begin_time <= '{t1}'"
+        return f"{check_state(state)} begin_time <= '{t1}'"
     else:
         return ''
 
 #
 # Build Range Query
 #
-def build_range_query(db_field, r0_field, r1_field):
+def build_range_query(state, db_field, r0_field, r1_field):
     r0 = request.args.get(r0_field)
     r1 = request.args.get(r1_field)
     if r0 != None and r1 != None:
-        return f"WHERE {db_field} BETWEEN {r0} AND {r1}"
+        return f"{check_state(state)} {db_field} BETWEEN {r0} AND {r1}"
     elif r0 != None:
-        return f'WHERE {db_field} >= {r0}'
+        return f'{check_state(state)} {db_field} >= {r0}'
     elif r1 != None:
-        return f'WHERE {db_field} <= {r1}'
+        return f'{check_state(state)} {db_field} <= {r1}'
     else:
         return ''
 
 #
 # Build Matching Query
 #
-def build_matching_query(db_field, m_field):
+def build_matching_query(state, db_field, m_field):
     m = request.args.get(m_field)
     if m != None:
-        return f'WHERE {db_field} == {m}'
+        return f'{check_state(state)} {db_field} == {m}'
     else:
         return ''
 
 #
 # Build Geometry Query
 #
-def build_geometry_query(poly_field):
+def build_geometry_query(state, poly_field):
     poly = request.args.get(poly_field)
     if poly != None:
-        poly_str = f"POLYGON(({','.join(poly.split(' '))}))"
-        return f"WHERE ST_Intersects(geometry, ST_PolygonFromText('{poly_str}'));"
+        points = poly.split(' ')
+        coords = [f'{points[i]} {points[i+1]}' for i in range(0, len(points), 2)]
+        poly_str = f"POLYGON(({','.join(coords)}))"
+        return f"{check_state(state)} ST_Intersects(geometry, ST_GeomFromText('{poly_str}'));"
     else:
         return ''
 
@@ -100,17 +112,18 @@ def build_geometry_query(poly_field):
 def atl24_route():
     try:
         # execute query
+        state = {'WHERE': False}
         db = __get_atl24()
         cmd = f"""
             SELECT *
             FROM atl24db
-            {build_time_query()}
-            {build_matching_query("season", "season")}
-            {build_range_query("bathy_photons", "photons0", "photons1")}
-            {build_range_query("bathy_mean_depth", "meandepth0", "meandepth1")}
-            {build_range_query("bathy_min_depth", "mindepth0", "mindepth1")}
-            {build_range_query("bathy_max_depth", "maxdepth0", "maxdepth1")}
-            {build_geometry_query("poly")}
+            {build_time_query(state)}
+            {build_matching_query(state, "season", "season")}
+            {build_range_query(state, "bathy_photons", "photons0", "photons1")}
+            {build_range_query(state, "bathy_mean_depth", "meandepth0", "meandepth1")}
+            {build_range_query(state, "bathy_min_depth", "mindepth0", "mindepth1")}
+            {build_range_query(state, "bathy_max_depth", "maxdepth0", "maxdepth1")}
+            {build_geometry_query(state, "poly")}
         """
         print(cmd)
         df = db.execute(cmd).df()
