@@ -253,7 +253,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
                 rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
-                status_code = RTE_SCRIPT_DOES_NOT_EXIST;
+                status_code = RTE_RESOURCE_DOES_NOT_EXIST;
             }
         }
         else

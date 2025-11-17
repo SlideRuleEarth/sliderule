@@ -367,7 +367,7 @@ static CURL* initializeWriteRequest (const FString& url, headers_t headers, writ
     }
     else
     {
-        mlog(CRITICAL, "Failed to initialize cURL put request");
+        throw RunTimeException(ERROR, RTE_FAILURE, "Failed to initialize cURL put request");
     }
 
     /* Return Handle */
@@ -726,95 +726,96 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
 {
-    bool status = false;
+    CURL* curl = NULL;
+    file_data_t data = {NULL, 0};
+    struct curl_slist* headers = NULL;
+    bool rqst_complete = false;
 
-    /* Massage Key */
-    const char* key_ptr = key;
-    if(key_ptr[0] == '/') key_ptr++;
-
-    /* Setup File Data for Callback */
-    file_data_t data;
-    data.size = 0;
-    data.fd = fopen(filename, "r");
-    if(data.fd)
+    try
     {
+        /* Open File */
+        data.fd = fopen(filename, "r");
+        if(!data.fd)
+        {
+            char err_buf[256];
+            throw RunTimeException(ERROR, RTE_FAILURE, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)))
+        }
+
         /* Get Size of File */
         fseek(data.fd, 0L, SEEK_END);
         const long content_length = ftell(data.fd);
         fseek(data.fd, 0L, SEEK_SET);
+        if(content_length == 0)
+        {
+            throw RunTimeException(ERROR, RTE_RESOURCE_EMPTY, "File is empty: %s", filename);
+        }
 
         /* Build Headers */
-        struct curl_slist* headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
+        headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
+
+        /* Massage Key */
+        const char* key_ptr = key;
+        if(key_ptr[0] == '/') key_ptr++;
 
         /* Build URL */
         const FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
         /* Initialize cURL Request */
-        CURL* curl = initializeWriteRequest(url, headers, curlReadFile, &data);
-        if(curl)
+        curl = initializeWriteRequest(url, headers, curlReadFile, &data);
+        int attempts = ATTEMPTS_PER_REQUEST;
+        while(!rqst_complete && (attempts-- > 0))
         {
-            bool rqst_complete = false;
-            int attempts = ATTEMPTS_PER_REQUEST;
-            while(!rqst_complete && (attempts-- > 0))
+            /* Perform Request */
+            const CURLcode res = curl_easy_perform(curl);
+            if(res == CURLE_OK)
             {
-                /* Perform Request */
-                const CURLcode res = curl_easy_perform(curl);
-                if(res == CURLE_OK)
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code < 300)
                 {
-                    /* Get HTTP Code */
-                    long http_code = 0;
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                    if(http_code < 300)
-                    {
-                        /* Request Succeeded */
-                        status = true;
-                    }
-                    else
-                    {
-                        /* Request Failed */
-                        mlog(ERROR, "S3 put returned http error <%ld>", http_code);
-                    }
-
-                    /* Request Completed */
+                    /* Request Succeeded */
                     rqst_complete = true;
-                }
-                else if(data.size > 0)
-                {
-                    mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
-                    rqst_complete = true;
-                }
-                else if(res == CURLE_OPERATION_TIMEDOUT)
-                {
-                    mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
                 }
                 else
                 {
-                    mlog(ERROR, "cURL call failed (%d) for put request: %s", res, key_ptr);
-                    OsApi::performIOTimeout();
+                    /* Request Failed */
+                    throw RunTimeException(ERROR, RTE_FAILURE, "S3 put returned http error <%ld>", http_code);
                 }
             }
-
-            /* Clean Up cURL */
-            curl_easy_cleanup(curl);
+            else if(data.size > 0)
+            {
+                throw RunTimeException(ERROR, RTE_DID_NOT_COMPLETE, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
+            }
+            else if(res == CURLE_OPERATION_TIMEDOUT)
+            {
+                mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
+            }
+            else
+            {
+                mlog(ERROR, "cURL call failed (%d) for put request: %s", res, key_ptr);
+                OsApi::performIOTimeout();
+            }
         }
 
-        /* Clean Up Headers */
-        curl_slist_free_all(headers);
-
-        /* Close File */
-        fclose(data.fd);
+        /* Check Completion */
+        if(!rqst_complete)
+        {
+            throw RunTimeException(ERROR, RTE_FAILURE, "cURL file request for %s to S3 did not complete", key_ptr);
+        }
     }
-    else
+    catch(const RunTimeException& e)
     {
-        char err_buf[256];
-        mlog(ERROR, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
+        if(curl) curl_easy_cleanup(curl);
+        if(headers) curl_slist_free_all(headers);
+        if(data.fd) fclose(data.fd);
+        throw; // rethrow after cleaning up
     }
 
-    /* Throw Exception on Failure */
-    if(!status)
-    {
-        throw RunTimeException(ERROR, RTE_FAILURE, "cURL file request to S3 failed");
-    }
+    /* Clean Up */
+    if(curl) curl_easy_cleanup(curl);
+    if(headers) curl_slist_free_all(headers);
+    if(data.fd) fclose(data.fd);
 
     /* Return Success */
     return data.size;

@@ -252,7 +252,7 @@ Atl03Viewer::Region::Region (const info_t* info):
         /* Check If Anything to Process */
         if(num_segments <= 0)
         {
-            throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+            throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */

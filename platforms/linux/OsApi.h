@@ -134,10 +134,10 @@ typedef enum {
     RTE_FAILURE                 = -1,
     RTE_TIMEOUT                 = -2,
     RTE_RESOURCE_DOES_NOT_EXIST = -3,
-    RTE_EMPTY_SUBSET            = -4,
+    RTE_RESOURCE_EMPTY          = -4,
     RTE_SIMPLIFY                = -5,
     RTE_NOT_ENOUGH_MEMORY       = -6,
-    RTE_SCRIPT_DOES_NOT_EXIST   = -7,
+    // RESERVED                 = -7,
     RTE_UNAUTHORIZED            = -8,
     RTE_DID_NOT_COMPLETE        = -9,
     RTE_TOO_MANY_RESOURCES      = -10

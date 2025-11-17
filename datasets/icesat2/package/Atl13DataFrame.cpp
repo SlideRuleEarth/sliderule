@@ -206,7 +206,7 @@ Atl13DataFrame::AreaOfInterest::AreaOfInterest (const Atl13DataFrame* df):
 
             /* Calculate Initial Number of Segments */
             numSegments = lastSegment - firstSegment + 1;
-            if(numSegments <= 0) throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "reference id not found");
+            if(numSegments <= 0) throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "reference id not found");
         }
 
         /* Join Latitude/Longitude Reads */
@@ -226,7 +226,7 @@ Atl13DataFrame::AreaOfInterest::AreaOfInterest (const Atl13DataFrame* df):
         /* Check If Anything to Process */
         if(numSegments <= 0)
         {
-            throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+            throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
