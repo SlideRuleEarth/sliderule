@@ -74,7 +74,7 @@ ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --lo
 ARCH = $(shell arch)
 
 DOMAIN ?= slideruleearth.io
-ORGANIZATION ?= sliderule
+ORGANIZATION ?= developers
 VERSION ?= latest
 
 DOCKEROPTS ?= # --progress=plain --no-cache
@@ -243,7 +243,6 @@ cluster-docker: ## build all cluster docker images
 	make ams-docker
 
 cluster-docker-push: ## push all cluster images to container registries (and docker compose files to S3)
-	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive --exclude "*" --include "docker-compmose-*.yml"
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
@@ -257,60 +256,7 @@ cluster-cf-install:
 	mkdir -p $(CF_STAGE_DIR)
 	wget --directory-prefix=$(CF_STAGE_DIR) https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
 	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
-
-########################
-# AMI Targets
-########################
-
-AMI_DATE = $(shell date +'%Y.%-m.%d')
-
-AMI_ID = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/2025.9.22/2 \
-	--region $(AWS_REGION) \
-	--query 'image.outputResources.amis[0].image' \
-	--output text)
-
-AMI_NAME = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
-	--region $(AWS_REGION) \
-	--query 'image.outputResources.amis[0].name' \
-	--output text)
-
-ami-pipeline-create: ## create EC2 Image Builder pipeline
-	aws cloudformation create-stack \
-		--stack-name 	ami \
-		--template-body file://cloudformation/ami.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=AmiDate,ParameterValue=$(AMI_DATE)
-	aws cloudformation wait stack-create-complete --stack-name ami
-
-ami-pipeline-describe: ## status the creation/deletion of the EC2 Image Builder pipeline
-	aws cloudformation describe-stack-events \
-		--stack-name ami
-
-ami-pipeline-status:
-	@echo $(AMI_NAME)
-
-ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
-	aws cloudformation delete-stack \
-		--stack-name ami
-	aws cloudformation wait stack-delete-complete --stack-name ami
-
-ami-image-build: ## run EC2 Image Builder pipeline to create an AMI
-	aws s3 cp cloudformation/ami/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive
-	aws imagebuilder start-image-pipeline-execution \
-   		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
-    	--region $(AWS_REGION)
-
-ami-image-publish: ## publish AMI image name to SSM
-	aws ssm put-parameter \
-    	--name "/ami/sliderule/arm/$(VERSION)" \
-    	--type "String" \
-    	--value "$(AMI_ID)" \
-    	--overwrite
+	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive --exclude "*" --include "docker-compose-*.yml"
 
 ########################
 # Deployment Targets
@@ -347,7 +293,7 @@ deployment-delete: ## deletes the cluster
 	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-cluster
 
-deployment-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
+deployment-go-live: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
 	aws cloudformation create-stack \
 		--stack-name 	dns \
 		--template-body file://cloudformation/dns.yml \

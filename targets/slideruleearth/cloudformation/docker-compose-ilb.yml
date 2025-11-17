@@ -23,6 +23,27 @@ services:
       start_period: 30s
     labels:
       - autoheal=true
+  monitor-agent:
+    image: ${MONITOR_AGENT_IMAGE}
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      # node exporter
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      # promtail
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    labels:
+      - autoheal=true
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true
