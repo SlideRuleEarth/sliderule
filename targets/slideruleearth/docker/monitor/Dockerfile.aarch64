@@ -1,15 +1,14 @@
-FROM ubuntu:20.04
-MAINTAINER JP Swinski (jp.swinski@nasa.gov)
+FROM amazonlinux:2023
 
 # Install Dependencies
-RUN apt-get update && \
-  apt-get install -y \
-  adduser \
-  libfontconfig1 \
-  wget \
-  zip \
-  curl \
-  && rm -rf /var/lib/apt/lists/*
+RUN dnf update -y \
+    && dnf install -y \
+        wget \
+        zip \
+        curl \
+        fontconfig \
+    && dnf clean all \
+    && rm -rf /var/cache/yum
 
 # Install Grafana
 RUN wget https://dl.grafana.com/enterprise/release/grafana-enterprise-8.2.1.linux-arm64.tar.gz && \

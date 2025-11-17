@@ -1,0 +1,28 @@
+# port at which promtail will run
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+# this is the place where promtail will store the progress about how far it has read the logs
+positions:
+  filename: /tmp/positions.yaml
+
+# address of loki server to which promtail should push the logs
+clients:
+  - url: http://10.0.1.4:3100/loki/api/v1/push
+
+# which logs to read/scrape
+scrape_configs:
+  - job_name: system
+    pipeline_stages:
+      - docker: {}
+      - regex:
+          expression: ip=(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) level=(?P<level>.*) caller=(?P<caller>.*) msg=(?P<msg>.*)
+      - labels:
+          host: ip
+          level: level
+
+    static_configs:
+      - labels:
+          job: sliderule
+          __path__: /var/lib/docker/containers/*/*.log

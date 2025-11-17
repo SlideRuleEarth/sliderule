@@ -1,0 +1,31 @@
+FROM amazonlinux:2023
+
+# Install Dependencies
+RUN dnf update -y && \
+    dnf install -y wget zip gzip tar && \
+    dnf clean all && \
+    rm -rf /var/cache/yum
+
+# Install Node Exporter
+RUN wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-arm64.tar.gz && \
+    tar -xvzf node_exporter-1.8.2.linux-arm64.tar.gz && \
+    mv node_exporter-1.8.2.linux-arm64/node_exporter /usr/local/bin/node_exporter
+
+# Install Promtail
+RUN wget https://github.com/grafana/loki/releases/download/v2.9.9/promtail-linux-arm64.zip && \
+    unzip promtail-linux-arm64.zip && \
+    mv promtail-linux-arm64 /usr/local/bin/promtail
+
+# Install Logcli
+RUN wget https://github.com/grafana/loki/releases/download/v2.9.9/logcli-linux-arm64.zip && \
+    unzip logcli-linux-arm64.zip && \
+    mv logcli-linux-arm64 /usr/local/bin/logcli
+
+# Configuration Files
+COPY promtail.yml /usr/local/etc/
+
+# Entrypoint Script
+COPY docker-entrypoint.sh /usr/local/etc/
+
+# Default Entry Point
+ENTRYPOINT ["/usr/bin/bash"]

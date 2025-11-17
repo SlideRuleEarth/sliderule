@@ -45,6 +45,7 @@ BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
 MONITOR_STAGE_DIR = $(STAGE)/monitor
+MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
@@ -183,6 +184,14 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
+monitor-agent-docker: ## build monitor agent docker image; needs VERSION
+	-rm -Rf $(MONITOR_AGENT_STAGE_DIR)
+	mkdir -p $(MONITOR_AGENT_STAGE_DIR)
+	cp docker/monitor-agent/* $(MONITOR_AGENT_STAGE_DIR)
+	cp docker/monitor-agent/Dockerfile.$(ARCH) $(MONITOR_AGENT_STAGE_DIR)/Dockerfile
+	chmod +x $(MONITOR_AGENT_STAGE_DIR)/docker-entrypoint.sh
+	cd $(MONITOR_AGENT_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor-agent:$(VERSION) $(DOCKER_PLATFORM) .
+
 ams-lock: ## update dependencies of ams
 	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
 	cd docker/ams && conda-lock render -p linux-$(ARCH)
@@ -229,6 +238,7 @@ cluster-docker: ## build all cluster docker images
 	make ilb-docker
 	make proxy-docker
 	make monitor-docker
+	make monitor-agent-docker
 	make manager-docker
 	make ams-docker
 
@@ -237,6 +247,7 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/monitor-agent:$(VERSION)
 	docker push $(ECR)/manager:$(VERSION)
 	docker push $(ECR)/ams:$(VERSION)
 
