@@ -350,7 +350,8 @@ Resources:
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-ilb.yml ./docker-compose.yml
-          docker-compose -p cluster up --detach
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          ./docker-compose -p cluster up --detach
 
   #
   # Manager
@@ -400,7 +401,8 @@ Resources:
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-manager.yml ./docker-compose.yml
-          docker-compose -p cluster up --detach
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          ./docker-compose -p cluster up --detach
 
   #
   # Monitor
@@ -443,7 +445,8 @@ Resources:
           export MONITOR_IMAGE=${ContainerRegistry}/monitor:${Version}
           export PROXY_IMAGE=${ContainerRegistry}/proxy:${Version}
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-monitor.yml ./docker-compose.yml
-          docker-compose -p cluster up --detach
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          ./docker-compose -p cluster up --detach
 
   #
   # Autoscaling Group
@@ -487,7 +490,8 @@ Resources:
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/inland_water_body.db /data/ATL13/inland_water_body.db
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-node.yml ./docker-compose.yml
-            docker-compose -p cluster up --detach
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+            ./docker-compose -p cluster up --detach
 
   SlideruleAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup

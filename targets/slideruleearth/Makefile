@@ -48,7 +48,6 @@ MONITOR_STAGE_DIR = $(STAGE)/monitor
 MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
-TF_STAGE_DIR = $(STAGE)/tf
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
@@ -58,6 +57,7 @@ WEBSITE_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
+CF_STAGE_DIR = $(STAGE)/cf
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -242,7 +242,8 @@ cluster-docker: ## build all cluster docker images
 	make manager-docker
 	make ams-docker
 
-cluster-docker-push: ## push all cluster images to docker container registries
+cluster-docker-push: ## push all cluster images to container registries (and docker compose files to S3)
+	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive --exclude "*" --include "docker-compmose-*.yml"
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
@@ -250,6 +251,12 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/monitor-agent:$(VERSION)
 	docker push $(ECR)/manager:$(VERSION)
 	docker push $(ECR)/ams:$(VERSION)
+
+cluster-cf-install:
+	-rm -Rf $(CF_STAGE_DIR)
+	mkdir -p $(CF_STAGE_DIR)
+	wget --directory-prefix=$(CF_STAGE_DIR) https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
+	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 
 ########################
 # AMI Targets
