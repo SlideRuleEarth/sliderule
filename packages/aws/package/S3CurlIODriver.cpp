@@ -738,7 +738,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
         if(!data.fd)
         {
             char err_buf[256];
-            throw RunTimeException(ERROR, RTE_FAILURE, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)))
+            throw RunTimeException(ERROR, RTE_FAILURE, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
         }
 
         /* Get Size of File */
@@ -750,12 +750,12 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
             throw RunTimeException(ERROR, RTE_RESOURCE_EMPTY, "File is empty: %s", filename);
         }
 
-        /* Build Headers */
-        headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
-
         /* Massage Key */
         const char* key_ptr = key;
         if(key_ptr[0] == '/') key_ptr++;
+
+        /* Build Headers */
+        headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
 
         /* Build URL */
         const FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
