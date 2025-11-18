@@ -474,6 +474,9 @@ Resources:
             mkdir -p /data/ATL13
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13_mappings.json /data/ATL13/atl13_mappings.json
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/inland_water_body.db /data/ATL13/inland_water_body.db
+            mkdir -p /data/ATL24
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl24r2.db /data/ATL24/atl24r2.db
+            mkdir -p /plugins
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-node.yml ./docker-compose.yml
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose

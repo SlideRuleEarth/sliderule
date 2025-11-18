@@ -53,6 +53,9 @@ Mutex LuaEngine::pkgInitTableMutex;
 
 std::atomic<uint64_t> LuaEngine::engineIds{1};
 
+const char* LuaEngine::pathPrefix = NULL;
+int LuaEngine::pathPrefixLength = 0;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -164,6 +167,8 @@ LuaEngine::~LuaEngine(void)
  *----------------------------------------------------------------------------*/
 void LuaEngine::init(void)
 {
+    pathPrefix = LUA_RESOURCE_PATH;
+    pathPrefixLength = StringLib::size(pathPrefix);
 }
 
 /*----------------------------------------------------------------------------
@@ -346,13 +351,51 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
  *
  *  Note: must delete returned string
  *----------------------------------------------------------------------------*/
-const char* LuaEngine::sanitize (const char* filename)
+const char* LuaEngine::sanitize (const char* url, const char** argument)
 {
-    char* safe_filename = StringLib::duplicate(filename);
-    StringLib::replace(safe_filename, PATH_DELIMETER, '_');
-    const FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename);
-    delete [] safe_filename;
-    return safe_pathname.c_str(true);
+    assert(url);
+    assert(argument);
+
+    // the following two urls will
+    // result in resource=endpoint and argument=arg
+    // https://organization.domain/source/endpoint/arg
+    // https://organization.domain/source/endpoint?arg
+    int url_len = 0;
+    int endpoint_len = 0;
+
+    // get endpoint length
+    while(true)
+    {
+        if( (url[url_len] == PATH_DELIMETER) ||
+            (url[url_len] == '?') ||
+            (url[url_len] == '\0') )
+        {
+            endpoint_len = url_len;
+            break;
+        }
+        url_len++;
+    }
+
+    // get url length
+    while(url[url_len] != '\0')
+    {
+        url_len++;
+    }
+
+    // set argument if it exists
+    const int argument_len = url_len - endpoint_len;
+    if(argument_len > 1) // 1 accounts for / and ?
+    {
+        *argument = &url[endpoint_len + 1];
+    }
+
+    // build and return the path to the resource
+    const size_t len = pathPrefixLength + endpoint_len + 5; // 4 for ".lua", 1 for null termination
+    char* resource = new char [len];
+    StringLib::copy(resource, pathPrefix, pathPrefixLength + 1);
+    StringLib::copy(&resource[pathPrefixLength], url, endpoint_len + 1);
+    StringLib::copy(&resource[pathPrefixLength + endpoint_len], ".lua", 5);
+    return resource;
 }
 
 /*----------------------------------------------------------------------------

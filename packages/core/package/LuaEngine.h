@@ -49,6 +49,12 @@ extern "C"
 }
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#define LUA_RESOURCE_PATH CONFDIR PATH_DELIMETER_STR APIDIR PATH_DELIMETER_STR
+
+/******************************************************************************
  * LUA ENGINE CLASS
  ******************************************************************************/
 
@@ -99,7 +105,7 @@ class LuaEngine
         static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
         static void         showStack       (lua_State* l, const char* prefix=NULL);
-        static const char*  sanitize        (const char* filename);
+        static const char*  sanitize        (const char* url, const char** argument);
         static void         abortHook       (lua_State* L, lua_Debug *ar);
 
         lua_State*          getLuaState     (void);
@@ -165,6 +171,9 @@ class LuaEngine
         uint32_t                        traceId;
         protectedThread_t*              pInfo;
         directThread_t*                 dInfo;
+
+        static const char*              pathPrefix;
+        static int                      pathPrefixLength; // does not include null terminator
 
         /*--------------------------------------------------------------------
          * Methods
