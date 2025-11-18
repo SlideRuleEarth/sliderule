@@ -57,7 +57,7 @@ def test_atl24_poly(client):
         {"lat": 21.222261686673306, "lon": -73.51303956051089},
         {"lat": 21.222261686673306, "lon": -73.78074797284968}
     ]
-    poly_str = '%20'.join([f"{p['lon']} {p['lat']}" for p in poly])
+    poly_str = '%20'.join([f"{p['lon']}%20{p['lat']}" for p in poly])
     response = client.get(f'/ams/atl24?poly={poly_str}')
     data = json.loads(response.data.decode("utf-8"))
     assert data["hits"] == 521
