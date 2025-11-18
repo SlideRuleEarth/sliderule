@@ -3,6 +3,7 @@
 --
 local dataframe = require("dataframe")
 local json      = require("json")
+local ams_atl13 = require("ams_atl13")
 local rqst      = json.decode(arg[1])
 local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl13", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
@@ -12,14 +13,7 @@ if parms["key_space"] == core.INVALID_KEY then
     local atl13_parms = parms["atl13"]
     -- query for resources
     local resources_set_by_ams = false
-    local response = nil
-    if atl13_parms["refid"] > 0 then
-        response = core.ams("GET", string.format("atl13?refid=%d", atl13_parms["refid"]))
-    elseif #atl13_parms["name"] > 0 then
-        response = core.ams("GET", string.format("atl13?name=%s", string.gsub(atl13_parms["name"], " ", "%%20")))
-    elseif atl13_parms["coord"]["lat"] ~= 0.0 or atl13_parms["coord"]["lon"] ~= 0.0 then
-        response = core.ams("GET", string.format("atl13?lon=%f&lat=%f", atl13_parms["coord"]["lon"], atl13_parms["coord"]["lat"]))
-    end
+    local response = ams_atl13.query(atl13_parms)
     -- get resources
     if response then
         local rc, data = pcall(json.decode, response)
