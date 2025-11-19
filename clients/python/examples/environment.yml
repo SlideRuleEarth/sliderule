@@ -29,7 +29,7 @@ dependencies:
   - scikit-learn
   - scipy
   - setuptools_scm
-  - shapely=1.8.2
+  - shapely
   - sliderule
   - tk
   - xyzservices
