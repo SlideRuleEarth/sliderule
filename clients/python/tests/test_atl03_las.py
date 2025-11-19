@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import geopandas
 from pyproj import CRS
-from sliderule import sliderule, icesat2
+from sliderule import sliderule, icesat2, las
 
 
 
@@ -149,8 +149,8 @@ def _check_output_file(path):
 
 
 def _load_las_laz(las_path, laz_path):
-    las_gdf = sliderule.load_las(las_path)
-    laz_gdf = sliderule.load_las(laz_path)
+    las_gdf = las.load(las_path)
+    laz_gdf = las.load(laz_path)
     return las_gdf, laz_gdf
 
 
