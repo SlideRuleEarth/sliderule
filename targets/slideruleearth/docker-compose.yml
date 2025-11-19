@@ -71,22 +71,17 @@ services:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor-agent:latest
     container_name: monitor-agent
     network_mode: host
-    pid: host
     restart: unless-stopped
     pull_policy: if_not_present
-    entrypoint: /usr/local/etc/docker-entrypoint.sh
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     volumes:
-      # node exporter
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-      # promtail
       - /var/log:/var/log:ro
       - /var/log/journal:/var/log/journal:ro
       - /run/log/journal:/run/log/journal:ro
       - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
   proxy:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/proxy:latest
     container_name: proxy

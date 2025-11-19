@@ -1,8 +1,8 @@
-FROM amazonlinux:2023
+FROM public.ecr.aws/amazonlinux/amazonlinux:2023
 
 # Install Dependencies
 RUN dnf update -y && \
-    dnf install -y wget zip gzip tar && \
+    dnf install -y wget zip gzip xz tar && \
     dnf clean all && \
     rm -rf /var/cache/yum
 
@@ -21,11 +21,15 @@ RUN wget https://github.com/grafana/loki/releases/download/v2.9.9/logcli-linux-a
     unzip logcli-linux-arm64.zip && \
     mv logcli-linux-arm64 /usr/local/bin/logcli
 
+# Install s6-overlay (glibc, arm64)
+ADD https://github.com/just-containers/s6-overlay/releases/latest/download/s6-overlay-noarch.tar.xz /tmp/
+ADD https://github.com/just-containers/s6-overlay/releases/latest/download/s6-overlay-aarch64.tar.xz /tmp/
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-aarch64.tar.xz && \
+    rm -f /tmp/s6-overlay-*.tar.xz
+
 # Configuration Files
-COPY promtail.yml /usr/local/etc/
+COPY ./ /
 
-# Entrypoint Script
-COPY docker-entrypoint.sh /usr/local/etc/
-
-# Default Entry Point
-ENTRYPOINT ["/usr/bin/bash"]
+# Entrypoint
+ENTRYPOINT ["/init"]

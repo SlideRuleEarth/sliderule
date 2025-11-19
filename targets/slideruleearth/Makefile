@@ -181,15 +181,13 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	mkdir -p $(MONITOR_STAGE_DIR)
 	cp docker/monitor/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
-	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
 monitor-agent-docker: ## build monitor agent docker image; needs VERSION
 	-rm -Rf $(MONITOR_AGENT_STAGE_DIR)
 	mkdir -p $(MONITOR_AGENT_STAGE_DIR)
-	cp docker/monitor-agent/* $(MONITOR_AGENT_STAGE_DIR)
+	cp -R docker/monitor-agent/rootfs/* $(MONITOR_AGENT_STAGE_DIR)
 	cp docker/monitor-agent/Dockerfile.$(ARCH) $(MONITOR_AGENT_STAGE_DIR)/Dockerfile
-	chmod +x $(MONITOR_AGENT_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_AGENT_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor-agent:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-lock: ## update dependencies of ams
