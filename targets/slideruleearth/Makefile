@@ -179,7 +179,7 @@ proxy-docker: # make the reverse proxy docker image; needs VERSION
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
-	cp docker/monitor/* $(MONITOR_STAGE_DIR)
+	cp -R docker/monitor/rootfs/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
