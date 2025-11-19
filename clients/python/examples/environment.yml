@@ -1,35 +1,35 @@
-# conda env create -f environment.yml
 name: sliderule_notebook
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - geopandas
-  - h5py
   - boto3
   - duckdb
+  - geojson
+  - geopandas
+  - h5coro
+  - h5py
   - ipykernel
-  - ipywidgets
   - ipyleaflet
+  - ipympl
+  - ipywidgets
   - jupyterlab
   - jupyterlab_widgets
-  - h5coro
-  - ipympl
   - matplotlib
   - numpy
   - pandas
   - pip
   - pyarrow
   - pyproj
-  - pytables
   - pytest
   - python
   - python-pdal
+  - pytables
   - requests
   - scikit-learn
   - scipy
   - setuptools_scm
-  - shapely
+  - shapely=1.8.2
   - sliderule
   - tk
   - xyzservices
