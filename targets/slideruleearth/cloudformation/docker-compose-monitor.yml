@@ -2,12 +2,9 @@ version: "3.9"
 services:
   monitor:
     image: ${MONITOR_IMAGE}
-    network_mode: "host"
+    network_mode: host
     restart: always
     pull_policy: if_not_present
-    entrypoint: /usr/local/etc/docker-entrypoint.sh
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     labels:
       - autoheal=true
   monitor-agent:
@@ -28,11 +25,9 @@ services:
       - autoheal=true
   proxy:
     image: ${PROXY_IMAGE}
-    network_mode: "host"
+    network_mode: host
     restart: always
     pull_policy: if_not_present
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     entrypoint: /usr/local/etc/docker-entrypoint.sh
     volumes:
       - /etc/ssl/private:/etc/ssl/private
@@ -45,7 +40,6 @@ services:
       - autoheal=true
   autoheal:
     image: willfarrell/autoheal:latest
-    tty: true
     container_name: autoheal
     restart: always
     environment:

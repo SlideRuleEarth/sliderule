@@ -61,7 +61,7 @@ services:
   monitor:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest
     container_name: monitor
-    network_mode: "host"
+    network_mode: host
     restart: unless-stopped
     pull_policy: if_not_present
   monitor-agent:

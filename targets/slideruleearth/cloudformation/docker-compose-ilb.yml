@@ -2,11 +2,9 @@ version: "3.9"
 services:
   ilb:
     image: ${ILB_IMAGE}
-    network_mode: "host"
+    network_mode: host
     restart: always
     pull_policy: if_not_present
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     volumes:
       - /haproxy:/haproxy
       - /etc/ssl/private:/etc/ssl/private
@@ -41,7 +39,6 @@ services:
       - autoheal=true
   autoheal:
     image: willfarrell/autoheal:latest
-    tty: true
     container_name: autoheal
     restart: always
     environment:
