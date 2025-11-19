@@ -4,7 +4,6 @@
 
 local dataframe = require("dataframe")
 local json      = require("json")
-local ams_atl24 = require("ams_atl24")
 local rqst      = json.decode(arg[1])
 local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl24", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
@@ -13,6 +12,8 @@ local channels  = 6 -- number of dataframes per resource
 if (parms["key_space"] == core.INVALID_KEY) and
    (rqst["parms"] and not rqst["parms"]["resources"]) and
    (rqst["ams"]) then
+    -- pull in AMS package
+    local ams_atl24 = require("ams_atl24")
     -- construct query parameters
     rqst["ams"]["t0"] = rqst["ams"]["t0"] or rqst["t0"]
     rqst["ams"]["t1"] = rqst["ams"]["t1"] or rqst["t1"]

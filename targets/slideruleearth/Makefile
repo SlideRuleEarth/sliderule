@@ -251,11 +251,13 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 	docker push $(ECR)/manager:$(VERSION)
 	docker push $(ECR)/ams:$(VERSION)
 
-cluster-cf-install:
+cluster-cf-init:
 	-rm -Rf $(CF_STAGE_DIR)
 	mkdir -p $(CF_STAGE_DIR)
 	wget --directory-prefix=$(CF_STAGE_DIR) https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
 	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
+
+cluster-cf-update:
 	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive --exclude "*" --include "docker-compose-*.yml"
 
 ########################

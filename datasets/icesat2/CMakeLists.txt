@@ -88,7 +88,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_atl13.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_atl24.lua
     DESTINATION
-        ${CONFDIR}
+        ${CONFDIR}/ext
 )
 
 install (
