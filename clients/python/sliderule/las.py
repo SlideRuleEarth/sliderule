@@ -81,13 +81,10 @@ def __emptyframe(crs):
 
 
 def __las_spatial_reference(metadata):
-    if not isinstance(metadata, dict):
-        return None
-    for key in ["comp_spatialreference", "spatialreference"]:
-        value = metadata.get(key)
-        if value:
-            return value
-    return None
+    spatial_ref = metadata.get("comp_spatialreference")
+    if not spatial_ref:
+        raise FatalError("LAS metadata missing comp_spatialreference; only Sliderule LAS files are supported")
+    return spatial_ref
 
 
 def __read_las_arrays(path):
@@ -95,8 +92,6 @@ def __read_las_arrays(path):
     pipeline = pdal.Pipeline(pipeline_json)
 
     try:
-        if hasattr(pipeline, "validate"):  # Newer PDAL versions support validate()
-            pipeline.validate()            # PDAL docs recommend calling validate() before execute() even on hardcoded pipelines
         pipeline.execute()
     except RuntimeError as exc:
         raise FatalError(f'failed to load LAS/LAZ file {path}: {exc}') from exc
@@ -107,66 +102,21 @@ def __read_las_arrays(path):
 
 def __normalize_pdal_metadata(raw_metadata):
     """
-    Normalize PDAL metadata specifically for LAS readers.
-    PDAL metadata returned from pipeline.metadata typically has this structure:
-
-    {
-        "metadata": {
-            "readers.las": {
-                ... actual useful LAS metadata (point count, bounds, scale, offsets, etc) ...
-            }
-        }
-    }
-
-    However, the input may also come as:
-    - bytes or JSON string (needs decoding and parsing)
-    - a flat dict that already contains 'metadata'
-    - malformed, missing, or unusable types
-
-    This function:
-    1. Decodes bytes → string → JSON dict when needed
-    2. Navigates into the "metadata" → "readers.las" block
-    3. Returns only the LAS reader section (dict) if found
-    4. Safely falls back to {} for any invalid or unexpected input
+    LAS reader metadata normalization constrained to Sliderule's C++ LAS writer.
     """
-
-    # Convert bytes to string
-    if isinstance(raw_metadata, (bytes, bytearray)):
-        try:
-            raw_metadata = raw_metadata.decode('utf-8')
-        except Exception:
-            return {}
-
-    # Convert JSON string to dict
-    if isinstance(raw_metadata, str):
-        try:
-            raw_metadata = json.loads(raw_metadata)
-        except Exception as exc:
-            logger.debug(f"Unable to parse PDAL metadata JSON: {exc}")
-            return {}
-
-    # Expect a dict from here
     if not isinstance(raw_metadata, dict):
-        return {}
+        raise FatalError("unsupported PDAL metadata type; Sliderule LAS output expected")
+    parsed = raw_metadata
 
-    # Drill into 'metadata' → 'readers.las'
-    metadata_root = raw_metadata.get("metadata", raw_metadata)
-    readers_las = metadata_root.get("readers.las")
+    metadata_root = parsed.get("metadata", {})
+    las_metadata = metadata_root.get("readers.las")
+    if not isinstance(las_metadata, dict):
+        raise FatalError("missing readers.las metadata; only Sliderule LAS files are supported")
 
-    return readers_las if isinstance(readers_las, dict) else {}
-
-
-def __select_column(columns, candidates):
-    for candidate in candidates:
-        cand_lower = candidate.lower()
-        for column in columns:
-            if column.lower() == cand_lower:
-                return column
-    return None
+    return las_metadata
 
 
 def __arrays_to_geodataframe(arrays, metadata, path):
-    # Helper to attach LAS metadata to any GeoDataFrame
     def attach_las_metadata(gdf):
         gdf.attrs["las_path"] = path
         gdf.attrs["pdal_metadata"] = metadata
@@ -191,23 +141,21 @@ def __arrays_to_geodataframe(arrays, metadata, path):
     record = arrays[0] if len(arrays) == 1 else numpy.concatenate(arrays)
     df = geopandas.pd.DataFrame({name: record[name] for name in record.dtype.names})
 
-    # Coordinate fields
-    x_col = __select_column(df.columns, ["X", "longitude", "lon"])
-    y_col = __select_column(df.columns, ["Y", "latitude", "lat"])
-    z_col = __select_column(df.columns, ["Z", "height", "h"])
-
-    if not (x_col and y_col and z_col):
-        raise FatalError(f"missing coordinate fields in LAS/LAZ file: {path}")
+    # Coordinate fields used by Sliderule's C++ LAS writer
+    required_axes = ("X", "Y", "Z")
+    missing_axes = [axis for axis in required_axes if axis not in df.columns]
+    if missing_axes:
+        raise FatalError(f"missing required coordinate fields {missing_axes} in Sliderule LAS file: {path}")
 
     # Geometry
-    geometry = geopandas.points_from_xy(df[x_col], df[y_col], df[z_col])
+    geometry = geopandas.points_from_xy(df["X"], df["Y"], df["Z"])
 
     # Build GeoDataFrame
     gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=crs)
 
     # Add height column if needed
-    if "height" not in gdf.columns and z_col.lower() != "height":
-        gdf["height"] = geopandas.pd.Series(df[z_col], index=gdf.index)
+    if "height" not in gdf.columns:
+        gdf["height"] = geopandas.pd.Series(df["Z"], index=gdf.index)
 
     attach_las_metadata(gdf)
     return gdf

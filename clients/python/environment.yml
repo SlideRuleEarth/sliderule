@@ -14,12 +14,12 @@ dependencies:
   - pytables
   - pytest
   - python
+  - python-pdal>=3.0.0
   - requests
   - scikit-learn
   - scipy
   - setuptools_scm
   - shapely
+  - sliderule
   - tk
   - xyzservices
-  - python-pdal
-  - sliderule

@@ -24,7 +24,7 @@ dependencies:
   - pyproj
   - pytest
   - python
-  - python-pdal
+  - python-pdal>=3.0.0
   - pytables
   - requests
   - scikit-learn

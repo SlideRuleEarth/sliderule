@@ -40,7 +40,6 @@ from datetime import datetime
 from sliderule import version
 from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError, RetryRequest
 from pyproj import CRS
-from sliderule import las
 
 try:
     from sklearn.cluster import KMeans
@@ -806,6 +805,7 @@ def procoutputfile(parm, rsps):
         elif output["format"] == "csv":
             local_file = geopandas.pd.read_csv(path) # CSV
         elif output["format"] == "las" or output["format"] == "laz":
+            from sliderule import las # delayed import to avoid loading PDAL dependency unnecessarily
             local_file = las.load(path)
         else:
             raise FatalError('unsupported output format: %s' % (output["format"]))
