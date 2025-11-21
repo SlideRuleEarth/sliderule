@@ -159,6 +159,27 @@ class TestSlideRule:
             assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
             assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
 
+    def test_atl06_default_version(self, init):
+        parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        assert init
+        assert resources
+        assert any("_007_" in resource for resource in resources)
+
+    def test_atl06_version_006(self, init):
+        parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01', "cmr": {"version": "006"}}
+        resources = earthdata.search(parms)
+        assert init
+        assert resources
+        assert any("_006_" in resource for resource in resources)
+
+    def test_atl06_version_007(self, init):
+        parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01', "cmr": {"version": "007"}}
+        resources = earthdata.search(parms)
+        assert init
+        assert resources
+        assert any("_007_" in resource for resource in resources)
+
     def test_atl09(self, init):
         parms = {"asset": "icesat2-atl09", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
