@@ -101,6 +101,17 @@ def build_geometry_query(state, poly_field):
     else:
         return ''
 
+#
+# Build Name Filter
+#
+def build_name_filter(state):
+    f = request.args.get("name_filter")
+    if f != None:
+        return rf"{check_state(state)} granule LIKE '{f}' ESCAPE '\\'"
+    else:
+        return ''
+
+
 ####################
 # APIs
 ####################
@@ -123,9 +134,9 @@ def atl24_route():
             {build_range_query(state, "bathy_mean_depth", "meandepth0", "meandepth1")}
             {build_range_query(state, "bathy_min_depth", "mindepth0", "mindepth1")}
             {build_range_query(state, "bathy_max_depth", "maxdepth0", "maxdepth1")}
+            {build_name_filter(state)}
             {build_geometry_query(state, "poly")}
         """
-        print(cmd)
         df = db.execute(cmd).df()
         # build response
         hits = len(df)

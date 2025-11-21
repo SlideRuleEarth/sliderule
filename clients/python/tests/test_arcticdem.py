@@ -8,8 +8,6 @@ from sliderule import icesat2
 from sliderule import raster
 from sliderule import earthdata
 from sliderule import earthdata
-from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
-from sliderule.earthdata import __cmr_max_version as cmr_max_version
 
 # Change connection timeout from default 10s to 1s
 sliderule.set_rqst_timeout((1, 60))

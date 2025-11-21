@@ -8,34 +8,6 @@ local rqst      = json.decode(arg[1])
 local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl24", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
 
--- attempt to populate resources on initial request
-if (parms["key_space"] == core.INVALID_KEY) and
-   (rqst["parms"] and not rqst["parms"]["resources"]) and
-   (rqst["ams"]) then
-    -- pull in AMS package
-    local ams_atl24 = require("ams_atl24")
-    -- construct query parameters
-    rqst["ams"]["t0"] = rqst["ams"]["t0"] or rqst["t0"]
-    rqst["ams"]["t1"] = rqst["ams"]["t1"] or rqst["t1"]
-    rqst["ams"]["poly"] = rqst["ams"]["poly"] or rqst["poly"]
-    -- query AMS
-    local response = ams_atl24.query(rqst["ams"])
-    if response then
-        local rc, data = pcall(json.decode, response)
-        if rc then
-            local granules = {}
-            for granule in data["granules"] do
-                granules[#granules + 1] = granule
-            end
-            rqst["parms"]["resources"] = granules
-        else
-            local userlog = msg.publish(_rqst.rspq)
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from asset metadata service: %s", _rqst.id, response))
-            return
-        end
-    end
-end
-
 -- proxy the request
 dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
     local dataframes = {}

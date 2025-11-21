@@ -81,7 +81,7 @@ AmsLib::rsps_t AmsLib::request (EndpointObject::verb_t verb, const char* resourc
 }
 
 /*----------------------------------------------------------------------------
- * luaRequest - post(<verb>, <resource>, <data>)
+ * luaRequest - ams(<verb>, <resource>, <data>)
  *----------------------------------------------------------------------------*/
 int AmsLib::luaRequest(lua_State* L)
 {
@@ -114,17 +114,22 @@ int AmsLib::luaRequest(lua_State* L)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "<%ld> returned from %s", rsps.code, resource);
         }
 
-        // return response
+        // return successful response
+        lua_pushboolean(L, true);
         lua_pushlstring(L, rsps.response, rsps.size);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error in request to asset metadata service: %s", e.what());
-        lua_pushnil(L);
+        FString errmsg("Error in request to asset metadata service: %s", e.what());
+        mlog(e.level(), "%s", errmsg.c_str());
+
+        // return failure response
+        lua_pushboolean(L, true);
+        lua_pushstring(L, errmsg.c_str());
     }
 
     // cleanup
     delete [] rsps.response;
 
-    return 1;
+    return 2;
 }

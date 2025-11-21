@@ -3,59 +3,9 @@
 --
 local dataframe = require("dataframe")
 local json      = require("json")
-local ams_atl13 = require("ams_atl13")
 local rqst      = json.decode(arg[1])
 local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl13", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
-
--- attempt to populate resources on initial request
-if parms["key_space"] == core.INVALID_KEY then
-    local atl13_parms = parms["atl13"]
-    -- query for resources
-    local resources_set_by_ams = false
-    local response = ams_atl13.query(atl13_parms)
-    -- get resources
-    if response then
-        local rc, data = pcall(json.decode, response)
-        if rc then
-            rqst["parms"]["atl13"]["refid"] = data["refid"]
-            if not rqst["parms"]["resources"] then
-                rqst["parms"]["resources"] = data["granules"]
-                resources_set_by_ams = true
-            end
-        else
-            local userlog = msg.publish(_rqst.rspq)
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from asset metadata service: %s", _rqst.id, response))
-            return
-        end
-    end
-    -- apply polygon if supplied
-    if resources_set_by_ams and parms:length("poly") > 0 then
-        local userlog = msg.publish(_rqst.rspq)
-        rqst["parms"]["asset"] = parms["asset"] -- needed by earth data search function inside get_resources
-        local status, cmr_response = dataframe.get_resources(rqst["parms"], _rqst.rspq, userlog)
-        if status == RC_SUCCESS and type(cmr_response) == 'table' then
-
-            -- pull out all resources from cmr query
-            local resources_to_process = {}
-            for _,resource in ipairs(cmr_response) do
-                resources_to_process[resource] = true
-            end
-            -- keep only resources also found in ams query
-            local resources = {}
-            for _,resource in ipairs(rqst["parms"]["resources"]) do
-                if resources_to_process[resource] then
-                    table.insert(resources, resource)
-                end
-            end
-            -- update request parameters
-            rqst["parms"]["resources"] = resources
-        else
-            -- report error back to user
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> earthdata queury failed: %d", _rqst.id, status))
-        end
-    end
-end
 
 -- proxy request
 dataframe.proxy("atl13x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)

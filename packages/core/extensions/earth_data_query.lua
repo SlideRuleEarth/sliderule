@@ -18,8 +18,8 @@ DATASETS = {
     ATL06 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL08 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL13 =                                               {provider = "SLIDERULE",   version = "006",  api = "ams",   formats = {".h5"},    collections = {},                               url = "ams_atl13"},
+    ATL24 =                                               {provider = "SLIDERULE",   version = "002",  api = "ams",   formats = {".h5"},    collections = {},                               url = "ams_atl24"},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
@@ -57,7 +57,6 @@ ASSETS_TO_DATASETS = {
     ["atlas-local"] = "ATL03",
     ["atlas-s3"] = "ATL03",
     ["atl24-s3"] = "ATL24",
-    ["nsidc-s3"] = "ATL03",
     ["arcticdem-strips"] = "arcticdem-strips",
     ["rema-strips"] = "rema-strips"
 }
@@ -135,11 +134,61 @@ end
 ---------------------------------------------------------------
 
 --
+-- AMS
+--
+local function ams (parms, poly, _with_meta)
+
+    local short_name        = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset           = DATASETS[short_name] or {}
+    local ams_pkg           = require(dataset["url"])
+    parms["ams"]            = parms["ams"] or {}
+    parms["ams"]["t0"]      = parms["ams"]["t0"] or parms["t0"]
+    parms["ams"]["t1"]      = parms["ams"]["t1"] or parms["t1"]
+    local polygon           = parms["ams"]["poly"] or parms["poly"] or poly
+    local with_meta         = parms["ams"]["with_meta"] or parms["with_meta"] or _with_meta
+
+    -- flatten polygon
+    if polygon then
+        local polystr = ""
+        for i,coord in ipairs(polygon) do
+            if i < #polygon then
+                polystr = polystr .. string.format("%f%%20%f%%20", coord["lon"], coord["lat"]) -- with trailing comma
+            else
+                polystr = polystr .. string.format("%f%%20%f", coord["lon"], coord["lat"]) -- without trailing comma
+            end
+        end
+        parms["ams"]["poly"] = polystr
+    end
+
+    -- make request
+    local status, rsps = ams_pkg.query(parms)
+    if status then
+        local rc, data = pcall(json.decode, rsps)
+        if rc then
+            if with_meta then -- returns full response from the AMS
+                return RC_SUCCESS, data
+            else -- pulls out just the granules from the AMS
+                local granules = {}
+                for granule in data["granules"] do
+                    granules[#granules + 1] = granule
+                end
+                return RC_SUCCESS, granules
+            end
+        else
+            return RC_RSPS_UNPARSEABLE, "could not parse json in response from AMS"
+        end
+    else
+        return RC_RQST_FAILED, string.format("request to AMS failed: %s", rsps)
+    end
+
+end
+
+--
 -- CMR
 --
-local function cmr (parms, poly, with_meta)
+local function cmr (parms, poly, _with_meta)
 
-    local link_table = {}
+    local linktable = {}
 
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
@@ -149,12 +198,13 @@ local function cmr (parms, poly, with_meta)
     local provider      = dataset["provider"] or error("unable to determine provider for query")
     local version       = cmr_parms["version"] or dataset["version"]
     local polygon       = cmr_parms["polygon"] or parms["poly"] or poly
+    local name_filter   = cmr_parms["name_filter"] or parms["name_filter"]
+    local with_meta     = cmr_parms["with_meta"] or parms["with_meta"] or _with_meta
     local rgt           = parms["rgt"] or granule_parms["rgt"]
     local cycle         = parms["cycle"] or granule_parms["cycle"]
     local region        = parms["region"] or granule_parms["region"]
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
-    local name_filter   = parms["name_filter"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build name filter
@@ -263,8 +313,8 @@ local function cmr (parms, poly, with_meta)
                                         url = token
                                     end
                                     -- add url to table of links with metadata
-                                    if not link_table[url] then
-                                        link_table[url] = metadata
+                                    if not linktable[url] then
+                                        linktable[url] = metadata
                                         num_links = num_links + 1
                                         total_links = total_links + 1
                                     end
@@ -288,10 +338,10 @@ local function cmr (parms, poly, with_meta)
 
     -- return results
     if with_meta then
-        return RC_SUCCESS, link_table
+        return RC_SUCCESS, linktable
     else
         local urls = {}
-        for link,_ in pairs(link_table) do
+        for link,_ in pairs(linktable) do
             table.insert(urls, link)
         end
         return RC_SUCCESS, urls
@@ -303,6 +353,8 @@ end
 -- STAC
 --
 local function stac (parms, poly)
+
+    local geotable = {}
 
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
@@ -347,7 +399,6 @@ local function stac (parms, poly)
     end
 
     -- parse response into a table
-    local geotable = {}
     local next_page = {}
     status, geotable, next_page = build_geojson(rsps)
     if not status then
@@ -514,12 +565,14 @@ end
 --
 -- search
 --
-local function search (parms, poly)
+local function search (parms, poly, _api)
 
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset = DATASETS[short_name] or {}
-    local api = dataset["api"]
-    if api == "cmr" then
+    local api = _api or dataset["api"]
+    if api == "ams" then
+        return ams(parms, poly)
+    elseif api == "cmr" then
         return cmr(parms, poly)
     elseif api == "stac" then
         return stac(parms, poly)
@@ -535,6 +588,7 @@ end
 -- Return Package --
 --
 return {
+    ams = ams,
     cmr = cmr,
     stac = stac,
     tnm = tnm,

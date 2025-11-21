@@ -3,8 +3,6 @@
 import pytest
 import sliderule
 from sliderule import earthdata
-from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
-from sliderule.earthdata import __cmr_max_version as cmr_max_version
 from pathlib import Path
 from datetime import datetime
 import os
@@ -33,18 +31,6 @@ class TestCMR:
         assert init
         assert isinstance(granules, list)
         assert 'ATL03_20181016104402_02720106_006_02.h5' in granules
-
-    def test_collection(self, init):
-        entries = cmr_collection_query('NSIDC_ECS', 'ATL03')
-        assert init
-        assert isinstance(entries, list)
-        assert entries[0]['short_name'] == 'ATL03'
-
-    def test_max_version(self, init):
-        max_version = cmr_max_version('NSIDC_ECS', 'ATL03')
-        assert init
-        assert isinstance(max_version, str)
-        assert int(max_version) >= 6
 
 #
 # STAC
