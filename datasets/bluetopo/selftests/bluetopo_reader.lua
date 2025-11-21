@@ -18,7 +18,7 @@ local height = 0
 
 local expElevation   = {-14.10, -4.28, -17.18}
 local expUncertainty = {  2.58,  0.34,  1.32}
-local expContributor = { 63846, 24955, 90305}
+local expContributor = { 63846, 24955, 102286}
 
 local elevation_tolerance = 50.0 -- BlueTopo is updated constantly; we just want to check that a valid elevation (within reason) can be sampled
 

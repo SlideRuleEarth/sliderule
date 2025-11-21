@@ -120,7 +120,7 @@ int AmsLib::luaRequest(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        FString errmsg("Error in request to asset metadata service: %s", e.what());
+        const FString errmsg("Error in request to asset metadata service: %s", e.what());
         mlog(e.level(), "%s", errmsg.c_str());
 
         // return failure response
