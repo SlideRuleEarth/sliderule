@@ -1,4 +1,4 @@
-local utils = require("ams_utils")
+local utils = require("ams_icesat2")
 
 local function query (_parms)
     local parms = _parms["ams"]
@@ -9,7 +9,9 @@ local function query (_parms)
         status, response = core.ams("GET", string.format("atl13?refid=%d", parms["refid"]))
     elseif parms["name"] then
         status, response = core.ams("GET", string.format("atl13?name=%s", string.gsub(parms["name"], " ", "%%20")))
-    elseif parms["coord"]["lat"] or parms["coord"]["lon"] then
+    elseif parms["coord"] and (parms["coord"]["lat"] or parms["coord"]["lon"]) then
+        status, response = core.ams("GET", string.format("atl13?lon=%f&lat=%f", parms["coord"]["lon"], parms["coord"]["lat"]))
+    elseif parms["name_filter"] or parms["poly"] then
         status, response = core.ams("GET", string.format("atl13?lon=%f&lat=%f", parms["coord"]["lon"], parms["coord"]["lat"]))
     end
     if status and response and response["refid"] then -- special case to populate refid from response

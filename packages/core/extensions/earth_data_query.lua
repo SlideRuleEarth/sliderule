@@ -146,20 +146,6 @@ local function ams (parms, poly, _with_meta)
     parms["ams"]["t1"]      = parms["ams"]["t1"] or parms["t1"]
     local polygon           = parms["ams"]["poly"] or parms["poly"] or poly
     local with_meta         = parms["ams"]["with_meta"] or parms["with_meta"] or _with_meta
-
-    -- flatten polygon
-    if polygon then
-        local polystr = ""
-        for i,coord in ipairs(polygon) do
-            if i < #polygon then
-                polystr = polystr .. string.format("%f%%20%f%%20", coord["lon"], coord["lat"]) -- with trailing comma
-            else
-                polystr = polystr .. string.format("%f%%20%f", coord["lon"], coord["lat"]) -- without trailing comma
-            end
-        end
-        parms["ams"]["poly"] = polystr
-    end
-
     -- make request
     local status, rsps = ams_pkg.query(parms)
     if status then
@@ -565,11 +551,11 @@ end
 --
 -- search
 --
-local function search (parms, poly, _api)
+local function search (parms, poly)
 
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset = DATASETS[short_name] or {}
-    local api = _api or dataset["api"]
+    local api = dataset["api"]
     if api == "ams" then
         return ams(parms, poly)
     elseif api == "cmr" then

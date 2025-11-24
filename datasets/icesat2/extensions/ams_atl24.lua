@@ -1,5 +1,4 @@
-local json = require("json")
-local utils = require("ams_utils")
+local utils = require("ams_icesat2")
 
 local function query (_parms)
     local parms = _parms["ams"]

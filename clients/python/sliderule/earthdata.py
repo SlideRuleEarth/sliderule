@@ -57,6 +57,53 @@ def set_max_resources (max_resources):
     MaxRequestedResources = max_resources
 
 #
+#  Asset Metadata Service
+#
+def ams(short_name=None, version=None, polygon=None, time_start=None, time_end=None, return_metadata=False, name_filter=None):
+    '''
+    Query the SlideRule Asset Metadata Service (AMS) for a list of data within temporal and spatial parameters
+
+    Parameters
+    ----------
+        short_name:         str
+                            dataset short name as defined in the `NASA CMR Directory <https://cmr.earthdata.nasa.gov/search/site/collections/directory/eosdis>`_
+        version:            str
+                            dataset version string, leave as None to get latest support version
+        polygon:            list
+                            either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+        time_start:         str
+                            starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
+        time_end:           str
+                            ending time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
+        return_metadata:    bool
+                            flag indicating whether metadata associated with the query is returned back to the user
+        name_filter:        str
+                            filter to apply to resources returned by query
+
+    Returns
+    -------
+    list
+        files (granules) for the dataset fitting the spatial and temporal parameters
+    '''
+    global MaxRequestedResources
+
+    # Build Parameters
+    parms = {
+        k: v for k, v in {
+        "api": "ams",
+        "short_name": short_name,
+        "poly": polygon,
+        "t0": time_start,
+        "t1": time_end,
+        "with_meta": return_metadata,
+        "name_filter": name_filter,
+        "max_resources": MaxRequestedResources
+    }.items() if v is not None}
+
+    # Make Request
+    return sliderule.source("earthdata", parms)
+
+#
 #  Common Metadata Repository
 #
 def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):

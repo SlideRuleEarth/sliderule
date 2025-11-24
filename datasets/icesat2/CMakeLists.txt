@@ -87,6 +87,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_atl13.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_atl24.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_icesat2.lua
     DESTINATION
         ${CONFDIR}/ext
 )

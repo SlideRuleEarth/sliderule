@@ -1,13 +1,10 @@
-#
-# Asset Metadata Service
-#
-
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
+from . import icesat2
+import threading
 import time
 import json
 import duckdb
-import threading
 
 ####################
 # Initialization
@@ -50,24 +47,6 @@ def init_app(app):
     db.close()
     app.teardown_appcontext(close_atl13)
 
-#
-# Build Geometry Query
-#
-def build_geometry_query(verb, poly):
-    if poly != None:
-        return f"{verb} ST_Intersects(geometry, ST_GeomFromText('{poly}'));"
-    else:
-        return ''
-
-#
-# Build Name Filter
-#
-def build_name_filter(verb, name_filter):
-    if name_filter != None:
-        return rf"{verb} granule LIKE '{name_filter}' ESCAPE '\\'"
-    else:
-        return ''
-
 ####################
 # APIs
 ####################
@@ -75,24 +54,20 @@ def build_name_filter(verb, name_filter):
 #
 # ATL13
 #
-@atl13.route('/atl13', methods=['GET'])
+@atl13.route('/atl13', methods=['GET', 'POST'])
 def atl13_route():
     single_lake = True
     try:
         # get parameters
-        refid = request.args.get('refid') # reference id
-        name = request.args.get('name') # lake name
-        lon = request.args.get('lon') # longitude coordinate
-        lat = request.args.get('lat') # latitude coordinate
-        poly = request.args.get("poly")
-        name_filter = request.args.get("name_filter")
+        data = request.get_json()
+        refid = data.get('refid') # reference id
+        name = data.get('name') # lake name
+        lon = data.get('lon') # longitude coordinate
+        lat = data.get('lat') # latitude coordinate
+        poly = icesat2.get_polygon_query(data)
+        name_filter = icesat2.get_name_filter(data)
         # get metadata
         mask, mappings = __get_atl13()
-        # reformat polygon
-        if poly != None:
-            points = poly.split(' ')
-            coords = [f'{points[i]} {points[i+1]}' for i in range(0, len(points), 2)]
-            poly = f"POLYGON(({','.join(coords)}))"
         # perform database query
         if refid != None:
             data = mask.execute(f"""
@@ -111,29 +86,29 @@ def atl13_route():
                 SELECT *
                 FROM atl13_mask
                 WHERE ST_Contains(geometry, ST_Point({lon}, {lat}))
-                {build_geometry_query("AND", poly)};
+                {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif poly != None and name_filter != None:
             single_lake = False
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                {build_geometry_query("WHERE", poly)}
-                {build_name_filter("AND", name_filter)};
+                {icesat2.build_polygon_query("WHERE", poly)}
+                {icesat2.build_name_filter("AND", name_filter)};
             """).df()
         elif poly != None:
             single_lake = False
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                {build_geometry_query("WHERE", poly)};
+                {icesat2.build_polygon_query("WHERE", poly)};
             """).df()
         elif name_filter != None:
             single_lake = False
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                {build_name_filter("AND", name_filter)};
+                {icesat2.build_name_filter("AND", name_filter)};
             """).df()
         else:
             raise RuntimeError("must supply at least one query parameter (refid, name, lon and lat)")

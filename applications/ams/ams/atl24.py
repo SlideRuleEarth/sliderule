@@ -1,9 +1,6 @@
-#
-# Asset Metadata Service
-#
-
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
+from . import icesat2
 import json
 import duckdb
 
@@ -35,108 +32,34 @@ def init_app(app):
     app.teardown_appcontext(close_atl24)
 
 ####################
-# Helper Functions
-####################
-
-#
-# Check State
-#
-def check_state(state):
-    if not state['WHERE']:
-        state['WHERE'] = True
-        return 'WHERE'
-    else:
-        return 'AND'
-
-#
-# Build Time Query
-#
-def build_time_query(state):
-    t0 = request.args.get('t0')
-    t1 = request.args.get('t1')
-    if t0 != None and t1 != None:
-        return f"{check_state(state)} begin_time BETWEEN '{t0}' AND '{t1}'"
-    elif t0 != None:
-        return f"{check_state(state)} begin_time >= '{t0}'"
-    elif t1 != None:
-        return f"{check_state(state)} begin_time <= '{t1}'"
-    else:
-        return ''
-
-#
-# Build Range Query
-#
-def build_range_query(state, db_field, r0_field, r1_field):
-    r0 = request.args.get(r0_field)
-    r1 = request.args.get(r1_field)
-    if r0 != None and r1 != None:
-        return f"{check_state(state)} {db_field} BETWEEN {r0} AND {r1}"
-    elif r0 != None:
-        return f'{check_state(state)} {db_field} >= {r0}'
-    elif r1 != None:
-        return f'{check_state(state)} {db_field} <= {r1}'
-    else:
-        return ''
-
-#
-# Build Matching Query
-#
-def build_matching_query(state, db_field, m_field):
-    m = request.args.get(m_field)
-    if m != None:
-        return f'{check_state(state)} {db_field} == {m}'
-    else:
-        return ''
-
-#
-# Build Geometry Query
-#
-def build_geometry_query(state, poly_field):
-    poly = request.args.get(poly_field)
-    if poly != None:
-        points = poly.split(' ')
-        coords = [f'{points[i]} {points[i+1]}' for i in range(0, len(points), 2)]
-        poly_str = f"POLYGON(({','.join(coords)}))"
-        return f"{check_state(state)} ST_Intersects(geometry, ST_GeomFromText('{poly_str}'));"
-    else:
-        return ''
-
-#
-# Build Name Filter
-#
-def build_name_filter(state):
-    f = request.args.get("name_filter")
-    if f != None:
-        return rf"{check_state(state)} granule LIKE '{f}' ESCAPE '\\'"
-    else:
-        return ''
-
-
-####################
 # APIs
 ####################
 
 #
 # ATL24
 #
-@atl24.route('/atl24', methods=['GET'])
+@atl24.route('/atl24', methods=['GET', 'POST'])
 def atl24_route():
     try:
         # execute query
+        data = request.get_json()
+        poly = icesat2.get_polygon_query(data)
+        name_filter = icesat2.get_name_filter(data)
         state = {'WHERE': False}
         db = __get_atl24()
         cmd = f"""
             SELECT *
             FROM atl24db
-            {build_time_query(state)}
-            {build_matching_query(state, "season", "season")}
-            {build_range_query(state, "bathy_photons", "photons0", "photons1")}
-            {build_range_query(state, "bathy_mean_depth", "meandepth0", "meandepth1")}
-            {build_range_query(state, "bathy_min_depth", "mindepth0", "mindepth1")}
-            {build_range_query(state, "bathy_max_depth", "maxdepth0", "maxdepth1")}
-            {build_name_filter(state)}
-            {build_geometry_query(state, "poly")}
+            {icesat2.build_time_query(state, data)}
+            {icesat2.build_matching_query(state, data, "season", "season")}
+            {icesat2.build_range_query(state, data, "bathy_photons", "photons0", "photons1")}
+            {icesat2.build_range_query(state, data, "bathy_mean_depth", "meandepth0", "meandepth1")}
+            {icesat2.build_range_query(state, data, "bathy_min_depth", "mindepth0", "mindepth1")}
+            {icesat2.build_range_query(state, data, "bathy_max_depth", "maxdepth0", "maxdepth1")}
+            {icesat2.build_name_filter(state, name_filter)}
+            {icesat2.build_polygon_query(state, poly)}
         """
+        print(cmd)
         df = db.execute(cmd).df()
         # build response
         hits = len(df)
@@ -158,7 +81,7 @@ def atl24_route():
 #
 # Granule
 #
-@atl24.route('/atl24/granule/<name>', methods=['GET'])
+@atl24.route('/atl24/granule/<name>', methods=['GET', 'POST'])
 def granule_route(name):
     try:
         # execute query
