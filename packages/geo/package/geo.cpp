@@ -269,6 +269,7 @@ int geo_open (lua_State* L)
         {"parms",           GeoFields::luaCreate},
         {"calcutm",         GeoLib::luaCalcUTM},
         {"tiff",            GeoLib::TIFFImage::luaCreate},
+        {"simplify",        GeoLib::luaPolySimplify},
 #ifdef __unittesting__
         {"ut_subset",       UT_RasterSubset::luaCreate},
         {"ut_sample",       UT_RasterSample::luaCreate},

@@ -118,6 +118,7 @@ class GeoLib: public MathLib
 
         static void init (void);
         static int luaCalcUTM (lua_State* L);
+        static int luaPolySimplify (lua_State* L);
         static bool writeBMP (const uint32_t* data, int width, int height, const char* filename, uint32_t min_val=0, uint32_t max_val=0xFFFFFFFF);
         static bool burnGeoJson (RegionMask& image);
         

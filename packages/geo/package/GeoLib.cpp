@@ -34,10 +34,11 @@
  ******************************************************************************/
 
 #include <cmath>
-#include <proj.h>
+#include <vector>
 #include <tiffio.h>
 #include <gdal.h>
 #include <ogr_spatialref.h>
+#include <geos_c.h>
 
 
 #include "GeoLib.h"
@@ -60,6 +61,161 @@ typedef struct {
  ******************************************************************************/
 
 const char* GeoLib::DEFAULT_CRS = "EPSG:7912";  // as opposed to "EPSG:4326"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+static bool luaTableToCoords(lua_State* L, int index, std::vector<MathLib::coord_t>& coords)
+{
+    if(!lua_istable(L, index))
+    {
+        mlog(ERROR, "Polygon parameter is not a table");
+        return false;
+    }
+
+    const int num_points = lua_rawlen(L, index);
+    for(int i = 1; i <= num_points; i++)
+    {
+        lua_rawgeti(L, index, i);
+        if(!lua_istable(L, -1))
+        {
+            mlog(ERROR, "Polygon vertex %d is not a table", i);
+            lua_pop(L, 1);
+            return false;
+        }
+
+        MathLib::coord_t coord {};
+
+        lua_getfield(L, -1, "lon");
+        coord.lon = LuaObject::getLuaFloat(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "lat");
+        coord.lat = LuaObject::getLuaFloat(L, -1);
+        lua_pop(L, 1);
+
+        coords.push_back(coord);
+        lua_pop(L, 1);
+    }
+
+    return true;
+}
+
+static GEOSGeometry* coordsToGeosPolygon(GEOSContextHandle_t context, const std::vector<MathLib::coord_t>& coords)
+{
+    if(coords.size() < 3)
+    {
+        mlog(ERROR, "Polygon requires at least three vertices");
+        return NULL;
+    }
+
+    /* Ensure ring is closed */
+    std::vector<MathLib::coord_t> ring = coords;
+    const MathLib::coord_t& first = ring.front();
+    const MathLib::coord_t& last = ring.back();
+    if(fabs(first.lat - last.lat) > 1e-9 || fabs(first.lon - last.lon) > 1e-9)
+    {
+        ring.push_back(first);
+    }
+
+    GEOSCoordSequence* seq = GEOSCoordSeq_create_r(context, ring.size(), 2);
+    if(seq == NULL)
+    {
+        mlog(ERROR, "Failed to create GEOS coordinate sequence");
+        return NULL;
+    }
+
+    for(size_t i = 0; i < ring.size(); i++)
+    {
+        const MathLib::coord_t& c = ring[i];
+        if(!GEOSCoordSeq_setX_r(context, seq, i, c.lon) || !GEOSCoordSeq_setY_r(context, seq, i, c.lat))
+        {
+            GEOSCoordSeq_destroy_r(context, seq);
+            mlog(ERROR, "Failed to populate GEOS coordinate sequence");
+            return NULL;
+        }
+    }
+
+    GEOSGeometry* linearRing = GEOSGeom_createLinearRing_r(context, seq);
+    if(linearRing == NULL)
+    {
+        GEOSCoordSeq_destroy_r(context, seq);
+        mlog(ERROR, "Failed to create GEOS linear ring");
+        return NULL;
+    }
+
+    GEOSGeometry* polygon = GEOSGeom_createPolygon_r(context, linearRing, NULL, 0);
+    if(polygon == NULL)
+    {
+        GEOSGeom_destroy_r(context, linearRing);
+        mlog(ERROR, "Failed to create GEOS polygon");
+    }
+
+    return polygon;
+}
+
+static bool pushPolygonToLua(lua_State* L, GEOSContextHandle_t context, const GEOSGeometry* polygon)
+{
+    const GEOSGeometry* ring = GEOSGetExteriorRing_r(context, polygon);
+    if(ring == NULL)
+    {
+        return false;
+    }
+
+    const GEOSCoordSequence* seq = GEOSGeom_getCoordSeq_r(context, ring);
+    if(seq == NULL)
+    {
+        return false;
+    }
+
+    uint32_t size = 0;
+    if(!GEOSCoordSeq_getSize_r(context, seq, &size) || size < 3)
+    {
+        return false;
+    }
+
+    /* Skip duplicated closing point, if present */
+    uint32_t limit = size;
+    double firstX = 0.0;
+    double firstY = 0.0;
+    double lastX = 0.0;
+    double lastY = 0.0;
+
+    if(GEOSCoordSeq_getX_r(context, seq, 0, &firstX) && GEOSCoordSeq_getY_r(context, seq, 0, &firstY) &&
+       GEOSCoordSeq_getX_r(context, seq, size - 1, &lastX) && GEOSCoordSeq_getY_r(context, seq, size - 1, &lastY) &&
+       firstX == lastX && firstY == lastY)
+    {
+        limit = size - 1;
+    }
+
+    lua_newtable(L);
+    for(uint32_t i = 0; i < limit; i++)
+    {
+        double x = 0.0;
+        double y = 0.0;
+        if(!GEOSCoordSeq_getX_r(context, seq, i, &x) ||
+           !GEOSCoordSeq_getY_r(context, seq, i, &y))
+        {
+            lua_pop(L, 1); // remove partially filled table
+            lua_pushnil(L);
+            return false;
+        }
+
+        lua_newtable(L);
+        lua_pushstring(L, "lat");
+        lua_pushnumber(L, y);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "lon");
+        lua_pushnumber(L, x);
+        lua_settable(L, -3);
+
+        lua_rawseti(L, -2, i + 1);
+    }
+
+    return true;
+}
 
 /******************************************************************************
  * UTMTransform Subclass
@@ -486,6 +642,120 @@ int GeoLib::luaCalcUTM (lua_State* L)
         mlog(CRITICAL, "Failed to perform UTM transformation on %lf, %lf", latitude, longitude);
         return 0;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * luaPolySimplify
+ *----------------------------------------------------------------------------*/
+int GeoLib::luaPolySimplify(lua_State* L)
+{
+    GEOSContextHandle_t context = initGEOS_r(NULL, NULL);
+    if(context == NULL)
+    {
+        mlog(CRITICAL, "Failed to initialize GEOS context");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    GEOSGeometry* polygon = NULL;
+    GEOSGeometry* buffered = NULL;
+    GEOSGeometry* simplified = NULL;
+    GEOSGeometry* hull = NULL;
+    bool status = false;
+
+    try
+    {
+        const double bufferDistance    = LuaObject::getLuaFloat(L, 2, true, 0.0);
+        const double simplifyTolerance = LuaObject::getLuaFloat(L, 3, true, 0.0);
+        if(bufferDistance < 0.0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Buffer distance must be >= 0.0");
+        }
+        if(simplifyTolerance < 0.0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Simplify tolerance must be >= 0.0");
+        }
+
+        std::vector<MathLib::coord_t> coords;
+        if(!luaTableToCoords(L, 1, coords))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid polygon argument");
+        }
+
+        polygon = coordsToGeosPolygon(context, coords);
+        if(polygon == NULL)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GEOS polygon");
+        }
+
+        /* Buffer first to clean up small gaps/invalidities */
+        buffered = GEOSBuffer_r(context, polygon, bufferDistance, 8);
+        if(buffered == NULL)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "GEOS buffer failed");
+        }
+
+        /* Simplify */
+        simplified = (simplifyTolerance > 0.0) ?
+            GEOSTopologyPreserveSimplify_r(context, buffered, simplifyTolerance) :
+            GEOSGeom_clone_r(context, buffered);
+
+        if(simplified == NULL)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "GEOS simplification failed");
+        }
+
+        /* Compute convex hull of simplified geometry */
+        hull = GEOSConvexHull_r(context, simplified);
+        if (hull == NULL)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "GEOS convex hull failed");
+        }
+
+        /* Reject empty geometries */
+        if (GEOSisEmpty_r(context, hull))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Convex hull result is empty");
+        }
+
+        /* Hull must be a single polygon
+         * In rare cases hull can degenerate to line or point */
+        if (GEOSGeomTypeId_r(context, hull) != GEOS_POLYGON)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Convex hull did not produce a polygon");
+        }
+
+        /*
+         * Validate the hull before returning it to Lua. This is quick relative to
+         * buffer/simplify and guards against numeric edge cases yielding an invalid polygon.
+         */
+        if(GEOSisValid_r(context, hull) != 1)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Convex hull failed validity check");
+        }
+
+        if(!pushPolygonToLua(L, context, hull))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to convert simplified polygon to Lua");
+        }
+
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error simplifying polygon: %s", e.what());
+    }
+
+    GEOSGeom_destroy_r(context, hull);
+    GEOSGeom_destroy_r(context, simplified);
+    GEOSGeom_destroy_r(context, buffered);
+    GEOSGeom_destroy_r(context, polygon);
+    finishGEOS_r(context);
+
+    if(status) return 1;
+
+    lua_pushnil(L);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
