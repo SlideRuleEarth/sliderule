@@ -136,23 +136,38 @@ end
 --
 -- AMS
 --
-local function ams (parms, poly, _with_meta)
+local function ams (parms, poly)
 
-    local short_name        = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset           = DATASETS[short_name] or {}
-    local with_meta         = parms["with_meta"] or _with_meta
-    local status, response  = core.ams("POST", string.format(dataset["url"]), json.encode(parms))
+    -- get dataset
+    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset       = DATASETS[short_name] or {}
+    local url           = dataset["url"]
+    local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
+
+    -- build local parameters that combine top level parms with url (e.g. atl13) specific parms
+    local ams_parms             = parms[url] or {}
+    ams_parms["t0"]             = ams_parms["t0"] or parms["t0"]
+    ams_parms["t1"]             = ams_parms["t1"] or parms["t1"]
+    ams_parms["poly"]           = ams_parms["poly"] or parms["poly"] or poly
+    ams_parms["name_filter"]    = ams_parms["name_filter"] or parms["name_filter"]
+    ams_parms["rgt"]            = ams_parms["rgt"] or parms["rgt"] -- backwards compatibility
+    ams_parms["cycle"]          = ams_parms["cycle"] or parms["cycle"] -- backwards compatibility
+    ams_parms["region"]         = ams_parms["region"] or parms["region"] -- backwards compatibility
+
+    -- make request and process response
+    local status, response = core.ams("POST", dataset["url"], json.encode(ams_parms))
     if status then
         local rc, data = pcall(json.decode, response)
         if rc then
-            if with_meta then -- returns full response from the AMS
+            if parms["with_meta"] then -- returns full response from the AMS
                 return RC_SUCCESS, data
             elseif data["granules"] then -- pulls out just the granules from the AMS
-                local granules = {}
-                for granule in pairs(data["granules"]) do
-                    granules[#granules + 1] = granule
+                local num_granules = #data["granules"]
+                if num_granules > max_resources then
+                    return RC_RSPS_TRUNCATED, string.format("%s resources exceeded maximum allowed: %d > %d", short_name or "unknown", num_granules, max_resources)
+                else
+                    return RC_SUCCESS, data["granules"]
                 end
-                return RC_SUCCESS, granules
             else
                 return RC_RSPS_UNEXPECTED, "granules not found in response from AMS"
             end
@@ -168,28 +183,26 @@ end
 --
 -- CMR
 --
-local function cmr (parms, poly, _with_meta)
+local function cmr (parms, poly)
 
     local linktable = {}
 
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset       = DATASETS[short_name] or {}
-    local cmr_parms     = parms["cmr"] or {}
-    local granule_parms = parms["granule"] or {}
     local provider      = dataset["provider"] or error("unable to determine provider for query")
+    local cmr_parms     = parms["cmr"] or {}
     local version       = cmr_parms["version"] or dataset["version"]
     local polygon       = cmr_parms["polygon"] or parms["poly"] or poly
-    local name_filter   = cmr_parms["name_filter"] or parms["name_filter"]
-    local with_meta     = cmr_parms["with_meta"] or parms["with_meta"] or _with_meta
-    local rgt           = parms["rgt"] or granule_parms["rgt"]
-    local cycle         = parms["cycle"] or granule_parms["cycle"]
-    local region        = parms["region"] or granule_parms["region"]
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build name filter
+    local name_filter   = parms["name_filter"]
+    local rgt           = parms["rgt"]
+    local cycle         = parms["cycle"]
+    local region        = parms["region"]
     if (not name_filter) and
        (rgt or cycle or region) then
         local rgt_filter = rgt and string.format("%04d", rgt) or '????'
@@ -319,7 +332,7 @@ local function cmr (parms, poly, _with_meta)
     end
 
     -- return results
-    if with_meta then
+    if parms["with_meta"] then
         return RC_SUCCESS, linktable
     else
         local urls = {}

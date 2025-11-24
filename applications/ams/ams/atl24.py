@@ -59,21 +59,12 @@ def atl24_route():
             {icesat2.build_name_filter(state, name_filter)}
             {icesat2.build_polygon_query(state, poly)}
         """
-        print(cmd)
         df = db.execute(cmd).df()
-        # build response
         hits = len(df)
-        response = {"hits": hits}
         if hits > current_app.config['MAX_RESOURCES']:
             raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
-        elif hits <= 0:
-            raise RuntimeError(f"no resources were found")
         else:
-            response["granules"] = {}
-            granules = df["granule"].unique()
-            for granule in granules:
-                response["granules"][granule] = list(df[df["granule"] == granule]["beam"].unique())
-        # return response
+            response = {"hits": hits, "granules": list(df["granule"].unique())}
         return json.dumps(response)
     except Exception as e:
         abort(400, f'Failed to query ATL24 metadata service: {e}')

@@ -26,19 +26,37 @@ grandmesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
 #
 class TestAMS:
     def test_atl13_refid(self, init):
-        granules = earthdata.search({"asset": "icesat2-atl13", "refid": 5952002394})
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"refid": 5952002394}})
         assert init
         assert len(granules) == 43
 
     def test_atl13_name(self, init):
-        granules = earthdata.search({"asset": "icesat2-atl13", "name": "Caspian Sea"})
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"name": "Caspian Sea"}})
         assert init
         assert len(granules) == 1372
 
     def test_atl13_coord(self, init):
-        granules = earthdata.search({"asset": "icesat2-atl13", "coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}})
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}}})
         assert init
         assert len(granules) == 2
+
+    def test_atl24_poly(self, init):
+        poly = [
+            {"lat": 21.222261686673306, "lon": -73.78074797284968},
+            {"lat": 21.07228912392266,  "lon": -73.78074797284968},
+            {"lat": 21.07228912392266,  "lon": -73.51303956051089},
+            {"lat": 21.222261686673306, "lon": -73.51303956051089},
+            {"lat": 21.222261686673306, "lon": -73.78074797284968}
+        ]
+        granules = earthdata.search({"asset": "icesat2-atl24", "poly": poly})
+        assert init
+        assert len(granules) == 89
+
+    def test_atl24_meta(self, init):
+        response = earthdata.search({"asset": "icesat2-atl24", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True})
+        assert init
+        assert response["hits"] == 859
+        assert len(response["granules"]) == 204
 
 #
 # CMR

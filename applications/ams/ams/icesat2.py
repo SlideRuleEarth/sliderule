@@ -29,7 +29,7 @@ def get_polygon_query(parms):
 #
 def build_polygon_query(clause, poly):
     if poly != None:
-        return f"{__check(clause)} ST_Intersects(geometry, ST_GeomFromText('{poly}'));"
+        return f"{__check(clause)} ST_Intersects(geometry, ST_GeomFromText('{poly}'))"
     else:
         return ''
 

@@ -14,9 +14,7 @@ def test_atl24_time_range(client):
     data = json.loads(response.data.decode("utf-8"))
     assert data["hits"] == 789
     assert len(data["granules"]) == 138
-    assert len(data["granules"]["ATL24_20181014153336_02440113_006_02_002_01.h5"]) == 3
-    for beam in ["gt1r", "gt2r", "gt3r"]:
-        assert beam in data["granules"]["ATL24_20181014153336_02440113_006_02_002_01.h5"]
+    assert "ATL24_20181014153336_02440113_006_02_002_01.h5" in data["granules"]
 
 def test_atl24_season(client):
     response = client.post('/ams/atl24', json={"t0":"2019-09-30", "t1":"2019-10-02"})

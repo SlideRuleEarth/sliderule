@@ -43,7 +43,6 @@
 #include "OsApi.h"
 #include "H5Coro.h"
 #include "H5Object.h"
-#include "BathyFields.h"
 
 /******************************************************************************
  * CLASS

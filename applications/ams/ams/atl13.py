@@ -72,13 +72,21 @@ def atl13_route():
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                WHERE ATL13refID == {refid};
+                WHERE ATL13refID == {refid}
+                {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif name != None:
+            print("CMD", f"""
+                SELECT *
+                FROM atl13_mask
+                WHERE Lake_name == '{name}'
+                {icesat2.build_polygon_query("AND", poly)};
+            """)
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                WHERE Lake_name == '{name}';
+                WHERE Lake_name == '{name}'
+                {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif coord != None:
             data = mask.execute(f"""
@@ -87,12 +95,19 @@ def atl13_route():
                 WHERE ST_Contains(geometry, ST_Point({coord['lon']}, {coord['lat']}))
                 {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
-        elif poly != None and name_filter != None:
+        elif name_filter != None and poly != None:
             single_lake = False
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                {icesat2.build_polygon_query("WHERE", poly)}
+                {icesat2.build_name_filter("WHERE", name_filter)}
+                {icesat2.build_polygon_query("AND", poly)};
+            """).df()
+        elif name_filter != None:
+            single_lake = False
+            data = mask.execute(f"""
+                SELECT *
+                FROM atl13_mask
                 {icesat2.build_name_filter("AND", name_filter)};
             """).df()
         elif poly != None:
@@ -101,13 +116,6 @@ def atl13_route():
                 SELECT *
                 FROM atl13_mask
                 {icesat2.build_polygon_query("WHERE", poly)};
-            """).df()
-        elif name_filter != None:
-            single_lake = False
-            data = mask.execute(f"""
-                SELECT *
-                FROM atl13_mask
-                {icesat2.build_name_filter("AND", name_filter)};
             """).df()
         else:
             raise RuntimeError("must supply at least one query parameter (refid, name, coord, poly, name_filter)")
@@ -131,16 +139,10 @@ def atl13_route():
         # build multiple lake response
         else:
             hits = len(data)
-            response = {"hits": hits}
             if hits > current_app.config['MAX_RESOURCES']:
                 raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
-            elif hits <= 0:
-                raise RuntimeError(f"no resources were found")
             else:
-                response["granules"] = {}
-                granules = data["granule"].unique()
-                for granule in granules:
-                    response["granules"][granule] = []
+                response = {"hits": hits, "granules":list(data["granule"].unique())}
             return json.dumps(response)
     except Exception as e:
         abort(400, f'Failed to query ATL13 metadata service: {e}')
