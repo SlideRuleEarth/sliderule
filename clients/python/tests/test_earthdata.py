@@ -26,19 +26,19 @@ grandmesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
 #
 class TestAMS:
     def test_atl13_refid(self, init):
-        response = earthdata.search({"asset": "icesat2-atl13", "refid": 5952002394})
+        granules = earthdata.search({"asset": "icesat2-atl13", "refid": 5952002394})
         assert init
-        assert len(response["granules"]) == 43
+        assert len(granules) == 43
 
     def test_atl13_name(self, init):
-        response = earthdata.search({"asset": "icesat2-atl13", "name": "Caspian Sea"})
+        granules = earthdata.search({"asset": "icesat2-atl13", "name": "Caspian Sea"})
         assert init
-        assert len(response["granules"]) == 1372
+        assert len(granules) == 1372
 
     def test_atl13_coord(self, init):
-        response = earthdata.search({"asset": "icesat2-atl13", "coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}})
+        granules = earthdata.search({"asset": "icesat2-atl13", "coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}})
         assert init
-        assert len(response["granules"]) == 2
+        assert len(granules) == 2
 
 #
 # CMR

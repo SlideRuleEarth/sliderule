@@ -18,8 +18,8 @@ DATASETS = {
     ATL06 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL08 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL13 =                                               {provider = "SLIDERULE",   version = "006",  api = "ams",   formats = {".h5"},    collections = {},                               url = "ams_atl13"},
-    ATL24 =                                               {provider = "SLIDERULE",   version = "002",  api = "ams",   formats = {".h5"},    collections = {},                               url = "ams_atl24"},
+    ATL13 =                                               {provider = "SLIDERULE",   version = "006",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl13"},
+    ATL24 =                                               {provider = "SLIDERULE",   version = "002",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl24"},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
@@ -140,31 +140,27 @@ local function ams (parms, poly, _with_meta)
 
     local short_name        = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset           = DATASETS[short_name] or {}
-    local ams_pkg           = require(dataset["url"])
-    parms["ams"]            = parms["ams"] or {}
-    parms["ams"]["t0"]      = parms["ams"]["t0"] or parms["t0"]
-    parms["ams"]["t1"]      = parms["ams"]["t1"] or parms["t1"]
-    local polygon           = parms["ams"]["poly"] or parms["poly"] or poly
-    local with_meta         = parms["ams"]["with_meta"] or parms["with_meta"] or _with_meta
-    -- make request
-    local status, rsps = ams_pkg.query(parms)
+    local with_meta         = parms["with_meta"] or _with_meta
+    local status, response  = core.ams("POST", string.format(dataset["url"]), json.encode(parms))
     if status then
-        local rc, data = pcall(json.decode, rsps)
+        local rc, data = pcall(json.decode, response)
         if rc then
             if with_meta then -- returns full response from the AMS
                 return RC_SUCCESS, data
-            else -- pulls out just the granules from the AMS
+            elseif data["granules"] then -- pulls out just the granules from the AMS
                 local granules = {}
-                for granule in data["granules"] do
+                for granule in pairs(data["granules"]) do
                     granules[#granules + 1] = granule
                 end
                 return RC_SUCCESS, granules
+            else
+                return RC_RSPS_UNEXPECTED, "granules not found in response from AMS"
             end
         else
             return RC_RSPS_UNPARSEABLE, "could not parse json in response from AMS"
         end
     else
-        return RC_RQST_FAILED, string.format("request to AMS failed: %s", rsps)
+        return RC_RQST_FAILED, string.format("request to AMS failed: %s", response)
     end
 
 end

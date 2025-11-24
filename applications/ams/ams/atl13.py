@@ -62,8 +62,7 @@ def atl13_route():
         data = request.get_json()
         refid = data.get('refid') # reference id
         name = data.get('name') # lake name
-        lon = data.get('lon') # longitude coordinate
-        lat = data.get('lat') # latitude coordinate
+        coord = data.get('coord') # coordinate contained in lake
         poly = icesat2.get_polygon_query(data)
         name_filter = icesat2.get_name_filter(data)
         # get metadata
@@ -81,11 +80,11 @@ def atl13_route():
                 FROM atl13_mask
                 WHERE Lake_name == '{name}';
             """).df().iloc[0]
-        elif lon != None and lat != None:
+        elif coord != None:
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                WHERE ST_Contains(geometry, ST_Point({lon}, {lat}))
+                WHERE ST_Contains(geometry, ST_Point({coord['lon']}, {coord['lat']}))
                 {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif poly != None and name_filter != None:
@@ -111,7 +110,7 @@ def atl13_route():
                 {icesat2.build_name_filter("AND", name_filter)};
             """).df()
         else:
-            raise RuntimeError("must supply at least one query parameter (refid, name, lon and lat)")
+            raise RuntimeError("must supply at least one query parameter (refid, name, coord, poly, name_filter)")
         # build single lake response
         if single_lake:
             response = {

@@ -85,15 +85,6 @@ install (
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_atl13.lua
-        ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_atl24.lua
-        ${CMAKE_CURRENT_LIST_DIR}/extensions/ams_icesat2.lua
-    DESTINATION
-        ${CONFDIR}/ext
-)
-
-install (
-    FILES
         ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912.projjson
         ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912_EGM08.projjson
         ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG9989.projjson
