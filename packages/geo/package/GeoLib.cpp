@@ -61,6 +61,8 @@ typedef struct {
  ******************************************************************************/
 
 const char* GeoLib::DEFAULT_CRS = "EPSG:7912";  // as opposed to "EPSG:4326"
+static constexpr double CLOSE_RING_EPSILON       = 1e-9;
+static constexpr double REMOVE_DUPLICATE_EPSILON = 1e-12;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -114,7 +116,7 @@ static GEOSGeometry* coordsToGeosPolygon(GEOSContextHandle_t context, const std:
     std::vector<MathLib::coord_t> ring = coords;
     const MathLib::coord_t& first = ring.front();
     const MathLib::coord_t& last = ring.back();
-    if(fabs(first.lat - last.lat) > 1e-9 || fabs(first.lon - last.lon) > 1e-9)
+    if(fabs(first.lat - last.lat) > CLOSE_RING_EPSILON || fabs(first.lon - last.lon) > CLOSE_RING_EPSILON)
     {
         ring.push_back(first);
     }
@@ -184,7 +186,7 @@ static bool pushPolygonToLua(lua_State* L, GEOSContextHandle_t context, const GE
 
     if(GEOSCoordSeq_getX_r(context, seq, 0, &firstX) && GEOSCoordSeq_getY_r(context, seq, 0, &firstY) &&
        GEOSCoordSeq_getX_r(context, seq, size - 1, &lastX) && GEOSCoordSeq_getY_r(context, seq, size - 1, &lastY) &&
-       firstX == lastX && firstY == lastY)
+       fabs(firstX - lastX) < REMOVE_DUPLICATE_EPSILON && fabs(firstY - lastY) < REMOVE_DUPLICATE_EPSILON)
     {
         limit = size - 1;
     }
@@ -194,8 +196,7 @@ static bool pushPolygonToLua(lua_State* L, GEOSContextHandle_t context, const GE
     {
         double x = 0.0;
         double y = 0.0;
-        if(!GEOSCoordSeq_getX_r(context, seq, i, &x) ||
-           !GEOSCoordSeq_getY_r(context, seq, i, &y))
+        if(!GEOSCoordSeq_getX_r(context, seq, i, &x) || !GEOSCoordSeq_getY_r(context, seq, i, &y))
         {
             lua_pop(L, 1); // remove partially filled table
             lua_pushnil(L);
