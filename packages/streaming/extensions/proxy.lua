@@ -40,12 +40,15 @@ local function proxy(resources, parms_tbl, endpoint, rec)
 
     -- Populate Resources via CMR Request --
     if not resources then
-        local rc, rsps = earthdata.cmr(parms_tbl)
+        local rc, rsps = earthdata.search(parms_tbl)
         if rc == earthdata.SUCCESS then
+            userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> retrieved %d resources", _rqst.id, #rsps))
             resources = rsps
-            userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> retrieved %d resources from CMR", _rqst.id, #resources))
+        elseif rc == earthdata.RSPS_TRUNCATED then
+            userlog:alert(core.CRITICAL, core.RTE_TOO_MANY_RESOURCES, string.format("request <%s> query response truncated: %s", _rqst.id, rsps))
+            return
         else
-            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", _rqst.id, rc, rsps))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed query: %s", _rqst.id, rsps))
             return
         end
     end

@@ -18,8 +18,8 @@ DATASETS = {
     ATL06 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL08 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL13 =                                               {provider = "SLIDERULE",   version = "006",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl13"},
-    ATL24 =                                               {provider = "SLIDERULE",   version = "002",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl24"},
+    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl13"},
+    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "002",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl24"},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
@@ -136,19 +136,20 @@ end
 --
 -- AMS
 --
-local function ams (parms, poly)
+local function ams (parms, poly, _with_meta, _short_name)
 
     -- get dataset
-    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local short_name    = _short_name or parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset       = DATASETS[short_name] or {}
     local url           = dataset["url"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
+    local with_meta     = _with_meta or parms["with_meta"]
 
     -- build local parameters that combine top level parms with url (e.g. atl13) specific parms
     local ams_parms             = parms[url] or {}
     ams_parms["t0"]             = ams_parms["t0"] or parms["t0"]
     ams_parms["t1"]             = ams_parms["t1"] or parms["t1"]
-    ams_parms["poly"]           = ams_parms["poly"] or parms["poly"] or poly
+    ams_parms["poly"]           = poly or ams_parms["poly"] or parms["poly"]
     ams_parms["name_filter"]    = ams_parms["name_filter"] or parms["name_filter"]
     ams_parms["rgt"]            = ams_parms["rgt"] or parms["rgt"] -- backwards compatibility
     ams_parms["cycle"]          = ams_parms["cycle"] or parms["cycle"] -- backwards compatibility
@@ -159,7 +160,7 @@ local function ams (parms, poly)
     if status then
         local rc, data = pcall(json.decode, response)
         if rc then
-            if parms["with_meta"] then -- returns full response from the AMS
+            if with_meta then -- returns full response from the AMS
                 return RC_SUCCESS, data
             elseif data["granules"] then -- pulls out just the granules from the AMS
                 local num_granules = #data["granules"]
@@ -183,20 +184,21 @@ end
 --
 -- CMR
 --
-local function cmr (parms, poly)
+local function cmr (parms, poly, _with_meta, _short_name)
 
     local linktable = {}
 
     -- get parameters of request
-    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local short_name    = _short_name or parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset       = DATASETS[short_name] or {}
     local provider      = dataset["provider"] or error("unable to determine provider for query")
     local cmr_parms     = parms["cmr"] or {}
     local version       = cmr_parms["version"] or dataset["version"]
-    local polygon       = cmr_parms["polygon"] or parms["poly"] or poly
+    local polygon       = poly or parms["poly"]
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
+    local with_meta     = _with_meta or parms["with_meta"]
 
     -- build name filter
     local name_filter   = parms["name_filter"]
@@ -332,7 +334,7 @@ local function cmr (parms, poly)
     end
 
     -- return results
-    if parms["with_meta"] then
+    if with_meta then
         return RC_SUCCESS, linktable
     else
         local urls = {}
@@ -356,7 +358,7 @@ local function stac (parms, poly)
     local dataset       = DATASETS[short_name] or {}
     local url           = dataset["url"]
     local collections   = parms["collections"] or dataset["collections"]
-    local polygon       = parms["poly"] or poly
+    local polygon       = poly or parms["poly"]
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
@@ -448,7 +450,7 @@ local function tnm (parms, poly)
 
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local polygon       = parms["poly"] or poly
+    local polygon       = poly or parms["poly"]
     local t0            = parms["t0"] or '2018-01-01'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
@@ -560,23 +562,28 @@ end
 --
 -- search
 --
-local function search (parms, poly)
-
-    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset = DATASETS[short_name] or {}
-    local api = dataset["api"]
-    if api == "ams" then
-        return ams(parms, poly)
-    elseif api == "cmr" then
-        return cmr(parms, poly)
-    elseif api == "stac" then
-        return stac(parms, poly)
-    elseif api == "tnm" then
-        return tnm(parms, poly)
-    else
-        return RC_UNSUPPORTED, string.format("unsupported api: %s", api)
+local function search (parms, _poly)
+    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset       = DATASETS[short_name] or {}
+    local api           = dataset["api"]
+    local handlers      = { ams=ams, cmr=cmr, stac=stac, tnm=tnm }
+    local handler       = handlers[api]
+    local tolerances    = { 0.0001, 0.001, 0.01, 0.1, 1.0 }
+    local poly          = _poly or parms["poly"]
+    local max_attempts  = (poly and __geo__) and (#tolerances + 1) or 1
+    local attempt       = 1
+    while handler do
+        local rc, rsps = handler(parms, poly)
+        if (rc == RC_SUCCESS) or (rc == RC_RSPS_TRUNCATED) then -- success
+            return rc, rsps
+        elseif attempt >= max_attempts then -- failure
+            return rc, string.format("earthdata query failed after %d attempts", attempt)
+        else -- simplify and retry
+            poly = geo.simplify(poly, tolerances[attempt], tolerances[attempt])
+            attempt = attempt + 1
+        end
     end
-
+    return RC_UNSUPPORTED, string.format("unsupported api <%s>", api)
 end
 
 --

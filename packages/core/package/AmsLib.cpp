@@ -110,8 +110,8 @@ int AmsLib::luaRequest(lua_State* L)
         rsps = request(verb, resource, data);
         if(rsps.code != EndpointObject::OK)
         {
-            if(rsps.response) mlog(CRITICAL, "%s", rsps.response);
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "<%ld> returned from %s", rsps.code, resource);
+            const char* errmsg = StringLib::find(rsps.response, "<p>");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "<%ld> %s", rsps.code, errmsg ? errmsg : rsps.response);
         }
 
         // return successful response
@@ -120,12 +120,9 @@ int AmsLib::luaRequest(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        const FString errmsg("Error in request to asset metadata service: %s", e.what());
-        mlog(e.level(), "%s", errmsg.c_str());
-
         // return failure response
-        lua_pushboolean(L, true);
-        lua_pushstring(L, errmsg.c_str());
+        lua_pushboolean(L, false);
+        lua_pushstring(L, e.what());
     }
 
     // cleanup

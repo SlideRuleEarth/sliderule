@@ -63,10 +63,11 @@ def atl13_route():
         refid = data.get('refid') # reference id
         name = data.get('name') # lake name
         coord = data.get('coord') # coordinate contained in lake
-        poly = icesat2.get_polygon_query(data)
+        poly = None # icesat2.get_polygon_query(data) # currently unsupported by AMS
         name_filter = icesat2.get_name_filter(data)
         # get metadata
         mask, mappings = __get_atl13()
+        print("DATA", data)
         # perform database query
         if refid != None:
             data = mask.execute(f"""
@@ -145,4 +146,4 @@ def atl13_route():
                 response = {"hits": hits, "granules":list(data["granule"].unique())}
             return json.dumps(response)
     except Exception as e:
-        abort(400, f'Failed to query ATL13 metadata service: {e}')
+        abort(400, f'Failed to query ATL13: {e}')

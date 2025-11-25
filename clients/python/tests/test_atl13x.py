@@ -29,8 +29,6 @@ class TestAtl13x:
         gdf_coord = sliderule.run("atl13x",
             {
                 "atl13": {
-                    "refid": 0,
-                    "name": "",
                     "coord": {
                         "lon": -96.87354790276703,
                         "lat": 40.846535052574865

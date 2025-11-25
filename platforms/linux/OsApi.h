@@ -139,12 +139,13 @@ typedef enum {
     RTE_TIMEOUT                 = -2,
     RTE_RESOURCE_DOES_NOT_EXIST = -3,
     RTE_RESOURCE_EMPTY          = -4,
-    RTE_SIMPLIFY                = -5,
+    // DEPRECATED (SIMPLIFY)    = -5,
     RTE_NOT_ENOUGH_MEMORY       = -6,
     RTE_RESOURCE_IO_ERROR       = -7,
     RTE_UNAUTHORIZED            = -8,
     RTE_DID_NOT_COMPLETE        = -9,
-    RTE_TOO_MANY_RESOURCES      = -10
+    RTE_TOO_MANY_RESOURCES      = -10,
+    RTE_SIMPLIFY                = -11
 } alert_code_t;
 
 /* Ordered Key */

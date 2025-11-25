@@ -35,11 +35,9 @@ import tempfile
 import json
 import geopandas
 from shapely.geometry import Polygon
-from shapely.geometry.multipolygon import MultiPolygon
 from datetime import datetime
 from sliderule import version
-from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError, RetryRequest
-from pyproj import CRS
+from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError
 
 try:
     from sklearn.cluster import KMeans
@@ -172,13 +170,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", session=No
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
     session = checksession(session)
-    for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
-        try:
-            return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path)
-        except RetryRequest as e:
-            logger.info(f'Retry requested by {api}: {e}')
-            simplifypolygon(parm, tolerance)
-    return None
+    return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path)
 
 #
 #  set_url
@@ -876,37 +868,6 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 
     # Return GeoDataFrame
     return gdf
-
-#
-# Simplify Polygon
-#
-def simplifypolygon(parm, tolerance):
-    if "parms" not in parm:
-        return
-
-    if "cmr" in parm["parms"]:
-        polygon = parm["parms"]["cmr"]["polygon"]
-    elif "poly" in parm["parms"]:
-        polygon = parm["parms"]["poly"]
-    else:
-        return
-
-    raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
-    shape = MultiPolygon(*raw_multi_polygon)
-    buffered_shape = shape.buffer(tolerance)
-    simplified_shape = buffered_shape.simplify(tolerance)
-    simplified_coords = list(simplified_shape.exterior.coords)
-
-    simplified_polygon = []
-    for coord in simplified_coords:
-        point = {"lon": coord[0], "lat": coord[1]}
-        simplified_polygon.insert(0, point)
-
-    if "cmr" not in parm["parms"]:
-        parm["parms"]["cmr"] = {}
-    parm["parms"]["cmr"]["polygon"] = simplified_polygon
-
-    logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
 
 #
 # Set Session
