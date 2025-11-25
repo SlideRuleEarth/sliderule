@@ -43,11 +43,11 @@ def locateit(source_ip, debug_info):
 def captureit(endpoint, duration):
     global gauge_metrics, count_metrics
     if type(endpoint) != str:
-        raise RuntimeError('endpoint not provided: {endpoint}')
+        raise RuntimeError(f'endpoint not provided: {endpoint}')
     elif len(endpoint) == 0 or len(endpoint) > 32:
-        raise RuntimeError('endpoint name too long: {endpoint}')
+        raise RuntimeError(f'endpoint name too long: {endpoint}')
     elif not endpoint.isidentifier():
-        raise RuntimeError('invalid endpoint name: {endpoint}')
+        raise RuntimeError(f'invalid endpoint name: {endpoint}')
     else:
         gauge_metrics[endpoint] = duration
         gauge_metrics[endpoint + "_sum"] = gauge_metrics.get(endpoint + "_sum", 0.0) + duration
@@ -97,7 +97,7 @@ def record():
     try:
         data = request.get_json()
         client = data['client']
-        endpoint = data['endpoint']
+        endpoint = data['endpoint'].split("/")[0]
         duration = data['duration']
         source_ip = data['source_ip'].split(",")[0]
         account = data['account']

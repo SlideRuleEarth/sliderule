@@ -221,6 +221,8 @@ int StringLib::formats(char* dststr, int size, const char* _format, ...)
 
 /*----------------------------------------------------------------------------
  * copy
+ *
+ *  _size includes null terminator
  *----------------------------------------------------------------------------*/
 char* StringLib::copy(char* dst, const char* src, int _size)
 {

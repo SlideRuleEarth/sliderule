@@ -18,8 +18,8 @@ DATASETS = {
     ATL06 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL08 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL13 =                                               {provider = "SLIDERULE",   version = "006",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl13"},
+    ATL24 =                                               {provider = "SLIDERULE",   version = "002",  api = "ams",   formats = {".h5"},    collections = {},                               url = "atl24"},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
@@ -57,7 +57,6 @@ ASSETS_TO_DATASETS = {
     ["atlas-local"] = "ATL03",
     ["atlas-s3"] = "ATL03",
     ["atl24-s3"] = "ATL24",
-    ["nsidc-s3"] = "ATL03",
     ["arcticdem-strips"] = "arcticdem-strips",
     ["rema-strips"] = "rema-strips"
 }
@@ -135,29 +134,75 @@ end
 ---------------------------------------------------------------
 
 --
+-- AMS
+--
+local function ams (parms, poly)
+
+    -- get dataset
+    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset       = DATASETS[short_name] or {}
+    local url           = dataset["url"]
+    local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
+
+    -- build local parameters that combine top level parms with url (e.g. atl13) specific parms
+    local ams_parms             = parms[url] or {}
+    ams_parms["t0"]             = ams_parms["t0"] or parms["t0"]
+    ams_parms["t1"]             = ams_parms["t1"] or parms["t1"]
+    ams_parms["poly"]           = ams_parms["poly"] or parms["poly"] or poly
+    ams_parms["name_filter"]    = ams_parms["name_filter"] or parms["name_filter"]
+    ams_parms["rgt"]            = ams_parms["rgt"] or parms["rgt"] -- backwards compatibility
+    ams_parms["cycle"]          = ams_parms["cycle"] or parms["cycle"] -- backwards compatibility
+    ams_parms["region"]         = ams_parms["region"] or parms["region"] -- backwards compatibility
+
+    -- make request and process response
+    local status, response = core.ams("POST", dataset["url"], json.encode(ams_parms))
+    if status then
+        local rc, data = pcall(json.decode, response)
+        if rc then
+            if parms["with_meta"] then -- returns full response from the AMS
+                return RC_SUCCESS, data
+            elseif data["granules"] then -- pulls out just the granules from the AMS
+                local num_granules = #data["granules"]
+                if num_granules > max_resources then
+                    return RC_RSPS_TRUNCATED, string.format("%s resources exceeded maximum allowed: %d > %d", short_name or "unknown", num_granules, max_resources)
+                else
+                    return RC_SUCCESS, data["granules"]
+                end
+            else
+                return RC_RSPS_UNEXPECTED, "granules not found in response from AMS"
+            end
+        else
+            return RC_RSPS_UNPARSEABLE, "could not parse json in response from AMS"
+        end
+    else
+        return RC_RQST_FAILED, string.format("request to AMS failed: %s", response)
+    end
+
+end
+
+--
 -- CMR
 --
-local function cmr (parms, poly, with_meta)
+local function cmr (parms, poly)
 
-    local link_table = {}
+    local linktable = {}
 
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset       = DATASETS[short_name] or {}
-    local cmr_parms     = parms["cmr"] or {}
-    local granule_parms = parms["granule"] or {}
     local provider      = dataset["provider"] or error("unable to determine provider for query")
+    local cmr_parms     = parms["cmr"] or {}
     local version       = cmr_parms["version"] or dataset["version"]
     local polygon       = cmr_parms["polygon"] or parms["poly"] or poly
-    local rgt           = parms["rgt"] or granule_parms["rgt"]
-    local cycle         = parms["cycle"] or granule_parms["cycle"]
-    local region        = parms["region"] or granule_parms["region"]
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
-    local name_filter   = parms["name_filter"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build name filter
+    local name_filter   = parms["name_filter"]
+    local rgt           = parms["rgt"]
+    local cycle         = parms["cycle"]
+    local region        = parms["region"]
     if (not name_filter) and
        (rgt or cycle or region) then
         local rgt_filter = rgt and string.format("%04d", rgt) or '????'
@@ -263,8 +308,8 @@ local function cmr (parms, poly, with_meta)
                                         url = token
                                     end
                                     -- add url to table of links with metadata
-                                    if not link_table[url] then
-                                        link_table[url] = metadata
+                                    if not linktable[url] then
+                                        linktable[url] = metadata
                                         num_links = num_links + 1
                                         total_links = total_links + 1
                                     end
@@ -287,11 +332,11 @@ local function cmr (parms, poly, with_meta)
     end
 
     -- return results
-    if with_meta then
-        return RC_SUCCESS, link_table
+    if parms["with_meta"] then
+        return RC_SUCCESS, linktable
     else
         local urls = {}
-        for link,_ in pairs(link_table) do
+        for link,_ in pairs(linktable) do
             table.insert(urls, link)
         end
         return RC_SUCCESS, urls
@@ -303,6 +348,8 @@ end
 -- STAC
 --
 local function stac (parms, poly)
+
+    local geotable = {}
 
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
@@ -347,7 +394,6 @@ local function stac (parms, poly)
     end
 
     -- parse response into a table
-    local geotable = {}
     local next_page = {}
     status, geotable, next_page = build_geojson(rsps)
     if not status then
@@ -519,7 +565,9 @@ local function search (parms, poly)
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset = DATASETS[short_name] or {}
     local api = dataset["api"]
-    if api == "cmr" then
+    if api == "ams" then
+        return ams(parms, poly)
+    elseif api == "cmr" then
         return cmr(parms, poly)
     elseif api == "stac" then
         return stac(parms, poly)
@@ -535,6 +583,7 @@ end
 -- Return Package --
 --
 return {
+    ams = ams,
     cmr = cmr,
     stac = stac,
     tnm = tnm,

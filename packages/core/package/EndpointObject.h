@@ -130,7 +130,7 @@ class EndpointObject: public LuaObject
                 explicit Request (const char* _id);
                 ~Request (void);
 
-                int         setLuaTable     (lua_State* L, const char* rqst_id, const char* rspq_name) const;
+                int         setLuaTable     (lua_State* L, const char* rqst_id, const char* rspq_name, const char* argument) const;
                 const char* getHdrSourceIp  (void) const;
                 const char* getHdrClient    (void) const;
                 const char* getHdrAccount   (void) const;

@@ -1,52 +1,49 @@
-FROM ubuntu:20.04
-MAINTAINER JP Swinski (jp.swinski@nasa.gov)
+FROM amazonlinux:2023
 
 # Install Dependencies
-RUN apt-get update && \
-  apt-get install -y \
-  adduser \
-  libfontconfig1 \
-  wget \
-  zip \
-  curl \
-  && rm -rf /var/lib/apt/lists/*
+RUN dnf update -y \
+    && dnf install -y \
+        wget \
+        zip \
+        gzip \
+        xz \
+        tar \
+        fontconfig \
+    && dnf clean all \
+    && rm -rf /var/cache/yum
 
 # Install Grafana
 RUN wget https://dl.grafana.com/enterprise/release/grafana-enterprise-8.2.1.linux-arm64.tar.gz && \
     tar -zxvf grafana-enterprise-8.2.1.linux-arm64.tar.gz && \
-    ln -s /grafana-8.2.1/bin/grafana-server /usr/sbin/grafana-server && \
-    ln -s /grafana-8.2.1/bin/grafana-cli /usr/sbin/grafana-cli && \
-    ln -s /grafana-8.2.1/ /grafana
+    mv /grafana-8.2.1/bin/grafana-server /usr/sbin/grafana-server && \
+    mv /grafana-8.2.1/bin/grafana-cli /usr/sbin/grafana-cli && \
+    mv /grafana-8.2.1/ /grafana
 
 # Install Prometheus
 RUN wget https://github.com/prometheus/prometheus/releases/download/v2.30.3/prometheus-2.30.3.linux-arm64.tar.gz && \
     tar -xvzf prometheus-2.30.3.linux-arm64.tar.gz && \
-    ln -s /prometheus-2.30.3.linux-arm64/prometheus /usr/sbin/prometheus && \
-    ln -s /prometheus-2.30.3.linux-arm64/promtool /usr/sbin/promtool && \
-    ln -s /prometheus-2.30.3.linux-arm64/ /prometheus
+    mv /prometheus-2.30.3.linux-arm64/prometheus /usr/sbin/prometheus && \
+    mv /prometheus-2.30.3.linux-arm64/promtool /usr/sbin/promtool && \
+    mv /prometheus-2.30.3.linux-arm64/ /prometheus
 
 # Install Loki
 RUN wget https://github.com/grafana/loki/releases/download/v2.3.0/loki-linux-arm64.zip && \
     unzip loki-linux-arm64.zip && \
-    ln -s /loki-linux-arm64 /usr/sbin/loki && \
-    mkdir /loki
+    mv /loki-linux-arm64 /usr/sbin/loki
 
-# Configure Loki
-COPY loki.yml /loki
+# Install s6-overlay (glibc, arm64)
+ADD https://github.com/just-containers/s6-overlay/releases/latest/download/s6-overlay-noarch.tar.xz /tmp/
+ADD https://github.com/just-containers/s6-overlay/releases/latest/download/s6-overlay-aarch64.tar.xz /tmp/
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-aarch64.tar.xz && \
+    rm -f /tmp/s6-overlay-*.tar.xz
 
-# Configure Prometheus
-COPY prometheus.yml /prometheus/prometheus.yml
+# Copy Configuration
+COPY ./ /
 
 # Configure Grafana
-COPY grafana.ini /grafana/conf/grafana.ini
-COPY datasources.yaml /grafana/conf/provisioning/datasources/default.yaml
-COPY dashboards.yaml /grafana/conf/provisioning/dashboards/default.yaml
-COPY dashboard-*.json /var/lib/grafana/dashboards/
 RUN grafana-cli --homepath "/grafana" --config "/grafana/conf/grafana.ini" admin data-migration encrypt-datasource-passwords
-COPY dashboard-sliderule-node-sys-metrics.json /grafana/public/dashboards/home.json
+RUN cp /var/lib/grafana/dashboards/dashboard-sliderule-node-sys-metrics.json /grafana/public/dashboards/home.json
 
-# Copy Over Entry Point Script
-COPY docker-entrypoint.sh /usr/local/etc/
-
-# Default Entry Point (likely overridden by command line invocation of entrypoint script above)
-ENTRYPOINT ["/usr/bin/bash"]
+# Default Entrypoint
+ENTRYPOINT ["/init"]

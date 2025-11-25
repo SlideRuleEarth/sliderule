@@ -3,8 +3,6 @@
 import pytest
 import sliderule
 from sliderule import earthdata
-from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
-from sliderule.earthdata import __cmr_max_version as cmr_max_version
 from pathlib import Path
 from datetime import datetime
 import os
@@ -24,6 +22,43 @@ grandmesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
               {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
 
 #
+# AMS
+#
+class TestAMS:
+    def test_atl13_refid(self, init):
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"refid": 5952002394}})
+        assert init
+        assert len(granules) == 43
+
+    def test_atl13_name(self, init):
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"name": "Caspian Sea"}})
+        assert init
+        assert len(granules) == 1372
+
+    def test_atl13_coord(self, init):
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}}})
+        assert init
+        assert len(granules) == 2
+
+    def test_atl24_poly(self, init):
+        poly = [
+            {"lat": 21.222261686673306, "lon": -73.78074797284968},
+            {"lat": 21.07228912392266,  "lon": -73.78074797284968},
+            {"lat": 21.07228912392266,  "lon": -73.51303956051089},
+            {"lat": 21.222261686673306, "lon": -73.51303956051089},
+            {"lat": 21.222261686673306, "lon": -73.78074797284968}
+        ]
+        granules = earthdata.search({"asset": "icesat2-atl24", "poly": poly})
+        assert init
+        assert len(granules) == 89
+
+    def test_atl24_meta(self, init):
+        response = earthdata.search({"asset": "icesat2-atl24", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True})
+        assert init
+        assert response["hits"] == 859
+        assert len(response["granules"]) == 204
+
+#
 # CMR
 #
 @pytest.mark.external
@@ -33,18 +68,6 @@ class TestCMR:
         assert init
         assert isinstance(granules, list)
         assert 'ATL03_20181016104402_02720106_006_02.h5' in granules
-
-    def test_collection(self, init):
-        entries = cmr_collection_query('NSIDC_ECS', 'ATL03')
-        assert init
-        assert isinstance(entries, list)
-        assert entries[0]['short_name'] == 'ATL03'
-
-    def test_max_version(self, init):
-        max_version = cmr_max_version('NSIDC_ECS', 'ATL03')
-        assert init
-        assert isinstance(max_version, str)
-        assert int(max_version) >= 6
 
 #
 # STAC

@@ -196,7 +196,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "RTE_FAILURE",              RTE_FAILURE);
     LuaEngine::setAttrInt   (L, "RTE_TIMEOUT",              RTE_TIMEOUT);
     LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST", RTE_RESOURCE_DOES_NOT_EXIST);
-    LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);
+    LuaEngine::setAttrInt   (L, "RTE_RESOURCE_EMPTY",       RTE_RESOURCE_EMPTY);
     LuaEngine::setAttrInt   (L, "RTE_SIMPLIFY",             RTE_SIMPLIFY);
     LuaEngine::setAttrInt   (L, "RTE_TOO_MANY_RESOURCES",   RTE_TOO_MANY_RESOURCES);
     LuaEngine::setAttrInt   (L, "INT8",                     RecordObject::INT8);

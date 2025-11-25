@@ -35,9 +35,14 @@ def create_app(test_config=None):
     def echo(var):
         return f'{var}'
 
-    # initialize asset metadata service
+    # initialize ATL13
     from . import atl13
     atl13.init_app(app)
     app.register_blueprint(atl13.atl13)
+
+    # initialize ATL24
+    from . import atl24
+    atl24.init_app(app)
+    app.register_blueprint(atl24.atl24)
 
     return app

@@ -104,12 +104,13 @@ EndpointObject::Request::~Request (void)
 /*----------------------------------------------------------------------------
  * setLuaTable
  *----------------------------------------------------------------------------*/
-int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, const char* rspq_name) const
+int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, const char* rspq_name, const char* argument) const
 {
     lua_newtable(L);
     LuaEngine::setAttrStr(L, "id", rqst_id);
     LuaEngine::setAttrStr(L, "rspq", rspq_name);
     LuaEngine::setAttrStr(L, "srcip", getHdrSourceIp());
+    LuaEngine::setAttrStr(L, "arg", argument);
     lua_setglobal(L, "_rqst");
     return 1;
 }
