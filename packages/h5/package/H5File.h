@@ -93,6 +93,8 @@ class H5File: public LuaObject
             long                    col;
             long                    startrow;
             long                    numrows;
+            H5Coro::range_t         slice[H5Coro::MAX_NDIMS];
+            int                     slicendims;
             const char*             outqname;
             H5File*                 h5file;
         } dataset_info_t;

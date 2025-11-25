@@ -132,8 +132,7 @@ void* H5File::readThread (void* parm)
     try
     {
         /* Read Dataset */
-        H5Coro::range_t slice[2] = COLUMN_SLICE(info->col, info->startrow, info->numrows);
-        results = H5Coro::read(info->h5file->context, info->dataset, info->valtype, slice, 2, false, info->h5file->traceId);
+        results = H5Coro::read(info->h5file->context, info->dataset, info->valtype, info->slice, info->slicendims, false, info->h5file->traceId);
     }
     catch (const RunTimeException& e)
     {
@@ -219,6 +218,8 @@ int H5File::luaRead (lua_State* L)
                 long startrow;
                 long numrows;
                 RecordObject::valType_t valtype;
+                H5Coro::range_t slice[H5Coro::MAX_NDIMS];
+                int slicendims = 0;
 
                 /* Get Dataset Entry */
                 lua_rawgeti(L, tbl_index, i+1);
@@ -243,6 +244,60 @@ int H5File::luaRead (lua_State* L)
                     lua_getfield(L, -1, "numrows");
                     numrows = getLuaInteger(L, -1, true, H5Coro::ALL_ROWS);
                     lua_pop(L, 1);
+
+                    /* Initialize Slice Defaults */
+                    for(int d = 0; d < H5Coro::MAX_NDIMS; d++)
+                    {
+                        slice[d].r0 = 0;
+                        slice[d].r1 = H5Coro::EOR;
+                    }
+
+                    /* Optional Explicit Slice */
+                    lua_getfield(L, -1, "slice");
+                    if(lua_istable(L, -1))
+                    {
+                        slicendims = lua_rawlen(L, -1);
+                        if(slicendims <= 0 || slicendims > H5Coro::MAX_NDIMS)
+                        {
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid slice dimensions specified: %d", slicendims);
+                        }
+
+                        for(int d = 0; d < slicendims; d++)
+                        {
+                            lua_rawgeti(L, -1, d + 1);
+                            if(!lua_istable(L, -1) || lua_rawlen(L, -1) < 2)
+                            {
+                                throw RunTimeException(CRITICAL, RTE_FAILURE, "slice dimension %d must be a 2-element table", d);
+                            }
+
+                            lua_rawgeti(L, -1, 1);
+                            const long r0 = getLuaInteger(L, -1, true, 0);
+                            lua_pop(L, 1);
+
+                            lua_rawgeti(L, -1, 2);
+                            const long r1 = getLuaInteger(L, -1, true, H5Coro::EOR);
+                            lua_pop(L, 1);
+
+                            lua_pop(L, 1); // pop dimension table
+
+                            if(r1 != H5Coro::EOR && r1 < r0)
+                            {
+                                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid slice range [%ld, %ld) at dimension %d", r0, r1, d);
+                            }
+
+                            slice[d].r0 = r0;
+                            slice[d].r1 = (r1 == H5Coro::EOR ? H5Coro::EOR : r1);
+                        }
+                    }
+                    else
+                    {
+                        /* Backward-compatible column slice */
+                        const H5Coro::range_t column_slice[2] = COLUMN_SLICE(col, startrow, numrows);
+                        slice[0] = column_slice[0];
+                        slice[1] = column_slice[1];
+                        slicendims = 2;
+                    }
+                    lua_pop(L, 1); // pop slice
                 }
                 else
                 {
@@ -256,6 +311,11 @@ int H5File::luaRead (lua_State* L)
                 info->col = col;
                 info->startrow = startrow;
                 info->numrows = numrows;
+                info->slicendims = slicendims;
+                for(int d = 0; d < H5Coro::MAX_NDIMS; d++)
+                {
+                    info->slice[d] = slice[d];
+                }
                 info->outqname = StringLib::duplicate(outq_name);
                 info->h5file = lua_obj;
                 Thread* pid = new Thread(readThread, info);
