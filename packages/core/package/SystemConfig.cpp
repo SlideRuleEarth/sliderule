@@ -135,7 +135,6 @@ SystemConfig::SystemConfig(void):
         {"authenticate_to_podaac",      &authenticateToPODAAC},
         {"authenticate_to_asf",         &authenticateToASF},
         {"register_as_service",         &registerAsService},
-        {"asset_directory",             &assetDirectory},
         {"normal_mem_thresh",           &normalMemoryThreshold},
         {"stream_mem_thresh",           &streamMemoryThreshold},
         {"msgq_depth",                  &msgQDepth},

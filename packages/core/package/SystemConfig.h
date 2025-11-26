@@ -97,7 +97,6 @@ class SystemConfig: public FieldDictionary
         FieldElement<bool>              authenticateToPODAAC        {true};
         FieldElement<bool>              authenticateToASF           {true};
         FieldElement<bool>              registerAsService           {true};
-        FieldElement<string>            assetDirectory              {"asset_directory.csv"};
         FieldElement<float>             normalMemoryThreshold       {1.0};
         FieldElement<float>             streamMemoryThreshold       {0.75};
         FieldElement<int>               msgQDepth                   {10000};

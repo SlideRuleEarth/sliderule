@@ -300,7 +300,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=Non
 #
 # scaleout
 #
-def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
+def scaleout(desired_nodes, time_to_live, session=None):
     '''
     Scale the cluster and wait for cluster to reach desired state
 
@@ -310,8 +310,6 @@ def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
                         the desired number of nodes in the cluster
         time_to_live:   int
                         number of minutes for the desired nodes to run
-        bypass_dns:     bool
-                        the cluster ip address is retrieved from the provisioning system and used directly
 
     Examples
     --------
@@ -319,7 +317,7 @@ def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
         >>> sliderule.scaleout(4, 300, False)
     '''
     session = checksession(session)
-    return session.scaleout(desired_nodes, time_to_live, bypass_dns)
+    return session.scaleout(desired_nodes, time_to_live)
 
 #
 # authenticate

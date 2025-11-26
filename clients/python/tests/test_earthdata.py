@@ -48,12 +48,12 @@ class TestAMS:
             {"lat": 21.222261686673306, "lon": -73.51303956051089},
             {"lat": 21.222261686673306, "lon": -73.78074797284968}
         ]
-        granules = earthdata.search({"asset": "icesat2-atl24", "poly": poly})
+        granules = earthdata.search({"asset": "atl24-s3", "poly": poly})
         assert init
         assert len(granules) == 89
 
     def test_atl24_meta(self, init):
-        response = earthdata.search({"asset": "icesat2-atl24", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True})
+        response = earthdata.search({"asset": "atl24-s3", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True})
         assert init
         assert response["hits"] == 859
         assert len(response["granules"]) == 204

@@ -1,4 +1,4 @@
-local asset = require("asset")
+local earthdata = require("earth_data_query")
 local json = require("json")
 local aws_utils = require("aws_utils")
 
@@ -38,8 +38,8 @@ if sys.upleap(leap_seconds_file) then
     sys.log(core.CRITICAL, "Successfully updated leap seconds from "..leap_seconds_service)
 end
 
--- Configure Assets --
-asset.loaddir(sys.getcfg("asset_directory"))
+-- Load Earthdata Assets --
+earthdata.load()
 
 -- Run IAM Role Authentication Script (identity="iam-role") --
 core.script("iam_role_auth"):global("RoleAuthScript")
