@@ -267,7 +267,7 @@ void initcore (void)
 #endif
 
     /* Register IO Drivers */
-    Asset::registerDriver("nil", Asset::IODriver::create);
+    Asset::registerDriver(Asset::NIL_DRIVER, Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
 
     /* Initialize Lua Extensions */

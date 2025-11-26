@@ -78,6 +78,7 @@ class Asset: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int    RESOURCE_NAME_LENGTH = 150;
+        static const char*  NIL_DRIVER;
         static const char*  OBJECT_TYPE;
 
         /*--------------------------------------------------------------------
