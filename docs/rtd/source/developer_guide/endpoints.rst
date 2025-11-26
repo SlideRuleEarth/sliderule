@@ -349,6 +349,9 @@ h5p
        * - **datasets**
          - list of datasets (see `h5 <#h5>`_ for a list of parameters for each dataset)
          - *required*
+       * - **datasets[*].slice**
+         - optional multi-dimensional slice for a dataset; list of ranges ``[[start0, end0], [start1, end1], ...]`` per dimension. Ranges are half-open ``[start, end)`` with ``-1`` meaning “to the end”. Up to ``H5Coro::MAX_NDIMS`` dimensions are honored; missing trailing dimensions default to ``[0, end]``. If ``slice`` is omitted, the legacy ``col``, ``startrow``, and ``numrows`` parameters are used for 2D column/row selection.
+         - ``None``
 
     **Python Example**
 

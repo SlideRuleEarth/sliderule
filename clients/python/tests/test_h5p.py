@@ -2,6 +2,7 @@
 
 import pytest
 from sliderule import h5
+import numpy
 
 ATL06_FILE1 = "ATL06_20181019065445_03150111_007_01.h5"
 
@@ -94,3 +95,47 @@ class TestApi:
         r6 = h5.h5("/gt1r/signal_find_output/ocean/delta_time", resource, "icesat2", numrows=100000)
         assert len(r6) == 0
 
+    def test_slice(self, init):
+        # Read full dataset once
+        dataset = "/gt1l/land_ice_segments/h_li"
+        full_rsps = h5.h5p([{"dataset": dataset}], ATL06_FILE1, "icesat2")
+        assert init
+        assert dataset in full_rsps
+
+        full_vals = full_rsps[dataset]
+        if len(full_vals) < 2:
+            pytest.skip("dataset too small to validate slice behavior")
+
+        # Slice entire range explicitly, should match full read
+        slice_rsps = h5.h5p([{"dataset": dataset, "slice": [[0, -1]]}], ATL06_FILE1, "icesat2")
+        assert dataset in slice_rsps
+        numpy.testing.assert_array_equal(full_vals, slice_rsps[dataset])
+
+        # Slice from index 1 to end, should match full_vals[1:]
+        slice_rsps = h5.h5p([{"dataset": dataset, "slice": [[1, -1]]}], ATL06_FILE1, "icesat2")
+        assert dataset in slice_rsps
+        numpy.testing.assert_array_equal(full_vals[1:], slice_rsps[dataset])
+
+        # Slice starting ~1/4 into the array and stopping before the end
+        start = len(full_vals) // 4
+        end = max(start + 1, len(full_vals) - 2)
+        slice_rsps = h5.h5p([{"dataset": dataset, "slice": [[start, end]]}], ATL06_FILE1, "icesat2")
+        assert dataset in slice_rsps
+        numpy.testing.assert_array_equal(full_vals[start:end], slice_rsps[dataset])
+
+    def test_slice_invalid_ranges(self, init):
+        dataset = "/gt1l/land_ice_segments/h_li"
+
+        # Excessively high end
+        rsps = h5.h5p([{"dataset": dataset, "slice": [[0, 999999999]]}], ATL06_FILE1, "icesat2")
+        assert init
+        assert dataset not in rsps
+
+        # Negative start
+        rsps = h5.h5p([{"dataset": dataset, "slice": [[-5, 10]]}], ATL06_FILE1, "icesat2")
+        assert init
+        assert dataset not in rsps
+
+        # start > end
+        rsps = h5.h5p([{"dataset": dataset, "slice": [[10, 5]]}], ATL06_FILE1, "icesat2")
+        assert dataset not in rsps

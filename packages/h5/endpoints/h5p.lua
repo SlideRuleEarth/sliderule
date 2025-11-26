@@ -12,7 +12,8 @@
 --                          "valtype":  <RecordObject::valType_t>,
 --                          "col":      [<column number>],
 --                          "startrow": [<row number>],
---                          "numrows":  [<total number of rows to read>]
+--                          "numrows":  [<total number of rows to read>],
+--                          "slice":    [ [<start dim0>, <end dim0>], [<start dim1>, <end dim1>], ... ]
 --                      },
 --                      ...
 --                  ]

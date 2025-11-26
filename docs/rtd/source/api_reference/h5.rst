@@ -20,4 +20,3 @@ h5
 h5p
 ---
 .. autofunction:: sliderule.h5.h5p
-
