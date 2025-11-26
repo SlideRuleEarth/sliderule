@@ -2,7 +2,7 @@
 
 import pytest
 import sliderule
-from sliderule import earthdata
+from sliderule import earthdata, session
 from pathlib import Path
 from datetime import datetime
 import os
@@ -61,18 +61,58 @@ class TestAMS:
 #
 # CMR
 #
-@pytest.mark.external
 class TestCMR:
     def test_grandmesa_time_range(self, init):
         granules = earthdata.cmr(short_name='ATL03', polygon=grandmesa, time_start='2018-10-01', time_end='2018-12-01')
         assert init
         assert isinstance(granules, list)
-        assert 'ATL03_20181016104402_02720106_006_02.h5' in granules
+        assert 'ATL03_20181115210428_07370102_007_01.h5' in granules
+
+    def test_truncation(self, domain, organization):
+        sliderule.init(domain, organization=organization, rethrow=True)
+        poly = [
+            {"lon": -57.3377754282184,"lat": 47.52178013311578},
+            {"lon": -57.3377754282184,"lat": 48.25095283140914},
+            {"lon": -59.04776772612316,"lat": 48.25095283140914},
+            {"lon": -59.04776772612316,"lat": 47.52178013311578},
+            {"lon": -57.3377754282184,"lat": 47.52178013311578}
+        ]
+        with pytest.raises(session.FatalError) as info:
+            earthdata.search({"asset": "icesat2", "poly": poly})
+        assert "HTTP error <500>" in str(info.value)
+
+    def test_invalid_polygon(self, domain, organization):
+        sliderule.init(domain, organization=organization, rethrow=True)
+        poly = [
+            {"lon": 19.975596525453085, "lat": 3.7442630778936206},
+            {"lon": 20.1664873571508,   "lat": 3.7620774102445154},
+            {"lon": 20.425971422567812, "lat": 4.2291563179785925},
+            {"lon": 20.65399992379713,  "lat": 3.5112727532072086},
+            {"lon": 20.77075101805619,  "lat": 3.8854015379486952},
+            {"lon": 20.132155753778108, "lat": 4.082686073723906},
+            {"lon": 19.975596525453085, "lat": 3.744263077893} # not closed (missing last digits)
+        ]
+        with pytest.raises(session.FatalError) as info:
+            earthdata.search({"asset": "icesat2", "poly": poly})
+        assert "HTTP error <500>" in str(info.value)
+
+    def test_simplification(self, init):
+        poly = [
+            {"lon": 19.975596525453085, "lat": 3.7442630778936206},
+            {"lon": 20.1664873571508,   "lat": 3.7620774102445154},
+            {"lon": 20.425971422567812, "lat": 4.2291563179785925},
+            {"lon": 20.65399992379713,  "lat": 3.5112727532072086},
+            {"lon": 20.77075101805619,  "lat": 3.8854015379486952},
+            {"lon": 20.132155753778108, "lat": 4.082686073723906},
+            {"lon": 19.975596525453085, "lat": 3.7442630778936206}
+        ]
+        rsps = earthdata.search({"asset": "icesat2", "poly": poly})
+        assert init
+        assert len(rsps) == 186
 
 #
 # STAC
 #
-@pytest.mark.external
 class TestSTAC:
     def test_hls_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
@@ -152,10 +192,10 @@ class TestTNM:
         assert len(geojson['features']) == 0
 
 #
-# SlideRule Endpoint
+# Icesat2 Earthdata Search
 #
 @pytest.mark.external
-class TestSlideRule:
+class TestIcesat2:
     def test_atl03(self, init):
         parms = {"asset": "icesat2", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
@@ -218,26 +258,11 @@ class TestSlideRule:
 
     def test_atl13(self, init):
         saltlake = [
-            {
-            "lon": -111.78656302303546,
-            "lat": 40.474445992545355
-            },
-            {
-            "lon": -111.78656302303546,
-            "lat": 41.745511885629725
-            },
-            {
-            "lon": -113.25842634761666,
-            "lat": 41.745511885629725
-            },
-            {
-            "lon": -113.25842634761666,
-            "lat": 40.474445992545355
-            },
-            {
-            "lon": -111.78656302303546,
-            "lat": 40.474445992545355
-            }
+            {"lon": -111.78656302303546,"lat": 40.474445992545355},
+            {"lon": -111.78656302303546,"lat": 41.745511885629725},
+            {"lon": -113.25842634761666,"lat": 41.745511885629725},
+            {"lon": -113.25842634761666,"lat": 40.474445992545355},
+            {"lon": -111.78656302303546,"lat": 40.474445992545355}
         ]
         parms = {"asset": "icesat2-atl13", "poly": saltlake, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
@@ -297,7 +322,6 @@ class TestSlideRule:
 #
 # GEDI Earthdata Search
 #
-@pytest.mark.external
 class TestGedi:
     def test_l1b(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))

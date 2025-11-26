@@ -62,7 +62,6 @@ typedef struct {
 
 const char* GeoLib::DEFAULT_CRS = "EPSG:7912";  // as opposed to "EPSG:4326"
 static constexpr double CLOSE_RING_EPSILON       = 1e-9;
-static constexpr double REMOVE_DUPLICATE_EPSILON = 1e-12;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -142,7 +141,7 @@ static GEOSGeometry* coordsToGeosPolygon(GEOSContextHandle_t context, const std:
     GEOSGeometry* linearRing = GEOSGeom_createLinearRing_r(context, seq);
     if(linearRing == NULL)
     {
-        GEOSCoordSeq_destroy_r(context, seq);
+        // DO NOT destroy seq - the call to createLinearRing takes ownership and destroys it
         mlog(ERROR, "Failed to create GEOS linear ring");
         return NULL;
     }
@@ -177,22 +176,8 @@ static bool pushPolygonToLua(lua_State* L, GEOSContextHandle_t context, const GE
         return false;
     }
 
-    /* Skip duplicated closing point, if present */
-    uint32_t limit = size;
-    double firstX = 0.0;
-    double firstY = 0.0;
-    double lastX = 0.0;
-    double lastY = 0.0;
-
-    if(GEOSCoordSeq_getX_r(context, seq, 0, &firstX) && GEOSCoordSeq_getY_r(context, seq, 0, &firstY) &&
-       GEOSCoordSeq_getX_r(context, seq, size - 1, &lastX) && GEOSCoordSeq_getY_r(context, seq, size - 1, &lastY) &&
-       fabs(firstX - lastX) < REMOVE_DUPLICATE_EPSILON && fabs(firstY - lastY) < REMOVE_DUPLICATE_EPSILON)
-    {
-        limit = size - 1;
-    }
-
     lua_newtable(L);
-    for(uint32_t i = 0; i < limit; i++)
+    for(uint32_t i = 0; i < size; i++)
     {
         double x = 0.0;
         double y = 0.0;

@@ -7,7 +7,6 @@ from sliderule import sliderule, earthdata, icesat2
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.external
 class TestHLS:
     def test_samples(self, init):
         time_start = "2021-01-01T00:00:00Z"

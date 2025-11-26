@@ -175,8 +175,6 @@ class TestMosaic:
         assert 'mosaic.stdev' in gdf.columns
         assert 'mosaic.slope' not in gdf.columns
 
-
-@pytest.mark.external
 class TestStrips:
     def test_indexed_raster(self, init):
         region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},

@@ -78,6 +78,7 @@ RC_RSPS_UNPARSEABLE = -3
 RC_RSPS_UNEXPECTED = -4
 RC_RSPS_TRUNCATED = -5
 RC_UNSUPPORTED = -6
+RC_INVALID_GEOMETRY = -7
 
 --
 -- Build GeoJSON
@@ -117,6 +118,40 @@ local function build_geojson(rsps)
     end
     -- return geotable
     return status, geotable, next_page
+end
+
+--
+-- Clean Polygon
+--
+local function clean_polygon(poly)
+    -- check type
+    if type(poly) ~= 'table' then
+        sys.log(core.ERROR, "Invalid type for polygon detected: " .. type(poly))
+        return nil
+    end
+    -- check size
+    local num_coords = #poly
+    if num_coords <= 3 then
+        sys.log(core.ERROR, "Invalid length of polygon detected: " .. tostring(num_coords))
+        return nil
+    end
+    -- close polygon if necessary
+    if (poly[1]["lat"] ~= poly[num_coords]["lat"]) and
+       (poly[1]["lon"] ~= poly[num_coords]["lon"]) then
+        sys.log(core.ERROR, "Polygon is not closed")
+        return nil
+    end
+    -- determine winding of polygon: sum((x2 - x1) * (y2 + y1))
+    local wind = 0
+    for i=1,(num_coords-1) do
+        wind = wind + ((poly[i+1]["lon"] - poly[i]["lon"]) * (poly[i+1]["lat"] + poly[i]["lat"]))
+    end
+    -- reverse direction (make counter-clockwise) if necessary
+    for i = 1,math.floor(num_coords/2) do
+        poly[i], poly[num_coords-i+1] = poly[num_coords-i+1], poly[i]
+    end
+    -- return cleaned version of polygon (in addition to changing in place)
+    return poly
 end
 
 --
@@ -579,7 +614,12 @@ local function search (parms, _poly)
         elseif attempt >= max_attempts then -- failure
             return rc, string.format("earthdata query failed after %d attempts", attempt)
         else -- simplify and retry
+            sys.log(core.WARNING, string.format("Simplifying polygon with tolerance of %f", tolerances[attempt]))
             poly = geo.simplify(poly, tolerances[attempt], tolerances[attempt])
+            poly = clean_polygon(poly)
+            if poly == nil then
+                return RC_INVALID_GEOMETRY, string.format("invalid polygon")
+            end
             attempt = attempt + 1
         end
     end
@@ -601,5 +641,6 @@ return {
     RSPS_UNPARSEABLE = RC_RSPS_UNPARSEABLE,
     RSPS_UNEXPECTED = RC_RSPS_UNEXPECTED,
     RSPS_TRUNCATED = RC_RSPS_TRUNCATED,
-    UNSUPPORTED = RC_UNSUPPORTED
+    UNSUPPORTED = RC_UNSUPPORTED,
+    INVALID_GEOMETRY = RC_INVALID_GEOMETRY
 }

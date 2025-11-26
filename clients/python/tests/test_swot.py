@@ -7,7 +7,6 @@ import os.path
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.external
 class Test_ECCO_LLC4320:
     def test_cmr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
@@ -15,7 +14,6 @@ class Test_ECCO_LLC4320:
         assert len(granules) > 0
         assert 'SWOT_L2_' in granules[0]
 
-@pytest.mark.external
 class Test_GLORYS:
     def test_cmr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))

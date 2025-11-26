@@ -253,34 +253,37 @@ class Session:
                 complete = True
 
             except requests.ConnectionError as e:
-                logger.error(f'Connection error... {retry_status(remaining_attempts)}')
+                rsps = 'Connection error'
 
             except requests.Timeout as e:
-                logger.error(f'Timed-out waiting for response... {retry_status(remaining_attempts)}')
+                rsps = 'Timed-out waiting for response'
 
             except requests.exceptions.ChunkedEncodingError as e:
-                logger.error(f'Unexpected termination of response... {retry_status(remaining_attempts)}')
+                rsps = 'Unexpected termination of response'
 
             except requests.exceptions.SSLError as e:
-                logger.error(f'Unable to verify SSL certificate... {retry_status(remaining_attempts)}')
+                rsps = 'Unable to verify SSL certificate'
                 break # skip retries
 
             except requests.HTTPError as e:
                 if e.response.status_code == 503:
-                    logger.error(f'Cluster experiencing heavy load... {retry_status(remaining_attempts)}')
+                    rsps = 'Cluster experiencing heavy load'
                 else:
-                    logger.error(f'HTTP error <{e.response.status_code}> from {url}: {rsps}')
+                    rsps = f'HTTP error <{e.response.status_code}> {rsps}'
                     break # skip retries
 
             except Exception as e:
-                logger.error(f'Exception processing request to {url}: {e}')
+                rsps = f'Exception processing request: {e}'
                 break # skip retries
 
+            # Log Reason for Not Completing
+            if not complete:
+                logger.error(f'{rsps}... {retry_status(remaining_attempts)}')
 
         # Check Complete
         if not complete:
             if self.throw_exceptions:
-                raise FatalError(f'Request to {url} did not complete')
+                raise FatalError(f'Request to {url} did not complete: {rsps}')
             else:
                 rsps = None
 
