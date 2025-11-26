@@ -6,7 +6,7 @@ local earthdata = require("earth_data_query")
 local parm = json.decode(arg[1])
 local status,rsps = earthdata.search(parm)
 if status == earthdata.SUCCESS then
-    return json.encode(rsps)
+    return json.encode(rsps), true
 else
-    return json.encode({error=rsps, code=status})
+    return json.encode({error=rsps, code=status}), false
 end

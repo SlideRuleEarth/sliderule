@@ -588,7 +588,7 @@ const char* LuaEngine::getResult (bool* in_error)
         return lua_tostring(L, 1); // return results
     }
 
-    return NULL; // return null to indicate results were no obtainable
+    return NULL; // return null to indicate results were not obtainable
 }
 
 /******************************************************************************

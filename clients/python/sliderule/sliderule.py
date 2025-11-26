@@ -69,7 +69,7 @@ def init (
     desired_nodes=None,
     time_to_live=60,
     bypass_dns=False,
-    plugins=[],
+    plugins=None,
     log_handler=None,
     rethrow=False ):
     '''
@@ -134,7 +134,7 @@ def init (
 #
 #  source
 #
-def source (api, parm={}, stream=False, callbacks={}, path="/source", session=None):
+def source (api, parm=None, stream=False, callbacks=None, path="/source", session=None):
     '''
     Perform API call to SlideRule service
 
@@ -417,7 +417,7 @@ def get_version (session=None):
 #
 # check_version
 #
-def check_version (plugins=[], session=None):
+def check_version (plugins=None, session=None):
     '''
     Check that the version of the client matches the version of the server and any additionally requested plugins
 
@@ -449,9 +449,10 @@ def check_version (plugins=[], session=None):
         raise FatalError(f'Client {info["client"]["version"]} is incompatible with the server {info["server"]["version"]}')
 
     # check plugins
-    for plugin in plugins:
-        if versions[plugin][0] != versions['client'][0]:
-            raise FatalError(f'Client {info["client"]["version"]} is incompatible with the {plugin} plugin {info[plugin]["version"]}')
+    if isinstance(plugins, list):
+        for plugin in plugins:
+            if versions[plugin][0] != versions['client'][0]:
+                raise FatalError(f'Client {info["client"]["version"]} is incompatible with the {plugin} plugin {info[plugin]["version"]}')
 
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
@@ -565,44 +566,15 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     >>> import sliderule, json
     >>> region = sliderule.toregion("tests/data/grandmesa.geojson")
     >>> print(json.dumps(region["poly"], indent=4))
-    [
-        {
-            "lon": -108.20772968780051,
-            "lat": 38.8232055291981
-        },
-        {
-            "lon": -108.07460164311031,
-            "lat": 38.8475137825863
-        },
-        {
-            "lon": -107.72839858755752,
-            "lat": 39.01510930230633
-        },
-        {
-            "lon": -107.78724142490994,
-            "lat": 39.195630349659986
-        },
-        {
-            "lon": -108.17287000970857,
-            "lat": 39.15920066396116
-        },
-        {
-            "lon": -108.31168256553767,
-            "lat": 39.13757646212944
-        },
-        {
-            "lon": -108.34115668325224,
-            "lat": 39.03758987613325
-        },
-        {
-            "lon": -108.2878686387796,
-            "lat": 38.89051431295789
-        },
-        {
-            "lon": -108.20772968780051,
-            "lat": 38.8232055291981
-        }
-    ]
+    [   {"lon": -108.20772968780051,"lat": 38.8232055291981},
+        {"lon": -108.07460164311031,"lat": 38.8475137825863},
+        {"lon": -107.72839858755752,"lat": 39.01510930230633},
+        {"lon": -107.78724142490994,"lat": 39.195630349659986},
+        {"lon": -108.17287000970857,"lat": 39.15920066396116},
+        {"lon": -108.31168256553767,"lat": 39.13757646212944},
+        {"lon": -108.34115668325224,"lat": 39.03758987613325},
+        {"lon": -108.2878686387796,"lat": 38.89051431295789},
+        {"lon": -108.20772968780051,"lat": 38.8232055291981}    ]
     '''
     # GeoDataFrame
     if isinstance(source, geopandas.GeoDataFrame):

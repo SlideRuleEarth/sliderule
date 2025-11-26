@@ -213,7 +213,7 @@ class Session:
     #
     #  source
     #
-    def source (self, api, parm={}, stream=False, callbacks={}, path="/source", force_throw=False):
+    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2):
         '''
         handles making the HTTP request to the sliderule cluster nodes
         '''
@@ -222,27 +222,32 @@ class Session:
         headers = {'x-sliderule-client': f'python-{version.full_version}'}
 
         # build callbacks
-        for c in self.callbacks:
-            if c not in callbacks:
-                callbacks[c] = self.callbacks[c]
+        if isinstance(callbacks, dict):
+            for c in self.callbacks:
+                if c not in callbacks:
+                    callbacks[c] = self.callbacks[c]
 
         # Construct Request URL
         if self.service_org:
-            url = 'https://%s.%s%s/%s' % (self.service_org, self.service_domain, path, api)
+            url = f'https://{self.service_org}.{self.service_domain}{path}/{api}'
         else:
-            url = 'http://%s%s/%s' % (self.service_domain, path, api)
+            url = f'http://{self.service_domain}{path}/{api}'
 
         # Construct Payload
-        if type(parm) == dict:
+        if isinstance(parm, dict):
             payload = json.dumps(parm)
         else:
             payload = parm
 
+        # status helper function
+        def retry_status(attempt):
+            return f"attempt {1 + retries - attempt} of {1 + retries} to {url}"
+
         # Attempt request
         complete = False
-        attempts = 3
-        while not complete and attempts > 0:
-            attempts -= 1
+        remaining_attempts = 1 + retries
+        while not complete and remaining_attempts > 0:
+            remaining_attempts -= 1
             try:
                 # Build Authorization Header
                 if self.service_org:
@@ -253,56 +258,51 @@ class Session:
                     data = self.session.get(url, data=payload, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
                 else:
                     data = self.session.post(url, data=payload, headers=headers, timeout=self.rqst_timeout, stream=True, verify=self.ssl_verify)
-                data.raise_for_status()
 
                 # Parse Response
-                stream = self.__StreamSource(data)
-                format = data.headers['Content-Type']
-                if format == 'text/plain':
-                    rsps = self.__parse_json(stream)
-                elif format == 'application/json':
-                    rsps = self.__parse_json(stream)
+                stream_source = self.__StreamSource(data)
+                format = data.headers.get('Content-Type')
+                if format in ('text/plain', 'application/json'):
+                    rsps = self.__parse_json(stream_source)
                 elif format == 'application/octet-stream':
-                    rsps = self.__parse_native(stream, callbacks)
-                elif self.throw_exceptions or force_throw:
-                    raise FatalError(f'Unsupported content type: {format}')
+                    rsps = self.__parse_native(stream_source, callbacks)
                 else:
-                    logger.error(f'Unsupported content type: {format}')
+                    raise FatalError(f'Unsupported content type: {format}')
+
+                # Handle Error Codes
+                data.raise_for_status()
 
                 # Success
                 complete = True
 
-            except requests.exceptions.SSLError as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Unable to verify SSL certificate for {url} ...retrying request')
-
             except requests.ConnectionError as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Connection error to endpoint {url} ...retrying request')
+                logger.error(f'Connection error... {retry_status(remaining_attempts)}')
 
             except requests.Timeout as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Timed-out waiting for response from endpoint {url} ...retrying request')
+                logger.error(f'Timed-out waiting for response... {retry_status(remaining_attempts)}')
 
             except requests.exceptions.ChunkedEncodingError as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Unexpected termination of response from endpoint {url} ...retrying request')
+                logger.error(f'Unexpected termination of response... {retry_status(remaining_attempts)}')
+
+            except requests.exceptions.SSLError as e:
+                logger.error(f'Unable to verify SSL certificate... {retry_status(remaining_attempts)}')
+                break # skip retries
 
             except requests.HTTPError as e:
-                if self.throw_exceptions or force_throw:
-                    if e.response.status_code == 503:
-                        raise FatalError(f'Server experiencing heavy load, stalling on request to {url}')
-                    else:
-                        raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'HTTP error <{e.response.status_code}> returned in request to {url} ...retrying request')
+                if e.response.status_code == 503:
+                    logger.error(f'Cluster experiencing heavy load... {retry_status(remaining_attempts)}')
+                else:
+                    logger.error(f'HTTP error <{e.response.status_code}> from {url}: {rsps}')
+                    break # skip retries
+
+            except Exception as e:
+                logger.error(f'Exception processing request to {url}: {e}')
+                break # skip retries
+
 
         # Check Complete
         if not complete:
-            if self.throw_exceptions or force_throw:
+            if self.throw_exceptions:
                 raise FatalError(f'Request to {url} did not complete')
             else:
                 rsps = None
@@ -414,7 +414,7 @@ class Session:
 
         # Get number of nodes currently registered
         try:
-            rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", force_throw=True)
+            rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
             available_servers = rsps["nodes"]
         except FatalError as e:
             logger.debug(f'Failed to retrieve number of nodes registered: {e}')
@@ -540,10 +540,14 @@ class Session:
     #
     #  manager
     #
-    def manager (self, api, content_json=True, as_post=False, headers={}):
+    def manager (self, api, content_json=True, as_post=False, headers=None):
         '''
         handles making the HTTP request to the sliderule manager
         '''
+        # default parameters
+        if headers == None:
+            headers = {}
+
         # initialize local variables
         rsps = ""
 
@@ -566,23 +570,11 @@ class Session:
             data.raise_for_status()
 
             # Parse Response
-            stream = self.__StreamSource(data)
-            lines = [line for line in stream]
+            stream_source = self.__StreamSource(data)
+            lines = [line for line in stream_source]
             rsps = b''.join(lines)
             if content_json:
                 rsps = json.loads(rsps)
-
-        except requests.exceptions.SSLError as e:
-            logger.error(f'Unable to verify SSL certificate for {url}')
-
-        except requests.ConnectionError as e:
-            logger.error(f'Connection error to endpoint {url}')
-
-        except requests.Timeout as e:
-            logger.error(f'Timed-out waiting for response from endpoint {url}')
-
-        except requests.HTTPError as e:
-            logger.error(f'HTTP error <{e.response.status_code}> returned in request to {url}: {rsps}')
 
         except Exception as e:
             logger.error(f'Failed to make request to {url}: {e}')
