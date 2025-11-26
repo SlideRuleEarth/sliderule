@@ -68,7 +68,6 @@ def init (
     organization=0,
     desired_nodes=None,
     time_to_live=60,
-    bypass_dns=False,
     plugins=None,
     log_handler=None,
     rethrow=False ):
@@ -90,8 +89,6 @@ def init (
                         requested number of processing nodes in the cluster
         time_to_live:   int
                         minimum number of minutes the desired number of nodes should be present in the cluster
-        bypass_dns:     bool
-                        if true then the ip address for the cluster is retrieved from the provisioning system and used directly
         plugins:        list
                         names of the plugins that need to be available on the server
         log_handler:    logger
@@ -118,7 +115,6 @@ def init (
         organization=organization,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
-        bypass_dns=bypass_dns,
         log_handler=log_handler,
         rethrow=rethrow)
     # verify compatibility between client and server versions

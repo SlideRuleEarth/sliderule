@@ -29,7 +29,6 @@
 
 import os
 import netrc
-import getpass
 import requests
 import threading
 import socket
@@ -53,24 +52,6 @@ eventlogger = {
     3: logger.error,
     4: logger.critical
 }
-
-###############################################################################
-# DNS OVERRIDE
-###############################################################################
-
-sliderule_getaddrinfo = socket.getaddrinfo
-sliderule_dns = {}
-
-def __override_getaddrinfo(*args, **kwargs):
-    global sliderule_getaddrinfo, sliderule_dns
-    url = args[0].lower()
-    if url in sliderule_dns:
-        logger.debug("getaddrinfo returned {} for {}".format(sliderule_dns[url], url))
-        return sliderule_getaddrinfo(sliderule_dns[url], *args[1:], **kwargs)
-    else:
-        return sliderule_getaddrinfo(*args, **kwargs)
-
-socket.getaddrinfo = __override_getaddrinfo
 
 ###############################################################################
 # GLOBALS
@@ -133,12 +114,6 @@ class FatalError(RuntimeError):
     pass
 
 #
-# RetryRequest
-#
-class RetryRequest(RuntimeError):
-    pass
-
-#
 # Session
 #
 class Session:
@@ -157,13 +132,15 @@ class Session:
         organization    = 0,
         desired_nodes   = None,
         time_to_live    = 60, # minutes
-        bypass_dns      = False,
         trust_env       = False,
         ssl_verify      = True,
         rqst_timeout    = (10, 120), # (connection, read) in seconds
         log_handler     = None,
         decode_aux      = True,
-        rethrow         = False ):
+        rethrow         = False,
+        ps_username     = None,
+        ps_password     = None,
+        github_token    = None):
         '''
         creates and configures a sliderule session
         '''
@@ -205,10 +182,10 @@ class Session:
         # configure credentials (if any) for organization
         if organization == 0:
             organization = self.PUBLIC_ORG
-        self.authenticate(organization)
+        self.authenticate(organization, ps_username=ps_username, ps_password=ps_password, github_token=github_token)
 
         # set cluster to desired number of nodes (if permitted based on credentials)
-        self.scaleout(desired_nodes, time_to_live, bypass_dns)
+        self.scaleout(desired_nodes, time_to_live)
 
     #
     #  source
@@ -375,7 +352,7 @@ class Session:
         requested_nodes = 0
 
         # update number of nodes
-        if type(desired_nodes) == int:
+        if isinstance(desired_nodes, int):
             headers = {}
             rsps_body = {}
             requested_nodes = desired_nodes
@@ -398,7 +375,7 @@ class Session:
 
             # Request number of nodes in cluster
             try:
-                if type(time_to_live) == int:
+                if isinstance(time_to_live, int):
                     host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes_ttl/" + self.service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
                     rsps = self.session.post(host, headers=headers, timeout=self.rqst_timeout)
                 else:
@@ -425,7 +402,7 @@ class Session:
     #
     # scaleout
     #
-    def scaleout (self, desired_nodes, time_to_live, bypass_dns):
+    def scaleout (self, desired_nodes, time_to_live):
         '''
         makes a capacity request to the provisioning system and waits
         for the cluster to reach the requested capacity
@@ -435,11 +412,6 @@ class Session:
             return # nothing needs to be done
         if desired_nodes < 0:
             raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
-
-        # initialize DNS
-        self.__initdns() # clear cache of DNS lookups for clusters
-        if bypass_dns:
-            self.__jamdns() # use ip address for cluster
 
         # send initial request for desired cluster state
         start = time.time()
@@ -452,9 +424,6 @@ class Session:
             logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
             time.sleep(10.0)
             available_nodes,_ = self.update_available_servers()
-            # Override DNS if Cluster is Starting
-            if available_nodes == 0 and not self.__dnsoverridden():
-                self.__jamdns()
             # Timeout Occurred
             if int(time.time() - start) > self.MAX_PS_CLUSTER_WAIT_SECS:
                 logger.error("Maximum time allowed waiting for cluster has been exceeded")
@@ -498,12 +467,6 @@ class Session:
                 ps_password = login_credentials[2]
             except Exception as e:
                 pass
-
-        # prompt user for username and password
-        if not github_token and not ps_username and not ps_password:
-            if ps_organization != self.PUBLIC_ORG:
-                ps_username = input("Username: ")
-                ps_password = getpass.getpass("Password: ")
 
         # build authentication request
         user = None
@@ -821,44 +784,6 @@ class Session:
         return recs
 
     #
-    # __initdns
-    #
-    def __initdns (self):
-        '''
-        resets the global dictionary
-        '''
-        self.local_dns.clear()
-
-    #
-    # __dnsoverridden
-    #
-    def __dnsoverridden (self):
-        '''
-        checks if url is already overridden
-        '''
-        url = self.service_org + "." + self.service_domain
-        return url.lower() in self.local_dns
-
-    #
-    # __jamdns
-    #
-    def __jamdns (self):
-        '''
-        override the dns entry
-        '''
-        global sliderule_dns
-        headers = {}
-        url = self.service_org + "." + self.service_domain
-        self.__buildauthheader(headers)
-        host = "https://ps." + self.service_domain + "/api/org_ip_adr/" + self.service_org + "/"
-        rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout).json()
-        if rsps["status"] == "SUCCESS":
-            ipaddr = rsps["ip_address"]
-            self.local_dns[url.lower()] = ipaddr
-            logger.debug("Overriding DNS for {} with {}".format(url, ipaddr))
-        sliderule_dns = self.local_dns
-
-    #
     #  __logrec
     #
     @staticmethod
@@ -870,9 +795,7 @@ class Session:
     #
     @staticmethod
     def __alertrec (rec, session):
-        if rec["code"] == EXCEPTION_CODES["SIMPLIFY"]:
-            raise RetryRequest("cmr simplification requested")
-        elif rec["code"] < 0:
+        if rec["code"] < 0:
             eventlogger[rec["level"]]("Alert <%d>: %s", rec["code"], rec["text"])
         else:
             eventlogger[rec["level"]]("%s", rec["text"])

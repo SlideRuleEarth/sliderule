@@ -497,8 +497,6 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
         #ifdef __geo__
         {GeoFields::PARMS,      &samplers},
         #endif
-        // deprecated
-        {"raster",              &regionMask},
     }),
     asset(asset_name)
 {
