@@ -83,11 +83,11 @@ def h5 (dataset, resource, asset, datatype=DATATYPES["DYNAMIC"], col=0, startrow
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
-                    the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
+                    the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned. Ignored if ``slice`` is supplied.
         startrow:   int
-                    the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
+                    the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension). Ignored if ``slice`` is supplied.
         numrows:    int
-                    the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
+                    the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset. Ignored if ``slice`` is supplied.
 
     Returns
     -------
@@ -139,6 +139,7 @@ def h5p (datasets, resource, asset):
         The `datasets` dictionary can optionally contain the following elements per entry:
 
         * "valtype" (int): the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
+        * "slice" (list): optional multi-dimensional slice, expressed as ``[[start0, end0], [start1, end1], ...]`` (half-open ``[start, end)``, ``-1`` means to the end). Up to ``H5Coro::MAX_NDIMS`` dimensions are honored; missing trailing dimensions default to ``[0, end]``. If "slice" is provided, "col"/"startrow"/"numrows" are ignored.
         * "col" (int): the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned.
         * "startrow" (int): the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)
         * "numrows" (int): the number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if **ALL_ROWS** selected, it will read from the **startrow** to the end of the dataset.
@@ -148,8 +149,8 @@ def h5p (datasets, resource, asset):
         >>> from sliderule import icesat2
         >>> icesat2.init(["127.0.0.1"], False)
         >>> datasets = [
-        ...         {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
-        ...         {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},
+        ...         {"dataset": "/gt1l/land_ice_segments/h_li", "slice": [[0, 5], [0, -1]]},  # slice rows 0-4, all cols
+        ...         {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},                # legacy window
         ...         {"dataset": "/gt2l/land_ice_segments/h_li", "numrows": 5},
         ...         {"dataset": "/gt2r/land_ice_segments/h_li", "numrows": 5},
         ...         {"dataset": "/gt3l/land_ice_segments/h_li", "numrows": 5},

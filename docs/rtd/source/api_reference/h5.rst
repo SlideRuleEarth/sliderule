@@ -21,3 +21,14 @@ h5p
 ---
 .. autofunction:: sliderule.h5.h5p
 
+   ``datasets`` entries can optionally include a ``slice`` field to request multi-dimensional hyperslabs. The ``slice`` is a list of ranges per dimension: ``[[start0, end0], [start1, end1], ...]`` with half-open semantics ``[start, end)``. Use ``-1`` for an end bound to read to the end of that dimension. Missing trailing dimensions default to ``[0, end]`` and up to ``H5Coro::MAX_NDIMS`` are honored. If ``slice`` is omitted, legacy parameters ``col``, ``startrow``, and ``numrows`` are used for 2D column/row selection.
+
+   Example:
+
+   .. code-block:: python
+
+        datasets = [
+            {"dataset": "/gt1l/land_ice_segments/h_li", "slice": [[0, 10], [0, -1]]},  # rows 0-9, all columns
+            {"dataset": "/gt1r/land_ice_segments/h_li", "col": 0, "startrow": 5, "numrows": 5}  # legacy style
+        ]
+        rsps = h5.h5p(datasets, "ATL06_20181019065445_03150111_007_01.h5", "icesat2")
