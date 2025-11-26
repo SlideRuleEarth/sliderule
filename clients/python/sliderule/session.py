@@ -198,11 +198,14 @@ class Session:
         rsps = {}
         headers = {'x-sliderule-client': f'python-{version.full_version}'}
 
+        # initialize parameters
+        if callbacks == None:
+            callbacks = {}
+
         # build callbacks
-        if isinstance(callbacks, dict):
-            for c in self.callbacks:
-                if c not in callbacks:
-                    callbacks[c] = self.callbacks[c]
+        for c in self.callbacks:
+            if c not in callbacks:
+                callbacks[c] = self.callbacks[c]
 
         # Construct Request URL
         if self.service_org:
