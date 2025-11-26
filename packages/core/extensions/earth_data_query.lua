@@ -453,9 +453,9 @@ end
 ---------------------------------------------------------------
 
 --
--- load - create global assets
+-- Create global assets
 --
-local function load()
+local function load ()
     local assets = {}
     for k,v in pairs(ASSETS) do
         local asset = core.getbyname(k) -- see if asset already exists
