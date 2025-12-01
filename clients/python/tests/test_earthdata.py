@@ -31,7 +31,7 @@ class TestAMS:
         assert len(granules) == 43
 
     def test_atl13_name(self, init):
-        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"name": "Caspian Sea"}})
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"name": "Caspian Sea"}, "max_resources": 1500})
         assert init
         assert len(granules) == 1372
 
@@ -114,19 +114,21 @@ class TestCMR:
 # STAC
 #
 class TestSTAC:
-    def test_hls_asdict(self):
+    def test_hls_asdict(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2021-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
+        assert init
         assert len(catalog["features"]) == 590
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 2
 
-    def test_hls_asstr(self):
+    def test_hls_asstr(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         response = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=True)
         catalog = json.loads(response)
+        assert init
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 99
 
-    def test_arcticdem_region(self):
+    def test_arcticdem_region(self, init):
         arcticdem_test_region = [[ # Central Brooks Range, northern Alaska
             { "lon": -152.0, "lat": 68.5 },
             { "lon": -152.0, "lat": 67.5 },
@@ -135,18 +137,20 @@ class TestSTAC:
             { "lon": -152.0, "lat": 68.5 }
         ]]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert init
         assert len(catalog["features"]) == 702
         assert catalog["features"][0]['properties']['datetime'] == "2022-05-16T21:47:36Z"
 
-    def test_arcticdem_point(self):
+    def test_arcticdem_point(self, init):
         arcticdem_test_point = [[
             { "lon": -152.0, "lat": 68.5 }
         ]]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert init
         assert len(catalog["features"]) == 16
         assert catalog["features"][0]['properties']['datetime'] == "2022-03-24T22:38:46Z"
 
-    def test_rema_region(self):
+    def test_rema_region(self, init):
         rema_test_region = [[ # Ellsworth Mountains, West Antarctica
             { "lon": -86.0, "lat": -78.0 },
             { "lon": -86.0, "lat": -79.0 },
@@ -155,19 +159,22 @@ class TestSTAC:
             { "lon": -86.0, "lat": -78.0 }
         ]]
         catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert init
         assert len(catalog["features"]) == 603
         assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
 
-    def test_rema_point(self):
+    def test_rema_point(self, init):
         rema_test_point = [[
             { "lon": -86.0, "lat": -78.0 }
         ]]
         catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert init
         assert len(catalog["features"]) == 49
         assert catalog["features"][0]['properties']['datetime'] == "2024-11-07T14:25:48Z"
 
-    def test_bad_short_name(self):
+    def test_bad_short_name(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
+        assert init
         with pytest.raises(sliderule.FatalError):
             earthdata.stac(short_name="DOES_NOT_EXIST", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z")
 #
@@ -199,13 +206,13 @@ class TestIcesat2:
     def test_atl03(self, init):
         parms = {"asset": "icesat2", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
         for resource in resources:
-            assert resource in rsps
+            print(resource)
+        assert init
+        assert len(resources) == 26
+        assert len(resources) == len(set(resources))
+        for resource in resources:
+            assert resource in resources
             assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
             assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
 
@@ -277,48 +284,6 @@ class TestIcesat2:
             assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
             assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
 
-    def test_gedil1b(self, init):
-        parms = {"asset": "gedil1b", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
-        resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        print(resources)
-        assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
-        for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
-
-    def test_gedil2a(self, init):
-        parms = {"asset": "gedil2a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
-        resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        print(resources)
-        assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
-        for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
-
-    def test_gedil4a(self, init):
-        parms = {"asset": "gedil4a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
-        resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        print(resources)
-        assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
-        for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
-
 #
 # GEDI Earthdata Search
 #
@@ -332,6 +297,20 @@ class TestGedi:
         granules = earthdata.search(parms)
         assert 'GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5' in granules
 
+    def test_l1b_r2(self, init):
+        parms = {"asset": "gedil1b", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        print(resources)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
     def test_l2a(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
@@ -341,6 +320,20 @@ class TestGedi:
         granules = earthdata.search(parms)
         assert 'GEDI02_A_2019109210809_O01988_03_T02056_02_003_01_V002.h5' in granules
 
+    def test_l2a_r2(self, init):
+        parms = {"asset": "gedil2a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        print(resources)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
     def test_l4a(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
@@ -349,3 +342,17 @@ class TestGedi:
         }
         granules = earthdata.search(parms)
         assert 'GEDI04_A_2019109210809_O01988_03_T02056_02_002_02_V002.h5' in granules
+
+    def test_l4a_r2(self, init):
+        parms = {"asset": "gedil4a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        print(resources)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')

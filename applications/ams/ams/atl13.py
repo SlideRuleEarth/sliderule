@@ -67,7 +67,6 @@ def atl13_route():
         name_filter = icesat2.get_name_filter(data)
         # get metadata
         mask, mappings = __get_atl13()
-        print("DATA", data)
         # perform database query
         if refid != None:
             data = mask.execute(f"""
@@ -77,12 +76,6 @@ def atl13_route():
                 {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif name != None:
-            print("CMD", f"""
-                SELECT *
-                FROM atl13_mask
-                WHERE Lake_name == '{name}'
-                {icesat2.build_polygon_query("AND", poly)};
-            """)
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask

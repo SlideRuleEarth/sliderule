@@ -8,5 +8,7 @@ local status,rsps = earthdata.search(parm)
 if status == earthdata.SUCCESS then
     return json.encode(rsps), true
 else
-    return json.encode({error=rsps, code=status}), false
+    local err_rsps = json.encode({error=rsps, code=status})
+    sys.log(core.CRITICAL, "Failed earthdata request: " .. err_rsps)
+    return err_rsps, false
 end

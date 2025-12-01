@@ -313,6 +313,7 @@ ASSETS = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "sliderule/data/GEBCO",
+        index       = "index.geojson",
         region      = "us-west-2"
     },
     ["atlas-local"] = {
@@ -345,7 +346,7 @@ TNM_PAGE_SIZE = 100
 
 -- response codes for all of the package functions
 RC_SUCCESS = 0
-RC_FAILURE = -1
+RC_FATAL_ERROR = -1
 RC_RQST_FAILED = -2
 RC_RSPS_UNPARSEABLE = -3
 RC_RSPS_UNEXPECTED = -4
@@ -720,7 +721,7 @@ local function stac (parms, poly)
     -- post initial request
     local rsps, status = core.post(url, json.encode(rqst), headers)
     if not status then
-        return RC_RQST_FAILED, "http request to stac server failed"
+        return RC_FATAL_ERROR, "http request to stac server failed -> " .. rsps
     end
 
     -- parse response into a table
@@ -741,7 +742,7 @@ local function stac (parms, poly)
         -- post paged request
         rsps, status = core.post(next_page["link"], next_page["body"], headers)
         if not status then
-            return RC_RQST_FAILED, "http request to stac server failed"
+            return RC_FATAL_ERROR, "http request to stac server failed -> " .. rsps
         end
 
         -- parse paged response into table
@@ -817,22 +818,10 @@ local function tnm (parms, poly)
             string.format("&stop=%s", t1),
         })
 
-        -- make https request (with retries)
-        local rsps = nil
-        local rsps_status = false
-        local attempts = 3
-        local request_complete = false
-        while not request_complete do
-            rsps, rsps_status = core.get(tnm_query_url, nil, {})
-            if rsps_status then
-                break
-            end
-            attempts = attempts - 1
-            if attempts <= 0 then
-                return RC_RQST_FAILED, rsps
-            else
-                sys.log(core.WARNING, string.format("TNM returned error <%d>, retrying... \n>>>\n%s\n<<<", rsps_status, rsps))
-            end
+        -- make https request
+        local rsps, rsps_status = core.get(tnm_query_url, nil, {})
+        if not rsps_status then
+            return RC_RQST_FAILED, "http request to tnm failed -> " .. rsps
         end
 
         -- build table from response
@@ -902,12 +891,12 @@ local function search (parms, _poly)
     local attempt       = 1
     while handler do
         local rc, rsps = handler(parms, poly)
-        if (rc == RC_SUCCESS) or (rc == RC_RSPS_TRUNCATED) then -- success
+        if rc ~= RC_RQST_FAILED then -- success/no retries
             return rc, rsps
         elseif attempt >= max_attempts then -- failure
             return rc, string.format("earthdata query failed after %d attempts", attempt)
-        else -- simplify and retry
-            sys.log(core.WARNING, string.format("Simplifying polygon with tolerance of %f", tolerances[attempt]))
+        else -- simplify and retry (RC_RQST_FAILED)
+            sys.log(core.WARNING, string.format("%s: simplifying polygon with tolerance of %f", rsps, tolerances[attempt]))
             poly = geo.simplify(poly, tolerances[attempt], tolerances[attempt])
             poly = clean_polygon(poly)
             if poly == nil then
@@ -930,7 +919,7 @@ return {
     tnm = tnm,
     search = search,
     SUCCESS = RC_SUCCESS,
-    FAILURE = RC_FAILURE,
+    FATAL_ERROR = RC_FATAL_ERROR,
     RQST_FAILED = RC_RQST_FAILED,
     RSPS_UNPARSEABLE = RC_RSPS_UNPARSEABLE,
     RSPS_UNEXPECTED = RC_RSPS_UNEXPECTED,
