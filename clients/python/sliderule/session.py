@@ -190,7 +190,7 @@ class Session:
     #
     #  source
     #
-    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2):
+    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2, rethrow=False):
         '''
         handles making the HTTP request to the sliderule cluster nodes
         '''
@@ -285,7 +285,7 @@ class Session:
 
         # Check Complete
         if not complete:
-            if self.throw_exceptions:
+            if self.throw_exceptions or rethrow:
                 raise FatalError(f'Request to {url} did not complete: {rsps}')
             else:
                 rsps = None

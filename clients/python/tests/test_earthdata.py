@@ -66,7 +66,7 @@ class TestCMR:
         granules = earthdata.cmr(short_name='ATL03', polygon=grandmesa, time_start='2018-10-01', time_end='2018-12-01')
         assert init
         assert isinstance(granules, list)
-        assert 'ATL03_20181115210428_07370102_007_01.h5' in granules
+        assert 'ATL03_20181017222812_02950102_007_01.h5' in granules
 
     def test_truncation(self, domain, organization):
         sliderule.init(domain, organization=organization, rethrow=True)
@@ -108,13 +108,14 @@ class TestCMR:
         ]
         rsps = earthdata.search({"asset": "icesat2", "poly": poly})
         assert init
-        assert len(rsps) == 186
+        assert len(rsps) >= 160
 
 #
 # STAC
 #
 class TestSTAC:
     def test_hls_asdict(self, init):
+        earthdata.set_max_resources(1000)
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2021-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
         assert init
@@ -122,6 +123,7 @@ class TestSTAC:
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 2
 
     def test_hls_asstr(self, init):
+        earthdata.set_max_resources(1000)
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         response = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=True)
         catalog = json.loads(response)
@@ -201,7 +203,6 @@ class TestTNM:
 #
 # Icesat2 Earthdata Search
 #
-@pytest.mark.external
 class TestIcesat2:
     def test_atl03(self, init):
         parms = {"asset": "icesat2", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}

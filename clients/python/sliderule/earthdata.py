@@ -101,7 +101,7 @@ def ams(short_name=None, version=None, polygon=None, time_start=None, time_end=N
     }.items() if v is not None}
 
     # Make Request
-    return sliderule.source("earthdata", parms)
+    return sliderule.source("earthdata", parms, rethrow=True)
 
 #
 #  Common Metadata Repository
@@ -165,7 +165,7 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
         parms["cmr"]["version"] = version
 
     # Make Request
-    return sliderule.source("earthdata", parms)
+    return sliderule.source("earthdata", parms, rethrow=True)
 
 #
 #  SpatioTemporal Asset Catalog
@@ -246,7 +246,7 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
     }.items() if v is not None}
 
     # Make Request
-    geojson = sliderule.source("earthdata", parms)
+    geojson = sliderule.source("earthdata", parms, rethrow=True)
 
     # Return GeoJSON
     if as_str:
@@ -303,7 +303,7 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
     }.items() if v is not None}
 
     # Make Request
-    geojson = sliderule.source("earthdata", parms)
+    geojson = sliderule.source("earthdata", parms, rethrow=True)
 
     # Return GeoJSON
     if as_str:
@@ -344,4 +344,4 @@ def search(parm, resources=None):
         >>> resources = earthdata.search(parms)
     '''
     global MaxRequestedResources
-    return sliderule.source("earthdata", parm)
+    return sliderule.source("earthdata", parm, rethrow=True)
