@@ -265,7 +265,7 @@ class TestIcesat2:
             assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
             assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
 
-    def test_atl13(self, init):
+    def test_atl13_cmr(self, init):
         saltlake = [
             {"lon": -111.78656302303546,"lat": 40.474445992545355},
             {"lon": -111.78656302303546,"lat": 41.745511885629725},
@@ -273,18 +273,13 @@ class TestIcesat2:
             {"lon": -113.25842634761666,"lat": 40.474445992545355},
             {"lon": -111.78656302303546,"lat": 40.474445992545355}
         ]
-        parms = {"asset": "icesat2-atl13", "poly": saltlake, "t0": '2018-10-01', "t1": '2019-12-01'}
-        resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
+        resources = earthdata.cmr(short_name="ATL13", polygon=saltlake, time_start='2018-10-01', time_end='2019-12-01')
         assert init
-        print(resources)
-        assert len(rsps) == 67
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
+        assert len(resources) == 67
+        assert len(resources) == len(set(resources))
         for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime('2019-12-01', '%Y-%m-%d')
 
 #
 # GEDI Earthdata Search

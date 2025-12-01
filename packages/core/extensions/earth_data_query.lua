@@ -82,7 +82,7 @@ ASSETS = {
         name        = "GEDI_L4A_AGB_Density_V2_1_2056",
         identity    = "ornl-cloud",
         driver      = "s3",
-        path        = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data/",
+        path        = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data",
         region      = "us-west-2",
         provider    = "ORNL_CLOUD",
         api         = "cmr",
@@ -252,22 +252,22 @@ ASSETS = {
         url         = "https://stac.pgc.umn.edu/api/v1/search"
     },
     ["nisar-L2-geoff"] = {
-        indentity   = "asf-cloud",
+        identity   = "asf-cloud",
         path        = "/vsis3/sds-n-cumulus-prod-nisar-sample-data",
         region      = "us-west-2"
     },
     ["gedtm-30meter"] = {
-        indentity   = "iam-role",
+        identity   = "iam-role",
         path        = "/vsis3/sliderule/data/GEDTM/legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif",
         region      = "us-west-2"
     },
     ["gedtm-std"] = {
-        indentity   = "iam-role",
+        identity   = "iam-role",
         path        = "/vsis3/sliderule/data/GEDTM/gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif",
         region      = "us-west-2"
     },
     ["gedtm-dfm"] = {
-        indentity   = "iam-role",
+        identity   = "iam-role",
         path        = "/vsis3/sliderule/data/GEDTM/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif",
         region      = "us-west-2"
     },
@@ -309,7 +309,7 @@ ASSETS = {
     ["gebco-s3"] = {
         identity    = "iam-role",
         driver      = "s3",
-        path        = "sliderule/data/GEBCO",
+        path        = "/vsis3/sliderule/data/GEBCO",
         index       = "index.geojson",
         region      = "us-west-2"
     },
@@ -506,7 +506,7 @@ local function ams (parms, poly, _with_meta, _short_name)
             return RC_RSPS_UNPARSEABLE, "could not parse json in response from AMS"
         end
     else
-        return RC_RQST_FAILED, string.format("request to AMS failed: %s", response)
+        return RC_FATAL_ERROR, string.format("request to AMS failed: %s", response)
     end
 
 end
@@ -881,7 +881,7 @@ end
 --
 local function search (parms, _poly)
     local dataset       = DATASETS[parms["short_name"]] or ASSETS[parms["asset"]]
-    local api           = dataset["api"]
+    local api           = parms["api"] or dataset["api"]
     local handlers      = { ams=ams, cmr=cmr, stac=stac, tnm=tnm }
     local handler       = handlers[api]
     local tolerances    = { 0.0001, 0.001, 0.01, 0.1, 1.0 }
