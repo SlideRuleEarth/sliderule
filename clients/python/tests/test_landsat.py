@@ -26,6 +26,7 @@ class TestHLS:
         assert rsps['samples'][0][0]['value'] == pytest.approx(-0.259439707674, rel=1e-6)
 
     def test_cmr_stac(self, init):
+        earthdata.set_max_resources(7000)
         time_start = "2000-01-01T00:00:00Z"
         time_end = "2022-02-01T23:59:59Z"
         polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},

@@ -44,13 +44,13 @@
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-#undef DEBUG_OUTPUT
+//#define DEBUG_OUTPUT
 #ifdef DEBUG_OUTPUT
 static int debug_print(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
 {
     (void)handle;
 
-    const char* url = static_cast<const char*>(userptr);
+    const char* url = static_cast<const char*>(userptr); (void)url;
     const char* text;
     switch (type) {
         case CURLINFO_TEXT:         text = "== Info";   break;
@@ -61,7 +61,7 @@ static int debug_print(CURL *handle, curl_infotype type, char *data, size_t size
         default:                    return 0;
     }
 
-    fprintf(stderr, "%s %s (%zu bytes)\n", url, text, size);
+    fprintf(stderr, "%s (%zu bytes)\n", text, size);
     fwrite(data, 1, size, stderr);
     fprintf(stderr, "\n");
 

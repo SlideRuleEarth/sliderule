@@ -82,7 +82,7 @@ ASSETS = {
         name        = "GEDI_L4A_AGB_Density_V2_1_2056",
         identity    = "ornl-cloud",
         driver      = "s3",
-        path        = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data",
+        path        = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data/",
         region      = "us-west-2",
         provider    = "ORNL_CLOUD",
         api         = "cmr",
@@ -92,8 +92,7 @@ ASSETS = {
         name        = "GEDI_L4B_Gridded_Biomass_2017",
         identity    = "ornl-cloud",
         driver      = "s3",
-        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass_V2_1/data",
-        index       = "GEDI04_B_MW019MW223_02_002_02_R01000M_V2.tif",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass_V2_1/data/GEDI04_B_MW019MW223_02_002_02_R01000M_V2.tif",
         region      = "us-west-2",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
@@ -229,7 +228,6 @@ ASSETS = {
     },
     ["arcticdem-strips"] = {
         name        = "arcticdem-strips",
-        identity    = "lpdaac-cloud",
         path        = "/vsis3/pgc-opendata-dems/",
         region      = "us-west-2",
         provider    = "PGC",
@@ -245,7 +243,6 @@ ASSETS = {
     },
     ["rema-strips"] = {
         name        = "rema-strips",
-        identity    = "lpdaac-cloud",
         path        = "/vsis3/pgc-opendata-dems/",
         region      = "us-west-2",
         provider    = "PGC",
@@ -432,8 +429,10 @@ local function clean_polygon(poly)
         wind = wind + ((poly[i+1]["lon"] - poly[i]["lon"]) * (poly[i+1]["lat"] + poly[i]["lat"]))
     end
     -- reverse direction (make counter-clockwise) if necessary
-    for i = 1,math.floor(num_coords/2) do
-        poly[i], poly[num_coords-i+1] = poly[num_coords-i+1], poly[i]
+    if wind > 0 then
+        for i = 1,math.floor(num_coords/2) do
+            poly[i], poly[num_coords-i+1] = poly[num_coords-i+1], poly[i]
+        end
     end
     -- return cleaned version of polygon (in addition to changing in place)
     return poly
@@ -525,8 +524,8 @@ local function cmr (parms, poly, _with_meta, _short_name)
     local cmr_parms     = parms["cmr"] or {}
     local version       = cmr_parms["version"] or dataset["version"]
     local polygon       = poly or parms["poly"]
-    local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
-    local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
+    local t0            = parms["t0"]
+    local t1            = parms["t1"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
     local with_meta     = _with_meta or parms["with_meta"]
 
@@ -548,9 +547,9 @@ local function cmr (parms, poly, _with_meta, _short_name)
     if polygon then
         for i,coord in ipairs(polygon) do
             if i < #polygon then
-                polystr = polystr .. string.format("%f,%f,", coord["lon"], coord["lat"]) -- with trailing comma
+                polystr = polystr .. string.format("%.15f,%.15f,", coord["lon"], coord["lat"]) -- with trailing comma
             else
-                polystr = polystr .. string.format("%f,%f", coord["lon"], coord["lat"]) -- without trailing comma
+                polystr = polystr .. string.format("%.15f,%.15f", coord["lon"], coord["lat"]) -- without trailing comma
             end
         end
     end

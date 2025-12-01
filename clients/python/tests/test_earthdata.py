@@ -131,44 +131,45 @@ class TestSTAC:
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 99
 
     def test_arcticdem_region(self, init):
-        arcticdem_test_region = [[ # Central Brooks Range, northern Alaska
+        earthdata.set_max_resources(1000)
+        arcticdem_test_region = [ # Central Brooks Range, northern Alaska
             { "lon": -152.0, "lat": 68.5 },
             { "lon": -152.0, "lat": 67.5 },
             { "lon": -147.0, "lat": 67.5 },
             { "lon": -147.0, "lat": 68.5 },
             { "lon": -152.0, "lat": 68.5 }
-        ]]
+        ]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
-        assert init
         assert len(catalog["features"]) == 702
         assert catalog["features"][0]['properties']['datetime'] == "2022-05-16T21:47:36Z"
 
     def test_arcticdem_point(self, init):
-        arcticdem_test_point = [[
+        arcticdem_test_point = [
             { "lon": -152.0, "lat": 68.5 }
-        ]]
+        ]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
         assert init
         assert len(catalog["features"]) == 16
         assert catalog["features"][0]['properties']['datetime'] == "2022-03-24T22:38:46Z"
 
     def test_rema_region(self, init):
-        rema_test_region = [[ # Ellsworth Mountains, West Antarctica
+        earthdata.set_max_resources(1000)
+        rema_test_region = [ # Ellsworth Mountains, West Antarctica
             { "lon": -86.0, "lat": -78.0 },
             { "lon": -86.0, "lat": -79.0 },
             { "lon": -82.0, "lat": -79.0 },
             { "lon": -82.0, "lat": -78.0 },
             { "lon": -86.0, "lat": -78.0 }
-        ]]
+        ]
         catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
         assert init
         assert len(catalog["features"]) == 603
         assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
 
     def test_rema_point(self, init):
-        rema_test_point = [[
+        rema_test_point = [
             { "lon": -86.0, "lat": -78.0 }
-        ]]
+        ]
         catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
         assert init
         assert len(catalog["features"]) == 49

@@ -205,9 +205,7 @@ class TestStrips:
 
     def test_sample_api_serial(self, init):
         arcticdem_test_point = [
-            [
-                { "lon": -150.0, "lat": 70.0 }
-            ]
+            { "lon": -150.0, "lat": 70.0 }
         ]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, as_str=True)
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat]], parms={"catalog": catalog})
@@ -216,13 +214,11 @@ class TestStrips:
 
     def test_sample_api_batch(self, init):
         arcticdem_test_region = [
-            [
-                { "lon": -150.0, "lat": 70.0 },
-                { "lon": -150.0, "lat": 71.0 },
-                { "lon": -149.0, "lat": 71.0 },
-                { "lon": -149.0, "lat": 70.0 },
-                { "lon": -150.0, "lat": 70.0 }
-            ]
+            { "lon": -150.0, "lat": 70.0 },
+            { "lon": -150.0, "lat": 71.0 },
+            { "lon": -149.0, "lat": 71.0 },
+            { "lon": -149.0, "lat": 70.0 },
+            { "lon": -150.0, "lat": 70.0 }
         ]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, as_str=True)
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"catalog": catalog})
