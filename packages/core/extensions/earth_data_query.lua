@@ -190,12 +190,9 @@ ASSETS = {
         formats     = {".tiff"}
     },
     ["3dep1m"] = {
-        name        = "3DEP",
         path        = "/vsis3/prd-tnm",
         region      = "us-west-2",
-        provider    = "USGS",
         api         = "ams",
-        formats     = {".tiff"},
         endpoint    = "3dep",
         stac        = true
     },
