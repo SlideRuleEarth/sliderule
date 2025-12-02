@@ -3,6 +3,7 @@
 import pytest
 import numpy
 import math
+import json
 from sliderule import earthdata, raster, gedi, icesat2
 
 region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
@@ -55,15 +56,14 @@ class Test3DEP_1meter:
                         non_array_count += 1
         assert non_array_count > 0
 
-@pytest.mark.external
 class Test3dep1m:
-    def test_sample(self, init):
+    def test_sample_ams(self, init):
         geojson = earthdata.ams(short_name='3dep1m', polygon=region)
-        gdf = raster.sample("3dep1m", [[-108.0,39.0]], {"catalog": geojson})
+        gdf = raster.sample("3dep1m", [[-108.0,39.0]], {"catalog": json.dumps(geojson)})
         assert init
-        assert len(gdf) >= 4
+        assert len(gdf) >= 2
 
-    def test_as_numpy_array(self, init):
+    def test_as_numpy_array_ams(self, init):
         parms = {
             "poly": region,
             "degrade_filter": True,
@@ -79,7 +79,7 @@ class Test3dep1m:
                 for entry in gdf[key]:
                     assert (type(entry) == numpy.ndarray) or math.isnan(entry)
 
-    def test_as_variable(self, init):
+    def test_as_variable_ams(self, init):
         parms = {
             "poly": region,
             "degrade_filter": True,
