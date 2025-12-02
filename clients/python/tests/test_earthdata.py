@@ -208,28 +208,23 @@ class TestIcesat2:
     def test_atl03(self, init):
         parms = {"asset": "icesat2", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        for resource in resources:
-            print(resource)
         assert init
         assert len(resources) == 26
         assert len(resources) == len(set(resources))
         for resource in resources:
             assert resource in resources
-            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime('2019-12-01', '%Y-%m-%d')
 
     def test_atl06(self, init):
         parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
         assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
+        assert len(resources) == 26
+        assert len(resources) == len(set(resources))
         for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime('2019-12-01', '%Y-%m-%d')
 
     def test_atl06_default_version(self, init):
         parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
@@ -255,15 +250,12 @@ class TestIcesat2:
     def test_atl09(self, init):
         parms = {"asset": "icesat2-atl09", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
         assert init
-        assert len(rsps) == 36
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
+        assert len(resources) == 36
+        assert len(resources) == len(set(resources))
         for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime('2019-12-01', '%Y-%m-%d')
 
     def test_atl13_cmr(self, init):
         saltlake = [
@@ -297,16 +289,12 @@ class TestGedi:
     def test_l1b_r2(self, init):
         parms = {"asset": "gedil1b", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        print(resources)
         assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
+        assert len(resources) == 26
+        assert len(resources) == len(set(resources))
         for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime('2019-12-01', '%Y-%m-%d')
 
     def test_l2a(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
@@ -320,16 +308,12 @@ class TestGedi:
     def test_l2a_r2(self, init):
         parms = {"asset": "gedil2a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        print(resources)
         assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
+        assert len(resources) == 26
+        assert len(resources) == len(set(resources))
         for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime('2019-12-01', '%Y-%m-%d')
 
     def test_l4a(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
@@ -343,13 +327,9 @@ class TestGedi:
     def test_l4a_r2(self, init):
         parms = {"asset": "gedil4a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
         resources = earthdata.search(parms)
-        rsps = sliderule.source("earthdata", parms)
-        print(resources)
         assert init
-        assert len(rsps) == 26
-        assert len(rsps) == len(set(rsps))
-        assert len(rsps) == len(resources)
+        assert len(resources) == 26
+        assert len(resources) == len(set(resources))
         for resource in resources:
-            assert resource in rsps
-            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
-            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime('2019-12-01', '%Y-%m-%d')

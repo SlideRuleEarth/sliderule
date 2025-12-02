@@ -820,7 +820,7 @@ local function tnm (parms, poly)
         -- make https request
         local rsps, rsps_status = core.get(tnm_query_url, nil, {})
         if not rsps_status then
-            return RC_RQST_FAILED, "http request to tnm failed -> " .. rsps
+            return RC_FATAL_ERROR, "http request to tnm failed -> " .. rsps
         end
 
         -- build table from response
