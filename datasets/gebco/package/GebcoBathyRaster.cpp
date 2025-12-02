@@ -44,7 +44,7 @@
  *----------------------------------------------------------------------------*/
 GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key),
- filePath("/vsis3/" + std::string(parms->asset.asset->getPath())),
+ filePath(std::string(parms->asset.asset->getPath())),
  indexFile(parms->asset.asset->getIndex())
 {
     /*

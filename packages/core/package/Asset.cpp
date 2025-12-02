@@ -49,6 +49,8 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Asset::NIL_DRIVER = "nil";
+
 const char* Asset::OBJECT_TYPE = "Asset";
 const char* Asset::LUA_META_NAME = "Asset";
 const struct luaL_Reg Asset::LUA_META_TABLE[] = {
@@ -110,21 +112,24 @@ int Asset::luaCreate (lua_State* L)
 
         /* Get Parameters */
         _attributes.name       = getLuaString(L, 1);
-        _attributes.identity   = getLuaString(L, 2);
-        _attributes.driver     = getLuaString(L, 3);
-        _attributes.path       = getLuaString(L, 4);
+        _attributes.identity   = getLuaString(L, 2, true, NULL);
+        _attributes.driver     = getLuaString(L, 3, true, NIL_DRIVER);
+        _attributes.path       = getLuaString(L, 4, true, NULL);
         _attributes.index      = getLuaString(L, 5, true, NULL);
         _attributes.region     = getLuaString(L, 6, true, NULL);
         _attributes.endpoint   = getLuaString(L, 7, true, NULL);
 
         /* Get IO Driver */
-        io_driver_t _driver;
+        io_driver_t _driver = {.factory = NULL};
         bool found = false;
-        ioDriverMut.lock();
+        if(_attributes.driver)
         {
-            found = ioDrivers.find(_attributes.driver, &_driver);
+            ioDriverMut.lock();
+            {
+                found = ioDrivers.find(_attributes.driver, &_driver);
+            }
+            ioDriverMut.unlock();
         }
-        ioDriverMut.unlock();
 
         /* Check Driver */
         if(!found)

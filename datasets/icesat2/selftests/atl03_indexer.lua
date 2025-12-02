@@ -24,6 +24,7 @@ local name, identity, driver, path, index_filename, region, endpoint, status = n
 runner.assert(status)
 
 -- setup index file writer
+index_filename = "/tmp/_atl03_index.txt"
 local asset_index_file = streaming.file(streaming.WRITER, streaming.TEXT, index_filename)
 local writer = streaming.writer(asset_index_file, "indexq")
 

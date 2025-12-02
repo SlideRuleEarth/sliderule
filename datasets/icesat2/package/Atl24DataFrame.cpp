@@ -216,7 +216,7 @@ Atl24DataFrame::AreaOfInterest::AreaOfInterest (const Atl24DataFrame* df):
         /* Check If Anything to Process */
         if(num_photons <= 0)
         {
-            throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+            throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */

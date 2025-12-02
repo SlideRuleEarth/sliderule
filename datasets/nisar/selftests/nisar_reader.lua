@@ -116,7 +116,7 @@ runner.assert(err == 0)
 runner.assert(tbl ~= nil)
 
 if err ~= 0 then
-    print(string.format("Point: %d, (%.5f, %.5f) ======> FAILED to read, err# %d", j, lon, lat, err))
+    print(string.format("Point: (%.5f, %.5f) ======> FAILED to read, err# %d", lon, lat, err))
     failedSamples = failedSamples + 1
     table.insert(batchResults, nil)
 else

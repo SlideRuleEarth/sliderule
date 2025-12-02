@@ -98,7 +98,8 @@ void* ArrowEndpoint::requestThread (void* parm)
     const double start = TimeLib::latchtime();
 
     /* Get Request Script */
-    const char* script_pathname = LuaEngine::sanitize(request->resource);
+    const char* argument_ptr = NULL;
+    const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "arrow_endpoint_request", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
@@ -117,10 +118,10 @@ void* ArrowEndpoint::requestThread (void* parm)
     if(authorized)
     {
         /* Create Engine */
-        LuaEngine* engine = new LuaEngine(script_pathname, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
+        LuaEngine* engine = new LuaEngine(script_path, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
         /* Supply Global Variables to Script */
-        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName());
+        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument_ptr);
 
         /* Execute Engine
          *  The call to execute the script blocks on completion of the script. The lua state context
@@ -132,7 +133,7 @@ void* ArrowEndpoint::requestThread (void* parm)
          *  but we can log the error and report it as such in telemetry */
         if(!status)
         {
-            mlog(CRITICAL, "Failed to execute script %s", script_pathname);
+            mlog(CRITICAL, "Failed to execute script %s", script_path);
             status_code = RTE_FAILURE;
         }
 
@@ -167,7 +168,7 @@ void* ArrowEndpoint::requestThread (void* parm)
 
     /* Clean Up */
     delete rspq;
-    delete [] script_pathname;
+    delete [] script_path;
     delete request; // deleted here only
     delete info;
 

@@ -80,10 +80,9 @@ class TestVersion:
         assert hasattr(sliderule, '__version__')
         assert isinstance(sliderule.__version__, str)
 
-    def test_check_version(self, domain, organization, desired_nodes):
+    def test_check_version(self, domain, organization):
         sliderule.set_url(domain)
         sliderule.authenticate(organization)
-        sliderule.scaleout(desired_nodes, 15, True)
         assert sliderule.check_version()
 
 #
@@ -92,7 +91,7 @@ class TestVersion:
 class TestInitialization:
     def test_loop_init(self, domain, organization, desired_nodes):
         for _ in range(10):
-            icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+            icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
 
     def test_loop_versions(self, init):
         assert init
@@ -121,8 +120,8 @@ class TestInitialization:
             icesat2.init(url=[])
 
     def test_init_restore(self):
-            sliderule.init()
-            assert len(sliderule.source("version")) > 0
+        sliderule.init()
+        assert len(sliderule.source("version")) > 0
 
 #
 # Region of Interest APIs

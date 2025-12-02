@@ -29,7 +29,6 @@
 
 import os
 import netrc
-import getpass
 import requests
 import threading
 import socket
@@ -53,24 +52,6 @@ eventlogger = {
     3: logger.error,
     4: logger.critical
 }
-
-###############################################################################
-# DNS OVERRIDE
-###############################################################################
-
-sliderule_getaddrinfo = socket.getaddrinfo
-sliderule_dns = {}
-
-def __override_getaddrinfo(*args, **kwargs):
-    global sliderule_getaddrinfo, sliderule_dns
-    url = args[0].lower()
-    if url in sliderule_dns:
-        logger.debug("getaddrinfo returned {} for {}".format(sliderule_dns[url], url))
-        return sliderule_getaddrinfo(sliderule_dns[url], *args[1:], **kwargs)
-    else:
-        return sliderule_getaddrinfo(*args, **kwargs)
-
-socket.getaddrinfo = __override_getaddrinfo
 
 ###############################################################################
 # GLOBALS
@@ -133,12 +114,6 @@ class FatalError(RuntimeError):
     pass
 
 #
-# RetryRequest
-#
-class RetryRequest(RuntimeError):
-    pass
-
-#
 # Session
 #
 class Session:
@@ -157,13 +132,15 @@ class Session:
         organization    = 0,
         desired_nodes   = None,
         time_to_live    = 60, # minutes
-        bypass_dns      = False,
         trust_env       = False,
         ssl_verify      = True,
         rqst_timeout    = (10, 120), # (connection, read) in seconds
         log_handler     = None,
         decode_aux      = True,
-        rethrow         = False ):
+        rethrow         = False,
+        ps_username     = None,
+        ps_password     = None,
+        github_token    = None):
         '''
         creates and configures a sliderule session
         '''
@@ -205,21 +182,25 @@ class Session:
         # configure credentials (if any) for organization
         if organization == 0:
             organization = self.PUBLIC_ORG
-        self.authenticate(organization)
+        self.authenticate(organization, ps_username=ps_username, ps_password=ps_password, github_token=github_token)
 
         # set cluster to desired number of nodes (if permitted based on credentials)
-        self.scaleout(desired_nodes, time_to_live, bypass_dns)
+        self.scaleout(desired_nodes, time_to_live)
 
     #
     #  source
     #
-    def source (self, api, parm={}, stream=False, callbacks={}, path="/source", force_throw=False):
+    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2, rethrow=False):
         '''
         handles making the HTTP request to the sliderule cluster nodes
         '''
         # initialize local variables
         rsps = {}
         headers = {'x-sliderule-client': f'python-{version.full_version}'}
+
+        # initialize parameters
+        if callbacks == None:
+            callbacks = {}
 
         # build callbacks
         for c in self.callbacks:
@@ -228,21 +209,25 @@ class Session:
 
         # Construct Request URL
         if self.service_org:
-            url = 'https://%s.%s%s/%s' % (self.service_org, self.service_domain, path, api)
+            url = f'https://{self.service_org}.{self.service_domain}{path}/{api}'
         else:
-            url = 'http://%s%s/%s' % (self.service_domain, path, api)
+            url = f'http://{self.service_domain}{path}/{api}'
 
         # Construct Payload
-        if type(parm) == dict:
+        if isinstance(parm, dict):
             payload = json.dumps(parm)
         else:
             payload = parm
 
+        # status helper function
+        def retry_status(attempt):
+            return f"attempt {1 + retries - attempt} of {1 + retries} to {url}"
+
         # Attempt request
         complete = False
-        attempts = 3
-        while not complete and attempts > 0:
-            attempts -= 1
+        remaining_attempts = 1 + retries
+        while not complete and remaining_attempts > 0:
+            remaining_attempts -= 1
             try:
                 # Build Authorization Header
                 if self.service_org:
@@ -253,57 +238,55 @@ class Session:
                     data = self.session.get(url, data=payload, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
                 else:
                     data = self.session.post(url, data=payload, headers=headers, timeout=self.rqst_timeout, stream=True, verify=self.ssl_verify)
-                data.raise_for_status()
 
                 # Parse Response
-                stream = self.__StreamSource(data)
-                format = data.headers['Content-Type']
-                if format == 'text/plain':
-                    rsps = self.__parse_json(stream)
-                elif format == 'application/json':
-                    rsps = self.__parse_json(stream)
+                stream_source = self.__StreamSource(data)
+                format = data.headers.get('Content-Type')
+                if format in ('text/plain', 'application/json'):
+                    rsps = self.__parse_json(stream_source)
                 elif format == 'application/octet-stream':
-                    rsps = self.__parse_native(stream, callbacks)
-                elif self.throw_exceptions or force_throw:
-                    raise FatalError(f'Unsupported content type: {format}')
+                    rsps = self.__parse_native(stream_source, callbacks)
                 else:
-                    logger.error(f'Unsupported content type: {format}')
+                    raise FatalError(f'Unsupported content type: {format}')
+
+                # Handle Error Codes
+                data.raise_for_status()
 
                 # Success
                 complete = True
 
-            except requests.exceptions.SSLError as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Unable to verify SSL certificate for {url} ...retrying request')
-
             except requests.ConnectionError as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Connection error to endpoint {url} ...retrying request')
+                rsps = 'Connection error'
 
             except requests.Timeout as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Timed-out waiting for response from endpoint {url} ...retrying request')
+                rsps = 'Timed-out waiting for response'
 
             except requests.exceptions.ChunkedEncodingError as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Unexpected termination of response from endpoint {url} ...retrying request')
+                rsps = 'Unexpected termination of response'
+
+            except requests.exceptions.SSLError as e:
+                rsps = 'Unable to verify SSL certificate'
+                break # skip retries
 
             except requests.HTTPError as e:
-                if self.throw_exceptions or force_throw:
-                    if e.response.status_code == 503:
-                        raise FatalError(f'Server experiencing heavy load, stalling on request to {url}')
-                    else:
-                        raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'HTTP error <{e.response.status_code}> returned in request to {url} ...retrying request')
+                if e.response.status_code == 503:
+                    rsps = 'Cluster experiencing heavy load'
+                else:
+                    rsps = f'HTTP error <{e.response.status_code}> {rsps}'
+                    break # skip retries
+
+            except Exception as e:
+                rsps = f'Exception processing request: {e}'
+                break # skip retries
+
+            # Log Reason for Not Completing
+            if not complete:
+                logger.error(f'{rsps}... {retry_status(remaining_attempts)}')
 
         # Check Complete
         if not complete:
-            if self.throw_exceptions or force_throw:
-                raise FatalError(f'Request to {url} did not complete')
+            if self.throw_exceptions or rethrow:
+                raise FatalError(f'Request to {url} did not complete: {rsps}')
             else:
                 rsps = None
 
@@ -375,7 +358,7 @@ class Session:
         requested_nodes = 0
 
         # update number of nodes
-        if type(desired_nodes) == int:
+        if isinstance(desired_nodes, int):
             headers = {}
             rsps_body = {}
             requested_nodes = desired_nodes
@@ -398,7 +381,7 @@ class Session:
 
             # Request number of nodes in cluster
             try:
-                if type(time_to_live) == int:
+                if isinstance(time_to_live, int):
                     host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes_ttl/" + self.service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
                     rsps = self.session.post(host, headers=headers, timeout=self.rqst_timeout)
                 else:
@@ -414,7 +397,7 @@ class Session:
 
         # Get number of nodes currently registered
         try:
-            rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", force_throw=True)
+            rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
             available_servers = rsps["nodes"]
         except FatalError as e:
             logger.debug(f'Failed to retrieve number of nodes registered: {e}')
@@ -425,7 +408,7 @@ class Session:
     #
     # scaleout
     #
-    def scaleout (self, desired_nodes, time_to_live, bypass_dns):
+    def scaleout (self, desired_nodes, time_to_live):
         '''
         makes a capacity request to the provisioning system and waits
         for the cluster to reach the requested capacity
@@ -435,11 +418,6 @@ class Session:
             return # nothing needs to be done
         if desired_nodes < 0:
             raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
-
-        # initialize DNS
-        self.__initdns() # clear cache of DNS lookups for clusters
-        if bypass_dns:
-            self.__jamdns() # use ip address for cluster
 
         # send initial request for desired cluster state
         start = time.time()
@@ -452,9 +430,6 @@ class Session:
             logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
             time.sleep(10.0)
             available_nodes,_ = self.update_available_servers()
-            # Override DNS if Cluster is Starting
-            if available_nodes == 0 and not self.__dnsoverridden():
-                self.__jamdns()
             # Timeout Occurred
             if int(time.time() - start) > self.MAX_PS_CLUSTER_WAIT_SECS:
                 logger.error("Maximum time allowed waiting for cluster has been exceeded")
@@ -499,12 +474,6 @@ class Session:
             except Exception as e:
                 pass
 
-        # prompt user for username and password
-        if not github_token and not ps_username and not ps_password:
-            if ps_organization != self.PUBLIC_ORG:
-                ps_username = input("Username: ")
-                ps_password = getpass.getpass("Password: ")
-
         # build authentication request
         user = None
         if github_token:
@@ -540,10 +509,14 @@ class Session:
     #
     #  manager
     #
-    def manager (self, api, content_json=True, as_post=False, headers={}):
+    def manager (self, api, content_json=True, as_post=False, headers=None):
         '''
         handles making the HTTP request to the sliderule manager
         '''
+        # default parameters
+        if headers == None:
+            headers = {}
+
         # initialize local variables
         rsps = ""
 
@@ -566,23 +539,11 @@ class Session:
             data.raise_for_status()
 
             # Parse Response
-            stream = self.__StreamSource(data)
-            lines = [line for line in stream]
+            stream_source = self.__StreamSource(data)
+            lines = [line for line in stream_source]
             rsps = b''.join(lines)
             if content_json:
                 rsps = json.loads(rsps)
-
-        except requests.exceptions.SSLError as e:
-            logger.error(f'Unable to verify SSL certificate for {url}')
-
-        except requests.ConnectionError as e:
-            logger.error(f'Connection error to endpoint {url}')
-
-        except requests.Timeout as e:
-            logger.error(f'Timed-out waiting for response from endpoint {url}')
-
-        except requests.HTTPError as e:
-            logger.error(f'HTTP error <{e.response.status_code}> returned in request to {url}: {rsps}')
 
         except Exception as e:
             logger.error(f'Failed to make request to {url}: {e}')
@@ -829,44 +790,6 @@ class Session:
         return recs
 
     #
-    # __initdns
-    #
-    def __initdns (self):
-        '''
-        resets the global dictionary
-        '''
-        self.local_dns.clear()
-
-    #
-    # __dnsoverridden
-    #
-    def __dnsoverridden (self):
-        '''
-        checks if url is already overridden
-        '''
-        url = self.service_org + "." + self.service_domain
-        return url.lower() in self.local_dns
-
-    #
-    # __jamdns
-    #
-    def __jamdns (self):
-        '''
-        override the dns entry
-        '''
-        global sliderule_dns
-        headers = {}
-        url = self.service_org + "." + self.service_domain
-        self.__buildauthheader(headers)
-        host = "https://ps." + self.service_domain + "/api/org_ip_adr/" + self.service_org + "/"
-        rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout).json()
-        if rsps["status"] == "SUCCESS":
-            ipaddr = rsps["ip_address"]
-            self.local_dns[url.lower()] = ipaddr
-            logger.debug("Overriding DNS for {} with {}".format(url, ipaddr))
-        sliderule_dns = self.local_dns
-
-    #
     #  __logrec
     #
     @staticmethod
@@ -878,9 +801,7 @@ class Session:
     #
     @staticmethod
     def __alertrec (rec, session):
-        if rec["code"] == EXCEPTION_CODES["SIMPLIFY"]:
-            raise RetryRequest("cmr simplification requested")
-        elif rec["code"] < 0:
+        if rec["code"] < 0:
             eventlogger[rec["level"]]("Alert <%d>: %s", rec["code"], rec["text"])
         else:
             eventlogger[rec["level"]]("%s", rec["text"])

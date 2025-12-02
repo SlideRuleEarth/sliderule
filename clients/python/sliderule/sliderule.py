@@ -35,11 +35,9 @@ import tempfile
 import json
 import geopandas
 from shapely.geometry import Polygon
-from shapely.geometry.multipolygon import MultiPolygon
 from datetime import datetime
 from sliderule import version
-from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError, RetryRequest
-from pyproj import CRS
+from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError
 
 try:
     from sklearn.cluster import KMeans
@@ -70,8 +68,7 @@ def init (
     organization=0,
     desired_nodes=None,
     time_to_live=60,
-    bypass_dns=False,
-    plugins=[],
+    plugins=None,
     log_handler=None,
     rethrow=False ):
     '''
@@ -92,8 +89,6 @@ def init (
                         requested number of processing nodes in the cluster
         time_to_live:   int
                         minimum number of minutes the desired number of nodes should be present in the cluster
-        bypass_dns:     bool
-                        if true then the ip address for the cluster is retrieved from the provisioning system and used directly
         plugins:        list
                         names of the plugins that need to be available on the server
         log_handler:    logger
@@ -120,7 +115,6 @@ def init (
         organization=organization,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
-        bypass_dns=bypass_dns,
         log_handler=log_handler,
         rethrow=rethrow)
     # verify compatibility between client and server versions
@@ -136,7 +130,7 @@ def init (
 #
 #  source
 #
-def source (api, parm={}, stream=False, callbacks={}, path="/source", session=None):
+def source (api, parm=None, stream=False, callbacks=None, path="/source", session=None, rethrow=False):
     '''
     Perform API call to SlideRule service
 
@@ -152,6 +146,8 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", session=No
                     record type callbacks (advanced use)
         path:       str
                     path to api being requested
+        rethrow:    bool
+                    client rethrows exceptions to be handled by calling code
 
     Returns
     -------
@@ -172,13 +168,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", session=No
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
     session = checksession(session)
-    for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
-        try:
-            return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path)
-        except RetryRequest as e:
-            logger.info(f'Retry requested by {api}: {e}')
-            simplifypolygon(parm, tolerance)
-    return None
+    return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path, rethrow=rethrow)
 
 #
 #  set_url
@@ -312,7 +302,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=Non
 #
 # scaleout
 #
-def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
+def scaleout(desired_nodes, time_to_live, session=None):
     '''
     Scale the cluster and wait for cluster to reach desired state
 
@@ -322,8 +312,6 @@ def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
                         the desired number of nodes in the cluster
         time_to_live:   int
                         number of minutes for the desired nodes to run
-        bypass_dns:     bool
-                        the cluster ip address is retrieved from the provisioning system and used directly
 
     Examples
     --------
@@ -331,7 +319,7 @@ def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
         >>> sliderule.scaleout(4, 300, False)
     '''
     session = checksession(session)
-    return session.scaleout(desired_nodes, time_to_live, bypass_dns)
+    return session.scaleout(desired_nodes, time_to_live)
 
 #
 # authenticate
@@ -425,7 +413,7 @@ def get_version (session=None):
 #
 # check_version
 #
-def check_version (plugins=[], session=None):
+def check_version (plugins=None, session=None):
     '''
     Check that the version of the client matches the version of the server and any additionally requested plugins
 
@@ -457,9 +445,10 @@ def check_version (plugins=[], session=None):
         raise FatalError(f'Client {info["client"]["version"]} is incompatible with the server {info["server"]["version"]}')
 
     # check plugins
-    for plugin in plugins:
-        if versions[plugin][0] != versions['client'][0]:
-            raise FatalError(f'Client {info["client"]["version"]} is incompatible with the {plugin} plugin {info[plugin]["version"]}')
+    if isinstance(plugins, list):
+        for plugin in plugins:
+            if versions[plugin][0] != versions['client'][0]:
+                raise FatalError(f'Client {info["client"]["version"]} is incompatible with the {plugin} plugin {info[plugin]["version"]}')
 
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
@@ -573,44 +562,15 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     >>> import sliderule, json
     >>> region = sliderule.toregion("tests/data/grandmesa.geojson")
     >>> print(json.dumps(region["poly"], indent=4))
-    [
-        {
-            "lon": -108.20772968780051,
-            "lat": 38.8232055291981
-        },
-        {
-            "lon": -108.07460164311031,
-            "lat": 38.8475137825863
-        },
-        {
-            "lon": -107.72839858755752,
-            "lat": 39.01510930230633
-        },
-        {
-            "lon": -107.78724142490994,
-            "lat": 39.195630349659986
-        },
-        {
-            "lon": -108.17287000970857,
-            "lat": 39.15920066396116
-        },
-        {
-            "lon": -108.31168256553767,
-            "lat": 39.13757646212944
-        },
-        {
-            "lon": -108.34115668325224,
-            "lat": 39.03758987613325
-        },
-        {
-            "lon": -108.2878686387796,
-            "lat": 38.89051431295789
-        },
-        {
-            "lon": -108.20772968780051,
-            "lat": 38.8232055291981
-        }
-    ]
+    [   {"lon": -108.20772968780051,"lat": 38.8232055291981},
+        {"lon": -108.07460164311031,"lat": 38.8475137825863},
+        {"lon": -107.72839858755752,"lat": 39.01510930230633},
+        {"lon": -107.78724142490994,"lat": 39.195630349659986},
+        {"lon": -108.17287000970857,"lat": 39.15920066396116},
+        {"lon": -108.31168256553767,"lat": 39.13757646212944},
+        {"lon": -108.34115668325224,"lat": 39.03758987613325},
+        {"lon": -108.2878686387796,"lat": 38.89051431295789},
+        {"lon": -108.20772968780051,"lat": 38.8232055291981}    ]
     '''
     # GeoDataFrame
     if isinstance(source, geopandas.GeoDataFrame):
@@ -876,37 +836,6 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 
     # Return GeoDataFrame
     return gdf
-
-#
-# Simplify Polygon
-#
-def simplifypolygon(parm, tolerance):
-    if "parms" not in parm:
-        return
-
-    if "cmr" in parm["parms"]:
-        polygon = parm["parms"]["cmr"]["polygon"]
-    elif "poly" in parm["parms"]:
-        polygon = parm["parms"]["poly"]
-    else:
-        return
-
-    raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
-    shape = MultiPolygon(*raw_multi_polygon)
-    buffered_shape = shape.buffer(tolerance)
-    simplified_shape = buffered_shape.simplify(tolerance)
-    simplified_coords = list(simplified_shape.exterior.coords)
-
-    simplified_polygon = []
-    for coord in simplified_coords:
-        point = {"lon": coord[0], "lat": coord[1]}
-        simplified_polygon.insert(0, point)
-
-    if "cmr" not in parm["parms"]:
-        parm["parms"]["cmr"] = {}
-    parm["parms"]["cmr"]["polygon"] = simplified_polygon
-
-    logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
 
 #
 # Set Session

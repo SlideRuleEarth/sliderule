@@ -316,7 +316,7 @@ FootprintReader<footprint_t>::Region::Region (const info_t* info):
     if(num_footprints <= 0)
     {
         cleanup();
-        throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+        throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
     }
 
     /* Trim Geospatial Datasets Read from HDF5 File */

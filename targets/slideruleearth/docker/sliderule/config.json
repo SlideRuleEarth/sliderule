@@ -1,4 +1,4 @@
 {
     "log_format": "FMT_CLOUD",
-    "post_startup_scripts": ["bathy_init"]
+    "post_startup_scripts": []
 }

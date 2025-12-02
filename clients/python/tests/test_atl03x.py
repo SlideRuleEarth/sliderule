@@ -152,7 +152,7 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
-        assert len(gdf) == 49554
+        assert len(gdf) == 49548
         assert len(gdf.keys()) == 18
         assert gdf["atl24_class"].value_counts()[41] == 49523
         assert abs(gdf["atl24_confidence"].max() - 0.8872309) < 0.0001, gdf["atl24_confidence"].max()

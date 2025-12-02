@@ -2,11 +2,9 @@ version: "3.9"
 services:
   sliderule:
     image: ${SLIDERULE_IMAGE}
-    network_mode: "host"
+    network_mode: host
     restart: always
     pull_policy: if_not_present
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     ulimits:
       nofile:
         soft: 8192
@@ -37,19 +35,32 @@ services:
       start_period: 30s
   ams:
     image: ${AMS_IMAGE}
-    network_mode: "host"
+    network_mode: host
     restart: always
     pull_policy: if_not_present
     entrypoint: /docker-entrypoint.sh
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     volumes:
       - /data:/data
     labels:
       - autoheal=true
+  monitor-agent:
+    image:  ${MONITOR_AGENT_IMAGE}
+    network_mode: host
+    restart: unless-stopped
+    pull_policy: if_not_present
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    labels:
+      - autoheal=true
   autoheal:
     image: willfarrell/autoheal:latest
-    tty: true
     container_name: autoheal
     restart: always
     environment:

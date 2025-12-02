@@ -41,7 +41,7 @@ from sliderule.session import Session
 #
 #  Initialize
 #
-def init (url=Session.PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=Session.PUBLIC_ORG, desired_nodes=None, time_to_live=60, bypass_dns=False):
+def init (url=Session.PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=Session.PUBLIC_ORG, desired_nodes=None, time_to_live=60):
     '''
     Initializes the Python client for use with SlideRule and should be called before other SWOT API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
@@ -51,7 +51,7 @@ def init (url=Session.PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, orga
         >>> from sliderule import swot
         >>> swot.init()
     '''
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns)
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live)
 
 #
 #  L2

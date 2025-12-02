@@ -3,6 +3,7 @@
 import pytest
 import numpy
 import math
+import json
 from sliderule import earthdata, raster, gedi, icesat2
 
 region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
@@ -44,6 +45,47 @@ class Test3DEP_1meter:
             "l2_quality_filter": True,
             "beams": 0,
             "samples": {"3dep": {"asset": "usgs3dep-1meter-dem"}}
+        }
+        gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'], as_numpy_array=False)
+        assert init
+        non_array_count = 0
+        for key in gdf.keys():
+            if '3dep' in key:
+                for entry in gdf[key]:
+                    if (type(entry) != numpy.ndarray) and (not math.isnan(entry)):
+                        non_array_count += 1
+        assert non_array_count > 0
+
+class Test3dep1m:
+    def test_sample_ams(self, init):
+        geojson = earthdata.ams(short_name='3dep1m', polygon=region)
+        gdf = raster.sample("3dep1m", [[-108.0,39.0]], {"catalog": json.dumps(geojson)})
+        assert init
+        assert len(gdf) >= 2
+
+    def test_as_numpy_array_ams(self, init):
+        parms = {
+            "poly": region,
+            "degrade_filter": True,
+            "l2_quality_filter": True,
+            "beams": 0,
+            "samples": {"3dep": {"asset": "3dep1m"}}
+        }
+        gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'], as_numpy_array=True)
+        assert init
+        assert len(gdf) > 0
+        for key in gdf.keys():
+            if '3dep' in key:
+                for entry in gdf[key]:
+                    assert (type(entry) == numpy.ndarray) or math.isnan(entry)
+
+    def test_as_variable_ams(self, init):
+        parms = {
+            "poly": region,
+            "degrade_filter": True,
+            "l2_quality_filter": True,
+            "beams": 0,
+            "samples": {"3dep": {"asset": "3dep1m"}}
         }
         gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'], as_numpy_array=False)
         assert init

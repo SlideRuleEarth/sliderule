@@ -137,7 +137,8 @@ void* LuaEndpoint::requestThread (void* parm)
     int status_code = RTE_STATUS;
 
     /* Get Request Script */
-    const char* script_pathname = LuaEngine::sanitize(request->resource);
+    const char* argument_ptr = NULL;
+    const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
@@ -158,11 +159,11 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Handle Response */
         if(info->streaming)
         {
-            status_code = streamResponse(script_pathname, request, rspq, trace_id);
+            status_code = streamResponse(script_path, argument_ptr, request, rspq, trace_id);
         }
         else
         {
-            status_code = normalResponse(script_pathname, request, rspq, trace_id);
+            status_code = normalResponse(script_path, argument_ptr, request, rspq, trace_id);
         }
     }
     else
@@ -195,7 +196,7 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Clean Up */
     delete rspq;
-    delete [] script_pathname;
+    delete [] script_path;
     delete request;
     delete info;
 
@@ -209,7 +210,7 @@ void* LuaEndpoint::requestThread (void* parm)
 /*----------------------------------------------------------------------------
  * normalResponse
  *----------------------------------------------------------------------------*/
-int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id)
+int LuaEndpoint::normalResponse (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id)
 {
     int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
@@ -223,7 +224,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
     {
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
-        request->setLuaTable(engine->getLuaState(), request->id, "");
+        request->setLuaTable(engine->getLuaState(), request->id, "", argument);
         const bool status = engine->executeEngine(SystemConfig::settings().requestTimeoutSec.value);
 
         /* Send Response */
@@ -253,7 +254,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
                 rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
-                status_code = RTE_SCRIPT_DOES_NOT_EXIST;
+                status_code = RTE_RESOURCE_DOES_NOT_EXIST;
             }
         }
         else
@@ -290,7 +291,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id)
+int LuaEndpoint::streamResponse (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id)
 {
     int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
@@ -310,7 +311,7 @@ int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publi
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
         /* Supply Global Variables to Script */
-        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName());
+        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument);
 
         /* Execute Engine
          *  The call to execute the script blocks on completion of the script. The lua state context

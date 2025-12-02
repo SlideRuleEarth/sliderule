@@ -1,13 +1,10 @@
-#
-# RUNTIME
-#
-FROM fedora:latest
+FROM amazonlinux:2023
 
 # runtime dependencies
 RUN dnf update -y \
     && dnf install -y \
         wget \
-        awk \
+        gawk \
         gcc-c++ \
         make \
         cmake \

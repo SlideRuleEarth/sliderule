@@ -262,7 +262,7 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         /* Check If Anything to Process */
         if(num_photons <= 0)
         {
-            throw RunTimeException(CRITICAL, RTE_EMPTY_SUBSET, "empty spatial region");
+            throw RunTimeException(CRITICAL, RTE_RESOURCE_EMPTY, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */

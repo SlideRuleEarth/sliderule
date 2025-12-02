@@ -41,7 +41,7 @@ To request raster sampling, the ``"samples"`` parameter must be populated as a d
     }
 ```
 
-See the [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth/asset_directory.csv) for details on which rasters can be sampled.
+See the [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/packages/core/extensions/earth_data_query.lua) for details on which rasters can be sampled.
 
 Sampling rasters is controlled by the `samples` field of a request's parameter dictionary.  The `samples` field is itself a dictionary of dictionaries, each describing a raster dataset that needs to be sampled for the given processing request.  The example below specifies two raster datasets that need to be sampled:
 

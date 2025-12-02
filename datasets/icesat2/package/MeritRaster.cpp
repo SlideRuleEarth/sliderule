@@ -45,7 +45,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* MeritRaster::ASSET_NAME = "merit-dem";
+const char* MeritRaster::ASSET_NAME = "merit-s3";
 const char* MeritRaster::RESOURCE_NAME = "merit_3as_20200617_001_01.h5";
 
 const double MeritRaster::X_SCALE = (1.0 / 1200.0);

@@ -5,7 +5,7 @@ local srcfile, dirpath = runner.srcscript()
 -- Load GeoJSON file
 local geojsonfile = dirpath.."../data/grandmesa.geojson"
 local f = io.open(geojsonfile, "r")
-runner.assert(f ~= nil, "failed to open geojson file")
+runner.assert(f ~= nil, "failed to open geojson file", true)
 local vectorfile = f:read("*a")
 f:close()
 

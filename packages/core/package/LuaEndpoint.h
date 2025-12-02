@@ -83,8 +83,8 @@ class LuaEndpoint: public EndpointObject
 
         bool                handleRequest   (Request* request) override;
         static void*        requestThread   (void* parm);
-        static int          normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id);
-        static int          streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id);
+        static int          normalResponse  (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id);
+        static int          streamResponse  (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id);
 };
 
 #endif  /* __lua_endpoint__ */

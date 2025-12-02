@@ -9,58 +9,336 @@ local json = require("json")
 -- Constants
 --
 
+-- Asset Directory
+ASSETS = {
+    ["icesat2"] = {
+        name        = "ATL03",
+        identity    = "nsidc-cloud",
+        driver      = "cumulus",
+        path        = "nsidc-cumulus-prod-protected",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "007",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["icesat2-atl06"] = {
+        name        = "ATL06",
+        identity    = "nsidc-cloud",
+        driver      = "cumulus",
+        path        = "nsidc-cumulus-prod-protected",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "007",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["icesat2-atl08"] = {
+        name        = "ATL08",
+        identity    = "nsidc-cloud",
+        driver      = "cumulus",
+        path        = "nsidc-cumulus-prod-protected",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "007",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["icesat2-atl09"] = {
+        name        = "ATL09",
+        identity    = "nsidc-cloud",
+        driver      = "cumulus",
+        path        = "nsidc-cumulus-prod-protected",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "006",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["icesat2-atl13"] = {
+        name        = "ATL13",
+        identity    = "nsidc-cloud",
+        driver      = "s3atl13",
+        path        = "nsidc-cumulus-prod-protected",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "006",
+        api         = "ams",
+        formats     = {".h5"},
+        endpoint    = "atl13"
+    },
+    ["icesat2-atl24"] = {
+        name        = "ATL24_ARCHIVED",
+        identity    = "nsidc-cloud",
+        driver      = "s3atl24",
+        path        = "nsidc-cumulus-prod-protected",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "001",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["gedil4a"] = {
+        name        = "GEDI_L4A_AGB_Density_V2_1_2056",
+        identity    = "ornl-cloud",
+        driver      = "s3",
+        path        = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["gedil4b"] = {
+        name        = "GEDI_L4B_Gridded_Biomass_2017",
+        identity    = "ornl-cloud",
+        driver      = "s3",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass_V2_1/data/GEDI04_B_MW019MW223_02_002_02_R01000M_V2.tif",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        formats     = {".tiff"}
+    },
+    ["gedil3-elevation"] = {
+        name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
+        identity    = "ornl-cloud",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        formats     = {".tiff"}
+    },
+    ["gedil3-canopy"] = {
+        name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
+        identity    = "ornl-cloud",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_mean_2019108_2022019_002_03.tif",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        formats     = {".tiff"}
+    },
+    ["gedil3-elevation-stddev"] = {
+        name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
+        identity    = "ornl-cloud",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        formats     = {".tiff"}
+    },
+    ["gedil3-canopy-stddev"] = {
+        name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
+        identity    = "ornl-cloud",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_stddev_2019108_2022019_002_03.tif",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        formats     = {".tiff"}
+    },
+    ["gedil3-counts"] = {
+        name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
+        identity    = "ornl-cloud",
+        path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_counts_2019108_2022019_002_03.tif",
+        region      = "us-west-2",
+        provider    = "ORNL_CLOUD",
+        formats     = {".tiff"}
+    },
+    ["gedil2a"] = {
+        name        = "GEDI02_A",
+        identity    = "lpdaac-cloud",
+        driver      = "s3gedi",
+        path        = "lp-prod-protected",
+        region      = "us-west-2",
+        provider    = "LPCLOUD",
+        version     = "002",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["gedil1b"] = {
+        name        = "GEDI01_B",
+        identity    = "lpdaac-cloud",
+        driver      = "s3gedi",
+        path        = "lp-prod-protected",
+        region      = "us-west-2",
+        provider    = "LPCLOUD",
+        version     = "002",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
+    ["swot-sim-ecco-llc4320"] = {
+        name        = "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
+        identity    = "podaac-cloud",
+        driver      = "s3",
+        path        = "podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
+        region      = "us-west-2",
+        provider    = "POCLOUD",
+        api         = "cmr",
+        formats     = {".nc"},
+        collections = {"C2147947806-POCLOUD"}
+    },
+    ["swot-sim-glorys"] = {
+        name        = "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
+        identity    = "podaac-cloud",
+        driver      = "s3",
+        path        = "podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
+        region      = "us-west-2",
+        provider    = "POCLOUD",
+        api         = "cmr",
+        formats     = {".nc"},
+        collections = {"C2152046451-POCLOUD"}
+    },
+    ["usgs3dep-1meter-dem"] = {
+        name        = "Digital Elevation Model (DEM) 1 meter",
+        path        = "/vsis3/prd-tnm",
+        region      = "us-west-2",
+        provider    = "USGS",
+        api         = "tnm",
+        formats     = {".tiff"}
+    },
+    ["3dep1m"] = {
+        name        = "3dep1m",
+        path        = "/vsis3/prd-tnm",
+        region      = "us-west-2",
+        api         = "ams",
+        endpoint    = "3dep",
+        stac        = true
+    },
+    ["usgs3dep-10meter-dem"] = {
+        path        = "/vsis3/prd-tnm",
+        index       = "/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt",
+        region      = "us-west-2",
+    },
+    ["esa-worldcover-10meter"] = {
+        path        = "/vsis3/esa-worldcover/v200/2021/map",
+        index       = "/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt",
+        region      = "eu-central-1",
+    },
+    ["meta-globalcanopy-1meter"] = {
+        path        = "/vsis3/dataforgood-fb-data/forests/v1/alsgedi_global_v6_float/",
+        index       = "/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt",
+        region      = "us-east-1",
+    },
+    ["bluetopo-bathy"] = {
+        identity    = "iam-role",
+        path        = "/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/",
+        index       = "_BlueTopo_Tile_Scheme",
+        region      = "us-east-1",
+    },
+    ["landsat-hls"] = {
+        name        = "HLS",
+        identity    = "lpdaac-cloud",
+        path        = "/vsis3/lp-prod-protected",
+        region      = "us-west-2",
+        provider    = "LPCLOUD",
+        api         = "stac",
+        formats     = {".tiff"},
+        collections = {"HLSS30.v2.0", "HLSL30.v2.0"},
+        url         = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"
+    },
+    ["arcticdem-mosaic"] = {
+        path        = "/vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1",
+        index       = "/vsis3/sliderule/data/PGC/arcticdem_2m_v4_1_tiles.vrt",
+        region      = "us-west-2"
+    },
+    ["arcticdem-strips"] = {
+        name        = "arcticdem-strips",
+        path        = "/vsis3/pgc-opendata-dems/",
+        region      = "us-west-2",
+        provider    = "PGC",
+        api         = "stac",
+        formats     = {".tiff"},
+        collections = {"arcticdem-strips-s2s041-2m"},
+        url         = "https://stac.pgc.umn.edu/api/v1/search"
+    },
+    ["rema-mosaic"] = {
+        path        = "/vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m",
+        index       = "/vsis3/sliderule/data/PGC/rema_2m_v2_0_tiles.vrt",
+        region      = "us-west-2"
+    },
+    ["rema-strips"] = {
+        name        = "rema-strips",
+        path        = "/vsis3/pgc-opendata-dems/",
+        region      = "us-west-2",
+        provider    = "PGC",
+        api         = "stac",
+        formats     = {".tiff"},
+        collections = {"rema-strips-s2s041-2m"},
+        url         = "https://stac.pgc.umn.edu/api/v1/search"
+    },
+    ["nisar-L2-geoff"] = {
+        identity   = "asf-cloud",
+        path        = "/vsis3/sds-n-cumulus-prod-nisar-sample-data",
+        region      = "us-west-2"
+    },
+    ["gedtm-30meter"] = {
+        identity   = "iam-role",
+        path        = "/vsis3/sliderule/data/GEDTM/legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif",
+        region      = "us-west-2"
+    },
+    ["gedtm-std"] = {
+        identity   = "iam-role",
+        path        = "/vsis3/sliderule/data/GEDTM/gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif",
+        region      = "us-west-2"
+    },
+    ["gedtm-dfm"] = {
+        identity   = "iam-role",
+        path        = "/vsis3/sliderule/data/GEDTM/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif",
+        region      = "us-west-2"
+    },
+    ["atlas-s3"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule/data/ATLAS",
+        region      = "us-west-2"
+    },
+    ["atl24-s3"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule/data/ATL24r2",
+        region      = "us-west-2",
+        provider    = "NSIDC_CPRD",
+        version     = "002",
+        api         = "ams",
+        formats     = {".h5"},
+        endpoint    = "atl24"
+    },
+    ["swot-s3"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule/data/SWOT",
+        region      = "us-west-2"
+    },
+    ["viirsj1-s3"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule/data/VIIRSJ1",
+        region      = "us-west-2"
+    },
+    ["merit-s3"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule/data/MERIT",
+        region      = "us-west-2"
+    },
+    ["gebco-s3"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "/vsis3/sliderule/data/GEBCO",
+        index       = "index.geojson",
+        region      = "us-west-2"
+    },
+    ["atlas-local"] = {
+        driver      = "file",
+        path        = "/data/ATLAS",
+    },
+    ["gedi-local"] = {
+        driver      = "file",
+        path        = "/data/GEDI",
+    },
+    ["sliderule-stage"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule-public",
+        region      = "us-west-2"
+    },
+}
+
 -- default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
-
--- best effort match of datasets to providers and versions for earthdata
-DATASETS = {
-    ATL03 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL06 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL08 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
-    GEDI_L4A_AGB_Density_V2_1_2056 =                      {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    GEDI_L4B_Gridded_Biomass_2017 =                       {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
-    HLS =                                                 {provider = "LPCLOUD",     version = nil,    api = "stac",  formats = {".tiff"},  collections = {"HLSS30.v2.0", "HLSL30.v2.0"},   url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"},
-    ["Digital Elevation Model (DEM) 1 meter"] =           {provider = "USGS",        version = nil,    api = "tnm",   formats = {".tiff"},  collections = {},                               url = nil},
-    SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1 =  {provider = "POCLOUD",     version = nil,    api = "cmr",   formats = {".nc"},    collections = {"C2147947806-POCLOUD"},          url = nil},
-    SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1 =        {provider = "POCLOUD",     version = nil,    api = "cmr",   formats = {".nc"},    collections = {"C2152046451-POCLOUD"},          url = nil},
-    ["arcticdem-strips"] =                                {provider = "PGC",         version = nil,    api = "stac",  formats = {".tiff"},  collections = {"arcticdem-strips-s2s041-2m"},   url = "https://stac.pgc.umn.edu/api/v1/search"},
-    ["rema-strips"] =                                     {provider = "PGC",         version = nil,    api = "stac",  formats = {".tiff"},  collections = {"rema-strips-s2s041-2m"},        url = "https://stac.pgc.umn.edu/api/v1/search"}
-}
-
--- best effort match of sliderule assets to earthdata datasets
-ASSETS_TO_DATASETS = {
-    ["gedil4a"] = "GEDI_L4A_AGB_Density_V2_1_2056",
-    ["gedil4b"] = "GEDI_L4B_Gridded_Biomass_2017",
-    ["gedil3-elevation"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
-    ["gedil3-canopy"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
-    ["gedil3-elevation-stddev"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
-    ["gedil3-canopy-stddev"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
-    ["gedil3-counts"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
-    ["gedil2a"] = "GEDI02_A",
-    ["gedil1b"] = "GEDI01_B",
-    ["swot-sim-ecco-llc4320"] = "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
-    ["swot-sim-glorys"] = "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
-    ["usgs3dep-1meter-dem"] = "Digital Elevation Model (DEM) 1 meter",
-    ["landsat-hls"] = "HLS",
-    ["icesat2"] = "ATL03",
-    ["icesat2-atl06"] = "ATL06",
-    ["icesat2-atl08"] = "ATL08",
-    ["icesat2-atl09"] = "ATL09",
-    ["icesat2-atl13"] = "ATL13",
-    ["icesat2-atl24"] = "ATL24",
-    ["atlas-local"] = "ATL03",
-    ["atlas-s3"] = "ATL03",
-    ["atl24-s3"] = "ATL24",
-    ["nsidc-s3"] = "ATL03",
-    ["arcticdem-strips"] = "arcticdem-strips",
-    ["rema-strips"] = "rema-strips"
-}
 
 -- upper limit on resources returned from CMR query per request
 CMR_PAGE_SIZE = 2000
@@ -73,12 +351,24 @@ TNM_PAGE_SIZE = 100
 
 -- response codes for all of the package functions
 RC_SUCCESS = 0
-RC_FAILURE = -1
+RC_FATAL_ERROR = -1
 RC_RQST_FAILED = -2
 RC_RSPS_UNPARSEABLE = -3
 RC_RSPS_UNEXPECTED = -4
 RC_RSPS_TRUNCATED = -5
 RC_UNSUPPORTED = -6
+RC_INVALID_GEOMETRY = -7
+
+-- reverse lookup for short names
+DATASETS = (function()
+    local name_lookup = {}
+    for asset,info in pairs(ASSETS) do
+        if info["name"] then
+            name_lookup[info["name"]] = ASSETS[asset]
+        end
+    end
+    return name_lookup
+end)()
 
 --
 -- Build GeoJSON
@@ -121,6 +411,42 @@ local function build_geojson(rsps)
 end
 
 --
+-- Clean Polygon
+--
+local function clean_polygon(poly)
+    -- check type
+    if type(poly) ~= 'table' then
+        sys.log(core.ERROR, "Invalid type for polygon detected: " .. type(poly))
+        return nil
+    end
+    -- check size
+    local num_coords = #poly
+    if num_coords <= 3 then
+        sys.log(core.ERROR, "Invalid length of polygon detected: " .. tostring(num_coords))
+        return nil
+    end
+    -- close polygon if necessary
+    if (poly[1]["lat"] ~= poly[num_coords]["lat"]) and
+       (poly[1]["lon"] ~= poly[num_coords]["lon"]) then
+        sys.log(core.ERROR, "Polygon is not closed")
+        return nil
+    end
+    -- determine winding of polygon: sum((x2 - x1) * (y2 + y1))
+    local wind = 0
+    for i=1,(num_coords-1) do
+        wind = wind + ((poly[i+1]["lon"] - poly[i]["lon"]) * (poly[i+1]["lat"] + poly[i]["lat"]))
+    end
+    -- reverse direction (make counter-clockwise) if necessary
+    if wind > 0 then
+        for i = 1,math.floor(num_coords/2) do
+            poly[i], poly[num_coords-i+1] = poly[num_coords-i+1], poly[i]
+        end
+    end
+    -- return cleaned version of polygon (in addition to changing in place)
+    return poly
+end
+
+--
 -- urlify
 --
 local function urlify(str)
@@ -135,29 +461,87 @@ end
 ---------------------------------------------------------------
 
 --
+-- Create global assets
+--
+local function load ()
+    local assets = {}
+    for k,v in pairs(ASSETS) do
+        local asset = core.getbyname(k) -- see if asset already exists
+        assets[k] = asset or core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"]):global(k)
+    end
+    return assets
+end
+
+--
+-- AMS
+--
+local function ams (parms, poly, _with_meta, _short_name)
+
+    -- get dataset
+    local dataset       = DATASETS[_short_name or parms["short_name"]] or ASSETS[parms["asset"]]
+    local endpoint      = dataset["endpoint"]
+    local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
+    local with_meta     = _with_meta or parms["with_meta"] or dataset["stac"]
+
+    -- build local parameters that combine top level parms with endpoint (e.g. atl13) specific parms
+    local ams_parms             = parms[endpoint] or {}
+    ams_parms["t0"]             = ams_parms["t0"] or parms["t0"]
+    ams_parms["t1"]             = ams_parms["t1"] or parms["t1"]
+    ams_parms["poly"]           = poly or ams_parms["poly"] or parms["poly"]
+    ams_parms["name_filter"]    = ams_parms["name_filter"] or parms["name_filter"]
+    ams_parms["rgt"]            = ams_parms["rgt"] or parms["rgt"] -- backwards compatibility
+    ams_parms["cycle"]          = ams_parms["cycle"] or parms["cycle"] -- backwards compatibility
+    ams_parms["region"]         = ams_parms["region"] or parms["region"] -- backwards compatibility
+
+    -- make request and process response
+    local status, response = core.ams("POST", dataset["endpoint"], json.encode(ams_parms))
+    if status then
+        local rc, data = pcall(json.decode, response)
+        if rc then
+            if with_meta then -- returns full response from the AMS
+                return RC_SUCCESS, data
+            elseif data["granules"] then -- pulls out just the granules from the AMS
+                local num_granules = #data["granules"]
+                if num_granules > max_resources then
+                    return RC_RSPS_TRUNCATED, string.format("%s resources exceeded maximum allowed: %d > %d", dataset["name"] or "unknown", num_granules, max_resources)
+                else
+                    return RC_SUCCESS, data["granules"]
+                end
+            else
+                return RC_RSPS_UNEXPECTED, "granules not found in response from AMS"
+            end
+        else
+            return RC_RSPS_UNPARSEABLE, "could not parse json in response from AMS"
+        end
+    else
+        return RC_FATAL_ERROR, string.format("request to AMS failed: %s", response)
+    end
+
+end
+
+--
 -- CMR
 --
-local function cmr (parms, poly, with_meta)
+local function cmr (parms, poly, _with_meta, _short_name)
 
-    local link_table = {}
+    local linktable = {}
 
     -- get parameters of request
-    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset       = DATASETS[short_name] or {}
-    local cmr_parms     = parms["cmr"] or {}
-    local granule_parms = parms["granule"] or {}
+    local dataset       = DATASETS[_short_name or parms["short_name"]] or ASSETS[parms["asset"]]
     local provider      = dataset["provider"] or error("unable to determine provider for query")
+    local cmr_parms     = parms["cmr"] or {}
     local version       = cmr_parms["version"] or dataset["version"]
-    local polygon       = cmr_parms["polygon"] or parms["poly"] or poly
-    local rgt           = parms["rgt"] or granule_parms["rgt"]
-    local cycle         = parms["cycle"] or granule_parms["cycle"]
-    local region        = parms["region"] or granule_parms["region"]
-    local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
-    local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
-    local name_filter   = parms["name_filter"]
+    local polygon       = poly or parms["poly"]
+    local t0            = parms["t0"]
+    local t1            = parms["t1"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
+    local with_meta     = _with_meta or parms["with_meta"]
 
     -- build name filter
+    local name_filter   = parms["name_filter"]
+    local rgt           = parms["rgt"]
+    local cycle         = parms["cycle"]
+    local region        = parms["region"]
     if (not name_filter) and
        (rgt or cycle or region) then
         local rgt_filter = rgt and string.format("%04d", rgt) or '????'
@@ -171,9 +555,9 @@ local function cmr (parms, poly, with_meta)
     if polygon then
         for i,coord in ipairs(polygon) do
             if i < #polygon then
-                polystr = polystr .. string.format("%f,%f,", coord["lon"], coord["lat"]) -- with trailing comma
+                polystr = polystr .. string.format("%.15f,%.15f,", coord["lon"], coord["lat"]) -- with trailing comma
             else
-                polystr = polystr .. string.format("%f,%f", coord["lon"], coord["lat"]) -- without trailing comma
+                polystr = polystr .. string.format("%.15f,%.15f", coord["lon"], coord["lat"]) -- without trailing comma
             end
         end
     end
@@ -184,7 +568,7 @@ local function cmr (parms, poly, with_meta)
         string.format("?provider=%s", provider),
         "&sort_key[]=start_date&sort_key[]=producer_granule_id",
         string.format("&page_size=%s", CMR_PAGE_SIZE),
-        string.format("&short_name=%s", short_name),
+        string.format("&short_name=%s", dataset["name"]),
         version and string.format("&version=%s", version) or "",
         (t0 and t1) and string.format("&temporal[]=%s,%s", t0, t1) or "",
         polygon and string.format("&polygon=%s", polystr) or "",
@@ -208,9 +592,9 @@ local function cmr (parms, poly, with_meta)
         -- get and check number of cmr hits
         local cmr_hits = tonumber(hdrs["cmr-hits"])
         if cmr_hits > max_resources then
-            return RC_RSPS_TRUNCATED, string.format("number of CMR hits <%d> exceeded maximum allowed <%d> for %s", cmr_hits, max_resources, short_name)
+            return RC_RSPS_TRUNCATED, string.format("number of CMR hits <%d> exceeded maximum allowed <%d> for %s", cmr_hits, max_resources, dataset["name"])
         elseif total_links > max_resources then
-            return RC_RSPS_TRUNCATED, string.format("number of total links found <%d> exceeded maximum allowed <%d> for %s", total_links, max_resources, short_name)
+            return RC_RSPS_TRUNCATED, string.format("number of total links found <%d> exceeded maximum allowed <%d> for %s", total_links, max_resources, dataset["name"])
         end
 
         -- decode response text (json) into lua table
@@ -263,8 +647,8 @@ local function cmr (parms, poly, with_meta)
                                         url = token
                                     end
                                     -- add url to table of links with metadata
-                                    if not link_table[url] then
-                                        link_table[url] = metadata
+                                    if not linktable[url] then
+                                        linktable[url] = metadata
                                         num_links = num_links + 1
                                         total_links = total_links + 1
                                     end
@@ -288,10 +672,10 @@ local function cmr (parms, poly, with_meta)
 
     -- return results
     if with_meta then
-        return RC_SUCCESS, link_table
+        return RC_SUCCESS, linktable
     else
         local urls = {}
-        for link,_ in pairs(link_table) do
+        for link,_ in pairs(linktable) do
             table.insert(urls, link)
         end
         return RC_SUCCESS, urls
@@ -304,12 +688,13 @@ end
 --
 local function stac (parms, poly)
 
+    local geotable = {}
+
     -- get parameters of request
-    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset       = DATASETS[short_name] or {}
+    local dataset       = DATASETS[parms["short_name"]] or ASSETS[parms["asset"]]
     local url           = dataset["url"]
     local collections   = parms["collections"] or dataset["collections"]
-    local polygon       = parms["poly"] or poly
+    local polygon       = poly or parms["poly"]
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
@@ -343,11 +728,10 @@ local function stac (parms, poly)
     -- post initial request
     local rsps, status = core.post(url, json.encode(rqst), headers)
     if not status then
-        return RC_RQST_FAILED, "http request to stac server failed"
+        return RC_FATAL_ERROR, "http request to stac server failed -> " .. rsps
     end
 
     -- parse response into a table
-    local geotable = {}
     local next_page = {}
     status, geotable, next_page = build_geojson(rsps)
     if not status then
@@ -365,7 +749,7 @@ local function stac (parms, poly)
         -- post paged request
         rsps, status = core.post(next_page["link"], next_page["body"], headers)
         if not status then
-            return RC_RQST_FAILED, "http request to stac server failed"
+            return RC_FATAL_ERROR, "http request to stac server failed -> " .. rsps
         end
 
         -- parse paged response into table
@@ -401,8 +785,9 @@ local function tnm (parms, poly)
     }
 
     -- get parameters of request
-    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local polygon       = parms["poly"] or poly
+    local dataset       = ASSETS[parms["asset"]]
+    local short_name    = parms["short_name"] or dataset["name"]
+    local polygon       = poly or parms["poly"]
     local t0            = parms["t0"] or '2018-01-01'
     local t1            = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
@@ -440,22 +825,10 @@ local function tnm (parms, poly)
             string.format("&stop=%s", t1),
         })
 
-        -- make https request (with retries)
-        local rsps = nil
-        local rsps_status = false
-        local attempts = 3
-        local request_complete = false
-        while not request_complete do
-            rsps, rsps_status = core.get(tnm_query_url, nil, {})
-            if rsps_status then
-                break
-            end
-            attempts = attempts - 1
-            if attempts <= 0 then
-                return RC_RQST_FAILED, rsps
-            else
-                sys.log(core.WARNING, string.format("TNM returned error <%d>, retrying... \n>>>\n%s\n<<<", rsps_status, rsps))
-            end
+        -- make https request
+        local rsps, rsps_status = core.get(tnm_query_url, nil, {})
+        if not rsps_status then
+            return RC_FATAL_ERROR, "http request to tnm failed -> " .. rsps
         end
 
         -- build table from response
@@ -514,36 +887,50 @@ end
 --
 -- search
 --
-local function search (parms, poly)
-
-    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset = DATASETS[short_name] or {}
-    local api = dataset["api"]
-    if api == "cmr" then
-        return cmr(parms, poly)
-    elseif api == "stac" then
-        return stac(parms, poly)
-    elseif api == "tnm" then
-        return tnm(parms, poly)
-    else
-        return RC_UNSUPPORTED, string.format("unsupported api: %s", api)
+local function search (parms, _poly)
+    local dataset       = DATASETS[parms["short_name"]] or ASSETS[parms["asset"]]
+    local api           = parms["api"] or dataset["api"]
+    local handlers      = { ams=ams, cmr=cmr, stac=stac, tnm=tnm }
+    local handler       = handlers[api]
+    local tolerances    = { 0.0001, 0.001, 0.01, 0.1, 1.0 }
+    local poly          = _poly or parms["poly"]
+    local max_attempts  = (poly and __geo__) and (#tolerances + 1) or 1
+    local attempt       = 1
+    while handler do
+        local rc, rsps = handler(parms, poly)
+        if rc ~= RC_RQST_FAILED then -- success/no retries
+            return rc, rsps
+        elseif attempt >= max_attempts then -- failure
+            return rc, string.format("earthdata query failed after %d attempts", attempt)
+        else -- simplify and retry (RC_RQST_FAILED)
+            sys.log(core.WARNING, string.format("%s: simplifying polygon with tolerance of %f", rsps, tolerances[attempt]))
+            poly = geo.simplify(poly, tolerances[attempt], tolerances[attempt])
+            poly = clean_polygon(poly)
+            if poly == nil then
+                return RC_INVALID_GEOMETRY, string.format("invalid polygon")
+            end
+            attempt = attempt + 1
+        end
     end
-
+    return RC_UNSUPPORTED, string.format("unsupported api <%s>", api)
 end
 
 --
 -- Return Package --
 --
 return {
+    load = load,
+    ams = ams,
     cmr = cmr,
     stac = stac,
     tnm = tnm,
     search = search,
     SUCCESS = RC_SUCCESS,
-    FAILURE = RC_FAILURE,
+    FATAL_ERROR = RC_FATAL_ERROR,
     RQST_FAILED = RC_RQST_FAILED,
     RSPS_UNPARSEABLE = RC_RSPS_UNPARSEABLE,
     RSPS_UNEXPECTED = RC_RSPS_UNEXPECTED,
     RSPS_TRUNCATED = RC_RSPS_TRUNCATED,
-    UNSUPPORTED = RC_UNSUPPORTED
+    UNSUPPORTED = RC_UNSUPPORTED,
+    INVALID_GEOMETRY = RC_INVALID_GEOMETRY
 }

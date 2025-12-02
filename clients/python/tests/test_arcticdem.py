@@ -8,8 +8,6 @@ from sliderule import icesat2
 from sliderule import raster
 from sliderule import earthdata
 from sliderule import earthdata
-from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
-from sliderule.earthdata import __cmr_max_version as cmr_max_version
 
 # Change connection timeout from default 10s to 1s
 sliderule.set_rqst_timeout((1, 60))
@@ -177,8 +175,6 @@ class TestMosaic:
         assert 'mosaic.stdev' in gdf.columns
         assert 'mosaic.slope' not in gdf.columns
 
-
-@pytest.mark.external
 class TestStrips:
     def test_indexed_raster(self, init):
         region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
@@ -209,9 +205,7 @@ class TestStrips:
 
     def test_sample_api_serial(self, init):
         arcticdem_test_point = [
-            [
-                { "lon": -150.0, "lat": 70.0 }
-            ]
+            { "lon": -150.0, "lat": 70.0 }
         ]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, as_str=True)
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat]], parms={"catalog": catalog})
@@ -220,13 +214,11 @@ class TestStrips:
 
     def test_sample_api_batch(self, init):
         arcticdem_test_region = [
-            [
-                { "lon": -150.0, "lat": 70.0 },
-                { "lon": -150.0, "lat": 71.0 },
-                { "lon": -149.0, "lat": 71.0 },
-                { "lon": -149.0, "lat": 70.0 },
-                { "lon": -150.0, "lat": 70.0 }
-            ]
+            { "lon": -150.0, "lat": 70.0 },
+            { "lon": -150.0, "lat": 71.0 },
+            { "lon": -149.0, "lat": 71.0 },
+            { "lon": -149.0, "lat": 70.0 },
+            { "lon": -150.0, "lat": 70.0 }
         ]
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, as_str=True)
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"catalog": catalog})

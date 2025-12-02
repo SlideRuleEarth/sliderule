@@ -2,12 +2,10 @@ version: "3.9"
 services:
   manager:
     image: ${MANAGER_IMAGE}
-    network_mode: "host"
+    network_mode: host
     restart: always
     pull_policy: if_not_present
     entrypoint: /docker-entrypoint.sh
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
     volumes:
       - /data:/data
     environment:
@@ -19,9 +17,24 @@ services:
       - ORCHESTRATOR=http://10.0.1.5:8050
     labels:
       - autoheal=true
+  monitor-agent:
+    image:  ${MONITOR_AGENT_IMAGE}
+    network_mode: host
+    restart: unless-stopped
+    pull_policy: if_not_present
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    labels:
+      - autoheal=true
   autoheal:
     image: willfarrell/autoheal:latest
-    tty: true
     container_name: autoheal
     restart: always
     environment:

@@ -4,6 +4,26 @@ local earthdata = require("earth_data_query")
 -- Self Test --
 
 --[[
+    AMS Query
+--]]
+runner.unittest("AMS Query", function()
+    local parms = {
+        ["asset"] = "3dep1m",
+        ["poly"] = {
+            {["lon"] = -108.3435200747503, ["lat"] = 38.89102961045247},
+            {["lon"] = -107.7677425431139, ["lat"] = 38.90611184543033},
+            {["lon"] = -107.7818591266989, ["lat"] = 39.26613714985466},
+            {["lon"] = -108.3605610678553, ["lat"] = 39.25086131372244},
+            {["lon"] = -108.3435200747503, ["lat"] = 38.89102961045247}
+        }
+    }
+    local rc, rsps = earthdata.ams(parms)
+    runner.assert(rc == earthdata.SUCCESS, string.format("failed tnm request: %s", rsps), true)
+    runner.assert(#rsps["features"] >= 24, string.format("failed to return enough results: %d", #rsps["features"]))
+    runner.assert(#rsps["features"][1]["geometry"]["coordinates"][1] == 5, string.format("failed to return enough coordinates for each feature: %d", #rsps["features"][1]["geometry"]["coordinates"][1]))
+end)
+
+--[[
     CMR Query
 --]]
 runner.unittest("CMR Query", function()

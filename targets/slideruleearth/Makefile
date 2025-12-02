@@ -45,9 +45,9 @@ BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
 MONITOR_STAGE_DIR = $(STAGE)/monitor
+MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
-TF_STAGE_DIR = $(STAGE)/tf
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
@@ -57,6 +57,7 @@ WEBSITE_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
+CF_STAGE_DIR = $(STAGE)/cf
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -73,7 +74,7 @@ ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --lo
 ARCH = $(shell arch)
 
 DOMAIN ?= slideruleearth.io
-ORGANIZATION ?= sliderule
+ORGANIZATION ?= developers
 VERSION ?= latest
 
 DOCKEROPTS ?= # --progress=plain --no-cache
@@ -178,10 +179,16 @@ proxy-docker: # make the reverse proxy docker image; needs VERSION
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
-	cp docker/monitor/* $(MONITOR_STAGE_DIR)
+	cp -R docker/monitor/rootfs/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
-	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
+
+monitor-agent-docker: ## build monitor agent docker image; needs VERSION
+	-rm -Rf $(MONITOR_AGENT_STAGE_DIR)
+	mkdir -p $(MONITOR_AGENT_STAGE_DIR)
+	cp -R docker/monitor-agent/rootfs/* $(MONITOR_AGENT_STAGE_DIR)
+	cp docker/monitor-agent/Dockerfile.$(ARCH) $(MONITOR_AGENT_STAGE_DIR)/Dockerfile
+	cd $(MONITOR_AGENT_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor-agent:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-lock: ## update dependencies of ams
 	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
@@ -229,70 +236,27 @@ cluster-docker: ## build all cluster docker images
 	make ilb-docker
 	make proxy-docker
 	make monitor-docker
+	make monitor-agent-docker
 	make manager-docker
 	make ams-docker
 
-cluster-docker-push: ## push all cluster images to docker container registries
+cluster-docker-push: cluster-cf-update ## push all cluster images to container registries (and docker compose files to S3)
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/monitor-agent:$(VERSION)
 	docker push $(ECR)/manager:$(VERSION)
 	docker push $(ECR)/ams:$(VERSION)
 
-########################
-# AMI Targets
-########################
+cluster-cf-update:
+	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive --exclude "*" --include "docker-compose-*.yml"
 
-AMI_DATE = $(shell date +'%Y.%-m.%d')
-
-AMI_ID = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/2025.9.22/2 \
-	--region $(AWS_REGION) \
-	--query 'image.outputResources.amis[0].image' \
-	--output text)
-
-AMI_NAME = $(shell aws imagebuilder get-image \
-	--image-build-version-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image/sliderule-base-recipe/$(AMI_DATE) \
-	--region $(AWS_REGION) \
-	--query 'image.outputResources.amis[0].name' \
-	--output text)
-
-ami-pipeline-create: ## create EC2 Image Builder pipeline
-	aws cloudformation create-stack \
-		--stack-name 	ami \
-		--template-body file://cloudformation/ami.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=AmiDate,ParameterValue=$(AMI_DATE)
-	aws cloudformation wait stack-create-complete --stack-name ami
-
-ami-pipeline-describe: ## status the creation/deletion of the EC2 Image Builder pipeline
-	aws cloudformation describe-stack-events \
-		--stack-name ami
-
-ami-pipeline-status:
-	@echo $(AMI_NAME)
-
-ami-pipeline-delete: ## deletes the EC2 Image Builder pipeline
-	aws cloudformation delete-stack \
-		--stack-name ami
-	aws cloudformation wait stack-delete-complete --stack-name ami
-
-ami-image-build: ## run EC2 Image Builder pipeline to create an AMI
-	aws s3 cp cloudformation/ami/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive
-	aws imagebuilder start-image-pipeline-execution \
-   		--image-pipeline-arn arn:aws:imagebuilder:$(AWS_REGION):$(AWS_ACCOUNT):image-pipeline/sliderule-base-pipeline \
-    	--region $(AWS_REGION)
-
-ami-image-publish: ## publish AMI image name to SSM
-	aws ssm put-parameter \
-    	--name "/ami/sliderule/arm/$(VERSION)" \
-    	--type "String" \
-    	--value "$(AMI_ID)" \
-    	--overwrite
+cluster-cf-init:
+	-rm -Rf $(CF_STAGE_DIR)
+	mkdir -p $(CF_STAGE_DIR)
+	wget --directory-prefix=$(CF_STAGE_DIR) https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
+	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 
 ########################
 # Deployment Targets
@@ -329,7 +293,7 @@ deployment-delete: ## deletes the cluster
 	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-cluster
 
-deployment-go-public: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
+deployment-go-live: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
 	aws cloudformation create-stack \
 		--stack-name 	dns \
 		--template-body file://cloudformation/dns.yml \

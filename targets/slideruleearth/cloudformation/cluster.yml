@@ -1,77 +1,61 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: SlideRule Cluster
 
-##############################
 Parameters:
 
+  #
+  # Variables
+  #
   Version:
     Type: String
-
   EnvironmentVersion:
     Type: String
-
   IsPublic:
     Type: String
-
   Domain:
     Type: String
-
   ClusterName:
     Type: String
-
   Organization:
     Type: String
-
   ProjectBucket:
     Type: String
-
   ProjectFolder:
     Type: String
-
   ProjectPublicBucket:
     Type: String
-
   ContainerRegistry:
     Type: String
-
   NodeCapacity:
     Type: Number
 
   #
   # Constants
   #
-
   ManagerIP:
     Type: String
     Default: "10.0.1.3"
-
   MonitorIP:
     Type: String
     Default: "10.0.1.4"
-
   IlbIP:
     Type: String
     Default: "10.0.1.5"
-
   AvailabilityZone:
     Type: String
     Default: "us-west-2d"
-
   PublicCIDRBlock:
     Type: String
     Default: "0.0.0.0/0"
-
   VpcCIDRBlock:
     Type: String
     Default: "10.0.0.0/16"
 
-##############################
 Resources:
 
   #
   # Network
   #
-
   SlideruleVPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -81,7 +65,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${ClusterName}-vpc"
-
   SlideruleSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -92,20 +75,17 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${ClusterName}-subnet"
-
   SlideruleIGW:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
           Value: !Sub "${ClusterName}-gateway"
-
   AttachIGW:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref SlideruleIGW
       VpcId: !Ref SlideruleVPC
-
   SlideruleRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -113,14 +93,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Organization}-route"
-
   SlideruleRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref SlideruleRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref SlideruleIGW
-
   RouteAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -130,7 +108,6 @@ Resources:
   #
   # IAM Roles
   #
-
   ClusterRole:
     Type: AWS::IAM::Role
     Properties:
@@ -194,16 +171,14 @@ Resources:
                   - ec2:DescribeInstances
                   - ec2:TerminateInstances
                 Resource: "*"
-
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles: [!Ref ClusterRole]
 
   #
-  # Security Groups
+  # Security Group - Monitor
   #
-
   MonitorSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -229,7 +204,9 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${ClusterName}-monitor-sg"
-
+  #
+  # Security Group - ILB
+  #
   IlbSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -261,6 +238,9 @@ Resources:
         - Key: Name
           Value: !Sub "${ClusterName}-ilb-sg"
 
+  #
+  # Security Group - Manager
+  #
   ManagerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -282,6 +262,9 @@ Resources:
         - Key: Name
           Value: !Sub "${ClusterName}-manager-sg"
 
+  #
+  # Security Group - Cluster
+  #
   SlideruleSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -309,13 +292,12 @@ Resources:
           Value: !Sub "${ClusterName}-sliderule-sg"
 
   #
-  # ILB
+  # EC2 Instance - ILB
   #
-
   IlbInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
       InstanceType: c8g.large
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
@@ -347,19 +329,21 @@ Resources:
           export ORGANIZATION=${Organization}
           export DOMAIN=${Domain}
           export ILB_IMAGE=${ContainerRegistry}/ilb:${Version}
+          export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-ilb.yml ./docker-compose.yml
-          docker-compose -p cluster up --detach
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          chmod +x docker-compose
+          ./docker-compose -p cluster up --detach
 
   #
-  # Manager
+  # EC2 Instance -  Manager
   #
-
   ManagerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
       InstanceType: r8g.large
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
@@ -394,22 +378,24 @@ Resources:
           export DUCKDB_LOCAL_FILE='/data/manager-${ClusterName}.db'
           export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Organization}-${Version}.db'
           export MANAGER_IMAGE=${ContainerRegistry}/manager:${Version}
+          export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
           mkdir /data
           aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-manager.yml ./docker-compose.yml
-          docker-compose -p cluster up --detach
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          chmod +x docker-compose
+          ./docker-compose -p cluster up --detach
 
   #
-  # Monitor
+  # EC2 Instance - Monitor
   #
-
   MonitorInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
       InstanceType: c8g.large
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
@@ -442,19 +428,21 @@ Resources:
           export DOMAIN=${Domain}
           export MONITOR_IMAGE=${ContainerRegistry}/monitor:${Version}
           export PROXY_IMAGE=${ContainerRegistry}/proxy:${Version}
+          export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-monitor.yml ./docker-compose.yml
-          docker-compose -p cluster up --detach
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          chmod +x docker-compose
+          ./docker-compose -p cluster up --detach
 
   #
-  # Autoscaling Group
+  # Autoscaling Group - Cluster
   #
-
   SlideruleLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateName: !Sub "${ClusterName}-lt"
       LaunchTemplateData:
-        ImageId: !Sub "{{resolve:ssm:/ami/sliderule/arm/latest}}"
+        ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
         InstanceType: t4g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile
@@ -479,15 +467,23 @@ Resources:
             export IS_PUBLIC=${IsPublic}
             export SLIDERULE_IMAGE=${ContainerRegistry}/sliderule:${Version}
             export AMS_IMAGE=${ContainerRegistry}/ams:${Version}
+            export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
             export PROVISIONING_SYSTEM="https://ps.${Domain}"
             export CONTAINER_REGISTRY=${ContainerRegistry}
             aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
             mkdir -p /data/ATL13
-            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13_mappings.json /data/ATL13/atl13_mappings.json
-            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/inland_water_body.db /data/ATL13/inland_water_body.db
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.db /data/ATL13/atl13.db
+            mkdir -p /data/ATL24
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl24r2.db /data/ATL24/atl24r2.db
+            mkdir -p /data/3DEP
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
+            mkdir -p /plugins
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-node.yml ./docker-compose.yml
-            docker-compose -p cluster up --detach
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+            chmod +x docker-compose
+            ./docker-compose -p cluster up --detach
 
   SlideruleAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -509,9 +505,8 @@ Resources:
           PropagateAtLaunch: true
 
   #
-  # Route53
+  # DNS
   #
-
   IlbRecord:
     Type: AWS::Route53::RecordSet
     Properties:

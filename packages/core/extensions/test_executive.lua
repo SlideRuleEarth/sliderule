@@ -1,9 +1,9 @@
 local console = require("console")
 local json = require("json")
-local asset = require("asset")
+local earthdata = require("earth_data_query")
 
 -- Global Setup
-asset.loaddir()
+earthdata.load()
 
 -- Global Data
 local results = {}

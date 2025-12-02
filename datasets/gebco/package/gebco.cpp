@@ -41,7 +41,7 @@
  ******************************************************************************/
 
 #define LUA_GEBCO_LIBNAME     "gebco"
-#define LUA_GEBCO_RASTER_NAME "gebco-bathy"
+#define LUA_GEBCO_RASTER_NAME "gebco-s3"
 
 /******************************************************************************
  * LOCAL FUNCTIONS

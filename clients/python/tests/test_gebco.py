@@ -22,7 +22,7 @@ expected_file_2024  = '/vsis3/sliderule/data/GEBCO/2024/cog_gebco_2024_sub_ice_n
 
 class TestGebco:
     def test_samples_2023(self, init):
-        rqst = {"samples": {"asset": "gebco-bathy", "with_flags": True, "bands": ["2023"]}, "coordinates": [[lon,lat]]}
+        rqst = {"samples": {"asset": "gebco-s3", "with_flags": True, "bands": ["2023"]}, "coordinates": [[lon,lat]]}
         rsps = sliderule.source("samples", rqst)
         assert init
         print(rsps)
@@ -31,7 +31,7 @@ class TestGebco:
         assert rsps["samples"][0][0]["flags"] == expected_tid
 
     def test_samples_2024(self, init):
-        rqst = {"samples": {"asset": "gebco-bathy", "with_flags": True, "bands": ["2024"]}, "coordinates": [[lon,lat]]}
+        rqst = {"samples": {"asset": "gebco-s3", "with_flags": True, "bands": ["2024"]}, "coordinates": [[lon,lat]]}
         rsps = sliderule.source("samples", rqst)
         assert init
         print(rsps)
@@ -41,7 +41,7 @@ class TestGebco:
 
     # Test default data set (no bands parameter)
     def test_samples_default(self, init):
-        rqst = {"samples": {"asset": "gebco-bathy", "with_flags": True}, "coordinates": [[lon,lat]]}
+        rqst = {"samples": {"asset": "gebco-s3", "with_flags": True}, "coordinates": [[lon,lat]]}
         rsps = sliderule.source("samples", rqst)
         assert init
         print(rsps)
@@ -50,7 +50,7 @@ class TestGebco:
         assert rsps["samples"][0][0]["flags"] == expected_tid
 
     def test_sample_api(self, init):
-        gdf = raster.sample("gebco-bathy", [[lon,lat],[lon+0.01,lat+0.01]])
+        gdf = raster.sample("gebco-s3", [[lon,lat],[lon+0.01,lat+0.01]])
         assert init
         assert len(gdf) == 2
         assert gdf["value"].iloc[0] == expected_depth_2024

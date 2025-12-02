@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/******************************************************************************
+ /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
@@ -39,6 +39,35 @@
 #include "OsApi.h"
 #include "RecordObject.h"
 #include "EventLib.h"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+//#define DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
+static int debug_print(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
+{
+    (void)handle;
+
+    const char* url = static_cast<const char*>(userptr); (void)url;
+    const char* text;
+    switch (type) {
+        case CURLINFO_TEXT:         text = "== Info";   break;
+        case CURLINFO_HEADER_OUT:   text = "=> TxHdr";  break;
+        case CURLINFO_DATA_OUT:     text = "=> TxData"; break;
+        case CURLINFO_HEADER_IN:    text = "<= RxHdr";  break;
+        case CURLINFO_DATA_IN:      text = "<= RxData"; break;
+        default:                    return 0;
+    }
+
+    fprintf(stderr, "%s (%zu bytes)\n", text, size);
+    fwrite(data, 1, size, stderr);
+    fprintf(stderr, "\n");
+
+    return 0;
+}
+#endif
 
 /******************************************************************************
  * cURL LIBRARY CLASS
@@ -102,6 +131,13 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip,deflate");
+
+#ifdef DEBUG_OUTPUT
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_print);
+        curl_easy_setopt(curl, CURLOPT_DEBUGDATA, url);
+#endif
 
         if(unix_socket)
         {
@@ -371,7 +407,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 /*----------------------------------------------------------------------------
  * getHeaders
  *----------------------------------------------------------------------------*/
-int CurlLib::getHeaders (lua_State* L, int index, List<const FString*>& header_list)
+int CurlLib::getHeaders (lua_State* L, int index, hdrs_t& header_list)
 {
     int num_hdrs = 0;
 

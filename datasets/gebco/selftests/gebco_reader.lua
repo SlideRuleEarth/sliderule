@@ -24,7 +24,7 @@ local expFlags = {  70,     40,    44}
 local depth_tolerance = 1;
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values default with no band specified\n--------------------------------"))
-local dem = geo.raster(geo.parms({ asset = "gebco-bathy", algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
+local dem = geo.raster(geo.parms({ asset = "gebco-s3", algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
 runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
@@ -50,7 +50,7 @@ for j, lon in ipairs(lons) do
 end
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values band=2024\n--------------------------------"))
-dem = geo.raster(geo.parms({ asset = "gebco-bathy", bands = {"2024"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
+dem = geo.raster(geo.parms({ asset = "gebco-s3", bands = {"2024"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
 runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
@@ -80,7 +80,7 @@ end
 expDepth = { -64,  -4933, -4072}
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values band=2023\n--------------------------------"))
-dem = geo.raster(geo.parms({ asset = "gebco-bathy", bands = {"2023"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
+dem = geo.raster(geo.parms({ asset = "gebco-s3", bands = {"2023"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
 runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
