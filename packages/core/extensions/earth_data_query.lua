@@ -190,6 +190,7 @@ ASSETS = {
         formats     = {".tiff"}
     },
     ["3dep1m"] = {
+        name        = "3dep1m"
         path        = "/vsis3/prd-tnm",
         region      = "us-west-2",
         api         = "ams",
