@@ -189,6 +189,16 @@ ASSETS = {
         api         = "tnm",
         formats     = {".tiff"}
     },
+    ["3dep1m"] = {
+        name        = "3DEP",
+        path        = "/vsis3/prd-tnm",
+        region      = "us-west-2",
+        provider    = "USGS",
+        api         = "ams",
+        formats     = {".tiff"},
+        endpoint    = "3dep",
+        stac        = true
+    },
     ["usgs3dep-10meter-dem"] = {
         path        = "/vsis3/prd-tnm",
         index       = "/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt",
@@ -473,7 +483,7 @@ local function ams (parms, poly, _with_meta, _short_name)
     local dataset       = DATASETS[_short_name or parms["short_name"]] or ASSETS[parms["asset"]]
     local endpoint      = dataset["endpoint"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
-    local with_meta     = _with_meta or parms["with_meta"]
+    local with_meta     = _with_meta or parms["with_meta"] or dataset["stac"]
 
     -- build local parameters that combine top level parms with endpoint (e.g. atl13) specific parms
     local ams_parms             = parms[endpoint] or {}
