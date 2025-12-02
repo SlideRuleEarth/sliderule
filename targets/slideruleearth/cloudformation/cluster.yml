@@ -472,10 +472,12 @@ Resources:
             export CONTAINER_REGISTRY=${ContainerRegistry}
             aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
             mkdir -p /data/ATL13
-            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13_mappings.json /data/ATL13/atl13_mappings.json
-            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/inland_water_body.db /data/ATL13/inland_water_body.db
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.db /data/ATL13/atl13.db
             mkdir -p /data/ATL24
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl24r2.db /data/ATL24/atl24r2.db
+            mkdir -p /data/3DEP
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
             mkdir -p /plugins
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-node.yml ./docker-compose.yml
