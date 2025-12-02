@@ -45,4 +45,9 @@ def create_app(test_config=None):
     atl24.init_app(app)
     app.register_blueprint(atl24.atl24)
 
+    # initialize 3DEP
+    from . import usgs3dep
+    usgs3dep.init_app(app)
+    app.register_blueprint(usgs3dep.usgs3dep)
+
     return app
