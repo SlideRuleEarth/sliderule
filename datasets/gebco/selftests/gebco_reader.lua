@@ -8,6 +8,8 @@ end
 
 -- Setup --
 
+runner.authenticate({})
+
 -- Correct values test for different POIs
 
 local lons = {-40, -20, -120}

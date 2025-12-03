@@ -209,7 +209,9 @@ Function:   authenticate
    Notes:   accepts optional list of identity keys to authenticate
 ]]
 local function authenticate(identities_to_auth)
-    core.script("iam_role_auth")
+    if not aws.csget("iam-role") then
+        core.script("iam_role_auth")
+    end
     while not aws.csget("iam-role") do
         print("Waiting to establish IAM role...")
         sys.wait(1)
