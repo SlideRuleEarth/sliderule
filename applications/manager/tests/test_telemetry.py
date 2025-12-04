@@ -202,3 +202,20 @@ def test_geo(client):
     assert response.status_code == 200
     assert len(data) == 1
     assert data[0]['source_ip_location'] == "United States, Catonsville"
+
+def test_reset(client):
+    request = {
+	    "record_time": "2024-04-21 14:30:00.345",
+        "source_ip": "128.154.178.80",
+        "aoi": {"x": 30.0, "y": 57.0},
+        "client": "pytest",
+        "endpoint":"defaults",
+        "duration": 1.0,
+        "status_code": 0,
+        "account": "sliderule",
+        "version": "v4.5.1"
+    }
+    response = client.post('/manager/telemetry/record', json=request)
+    assert response.data == b'Telemetry record successfully posted'
+    response = client.post('/manager/telemetry/reset/127.0.0.1')
+    assert response.data == b'Rate limiting for 127.0.0.1 successfully reset'

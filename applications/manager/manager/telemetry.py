@@ -81,6 +81,11 @@ def blockit(source_ip):
     print(f"Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} seconds starting from {datetime.now()}")
     requests.post(current_app.config['ORCHESTRATOR'] + "/discovery/block", data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
 
+def clearit(source_ip):
+    source_ip_location = locateit(source_ip, 'internal')
+    print(f"Rate limiting for {source_ip_location} will be reset")
+    user_request_count[source_ip_location] = 0
+
 def get_metrics():
     global gauge_metrics, count_metrics
     return gauge_metrics, count_metrics
@@ -125,3 +130,14 @@ def record():
     except Exception as e:
         abort(400, f'Telemetry record failed to post: {e}')
     return f'Telemetry record successfully posted'
+
+#
+# Reset
+#
+@telemetry.route('/reset/<ip>', methods=['POST'])
+def reset(ip):
+    try:
+        clearit(ip)
+    except Exception as e:
+        abort(400, f'Failed to reset rate limiting for {ip}: {e}')
+    return f'Rate limiting for {ip} successfully reset'

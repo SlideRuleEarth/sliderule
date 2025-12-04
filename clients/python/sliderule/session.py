@@ -286,7 +286,7 @@ class Session:
         # Check Complete
         if not complete:
             if self.throw_exceptions or rethrow:
-                raise FatalError(f'Request to {url} did not complete: {rsps}')
+                raise FatalError(f'error in request to {url}: {rsps}')
             else:
                 rsps = None
 
@@ -618,7 +618,10 @@ class Session:
         for line in data:
             lines.append(line)
         response = b''.join(lines)
-        return json.loads(response)
+        try:
+            return json.loads(response)
+        except Exception:
+            return response
 
     #
     #  __decode_native
