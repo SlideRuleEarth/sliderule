@@ -31,46 +31,47 @@ The _SlideRule Provisioner_ consists of the following lambda functions:
 
 #### LOGIN(credentials)
 
-* If the user supplied `github credentials` are validated, then return a `jwt_user`
-* Else return failure
-
-#### ACCESS(cluster, jwt_user)
-
-* If the ***authenticated user*** has access to the provided `cluster` then return a `jwt_cluster`
+* If the user supplied `github credentials` validate, then return a `jwt_user` with the following attributes: account, level, list of allowed clusters.
 * Else return failure
 
 :::{note}
-The `jwt_cluster` is provided in requests to SlideRule clusters.  Public clusters will pass all requests onto the worker nodes which may use the `jwt_cluster` for some functions.  Private clusters will check the `jwt_cluster` at the Intelligent Load Balancer and only pass through requests that are validated.
+The list of allowed clusters is currently constrained to a cluster that is named to match the account name.
+In the future, we can use different methods to associate accounts to multiple private clusters; but that is currently not supported.
 :::
 
-#### DEPLOY(cluster, jwt_user)
+#### ACCESS(cluster, jwt_user)
 
-* If `jwt_user` fails authorization as ***github organization member*** for private clusters or ***administrator*** for public cluster, then return failure
-* If the `cluster` is ***running*** then return success
-* If the `cluster` is ***scheduled for delete*** then return failure
-* Deploy the `cluster` and wait up to 10 minutes for completion
-* If the `cluster` is ***running*** then return success
+* If the `jwt_user` includes in its attributes the provided `cluster` then return a `jwt_cluster`
 * Else return failure
 
-#### SCHEDULE_DESTROY(cluster, time_to_destroy, jwt_user)
+#### DEPLOY(cluster, is_public, node_capacity, time_to_live, wait, jwt_user)
 
-* If `jwt_user` fails authorization as ***github organization member*** for private clusters or ***administrator*** for public cluster, then return failure
-* If the `cluster` is ***scheduled for delete*** and ***now*** >= (***scheduled delete time*** - 5 minutes) then return failure
-* If the `cluster` is ***scheduled for delete*** and ***now*** < (***scheduled delete time*** - 5 minutes) then remove ***schedule for deletion***
-* Schedule `cluster` for deletion at `time_to_destroy`
-* Return success
+* If `jwt_user` is not ***administrator***, then validate `is_public` is false and return failure on error.
+* If `jwt_user` is not ***administrator***, then validate `cluster` against list of allowed clusters and return failure on error.
+* If `jwt_user` is not ***administrator***, then validate `node_capacity` against user level limits and return failure on error.
+* If `jwt_user` is not ***administrator***, then validate `time_to_live` against user level limits and return failure on error.
+* Clear any existing scheduled deletion for `cluster` and schedule a time of deletion using `time_to_live`
+* If the `cluster` is not ***running*** then deploy a new cluster with `node_capacity` and `is_public`
+* Else modify the existing cluster to the desired `node_capacity` (note that `is_public` cannot be changed once deployed)
+* If not `wait` then return success of deployment or modification operation (it returns right away and does not reflect final status of cluster)
+* Else wait for deployment or modification of cluster, up to 10 minutes, and return final status of cluster
 
-#### DESTROY(cluster)
+#### DESTROY(cluster, wait, jwt_user)
 
-* If `jwt_user` fails authorization as ***github organization member*** for private clusters or ***administrator*** for public cluster, then return failure
-* Destroy `cluster` and wait up to 10 minutes for completion
-* If `cluster` still ***running*** then return failure
-* Remove all ***schedules for deletion***
-* Return success
+* If `jwt_user` is not ***administrator***, then validate `cluster` against list of allowed clusters and return failure on error.
+* Clear any existing scheduled deletion for `cluster`
+* Destroy cluster
+* If not `wait` then return success of destruction operation (it returns right away and does not reflect final status of cluster)
+* Else wait for destruction of cluster to complete, up to 10 minutes, and return final status of cluster
 
-#### TEST(cluster, version)
+#### STATUS(cluster, jwt_user)
 
-* If `jwt_user` fails authorization as ***administrator*** then return failure
+* If `jwt_user` is not ***administrator***, then validate `cluster` against list of allowed clusters and return failure on error.
+* Return status of cluster (not running, in-progress deployment, in-progress destruction, running)
+
+#### TEST(cluster, version, jwt_user)
+
+* If `jwt_user` is not ***administrator*** then return failure
 * Deploy *unique* time-limited spot EC2 instance (AWS provided AMI)
 * Clone ***sliderule*** repository and checkout `version`
 * Create ***sliderule*** conda environment
@@ -86,9 +87,9 @@ The `jwt_cluster` is provided in requests to SlideRule clusters.  Public cluster
 * If all tests pass then return success
 * Else return failure
 
-#### RELEASE(cluster, version)
+#### RELEASE(cluster, version, jwt_user)
 
-* If `jwt_user` fails authorization as ***administrator*** then return failure
+* If `jwt_user` is not ***administrator*** then return failure
 * Deploy *unique* time-limited spot EC2 instance (AWS provided AMI)
 * Clone ***sliderule*** repository and checkout `version`
 * Execute the ***build cluster*** makefile target for the `cluster` (which pushes Docker images to the AWS container registry)
