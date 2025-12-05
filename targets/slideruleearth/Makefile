@@ -250,7 +250,7 @@ cluster-docker-push: cluster-cf-update ## push all cluster images to container r
 	docker push $(ECR)/ams:$(VERSION)
 
 cluster-cf-update:
-	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ --recursive --exclude "*" --include "docker-compose-*.yml"
+	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/ --recursive --exclude "*" --include "docker-compose-*.yml"
 
 cluster-cf-init:
 	-rm -Rf $(CF_STAGE_DIR)
