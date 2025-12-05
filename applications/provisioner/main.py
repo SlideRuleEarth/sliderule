@@ -24,7 +24,7 @@ def lambda_deploy(event, context):
             {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
             {"ParameterKey": "IsPublic", "ParameterValue": parms["IsPublic"]},
             {"ParameterKey": "Domain", "ParameterValue": parms["Domain"]},
-            {"ParameterKey": "ClusterName", "ParameterValue": f'{parms["Organization"]}-{parms["Color"]}'},
+            {"ParameterKey": "Cluster", "ParameterValue": f'{parms["Cluster"]}'},
             {"ParameterKey": "Organization", "ParameterValue": parms["Organization"]},
             {"ParameterKey": "ProjectBucket", "ParameterValue": parms["ProjectBucket"]},
             {"ParameterKey": "ProjectFolder", "ParameterValue": parms["ProjectFolder"]},

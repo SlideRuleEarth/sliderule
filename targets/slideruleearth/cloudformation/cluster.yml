@@ -14,7 +14,7 @@ Parameters:
     Type: String
   Domain:
     Type: String
-  ClusterName:
+  Cluster:
     Type: String
   Organization:
     Type: String
@@ -64,7 +64,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-vpc"
+          Value: !Sub "${Cluster}-vpc"
   SlideruleSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -74,13 +74,13 @@ Resources:
       AvailabilityZone: !Ref AvailabilityZone
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-subnet"
+          Value: !Sub "${Cluster}-subnet"
   SlideruleIGW:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-gateway"
+          Value: !Sub "${Cluster}-gateway"
   AttachIGW:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -92,7 +92,7 @@ Resources:
       VpcId: !Ref SlideruleVPC
       Tags:
         - Key: Name
-          Value: !Sub "${Organization}-route"
+          Value: !Sub "${Cluster}-route"
   SlideruleRoute:
     Type: AWS::EC2::Route
     Properties:
@@ -125,7 +125,7 @@ Resources:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
         - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
       Policies:
-        - PolicyName: !Sub "${ClusterName}-secrets-access"
+        - PolicyName: !Sub "${Cluster}-secrets-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -133,7 +133,7 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:slideruleearth.io/secrets-*
-        - PolicyName: !Sub "${ClusterName}-s3-access"
+        - PolicyName: !Sub "${Cluster}-s3-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -162,7 +162,7 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/manager/*"
                   - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
-        - PolicyName: !Sub "${ClusterName}-ec2-access"
+        - PolicyName: !Sub "${Cluster}-ec2-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -203,7 +203,7 @@ Resources:
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-monitor-sg"
+          Value: !Sub "${Cluster}-monitor-sg"
   #
   # Security Group - ILB
   #
@@ -236,7 +236,7 @@ Resources:
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-ilb-sg"
+          Value: !Sub "${Cluster}-ilb-sg"
 
   #
   # Security Group - Manager
@@ -260,7 +260,7 @@ Resources:
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-manager-sg"
+          Value: !Sub "${Cluster}-manager-sg"
 
   #
   # Security Group - Cluster
@@ -289,7 +289,7 @@ Resources:
           CidrIp: !Ref PublicCIDRBlock
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-sliderule-sg"
+          Value: !Sub "${Cluster}-sliderule-sg"
 
   #
   # EC2 Instance - ILB
@@ -318,7 +318,7 @@ Resources:
             DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-ilb"
+          Value: !Sub "${Cluster}-ilb"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -364,19 +364,19 @@ Resources:
             DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-manager"
+          Value: !Sub "${Cluster}-manager"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          echo ${ClusterName} > ./clustername.txt
+          echo ${Cluster} > ./Cluster.txt
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export IS_PUBLIC=${IsPublic}
           export DOMAIN=${Domain}
           export MANAGER_SECRET_SALT=$(echo $SECRET | jq -r .manager_secret_salt)
           export MANAGER_API_KEY=$(echo $SECRET | jq -r .manager_api_key)
-          export DUCKDB_LOCAL_FILE='/data/manager-${ClusterName}.db'
-          export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Organization}-${Version}.db'
+          export DUCKDB_LOCAL_FILE='/data/manager-${Cluster}.db'
+          export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Cluster}-${Version}.db'
           export MANAGER_IMAGE=${ContainerRegistry}/manager:${Version}
           export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
           mkdir /data
@@ -416,11 +416,11 @@ Resources:
             DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-monitor"
+          Value: !Sub "${Cluster}-monitor"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          echo ${ClusterName} > ./clustername.txt
+          echo ${Cluster} > ./Cluster.txt
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
@@ -440,7 +440,7 @@ Resources:
   SlideruleLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: !Sub "${ClusterName}-lt"
+      LaunchTemplateName: !Sub "${Cluster}-lt"
       LaunchTemplateData:
         ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
         InstanceType: t4g.2xlarge
@@ -463,7 +463,7 @@ Resources:
             export ENVIRONMENT_VERSION=${EnvironmentVersion}
             export IPV4=$(hostname -I | awk '{print $1}')
             export ORGANIZATION=${Organization}
-            export CLUSTER=${ClusterName}
+            export CLUSTER=${Cluster}
             export IS_PUBLIC=${IsPublic}
             export SLIDERULE_IMAGE=${ContainerRegistry}/sliderule:${Version}
             export AMS_IMAGE=${ContainerRegistry}/ams:${Version}
@@ -488,7 +488,7 @@ Resources:
   SlideruleAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: !Sub "${ClusterName}-asg"
+      AutoScalingGroupName: !Sub "${Cluster}-asg"
       MinSize: !Ref NodeCapacity
       MaxSize: !Ref NodeCapacity
       DesiredCapacity: !Ref NodeCapacity
@@ -501,7 +501,7 @@ Resources:
         Version: !GetAtt SlideruleLaunchTemplate.LatestVersionNumber
       Tags:
         - Key: Name
-          Value: !Sub "${ClusterName}-node"
+          Value: !Sub "${Cluster}-node"
           PropagateAtLaunch: true
 
   #
@@ -511,7 +511,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Sub "${Domain}."   # ensure trailing dot or you can pass HostedZoneId instead
-      Name: !Sub "${ClusterName}.${Domain}"
+      Name: !Sub "${Cluster}.${Domain}"
       Type: A
       TTL: "300"
       ResourceRecords:

@@ -265,11 +265,11 @@ cluster-cf-init:
 PUBLIC_IP ?= 127.0.0.1 # output from cluster-create
 IS_PUBLIC ?= False
 NODE_CAPACITY ?= 1
-CLUSTER_NAME ?= $(ORGANIZATION) # for public clusters this should be set to sliderule-blue|green
+CLUSTER ?= $(ORGANIZATION) # for public clusters this should be set to sliderule-blue|green
 
 deployment-create: ## create a cluster in AWS
 	aws cloudformation create-stack \
-		--stack-name 	$(ORGANIZATION)-cluster \
+		--stack-name 	$(CLUSTER)-cluster \
 		--template-body file://cloudformation/cluster.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
@@ -277,21 +277,21 @@ deployment-create: ## create a cluster in AWS
 						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=ClusterName,ParameterValue=$(CLUSTER_NAME) \
+						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
 						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
-	aws cloudformation wait stack-create-complete --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
 
 deployment-describe: ## status the creation/deletion of the cluster
-	aws cloudformation describe-stack-events --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation describe-stack-events --stack-name $(CLUSTER)-cluster
 
 deployment-delete: ## deletes the cluster
-	aws cloudformation delete-stack --stack-name $(ORGANIZATION)-cluster
-	aws cloudformation wait stack-delete-complete --stack-name $(ORGANIZATION)-cluster
+	aws cloudformation delete-stack --stack-name $(CLUSTER)-cluster
+	aws cloudformation wait stack-delete-complete --stack-name $(CLUSTER)-cluster
 
 deployment-go-live: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
 	aws cloudformation create-stack \
@@ -303,7 +303,7 @@ deployment-go-live: ## switch dns entry of public cluster; needs PUBLIC_IP, uses
 						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
 						ParameterKey=PublicIp,ParameterValue=$(PUBLIC_IP)
 
-deployment-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
+deployment-take-offline: ## destroy dns entry of public cluste
 	aws cloudformation delete-stack --stack-name dns
 
 CLUSTER_PARMS = '{\
@@ -311,7 +311,7 @@ CLUSTER_PARMS = '{\
 	"IsPublic": "$(IS_PUBLIC)",\
 	"Domain": "$(DOMAIN)",\
 	"Organization": "$(ORGANIZATION)",\
-	"ClusterName": "$(CLUSTER_NAME)",\
+	"Cluster": "$(CLUSTER)",\
 	"ProjectBucket": "$(PROJECT_BUCKET)",\
 	"ProjectFolder": "$(PROJECT_FOLDER)",\
 	"ProjectPublicBucket": "$(PROJECT_PUBLIC_BUCKET)",\
