@@ -261,11 +261,14 @@ cluster-cf-init:
 ########################
 # Deployment Targets
 ########################
+# For public clusters the CLUSTER variable is set to sliderule-blue|green
+# while the ORGANIZATION remains as sliderule.  This is so the DNS can
+# be changed to a cluster that is already up and running.
 
-PUBLIC_IP ?= 127.0.0.1 # output from cluster-create
+PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= False
 NODE_CAPACITY ?= 1
-CLUSTER ?= $(ORGANIZATION) # for public clusters this should be set to sliderule-blue|green
+CLUSTER ?= $(ORGANIZATION)
 
 deployment-create: ## create a cluster in AWS
 	aws cloudformation create-stack \
@@ -611,6 +614,7 @@ environment: ## echo the environment variables
 	@echo ARCH: $(ARCH)
 	@echo DOMAIN: $(DOMAIN)
 	@echo ORGANIZATION: $(ORGANIZATION)
+	@echo CLUSTER: $(CLUSTER)
 	@echo VERSION: $(VERSION)
 	@echo DOCKEROPTS: $(DOCKEROPTS)
 	@echo BUILDX: $(BUILDX)
