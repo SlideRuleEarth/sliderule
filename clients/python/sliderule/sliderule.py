@@ -70,7 +70,7 @@ def init (
     time_to_live=60,
     plugins=None,
     log_handler=None,
-    rethrow=True ):
+    rethrow=False ):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -433,7 +433,7 @@ def check_version (plugins=None, session=None):
 
     # check response from server
     if info == None:
-        raise FatalError(f'Failed to get response from server at {session.service_org}.{session.service_domain}')
+        raise FatalError(f'error connecting to {session.service_org}.{session.service_domain}')
 
     # populate version info
     versions = {}

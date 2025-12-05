@@ -31,18 +31,13 @@ The _SlideRule Provisioner_ consists of the following lambda functions:
 
 #### LOGIN(credentials)
 
-* If the user supplied `github credentials` validate, then return a `jwt_user` with the following attributes: account, level, list of allowed clusters.
+* If the user supplied `credentials` validate, then return a `jwt_user` with the following attributes: account, level, list of allowed clusters.
 * Else return failure
 
 :::{note}
 The list of allowed clusters is currently constrained to a cluster that is named to match the account name.
 In the future, we can use different methods to associate accounts to multiple private clusters; but that is currently not supported.
 :::
-
-#### ACCESS(cluster, jwt_user)
-
-* If the `jwt_user` includes in its attributes the provided `cluster` then return a `jwt_cluster`
-* Else return failure
 
 #### DEPLOY(cluster, is_public, node_capacity, time_to_live, wait, jwt_user)
 

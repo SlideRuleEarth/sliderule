@@ -242,12 +242,10 @@ class Session:
                 # Parse Response
                 stream_source = self.__StreamSource(data)
                 format = data.headers.get('Content-Type')
-                if format in ('text/plain', 'application/json'):
-                    rsps = self.__parse_json(stream_source)
-                elif format == 'application/octet-stream':
+                if format == 'application/octet-stream':
                     rsps = self.__parse_native(stream_source, callbacks)
                 else:
-                    raise FatalError(f'Unsupported content type: {format}')
+                    rsps = self.__parse_text(stream_source)
 
                 # Handle Error Codes
                 data.raise_for_status()
@@ -288,6 +286,7 @@ class Session:
             if self.throw_exceptions or rethrow:
                 raise FatalError(f'error in request to {url}: {rsps}')
             else:
+                logger.error(f'Error in request to {url}: {rsps}')
                 rsps = None
 
         # Return Response
@@ -608,9 +607,9 @@ class Session:
         return self.recdef_table[rectype]
 
     #
-    #  __parse_json
+    #  __parse_text
     #
-    def __parse_json (self, data):
+    def __parse_text (self, data):
         """
         data: request response
         """

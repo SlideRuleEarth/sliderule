@@ -107,6 +107,12 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
+    bool verbose = false;
+    if(lua_isboolean(L, 1))
+    {
+        verbose = lua_toboolean(L, 1);
+    }
+
     /* Get Information */
     const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
@@ -116,22 +122,25 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     const char** pkg_list = LuaEngine::getPkgList();
 
     /* Display Information on Terminal */
-    print2term("SlideRule Version:   %s\n", LIBID);
-    print2term("Build Information:   %s\n", BUILDINFO);
-    print2term("Launch Time: %s\n", timestr.c_str());
-    print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
-    print2term("Packages: [ ");
-    if(pkg_list)
+    if(verbose)
     {
-        int index = 0;
-        while(pkg_list[index])
+        print2term("SlideRule Version:   %s\n", LIBID);
+        print2term("Build Information:   %s\n", BUILDINFO);
+        print2term("Launch Time: %s\n", timestr.c_str());
+        print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
+        print2term("Packages: [ ");
+        if(pkg_list)
         {
-            print2term("%s", pkg_list[index]);
-            index++;
-            if(pkg_list[index]) print2term(", ");
+            int index = 0;
+            while(pkg_list[index])
+            {
+                print2term("%s", pkg_list[index]);
+                index++;
+                if(pkg_list[index]) print2term(", ");
+            }
         }
+        print2term(" ]\n");
     }
-    print2term(" ]\n");
 
     /* Return Information to Lua (and clean up package list) */
     lua_pushstring(L, LIBID);
