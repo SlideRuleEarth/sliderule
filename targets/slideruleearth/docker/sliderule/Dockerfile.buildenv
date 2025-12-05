@@ -88,8 +88,9 @@ RUN git clone https://github.com/libgeos/geos.git && \
 # install hdf5 library dependency
 RUN git clone https://github.com/HDFGroup/hdf5.git && \
     cd hdf5 && \
-    VERSION=`curl -s https://api.github.com/repos/HDFGroup/hdf5/releases/latest | jq '.tag_name' | tr -d "\""` && \
-    git checkout $VERSION && \
+#    VERSION=`curl -s https://api.github.com/repos/HDFGroup/hdf5/releases/latest | jq '.tag_name' | tr -d "\""` && \
+#    git checkout $VERSION && \ # version 2.0.0 is a breaking change
+    git checkout hdf5-1.14.6 && \
     mkdir -p /build/hdf5 && \
     cd /build/hdf5 && \
     CFLAGS=-fPIC /hdf5/configure --prefix=/usr/local --disable-shared --enable-build-mode=production --enable-threadsafe --disable-hl && \
