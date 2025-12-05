@@ -1,6 +1,6 @@
 arrow: apache-arrow-19.0.1-0-g07b05dad1a
-gdal: v3.11.4-0-gdde6141aee
+gdal: v3.12.0-0-gb5a9fab4df
 geos: 3.14.1-0-gc389f532d
 libgeotiff: 1.7.4-0-g96024f6
-PROJ: 9.7.0-0-gb24cdfa5
+PROJ: 9.7.1-0-ge37c8172
 rapidjson: v1.1.0-763-g24b5e7a8
