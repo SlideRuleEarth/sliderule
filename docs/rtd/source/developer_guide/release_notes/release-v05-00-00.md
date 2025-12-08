@@ -55,7 +55,7 @@ Instead the request json must change to be this:
 
 * [fec547f](https://github.com/SlideRuleEarth/sliderule/commit/fec547f2c725b38cfecda9aafa787600b7fb17f5) - LAS/LAZ output will now open automatically in the Python client when `open_on_complete` is set to True.
 
-* Rate limiting improved - error messages displayed in web client and python client; admin capabilities added for reseting rate limiting
+* Rate limiting improved - error messages displayed in web client and python client; admin capabilities added for resetting rate limiting
 
 ## Development Changes
 

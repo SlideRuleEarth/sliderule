@@ -316,7 +316,7 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
 #
 def search(parm, resources=None):
     '''
-    This is the highest-level API call and attempts to automatically determine which service needs to be queried to return the resouces being requested.
+    This is the highest-level API call and attempts to automatically determine which service needs to be queried to return the resources being requested.
 
     Parameters
     ----------

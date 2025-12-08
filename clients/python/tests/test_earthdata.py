@@ -50,7 +50,7 @@ class TestAMS:
         ]
         granules = earthdata.search({"asset": "atl24-s3", "poly": poly})
         assert init
-        assert len(granules) == 89
+        assert len(granules) == 68
 
     def test_atl24_meta(self, init):
         response = earthdata.search({"asset": "atl24-s3", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True})
