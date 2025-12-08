@@ -27,7 +27,7 @@ https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.7-h85ac4a6_6.conda
 https://conda.anaconda.org/conda-forge/linux-aarch64/ld_impl_linux-aarch64-2.45-default_h1979696_104.conda#28035705fe0c977ea33963489cd008ad
 https://conda.anaconda.org/conda-forge/linux-aarch64/libopenblas-0.3.30-pthreads_h9d3fd7e_4.conda#11d7d57b7bdd01da745bbf2b67020b2e
 https://conda.anaconda.org/conda-forge/linux-aarch64/libblas-3.11.0-4_haddc8a3_openblas.conda#10471558ac2b0c1b4dcd5e620fd65bfe
-https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.1-hb06a95a_100_cp314.conda#440084d3af1aab4e196a4198988d3c24
+https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.2-hb06a95a_100_cp314.conda#432459e6961a5bc4cfe7cd080aee721a
 https://conda.anaconda.org/conda-forge/noarch/blinker-1.9.0-pyhff2d567_0.conda#42834439227a4551b939beeeb8a4b085
 https://conda.anaconda.org/conda-forge/noarch/click-8.3.1-pyh8f84b5b_1.conda#ea8a6c3256897cc31263de9f455e25d9
 https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda#962b9857ee8e7018c22f2776ffa0b2d7
@@ -58,4 +58,4 @@ https://conda.anaconda.org/conda-forge/noarch/python-dateutil-2.9.0.post0-pyhe01
 https://conda.anaconda.org/conda-forge/noarch/werkzeug-3.1.4-pyhcf101f3_0.conda#de082192dffe45d19aff3d86a4d06a24
 https://conda.anaconda.org/conda-forge/noarch/flask-3.1.2-pyhd8ed1ab_0.conda#ba67a9febeda36948fee26a3dec3d914
 https://conda.anaconda.org/conda-forge/linux-aarch64/pandas-2.3.3-py314h91eeaa4_2.conda#b2dd1c4c086280a3a9b2a12f0431bc7c
-https://conda.anaconda.org/conda-forge/noarch/pytest-9.0.1-pyhcf101f3_0.conda#fa7f71faa234947d9c520f89b4bda1a2
+https://conda.anaconda.org/conda-forge/noarch/pytest-9.0.2-pyhcf101f3_0.conda#2b694bad8a50dc2f712f5368de866480

@@ -537,7 +537,7 @@ package:
   category: main
   optional: false
 - name: pytest
-  version: 9.0.1
+  version: 9.0.2
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -549,14 +549,14 @@ package:
     tomli: '>=1'
     colorama: '>=0.4'
     exceptiongroup: '>=1'
-  url: https://conda.anaconda.org/conda-forge/noarch/pytest-9.0.1-pyhcf101f3_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/pytest-9.0.2-pyhcf101f3_0.conda
   hash:
-    md5: fa7f71faa234947d9c520f89b4bda1a2
-    sha256: 7f25f71e4890fb60a4c4cb4563d10acf2d741804fec51e9b85a6fd97cd686f2f
+    md5: 2b694bad8a50dc2f712f5368de866480
+    sha256: 9e749fb465a8bedf0184d8b8996992a38de351f7c64e967031944978de03a520
   category: main
   optional: false
 - name: python
-  version: 3.14.1
+  version: 3.14.2
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -577,10 +577,10 @@ package:
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
     zstd: '>=1.5.7,<1.6.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.1-hb06a95a_100_cp314.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.2-hb06a95a_100_cp314.conda
   hash:
-    md5: 440084d3af1aab4e196a4198988d3c24
-    sha256: 482bc557d2a5b13a854a2fb8abdcfcef527640720fabdccb9421fa109e4cb4b8
+    md5: 432459e6961a5bc4cfe7cd080aee721a
+    sha256: 41adf6ee7a953ef4f35551a4a910a196b0a75e1ded458df5e73ef321863cb3f2
   category: main
   optional: false
 - name: python-dateutil

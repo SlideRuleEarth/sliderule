@@ -106,15 +106,15 @@ package:
   category: main
   optional: false
 - name: backports.zstd
-  version: 1.1.0
+  version: 1.2.0
   manager: conda
   platform: linux-aarch64
   dependencies:
     python: '>=3.14'
-  url: https://conda.anaconda.org/conda-forge/noarch/backports.zstd-1.1.0-py314h680f03e_1.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/backports.zstd-1.2.0-py314h680f03e_0.conda
   hash:
-    md5: f642100d7720dc51e98d53789440d23d
-    sha256: e339bd3373f5285e0bd8c6aa49c3e0be5d50011fd753ca43da2b1ac4f38f3634
+    md5: 25e227ee028a17c2f2ef6eaf97e86734
+    sha256: de90f762aecfa4b8680ae7299398bd4a1634870a01db8351e5e22affc6bbf313
   category: main
   optional: false
 - name: blinker
@@ -130,22 +130,22 @@ package:
   category: main
   optional: false
 - name: boto3
-  version: 1.42.3
+  version: 1.42.4
   manager: conda
   platform: linux-aarch64
   dependencies:
-    botocore: '>=1.42.3,<1.43.0'
+    botocore: '>=1.42.4,<1.43.0'
     jmespath: '>=0.7.1,<2.0.0'
     python: '>=3.10'
     s3transfer: '>=0.16.0,<0.17.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.42.3-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.42.4-pyhd8ed1ab_0.conda
   hash:
-    md5: 22d53f7680d7f4a2f9d5d10d3aef1221
-    sha256: a105d01d4cdc69e8298f2e168268c4f5413484c0f74076c0f6cdf44626405a9b
+    md5: fd1abaafc779e08b3f95bf88cc55f5c5
+    sha256: 483eded6f6f90f4a4dd716df6590bb71dbc715ad93c577dfd8865d7f8997a093
   category: main
   optional: false
 - name: botocore
-  version: 1.42.3
+  version: 1.42.4
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -153,10 +153,10 @@ package:
     python: '>=3.10'
     python-dateutil: '>=2.1,<3.0.0'
     urllib3: '>=1.25.4,!=2.2.0,<3'
-  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.42.3-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.42.4-pyhd8ed1ab_0.conda
   hash:
-    md5: 33aa1c2431e44016bc7d59fe85f7f3e4
-    sha256: 9894a46bcd0df5ef35a922cf34bc523689668c9efde7c2a40d32bf83f19ddfab
+    md5: a4b80477c1cb8e4e83087fb06747a6b7
+    sha256: 06aab24a97e8091d448a0a07428930a4f002a4321105c2f627f1c25ee4b38985
   category: main
   optional: false
 - name: brotli-python
@@ -716,7 +716,7 @@ package:
   category: main
   optional: false
 - name: pytest
-  version: 9.0.1
+  version: 9.0.2
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -728,14 +728,14 @@ package:
     tomli: '>=1'
     colorama: '>=0.4'
     exceptiongroup: '>=1'
-  url: https://conda.anaconda.org/conda-forge/noarch/pytest-9.0.1-pyhcf101f3_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/pytest-9.0.2-pyhcf101f3_0.conda
   hash:
-    md5: fa7f71faa234947d9c520f89b4bda1a2
-    sha256: 7f25f71e4890fb60a4c4cb4563d10acf2d741804fec51e9b85a6fd97cd686f2f
+    md5: 2b694bad8a50dc2f712f5368de866480
+    sha256: 9e749fb465a8bedf0184d8b8996992a38de351f7c64e967031944978de03a520
   category: main
   optional: false
 - name: python
-  version: 3.14.1
+  version: 3.14.2
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -756,10 +756,10 @@ package:
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
     zstd: '>=1.5.7,<1.6.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.1-hb06a95a_100_cp314.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.2-hb06a95a_100_cp314.conda
   hash:
-    md5: 440084d3af1aab4e196a4198988d3c24
-    sha256: 482bc557d2a5b13a854a2fb8abdcfcef527640720fabdccb9421fa109e4cb4b8
+    md5: 432459e6961a5bc4cfe7cd080aee721a
+    sha256: 41adf6ee7a953ef4f35551a4a910a196b0a75e1ded458df5e73ef321863cb3f2
   category: main
   optional: false
 - name: python-dateutil
