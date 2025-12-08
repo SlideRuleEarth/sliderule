@@ -28,12 +28,9 @@ RUN pip3 install shapely numpy
 RUN pip3 install 'sphinx>=5.0' docutils sphinx_markdown_tables sphinx_panels sphinx_rtd_theme
 RUN pip3 install myst-parser nbsphinx jupyterlab geopandas matplotlib
 
-# Build Jekyll Website
-COPY jekyll /jekyll
-RUN chmod -R 777 /jekyll
+# Install Jekyll Dependencies
+COPY jekyll/Gemfile* /jekyll/
 RUN cd /jekyll && bundle install
-RUN cd /jekyll && bundle exec jekyll build
-RUN chmod -R 744 /jekyll
 
 # Install SlideRule Python Client
 COPY sliderule/clients/python /sliderule/clients/python
@@ -44,6 +41,13 @@ COPY rtd /rtd
 RUN chmod -R 777 /rtd
 RUN make -C /rtd html
 RUN chmod -R 744 /rtd
+
+# Build Jekyll Website
+COPY jekyll /jekyll
+RUN chmod -R 777 /jekyll \
+    && cd /jekyll \
+    && bundle exec jekyll build \
+    && chmod -R 744 /jekyll
 
 # Combine Outputs to Well Known Jekyll Directory
 RUN mkdir -p /srv/jekyll/_site \

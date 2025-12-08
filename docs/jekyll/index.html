@@ -35,6 +35,32 @@ feature_row:
     title: "Private Clusters"
 ---
 
+<h2 style="text-align: center;">Latest Information</h2>
+
+{% assign six_months_seconds = 15552000 %}
+{% assign now_seconds = 'now' | date: "%s" | plus: 0 %}
+{% assign six_months_ago_seconds = now_seconds | minus: six_months_seconds %}
+
+{% assign recent_posts = "" | split: "" %}
+
+{% for post in site.posts %}
+  {% assign post_seconds = post.date | date: "%s" | plus: 0 %}
+  {% if post_seconds >= six_months_ago_seconds %}
+    {% assign recent_posts = recent_posts | push: post %}
+  {% endif %}
+{% endfor %}
+
+{% assign recent_posts = recent_posts | reverse %}
+
+<ul class="latest-updates" style="list-style: none; text-align: center; padding: 0;">
+{% for post in recent_posts %}
+  <li style="margin-bottom: 2em;">
+    <h3><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h3>
+    <p>{{ post.excerpt | strip_html | truncate: 200 }}</p>
+  </li>
+{% endfor %}
+</ul>
+
 {% include feature_row id="opening" type="center" %}
 
 {% include feature_row id="intro" type="wide" %}
