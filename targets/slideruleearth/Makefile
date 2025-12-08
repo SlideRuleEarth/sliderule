@@ -263,14 +263,13 @@ cluster-cf-init:
 ########################
 # For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION remains as sliderule.
 # This is so the DNS can be changed to a cluster that is already up and running.
-# e.g. make deployment-create ORGANIZATION=sliderule CLUSTER=sliderule-green VERSION=v5.0.0 NODE_CAPACITY=7 IS_PUBLIC=True
 
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= False
 NODE_CAPACITY ?= 1
 CLUSTER ?= $(ORGANIZATION)
 
-deployment-create: ## create a cluster in AWS
+deployment-create: ## create a cluster in AWS; e.g. make deployment-create ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
 	aws cloudformation create-stack \
 		--stack-name 	$(CLUSTER)-cluster \
 		--template-body file://cloudformation/cluster.yml \
@@ -296,17 +295,18 @@ deployment-delete: ## deletes the cluster
 	aws cloudformation delete-stack --stack-name $(CLUSTER)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(CLUSTER)-cluster
 
-deployment-go-live: ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
-	aws cloudformation create-stack \
+deployment-go-live: ## switch dns entry of public cluster; e.g. make deployment-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
+	aws cloudformation deploy \
 		--stack-name 	dns \
-		--template-body file://cloudformation/dns.yml \
+		--template-file cloudformation/dns.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
-						ParameterKey=PublicIp,ParameterValue=$(PUBLIC_IP)
+		--parameter-overrides \
+		 	Domain=$(DOMAIN) \
+			Organization=$(ORGANIZATION) \
+			PublicIp=$(PUBLIC_IP)
 
-deployment-take-offline: ## destroy dns entry of public cluste
+deployment-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
 
 CLUSTER_PARMS = '{\
