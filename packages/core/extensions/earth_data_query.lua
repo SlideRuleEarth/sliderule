@@ -68,7 +68,7 @@ ASSETS = {
         endpoint    = "atl13"
     },
     ["icesat2-atl24"] = {
-        name        = "ATL24_ARCHIVED",
+        name        = "ATL24",
         identity    = "nsidc-cloud",
         driver      = "s3atl24",
         path        = "nsidc-cumulus-prod-protected",

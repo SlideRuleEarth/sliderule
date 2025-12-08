@@ -261,9 +261,9 @@ cluster-cf-init:
 ########################
 # Deployment Targets
 ########################
-# For public clusters the CLUSTER variable is set to sliderule-blue|green
-# while the ORGANIZATION remains as sliderule.  This is so the DNS can
-# be changed to a cluster that is already up and running.
+# For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION remains as sliderule.
+# This is so the DNS can be changed to a cluster that is already up and running.
+# e.g. make deployment-create ORGANIZATION=sliderule CLUSTER=sliderule-green VERSION=v5.0.0 NODE_CAPACITY=7 IS_PUBLIC=True
 
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= False

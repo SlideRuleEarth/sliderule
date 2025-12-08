@@ -441,19 +441,15 @@ def check_version (plugins=None, session=None):
         s = info[entity]['version'][1:].split('.')
         versions[entity] = (int(s[0]), int(s[1]), int(s[2]))
 
-    # check major version mismatches
-    if versions['server'][0] != versions['client'][0]:
-        raise FatalError(f'Client {info["client"]["version"]} is incompatible with the server {info["server"]["version"]}')
+    # check version mismatches
+    if (versions['server'][0] != versions['client'][0]) or (versions['server'][1] > versions['client'][1]):
+        logger.warning(f'Warning, this environment is using an outdated client ({info["client"]["version"]}). The code will run but some functionality supported by the server ({info["server"]["version"]}) may not be available.')
 
     # check plugins
     if isinstance(plugins, list):
         for plugin in plugins:
             if versions[plugin][0] != versions['client'][0]:
-                raise FatalError(f'Client {info["client"]["version"]} is incompatible with the {plugin} plugin {info[plugin]["version"]}')
-
-    # check minor version mismatches
-    if versions['server'][1] > versions['client'][1]:
-        logger.warning(f'Warning, this environment is using an outdated client ({info["client"]["version"]}). The code will run but some functionality supported by the server ({info["server"]["version"]}) may not be available.')
+                logger.warning(f'Client {info["client"]["version"]} may be incompatible with the {plugin} plugin {info[plugin]["version"]}')
 
     # return boolean for backward compatibility
     return True
