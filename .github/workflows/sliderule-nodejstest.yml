@@ -1,11 +1,12 @@
 name: SlideRule Node.js Tests
 
 on:
-  workflow_run:
-    workflows: ["SlideRule Python Tests"]
-    branches: [main]
-    types:
-      - completed
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 22 * * 5' # Every Sunday at 10 pm
 
 jobs:
   test:

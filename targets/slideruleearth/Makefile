@@ -348,7 +348,7 @@ testrunner-build: ## create the testrunner lambda zipfile
 	cp $(ROOT)/applications/testrunner/main.py $(TESTRUNNER_STAGE_DIR)/package/
 	cd $(TESTRUNNER_STAGE_DIR)/package/ && zip -r -q $(TESTRUNNER_STAGE_DIR)/testrunner.zip . -x "/*__pycache__/*"
 
-testrunner-create: ## create a test runner in AWS
+testrunner-create: testrunner-build ## create a test runner in AWS
 	aws s3 cp $(ROOT)/applications/testrunner/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/
 	aws s3 cp $(TESTRUNNER_STAGE_DIR)/testrunner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testrunner.zip
 	aws cloudformation create-stack \
@@ -585,6 +585,7 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
+	- docker image rm $(ECR)/monitor-agent:$(VERSION)
 	- docker image rm $(ECR)/manager:$(VERSION)
 	- docker image rm $(ECR)/ams:$(VERSION)
 	- docker image rm $(ECR)/website:$(VERSION)

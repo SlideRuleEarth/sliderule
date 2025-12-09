@@ -1,13 +1,12 @@
 #!/bin/bash
+exec > testrunner.log 2>&1
 CONTAINER_REGISTRY=$1
 VERSION=$2
 
 #
 # System Dependencies
 #
-dnf install -y git make rsync
-curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-dnf install -y nodejs
+dnf install -y git make rsync wget
 
 #
 # Install Mamba

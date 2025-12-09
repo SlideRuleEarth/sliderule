@@ -268,7 +268,7 @@ Resources:
           ###################
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/testrunner.sh ./testrunner.sh
           chmod +x testrunner.sh
-          ./testrunner.sh ${ContainerRegistry} ${Version} > testrunner.log
+          ./testrunner.sh ${ContainerRegistry} ${Version}
 
   #
   # Lambda Delete Function
