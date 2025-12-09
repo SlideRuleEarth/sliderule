@@ -49,6 +49,7 @@ MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
+TESTRUNNER_STAGE_DIR = $(STAGE)/testrunner
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
@@ -69,9 +70,10 @@ AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
-MYIP = $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
-ARCH = $(shell arch)
+MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
+ARCH ?= $(shell arch)
+CONFIG ?= release
 
 DOMAIN ?= slideruleearth.io
 ORGANIZATION ?= developers
@@ -82,6 +84,7 @@ BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
+BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(CONFIG) && make"
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -121,7 +124,7 @@ sliderule: ## build the server using the local configuration
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False ASAN_OPTIONS="detect_leaks=1" LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
 
-buildenv: ## run the build environment docker container
+build: ## build the code using the build environment docker container
 	docker run \
 		-it \
 		--network host \
@@ -135,7 +138,8 @@ buildenv: ## run the build environment docker container
 		-e GITEMAIL="$(shell git config user.email)" \
 		--rm \
 		--name buildenv \
-		$(ECR)/sliderule-buildenv:$(VERSION)
+		$(ECR)/sliderule-buildenv:$(VERSION) \
+		$(BUILD_CMD)
 
 ########################
 # Docker Build Targets
@@ -327,6 +331,46 @@ deployment-invoke:
 	echo $(CLUSTER_PARMS) > /tmp/request.json
 #	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/request.json /tmp/response.json
 #	cat /tmp/response.json | jq
+
+########################
+# Test Runner Targets
+########################
+
+testrunner-build: ## create the testrunner lambda zipfile
+	-rm -Rf $(TESTRUNNER_STAGE_DIR)
+	mkdir -p $(TESTRUNNER_STAGE_DIR)
+	docker run -it --rm \
+		-v $(TESTRUNNER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package urllib3"
+	cp $(ROOT)/applications/testrunner/main.py $(TESTRUNNER_STAGE_DIR)/package/
+	cd $(TESTRUNNER_STAGE_DIR)/package/ && zip -r -q $(TESTRUNNER_STAGE_DIR)/testrunner.zip . -x "/*__pycache__/*"
+
+testrunner-create: ## create a test runner in AWS
+	aws s3 cp $(ROOT)/applications/testrunner/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/
+	aws s3 cp $(TESTRUNNER_STAGE_DIR)/testrunner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testrunner.zip
+	aws cloudformation create-stack \
+		--stack-name 	testrunner \
+		--template-body file://cloudformation/testrunner.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testrunner.zip \
+						ParameterKey=ContainerRegistry,ParameterValue=$(ECR)
+	aws cloudformation wait stack-create-complete --stack-name testrunner
+
+testrunner-describe: ## status the creation/deletion of the test runner
+	aws cloudformation describe-stack-events --stack-name testrunner
+
+testrunner-delete: ## deletes the test runner
+	aws cloudformation delete-stack --stack-name testrunner
+	aws cloudformation wait stack-delete-complete --stack-name testrunner
 
 ########################
 # Website Targets

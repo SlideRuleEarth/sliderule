@@ -69,7 +69,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref SlideruleVPC
-      CidrBlock: "10.0.0.0/16"
+      CidrBlock: !Ref VpcCIDRBlock
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Ref AvailabilityZone
       Tags:

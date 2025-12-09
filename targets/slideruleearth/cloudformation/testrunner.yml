@@ -1,0 +1,314 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Remote Instance
+
+Parameters:
+
+  #
+  # Variables
+  #
+  Version:
+    Type: String
+  EnvironmentVersion:
+    Type: String
+  Domain:
+    Type: String
+  ProjectBucket:
+    Type: String
+  ProjectFolder:
+    Type: String
+  LambdaZipFile:
+    Type: String
+  ContainerRegistry:
+    Type: String
+  AvailabilityZone:
+    Type: String
+    Default: "us-west-2d"
+  DeleteAfterMinutes:
+    Type: Number
+    Default: 60
+
+Resources:
+
+  #
+  # Network
+  #
+  RemoteVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.0.0.0/16"
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+  RemoteSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RemoteVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref AvailabilityZone
+  RemoteIGW:
+    Type: AWS::EC2::InternetGateway
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref RemoteIGW
+      VpcId: !Ref RemoteVPC
+  RemoteRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref RemoteVPC
+  RemoteRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachIGW
+    Properties:
+      RouteTableId: !Ref RemoteRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref RemoteIGW
+  RouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RemoteSubnet
+      RouteTableId: !Ref RemoteRouteTable
+
+  #
+  # IAM Role
+  #
+  RemoteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+      Policies:
+        - PolicyName: testrunner-s3-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:ListBucket"]
+                Resource:
+                  - arn:aws:s3:::sliderule
+                  - arn:aws:s3:::sliderule-public
+                  - arn:aws:s3:::pgc-opendata-dems
+                  - arn:aws:s3:::prd-tnm
+                  - arn:aws:s3:::esa-worldcover
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
+                  - arn:aws:s3:::dataforgood-fb-data
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - arn:aws:s3:::sliderule/*
+                  - arn:aws:s3:::sliderule-public/*
+                  - arn:aws:s3:::pgc-opendata-dems/*
+                  - arn:aws:s3:::prd-tnm/*
+                  - arn:aws:s3:::esa-worldcover/*
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
+                  - arn:aws:s3:::dataforgood-fb-data/*
+        - PolicyName: testrunner-ec2-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:TerminateInstances
+                Resource: "*"
+  SchedulerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SchedulerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:DescribeRule
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                Resource: '*'
+  DeletionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DeletionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                Resource: !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref RemoteRole]
+
+  #
+  # Security Group
+  #
+  RemoteSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Test Runner Security Group
+      VpcId: !Ref RemoteVPC
+      SecurityGroupEgress:
+        # ALL
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: !Sub "testrunner-sg"
+
+  #
+  # EC2 Instance
+  #
+  ManagerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
+      InstanceType: t4g.2xlarge
+      AvailabilityZone: !Ref AvailabilityZone
+      IamInstanceProfile: !Ref InstanceProfile
+      SourceDestCheck: true
+      Monitoring: false
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref RemoteSubnet
+          GroupSet:
+            - !Ref RemoteSG
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "remote"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+
+          ###################
+          # ILB
+          ###################
+          mkdir -p /etc/ssl/private
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
+
+          ###################
+          # Manager
+          ###################
+          mkdir /data
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
+
+          ###################
+          # AMS
+          ###################
+          mkdir -p /data/ATL13
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.db /data/ATL13/atl13.db
+          mkdir -p /data/ATL24
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl24r2.db /data/ATL24/atl24r2.db
+          mkdir -p /data/3DEP
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
+
+          ###################
+          # Plugins
+          ###################
+          mkdir -p /plugins
+          aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
+
+          ###################
+          # Docker
+          ###################
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
+          chmod +x docker-compose
+
+          ###################
+          # Test
+          ###################
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/testrunner.sh ./testrunner.sh
+          chmod +x testrunner.sh
+          ./testrunner.sh ${ContainerRegistry} ${Version} > testrunner.log
+
+  #
+  # Lambda Delete Function
+  #
+  DeletionLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-Deleter'
+      Runtime: python3.11
+      Handler: main.lambda_deleter
+      Role: !GetAtt DeletionLambdaRole.Arn
+      Timeout: 60
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  #
+  # Lambda Schedule Function
+  #
+  SchedulerLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-Scheduler'
+      Runtime: python3.11
+      Handler: main.lambda_scheduler
+      Role: !GetAtt SchedulerLambdaRole.Arn
+      Timeout: 60
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  #
+  # Custom Schedule Trigger
+  #
+  AutoDeleteScheduler:
+    Type: Custom::ScheduleStackDeletion
+    DependsOn:
+      - ManagerInstance
+    Properties:
+      ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
+      StackName: !Ref AWS::StackName
+      DeleteAfterMinutes: !Ref DeleteAfterMinutes
+      DeletionLambdaArn: !GetAtt DeletionLambdaFunction.Arn
