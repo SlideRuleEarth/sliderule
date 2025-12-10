@@ -50,10 +50,36 @@ def cfn_send(event, context, responseStatus, responseData, physicalResourceId=No
 def lambda_deleter(event, context):
     stack_name = event['stack_name']
     cf_client = boto3.client('cloudformation')
+    events_client = boto3.client('events')
 
     print(f'Deleting stack: {stack_name}')
 
     try:
+        # Clean up EventBridge rule BEFORE deleting the stack
+        rule_name = f'{stack_name}-auto-delete'
+
+        try:
+            print(f'Removing targets from rule: {rule_name}')
+            events_client.remove_targets(
+                Rule=rule_name,
+                Ids=['1']
+            )
+            print(f'Successfully removed targets from rule: {rule_name}')
+        except events_client.exceptions.ResourceNotFoundException:
+            print(f'Rule {rule_name} not found or no targets, skipping target removal')
+        except Exception as e:
+            print(f'Error removing targets: {e}')
+
+        try:
+            print(f'Deleting rule: {rule_name}')
+            events_client.delete_rule(Name=rule_name)
+            print(f'Successfully deleted rule: {rule_name}')
+        except events_client.exceptions.ResourceNotFoundException:
+            print(f'Rule {rule_name} not found, skipping deletion')
+        except Exception as e:
+            print(f'Error deleting rule: {e}')
+
+        # Delete the stack
         cf_client.delete_stack(StackName=stack_name)
         print(f'Successfully initiated deletion of stack: {stack_name}')
         return {
@@ -160,14 +186,13 @@ def lambda_run(event, context):
         # read template
         templateBody = open("testrunner.yml").read()
 
-        # deterministically generate stack name
-        stackName = f'testrunner'
+        # hardcode stack name so only one can run at a time
+        stackName = 'testrunner'
         status["StackName"] = stackName
 
         # create stack
         cf = boto3.client("cloudformation", region_name=event["Region"])
-#        response = cf.create_stack(StackName=stackName, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=stackParameters)
-        response = json.dumps(stackParameters)
+        response = cf.create_stack(StackName=stackName, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=stackParameters)
         status["Response"] = response
 
     except Exception as e:

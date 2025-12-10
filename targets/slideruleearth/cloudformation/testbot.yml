@@ -7,7 +7,7 @@ Parameters:
     Type: String
 Resources:
   ## Lambda Function
-  ProvisionerLambda:
+  TestbotLambda:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: testbot-run
@@ -35,3 +35,26 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/PowerUserAccess
+      Policies:
+        - PolicyName: AllowCloudFormationIAM
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:TagRole
+                  - iam:GetRole
+                Resource: "arn:aws:iam::*:role/testrunner-*"
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DeleteStack
+                Resource: "*"

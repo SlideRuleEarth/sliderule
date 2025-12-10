@@ -340,28 +340,30 @@ deployment-invoke:
 testrunner-update: ## updates the testrunner script
 	aws s3 cp $(ROOT)/applications/testbot/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/testrunner.sh
 
-testrunner-create: testbot-build testrunner-update ## create a test runner in AWS
-	aws s3 cp $(TESTBOT_STAGE_DIR)/testbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
-	aws cloudformation create-stack \
-		--stack-name 	testrunner \
-		--template-body file://cloudformation/testrunner.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
-						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testbot.zip \
-						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
-						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP)
-	aws cloudformation wait stack-create-complete --stack-name testrunner
+#testrunner-create: testbot-build testrunner-update ## create a test runner in AWS
+# 	aws s3 cp $(TESTBOT_STAGE_DIR)/testbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
+# 	aws cloudformation create-stack \
+# 		--stack-name 	testrunner \
+# 		--template-body file://cloudformation/testrunner.yml \
+# 		--capabilities 	CAPABILITY_NAMED_IAM \
+# 		--region 		$(AWS_REGION) \
+# 		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
+# 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+# 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+# 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+# 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testbot.zip \
+# 						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+# 						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP)
+# 	aws cloudformation wait stack-create-complete --stack-name testrunner
 
 testrunner-describe: ## status the creation/deletion of the test runner
 	aws cloudformation describe-stack-events --stack-name testrunner
 
-testrunner-delete: ## deletes the test runner
+testrunner-delete: ## deletes the test runner and any lingering event bridge rules
 	aws cloudformation delete-stack --stack-name testrunner
 	aws cloudformation wait stack-delete-complete --stack-name testrunner
+	- aws events remove-targets --rule testrunner-auto-delete --ids 1
+	- aws events delete-rule --name testrunner-auto-delete
 
 testbot-build: ## create the testrunner lambda zipfile
 	-rm -Rf $(TESTBOT_STAGE_DIR)
