@@ -37,24 +37,46 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/PowerUserAccess
       Policies:
-        - PolicyName: AllowCloudFormationIAM
+        - PolicyName: AllowCFStackCreation
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - iam:CreateRole
+                  - iam:GetRole
                   - iam:DeleteRole
                   - iam:AttachRolePolicy
                   - iam:DetachRolePolicy
                   - iam:PutRolePolicy
                   - iam:DeleteRolePolicy
                   - iam:TagRole
-                  - iam:GetRole
+                  - iam:PassRole
                 Resource: "arn:aws:iam::*:role/testrunner-*"
+              - Effect: Allow
+                Action:
+                  - iam:CreateInstanceProfile
+                  - iam:GetInstanceProfile
+                  - iam:DeleteInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:TagInstanceProfile
+                Resource: "arn:aws:iam::*:instance-profile/testrunner-*"
+              - Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:GetFunction
+                  - lambda:DeleteFunction
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                Resource: "arn:aws:lambda:*:*:function:testrunner-*"
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack
                   - cloudformation:DescribeStacks
                   - cloudformation:DeleteStack
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:UpdateStack
                 Resource: "*"

@@ -183,7 +183,7 @@ Resources:
           CidrIp: "0.0.0.0/0"
       Tags:
         - Key: Name
-          Value: !Sub "testrunner-sg"
+          Value: "testrunner-sg"
 
   #
   # EC2 Instance
@@ -211,7 +211,7 @@ Resources:
             DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "testrunner-{DeployDate}"
+          Value: !Sub "testrunner-${DeployDate}"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
