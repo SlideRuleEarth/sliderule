@@ -268,7 +268,7 @@ Resources:
   DeletionLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-Deleter'
+      FunctionName: !Sub '${AWS::StackName}-deleter'
       Runtime: python3.11
       Handler: main.lambda_deleter
       Role: !GetAtt DeletionLambdaRole.Arn
@@ -283,7 +283,7 @@ Resources:
   SchedulerLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-Scheduler'
+      FunctionName: !Sub '${AWS::StackName}-scheduler'
       Runtime: python3.11
       Handler: main.lambda_scheduler
       Role: !GetAtt SchedulerLambdaRole.Arn

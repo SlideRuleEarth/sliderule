@@ -1,5 +1,6 @@
 #!/bin/bash
 exec > /testrunner.log 2>&1
+export HOME=/root # needed for pytests
 CONTAINER_REGISTRY=$1
 VERSION=$2
 

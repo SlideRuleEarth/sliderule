@@ -10,7 +10,7 @@ Resources:
   TestbotLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: testbot-run
+      FunctionName: !Sub '${AWS::StackName}-run'
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64

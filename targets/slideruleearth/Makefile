@@ -127,7 +127,7 @@ run: ## run the server locally
 
 build: ## build the code using the build environment docker container
 	docker run \
-		-it \
+		$(DOCKEROPTS) \
 		--network host \
 		--user $(shell id -u):$(shell id -g) \
 		-v $(shell realpath ~/.ssh):/root/.ssh \
@@ -339,22 +339,6 @@ deployment-invoke:
 
 testrunner-update: ## updates the testrunner script
 	aws s3 cp $(ROOT)/applications/testbot/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/testrunner.sh
-
-#testrunner-create: testbot-build testrunner-update ## create a test runner in AWS
-# 	aws s3 cp $(TESTBOT_STAGE_DIR)/testbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
-# 	aws cloudformation create-stack \
-# 		--stack-name 	testrunner \
-# 		--template-body file://cloudformation/testrunner.yml \
-# 		--capabilities 	CAPABILITY_NAMED_IAM \
-# 		--region 		$(AWS_REGION) \
-# 		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
-# 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-# 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-# 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-# 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testbot.zip \
-# 						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
-# 						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP)
-# 	aws cloudformation wait stack-create-complete --stack-name testrunner
 
 testrunner-describe: ## status the creation/deletion of the test runner
 	aws cloudformation describe-stack-events --stack-name testrunner
