@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Testbot Lambda
+Parameters:
+  ProjectBucket:
+    Type: String
+  LambdaZipFile:
+    Type: String
+Resources:
+  ## Lambda Function
+  ProvisionerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: testbot-run
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.11
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_run
+      Description: Kick off execution of the testrunner
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+  ## IAM Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

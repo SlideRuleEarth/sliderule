@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: SlideRule Remote Instance
+Description: SlideRule Test Runner Instance
 
 Parameters:
 
@@ -7,8 +7,6 @@ Parameters:
   # Variables
   #
   Version:
-    Type: String
-  EnvironmentVersion:
     Type: String
   Domain:
     Type: String
@@ -19,6 +17,8 @@ Parameters:
   LambdaZipFile:
     Type: String
   ContainerRegistry:
+    Type: String
+  DeployDate:
     Type: String
   AvailabilityZone:
     Type: String
@@ -161,16 +161,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: DeletionPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                Resource: !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+        - arn:aws:iam::aws:policy/PowerUserAccess  # broad permissions for deletion
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -197,7 +188,7 @@ Resources:
   #
   # EC2 Instance
   #
-  ManagerInstance:
+  RemoteInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
@@ -220,7 +211,7 @@ Resources:
             DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "remote"
+          Value: !Sub "testrunner-{DeployDate}"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -266,9 +257,10 @@ Resources:
           ###################
           # Test
           ###################
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/testrunner.sh ./testrunner.sh
-          chmod +x testrunner.sh
-          ./testrunner.sh ${ContainerRegistry} ${Version}
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/testrunner.sh /testrunner.sh
+          chmod +x /testrunner.sh
+          /testrunner.sh ${ContainerRegistry} ${Version}
+          aws s3 cp /testrunner.log s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Version}-${DeployDate}-testrunner.log
 
   #
   # Lambda Delete Function
@@ -306,7 +298,7 @@ Resources:
   AutoDeleteScheduler:
     Type: Custom::ScheduleStackDeletion
     DependsOn:
-      - ManagerInstance
+      - RemoteInstance
     Properties:
       ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
       StackName: !Ref AWS::StackName

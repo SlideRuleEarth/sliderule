@@ -49,7 +49,7 @@ MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
-TESTRUNNER_STAGE_DIR = $(STAGE)/testrunner
+TESTBOT_STAGE_DIR = $(STAGE)/testbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
@@ -73,6 +73,7 @@ ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 ARCH ?= $(shell arch)
+TIMESTAMP ?= $(shell date +%Y%m%d%H%M%S)
 CONFIG ?= release
 
 DOMAIN ?= slideruleearth.io
@@ -333,36 +334,26 @@ deployment-invoke:
 #	cat /tmp/response.json | jq
 
 ########################
-# Test Runner Targets
+# Testbot Targets
 ########################
 
-testrunner-build: ## create the testrunner lambda zipfile
-	-rm -Rf $(TESTRUNNER_STAGE_DIR)
-	mkdir -p $(TESTRUNNER_STAGE_DIR)
-	docker run -it --rm \
-		-v $(TESTRUNNER_STAGE_DIR):/host \
-		--user $(shell id -u):$(shell id -g) \
-		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.11 \
-		-c "pip install --target /host/package urllib3"
-	cp $(ROOT)/applications/testrunner/main.py $(TESTRUNNER_STAGE_DIR)/package/
-	cd $(TESTRUNNER_STAGE_DIR)/package/ && zip -r -q $(TESTRUNNER_STAGE_DIR)/testrunner.zip . -x "/*__pycache__/*"
+testrunner-update: ## updates the testrunner script
+	aws s3 cp $(ROOT)/applications/testbot/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/testrunner.sh
 
-testrunner-create: testrunner-build ## create a test runner in AWS
-	aws s3 cp $(ROOT)/applications/testrunner/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/
-	aws s3 cp $(TESTRUNNER_STAGE_DIR)/testrunner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testrunner.zip
+testrunner-create: testbot-build testrunner-update ## create a test runner in AWS
+	aws s3 cp $(TESTBOT_STAGE_DIR)/testbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
 	aws cloudformation create-stack \
 		--stack-name 	testrunner \
 		--template-body file://cloudformation/testrunner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
-						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testrunner.zip \
-						ParameterKey=ContainerRegistry,ParameterValue=$(ECR)
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testbot.zip \
+						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP)
 	aws cloudformation wait stack-create-complete --stack-name testrunner
 
 testrunner-describe: ## status the creation/deletion of the test runner
@@ -371,6 +362,43 @@ testrunner-describe: ## status the creation/deletion of the test runner
 testrunner-delete: ## deletes the test runner
 	aws cloudformation delete-stack --stack-name testrunner
 	aws cloudformation wait stack-delete-complete --stack-name testrunner
+
+testbot-build: ## create the testrunner lambda zipfile
+	-rm -Rf $(TESTBOT_STAGE_DIR)
+	mkdir -p $(TESTBOT_STAGE_DIR)
+	docker run -it --rm \
+		-v $(TESTBOT_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package urllib3"
+	cp $(ROOT)/applications/testbot/main.py $(TESTBOT_STAGE_DIR)/package/
+	cp cloudformation/testrunner.yml $(TESTBOT_STAGE_DIR)/package/
+	cd $(TESTBOT_STAGE_DIR)/package/ && zip -r -q $(TESTBOT_STAGE_DIR)/testbot.zip . -x "/*__pycache__/*"
+
+testbot-create: testbot-build testrunner-update ## creates the lambda testbot function
+	aws s3 cp $(TESTBOT_STAGE_DIR)/testbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
+	aws cloudformation create-stack \
+		--stack-name 	testbot \
+		--template-body file://cloudformation/testbot.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testbot.zip
+	aws cloudformation wait stack-create-complete --stack-name testbot
+
+testbot-describe: ## status the creation/deletion of the testbot function
+	aws cloudformation describe-stack-events --stack-name testbot
+
+testbot-delete: ## deletes the lambda testbot function
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
+	aws cloudformation delete-stack --stack-name testbot
+	aws cloudformation wait stack-delete-complete --stack-name testbot
+
+testbot-run: ## invokes the testbot lambda function and displays the response
+	echo '{"Version":"$(VERSION)","Domain":"$(DOMAIN)","ProjectBucket":"$(PROJECT_BUCKET)","ProjectFolder":"$(PROJECT_FOLDER)","LambdaZipFile":"$(PROJECT_FOLDER)/testbot.zip","ContainerRegistry":"$(ECR)","DeployDate":"$(TIMESTAMP)","Region":"$(AWS_REGION)"}' > /tmp/payload.json
+	aws lambda invoke --function-name testbot-run --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
 
 ########################
 # Website Targets
@@ -493,7 +521,7 @@ certbot-build: ## create the certbot lambda zipfile
 certbot-describe: ## status the creation/deletion of the certbot function
 	aws cloudformation describe-stack-events --stack-name certbot
 
-certbot-create: ## creates the lambda certbot function
+certbot-create: certbot-build ## creates the lambda certbot function
 	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
 	aws cloudformation create-stack \
 		--stack-name 	certbot \

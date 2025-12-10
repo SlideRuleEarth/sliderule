@@ -1,5 +1,5 @@
 #!/bin/bash
-exec > testrunner.log 2>&1
+exec > /testrunner.log 2>&1
 CONTAINER_REGISTRY=$1
 VERSION=$2
 
@@ -21,6 +21,9 @@ bash Miniforge3-Linux-aarch64.sh -b
 git clone https://github.com/SlideRuleEarth/sliderule.git
 cd /sliderule/targets/slideruleearth
 
+# TEMPORARY #
+git checkout testrunner
+
 #
 # Build and Run Self Tests
 #
@@ -38,9 +41,9 @@ make cluster-docker
 cd /sliderule/targets/slideruleearth
 /docker-compose up -d ilb ams manager sliderule
 cd /sliderule/clients/python
-/root/miniforge3/bin/mamba env create -f environment.yml -y
-/root/miniforge3/envs/sliderule/bin/pip install .
-/root/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
+/opt/miniforge3/bin/mamba env create -f environment.yml -y
+/opt/miniforge3/envs/sliderule/bin/pip install .
+/opt/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
 cd /sliderule/targets/slideruleearth
 /docker-compose down ilb ams manager sliderule
 
@@ -48,12 +51,12 @@ cd /sliderule/targets/slideruleearth
 # AMS PyTests
 #
 cd /sliderule/applications/ams
-/root/miniforge3/bin/mamba env create -f environment.yml -y
-/root/miniforge3/envs/ams/bin/pytest
+/opt/miniforge3/bin/mamba env create -f environment.yml -y
+/opt/miniforge3/envs/ams/bin/pytest
 
 #
 # Manager PyTests
 #
 cd /sliderule/applications/manager
-/root/miniforge3/bin/mamba env create -f environment.yml -y
-/root/miniforge3/envs/manager/bin/pytest
+/opt/miniforge3/bin/mamba env create -f environment.yml -y
+/opt/miniforge3/envs/manager/bin/pytest

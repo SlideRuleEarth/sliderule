@@ -3,10 +3,18 @@ import json
 import urllib3
 from datetime import datetime, timedelta
 
+# ###################
+# Globals
+# ###################
+
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"
 
 http = urllib3.PoolManager()
+
+# ###################
+# Utilities
+# ###################
 
 def cfn_send(event, context, responseStatus, responseData, physicalResourceId=None, noEcho=False, reason=None):
     responseUrl = event['ResponseURL']
@@ -35,6 +43,9 @@ def cfn_send(event, context, responseStatus, responseData, physicalResourceId=No
     except Exception as e:
         print("send(..) failed executing http.request(..):", e)
 
+# ###################
+# Lambda: Deleter
+# ###################
 
 def lambda_deleter(event, context):
     stack_name = event['stack_name']
@@ -53,6 +64,9 @@ def lambda_deleter(event, context):
         print(f'Error deleting stack: {str(e)}')
         raise
 
+# ###################
+# Lambda: Scheduler
+# ###################
 
 def lambda_scheduler(event, context):
     print(f'Event: {json.dumps(event)}')
@@ -121,3 +135,46 @@ def lambda_scheduler(event, context):
         print(f'Error: {str(e)}')
         cfn_send(event, context, FAILED, {'Error': str(e)})
 
+# ###################
+# Lambda: Run
+# ###################
+
+def lambda_run(event, context):
+
+    # initialize response status
+    status = {"Status": True}
+
+    try:
+
+        # build parameters for stack creation
+        stackParameters = [
+            {"ParameterKey": "Version", "ParameterValue": event["Version"]},
+            {"ParameterKey": "Domain", "ParameterValue": event["Domain"]},
+            {"ParameterKey": "ProjectBucket", "ParameterValue": event["ProjectBucket"]},
+            {"ParameterKey": "ProjectFolder", "ParameterValue": event["ProjectFolder"]},
+            {"ParameterKey": "LambdaZipFile", "ParameterValue": event["LambdaZipFile"]},
+            {"ParameterKey": "ContainerRegistry", "ParameterValue": event["ContainerRegistry"]},
+            {"ParameterKey": "DeployDate", "ParameterValue": event["DeployDate"]}
+        ]
+
+        # read template
+        templateBody = open("testrunner.yml").read()
+
+        # deterministically generate stack name
+        stackName = f'testrunner'
+        status["StackName"] = stackName
+
+        # create stack
+        cf = boto3.client("cloudformation", region_name=event["Region"])
+#        response = cf.create_stack(StackName=stackName, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=stackParameters)
+        response = json.dumps(stackParameters)
+        status["Response"] = response
+
+    except Exception as e:
+
+        # handle exceptions (return to user for debugging)
+        status["Exception"] = f'{e}'
+        status["Status"] = False
+
+    # return status
+    return status
