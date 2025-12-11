@@ -264,43 +264,31 @@ cluster-cf-init:
 	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 
 ########################
-# Deployment Targets
+# Provisioner Targets
 ########################
-# For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION remains as sliderule.
-# This is so the DNS can be changed to a cluster that is already up and running.
+
+# Notes:
+# 	* For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION
+#	  remains as sliderule. This is so the DNS can be changed to a cluster that is already up and running.
+#	* To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
+#	* To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
 
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= False
 NODE_CAPACITY ?= 1
+TTL ?= 60
 CLUSTER ?= $(ORGANIZATION)
 
-deployment-create: ## create a cluster in AWS; e.g. make deployment-create ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
-	aws cloudformation create-stack \
-		--stack-name 	$(CLUSTER)-cluster \
-		--template-body file://cloudformation/cluster.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=Version,ParameterValue=$(VERSION) \
-						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
-						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
-						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
-						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
-						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
-						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY)
-	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
-
-deployment-describe: ## status the creation/deletion of the cluster
+cluster-describe: ## status the creation/deletion of the cluster
 	aws cloudformation describe-stack-events --stack-name $(CLUSTER)-cluster
 
-deployment-delete: ## deletes the cluster
+cluster-delete: ## deletes the cluster
 	aws cloudformation delete-stack --stack-name $(CLUSTER)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(CLUSTER)-cluster
+	- aws events remove-targets --rule $(CLUSTER)-cluster-auto-delete --ids 1
+	- aws events delete-rule --name $(CLUSTER)-cluster-auto-delete
 
-deployment-go-live: ## switch dns entry of public cluster; e.g. make deployment-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
+cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
 		--stack-name 	dns \
 		--template-file cloudformation/dns.yml \
@@ -311,27 +299,61 @@ deployment-go-live: ## switch dns entry of public cluster; e.g. make deployment-
 			Organization=$(ORGANIZATION) \
 			PublicIp=$(PUBLIC_IP)
 
-deployment-take-offline: ## destroy dns entry of public cluster
+cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
 
-CLUSTER_PARMS = '{\
+provisioner-build: ## create the provisioner lambda zipfile
+	-rm -Rf $(PROVISIONER_STAGE_DIR)
+	mkdir -p $(PROVISIONER_STAGE_DIR)
+	docker run -it --rm \
+		-v $(PROVISIONER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package requests"
+	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
+	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
+	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
+
+provisioner-create: provisioner-build ## creates the lambda provisioner function
+	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
+	aws cloudformation create-stack \
+		--stack-name 	provisioner \
+		--template-body file://cloudformation/provisioner.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
+	aws cloudformation wait stack-create-complete --stack-name provisioner
+
+provisioner-describe: ## status the creation/deletion of the provisioner function
+	aws cloudformation describe-stack-events --stack-name provisioner
+
+provisioner-delete: ## deletes the lambda provisioner function
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
+	aws cloudformation delete-stack --stack-name provisioner
+	aws cloudformation wait stack-delete-complete --stack-name provisioner
+
+PROVISIONER_PARMS = '{\
 	"Version": "$(VERSION)",\
 	"IsPublic": "$(IS_PUBLIC)",\
 	"Domain": "$(DOMAIN)",\
 	"Organization": "$(ORGANIZATION)",\
 	"Cluster": "$(CLUSTER)",\
-	"ProjectBucket": "$(PROJECT_BUCKET)",\
-	"ProjectFolder": "$(PROJECT_FOLDER)",\
-	"ProjectPublicBucket": "$(PROJECT_PUBLIC_BUCKET)",\
-	"ContainerRegistry": "$(ECR)",\
 	"NodeCapacity": "$(NODE_CAPACITY)",\
+	"TTL": "$(TTL)" \
 	"Region": "$(AWS_REGION)"\
 }'
 
-deployment-invoke:
-	echo $(CLUSTER_PARMS) > /tmp/request.json
-#	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/request.json /tmp/response.json
-#	cat /tmp/response.json | jq
+provisioner-deploy: ## invokes the provisioner lambda function and displays the response
+	echo $(PROVISIONER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
 
 ########################
 # Testbot Targets
@@ -381,10 +403,57 @@ testbot-delete: ## deletes the lambda testbot function
 	aws cloudformation delete-stack --stack-name testbot
 	aws cloudformation wait stack-delete-complete --stack-name testbot
 
+TESTBOT_PARMS = '{\
+	"Version": "$(VERSION)",\
+	"Domain": "$(DOMAIN)",\
+	"ProjectBucket": "$(PROJECT_BUCKET)",\
+	"ProjectFolder": "$(PROJECT_FOLDER)",\
+	"LambdaZipFile": "$(PROJECT_FOLDER)/testbot.zip",\
+	"ContainerRegistry": "$(ECR)",\
+	"DeployDate": "$(TIMESTAMP)",\
+	"Region": "$(AWS_REGION)"\
+}'
+
 testbot-run: ## invokes the testbot lambda function and displays the response
-	echo '{"Version":"$(VERSION)","Domain":"$(DOMAIN)","ProjectBucket":"$(PROJECT_BUCKET)","ProjectFolder":"$(PROJECT_FOLDER)","LambdaZipFile":"$(PROJECT_FOLDER)/testbot.zip","ContainerRegistry":"$(ECR)","DeployDate":"$(TIMESTAMP)","Region":"$(AWS_REGION)"}' > /tmp/payload.json
+	echo $(TESTBOT_PARMS) > /tmp/payload.json
 	aws lambda invoke --function-name testbot-run --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
+
+########################
+# Certbot Targets
+########################
+
+certbot-build: ## create the certbot lambda zipfile
+	-rm -Rf $(CERTBOT_STAGE_DIR)
+	mkdir -p $(CERTBOT_STAGE_DIR)
+	docker run -it --rm \
+		-v $(CERTBOT_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.11 \
+		-c "pip install --target /host/package certbot certbot-dns-route53"
+	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
+	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
+
+certbot-describe: ## status the creation/deletion of the certbot function
+	aws cloudformation describe-stack-events --stack-name certbot
+
+certbot-create: certbot-build ## creates the lambda certbot function
+	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
+	aws cloudformation create-stack \
+		--stack-name 	certbot \
+		--template-body file://cloudformation/certbot.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
+	aws cloudformation wait stack-create-complete --stack-name certbot
+
+certbot-delete: ## deletes the lambda certbot function
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
+	aws cloudformation delete-stack --stack-name certbot
+	aws cloudformation wait stack-delete-complete --stack-name certbot
 
 ########################
 # Website Targets
@@ -487,85 +556,6 @@ website: ## build and update website
 	make website-render-notebooks
 	make website-docker
 	make website-live-update
-
-########################
-# Certbot Targets
-########################
-
-certbot-build: ## create the certbot lambda zipfile
-	-rm -Rf $(CERTBOT_STAGE_DIR)
-	mkdir -p $(CERTBOT_STAGE_DIR)
-	docker run -it --rm \
-		-v $(CERTBOT_STAGE_DIR):/host \
-		--user $(shell id -u):$(shell id -g) \
-		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.11 \
-		-c "pip install --target /host/package certbot certbot-dns-route53"
-	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
-	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
-
-certbot-describe: ## status the creation/deletion of the certbot function
-	aws cloudformation describe-stack-events --stack-name certbot
-
-certbot-create: certbot-build ## creates the lambda certbot function
-	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
-	aws cloudformation create-stack \
-		--stack-name 	certbot \
-		--template-body file://cloudformation/certbot.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
-	aws cloudformation wait stack-create-complete --stack-name certbot
-
-certbot-delete: ## deletes the lambda certbot function
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
-	aws cloudformation delete-stack --stack-name certbot
-	aws cloudformation wait stack-delete-complete --stack-name certbot
-
-########################
-# Provisioner Targets
-########################
-
-provisioner-build: ## create the provisioner lambda zipfile
-	-rm -Rf $(PROVISIONER_STAGE_DIR)
-	mkdir -p $(PROVISIONER_STAGE_DIR)
-	docker run -it --rm \
-		-v $(PROVISIONER_STAGE_DIR):/host \
-		--user $(shell id -u):$(shell id -g) \
-		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.11 \
-		-c "pip install --target /host/package requests"
-	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
-	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
-	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
-
-provisioner-describe: ## status the creation/deletion of the provisioner function
-	aws cloudformation describe-stack-events --stack-name provisioner
-
-provisioner-run: ## invokes the provisioner lambda function and displays the response
-	echo '{"domain":"$(DOMAIN)","version":"$(VERSION)"}' > /tmp/payload.json
-	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
-
-provisioner-create: ## creates the lambda provisioner function
-	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
-	aws cloudformation create-stack \
-		--stack-name 	provisioner \
-		--template-body file://cloudformation/provisioner.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
-						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
-	aws cloudformation wait stack-create-complete --stack-name provisioner
-
-provisioner-delete: ## deletes the lambda provisioner function
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
-	aws cloudformation delete-stack --stack-name provisioner
-	aws cloudformation wait stack-delete-complete --stack-name provisioner
 
 ########################
 # Release Target

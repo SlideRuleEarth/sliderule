@@ -1,20 +1,26 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: SlideRule Provisioner Lambda
 Parameters:
-  ContainerRegistry:
-    Type: String
   EnvironmentVersion:
     Type: String
+  Domain:
+    Type: String
   ProjectBucket:
+    Type: String
+  ProjectFolder:
+    Type: String
+  ProjectPublicBucket:
+    Type: String
+  ContainerRegistry:
     Type: String
   LambdaZipFile:
     Type: String
 Resources:
-  ## Lambda Function
-  ProvisionerLambda:
+  ## Deploy Lambda Function
+  DeployLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: provisioner-deploy
+      FunctionName: !Sub '${AWS::StackName}-deploy'
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
@@ -22,14 +28,66 @@ Resources:
       MemorySize: 128 # MB
       Timeout: 300 # seconds
       Handler: main.lambda_deploy
-      Description: DEPLOY(cluster)
+      Description: Deploy the cluster
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
-          CONTAINER_REGISTRY: !Ref ContainerRegistry
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          DOMAIN: !Ref Domain
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          CONTAINER_REGISTRY: !Ref ContainerRegistry
+  ## Destroy Lambda Function
+  DestroyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-destroy'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.11
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_destroy
+      Description: Destroy the cluster
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+  ## Status Lambda Function
+  DestroyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-status'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.11
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_status
+      Description: Status the cluster
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+  ## Events Lambda Function
+  EventsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-events'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.11
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_events
+      Description: Get events from provisioner stack operations
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
   ## IAM Role
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -43,3 +101,48 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/PowerUserAccess
+      Policies:
+        - PolicyName: AllowCFStackCreation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:GetRole
+                  - iam:DeleteRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:TagRole
+                  - iam:PassRole
+                Resource: "arn:aws:iam::*:role/testrunner-*"
+              - Effect: Allow
+                Action:
+                  - iam:CreateInstanceProfile
+                  - iam:GetInstanceProfile
+                  - iam:DeleteInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:TagInstanceProfile
+                Resource: "arn:aws:iam::*:instance-profile/testrunner-*"
+              - Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:GetFunction
+                  - lambda:DeleteFunction
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                Resource: "arn:aws:lambda:*:*:function:testrunner-*"
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:UpdateStack
+                Resource: "*"
