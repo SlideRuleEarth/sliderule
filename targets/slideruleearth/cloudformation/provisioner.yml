@@ -24,7 +24,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
       Handler: main.lambda_deploy
@@ -48,7 +48,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
       Handler: main.lambda_destroy
@@ -64,7 +64,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
       Handler: main.lambda_status
@@ -80,7 +80,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
       Handler: main.lambda_events

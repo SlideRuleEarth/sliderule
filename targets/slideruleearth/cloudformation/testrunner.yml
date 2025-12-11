@@ -269,7 +269,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-deleter'
-      Runtime: python3.11
+      Runtime: python3.13
       Handler: main.lambda_deleter
       Role: !GetAtt DeletionLambdaRole.Arn
       Timeout: 60
@@ -284,7 +284,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-scheduler'
-      Runtime: python3.11
+      Runtime: python3.13
       Handler: main.lambda_scheduler
       Role: !GetAtt SchedulerLambdaRole.Arn
       Timeout: 60

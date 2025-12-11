@@ -267,41 +267,6 @@ cluster-cf-init:
 # Provisioner Targets
 ########################
 
-# Notes:
-# 	* For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION
-#	  remains as sliderule. This is so the DNS can be changed to a cluster that is already up and running.
-#	* To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
-#	* To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
-
-PUBLIC_IP ?= 127.0.0.1
-IS_PUBLIC ?= False
-NODE_CAPACITY ?= 1
-TTL ?= 60
-CLUSTER ?= $(ORGANIZATION)
-
-cluster-describe: ## status the creation/deletion of the cluster
-	aws cloudformation describe-stack-events --stack-name $(CLUSTER)-cluster
-
-cluster-delete: ## deletes the cluster
-	aws cloudformation delete-stack --stack-name $(CLUSTER)-cluster
-	aws cloudformation wait stack-delete-complete --stack-name $(CLUSTER)-cluster
-	- aws events remove-targets --rule $(CLUSTER)-cluster-auto-delete --ids 1
-	- aws events delete-rule --name $(CLUSTER)-cluster-auto-delete
-
-cluster-go-live: ## switch dns entry of public cluster
-	aws cloudformation deploy \
-		--stack-name 	dns \
-		--template-file cloudformation/dns.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameter-overrides \
-		 	Domain=$(DOMAIN) \
-			Organization=$(ORGANIZATION) \
-			PublicIp=$(PUBLIC_IP)
-
-cluster-take-offline: ## destroy dns entry of public cluster
-	aws cloudformation delete-stack --stack-name dns
-
 provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
@@ -309,7 +274,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 		-v $(PROVISIONER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.11 \
+		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package requests"
 	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
@@ -339,6 +304,17 @@ provisioner-delete: ## deletes the lambda provisioner function
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
 
+# Cluster Notes:
+# 	* For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION
+#	  remains as sliderule. This is so the DNS can be changed to a cluster that is already up and running.
+#	* To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
+#	* To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
+
+PUBLIC_IP ?= 127.0.0.1
+IS_PUBLIC ?= False
+CLUSTER ?= $(ORGANIZATION)
+NODE_CAPACITY ?= 1
+TTL ?= 60
 PROVISIONER_PARMS = '{\
 	"Version": "$(VERSION)",\
 	"IsPublic": "$(IS_PUBLIC)",\
@@ -350,10 +326,39 @@ PROVISIONER_PARMS = '{\
 	"Region": "$(AWS_REGION)"\
 }'
 
-provisioner-deploy: ## invokes the provisioner lambda function and displays the response
+cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
 	echo $(PROVISIONER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name Provisioner --payload fileb:///tmp/payload.json /tmp/response.json
+	aws lambda invoke --function-name provisioner-deploy --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
+
+cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
+	echo $(PROVISIONER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-destroy --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-status: ## invokes the provisioner *status* lambda function and displays the response
+	echo $(PROVISIONER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-status --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-events: ## invokes the provisioner *events* lambda function and displays the response
+	echo $(PROVISIONER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-events --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-go-live: ## switch dns entry of public cluster
+	aws cloudformation deploy \
+		--stack-name 	dns \
+		--template-file cloudformation/dns.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameter-overrides \
+		 	Domain=$(DOMAIN) \
+			Organization=$(ORGANIZATION) \
+			PublicIp=$(PUBLIC_IP)
+
+cluster-take-offline: ## destroy dns entry of public cluster
+	aws cloudformation delete-stack --stack-name dns
 
 ########################
 # Testbot Targets
@@ -378,7 +383,7 @@ testbot-build: ## create the testrunner lambda zipfile
 		-v $(TESTBOT_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.11 \
+		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package urllib3"
 	cp $(ROOT)/applications/testbot/main.py $(TESTBOT_STAGE_DIR)/package/
 	cp cloudformation/testrunner.yml $(TESTBOT_STAGE_DIR)/package/

@@ -14,7 +14,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
       Handler: main.lambda_run
