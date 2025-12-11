@@ -236,6 +236,29 @@ manager-docker: ## build manager docker image; uses VERSION
 manager-run: ## run manager locally; uses VERSION
 	docker run -it -p 8040:8040 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
 
+########################
+# Cluster Targets
+########################
+# 	- For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION remains as sliderule.
+#	- To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
+#	- To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
+
+PUBLIC_IP ?= 127.0.0.1
+IS_PUBLIC ?= False
+CLUSTER ?= $(ORGANIZATION)
+NODE_CAPACITY ?= 1
+TTL ?= 60
+CLUSTER_PARMS = '{\
+	"Version": "$(VERSION)",\
+	"IsPublic": "$(IS_PUBLIC)",\
+	"Domain": "$(DOMAIN)",\
+	"Organization": "$(ORGANIZATION)",\
+	"Cluster": "$(CLUSTER)",\
+	"NodeCapacity": "$(NODE_CAPACITY)",\
+	"TTL": "$(TTL)",\
+	"Region": "$(AWS_REGION)"\
+}'
+
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker
 	make ilb-docker
@@ -254,14 +277,44 @@ cluster-docker-push: cluster-cf-update ## push all cluster images to container r
 	docker push $(ECR)/manager:$(VERSION)
 	docker push $(ECR)/ams:$(VERSION)
 
-cluster-cf-update:
-	aws s3 cp cloudformation/ s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/ --recursive --exclude "*" --include "docker-compose-*.yml"
-
-cluster-cf-init:
+cluster-cf-init: ## initialize S3 cloudformation subfolder; only needs to be run once
 	-rm -Rf $(CF_STAGE_DIR)
 	mkdir -p $(CF_STAGE_DIR)
 	wget --directory-prefix=$(CF_STAGE_DIR) https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
 	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
+
+cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
+	echo $(CLUSTER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-deploy --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
+	echo $(CLUSTER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-destroy --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-status: ## invokes the provisioner *status* lambda function and displays the response
+	echo $(CLUSTER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-status --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-events: ## invokes the provisioner *events* lambda function and displays the response
+	echo $(CLUSTER_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-events --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-go-live: ## switch dns entry of public cluster
+	aws cloudformation deploy \
+		--stack-name 			dns \
+		--template-file 		cloudformation/dns.yml \
+		--capabilities 			CAPABILITY_NAMED_IAM \
+		--region 				$(AWS_REGION) \
+		--parameter-overrides 	Domain=$(DOMAIN) \
+								Organization=$(ORGANIZATION) \
+								PublicIp=$(PUBLIC_IP)
+
+cluster-take-offline: ## destroy dns entry of public cluster
+	aws cloudformation delete-stack --stack-name dns
 
 ########################
 # Provisioner Targets
@@ -303,62 +356,6 @@ provisioner-delete: ## deletes the lambda provisioner function
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
-
-# Cluster Notes:
-# 	* For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION
-#	  remains as sliderule. This is so the DNS can be changed to a cluster that is already up and running.
-#	* To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
-#	* To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
-
-PUBLIC_IP ?= 127.0.0.1
-IS_PUBLIC ?= False
-CLUSTER ?= $(ORGANIZATION)
-NODE_CAPACITY ?= 1
-TTL ?= 60
-PROVISIONER_PARMS = '{\
-	"Version": "$(VERSION)",\
-	"IsPublic": "$(IS_PUBLIC)",\
-	"Domain": "$(DOMAIN)",\
-	"Organization": "$(ORGANIZATION)",\
-	"Cluster": "$(CLUSTER)",\
-	"NodeCapacity": "$(NODE_CAPACITY)",\
-	"TTL": "$(TTL)" \
-	"Region": "$(AWS_REGION)"\
-}'
-
-cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
-	echo $(PROVISIONER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-deploy --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
-
-cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
-	echo $(PROVISIONER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-destroy --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
-
-cluster-status: ## invokes the provisioner *status* lambda function and displays the response
-	echo $(PROVISIONER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-status --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
-
-cluster-events: ## invokes the provisioner *events* lambda function and displays the response
-	echo $(PROVISIONER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-events --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
-
-cluster-go-live: ## switch dns entry of public cluster
-	aws cloudformation deploy \
-		--stack-name 	dns \
-		--template-file cloudformation/dns.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameter-overrides \
-		 	Domain=$(DOMAIN) \
-			Organization=$(ORGANIZATION) \
-			PublicIp=$(PUBLIC_IP)
-
-cluster-take-offline: ## destroy dns entry of public cluster
-	aws cloudformation delete-stack --stack-name dns
 
 ########################
 # Testbot Targets

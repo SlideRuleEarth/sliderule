@@ -57,7 +57,7 @@ Resources:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
   ## Status Lambda Function
-  DestroyLambda:
+  StatusLambda:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-status'
@@ -118,7 +118,7 @@ Resources:
                   - iam:DeleteRolePolicy
                   - iam:TagRole
                   - iam:PassRole
-                Resource: "arn:aws:iam::*:role/testrunner-*"
+                Resource: "arn:aws:iam::*:role/*"
               - Effect: Allow
                 Action:
                   - iam:CreateInstanceProfile
@@ -127,7 +127,7 @@ Resources:
                   - iam:AddRoleToInstanceProfile
                   - iam:RemoveRoleFromInstanceProfile
                   - iam:TagInstanceProfile
-                Resource: "arn:aws:iam::*:instance-profile/testrunner-*"
+                Resource: "arn:aws:iam::*:instance-profile/*"
               - Effect: Allow
                 Action:
                   - lambda:CreateFunction
@@ -137,7 +137,7 @@ Resources:
                   - lambda:RemovePermission
                   - lambda:UpdateFunctionCode
                   - lambda:UpdateFunctionConfiguration
-                Resource: "arn:aws:lambda:*:*:function:testrunner-*"
+                Resource: "arn:aws:lambda:*:*:function:*"
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack

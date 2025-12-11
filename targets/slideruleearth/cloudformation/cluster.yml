@@ -28,6 +28,8 @@ Parameters:
     Type: String
   NodeCapacity:
     Type: Number
+  TTL:
+    Type: Number
 
   #
   # Constants
@@ -325,16 +327,60 @@ Resources:
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export OAUTH_HMAC_SECRET=$(echo $SECRET | jq -r .jwt_secret_key)
-          export IS_PUBLIC=${IsPublic}
-          export ORGANIZATION=${Organization}
-          export DOMAIN=${Domain}
-          export ILB_IMAGE=${ContainerRegistry}/ilb:${Version}
-          export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/docker-compose-ilb.yml ./docker-compose.yml
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
           chmod +x docker-compose
+          cat > docker-compose.yml << EOF
+          version: "3.9"
+          services:
+            ilb:
+              image: ${ContainerRegistry}/ilb:${Version}
+              network_mode: host
+              restart: always
+              pull_policy: if_not_present
+              volumes:
+                - /haproxy:/haproxy
+                - /etc/ssl/private:/etc/ssl/private
+              environment:
+                - IS_PUBLIC=${IsPublic}
+                - ORGANIZATION=${Organization}
+                - DOMAIN=${Domain}
+                - OAUTH_HMAC_SECRET=$OAUTH_HMAC_SECRET
+              healthcheck:
+                test: curl -f http://localhost:8050/discovery/health
+                interval: 30s
+                timeout: 10s
+                retries: 1
+                start_period: 30s
+              labels:
+                - autoheal=true
+            monitor-agent:
+              image: ${ContainerRegistry}/monitor-agent:${Version}
+              network_mode: host
+              restart: unless-stopped
+              pull_policy: if_not_present
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+                - /var/log:/var/log:ro
+                - /var/log/journal:/var/log/journal:ro
+                - /run/log/journal:/run/log/journal:ro
+                - /etc/machine-id:/etc/machine-id:ro
+                - /var/lib/docker/containers:/var/lib/docker/containers:ro
+              labels:
+                - autoheal=true
+            autoheal:
+              image: willfarrell/autoheal:latest
+              container_name: autoheal
+              restart: always
+              environment:
+                - AUTOHEAL_CONTAINER_LABEL=all
+                - AUTOHEAL_INTERVAL=30
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+          EOF
           ./docker-compose -p cluster up --detach
 
   #
@@ -371,22 +417,61 @@ Resources:
           echo ${Cluster} > ./Cluster.txt
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
-          export IS_PUBLIC=${IsPublic}
-          export DOMAIN=${Domain}
           export MANAGER_SECRET_SALT=$(echo $SECRET | jq -r .manager_secret_salt)
           export MANAGER_API_KEY=$(echo $SECRET | jq -r .manager_api_key)
-          export DUCKDB_LOCAL_FILE='/data/manager-${Cluster}.db'
-          export DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Cluster}-${Version}.db'
-          export MANAGER_IMAGE=${ContainerRegistry}/manager:${Version}
-          export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
           mkdir /data
           aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/docker-compose-manager.yml ./docker-compose.yml
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
           chmod +x docker-compose
+          cat > docker-compose.yml << EOF
+          version: "3.9"
+          services:
+            manager:
+              image: ${ContainerRegistry}/manager:${Version}
+              network_mode: host
+              restart: always
+              pull_policy: if_not_present
+              entrypoint: /docker-entrypoint.sh
+              volumes:
+                - /data:/data
+              environment:
+                - IS_PUBLIC=${IsPublic}
+                - MANAGER_SECRET_SALT=$MANAGER_SECRET_SALT
+                - MANAGER_API_KEY=$MANAGER_API_KEY
+                - DUCKDB_LOCAL_FILE='/data/manager-${Cluster}.db'
+                - DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Cluster}-${Version}.db'
+                - ORCHESTRATOR=http://10.0.1.5:8050
+              labels:
+                - autoheal=true
+            monitor-agent:
+              image: ${ContainerRegistry}/monitor-agent:${Version}
+              network_mode: host
+              restart: unless-stopped
+              pull_policy: if_not_present
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+                - /var/log:/var/log:ro
+                - /var/log/journal:/var/log/journal:ro
+                - /run/log/journal:/run/log/journal:ro
+                - /etc/machine-id:/etc/machine-id:ro
+                - /var/lib/docker/containers:/var/lib/docker/containers:ro
+              labels:
+                - autoheal=true
+            autoheal:
+              image: willfarrell/autoheal:latest
+              container_name: autoheal
+              restart: always
+              environment:
+                - AUTOHEAL_CONTAINER_LABEL=all
+                - AUTOHEAL_INTERVAL=30
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+          EOF
           ./docker-compose -p cluster up --detach
 
   #
@@ -425,13 +510,59 @@ Resources:
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
           export CLIENT_SECRET=$(echo $SECRET | jq -r .client_secret)
-          export DOMAIN=${Domain}
-          export MONITOR_IMAGE=${ContainerRegistry}/monitor:${Version}
-          export PROXY_IMAGE=${ContainerRegistry}/proxy:${Version}
-          export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/docker-compose-monitor.yml ./docker-compose.yml
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
           chmod +x docker-compose
+          cat > docker-compose.yml << EOF
+          version: "3.9"
+          services:
+            monitor:
+              image: ${ContainerRegistry}/monitor:${Version}
+              network_mode: host
+              restart: always
+              pull_policy: if_not_present
+              labels:
+                - autoheal=true
+            monitor-agent:
+              image: ${ContainerRegistry}/proxy:${Version}
+              network_mode: host
+              restart: unless-stopped
+              pull_policy: if_not_present
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+                - /var/log:/var/log:ro
+                - /var/log/journal:/var/log/journal:ro
+                - /run/log/journal:/run/log/journal:ro
+                - /etc/machine-id:/etc/machine-id:ro
+                - /var/lib/docker/containers:/var/lib/docker/containers:ro
+              labels:
+                - autoheal=true
+            proxy:
+              image: ${ContainerRegistry}/monitor-agent:${Version}
+              network_mode: host
+              restart: always
+              pull_policy: if_not_present
+              entrypoint: /usr/local/etc/docker-entrypoint.sh
+              volumes:
+                - /etc/ssl/private:/etc/ssl/private
+              environment:
+                - CLIENT_ID=$CLIENT_ID
+                - CLIENT_SECRET=$CLIENT_SECRET
+                - DOMAIN=${Domain}
+                - REDIRECT_URI_SCHEME=https
+              labels:
+                - autoheal=true
+            autoheal:
+              image: willfarrell/autoheal:latest
+              container_name: autoheal
+              restart: always
+              environment:
+                - AUTOHEAL_CONTAINER_LABEL=all
+                - AUTOHEAL_INTERVAL=30
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+          EOF
           ./docker-compose -p cluster up --detach
 
   #
@@ -460,16 +591,7 @@ Resources:
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
-            export ENVIRONMENT_VERSION=${EnvironmentVersion}
             export IPV4=$(hostname -I | awk '{print $1}')
-            export ORGANIZATION=${Organization}
-            export CLUSTER=${Cluster}
-            export IS_PUBLIC=${IsPublic}
-            export SLIDERULE_IMAGE=${ContainerRegistry}/sliderule:${Version}
-            export AMS_IMAGE=${ContainerRegistry}/ams:${Version}
-            export MONITOR_AGENT_IMAGE=${ContainerRegistry}/monitor-agent:${Version}
-            export PROVISIONING_SYSTEM="https://ps.${Domain}"
-            export CONTAINER_REGISTRY=${ContainerRegistry}
             aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
             mkdir -p /data/ATL13
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
@@ -480,9 +602,80 @@ Resources:
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
             mkdir -p /plugins
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
-            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/docker-compose-node.yml ./docker-compose.yml
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
             chmod +x docker-compose
+            cat > docker-compose.yml << EOF
+            version: "3.9"
+            services:
+              sliderule:
+                image: ${ContainerRegistry}/sliderule:${Version}
+                network_mode: host
+                restart: always
+                pull_policy: if_not_present
+                ulimits:
+                  nofile:
+                    soft: 8192
+                    hard: 8192
+                volumes:
+                  - /etc/ssl/certs:/etc/ssl/certs
+                  - /var/run/docker.sock:/var/run/docker.sock
+                  - /data:/data
+                  - /plugins:/plugins
+                environment:
+                  - IPV4=$IPV4
+                  - ORCHESTRATOR=http://10.0.1.5:8050
+                  - MANAGER=http://10.0.1.3:8030
+                  - AMS=http://127.0.0.1:9082
+                  - ORGANIZATION=${Organization}
+                  - CLUSTER=${Cluster}
+                  - IS_PUBLIC=${IsPublic}
+                  - PROVISIONING_SYSTEM="https://ps.${Domain}"
+                  - CONTAINER_REGISTRY=${ContainerRegistry}
+                  - ENVIRONMENT_VERSION=${EnvironmentVersion}
+                labels:
+                  - autoheal=true
+                healthcheck:
+                  test: curl -f -X GET -d "{}" http://localhost:9081/source/health
+                  interval: 30s
+                  timeout: 10s
+                  retries: 1
+                  start_period: 30s
+              ams:
+                image: ${ContainerRegistry}/ams:${Version}
+                network_mode: host
+                restart: always
+                pull_policy: if_not_present
+                entrypoint: /docker-entrypoint.sh
+                volumes:
+                  - /data:/data
+                labels:
+                  - autoheal=true
+              monitor-agent:
+                image: ${ContainerRegistry}/monitor-agent:${Version}
+                network_mode: host
+                restart: unless-stopped
+                pull_policy: if_not_present
+                volumes:
+                  - /proc:/host/proc:ro
+                  - /sys:/host/sys:ro
+                  - /:/rootfs:ro
+                  - /var/log:/var/log:ro
+                  - /var/log/journal:/var/log/journal:ro
+                  - /run/log/journal:/run/log/journal:ro
+                  - /etc/machine-id:/etc/machine-id:ro
+                  - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                labels:
+                  - autoheal=true
+              autoheal:
+                image: willfarrell/autoheal:latest
+                container_name: autoheal
+                restart: always
+                environment:
+                  - AUTOHEAL_CONTAINER_LABEL=all
+                  - AUTOHEAL_INTERVAL=30
+                volumes:
+                  - /var/run/docker.sock:/var/run/docker.sock
+            EOF
             ./docker-compose -p cluster up --detach
 
   SlideruleAutoScalingGroup:

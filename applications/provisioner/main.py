@@ -168,8 +168,8 @@ def lambda_scheduler(event, context):
 
 def lambda_deploy(event, context):
 
-    # initialize response status
-    status = {"Status": True}
+    # initialize response state
+    state = {"Status": True}
 
     try:
         # get environment variables
@@ -190,9 +190,10 @@ def lambda_deploy(event, context):
         version = event.get("Version", "latest")
         organization = event.get("Organization", cluster)
         region = event.get("Region", "us-west-2")
+        dryrun = event.get("DryRun", False)
 
         # build parameters for stack creation
-        stackParameters = [
+        state["StackParameters"] = [
             {"ParameterKey": "Version", "ParameterValue": version},
             {"ParameterKey": "IsPublic", "ParameterValue": is_public},
             {"ParameterKey": "Organization", "ParameterValue": organization},
@@ -211,24 +212,22 @@ def lambda_deploy(event, context):
         templateBody = open("cluster.yml").read()
 
         # the stack name naming convention is required by Makefile
-        stackName = f'{event["Cluster"]}-cluster'
-        status["StackName"] = stackName
+        state["StackName"] = f'{event["Cluster"]}-cluster'
 
         # create stack
         cf = boto3.client("cloudformation", region_name=region)
-        response = cf.create_stack(StackName=stackName, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=stackParameters)
-        print(f"Deploy initiated for {stackName}\n{response}")
-        status["Response"] = response
+        if not dryrun:
+            state["Response"] = cf.create_stack(StackName=state["StackName"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["StackParameters"])
+        print(f"Deploy initiated for {state["StackName"]}")
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
-        status["Exception"] = f'{e}'
-        status["Status"] = False
+        state["Exception"] = f'{e}'
+        state["Status"] = False
 
-    # return status
-    return status
-
+    # return response
+    return state
 
 # ###################
 # Lambda: Destroy
@@ -237,7 +236,7 @@ def lambda_deploy(event, context):
 def lambda_destroy(event, context):
 
     # initialize response status
-    status = {"Status": True}
+    state = {"Status": True}
 
     try:
         # get required request variables
@@ -247,40 +246,38 @@ def lambda_destroy(event, context):
         region = event.get("Region", "us-west-2")
 
         # the stack name naming convention is required by Makefile
-        stackName = f'{cluster}-cluster'
-        status["StackName"] = stackName
+        state["StackName"] = f'{cluster}-cluster'
 
         # delete eventbridge target and rule
         events = boto3.client("events")
-        ruleName = f"{stackName}-auto-delete"
+        ruleName = f"{state["StackName"]}-auto-delete"
         print(f'Delete initiated for {ruleName}')
         try:
-            response = events.remove_targets(Rule=ruleName, Ids=["1"])
-            status["EventBridge Target Removed"] = True
+            events.remove_targets(Rule=ruleName, Ids=["1"])
+            state["EventBridge Target Removed"] = True
         except Exception as e:
             print(f'Unable to delete eventbridge rule: {e}')
-            status["EventBridge Target Removed"] = False
+            state["EventBridge Target Removed"] = False
         try:
-            response = events.delete_rule(Name=ruleName, Force=False)
-            status["EventBridge Rule Removed"] = True
+            events.delete_rule(Name=ruleName, Force=False)
+            state["EventBridge Rule Removed"] = True
         except Exception as e:
             print(f'Unable to delete eventbridge rule: {e}')
-            status["EventBridge Rule Removed"] = False
+            state["EventBridge Rule Removed"] = False
 
         # delete stack
         cf = boto3.client("cloudformation", region_name=region)
-        response = cf.delete_stack(StackName=stackName)
-        print(f"Delete initiated for {stackName}\n{response}")
-        status["Response"] = response
+        state["Response"] = cf.delete_stack(StackName=state["StackName"])
+        print(f"Delete initiated for {state["StackName"]}")
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
-        status["Exception"] = f'{e}'
+        state["Exception"] = f'{e}'
         status["Status"] = False
 
-    # return status
-    return status
+    # return response
+    return state
 
 # ###################
 # Lambda: Status
@@ -288,8 +285,8 @@ def lambda_destroy(event, context):
 
 def lambda_status(event, context):
 
-    # initialize response status
-    status = {"Status": True}
+    # initialize response state
+    state = {"Status": True}
 
     try:
         # get required request variables
@@ -299,23 +296,21 @@ def lambda_status(event, context):
         region = event.get("Region", "us-west-2")
 
         # the stack name naming convention is required by Makefile
-        stackName = f'{cluster}-cluster'
-        status["StackName"] = stackName
+        state["StackName"] = f'{cluster}-cluster'
 
         # status stack
         cf = boto3.client("cloudformation", region_name=region)
-        response = cf.describe_stacks(StackName=stackName)
-        print(f"Status requested for {stackName}")
-        status["Response"] = response
+        state["Response"]  = cf.describe_stacks(StackName=state["StackName"])
+        print(f"Status requested for {state["StackName"]}")
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
-        status["Exception"] = f'{e}'
-        status["Status"] = False
+        state["Exception"] = f'{e}'
+        state["Status"] = False
 
-    # return status
-    return status
+    # return response
+    return state
 
 # ###################
 # Lambda: Events
@@ -323,8 +318,8 @@ def lambda_status(event, context):
 
 def lambda_events(event, context):
 
-    # initialize response status
-    status = {"Status": True}
+    # initialize response state
+    state = {"Status": True}
 
     try:
         # get required request variables
@@ -334,20 +329,18 @@ def lambda_events(event, context):
         region = event.get("Region", "us-west-2")
 
         # the stack name naming convention is required by Makefile
-        stackName = f'{cluster}-cluster'
-        status["StackName"] = stackName
+        state["StackName"] = f'{cluster}-cluster'
 
         # status stack
         cf = boto3.client("cloudformation", region_name=region)
-        response = cf.describe_stack_events(StackName=stackName)
-        print(f"Events requested for {stackName}")
-        status["Response"] = response
+        state["Response"] = cf.describe_stack_events(StackName=state["StackName"])
+        print(f"Events requested for {state["StackName"]}")
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
-        status["Exception"] = f'{e}'
-        status["Status"] = False
+        state["Exception"] = f'{e}'
+        state["Status"] = False
 
-    # return status
-    return status
+    # return response
+    return state
