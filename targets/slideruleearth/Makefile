@@ -244,18 +244,18 @@ manager-run: ## run manager locally; uses VERSION
 #	- To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
 
 PUBLIC_IP ?= 127.0.0.1
-IS_PUBLIC ?= False
+IS_PUBLIC ?= false
 CLUSTER ?= $(ORGANIZATION)
 NODE_CAPACITY ?= 1
 TTL ?= 60
 CLUSTER_PARMS = '{\
 	"Version": "$(VERSION)",\
-	"IsPublic": "$(IS_PUBLIC)",\
+	"IsPublic": $(IS_PUBLIC),\
 	"Domain": "$(DOMAIN)",\
 	"Organization": "$(ORGANIZATION)",\
 	"Cluster": "$(CLUSTER)",\
-	"NodeCapacity": "$(NODE_CAPACITY)",\
-	"TTL": "$(TTL)",\
+	"NodeCapacity": $(NODE_CAPACITY),\
+	"TTL": $(TTL),\
 	"Region": "$(AWS_REGION)"\
 }'
 
@@ -317,10 +317,45 @@ cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
 
 ########################
+# Test Runner Targets
+########################
+#	- Requires the provisioner to be created
+#	- The provisioner provides a lambda that is used to deploy the testrunner stack
+#	- The testrunner automatically destroys itself after one hour
+
+TESTBOT_PARMS = '{\
+	"Version": "$(VERSION)",\
+	"Domain": "$(DOMAIN)",\
+	"ProjectBucket": "$(PROJECT_BUCKET)",\
+	"ProjectFolder": "$(PROJECT_FOLDER)",\
+	"LambdaZipFile": "$(PROJECT_FOLDER)/testbot.zip",\
+	"ContainerRegistry": "$(ECR)",\
+	"DeployDate": "$(TIMESTAMP)",\
+	"Region": "$(AWS_REGION)"\
+}'
+
+testrunner-describe: ## status the creation/deletion of the test runner
+	aws cloudformation describe-stack-events --stack-name testrunner
+
+testrunner-delete: ## deletes the test runner and any lingering event bridge rules (debug only)
+	aws cloudformation delete-stack --stack-name testrunner
+	aws cloudformation wait stack-delete-complete --stack-name testrunner
+	- aws events remove-targets --rule testrunner-auto-delete --ids 1
+	- aws events delete-rule --name testrunner-auto-delete
+
+testrunner-run: ## invokes the provisioner lambda function and displays the response
+	echo $(TESTBOT_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name provisioner-test --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+########################
 # Provisioner Targets
 ########################
 
-provisioner-build: ## create the provisioner lambda zipfile
+provisioner-update: ## updates the provisioner (e.g. testrunner script)
+	aws s3 cp $(ROOT)/applications/provisioner/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/testrunner.sh
+
+provisioner-build: provisioner-update ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	docker run -it --rm \
@@ -331,6 +366,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 		-c "pip install --target /host/package requests"
 	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp cloudformation/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner function
@@ -356,70 +392,6 @@ provisioner-delete: ## deletes the lambda provisioner function
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
-
-########################
-# Testbot Targets
-########################
-
-testrunner-update: ## updates the testrunner script
-	aws s3 cp $(ROOT)/applications/testbot/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/testrunner.sh
-
-testrunner-describe: ## status the creation/deletion of the test runner
-	aws cloudformation describe-stack-events --stack-name testrunner
-
-testrunner-delete: ## deletes the test runner and any lingering event bridge rules
-	aws cloudformation delete-stack --stack-name testrunner
-	aws cloudformation wait stack-delete-complete --stack-name testrunner
-	- aws events remove-targets --rule testrunner-auto-delete --ids 1
-	- aws events delete-rule --name testrunner-auto-delete
-
-testbot-build: ## create the testrunner lambda zipfile
-	-rm -Rf $(TESTBOT_STAGE_DIR)
-	mkdir -p $(TESTBOT_STAGE_DIR)
-	docker run -it --rm \
-		-v $(TESTBOT_STAGE_DIR):/host \
-		--user $(shell id -u):$(shell id -g) \
-		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.13 \
-		-c "pip install --target /host/package urllib3"
-	cp $(ROOT)/applications/testbot/main.py $(TESTBOT_STAGE_DIR)/package/
-	cp cloudformation/testrunner.yml $(TESTBOT_STAGE_DIR)/package/
-	cd $(TESTBOT_STAGE_DIR)/package/ && zip -r -q $(TESTBOT_STAGE_DIR)/testbot.zip . -x "/*__pycache__/*"
-
-testbot-create: testbot-build testrunner-update ## creates the lambda testbot function
-	aws s3 cp $(TESTBOT_STAGE_DIR)/testbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
-	aws cloudformation create-stack \
-		--stack-name 	testbot \
-		--template-body file://cloudformation/testbot.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/testbot.zip
-	aws cloudformation wait stack-create-complete --stack-name testbot
-
-testbot-describe: ## status the creation/deletion of the testbot function
-	aws cloudformation describe-stack-events --stack-name testbot
-
-testbot-delete: ## deletes the lambda testbot function
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/testbot.zip
-	aws cloudformation delete-stack --stack-name testbot
-	aws cloudformation wait stack-delete-complete --stack-name testbot
-
-TESTBOT_PARMS = '{\
-	"Version": "$(VERSION)",\
-	"Domain": "$(DOMAIN)",\
-	"ProjectBucket": "$(PROJECT_BUCKET)",\
-	"ProjectFolder": "$(PROJECT_FOLDER)",\
-	"LambdaZipFile": "$(PROJECT_FOLDER)/testbot.zip",\
-	"ContainerRegistry": "$(ECR)",\
-	"DeployDate": "$(TIMESTAMP)",\
-	"Region": "$(AWS_REGION)"\
-}'
-
-testbot-run: ## invokes the testbot lambda function and displays the response
-	echo $(TESTBOT_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name testbot-run --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
 
 ########################
 # Certbot Targets

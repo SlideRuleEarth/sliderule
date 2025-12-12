@@ -40,6 +40,7 @@ Resources:
           PROJECT_FOLDER: !Ref ProjectFolder
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
+          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
   ## Destroy Lambda Function
   DestroyLambda:
     Type: AWS::Lambda::Function
@@ -85,6 +86,22 @@ Resources:
       Timeout: 300 # seconds
       Handler: main.lambda_events
       Description: Get events from provisioner stack operations
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+  ## Test Lambda Function
+  TestLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-test'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_test
+      Description: Kick off execution of the testrunner
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile

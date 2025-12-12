@@ -30,6 +30,8 @@ Parameters:
     Type: Number
   TTL:
     Type: Number
+  ProvisionerLambdaZipFile:
+    Type: String
 
   #
   # Constants
@@ -709,3 +711,78 @@ Resources:
       TTL: "300"
       ResourceRecords:
         - !GetAtt IlbInstance.PublicIp
+
+  #
+  # Auto-Shutdown
+  #
+  DeletionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/PowerUserAccess  # broad permissions for deletion
+  DeletionLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-shutdown'
+      Runtime: python3.13
+      Handler: main.lambda_deleter
+      Role: !GetAtt DeletionLambdaRole.Arn
+      Timeout: 60
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref ProvisionerLambdaZipFile
+  SchedulerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SchedulerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:DescribeRule
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                Resource: '*'
+  SchedulerLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-scheduler'
+      Runtime: python3.13
+      Handler: main.lambda_scheduler
+      Role: !GetAtt SchedulerLambdaRole.Arn
+      Timeout: 60
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref ProvisionerLambdaZipFile
+  AutoShutdownCustomResource:
+    Type: Custom::ScheduleStackDeletion
+    DependsOn:
+      - SlideruleAutoScalingGroup
+    Properties:
+      ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
+      StackName: !Ref AWS::StackName
+      DeleteAfterMinutes: !Ref TTL
+      DeletionLambdaArn: !GetAtt DeletionLambdaFunction.Arn

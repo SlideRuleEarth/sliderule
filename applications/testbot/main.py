@@ -186,7 +186,7 @@ def lambda_run(event, context):
         # read template
         templateBody = open("testrunner.yml").read()
 
-        # hardcode stack name so only one can run at a time
+        # default to hardcoded stack name so only one can run at a time
         stackName = event.get('StackName', 'testrunner')
         status["StackName"] = stackName
 
