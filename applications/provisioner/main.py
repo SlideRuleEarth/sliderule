@@ -423,6 +423,10 @@ def lambda_test(event, context):
         # read template
         templateBody = open("testrunner.yml").read()
 
+        # copy test runner to S3 (where cloudformation can find it)
+        s3 = boto3.client("s3")
+        s3.upload_file(Filename="testrunner.sh", Bucket=project_bucket, Key=f"{project_folder}/testrunner.sh")
+
         # create stack
         cf = boto3.client("cloudformation", region_name=region)
         state["Response"] = cf.create_stack(StackName=state["StackName"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["StackParameters"])

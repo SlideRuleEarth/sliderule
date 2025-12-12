@@ -351,10 +351,7 @@ testrunner-run: ## invokes the provisioner lambda function and displays the resp
 # Provisioner Targets
 ########################
 
-provisioner-update: ## updates the provisioner (e.g. testrunner script)
-	aws s3 cp $(ROOT)/applications/provisioner/testrunner.sh s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(VERSION)/testrunner.sh
-
-provisioner-build: provisioner-update ## create the provisioner lambda zipfile
+provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	docker run -it --rm \
@@ -366,6 +363,7 @@ provisioner-build: provisioner-update ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/testrunner.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner function
