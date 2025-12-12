@@ -49,7 +49,6 @@ MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
-TESTBOT_STAGE_DIR = $(STAGE)/testbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
@@ -328,7 +327,7 @@ TESTBOT_PARMS = '{\
 	"Domain": "$(DOMAIN)",\
 	"ProjectBucket": "$(PROJECT_BUCKET)",\
 	"ProjectFolder": "$(PROJECT_FOLDER)",\
-	"LambdaZipFile": "$(PROJECT_FOLDER)/testbot.zip",\
+	"LambdaZipFile": "$(PROJECT_FOLDER)/provisioner.zip",\
 	"ContainerRegistry": "$(ECR)",\
 	"DeployDate": "$(TIMESTAMP)",\
 	"Region": "$(AWS_REGION)"\
