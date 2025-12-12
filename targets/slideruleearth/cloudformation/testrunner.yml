@@ -188,7 +188,7 @@ Resources:
   #
   # EC2 Instance
   #
-  RemoteInstance:
+  TestRunnerInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
@@ -298,7 +298,7 @@ Resources:
   AutoDeleteScheduler:
     Type: Custom::ScheduleStackDeletion
     DependsOn:
-      - RemoteInstance
+      - TestRunnerInstance
     Properties:
       ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
       StackName: !Ref AWS::StackName

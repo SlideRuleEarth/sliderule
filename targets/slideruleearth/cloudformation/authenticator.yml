@@ -1,0 +1,258 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'GitHub OAuth Lambda for SlideRule Web Client - Organization Membership Verification'
+
+Parameters:
+  GitHubClientId:
+    Type: String
+    Description: GitHub OAuth App Client ID
+
+  Environment:
+    Type: String
+    Default: test
+    AllowedValues:
+      - test
+      - prod
+    Description: Environment (test or prod)
+
+  FrontendUrl:
+    Type: String
+    Description: Frontend URL for redirects after OAuth
+
+  ProjectBucket:
+    Type: String
+
+  LambdaZipFile:
+    Type: String
+
+  JwtAudience:
+    Type: String
+    Default: sliderule
+    Description: JWT audience claim - services validating the token should check this value
+
+Resources:
+  # Note: GitHub Client Secret must be created manually in Secrets Manager before deploying:
+  #   aws secretsmanager create-secret --name sliderule/github-oauth-client-secret-test --secret-string "YOUR_SECRET"
+  #   aws secretsmanager create-secret --name sliderule/github-oauth-client-secret-prod --secret-string "YOUR_SECRET"
+
+  # HMAC Signing Key for OAuth State (CSRF protection)
+  # This is a symmetric key stored in Secrets Manager for HMAC operations
+  HMACSigningKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'sliderule/github-oauth-hmac-key-${Environment}'
+      Description: HMAC signing key for OAuth state parameter (CSRF protection)
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: sliderule-web-client
+
+  # KMS Asymmetric Key for JWT Signing (RS256)
+  # Using asymmetric RSA key - private key never leaves KMS, public key can be distributed
+  JWTSigningKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub 'JWT signing key for SlideRule GitHub OAuth - RS256'
+      KeySpec: RSA_2048
+      KeyUsage: SIGN_VERIFY
+      EnableKeyRotation: false  # Asymmetric keys don't support automatic rotation
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+  # IAM Role for Lambda
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # Note: RoleName removed to avoid iam:GetRole permission requirement
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  # Reference existing GitHub client secret (created manually)
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:sliderule/github-oauth-client-secret-${Environment}*'
+                  # HMAC key for OAuth state signing
+                  - !Ref HMACSigningKeySecret
+        - PolicyName: KMSSigningAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Sign
+                  - kms:GetPublicKey
+                  - kms:DescribeKey
+                Resource:
+                  - !GetAtt JWTSigningKey.Arn
+
+  # Lambda Function
+  GitHubOAuthLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      # Note: FunctionName removed to let CloudFormation auto-generate
+      Description: !Sub 'GitHub OAuth handler for SlideRule Web Client (${Environment})'
+      Runtime: python3.13
+      Handler: github_oauth.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          GITHUB_CLIENT_ID: !Ref GitHubClientId
+          GITHUB_ORG: SlideRuleEarth
+          FRONTEND_URL: !Ref FrontendUrl
+          # Reference existing secret by name (must be created manually before deploying)
+          CLIENT_SECRET_NAME: !Sub 'sliderule/github-oauth-client-secret-${Environment}'
+          # HMAC key for OAuth state signing (CSRF protection)
+          HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
+          # KMS key for JWT signing (RS256 - asymmetric)
+          JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
+          # JWT audience claim for API Gateway JWT authorizer validation
+          JWT_AUDIENCE: !Ref JwtAudience
+
+  # API Gateway HTTP API
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub 'sliderule-github-oauth-${Environment}'
+      Description: GitHub OAuth API for SlideRule Web Client
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref FrontendUrl
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+
+  # API Gateway Integration with Lambda
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GitHubOAuthLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  # Route: GET /auth/github/login
+  LoginRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /auth/github/login'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Route: GET /auth/github/callback
+  CallbackRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /auth/github/callback'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Route: POST /auth/github/device (Device Flow - request device code)
+  DeviceCodeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /auth/github/device'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Route: POST /auth/github/device/poll (Device Flow - poll for token)
+  DevicePollRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /auth/github/device/poll'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Route: GET /auth/github/jwks (JWKS endpoint for JWT verification)
+  JwksRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /auth/github/jwks'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Route: GET /.well-known/jwks.json (Standard OIDC JWKS endpoint)
+  WellKnownJwksRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /.well-known/jwks.json'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # API Gateway Stage (auto-deploy)
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GitHubOAuthLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway endpoint URL
+    Value: !GetAtt HttpApi.ApiEndpoint
+    Export:
+      Name: !Sub 'sliderule-github-oauth-api-url-${Environment}'
+
+  LambdaFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt GitHubOAuthLambda.Arn
+    Export:
+      Name: !Sub 'sliderule-github-oauth-lambda-arn-${Environment}'
+
+  ClientSecretName:
+    Description: GitHub Client Secret name in Secrets Manager (must be created manually)
+    Value: !Sub 'sliderule/github-oauth-client-secret-${Environment}'
+
+  JWTSigningKeyArn:
+    Description: KMS Key ARN for JWT signing (RS256) - use GetPublicKey to retrieve the public key for verification
+    Value: !GetAtt JWTSigningKey.Arn
+    Export:
+      Name: !Sub 'sliderule-github-oauth-jwt-signing-key-arn-${Environment}'
+
+  JwksEndpoint:
+    Description: JWKS endpoint URL for JWT verification (standard OIDC format)
+    Value: !Sub '${HttpApi.ApiEndpoint}/auth/github/jwks'

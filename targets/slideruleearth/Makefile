@@ -50,6 +50,7 @@ MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
+AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
 WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
@@ -316,6 +317,77 @@ cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
 
 ########################
+# Authenticator Targets
+########################
+
+GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
+GITHUB_OAUTH_APP_CLIENT_SECRET ?=# supplied from GitHub OAuth App settings
+FRONTEND_URL_REDIRECT ?= https://testsliderule.org
+
+HELLO_ISS ?= https://zfdgbva9v1.execute-api.us-west-2.amazonaws.com
+
+hello-world-create:
+	aws cloudformation create-stack \
+	--stack-name hello-world \
+	--template-body file://cloudformation/helloworld.yml \
+	--parameters \
+		ParameterKey=JwksUri,ParameterValue=$(HELLO_ISS)/.well-known/jwks.json \
+		ParameterKey=JwtIssuer,ParameterValue=$(HELLO_ISS) \
+		ParameterKey=JwtAudience,ParameterValue=sliderule \
+	--capabilities CAPABILITY_IAM
+
+hello-world-describe:
+	aws cloudformation describe-stack-events --stack-name hello-world
+
+hello-world-delete:
+	aws cloudformation delete-stack --stack-name hello-world
+	aws cloudformation wait stack-delete-complete --stack-name hello-world
+
+authenticator-create: ## create the authenticator lambda package zipfile
+	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
+	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
+	cp $(ROOT)/applications/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(AUTHENTICATOR_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/applications/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
+	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip . -x "/*__pycache__/*"
+
+authenticator-create: authenticator-create  ## creates the lambda authenticator functions
+	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
+	aws cloudformation create-stack \
+		--stack-name 	authenticator \
+		--template-body file://cloudformation/authenticator.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
+						ParameterKey=Environment,ParameterValue=test \
+						ParameterKey=FrontendUrl,ParameterValue=$(FRONTEND_URL_REDIRECT) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
+	aws cloudformation wait stack-create-complete --stack-name authenticator
+
+authenticator-describe: ## status the creation/deletion of the authenticator functions
+	aws cloudformation describe-stack-events --stack-name authenticator
+
+authenticator-output: ## get the outputs from the creation of the authenticator stack
+	aws cloudformation describe-stacks --stack-name authenticator --output text
+
+authenticator-delete: ## deletes the lambda authenticator functions
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
+	aws cloudformation delete-stack --stack-name authenticator
+	aws cloudformation wait stack-delete-complete --stack-name authenticator
+
+authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
+	aws secretsmanager create-secret \
+		--name sliderule/github-oauth-client-secret-test \
+		--secret-string "$(GITHUB_OAUTH_APP_CLIENT_SECRET)" \
+		--description "GitHub OAuth Client Secret for SlideRule"
+
+########################
 # Test Runner Targets
 ########################
 #	- Requires the provisioner to be created
@@ -366,7 +438,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/testrunner.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
-provisioner-create: provisioner-build ## creates the lambda provisioner function
+provisioner-create: provisioner-build ## creates the lambda provisioner functions
 	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation create-stack \
 		--stack-name 	provisioner \
@@ -382,10 +454,10 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
-provisioner-describe: ## status the creation/deletion of the provisioner function
+provisioner-describe: ## status the creation/deletion of the provisioner functions
 	aws cloudformation describe-stack-events --stack-name provisioner
 
-provisioner-delete: ## deletes the lambda provisioner function
+provisioner-delete: ## deletes the lambda provisioner functions
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner

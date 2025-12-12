@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Hello World Lambda with API Gateway Native JWT Authorizer (RS256)
+
+Parameters:
+  JwksUri:
+    Type: String
+    Description: JWKS URI for RS256 public keys (e.g., https://your-domain.com/.well-known/jwks.json)
+    Default: https://your-domain.com/.well-known/jwks.json
+  JwtIssuer:
+    Type: String
+    Description: JWT Issuer - must match the 'iss' claim in your JWT
+    Default: https://your-domain.com
+  JwtAudience:
+    Type: String
+    Description: JWT Audience - must match the 'aud' claim in your JWT
+    Default: your-api-audience
+
+Resources:
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Hello World Lambda Function
+  HelloWorldFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-hello-world'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.13
+      Handler: index.lambda_handler
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+
+          def lambda_handler(event, context):
+              # Extract JWT claims from request context
+              # API Gateway v2 puts JWT claims in requestContext.authorizer.jwt.claims
+              request_context = event.get('requestContext', {})
+              authorizer = request_context.get('authorizer', {})
+              jwt_data = authorizer.get('jwt', {})
+              claims = jwt_data.get('claims', {})
+
+              # Common claims
+              user_id = claims.get('sub', 'unknown')
+              email = claims.get('email', 'not provided')
+
+              return {
+                  'statusCode': 200,
+                  'headers': {
+                      'Content-Type': 'application/json',
+                      'Access-Control-Allow-Origin': '*'
+                  },
+                  'body': json.dumps({
+                      'message': 'Hello, World!',
+                      'userId': user_id,
+                      'email': email,
+                      'claims': claims,
+                      'requestId': context.request_id
+                  })
+              }
+
+  # HTTP API (API Gateway v2)
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-api'
+      Description: Public API with Native JWT Authentication
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+
+  # JWT Authorizer (Native API Gateway)
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: JwtAuthorizer
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - !Ref JwtAudience
+        Issuer: !Ref JwtIssuer
+
+  # Lambda Integration
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt HelloWorldFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  # Route with JWT Authorization
+  HelloRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /hello'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Default Stage
+  DefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+
+  # Lambda Permission for API Gateway
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref HelloWorldFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/hello'
+
+  ApiId:
+    Description: API Gateway ID
+    Value: !Ref HttpApi
+
+  AuthorizerId:
+    Description: JWT Authorizer ID
+    Value: !Ref JwtAuthorizer
+
+  TestCommand:
+    Description: Test command (replace YOUR_JWT_TOKEN with actual token)
+    Value: !Sub |
+      curl -H "Authorization: Bearer YOUR_JWT_TOKEN" https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/hello
