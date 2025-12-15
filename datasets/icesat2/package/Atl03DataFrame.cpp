@@ -474,7 +474,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     geoid               (df->useGeoid ? df->hdf03 : NULL,       FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(), 0, aoi.first_segment, aoi.num_segments),
     anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),        0, aoi.first_segment, aoi.num_segments),
     anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(),       0, aoi.first_segment, aoi.num_segments),
-    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),            0, aoi.first_photon,  aoi.num_photons)
+    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),            H5Coro::ALL_COLS, aoi.first_photon,  aoi.num_photons)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);

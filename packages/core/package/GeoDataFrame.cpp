@@ -938,7 +938,7 @@ void GeoDataFrame::populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_c
 }
 
 /*----------------------------------------------------------------------------
- * populateAncillaryColumns
+ * addAncillaryColumns
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe)
 {
