@@ -114,11 +114,11 @@ class GitHubOrgAuth:
 
         while time.time() - start_time < actual_timeout:
             result = self._poll_for_token(device_code)
+            print("Poll Response: ", result)
 
             if result.get('status') == 'success':
                 print(f"\nAuthentication successful!")
                 print(f"Logged in as: {result['username']}")
-                print("RESULT", result)
                 # Use is_org_member/is_org_owner from Lambda response
                 is_member = result.get('is_org_member', False)
                 is_owner = result.get('is_org_owner', False)

@@ -324,7 +324,8 @@ JWT_AUDIENCE ?= sliderule
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
 CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
-ALLOWED_REDIRECT_HOSTS ?= 'client.slideruleearth.io testsliderule.org localhost 127.0.0.1'
+ALLOWED_REDIRECT_HOSTS ?= "client.slideruleearth.io testsliderule.org localhost 127.0.0.1"
+CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID := $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
   --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
@@ -369,12 +370,14 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--template-body file://cloudformation/authenticator.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
+		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
 						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
 						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
 						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
 	aws cloudformation wait stack-create-complete --stack-name authenticator

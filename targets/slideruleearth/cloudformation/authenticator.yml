@@ -2,6 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'GitHub OAuth Lambda for SlideRule Login'
 
 Parameters:
+  Domain:
+    Type: String
   JwtAudience:
     Type: String
   GitHubOrg:
@@ -14,6 +16,8 @@ Parameters:
     Type: String
   AllowedRedirectHosts:
     Type: String
+  CorsAllowOrigins:
+    Type: CommaDelimitedList
   ProjectBucket:
     Type: String
   LambdaZipFile:
@@ -122,9 +126,7 @@ Resources:
       Description: GitHub OAuth API for SlideRule
       ProtocolType: HTTP
       CorsConfiguration:
-        AllowOrigins:
-          - !Ref FrontendUrl
-          - https://login.${Domain}
+        AllowOrigins: !Ref CorsAllowOrigins
         AllowMethods:
           - GET
           - POST

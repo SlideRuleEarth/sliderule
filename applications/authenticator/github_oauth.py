@@ -1,32 +1,9 @@
 """
-GitHub OAuth Lambda Handler for SlideRule Web Client
-
-Handles OAuth authentication flow and organization membership verification
-for the SlideRuleEarth GitHub organization.
+GitHub OAuth Lambda Handler for SlideRule
 
 Supports two flows:
 1. Authorization Code Flow (for web clients)
 2. Device Flow (for CLI/Python clients)
-
-Returns:
-1. A minimal signed JWT containing only server-essential fields:
-   - sub/username: GitHub username (subject)
-   - accessible_clusters: list of cluster names the user can access
-   - deployable_clusters: list of cluster names the user can deploy/provision
-   - max_nodes: maximum compute nodes (15 for owners, 7 for members)
-   - cluster_ttl_minutes: max cluster runtime in minutes
-   - iat: issued at timestamp
-   - exp: token expiration timestamp (default 12 hours, configurable via JWT_EXPIRATION_HOURS)
-   - iss: token issuer
-
-2. User info returned separately (via URL params for web, JSON for device flow):
-   - username, is_org_member, is_org_owner
-   - teams, team_roles, org_roles
-   - accessible_clusters, deployable_clusters, max_nodes, cluster_ttl_minutes
-   - org, token_issued_at, token_expires_at, token_issuer
-
-The JWT is validated server-side only. Clients should treat it as opaque and use
-the separately returned user info for display/UX purposes.
 """
 
 import base64
@@ -925,7 +902,7 @@ def handle_device_poll(event):
         token, metadata = authenticate_user(access_token, event)
 
         # Response with a successful authentication
-        return json_response(200, {"token": token, "metadata": metadata})
+        return json_response(200, {"status": "success", "token": token, "metadata": metadata})
 
     except Exception as e:
         print(f"Error in device poll: {e}")
