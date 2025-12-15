@@ -321,7 +321,6 @@ cluster-take-offline: ## destroy dns entry of public cluster
 ########################
 
 GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
-GITHUB_OAUTH_APP_CLIENT_SECRET ?=# supplied from GitHub OAuth App settings
 FRONTEND_URL_REDIRECT ?= https://testsliderule.org
 
 HELLO_ISS ?= https://zfdgbva9v1.execute-api.us-west-2.amazonaws.com
@@ -364,7 +363,6 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
-						ParameterKey=Environment,ParameterValue=test \
 						ParameterKey=FrontendUrl,ParameterValue=$(FRONTEND_URL_REDIRECT) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
@@ -382,9 +380,10 @@ authenticator-delete: ## deletes the lambda authenticator functions
 	aws cloudformation wait stack-delete-complete --stack-name authenticator
 
 authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
+	@read -s -p "Enter GitHub OAuth Client Secret: " GITHUB_OAUTH_APP_CLIENT_SECRET; echo ""; \
 	aws secretsmanager create-secret \
-		--name sliderule/github-oauth-client-secret-test \
-		--secret-string "$(GITHUB_OAUTH_APP_CLIENT_SECRET)" \
+		--name sliderule/github-oauth-client-secret \
+		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
 		--description "GitHub OAuth Client Secret for SlideRule"
 
 ########################
