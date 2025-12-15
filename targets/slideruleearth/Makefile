@@ -343,7 +343,7 @@ hello-world-delete:
 	aws cloudformation delete-stack --stack-name hello-world
 	aws cloudformation wait stack-delete-complete --stack-name hello-world
 
-authenticator-create: ## create the authenticator lambda package zipfile
+authenticator-build: ## builds the authenticator lambda package zipfile
 	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
 	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
 	cp $(ROOT)/applications/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
@@ -356,7 +356,7 @@ authenticator-create: ## create the authenticator lambda package zipfile
 	cp $(ROOT)/applications/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
 	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip . -x "/*__pycache__/*"
 
-authenticator-create: authenticator-create  ## creates the lambda authenticator functions
+authenticator-create: authenticator-build  ## creates the lambda authenticator functions
 	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
 	aws cloudformation create-stack \
 		--stack-name 	authenticator \

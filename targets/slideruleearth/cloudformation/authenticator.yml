@@ -113,7 +113,7 @@ Resources:
   GitHubOAuthLambda:
     Type: AWS::Lambda::Function
     Properties:
-      # Note: FunctionName removed to let CloudFormation auto-generate
+      # Note: FunctionName removed to let CloudFormation auto-generate for seemless stack updates
       Description: !Sub 'GitHub OAuth handler for SlideRule Web Client (${Environment})'
       Runtime: python3.13
       Handler: github_oauth.lambda_handler
