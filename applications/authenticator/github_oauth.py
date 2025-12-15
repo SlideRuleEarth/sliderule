@@ -14,7 +14,7 @@ Returns:
    - accessible_clusters: list of cluster names the user can access
    - deployable_clusters: list of cluster names the user can deploy/provision
    - max_nodes: maximum compute nodes (15 for owners, 7 for members)
-   - cluster_ttl_hours: max cluster runtime in hours (12 for owners, 8 for members)
+   - cluster_ttl_minutes: max cluster runtime in minutes
    - iat: issued at timestamp
    - exp: token expiration timestamp (default 12 hours, configurable via JWT_EXPIRATION_HOURS)
    - iss: token issuer
@@ -22,7 +22,7 @@ Returns:
 2. User info returned separately (via URL params for web, JSON for device flow):
    - username, is_org_member, is_org_owner
    - teams, team_roles, org_roles
-   - accessible_clusters, deployable_clusters, max_nodes, cluster_ttl_hours
+   - accessible_clusters, deployable_clusters, max_nodes, cluster_ttl_minutes
    - org, token_issued_at, token_expires_at, token_issuer
 
 The JWT is validated server-side only. Clients should treat it as opaque and use
@@ -39,27 +39,23 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 import boto3
 import requests
-# Note: PyJWT is available for verification if needed, but we use KMS directly for signing
+
+############################
+# GLOBALS
+############################
 
 # Configuration from environment variables
+GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
-GITHUB_ORG = os.environ.get('GITHUB_ORG', 'SlideRuleEarth')
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://testsliderule.org')
 CLIENT_SECRET_NAME = os.environ.get('CLIENT_SECRET_NAME')
-# KMS key ARN for JWT signing (RS256 asymmetric)
-JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN')
-# Secrets Manager ARN for HMAC key (OAuth state signing)
-HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN')
+JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
+HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
+ALLOWED_REDIRECT_HOSTS = os.environ.get('ALLOWED_REDIRECT_HOSTS', '').split(' ') # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
+JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '12'))
+JWT_AUDIENCE = os.environ.get('JWT_AUDIENCE') # JWT audience claim - services validating the token should check this
 
 # JWT configuration
-# RS256 (asymmetric) is preferred over HS256 (symmetric) because:
-# - Private key never leaves KMS (more secure)
-# - Public key can be freely distributed for verification
-# - Better for distributed systems where multiple services verify tokens
 JWT_ALGORITHM = 'RS256'
-JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '12'))
-# JWT audience claim - services validating the token should check this
-JWT_AUDIENCE = os.environ.get('JWT_AUDIENCE', 'sliderule')
 
 # KMS client for JWT signing (initialized lazily)
 _kms_client = None
@@ -76,19 +72,12 @@ GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code'
 GITHUB_API_URL = 'https://api.github.com'
 
-# Allowed redirect domains (for open redirect protection)
-# These are validated against the redirect_uri to prevent attackers from
-# redirecting tokens to malicious sites
-ALLOWED_REDIRECT_HOSTS = [
-    'testsliderule.org',
-    'client.slideruleearth.io',
-    'localhost',
-    '127.0.0.1',
-]
-
 # Cache for secrets (Lambda container reuse)
 _secrets_cache = {}
 
+# =============================================================================
+# AWS Helper Functions
+# =============================================================================
 
 def _get_secret(secret_arn):
     """Retrieve a secret from AWS Secrets Manager."""
@@ -153,39 +142,9 @@ def sign_with_kms(message_bytes):
     return response['Signature']
 
 
-def get_kms_public_key():
-    """
-    Retrieve the public key from KMS for JWT verification.
-
-    This can be distributed freely to any service that needs to verify JWTs.
-    The public key is cached for Lambda container reuse.
-
-    Returns:
-        PEM-encoded public key string
-    """
-    if 'kms_public_key' not in _secrets_cache:
-        if not JWT_SIGNING_KEY_ARN:
-            raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
-
-        kms = get_kms_client()
-        response = kms.get_public_key(KeyId=JWT_SIGNING_KEY_ARN)
-
-        # Convert DER to PEM format
-        from cryptography.hazmat.primitives import serialization
-        from cryptography.hazmat.backends import default_backend
-
-        public_key = serialization.load_der_public_key(
-            response['PublicKey'],
-            backend=default_backend()
-        )
-        pem_key = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        _secrets_cache['kms_public_key'] = pem_key.decode('utf-8')
-
-    return _secrets_cache['kms_public_key']
-
+# =============================================================================
+# HMAC State Helper Functions
+# =============================================================================
 
 def create_signed_state(redirect_uri=None):
     """
@@ -281,90 +240,317 @@ def verify_signed_state(state):
         return False, None, "Invalid state format"
 
 
-def is_valid_redirect_uri(uri):
+# =============================================================================
+# GitHub Helper Functions
+# =============================================================================
+
+def get_github_user(access_token):
+    """Get authenticated user's GitHub profile."""
+    response = requests.get(
+        f"{GITHUB_API_URL}/user",
+        headers={
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        timeout=HTTP_TIMEOUT_SECONDS
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to get user info: {response.text}")
+
+    return response.json()
+
+
+def get_organization_roles(access_token, username):
     """
-    Validate that a redirect URI points to an allowed domain with a safe scheme.
-    Prevents open redirect attacks where an attacker could redirect
-    the JWT token to a malicious site.
-
-    Security checks:
-    - Scheme must be https (or http only for localhost/127.0.0.1)
-    - Host must be in ALLOWED_REDIRECT_HOSTS or match FRONTEND_URL
-
-    Args:
-        uri: The redirect URI to validate
-
-    Returns:
-        True if the URI is safe to redirect to, False otherwise
+    Builds a list of roles for the user
+    Raises:
+        Exception: If GitHub API returns an unexpected error (5xx, 429, etc.)
+                   This prevents silently degrading users to non-member status
+                   during GitHub outages.
     """
-    if not uri:
-        return False
+    # Initialize return values
+    is_org_owner = False
+    is_org_member = False
 
-    try:
-        parsed = urllib.parse.urlparse(uri)
-        host = parsed.hostname
-        scheme = parsed.scheme.lower() if parsed.scheme else ''
+    # Try to get the user's membership in the org
+    response = requests.get(
+        f"{GITHUB_API_URL}/orgs/{GITHUB_ORG}/memberships/{username}",
+        headers={
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        timeout=HTTP_TIMEOUT_SECONDS
+    )
 
-        if not host or not scheme:
-            print("Rejected redirect with missing host or scheme")
-            return False
-
-        is_localhost = host in ('localhost', '127.0.0.1')
-
-        # Validate scheme: only https allowed, except http for localhost
-        if scheme not in ('https', 'http'):
-            print(f"Rejected redirect with invalid scheme: {scheme}")
-            return False
-
-        # http is only allowed for localhost development
-        if scheme == 'http' and not is_localhost:
-            print(f"Rejected http redirect to non-localhost host: {host}")
-            return False
-
-        # Check against allowed hosts
-        for allowed_host in ALLOWED_REDIRECT_HOSTS:
-            if host == allowed_host or host.endswith('.' + allowed_host):
-                return True
-
-        # Also allow the configured FRONTEND_URL host
-        frontend_parsed = urllib.parse.urlparse(FRONTEND_URL)
-        if host == frontend_parsed.hostname:
-            return True
-
-        print(f"Rejected redirect to unauthorized host: {host}")
-        return False
-
-    except Exception as e:
-        print(f"Error validating redirect URI: {e}")
-        return False
-
-
-def lambda_handler(event, context):
-    """Main Lambda handler - routes requests based on path."""
-    path = event.get('rawPath', '')
-    method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
-
-    print(f"Received request: {method} {path}")
-
-    # Web client Authorization Code flow
-    if path == '/auth/github/login':
-        return handle_login(event)
-    elif path == '/auth/github/callback':
-        return handle_callback(event)
-    # Device Flow for CLI/Python clients
-    elif path == '/auth/github/device':
-        return handle_device_code_request(event)
-    elif path == '/auth/github/device/poll':
-        return handle_device_poll(event)
-    # Public key endpoint for JWT verification
-    elif path == '/auth/github/jwks' or path == '/.well-known/jwks.json':
-        return handle_jwks(event)
+    if response.status_code == 200:
+        data = response.json()
+        state = data.get('state', '')
+        role = data.get('role', '')
+        # User must have 'active' state to be considered a member
+        is_org_member = state == 'active'
+        is_org_owner = is_org_member and role == 'admin'
+    elif response.status_code == 404:
+        # User is not a member of the organization - this is expected for non-members
+        pass
+    elif response.status_code == 429:
+        # Rate limit exceeded - don't silently degrade, surface the error
+        raise Exception("GitHub API rate limit exceeded. Please try again later.")
+    elif response.status_code >= 500:
+        # GitHub API error - don't silently degrade, surface the error
+        raise Exception(f"GitHub API is unavailable (status {response.status_code}). Please try again later.")
     else:
-        return {
-            'statusCode': 404,
-            'body': json.dumps({'error': 'Not found'})
-        }
+        # Other unexpected errors - fail explicitly rather than silently degrading
+        print(f"Unexpected response checking org membership: {response.status_code} {response.text}")
+        raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
 
+    # Build organization roles
+    roles = []
+    if is_org_owner:
+        roles = ['owner', 'member']
+    elif is_org_member:
+        roles = ['member']
+
+    # Return organization roles
+    return roles
+
+
+def get_user_teams(access_token, username, org_roles):
+    """
+    Get all teams the user belongs to in the SlideRuleEarth organization.
+
+    Uses the /user/teams endpoint which works for all authenticated users,
+    unlike /orgs/{org}/teams which requires admin permissions.
+
+    Returns a list of team slugs
+    """
+    # Initialize teams
+    teams = []
+
+    # Early check if not a member
+    if 'member' not in org_roles:
+        return teams
+
+    # Use /user/teams which lists teams for the authenticated user
+    # This works for all users, unlike /orgs/{org}/teams which requires admin
+    url = f"{GITHUB_API_URL}/user/teams"
+    page = 1
+    per_page = 100
+
+    while True:
+        # Make request to GitHub
+        response = requests.get(
+            url,
+            headers={
+                'Authorization': f'Bearer {access_token}',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            params={
+                'page': page,
+                'per_page': per_page
+            },
+            timeout=HTTP_TIMEOUT_SECONDS
+        )
+
+        # Check valid response
+        if response.status_code != 200:
+            print(f"Failed to get user teams: {response.status_code} {response.text}")
+            break
+
+        # Pull out teams
+        user_teams = response.json()
+        for team in user_teams:
+            org = team.get('organization', {})
+            if org.get('login') == GITHUB_ORG:
+                team_slug = team.get('slug')
+                if team_slug:
+                    teams.append(team_slug)
+
+        # Check if there are more pages
+        if not user_teams:
+            break
+        if len(user_teams) < per_page:
+            break
+        page += 1
+
+    # Return teams
+    return teams
+
+
+# =============================================================================
+# Business Logic for Generating Tokens and Metadata
+# =============================================================================
+
+def get_accessible_clusters(username, teams, org_roles):
+    """
+    Returns a list of cluster names the user can access.
+    """
+    # Initialize accessible clusters
+    #   public cluster always available, along with user provided
+    accessible_clusters = ['sliderule', '*']
+
+    # Add user cluster for members
+    if 'member' in org_roles and username:
+        accessible_clusters.append(f"{username}-cluster")
+
+    # Add team clusters for members
+    if teams:
+        accessible_clusters.extend(teams)
+
+    # Return accessible clustera
+    return accessible_clusters
+
+
+def get_deployable_clusters(username, teams, org_roles):
+    """
+    Returns a list of cluster names the user can deploy.
+    """
+    # Initialize deployable clusters
+    deployable = []
+
+    # Early check if member
+    if 'member' not in org_roles:
+        return deployable
+
+    # Owners can deploy anything
+    if 'owner' in org_roles:
+        deployable.extend(['*'])
+
+    # All members can deploy to their personal cluster
+    if username:
+        deployable.append(f"{username}-cluster")
+
+    # All members can deploy to their team clusters
+    if teams:
+        deployable.extend(teams)
+
+    # Return deployable clusters
+    return deployable
+
+
+def get_max_nodes(org_roles):
+    """
+    Returns the maximum number of nodes a user can deploy
+    """
+    max_nodes = 0
+    if 'owner' in org_roles:
+        max_nodes = 500
+    elif 'member' in org_roles:
+        max_nodes = 10
+    return max_nodes
+
+
+def get_max_ttl(org_roles):
+    """
+    Returns the maximum time to live a user can deploy
+    """
+    max_ttl = 0
+    if 'owner' in org_roles:
+        max_ttl = 525600 # 1 year
+    elif 'member' in org_roles:
+        max_ttl = 720 # 12 hours
+    return max_ttl
+
+
+def create_auth_token(metadata):
+    """
+    Create a minimal signed JWT containing only server-essential fields.
+    This token is validated server-side only; clients should treat it as opaque.
+    """
+    # Build payload with server-essential fields + API Gateway compatible claims
+    payload = {
+        'sub': metadata["username"],  # Subject (GitHub username)
+        'username': metadata["username"],
+        'aud': JWT_AUDIENCE,  # Audience claim for API Gateway JWT authorizer
+        'iss': metadata['iss'],  # Issuer URL for JWKS discovery
+        'org': GITHUB_ORG,  # Organization name
+        'accessible_clusters': metadata["accessible_clusters"],
+        'deployable_clusters': metadata["deployable_clusters"],
+        'max_nodes': metadata['max_nodes'],
+        'max_ttl': metadata['max_ttl'],
+        'iat': metadata['iat'],
+        'exp': metadata['exp'],
+    }
+
+    # Build JWT header
+    header = {
+        'alg': JWT_ALGORITHM,
+        'typ': 'JWT'
+    }
+
+    # Helper Function
+    def base64url_encode(data):
+        return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
+
+    # Encode header and payload (base64url without padding)
+    header_b64 = base64url_encode(json.dumps(header, separators=(',', ':')).encode('utf-8'))
+    payload_b64 = base64url_encode(json.dumps(payload, separators=(',', ':')).encode('utf-8'))
+
+    # Create signing input
+    signing_input = f"{header_b64}.{payload_b64}"
+
+    # Sign with KMS (RS256 = RSASSA-PKCS1-v1_5 using SHA-256)
+    signature = sign_with_kms(signing_input.encode('utf-8'))
+    signature_b64 = base64url_encode(signature)
+
+    # Assemble final JWT
+    token = f"{signing_input}.{signature_b64}"
+    return token
+
+
+def authenticate_user(access_token, event):
+    """
+    Build the authentication token and metadata for the user
+    """
+    # Get user info
+    user_info = get_github_user(access_token)
+
+    # Get username
+    username = user_info.get('login')
+    if not username:
+        raise RuntimeError('Could not get GitHub username')
+
+    # Get user metadata
+    org_roles = get_organization_roles(access_token, username)
+    teams = get_user_teams(access_token, username, org_roles)
+    accessible_clusters = get_accessible_clusters(username, teams, org_roles)
+    deployable_clusters = get_deployable_clusters(username, teams, org_roles)
+    max_nodes = get_max_nodes(org_roles)
+    max_ttl = get_max_ttl(org_roles)
+
+    # Token expiration based on JWT_EXPIRATION_HOURS config
+    now = datetime.now(timezone.utc)
+    expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
+
+    # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
+    headers = event.get('headers', {})
+    api_host = headers.get('host', '')
+    issuer = f"https://{api_host}"
+
+    # Build metadata dictionary
+    metadata = {
+        'username': username,
+        'org_roles': org_roles,
+        'teams': teams,
+        'accessible_clusters': accessible_clusters,
+        'deployable_clusters': deployable_clusters,
+        'max_nodes': max_nodes,
+        'max_ttl': max_ttl,
+        'iat': int(now.timestamp()),
+        'exp': int(expiration.timestamp()),
+        'iss': issuer
+    }
+
+    # Create minimal signed JWT token (only server-essential fields)
+    auth_token = create_auth_token(metadata=metadata)
+
+    # Return artifacts
+    return auth_token, metadata
+
+
+# =============================================================================
+# GitHub Oauth Web Login Flow
+# =============================================================================
 
 def handle_login(event):
     """
@@ -398,9 +584,9 @@ def handle_login(event):
         'scope': 'read:org',
         'state': state
     }
-
     auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(params)}"
 
+    # Return response
     return {
         'statusCode': 302,
         'headers': {
@@ -414,8 +600,7 @@ def handle_login(event):
 def handle_callback(event):
     """
     Handle GitHub OAuth callback.
-    Exchange code for token, check org membership, get teams, create JWT, redirect to frontend.
-
+    Exchange code for token, build metadata, redirect to frontend.
     Security: Validates HMAC-signed state parameter to prevent CSRF attacks.
     """
     query_params = event.get('queryStringParameters') or {}
@@ -425,96 +610,56 @@ def handle_callback(event):
     error_description = query_params.get('error_description')
 
     # Verify state parameter FIRST (CSRF protection)
-    # This must happen before any other processing
     is_valid, redirect_uri, state_error = verify_signed_state(state)
     if not is_valid:
-        print(f"Security: Invalid OAuth state - {state_error}")
-        # Return error to default frontend since we can't trust the redirect_uri
-        return redirect_to_frontend_with_error(
-            redirect_uri=None,
-            error_message=f"Security error: {state_error}"
-        )
+        raise RuntimeError(f"Security: Invalid OAuth state - {state_error}")
 
     # Handle OAuth errors from GitHub
     if error:
-        return redirect_to_frontend_with_error(redirect_uri, error_description or error)
-
+        return redirect_to_frontend(redirect_uri, {'error': error_description or error})
     if not code:
-        return redirect_to_frontend_with_error(redirect_uri, 'No authorization code received')
+        return redirect_to_frontend(redirect_uri, {'error': 'No authorization code received'})
 
     try:
-        # Exchange code for access token
+        # Authenticate user (gets token and metadata)
         access_token = exchange_code_for_token(code, event)
+        token, metadata = authenticate_user(access_token, event)
 
-        # Get user info
-        user_info = get_github_user(access_token)
-        username = user_info.get('login')
+        # Build parameters for callback
+        parms = {
+            'username': metadata['username'],
+            'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
+            'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
+            'org': GITHUB_ORG,
+            'teams': ','.join(metadata['teams']),
+            'orgRoles': ','.join(metadata['org_roles']),
+            'accessibleClusters': ','.join(metadata['accessible_clusters']),
+            'deployableClusters': ','.join(metadata['deployable_clusters']),
+            'maxNodes': str(metadata['max_nodes']),
+            'maxTTL': str(metadata['max_ttl']),
+            'tokenIssuedAt': str(metadata['iat']),
+            'tokenExpiresAt': str(metadata['exp']),
+            'tokenIssuer': metadata['iss'],
+            'token': token
+        }
 
-        if not username:
-            return redirect_to_frontend_with_error(redirect_uri, 'Could not get GitHub username')
-
-        # Check organization membership
-        membership = check_org_membership(access_token, username)
-
-        # Get user's teams in the organization (only if they're a member)
-        teams = []
-        team_roles = {}
-        if membership['is_org_member']:
-            teams, team_roles = get_user_teams(access_token, username)
-            print(f"User {username} belongs to teams: {teams}, team_roles: {team_roles}")
-
-        # Compute org-level roles and accessible/deployable clusters
-        org_roles = compute_org_roles(membership['is_org_member'], membership['is_org_owner'])
-        accessible_clusters = compute_accessible_clusters(username, teams, membership['is_org_member'])
-        deployable_clusters = compute_deployable_clusters(
-            username, teams, membership['is_org_member'], membership['is_org_owner']
-        )
-        print(f"User {username} org_roles: {org_roles}, accessible_clusters: {accessible_clusters}, deployable_clusters: {deployable_clusters}")
-
-        # Compute token metadata (max_nodes, cluster_ttl, timestamps)
-        token_metadata = compute_token_metadata(membership['is_org_member'], membership['is_org_owner'])
-
-        # Get API host for issuer URL (enables JWKS discovery at {iss}/.well-known/jwks.json)
-        headers = event.get('headers', {})
-        api_host = headers.get('host', '')
-
-        # Create minimal signed JWT token (only server-essential fields)
-        auth_token = create_auth_token(
-            username=username,
-            accessible_clusters=accessible_clusters,
-            deployable_clusters=deployable_clusters,
-            token_metadata=token_metadata,
-            is_org_member=membership['is_org_member'],
-            is_org_owner=membership['is_org_owner'],
-            api_host=api_host
-        )
-
-        # Redirect to frontend with results (user info + token metadata returned separately)
-        return redirect_to_frontend_with_result(
-            redirect_uri=redirect_uri,
-            username=username,
-            is_org_member=membership['is_org_member'],
-            is_org_owner=membership['is_org_owner'],
-            teams=teams,
-            team_roles=team_roles,
-            org_roles=org_roles,
-            accessible_clusters=accessible_clusters,
-            deployable_clusters=deployable_clusters,
-            token=auth_token,
-            token_metadata=token_metadata
-        )
+        # Redirect to frontend with results
+        return redirect_to_frontend(redirect_uri, parms)
 
     except Exception as e:
-        print(f"Error during OAuth callback: {str(e)}")
-        return redirect_to_frontend_with_error(redirect_uri, str(e))
+        print('Exception in OAuth callback: {e}')
+        return redirect_to_frontend(redirect_uri, {'error': f"Error during OAuth callback"})
 
 
 def exchange_code_for_token(code, event):
     """Exchange authorization code for access token."""
     headers = event.get('headers', {})
     host = headers.get('host', '')
-    callback_url = f"https://{host}/auth/github/callback"
 
+    if not is_allowed_host(host):
+        raise RuntimeError(F"Invalid host: {host}")
+
+    callback_url = f"https://{host}/auth/github/callback"
     client_secret = get_github_client_secret()
 
     response = requests.post(
@@ -547,472 +692,75 @@ def exchange_code_for_token(code, event):
     return access_token
 
 
-def get_github_user(access_token):
-    """Get authenticated user's GitHub profile."""
-    response = requests.get(
-        f"{GITHUB_API_URL}/user",
-        headers={
-            'Authorization': f'Bearer {access_token}',
-            'Accept': 'application/vnd.github.v3+json'
-        },
-        timeout=HTTP_TIMEOUT_SECONDS
-    )
-
-    if response.status_code != 200:
-        raise Exception(f"Failed to get user info: {response.text}")
-
-    return response.json()
+def is_allowed_host(host):
+    for allowed_host in ALLOWED_REDIRECT_HOSTS:
+        if host == allowed_host or host.endswith('.' + allowed_host):
+            return True
+    print(f"Rejected redirect to unauthorized host: {host}")
+    return False
 
 
-def check_org_membership(access_token, username):
+def is_valid_redirect_uri(uri):
     """
-    Check if user is a member of the SlideRuleEarth organization.
+    Validate that a redirect URI points to an allowed domain with a safe scheme.
+    Prevents open redirect attacks where an attacker could redirect
+    the JWT token to a malicious site.
 
-    Returns dict with is_org_member and is_org_owner flags.
-
-    Raises:
-        Exception: If GitHub API returns an unexpected error (5xx, 429, etc.)
-                   This prevents silently degrading users to non-member status
-                   during GitHub outages.
+    Security checks:
+    - Scheme must be https (or http only for localhost/127.0.0.1)
+    - Host must be in ALLOWED_REDIRECT_HOSTS
     """
-    # Try to get the user's membership in the org
-    response = requests.get(
-        f"{GITHUB_API_URL}/orgs/{GITHUB_ORG}/memberships/{username}",
-        headers={
-            'Authorization': f'Bearer {access_token}',
-            'Accept': 'application/vnd.github.v3+json'
-        },
-        timeout=HTTP_TIMEOUT_SECONDS
-    )
+    if not uri:
+        return False
 
-    if response.status_code == 200:
-        data = response.json()
-        state = data.get('state', '')
-        role = data.get('role', '')
+    try:
+        parsed = urllib.parse.urlparse(uri)
+        host = parsed.hostname
+        scheme = parsed.scheme.lower() if parsed.scheme else ''
 
-        # User must have 'active' state to be considered a member
-        is_org_member = state == 'active'
-        is_org_owner = is_org_member and role == 'admin'
+        if not host or not scheme:
+            print("Rejected redirect with missing host or scheme")
+            return False
 
-        return {
-            'is_org_member': is_org_member,
-            'is_org_owner': is_org_owner
-        }
-    elif response.status_code == 404:
-        # User is not a member of the organization - this is expected for non-members
-        return {
-            'is_org_member': False,
-            'is_org_owner': False
-        }
-    elif response.status_code == 429:
-        # Rate limit exceeded - don't silently degrade, surface the error
-        raise Exception("GitHub API rate limit exceeded. Please try again later.")
-    elif response.status_code >= 500:
-        # GitHub API error - don't silently degrade, surface the error
-        raise Exception(f"GitHub API is unavailable (status {response.status_code}). Please try again later.")
-    else:
-        # Other unexpected errors - fail explicitly rather than silently degrading
-        print(f"Unexpected response checking org membership: {response.status_code} {response.text}")
-        raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
+        is_localhost = host in ('localhost', '127.0.0.1')
+
+        # Validate scheme: only https allowed, except http for localhost
+        if scheme not in ('https', 'http'):
+            print(f"Rejected redirect with invalid scheme: {scheme}")
+            return False
+
+        # http is only allowed for localhost development
+        if scheme == 'http' and not is_localhost:
+            print(f"Rejected http redirect to non-localhost host: {host}")
+            return False
+
+        # Check against allowed hosts
+        return is_allowed_host(host)
+
+    except Exception as e:
+        print(f"Error validating redirect URI: {e}")
+        return False
 
 
-def get_user_teams(access_token, username):
+def redirect_to_frontend(redirect_uri, parms):
     """
-    Get all teams the user belongs to in the SlideRuleEarth organization.
-
-    Uses the /user/teams endpoint which works for all authenticated users,
-    unlike /orgs/{org}/teams which requires admin permissions.
-
-    Returns a tuple of (teams, team_roles) where:
-    - teams: list of team slugs
-    - team_roles: dict mapping team slug to role ('member' or 'maintainer')
-    """
-    teams = []
-    team_roles = {}
-
-    # Use /user/teams which lists teams for the authenticated user
-    # This works for all users, unlike /orgs/{org}/teams which requires admin
-    url = f"{GITHUB_API_URL}/user/teams"
-    page = 1
-    per_page = 100
-
-    while True:
-        response = requests.get(
-            url,
-            headers={
-                'Authorization': f'Bearer {access_token}',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            params={
-                'page': page,
-                'per_page': per_page
-            },
-            timeout=HTTP_TIMEOUT_SECONDS
-        )
-
-        if response.status_code != 200:
-            print(f"Failed to get user teams: {response.status_code} {response.text}")
-            break
-
-        user_teams = response.json()
-        if not user_teams:
-            break
-
-        # Filter teams by organization and get role for each
-        for team in user_teams:
-            org = team.get('organization', {})
-            if org.get('login') == GITHUB_ORG:
-                team_slug = team.get('slug')
-                if team_slug:
-                    # /user/teams doesn't include the user's role in the team
-                    # Need to call the team membership API to get role
-                    membership = get_user_team_membership(access_token, team_slug, username)
-                    if membership:
-                        teams.append(team_slug)
-                        team_roles[team_slug] = membership.get('role', 'member')
-
-        # Check if there are more pages
-        if len(user_teams) < per_page:
-            break
-        page += 1
-
-    return teams, team_roles
-
-
-def get_user_team_membership(access_token, team_slug, username):
-    """
-    Get a user's membership details in a specific team.
-    Returns None if not a member, or a dict with role info if member.
-    """
-    response = requests.get(
-        f"{GITHUB_API_URL}/orgs/{GITHUB_ORG}/teams/{team_slug}/memberships/{username}",
-        headers={
-            'Authorization': f'Bearer {access_token}',
-            'Accept': 'application/vnd.github.v3+json'
-        },
-        timeout=HTTP_TIMEOUT_SECONDS
-    )
-
-    if response.status_code == 200:
-        data = response.json()
-        # User must have 'active' state
-        if data.get('state') == 'active':
-            # role can be 'member' or 'maintainer'
-            return {
-                'role': data.get('role', 'member')
-            }
-
-    return None
-
-
-def is_user_in_team(access_token, team_slug, username):
-    """Check if a user is a member of a specific team."""
-    membership = get_user_team_membership(access_token, team_slug, username)
-    return membership is not None
-
-
-def compute_org_roles(is_org_member, is_org_owner):
-    """
-    Compute org-level roles based on membership status.
-    Returns a list of role strings.
-    """
-    roles = []
-    if is_org_owner:
-        roles = ['owner', 'member']
-    elif is_org_member:
-        roles = ['member']
-    return roles
-
-
-def format_team_roles(team_roles):
-    """
-    Format team roles into the <team>-roles structure.
-    Input: {'frontend-team': 'maintainer', 'data-team': 'member'}
-    Output: {'frontend-team-roles': ['maintainer'], 'data-team-roles': ['member']}
-    """
-    formatted = {}
-    for team, role in team_roles.items():
-        formatted[f"{team}-roles"] = [role]
-    return formatted
-
-
-def compute_accessible_clusters(username, teams, is_org_member):
-    """
-    Compute accessible clusters for a user.
-    - 'sliderule' public cluster is always included first
-    - Org members get a personal cluster with -cluster suffix (username-cluster)
-    - Teams are used directly as cluster names (no suffix)
-
-    Returns a list of cluster names the user can access.
-    """
-    accessible_clusters = ['sliderule']  # Public cluster always available
-    if is_org_member and username:
-        accessible_clusters.append(f"{username}-cluster")
-    if teams:
-        accessible_clusters.extend(teams)
-    return accessible_clusters
-
-
-def compute_deployable_clusters(username, teams, is_org_member, is_org_owner):
-    """
-    Compute clusters that the user can deploy/provision.
-
-    - Non-members: empty list (no deployment rights)
-    - Org owners: ['sliderule-green', 'sliderule-blue', '<username>-cluster', ...teams]
-    - Org members: ['<username>-cluster', ...teams]
-
-    Returns a list of cluster names the user can deploy.
-    """
-    if not is_org_member:
-        return []
-
-    deployable = []
-
-    if is_org_owner:
-        # Owners can deploy to production clusters
-        deployable.extend(['sliderule-green', 'sliderule-blue'])
-
-    # All members can deploy to their personal cluster
-    if username:
-        deployable.append(f"{username}-cluster")
-
-    # All members can deploy to their team clusters
-    if teams:
-        deployable.extend(teams)
-
-    return deployable
-
-
-def compute_token_metadata(is_org_member, is_org_owner):
-    """
-    Compute token metadata (max_nodes, cluster_ttl, timestamps) based on user role.
-
-    Returns a dict with:
-    - max_nodes: maximum compute nodes
-    - cluster_ttl_hours: max cluster runtime in hours
-    - iat: issued at timestamp (int)
-    - exp: expiration timestamp (int)
-    - iss: issuer string
-    """
-    now = datetime.now(timezone.utc)
-
-    # Determine max_nodes and cluster TTL based on role
-    if is_org_owner:
-        max_nodes = 15
-        cluster_ttl_hours = 12
-    elif is_org_member:
-        max_nodes = 7
-        cluster_ttl_hours = 8
-    else:
-        # Non-members get no access
-        max_nodes = 0
-        cluster_ttl_hours = 0
-
-    # Token expiration based on JWT_EXPIRATION_HOURS config
-    expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
-
-    return {
-        'max_nodes': max_nodes,
-        'cluster_ttl_hours': cluster_ttl_hours,
-        'iat': int(now.timestamp()),
-        'exp': int(expiration.timestamp()),
-        'iss': 'sliderule-github-oauth'
-    }
-
-
-def create_auth_token(username, accessible_clusters, deployable_clusters, token_metadata,
-                      is_org_member, is_org_owner, api_host=None):
-    """
-    Create a minimal signed JWT containing only server-essential fields.
-    This token is validated server-side only; clients should treat it as opaque.
-
-    Uses RS256 (RSA + SHA-256) with AWS KMS for signing:
-    - Private key never leaves KMS (hardware security module)
-    - Public key can be freely distributed for verification
-    - More secure than HS256 for distributed systems
-
-    Token includes:
-    - sub/username: GitHub username (subject)
-    - aud: audience claim for token validation
-    - iss: issuer URL (API Gateway endpoint for JWKS discovery)
-    - org: GitHub organization name
-    - org_member: boolean indicating org membership
-    - org_owner: boolean indicating org owner status
-    - accessible_clusters: list of cluster names the user can access
-    - deployable_clusters: list of cluster names the user can deploy/provision
-    - max_nodes: maximum compute nodes
-    - cluster_ttl_hours: max cluster runtime in hours
-    - iat: issued at timestamp
-    - exp: expiration timestamp
-
-    All other user info (teams, roles, etc.) is returned
-    separately to the client for UX purposes.
-
-    Args:
-        username: GitHub username
-        accessible_clusters: List of cluster names user can access
-        deployable_clusters: List of cluster names user can deploy
-        token_metadata: Dict with max_nodes, cluster_ttl_hours, iat, exp
-        is_org_member: Boolean indicating if user is org member
-        is_org_owner: Boolean indicating if user is org owner
-        api_host: Optional API Gateway host for issuer URL
-    """
-    # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
-    if api_host:
-        issuer = f"https://{api_host}"
-    else:
-        issuer = token_metadata['iss']
-
-    # Build payload with server-essential fields + API Gateway compatible claims
-    payload = {
-        'sub': username,  # Subject (GitHub username)
-        'username': username,
-        'aud': JWT_AUDIENCE,  # Audience claim for API Gateway JWT authorizer
-        'iss': issuer,  # Issuer URL for JWKS discovery
-        'org': GITHUB_ORG,  # Organization name
-        'org_member': is_org_member,  # For authorization decisions
-        'org_owner': is_org_owner,  # For elevated permission checks
-        'accessible_clusters': accessible_clusters,
-        'deployable_clusters': deployable_clusters,
-        'max_nodes': token_metadata['max_nodes'],
-        'cluster_ttl_hours': token_metadata['cluster_ttl_hours'],
-        'iat': token_metadata['iat'],
-        'exp': token_metadata['exp'],
-    }
-
-    # Build JWT header
-    header = {
-        'alg': JWT_ALGORITHM,
-        'typ': 'JWT'
-    }
-
-    # Encode header and payload (base64url without padding)
-    def base64url_encode(data):
-        return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
-
-    header_b64 = base64url_encode(json.dumps(header, separators=(',', ':')).encode('utf-8'))
-    payload_b64 = base64url_encode(json.dumps(payload, separators=(',', ':')).encode('utf-8'))
-
-    # Create signing input
-    signing_input = f"{header_b64}.{payload_b64}"
-
-    # Sign with KMS (RS256 = RSASSA-PKCS1-v1_5 using SHA-256)
-    signature = sign_with_kms(signing_input.encode('utf-8'))
-    signature_b64 = base64url_encode(signature)
-
-    # Assemble final JWT
-    token = f"{signing_input}.{signature_b64}"
-    return token
-
-
-def redirect_to_frontend_with_result(redirect_uri, username, is_org_member, is_org_owner, teams=None, team_roles=None, org_roles=None, accessible_clusters=None, deployable_clusters=None, token=None, token_metadata=None):
-    """
-    Redirect to frontend with successful authentication result.
-
-    The JWT token is minimal (server-essential fields only). All user info
-    and token metadata are returned separately in URL params for client UX.
-
-    Args:
-        redirect_uri: The validated redirect URI from the signed state, or None to use default
-        username: GitHub username
-        is_org_member: Whether user is an org member
-        is_org_owner: Whether user is an org owner
-        teams: List of team slugs
-        team_roles: Dict of team slug to role
-        org_roles: List of org-level roles
-        accessible_clusters: List of clusters the user can access
-        deployable_clusters: List of clusters the user can deploy/provision
-        token: JWT token (opaque to client)
-        token_metadata: Dict with max_nodes, cluster_ttl_hours, iat, exp, iss
+    Validate redirection and respond with fully build redirection url to frontend.
     """
     # Validate redirect URI to prevent open redirect attacks
-    # Only use redirect_uri if it points to an allowed domain
-    if redirect_uri and not is_valid_redirect_uri(redirect_uri):
-        print(f"Security: Rejected invalid redirect URI: {redirect_uri}")
-        redirect_uri = None
+    if not is_valid_redirect_uri(redirect_uri):
+        raise RuntimeError('Invalid request')
 
-    # Build redirect URL (fall back to configured FRONTEND_URL if invalid)
-    base_url = redirect_uri or FRONTEND_URL
+    # Set base URL after validation
+    base_url = redirect_uri
 
-    # Ensure we redirect to the callback path on the frontend
+    # Check and build proper callback path if not provided
     if not base_url.endswith('/auth/github/callback'):
         base_url = base_url.rstrip('/') + '/auth/github/callback'
 
-    params = {
-        'username': username,
-        'isOrgMember': 'true' if is_org_member else 'false',
-        'isOrgOwner': 'true' if is_org_owner else 'false',
-        'org': GITHUB_ORG
-    }
+    # Build full parameterized redirect url
+    redirect_url = f"{base_url}?{urllib.parse.urlencode(parms)}"
 
-    # Add teams as comma-separated list
-    if teams:
-        params['teams'] = ','.join(teams)
-
-    # Add org-level roles as comma-separated list
-    if org_roles:
-        params['orgRoles'] = ','.join(org_roles)
-
-    # Add team-level roles as JSON (more complex structure)
-    if team_roles:
-        params['teamRoles'] = json.dumps(team_roles)
-
-    # Add accessible clusters as comma-separated list
-    if accessible_clusters:
-        params['accessibleClusters'] = ','.join(accessible_clusters)
-
-    # Add deployable clusters as comma-separated list
-    if deployable_clusters:
-        params['deployableClusters'] = ','.join(deployable_clusters)
-
-    # Add token metadata (for client UX display)
-    if token_metadata:
-        params['maxNodes'] = str(token_metadata['max_nodes'])
-        params['clusterTtlHours'] = str(token_metadata['cluster_ttl_hours'])
-        params['tokenIssuedAt'] = str(token_metadata['iat'])
-        params['tokenExpiresAt'] = str(token_metadata['exp'])
-        params['tokenIssuer'] = token_metadata['iss']
-
-    # Add JWT token (opaque to client - used only for server auth)
-    if token:
-        params['token'] = token
-
-    redirect_url = f"{base_url}?{urllib.parse.urlencode(params)}"
-
-    return {
-        'statusCode': 302,
-        'headers': {
-            'Location': redirect_url,
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
-        },
-        'body': ''
-    }
-
-
-def redirect_to_frontend_with_error(redirect_uri, error_message):
-    """
-    Redirect to frontend with error.
-
-    Args:
-        redirect_uri: The validated redirect URI from the signed state, or None to use default
-        error_message: Error message to display
-    """
-    # Validate redirect URI to prevent open redirect attacks
-    if redirect_uri and not is_valid_redirect_uri(redirect_uri):
-        print(f"Security: Rejected invalid redirect URI in error flow: {redirect_uri}")
-        redirect_uri = None
-
-    base_url = redirect_uri or FRONTEND_URL
-
-    if not base_url.endswith('/auth/github/callback'):
-        base_url = base_url.rstrip('/') + '/auth/github/callback'
-
-    params = {
-        'error': error_message
-    }
-
-    redirect_url = f"{base_url}?{urllib.parse.urlencode(params)}"
-
+    # Return response
     return {
         'statusCode': 302,
         'headers': {
@@ -1026,20 +774,6 @@ def redirect_to_frontend_with_error(redirect_uri, error_message):
 # =============================================================================
 # Device Flow handlers (for CLI/Python clients)
 # =============================================================================
-
-def json_response(status_code, body):
-    """Return a JSON API response with CORS headers."""
-    return {
-        'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        },
-        'body': json.dumps(body)
-    }
-
 
 def handle_device_code_request(event):
     """
@@ -1089,10 +823,10 @@ def handle_device_code_request(event):
         })
 
     except Exception as e:
-        print(f"Error in device code request: {str(e)}")
+        print(f"Error in device code request: {e}")
         return json_response(500, {
             'error': 'internal_error',
-            'error_description': str(e)
+            'error_description': 'error in device code request'
         })
 
 
@@ -1187,83 +921,33 @@ def handle_device_poll(event):
                 'error_description': 'No access token in response'
             })
 
-        # Get user info
-        user_info = get_github_user(access_token)
-        username = user_info.get('login')
+        # Authenticate user to get token and metadata
+        token, metadata = authenticate_user(access_token, event)
 
-        if not username:
-            return json_response(500, {
-                'status': 'error',
-                'error': 'no_username',
-                'error_description': 'Could not get GitHub username'
-            })
-
-        # Check organization membership
-        membership = check_org_membership(access_token, username)
-
-        # Get user's teams in the organization (only if they're a member)
-        teams = []
-        team_roles = {}
-        if membership['is_org_member']:
-            teams, team_roles = get_user_teams(access_token, username)
-            print(f"User {username} belongs to teams: {teams}, team_roles: {team_roles}")
-
-        # Compute org-level roles and accessible/deployable clusters
-        org_roles = compute_org_roles(membership['is_org_member'], membership['is_org_owner'])
-        accessible_clusters = compute_accessible_clusters(username, teams, membership['is_org_member'])
-        deployable_clusters = compute_deployable_clusters(
-            username, teams, membership['is_org_member'], membership['is_org_owner']
-        )
-        print(f"User {username} org_roles: {org_roles}, accessible_clusters: {accessible_clusters}, deployable_clusters: {deployable_clusters}")
-
-        # Compute token metadata (max_nodes, cluster_ttl, timestamps)
-        token_metadata = compute_token_metadata(membership['is_org_member'], membership['is_org_owner'])
-
-        # Get API host for issuer URL (enables JWKS discovery at {iss}/.well-known/jwks.json)
-        headers = event.get('headers', {})
-        api_host = headers.get('host', '')
-
-        # Create minimal signed JWT token (only server-essential fields)
-        auth_token = create_auth_token(
-            username=username,
-            accessible_clusters=accessible_clusters,
-            deployable_clusters=deployable_clusters,
-            token_metadata=token_metadata,
-            is_org_member=membership['is_org_member'],
-            is_org_owner=membership['is_org_owner'],
-            api_host=api_host
-        )
-
-        # Build response with user info and token metadata (JWT is opaque to client)
-        response_data = {
-            'status': 'success',
-            'username': username,
-            'is_org_member': membership['is_org_member'],
-            'is_org_owner': membership['is_org_owner'],
-            'teams': teams,
-            'team_roles': team_roles,
-            'org_roles': org_roles,
-            'accessible_clusters': accessible_clusters,
-            'deployable_clusters': deployable_clusters,
-            'token': auth_token,
-            'organization': GITHUB_ORG,
-            # Token metadata for client UX display
-            'max_nodes': token_metadata['max_nodes'],
-            'cluster_ttl_hours': token_metadata['cluster_ttl_hours'],
-            'token_issued_at': token_metadata['iat'],
-            'token_expires_at': token_metadata['exp'],
-            'token_issuer': token_metadata['iss']
-        }
-
-        return json_response(200, response_data)
+        # Response with a successful authentication
+        return json_response(200, {"token": token, "metadata": metadata})
 
     except Exception as e:
-        print(f"Error in device poll: {str(e)}")
+        print(f"Error in device poll: {e}")
         return json_response(500, {
             'status': 'error',
             'error': 'internal_error',
-            'error_description': str(e)
+            'error_description': 'error in device poll'
         })
+
+
+def json_response(status_code, body):
+    """Return a JSON API response with CORS headers."""
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        },
+        'body': json.dumps(body)
+    }
 
 
 # =============================================================================
@@ -1279,11 +963,9 @@ def handle_jwks(event):
     JWKS is the standard format for distributing public keys for JWT verification.
     This format is compatible with most JWT libraries and OIDC implementations.
     """
-    #
     # Local Utility Function
     #   Parse DER-encoded RSA SubjectPublicKeyInfo returned by KMS.get_public_key()
     #   to extract PEM, RSA modulus n, and exponent e
-    #
     def parse_rsa_public_key_spki(der_bytes):
         # parse top-level SubjectPublicKeyInfo
         spki, _ = decoder.decode(der_bytes, asn1Spec=SubjectPublicKeyInfo())
@@ -1302,16 +984,11 @@ def handle_jwks(event):
         # return
         return {"pem": pem, "n": n, "e": e}
 
-    #
     # Local Utility Function
     #   Base64url-encode an unsigned big integer
-    #
     def b64url_uint(n):
         return base64.urlsafe_b64encode(n.to_bytes((n.bit_length() + 7) // 8, "big")).rstrip(b"=").decode()
 
-    #
-    # Start of Function Definition
-    #
     try:
         # import dependencies needed for just this function
         from pyasn1.codec.der import decoder
@@ -1351,5 +1028,39 @@ def handle_jwks(event):
         print(f"Error generating JWKS: {e}")
         return json_response(500, {
             'error': 'jwks_error',
-            'error_description': str(e)
+            'error_description': 'error generating JWKS'
         })
+
+
+# =============================================================================
+# Lambda Function for Login
+# =============================================================================
+
+def lambda_handler(event, context):
+    """
+    Main Lambda handler - routes requests based on path.
+    """
+    path = event.get('rawPath', '')
+    method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
+
+    print(f"Received request: {method} {path}")
+
+    # Web client Authorization Code flow
+    if path == '/auth/github/login':
+        return handle_login(event)
+    elif path == '/auth/github/callback':
+        return handle_callback(event)
+    # Device Flow for CLI/Python clients
+    elif path == '/auth/github/device':
+        return handle_device_code_request(event)
+    elif path == '/auth/github/device/poll':
+        return handle_device_poll(event)
+    # Public key endpoint for JWT verification
+    elif path == '/auth/github/jwks' or path == '/.well-known/jwks.json':
+        return handle_jwks(event)
+    # Unknown path
+    else:
+        return {
+            'statusCode': 404,
+            'body': json.dumps({'error': 'Not found'})
+        }

@@ -320,8 +320,15 @@ cluster-take-offline: ## destroy dns entry of public cluster
 # Authenticator Targets
 ########################
 
+JWT_AUDIENCE ?= sliderule
+GITHUB_ORG ?= SlideRuleEarth
 GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
-FRONTEND_URL_REDIRECT ?= https://testsliderule.org
+CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
+ALLOWED_REDIRECT_HOSTS ?= 'client.slideruleearth.io testsliderule.org localhost 127.0.0.1'
+HOSTED_ZONE_ID := $(shell aws route53 list-hosted-zones-by-name \
+  --dns-name $(DOMAIN) \
+  --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
+  --output text | sed 's|/hostedzone/||')
 
 HELLO_ISS ?= https://zfdgbva9v1.execute-api.us-west-2.amazonaws.com
 
@@ -362,8 +369,12 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--template-body file://cloudformation/authenticator.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
-						ParameterKey=FrontendUrl,ParameterValue=$(FRONTEND_URL_REDIRECT) \
+		--parameters	ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
+						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
+						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
+						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
 	aws cloudformation wait stack-create-complete --stack-name authenticator
@@ -382,7 +393,7 @@ authenticator-delete: ## deletes the lambda authenticator functions
 authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
 	@read -s -p "Enter GitHub OAuth Client Secret: " GITHUB_OAUTH_APP_CLIENT_SECRET; echo ""; \
 	aws secretsmanager create-secret \
-		--name sliderule/github-oauth-client-secret \
+		--name $(CLIENT_SECRET_NAME) \
 		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
 		--description "GitHub OAuth Client Secret for SlideRule"
 

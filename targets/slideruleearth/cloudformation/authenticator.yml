@@ -2,20 +2,22 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'GitHub OAuth Lambda for SlideRule Login'
 
 Parameters:
+  JwtAudience:
+    Type: String
+  GitHubOrg:
+    Type: String
   GitHubClientId:
     Type: String
-    Description: GitHub OAuth App Client ID
-  FrontendUrl:
+  ClientSecretName:
     Type: String
-    Description: Frontend URL for redirects after OAuth
+  HostedZoneId:
+    Type: String
+  AllowedRedirectHosts:
+    Type: String
   ProjectBucket:
     Type: String
   LambdaZipFile:
     Type: String
-  JwtAudience:
-    Type: String
-    Default: sliderule
-    Description: JWT audience claim - services validating the token should check this value
 
 Resources:
   # HMAC Signing Key for OAuth State (CSRF protection)
@@ -73,7 +75,7 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource:
                   # Reference existing GitHub client secret (created manually)
-                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:sliderule/github-oauth-client-secret*'
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ClientSecretName}*'
                   # HMAC key for OAuth state signing
                   - !Ref HMACSigningKeySecret
         - PolicyName: KMSSigningAccess
@@ -105,26 +107,24 @@ Resources:
       Environment:
         Variables:
           GITHUB_CLIENT_ID: !Ref GitHubClientId
-          GITHUB_ORG: SlideRuleEarth
-          FRONTEND_URL: !Ref FrontendUrl
-          CLIENT_SECRET_NAME: 'sliderule/github-oauth-client-secret'
-          # HMAC key for OAuth state signing (CSRF protection)
+          GITHUB_ORG: !Ref GitHubOrg
+          CLIENT_SECRET_NAME: !Ref ClientSecretName
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
-          # KMS key for JWT signing (RS256 - asymmetric)
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
-          # JWT audience claim for API Gateway JWT authorizer validation
-          JWT_AUDIENCE: sliderule
+          ALLOWED_REDIRECT_HOSTS: !Ref AllowedRedirectHosts
+          JWT_AUDIENCE: !Ref JwtAudience
 
   # API Gateway HTTP API
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: !Sub 'sliderule-github-oauth'
+      Name: sliderule-github-oauth
       Description: GitHub OAuth API for SlideRule
       ProtocolType: HTTP
       CorsConfiguration:
         AllowOrigins:
           - !Ref FrontendUrl
+          - https://login.${Domain}
         AllowMethods:
           - GET
           - POST
@@ -208,24 +208,64 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
 
+  # ACM Certificate
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub "login.${Domain}"
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub "login.${Domain}"
+          HostedZoneId: !Ref HostedZoneId
+
+  # API Gateway Custom Domain Name
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    DependsOn: Certificate
+    Properties:
+      DomainName: !Sub "login.${Domain}"
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref Certificate
+
+  # API Mapping (connects custom domain to API)
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+
+  # Route53 Alias Record
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Sub "login.${Domain}"
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false
+
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway endpoint URL
     Value: !GetAtt HttpApi.ApiEndpoint
     Export:
-      Name: !Sub 'sliderule-github-oauth-api-url'
+      Name: sliderule-github-oauth-api-url
 
   LambdaFunctionArn:
     Description: Lambda function ARN
     Value: !GetAtt GitHubOAuthLambda.Arn
     Export:
-      Name: !Sub 'sliderule-github-oauth-lambda-arn'
+      Name: sliderule-github-oauth-lambda-arn
 
   JWTSigningKeyArn:
     Description: KMS Key ARN for JWT signing (RS256) - use GetPublicKey to retrieve the public key for verification
     Value: !GetAtt JWTSigningKey.Arn
     Export:
-      Name: !Sub 'sliderule-github-oauth-jwt-signing-key-arn'
+      Name: sliderule-github-oauth-jwt-signing-key-arn
 
   JwksEndpoint:
     Description: JWKS endpoint URL for JWT verification (standard OIDC format)
