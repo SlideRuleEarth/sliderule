@@ -364,7 +364,7 @@ def get_accessible_clusters(username, teams, org_roles):
     """
     # Initialize accessible clusters
     #   public cluster always available, along with user provided
-    accessible_clusters = ['sliderule', '*']
+    accessible_clusters = ['sliderule']
 
     # Add user cluster for members
     if 'member' in org_roles and username:
@@ -373,6 +373,10 @@ def get_accessible_clusters(username, teams, org_roles):
     # Add team clusters for members
     if teams:
         accessible_clusters.extend(teams)
+
+    # Owners can access anything
+    if 'owner' in org_roles:
+        accessible_clusters.append('*')
 
     # Return accessible clustera
     return accessible_clusters
@@ -389,10 +393,6 @@ def get_deployable_clusters(username, teams, org_roles):
     if 'member' not in org_roles:
         return deployable
 
-    # Owners can deploy anything
-    if 'owner' in org_roles:
-        deployable.extend(['*'])
-
     # All members can deploy to their personal cluster
     if username:
         deployable.append(f"{username}-cluster")
@@ -400,6 +400,10 @@ def get_deployable_clusters(username, teams, org_roles):
     # All members can deploy to their team clusters
     if teams:
         deployable.extend(teams)
+
+    # Owners can deploy anything
+    if 'owner' in org_roles:
+        deployable.extend(['*'])
 
     # Return deployable clusters
     return deployable
@@ -602,6 +606,9 @@ def handle_callback(event):
         access_token = exchange_code_for_token(code, event)
         token, metadata = authenticate_user(access_token, event)
 
+        # Build known clusters (what the user can possibly connect to)
+        known_clusters = [cluster for cluster in metadata['accessible_clusters'] if cluster != "*"]
+
         # Build parameters for callback
         parms = {
             'username': metadata['username'],
@@ -610,7 +617,7 @@ def handle_callback(event):
             'org': GITHUB_ORG,
             'teams': ','.join(metadata['teams']),
             'orgRoles': ','.join(metadata['org_roles']),
-            'accessibleClusters': ','.join(metadata['accessible_clusters']),
+            'knownClusters': ','.join(known_clusters),
             'deployableClusters': ','.join(metadata['deployable_clusters']),
             'maxNodes': str(metadata['max_nodes']),
             'maxTTL': str(metadata['max_ttl']),
