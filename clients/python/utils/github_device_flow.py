@@ -3,17 +3,6 @@ GitHub Organization Authentication for SlideRule Python Client
 
 This module provides Device Flow authentication to verify membership
 in the SlideRuleEarth GitHub organization.
-
-Usage:
-    from github_auth import GitHubOrgAuth
-
-    auth = GitHubOrgAuth()
-    result = auth.authenticate()
-
-    if result['is_member']:
-        print(f"Welcome {result['username']}! You have member access.")
-    else:
-        print(f"Hello {result['username']}. You are not a member of SlideRuleEarth.")
 """
 
 import json
@@ -29,9 +18,6 @@ class AuthResult(TypedDict):
     """Result of GitHub authentication."""
     success: bool
     username: Optional[str]
-    is_member: bool
-    is_owner: bool
-    organization: str
     error: Optional[str]
 
 
@@ -44,7 +30,7 @@ class GitHubOrgAuth:
     """
 
     # Default API URL (test environment)
-    DEFAULT_API_URL = "https://hn251osfa1.execute-api.us-west-2.amazonaws.com"
+    DEFAULT_API_URL = "https://login.slideruleearth.io"
 
     def __init__(self, api_url: Optional[str] = None, auto_open_browser: bool = True):
         """
@@ -114,26 +100,14 @@ class GitHubOrgAuth:
 
         while time.time() - start_time < actual_timeout:
             result = self._poll_for_token(device_code)
-            print("Poll Response: ", result)
 
             if result.get('status') == 'success':
                 print(f"\nAuthentication successful!")
-                print(f"Logged in as: {result['username']}")
-                # Use is_org_member/is_org_owner from Lambda response
-                is_member = result.get('is_org_member', False)
-                is_owner = result.get('is_org_owner', False)
-                if is_member:
-                    role = "Owner" if is_owner else "Member"
-                    print(f"Organization role: {role}")
-                else:
-                    print(f"Not a member of {result['organization']}")
+                print(f"Logged in as: {result['metadata']['username']}")
 
                 return AuthResult(
                     success=True,
-                    username=result['username'],
-                    is_member=is_member,
-                    is_owner=is_owner,
-                    organization=result['organization'],
+                    username=result['metadata']['username'],
                     error=None
                 )
 
@@ -182,9 +156,6 @@ class GitHubOrgAuth:
         return AuthResult(
             success=False,
             username=None,
-            is_member=False,
-            is_owner=False,
-            organization='SlideRuleEarth',
             error=error_message
         )
 
@@ -223,10 +194,7 @@ def main():
     result = auth.authenticate(timeout=args.timeout)
 
     if result['success']:
-        if result['is_member']:
-            print(f"\nYou have access to member-only features.")
-        else:
-            print(f"\nSome features are only available to organization members.")
+        print(f"\nnAuthentication succeeded: {result['username']}")
     else:
         print(f"\nAuthentication failed: {result['error']}")
         exit(1)

@@ -70,15 +70,6 @@ AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
-AUTHENTICATOR_URL ?= login.$(DOMAIN)
-PROVISIONER_URL ?= provisioner.$(DOMAIN)
-JWT_AUDIENCE ?= sliderule
-CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
-HOSTED_ZONE_ID := $(shell aws route53 list-hosted-zones-by-name \
-  --dns-name $(DOMAIN) \
-  --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
-  --output text | sed 's|/hostedzone/||')
-
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 ARCH ?= $(shell arch)
@@ -88,6 +79,15 @@ CONFIG ?= release
 DOMAIN ?= slideruleearth.io
 ORGANIZATION ?= developers
 VERSION ?= latest
+
+AUTHENTICATOR_URL ?= login.$(DOMAIN)
+PROVISIONER_URL ?= provisioner.$(DOMAIN)
+JWT_AUDIENCE ?= sliderule
+CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
+HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
+  --dns-name $(DOMAIN) \
+  --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
+  --output text | sed 's|/hostedzone/||')
 
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
@@ -509,11 +509,6 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
 	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" \
 	--output text)
 
-ZONE_ID=$(shell aws route53 list-hosted-zones-by-name \
-	--dns-name slideruleearth.io \
-	--query "HostedZones[0].Id" \
-	--output text | sed 's|/hostedzone/||')
-
 WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
 WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
 
@@ -586,7 +581,7 @@ website-create: ## create website stack
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-east-1 \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=HostedZoneId,ParameterValue=$(ZONE_ID) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET) \
 						ParameterKey=CloudFrontFunctionARN,ParameterValue=$(CFFUNC_ID)
 	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name website

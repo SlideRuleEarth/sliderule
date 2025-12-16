@@ -31,13 +31,14 @@ import os
 import netrc
 import requests
 import threading
-import socket
 import json
 import struct
 import ctypes
 import time
 import logging
 import numpy
+import webbrowser
+from urllib.parse import urljoin
 from sliderule import version
 
 ###############################################################################
@@ -138,8 +139,6 @@ class Session:
         log_handler     = None,
         decode_aux      = True,
         rethrow         = False,
-        ps_username     = None,
-        ps_password     = None,
         github_token    = None):
         '''
         creates and configures a sliderule session
@@ -153,14 +152,12 @@ class Session:
         self.throw_exceptions = rethrow
 
         # initialize to empty
-        self.ps_refresh_token = None
         self.ps_access_token = None
         self.ps_token_exp = None
         self.ps_lock = threading.Lock()
         self.console = None
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
-        self.local_dns = {} # global dictionary of DNS entries to override
 
         # configure logging
         self.set_verbose(verbose, loglevel)
@@ -180,12 +177,11 @@ class Session:
         }
 
         # configure credentials (if any) for organization
-        if organization == 0:
+        if organization != 0:
+            self.authenticate(organization, github_token=github_token, verbose=verbose)
+            self.scaleout(desired_nodes, time_to_live)
+        else:
             organization = self.PUBLIC_ORG
-        self.authenticate(organization, ps_username=ps_username, ps_password=ps_password, github_token=github_token)
-
-        # set cluster to desired number of nodes (if permitted based on credentials)
-        self.scaleout(desired_nodes, time_to_live)
 
     #
     #  source
@@ -356,45 +352,7 @@ class Session:
         # initialize local variables
         requested_nodes = 0
 
-        # update number of nodes
-        if isinstance(desired_nodes, int):
-            headers = {}
-            rsps_body = {}
-            requested_nodes = desired_nodes
-            self.__buildauthheader(headers)
-
-            # get boundaries of cluster and calculate nodes to request
-            try:
-                host = "https://ps." + self.service_domain + "/api/org_num_nodes/" + self.service_org + "/"
-                rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout)
-                rsps_body = rsps.json()
-                rsps.raise_for_status()
-                requested_nodes = max(min(desired_nodes, rsps_body["max_nodes"]), rsps_body["min_nodes"])
-                if requested_nodes != desired_nodes:
-                    logger.info("Provisioning system desired nodes overridden to {}".format(requested_nodes))
-            except requests.exceptions.HTTPError as e:
-                logger.info('{}'.format(e))
-                logger.info('Provisioning system status request returned error => {}'.format(rsps_body["error_msg"]))
-                if self.throw_exceptions:
-                    raise
-
-            # Request number of nodes in cluster
-            try:
-                if isinstance(time_to_live, int):
-                    host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes_ttl/" + self.service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
-                    rsps = self.session.post(host, headers=headers, timeout=self.rqst_timeout)
-                else:
-                    host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes/" + self.service_org + "/" + str(requested_nodes) + "/"
-                    rsps = self.session.put(host, headers=headers, timeout=self.rqst_timeout)
-                rsps_body = rsps.json()
-                rsps.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                logger.info('{}'.format(e))
-                logger.error('Provisioning system update request error => {}'.format(rsps_body["error_msg"]))
-                if self.throw_exceptions:
-                    raise
-
-        # Get number of nodes currently registered
+        # get number of nodes currently registered
         try:
             rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
             available_servers = rsps["nodes"]
@@ -402,6 +360,37 @@ class Session:
             logger.debug(f'Failed to retrieve number of nodes registered: {e}')
             available_servers = 0
 
+        # update number of nodes
+        if isinstance(desired_nodes, int):
+            headers = {}
+            rsps_body = {}
+            requested_nodes = desired_nodes
+            self.__buildauthheader(headers)
+
+            # build request
+            url = "https://provisioner." + self.service_domain + "/deploy"
+            payload = json.dumps({
+                "Cluster": self.service_org,
+                "IsPublic": False,
+                "NodeCapacity": desired_nodes,
+                "TTL": time_to_live
+            })
+
+            # make provisioning request
+            try:
+                rsps = self.session.post(url, data=payload, headers=headers, timeout=self.rqst_timeout)
+                rsps_body = rsps.json()
+                rsps.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                logger.error(f'Provisioning system update request error => {rsps_body.get("Exception")}')
+                if self.throw_exceptions:
+                    raise
+            except Exception as e:
+                logger.info(f'Failed to update available servers: {e}')
+                if self.throw_exceptions:
+                    raise
+
+        # return status
         return available_servers, requested_nodes
 
     #
@@ -441,69 +430,52 @@ class Session:
     #
     # authenticate
     #
-    def authenticate (self, ps_organization, ps_username=None, ps_password=None, github_token=None):
+    def authenticate (self, organization, github_token=None, verbose=False):
         '''
-        gets a bearer token (ps_access_token) from the provisioning system to use in requests
-        to private clusters
+        gets a bearer token (ps_access_token) from sliderule
+        to use in requests to private clusters
         '''
         # initialize local variables
         login_status = False
-        ps_url = "ps." + self.service_domain
+        github_user_token = os.environ.get("SLIDERULE_GITHUB_TOKEN", github_token)
+        login_url = "https://login." + self.service_domain
+        metadata = {}
 
         # set organization on any authentication request
-        self.service_org = ps_organization
+        self.service_org = organization
 
         # check for direct or public access
         if self.service_org == None:
             return True
 
-        # attempt retrieving from environment
-        if not github_token and not ps_username and not ps_password:
-            github_token = os.environ.get("PS_GITHUB_TOKEN")
-            ps_username = os.environ.get("PS_USERNAME")
-            ps_password = os.environ.get("PS_PASSWORD")
+        # authenticate user
+        try:
+            if github_user_token:
+                # github user tokens currently unsupported
+                rsps = {'status': 'unsupported'}
+            else:
+                # attempt device flow login
+                rsps = self.__deviceflow(login_url)
 
-        # attempt retrieving from netrc file
-        if not github_token and not ps_username and not ps_password:
-            try:
-                netrc_file = netrc.netrc()
-                login_credentials = netrc_file.hosts[ps_url]
-                ps_username = login_credentials[0]
-                ps_password = login_credentials[2]
-            except Exception as e:
-                pass
-
-        # build authentication request
-        user = None
-        if github_token:
-            user = "github"
-            rqst = {"org_name": ps_organization, "access_token": github_token}
-            headers = {'Content-Type': 'application/json'}
-            api = "https://" + ps_url + "/api/org_token_github/"
-        elif ps_username or ps_password:
-            user = "local"
-            rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
-            headers = {'Content-Type': 'application/json'}
-            api = "https://" + ps_url + "/api/org_token/"
-
-        # authenticate to provisioning system
-        if user:
-            try:
-                rsps = self.session.post(api, data=json.dumps(rqst), headers=headers, timeout=self.rqst_timeout)
-                rsps.raise_for_status()
-                rsps = rsps.json()
-                self.ps_refresh_token = rsps["refresh"]
-                self.ps_access_token = rsps["access"]
-                self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+            # set internal session data
+            if rsps['status'] == 'success':
+                now = time.time()
+                metadata = rsps['metadata']
+                self.ps_access_token = rsps['token']
+                self.ps_token_exp =  int(((metadata['exp'] - now) / 2) + now)
                 login_status = True
-            except:
-                if ps_organization != self.PUBLIC_ORG:
-                    logger.error("Unable to authenticate %s user to %s" % (user, api))
 
-        # return login status
-        if ps_organization != self.PUBLIC_ORG:
-            logger.info(f'Login status to {self.service_domain}/{self.service_org}: {login_status and "success" or "failure"}')
-        return login_status
+        except Exception as e:
+            logger.error(f'Failure attempting to authenticate: {e}')
+
+        # log status
+        if organization != self.PUBLIC_ORG:
+            logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
+        if verbose:
+            logger.info(f'Login metadata\n{json.dumps(metadata, indent=2)}')
+
+        # return response metadata
+        return metadata
 
     #
     #  manager
@@ -570,6 +542,72 @@ class Session:
             yield self.source
 
     #
+    #  __deviceflow
+    #
+    def __deviceflow(self, login_url, timeout=60):
+        """
+        Prompt the user through the device flow authentication to GitHub
+        """
+        result = {'status': 'error'}
+        try:
+            # get device info from github
+            response            = self.session.post(login_url + '/auth/github/device')
+            device_info         = response.json()
+            user_code           = device_info['user_code']
+            device_code         = device_info['device_code']
+            verification_uri    = device_info.get('verification_uri_complete') or device_info['verification_uri']
+            interval            = device_info.get('interval', 5) # default to check every 5 seconds
+            expires_in          = device_info.get('expires_in', timeout)
+
+            # display instructions to user
+            print("\n" + "=" * 60)
+            print("GitHub Authentication Required")
+            print("=" * 60)
+            print(f"\nPlease visit: {verification_uri}")
+            print(f"\nAnd enter this code: {user_code}")
+            print("\n" + "=" * 60)
+
+            # Open browser if possible
+            try:
+                print("\nAttempting to open browser... ", end='')
+                webbrowser.open(verification_uri)
+                print("success.")
+            except Exception:
+                print("failed (must manually open).")
+
+            # Poll for authorization
+            print("\nWaiting for authorization ", end='')
+            start_time = time.time()
+            actual_timeout = min(timeout, expires_in)
+            while time.time() - start_time < actual_timeout:
+                print(".", end='')
+                response = self.session.post(login_url + '/auth/github/device/poll', json={'device_code': device_code}, headers={'Content-Type': 'application/json'})
+                result = response.json()
+                if result['status'] == 'success':
+                    print(f"success")
+                    break
+                elif result['status'] == 'error':
+                    logger.error(f'error polling for authorization: {result.get('error')}')
+                else: # result['status'] == 'pending'
+                    wait_interval = result.get('interval', interval)
+                    time.sleep(wait_interval)
+
+            # if here then we failed to authenticate
+            print('failure')
+            logger.error(f'failed to authenticate to {login_url}')
+
+        # handle exceptions
+        except requests.RequestException as e:
+            logger.error(f"request failed: {e}")
+        except json.JSONDecodeError:
+            logger.error(f"invalid json response")
+        except Exception as e:
+            logger.error(f"internal error: {e}")
+
+        # return result (which includes status)
+        return result
+
+    #
     #  __buildauthheader
     #
     def __buildauthheader(self, headers, force_refresh=False):
@@ -579,19 +617,17 @@ class Session:
         '''
         if self.ps_access_token:
             # Check if Refresh Needed
+            now = time.time()
             with self.ps_lock:
-                if time.time() > self.ps_token_exp or force_refresh:
-                    host = "https://ps." + self.service_domain + "/api/org_token/refresh/"
-                    rqst = {"refresh": self.ps_refresh_token}
-                    hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.ps_access_token}
+                if now > self.ps_token_exp or force_refresh:
+                    host = "https://login." + self.service_domain + "/auth/refresh/"
+                    hdrs = {'Authorization': 'Bearer ' + self.ps_access_token}
                     try:
-                        rsps = self.session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=self.rqst_timeout).json()
-                        self.ps_refresh_token = rsps["refresh"]
-                        self.ps_access_token = rsps["access"]
-                        self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+                        rsps = self.session.get(host, headers=hdrs, timeout=self.rqst_timeout).json()
+                        self.ps_access_token = rsps["token"]
+                        self.ps_token_exp = int(((rsps['exp'] - now) / 2) + now)
                     except Exception as e:
                         logger.error(f'Failed to refresh token: {e}')
-                        logger.error(f'Provisioning system response: {rsps}')
             # Build Authentication Header
             headers['Authorization'] = 'Bearer ' + self.ps_access_token
 

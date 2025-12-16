@@ -179,6 +179,14 @@ Resources:
       RouteKey: 'POST /auth/github/device/poll'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
+  # Route: POST /auth/refresh (get refresh token)
+  JwksRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /auth/refresh'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
   # Route: GET /auth/github/jwks (JWKS endpoint for JWT verification)
   JwksRoute:
     Type: AWS::ApiGatewayV2::Route

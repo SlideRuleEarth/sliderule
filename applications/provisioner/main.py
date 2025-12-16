@@ -195,6 +195,7 @@ def lambda_deploy(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
+        print(f"Exception in deploy: {e}")
         state["Exception"] = f'{e}'
         state["Status"] = False
 
@@ -239,6 +240,7 @@ def lambda_extend(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
+        print(f"Exception in extend: {e}")
         state["Exception"] = f'{e}'
         state["Status"] = False
 
@@ -287,6 +289,7 @@ def lambda_destroy(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
+        print(f"Exception in destroy: {e}")
         state["Exception"] = f'{e}'
         state["Status"] = False
 
@@ -332,6 +335,7 @@ def lambda_status(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
+        print(f"Exception in status: {e}")
         state["Exception"] = f'{e}'
         state["Status"] = False
 
@@ -380,6 +384,7 @@ def lambda_events(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
+        print(f"Exception in events: {e}")
         state["Exception"] = f'{e}'
         state["Status"] = False
 
@@ -434,6 +439,7 @@ def lambda_test(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
+        print(f"Exception in test: {e}")
         state["Exception"] = f'{e}'
         state["Status"] = False
 
@@ -463,6 +469,7 @@ def lambda_gateway(event, context):
     elif path == '/test':
         return lambda_test(event, context)
     else:
+        print(f"Path not found: {path}")
         return {
             'statusCode': 404,
             'body': json.dumps({'error': 'not found'})

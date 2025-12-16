@@ -325,24 +325,17 @@ def scaleout(desired_nodes, time_to_live, session=None):
 #
 # authenticate
 #
-def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None, session=None):
+def authenticate (ps_organization, github_token=None, session=None):
     '''
     Authenticate to SlideRule Provisioning System
-    The username and password can be provided the following way in order of priority:
-    (1) The passed in arguments `github_token` or `ps_username` and `ps_password`;
-    (2) The O.S. environment variables `PS_GITHUB_TOKEN` or `PS_USERNAME` and `PS_PASSWORD`;
-    (3) The `ps.<url>` entry in the .netrc file in your home directory
+    (1) The passed in argument `github_token`;
+    (2) The O.S. environment variables `SLIDERULE_GITHUB_TOKEN`;
+    (3) The GitHub device flow;
 
     Parameters
     ----------
         ps_organization:    str
                             name of the SlideRule organization the user belongs to
-
-        ps_username:        str
-                            SlideRule provisioning system account name
-
-        ps_password:        str
-                            SlideRule provisioning system account password
 
         github_token:       str
                             GitHub access token (minimum scope/permissions require)
@@ -359,7 +352,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None, github_to
         True
     '''
     session = checksession(session)
-    return session.authenticate(ps_organization, ps_username, ps_password, github_token)
+    return session.authenticate(ps_organization, github_token)
 
 #
 # gps2utc

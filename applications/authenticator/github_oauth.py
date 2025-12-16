@@ -217,6 +217,31 @@ def verify_signed_state(state):
         return False, None, "Invalid state format"
 
 
+def verify_with_kms(message_bytes, signature):
+    """
+    Verify a signature using KMS public key.
+    Returns True if signature is valid, False otherwise
+    """
+    try:
+        if not JWT_SIGNING_KEY_ARN:
+            raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
+
+        kms = get_kms_client()
+        response = kms.verify(
+            KeyId=JWT_SIGNING_KEY_ARN,
+            Message=message_bytes,
+            MessageType='RAW',
+            Signature=signature,
+            SigningAlgorithm='RSASSA_PKCS1_V1_5_SHA_256'
+        )
+
+        return response.get('SignatureValid', False)
+
+    except Exception as e:
+        print(f"KMS verification error: {e}")
+        return False
+
+
 # =============================================================================
 # GitHub Helper Functions
 # =============================================================================
@@ -420,7 +445,7 @@ def create_auth_token(metadata):
         'typ': 'JWT'
     }
 
-    # Helper Function
+    # Helper function
     def base64url_encode(data):
         return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
 
@@ -438,6 +463,62 @@ def create_auth_token(metadata):
     # Assemble final JWT
     token = f"{signing_input}.{signature_b64}"
     return token
+
+
+def refresh_auth_token(token, event):
+    """
+    Refresh an existing JWT by extending its expiration time.
+    Validates the current token and issues a new one with updated timestamps.
+    """
+    # Helper function
+    def base64url_decode(data):
+        # Add padding if needed
+        padding = 4 - (len(data) % 4)
+        if padding != 4:
+            data += '=' * padding
+        return base64.urlsafe_b64decode(data)
+
+    try:
+        # Split token into parts
+        parts = token.split('.')
+        if len(parts) != 3:
+            raise ValueError("Invalid token format")
+        header_b64, payload_b64, signature_b64 = parts
+
+        # Decode header and payload
+        header = json.loads(base64url_decode(header_b64))
+        payload = json.loads(base64url_decode(payload_b64))
+
+        # Verify token algorithm
+        if header.get('alg') != JWT_ALGORITHM:
+            raise ValueError(f"Invalid algorithm: expected {JWT_ALGORITHM}")
+
+        # Verify token signature using KMS
+        signing_input = f"{header_b64}.{payload_b64}"
+        signature = base64url_decode(signature_b64)
+        if not verify_with_kms(signing_input.encode('utf-8'), signature):
+            raise ValueError("Invalid token signature")
+
+        # Check if token is expired
+        now = datetime.now(timezone.utc)
+        exp = payload.get('exp')
+        if not exp:
+            raise ValueError("Token missing expiration")
+        exp_time = datetime.fromtimestamp(exp, tz=timezone.utc)
+        if now > exp_time:
+            raise ValueError("Token expired and cannot be refreshed")
+
+        # Create new metadata with updated timestamps
+        metadata = payload.copy()
+        new_expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
+        metadata['iat'] = int(now.timestamp())
+        metadata['exp'] = int(new_expiration.timestamp())
+
+        # Generate new token and expiration
+        return create_auth_token(metadata), metadata['exp']
+
+    except Exception as e:
+        raise Exception(f"Token refresh failed: {e}")
 
 
 def authenticate_user(access_token, event):
@@ -897,6 +978,30 @@ def json_response(status_code, body):
 
 
 # =============================================================================
+# Refresh tokens
+# =============================================================================
+
+def handle_refresh(event):
+    """Handle JWT refresh requests"""
+    try:
+        # Get token from Authorization header
+        auth_header = event.get('headers', {}).get('authorization', '')
+        if not auth_header.startswith('Bearer '):
+            raise RuntimeError('Missing or invalid authorization header')
+        old_token = auth_header.replace('Bearer ', '')
+
+        # Refresh the token
+        token, expiration = refresh_auth_token(old_token, event)
+        return json_response(200, {'token': token, 'exp': expiration})
+
+    except Exception as e:
+        print(f"Token refresh failed: {e}")
+        return json_response(401, {
+            'error': 'token_refresh_failed',
+            'error_description': 'failed to refresh token'
+        })
+
+# =============================================================================
 # Public Key / JWKS endpoints (for JWT verification)
 # =============================================================================
 
@@ -1001,6 +1106,9 @@ def lambda_handler(event, context):
         return handle_device_code_request(event)
     elif path == '/auth/github/device/poll':
         return handle_device_poll(event)
+    # Refresh token
+    elif path == '/auth/refresh':
+        return handle_refresh(event)
     # Public key endpoint for JWT verification
     elif path == '/auth/github/jwks' or path == '/.well-known/jwks.json':
         return handle_jwks(event)
