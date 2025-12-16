@@ -88,7 +88,7 @@ HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
   --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
   --output text | sed 's|/hostedzone/||')
-CERTIFICATE_ARN=$(shell aws cloudformation describe-stacks \
+CERTIFICATE_ARN = $(shell aws cloudformation describe-stacks \
   --stack-name certificate \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`CertificateArn`].OutputValue' \
@@ -478,7 +478,7 @@ provisioner-delete: ## deletes the lambda provisioner functions
 
 CERTIFICATE_DOMAINS ?= '*.$(DOMAIN)'
 
-certificate-create: certbot-build ## creates the certificate
+certificate-create: ## creates the certificate
 	aws cloudformation create-stack \
 		--stack-name 	certificate \
 		--template-body file://cloudformation/certificate.yml \
