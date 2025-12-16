@@ -1,9 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: SlideRule Provisioner Lambda
+
 Parameters:
+
   EnvironmentVersion:
     Type: String
   Domain:
+    Type: String
+  ProvisionerUrl:
+    Type: String
+  JwtAudience:
+    Type: String
+  JwtIssuer:
     Type: String
   ProjectBucket:
     Type: String
@@ -13,9 +21,15 @@ Parameters:
     Type: String
   ContainerRegistry:
     Type: String
+  CorsAllowOrigins:
+    Type: CommaDelimitedList
+  HostedZoneId:
+    Type: String
   LambdaZipFile:
     Type: String
+
 Resources:
+
   ## Deploy Lambda Function
   DeployLambda:
     Type: AWS::Lambda::Function
@@ -41,6 +55,7 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
+
   ## Destroy Lambda Function
   DestroyLambda:
     Type: AWS::Lambda::Function
@@ -57,6 +72,7 @@ Resources:
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+
   ## Status Lambda Function
   StatusLambda:
     Type: AWS::Lambda::Function
@@ -73,6 +89,7 @@ Resources:
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+
   ## Events Lambda Function
   EventsLambda:
     Type: AWS::Lambda::Function
@@ -89,6 +106,7 @@ Resources:
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+
   ## Test Lambda Function
   TestLambda:
     Type: AWS::Lambda::Function
@@ -105,6 +123,24 @@ Resources:
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+
+  ## Gateway Lambda Function
+  GatewayLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-gateway'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: main.lambda_gateway
+      Description: Routes requests based on path
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
   ## IAM Role
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -163,3 +199,147 @@ Resources:
                   - cloudformation:DescribeStackResources
                   - cloudformation:UpdateStack
                 Resource: "*"
+
+  ## API Gateway HTTP API
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: Provisioner API for SlideRule
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref CorsAllowOrigins
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+
+  # JWT Authorizer (Native API Gateway)
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - !Ref JwtAudience
+        Issuer: !Ref JwtIssuer
+
+  ## API Gateway Integration with Lambda
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  ## Routes
+  DeployRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /deploy'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ExtendRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /extend'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  DestroyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /destroy'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  StatusRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /status'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  EventsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /events'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  ## API Gateway Stage
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+  # ACM Certificate
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref ProvisionerUrl
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref ProvisionerUrl
+          HostedZoneId: !Ref HostedZoneId
+
+  # API Gateway Custom Domain Name
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    DependsOn: Certificate
+    Properties:
+      DomainName: !Ref ProvisionerUrl
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref Certificate
+
+  ## API Mapping (connects custom domain to API)
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+
+  ## Route53 Alias Record
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Ref ProvisionerUrl
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false

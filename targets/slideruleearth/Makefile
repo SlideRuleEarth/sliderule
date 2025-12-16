@@ -70,6 +70,15 @@ AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
+AUTHENTICATOR_URL ?= login.$(DOMAIN)
+PROVISIONER_URL ?= provisioner.$(DOMAIN)
+JWT_AUDIENCE ?= sliderule
+CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
+HOSTED_ZONE_ID := $(shell aws route53 list-hosted-zones-by-name \
+  --dns-name $(DOMAIN) \
+  --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
+  --output text | sed 's|/hostedzone/||')
+
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 ARCH ?= $(shell arch)
@@ -317,90 +326,6 @@ cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
 
 ########################
-# Authenticator Targets
-########################
-
-JWT_AUDIENCE ?= sliderule
-GITHUB_ORG ?= SlideRuleEarth
-GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
-CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
-ALLOWED_REDIRECT_HOSTS ?= "client.slideruleearth.io testsliderule.org localhost 127.0.0.1"
-CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
-HOSTED_ZONE_ID := $(shell aws route53 list-hosted-zones-by-name \
-  --dns-name $(DOMAIN) \
-  --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
-  --output text | sed 's|/hostedzone/||')
-
-HELLO_ISS ?= https://zfdgbva9v1.execute-api.us-west-2.amazonaws.com
-
-hello-world-create:
-	aws cloudformation create-stack \
-	--stack-name hello-world \
-	--template-body file://cloudformation/helloworld.yml \
-	--parameters \
-		ParameterKey=JwksUri,ParameterValue=$(HELLO_ISS)/.well-known/jwks.json \
-		ParameterKey=JwtIssuer,ParameterValue=$(HELLO_ISS) \
-		ParameterKey=JwtAudience,ParameterValue=sliderule \
-	--capabilities CAPABILITY_IAM
-
-hello-world-describe:
-	aws cloudformation describe-stack-events --stack-name hello-world
-
-hello-world-delete:
-	aws cloudformation delete-stack --stack-name hello-world
-	aws cloudformation wait stack-delete-complete --stack-name hello-world
-
-authenticator-build: ## builds the authenticator lambda package zipfile
-	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
-	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
-	cp $(ROOT)/applications/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
-	docker run -it --rm \
-		-v $(AUTHENTICATOR_STAGE_DIR):/host \
-		--user $(shell id -u):$(shell id -g) \
-		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.13 \
-		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
-	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip . -x "/*__pycache__/*"
-
-authenticator-create: authenticator-build  ## creates the lambda authenticator functions
-	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
-	aws cloudformation create-stack \
-		--stack-name 	authenticator \
-		--template-body file://cloudformation/authenticator.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
-						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
-						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
-						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
-						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
-						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
-						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
-	aws cloudformation wait stack-create-complete --stack-name authenticator
-
-authenticator-describe: ## status the creation/deletion of the authenticator functions
-	aws cloudformation describe-stack-events --stack-name authenticator
-
-authenticator-output: ## get the outputs from the creation of the authenticator stack
-	aws cloudformation describe-stacks --stack-name authenticator --output text
-
-authenticator-delete: ## deletes the lambda authenticator functions
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
-	aws cloudformation delete-stack --stack-name authenticator
-	aws cloudformation wait stack-delete-complete --stack-name authenticator
-
-authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
-	@read -s -p "Enter GitHub OAuth Client Secret: " GITHUB_OAUTH_APP_CLIENT_SECRET; echo ""; \
-	aws secretsmanager create-secret \
-		--name $(CLIENT_SECRET_NAME) \
-		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
-		--description "GitHub OAuth Client Secret for SlideRule"
-
-########################
 # Test Runner Targets
 ########################
 #	- Requires the provisioner to be created
@@ -433,6 +358,66 @@ testrunner-run: ## invokes the provisioner lambda function and displays the resp
 	cat /tmp/response.json | jq
 
 ########################
+# Authenticator Targets
+########################
+
+GITHUB_ORG ?= SlideRuleEarth
+GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
+CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
+ALLOWED_REDIRECT_HOSTS ?= "client.slideruleearth.io testsliderule.org localhost 127.0.0.1"
+
+authenticator-build: ## builds the authenticator lambda package zipfile
+	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
+	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
+	cp $(ROOT)/applications/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(AUTHENTICATOR_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/applications/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
+	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip . -x "/*__pycache__/*"
+
+authenticator-create: authenticator-build  ## creates the lambda authenticator functions
+	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
+	aws cloudformation create-stack \
+		--stack-name 	authenticator \
+		--template-body file://cloudformation/authenticator.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=AuthenticatorUrl,ParameterValue=$(AUTHENTICATOR_URL) \
+						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
+						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
+						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
+						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
+	aws cloudformation wait stack-create-complete --stack-name authenticator
+
+authenticator-describe: ## status the creation/deletion of the authenticator functions
+	aws cloudformation describe-stack-events --stack-name authenticator
+
+authenticator-output: ## get the outputs from the creation of the authenticator stack
+	aws cloudformation describe-stacks --stack-name authenticator --output text
+
+authenticator-delete: ## deletes the lambda authenticator functions
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
+	aws cloudformation delete-stack --stack-name authenticator
+	aws cloudformation wait stack-delete-complete --stack-name authenticator
+
+authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
+	@read -s -p "Enter GitHub OAuth Client Secret: " GITHUB_OAUTH_APP_CLIENT_SECRET; echo ""; \
+	aws secretsmanager create-secret \
+		--name $(CLIENT_SECRET_NAME) \
+		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
+		--description "GitHub OAuth Client Secret for SlideRule"
+
+########################
 # Provisioner Targets
 ########################
 
@@ -460,10 +445,15 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=ProvisionerUrl,ParameterValue=$(PROVISIONER_URL) \
+						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
+						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 

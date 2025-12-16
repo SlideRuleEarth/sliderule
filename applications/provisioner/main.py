@@ -439,3 +439,31 @@ def lambda_test(event, context):
 
     # return response
     return state
+
+# ###############################
+# Lambda: Gateway Handler
+# ###############################
+
+def lambda_gateway(event, context):
+    """
+    Route requests based on path
+    """
+    path = event.get('rawPath', '')
+    print(f"Received request: {path}")
+    if path == '/depoy':
+        return lambda_deploy(event, context)
+    elif path == '/extend':
+        return lambda_extend(event, context)
+    elif path == '/destroy':
+        return lambda_destroy(event, context)
+    elif path == '/status':
+        return lambda_status(event, context)
+    elif path == '/events':
+        return lambda_events(event, context)
+    elif path == '/test':
+        return lambda_test(event, context)
+    else:
+        return {
+            'statusCode': 404,
+            'body': json.dumps({'error': 'not found'})
+        }

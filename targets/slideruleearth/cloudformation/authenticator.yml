@@ -4,6 +4,8 @@ Description: 'GitHub OAuth Lambda for SlideRule Login'
 Parameters:
   Domain:
     Type: String
+  AuthenticatorUrl:
+    Type: String
   JwtAudience:
     Type: String
   GitHubOrg:
@@ -214,10 +216,10 @@ Resources:
   Certificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Sub "login.${Domain}"
+      DomainName: !Ref AuthenticatorUrl
       ValidationMethod: DNS
       DomainValidationOptions:
-        - DomainName: !Sub "login.${Domain}"
+        - DomainName: !Ref AuthenticatorUrl
           HostedZoneId: !Ref HostedZoneId
 
   # API Gateway Custom Domain Name
@@ -225,7 +227,7 @@ Resources:
     Type: AWS::ApiGatewayV2::DomainName
     DependsOn: Certificate
     Properties:
-      DomainName: !Sub "login.${Domain}"
+      DomainName: !Ref AuthenticatorUrl
       DomainNameConfigurations:
         - EndpointType: REGIONAL
           CertificateArn: !Ref Certificate
@@ -244,7 +246,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Sub "${Domain}."
-      Name: !Sub "login.${Domain}"
+      Name: !Ref AuthenticatorUrl
       Type: A
       AliasTarget:
         DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
