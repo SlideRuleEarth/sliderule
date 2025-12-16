@@ -471,9 +471,9 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, aoi.first_photon,  aoi.num_photons),
     bckgrd_delta_time   (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/delta_time").c_str()),
     bckgrd_rate         (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/bckgrd_rate").c_str()),
-    geoid               (df->useGeoid ? df->hdf03 : NULL,       FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(), 0, aoi.first_segment, aoi.num_segments),
-    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),        0, aoi.first_segment, aoi.num_segments),
-    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(),       0, aoi.first_segment, aoi.num_segments),
+    geoid               (df->useGeoid ? df->hdf03 : NULL,       FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(),               0,  aoi.first_segment, aoi.num_segments),
+    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),        H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
+    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(),       H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),            H5Coro::ALL_COLS, aoi.first_photon,  aoi.num_photons)
 {
     /* Join Hardcoded Reads */

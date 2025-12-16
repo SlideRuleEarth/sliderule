@@ -40,104 +40,22 @@
 
 using std::vector;
 
-/*----------------------------------------------------------------------------
- * Local Helpers
- *----------------------------------------------------------------------------*/
-namespace
+/******************************************************************************
+ * STATIC FUNCTIONS
+ ******************************************************************************/
+static long computeRowSize(const H5DArray* array)
 {
-    long compute_row_size(const H5DArray* array)
+    long row_size = array->rowSize();
+
+    if(row_size <= 1 && array->h5f)
     {
-        long row_size = array->rowSize();
-        if(row_size <= 1 && array->h5f)
+        const int64_t rows = array->h5f->info.shape[0];
+        if(rows > 0 && array->numElements() % rows == 0)
         {
-            const int64_t rows = array->h5f->info.shape[0];
-            if(rows > 0 && array->numElements() % rows == 0)
-            {
-                row_size = array->numElements() / rows;
-            }
-        }
-        return row_size;
-    }
-
-    template<typename T>
-    FieldColumn<FieldList<T>>* get_list_column(GeoDataFrame* gdf, const char* name)
-    {
-        FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
-        if(!column)
-        {
-            column = new FieldColumn<FieldList<T>>();
-            if(!gdf->addColumn(name, column, true))
-            {
-                delete column;
-                throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add list column <%s>", name);
-            }
-        }
-        return column;
-    }
-
-    template<typename T>
-    void append_list_row(FieldColumn<FieldList<T>>* column, const H5DArray* array, long element, long row_size, bool nodata)
-    {
-        FieldList<T> values;
-
-        if(!nodata)
-        {
-            vector<uint8_t> row_buffer(row_size * array->elementSize());
-            array->serializeRow(row_buffer.data(), element);
-            const T* typed = reinterpret_cast<const T*>(row_buffer.data());
-            for(long i = 0; i < row_size; i++)
-            {
-                values.append(typed[i]);
-            }
-        }
-        else
-        {
-            for(long i = 0; i < row_size; i++)
-            {
-                values.append(static_cast<T>(0));
-            }
-        }
-
-        column->append(values);
-    }
-
-    void add_list_column(GeoDataFrame* gdf, const char* name, RecordObject::fieldType_t type)
-    {
-        switch(type)
-        {
-            case RecordObject::INT8:    (void)get_list_column<int8_t>(gdf, name);   break;
-            case RecordObject::INT16:   (void)get_list_column<int16_t>(gdf, name);  break;
-            case RecordObject::INT32:   (void)get_list_column<int32_t>(gdf, name);  break;
-            case RecordObject::INT64:   (void)get_list_column<int64_t>(gdf, name);  break;
-            case RecordObject::UINT8:   (void)get_list_column<uint8_t>(gdf, name);  break;
-            case RecordObject::UINT16:  (void)get_list_column<uint16_t>(gdf, name); break;
-            case RecordObject::UINT32:  (void)get_list_column<uint32_t>(gdf, name); break;
-            case RecordObject::UINT64:  (void)get_list_column<uint64_t>(gdf, name); break;
-            case RecordObject::FLOAT:   (void)get_list_column<float>(gdf, name);    break;
-            case RecordObject::DOUBLE:  (void)get_list_column<double>(gdf, name);   break;
-            case RecordObject::TIME8:   (void)get_list_column<time8_t>(gdf, name);  break;
-            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported list column type for %s: %d", name, type);
+            row_size = array->numElements() / rows;
         }
     }
-
-    void append_list_column(GeoDataFrame* gdf, const char* name, const H5DArray* array, long element, long row_size, bool nodata)
-    {
-        switch(array->elementType())
-        {
-            case RecordObject::INT8:    append_list_row<int8_t>   (get_list_column<int8_t>(gdf, name),    array, element, row_size, nodata);  break;
-            case RecordObject::INT16:   append_list_row<int16_t>  (get_list_column<int16_t>(gdf, name),   array, element, row_size, nodata); break;
-            case RecordObject::INT32:   append_list_row<int32_t>  (get_list_column<int32_t>(gdf, name),   array, element, row_size, nodata); break;
-            case RecordObject::INT64:   append_list_row<int64_t>  (get_list_column<int64_t>(gdf, name),   array, element, row_size, nodata); break;
-            case RecordObject::UINT8:   append_list_row<uint8_t>  (get_list_column<uint8_t>(gdf, name),   array, element, row_size, nodata); break;
-            case RecordObject::UINT16:  append_list_row<uint16_t> (get_list_column<uint16_t>(gdf, name),  array, element, row_size, nodata); break;
-            case RecordObject::UINT32:  append_list_row<uint32_t> (get_list_column<uint32_t>(gdf, name),  array, element, row_size, nodata); break;
-            case RecordObject::UINT64:  append_list_row<uint64_t> (get_list_column<uint64_t>(gdf, name),  array, element, row_size, nodata); break;
-            case RecordObject::FLOAT:   append_list_row<float>    (get_list_column<float>(gdf, name),     array, element, row_size, nodata); break;
-            case RecordObject::DOUBLE:  append_list_row<double>   (get_list_column<double>(gdf, name),    array, element, row_size, nodata); break;
-            case RecordObject::TIME8:   append_list_row<time8_t>  (get_list_column<time8_t>(gdf, name),   array, element, row_size, nodata); break;
-            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported element type for list append on %s: %d", name, array->elementType());
-        }
-    }
+    return row_size;
 }
 
 /******************************************************************************
@@ -175,17 +93,20 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
     while(dataset_name != NULL)
     {
         array->join(timeout_ms, throw_exception);
-        const long row_size = compute_row_size(array);
+        const long row_size = computeRowSize(array);
+        bool column_ok = true;
         if(row_size > 1)
         {
-            add_list_column(gdf, dataset_name, array->elementType());
+            column_ok = gdf->addNewListColumn(dataset_name, array->elementType());
         }
         else
         {
-            if(!gdf->addNewColumn(dataset_name, array->elementType()))
-            {
-                throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to join array for <%s>", dataset_name);
-            }
+            column_ok = gdf->addNewColumn(dataset_name, array->elementType());
+        }
+
+        if(!column_ok)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add column for <%s>", dataset_name);
         }
         dataset_name = variables.next(&array);
     }
@@ -201,30 +122,40 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
     {
         const char* dataset_name = iter[i].key;
         H5DArray* array = iter[i].value;
-        const long row_size = compute_row_size(array);
+        const long row_size = computeRowSize(array);
         const bool multidim = (row_size > 1);
+        bool append_ok = true;
+
         if(element != static_cast<int32_t>(INVALID_KEY))
         {
             if(multidim)
             {
-                append_list_column(gdf, dataset_name, array, element, row_size, false);
+                vector<uint8_t> row_buffer(row_size * array->elementSize(), 0);
+                array->serializeRow(row_buffer.data(), element);
+                append_ok = gdf->appendListValues(dataset_name, array->elementType(), row_buffer.data(), row_size, false);
             }
             else
             {
-                gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize());
+                append_ok = (gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize()) != 0);
             }
         }
         else
         {
             if(multidim)
             {
-                append_list_column(gdf, dataset_name, array, element, row_size, true);
+                vector<uint8_t> row_buffer(row_size * array->elementSize(), 0);
+                append_ok = gdf->appendListValues(dataset_name, array->elementType(), row_buffer.data(), row_size, true);
             }
             else
             {
                 const uint8_t nodata_buf[8] = {0,0,0,0,0,0,0,0};
-                gdf->appendFromBuffer(dataset_name, nodata_buf, 8);
+                append_ok = (gdf->appendFromBuffer(dataset_name, nodata_buf, 8) != 0);
             }
+        }
+
+        if(!append_ok)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);
         }
     }
 }

@@ -36,6 +36,7 @@
 #include <regex>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -89,6 +90,49 @@ const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
 };
 
 const char* GeoDataFrame::CRS_KEY = "crs";
+
+/******************************************************************************
+ * STATIC FUNCTIONS
+ ******************************************************************************/
+
+ /*----------------------------------------------------------------------------
+ * getListColumn - internal helper
+ *----------------------------------------------------------------------------*/
+template<typename T>
+static FieldColumn<FieldList<T>>* getListColumn(GeoDataFrame* gdf, const char* name)
+{
+    FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
+    if(!column)
+    {
+        column = new FieldColumn<FieldList<T>>();
+        if(!gdf->addColumn(name, column, true))
+        {
+            delete column;
+            column = NULL;
+        }
+    }
+    return column;
+}
+
+/*----------------------------------------------------------------------------
+ * _appendListValues - internal helper
+ *----------------------------------------------------------------------------*/
+template<typename T>
+static void _appendListValues(FieldColumn<FieldList<T>>* column, const void* values, long count, bool nodata)
+{
+    FieldList<T> list;
+    if(nodata)
+    {
+        for(long i = 0; i < count; i++) list.append(static_cast<T>(0));
+    }
+    else
+    {
+        const T* typed = reinterpret_cast<const T*>(values);
+        for(long i = 0; i < count; i++) list.append(typed[i]);
+    }
+    column->append(list);
+}
+
 
 /******************************************************************************
  * CLASS METHODS
@@ -541,6 +585,32 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
 }
 
 /*----------------------------------------------------------------------------
+ * addNewListColumn
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::addNewListColumn(const char* name, RecordObject::fieldType_t _type)
+{
+    switch(_type)
+    {
+        case RecordObject::INT8:    return getListColumn<int8_t>(this, name)   != NULL;
+        case RecordObject::INT16:   return getListColumn<int16_t>(this, name)  != NULL;
+        case RecordObject::INT32:   return getListColumn<int32_t>(this, name)  != NULL;
+        case RecordObject::INT64:   return getListColumn<int64_t>(this, name)  != NULL;
+        case RecordObject::UINT8:   return getListColumn<uint8_t>(this, name)  != NULL;
+        case RecordObject::UINT16:  return getListColumn<uint16_t>(this, name) != NULL;
+        case RecordObject::UINT32:  return getListColumn<uint32_t>(this, name) != NULL;
+        case RecordObject::UINT64:  return getListColumn<uint64_t>(this, name) != NULL;
+        case RecordObject::FLOAT:   return getListColumn<float>(this, name)    != NULL;
+        case RecordObject::DOUBLE:  return getListColumn<double>(this, name)   != NULL;
+        case RecordObject::TIME8:   return getListColumn<time8_t>(this, name)  != NULL;
+        default:
+        {
+            mlog(ERROR, "Cannot add list column <%s> of type %d", name, static_cast<int>(_type));
+            return false;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * addExistingColumn - only allocates name
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::addExistingColumn (const char* name, FieldUntypedColumn* column)
@@ -922,19 +992,56 @@ void GeoDataFrame::populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_c
         while(name)
         {
             double value;
-            switch(entry.op)
+            if(df[name].encoding & Field::NESTED_MASK)
             {
-                case GeoDataFrame::OP_NONE:     value = df[name].mean(start_index, num_elements);   break;
-                case GeoDataFrame::OP_MEAN:     value = df[name].mean(start_index, num_elements);   break;
-                case GeoDataFrame::OP_MEDIAN:   value = df[name].median(start_index, num_elements); break;
-                case GeoDataFrame::OP_MODE:     value = df[name].mode(start_index, num_elements);   break;
-                case GeoDataFrame::OP_SUM:      value = df[name].sum(start_index, num_elements);    break;
-                default:                        value = 0.0;                                        break;
+                /* Multidimensional ancillary field: no scalar aggregation */
+                value = NAN;
+            }
+            else
+            {
+                switch(entry.op)
+                {
+                    case GeoDataFrame::OP_NONE:     value = df[name].mean(start_index, num_elements);   break;
+                    case GeoDataFrame::OP_MEAN:     value = df[name].mean(start_index, num_elements);   break;
+                    case GeoDataFrame::OP_MEDIAN:   value = df[name].median(start_index, num_elements); break;
+                    case GeoDataFrame::OP_MODE:     value = df[name].mode(start_index, num_elements);   break;
+                    case GeoDataFrame::OP_SUM:      value = df[name].sum(start_index, num_elements);    break;
+                    default:                        value = 0.0;                                        break;
+                }
             }
             entry.column->append(value);
             name = ancillary_columns->next(&entry);
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * appendListValues
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::appendListValues(const char* name, RecordObject::fieldType_t _type, const void* values, long count, bool nodata)
+{
+    bool status = true;
+
+    switch(_type)
+    {
+        case RecordObject::INT8:    _appendListValues<int8_t>  (getListColumn<int8_t>(this, name),  values, count, nodata); break;
+        case RecordObject::INT16:   _appendListValues<int16_t> (getListColumn<int16_t>(this, name), values, count, nodata); break;
+        case RecordObject::INT32:   _appendListValues<int32_t> (getListColumn<int32_t>(this, name), values, count, nodata); break;
+        case RecordObject::INT64:   _appendListValues<int64_t> (getListColumn<int64_t>(this, name), values, count, nodata); break;
+        case RecordObject::UINT8:   _appendListValues<uint8_t> (getListColumn<uint8_t>(this, name), values, count, nodata); break;
+        case RecordObject::UINT16:  _appendListValues<uint16_t>(getListColumn<uint16_t>(this, name),values, count, nodata); break;
+        case RecordObject::UINT32:  _appendListValues<uint32_t>(getListColumn<uint32_t>(this, name),values, count, nodata); break;
+        case RecordObject::UINT64:  _appendListValues<uint64_t>(getListColumn<uint64_t>(this, name),values, count, nodata); break;
+        case RecordObject::FLOAT:   _appendListValues<float>   (getListColumn<float>(this, name),   values, count, nodata); break;
+        case RecordObject::DOUBLE:  _appendListValues<double>  (getListColumn<double>(this, name),  values, count, nodata); break;
+        case RecordObject::TIME8:   _appendListValues<time8_t> (getListColumn<time8_t>(this, name), values, count, nodata); break;
+        default:
+        {
+            mlog(ERROR, "Cannot append to list column <%s> value of type %d", name, static_cast<int>(_type));
+            status = false;
+        }
+    }
+    return status;
 }
 
 /*----------------------------------------------------------------------------
