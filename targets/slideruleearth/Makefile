@@ -369,7 +369,7 @@ testrunner-run: ## invokes the provisioner lambda function and displays the resp
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
 CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
-ALLOWED_REDIRECT_HOSTS ?= "client.slideruleearth.io testsliderule.org localhost 127.0.0.1"
+ALLOWED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
 
 authenticator-build: ## builds the authenticator lambda package zipfile
 	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)

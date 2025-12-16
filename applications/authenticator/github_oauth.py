@@ -674,7 +674,7 @@ def handle_callback(event):
         return redirect_to_frontend(redirect_uri, parms)
 
     except Exception as e:
-        print('Exception in OAuth callback: {e}')
+        print(f"Exception in OAuth callback: {e}")
         return redirect_to_frontend(redirect_uri, {'error': f"Error during OAuth callback"})
 
 
@@ -1084,6 +1084,50 @@ def handle_jwks(event):
 
 
 # =============================================================================
+# OpenID Configuration Discovery
+# =============================================================================
+
+def handle_openid(event):
+    """
+    Return standard compliant discovery response
+    """
+    try:
+        # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
+        headers = event.get('headers', {})
+        api_host = headers.get('host', '')
+        issuer = f"https://{api_host}"
+
+        # build response body
+        body = {
+            "issuer": issuer,
+            "jwks_uri": f"{issuer}/.well-known/jwks.json",
+            "authorization_endpoint": f"{issuer}/authorize", # stub (unimplemented)
+            "token_endpoint": f"{issuer}/token", # stub (unimplemented)
+            "response_types_supported": ["code"],
+            "subject_types_supported": ["public"],
+            "id_token_signing_alg_values_supported": ["RS256"]
+        }
+
+        # return response
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                # Recommended for browser-based OIDC discovery
+                "Cache-Control": "public, max-age=3600"
+            },
+            "body": json.dumps(body)
+        }
+
+    except Exception as e:
+        print(f"Error in openid discovery: {e}")
+        return json_response(500, {
+            'error': 'openid_error',
+            'error_description': 'error in openid discovery'
+        })
+
+
+# =============================================================================
 # Lambda Function for Login
 # =============================================================================
 
@@ -1112,6 +1156,9 @@ def lambda_handler(event, context):
     # Public key endpoint for JWT verification
     elif path == '/auth/github/jwks' or path == '/.well-known/jwks.json':
         return handle_jwks(event)
+    # OpenID Configuration Discovery
+    elif path == '/.well-known/openid-configuration':
+        return handle_openid(event)
     # Unknown path
     else:
         return {

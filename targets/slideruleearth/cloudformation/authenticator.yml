@@ -197,12 +197,20 @@ Resources:
       RouteKey: 'GET /auth/github/jwks'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
-  # Route: GET /.well-known/jwks.json (Standard OIDC JWKS endpoint)
+  # Route: GET /.well-known/jwks.json (Standard OIDC endpoint)
   WellKnownJwksRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: 'GET /.well-known/jwks.json'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # Route: GET /.well-known/openid-configuration (Standard OIDC endpoint)
+  WellKnownOpenidRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /.well-known/openid-configuration'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
   # API Gateway Stage (auto-deploy)
