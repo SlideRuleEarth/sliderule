@@ -8,12 +8,8 @@ Parameters:
     Default: https://your-domain.com/.well-known/jwks.json
   JwtIssuer:
     Type: String
-    Description: JWT Issuer - must match the 'iss' claim in your JWT
-    Default: https://your-domain.com
   JwtAudience:
     Type: String
-    Description: JWT Audience - must match the 'aud' claim in your JWT
-    Default: your-api-audience
 
 Resources:
   # Lambda Execution Role

@@ -358,31 +358,7 @@ def get_user_teams(access_token, username, org_roles):
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
 
-def get_accessible_clusters(username, teams, org_roles):
-    """
-    Returns a list of cluster names the user can access.
-    """
-    # Initialize accessible clusters
-    #   public cluster always available, along with user provided
-    accessible_clusters = ['sliderule']
-
-    # Add user cluster for members
-    if 'member' in org_roles and username:
-        accessible_clusters.append(f"{username}-cluster")
-
-    # Add team clusters for members
-    if teams:
-        accessible_clusters.extend(teams)
-
-    # Owners can access anything
-    if 'owner' in org_roles:
-        accessible_clusters.append('*')
-
-    # Return accessible clustera
-    return accessible_clusters
-
-
-def get_deployable_clusters(username, teams, org_roles):
+def get_allowed_clusters(username, teams, org_roles):
     """
     Returns a list of cluster names the user can deploy.
     """
@@ -438,21 +414,6 @@ def create_auth_token(metadata):
     Create a minimal signed JWT containing only server-essential fields.
     This token is validated server-side only; clients should treat it as opaque.
     """
-    # Build payload with server-essential fields + API Gateway compatible claims
-    payload = {
-        'sub': metadata["username"],  # Subject (GitHub username)
-        'username': metadata["username"],
-        'aud': JWT_AUDIENCE,  # Audience claim for API Gateway JWT authorizer
-        'iss': metadata['iss'],  # Issuer URL for JWKS discovery
-        'org': GITHUB_ORG,  # Organization name
-        'accessible_clusters': metadata["accessible_clusters"],
-        'deployable_clusters': metadata["deployable_clusters"],
-        'max_nodes': metadata['max_nodes'],
-        'max_ttl': metadata['max_ttl'],
-        'iat': metadata['iat'],
-        'exp': metadata['exp'],
-    }
-
     # Build JWT header
     header = {
         'alg': JWT_ALGORITHM,
@@ -465,7 +426,7 @@ def create_auth_token(metadata):
 
     # Encode header and payload (base64url without padding)
     header_b64 = base64url_encode(json.dumps(header, separators=(',', ':')).encode('utf-8'))
-    payload_b64 = base64url_encode(json.dumps(payload, separators=(',', ':')).encode('utf-8'))
+    payload_b64 = base64url_encode(json.dumps(metadata, separators=(',', ':')).encode('utf-8'))
 
     # Create signing input
     signing_input = f"{header_b64}.{payload_b64}"
@@ -494,8 +455,7 @@ def authenticate_user(access_token, event):
     # Get user metadata
     org_roles = get_organization_roles(access_token, username)
     teams = get_user_teams(access_token, username, org_roles)
-    accessible_clusters = get_accessible_clusters(username, teams, org_roles)
-    deployable_clusters = get_deployable_clusters(username, teams, org_roles)
+    allowed_clusters = get_allowed_clusters(username, teams, org_roles)
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
 
@@ -513,10 +473,12 @@ def authenticate_user(access_token, event):
         'username': username,
         'org_roles': org_roles,
         'teams': teams,
-        'accessible_clusters': accessible_clusters,
-        'deployable_clusters': deployable_clusters,
+        'allowed_clusters': allowed_clusters,
         'max_nodes': max_nodes,
         'max_ttl': max_ttl,
+        'sub': username,
+        'aud': JWT_AUDIENCE,
+        'org': GITHUB_ORG,
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
         'iss': issuer
@@ -607,18 +569,18 @@ def handle_callback(event):
         token, metadata = authenticate_user(access_token, event)
 
         # Build known clusters (what the user can possibly connect to)
-        known_clusters = [cluster for cluster in metadata['accessible_clusters'] if cluster != "*"]
+        known_clusters = ['sliderule'] + [cluster for cluster in metadata['allowed_clusters'] if cluster != "*"]
 
         # Build parameters for callback
         parms = {
             'username': metadata['username'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
             'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
-            'org': GITHUB_ORG,
+            'org': metadata['org'],
             'teams': ','.join(metadata['teams']),
             'orgRoles': ','.join(metadata['org_roles']),
             'knownClusters': ','.join(known_clusters),
-            'deployableClusters': ','.join(metadata['deployable_clusters']),
+            'deployableClusters': ','.join(metadata['allowed_clusters']),
             'maxNodes': str(metadata['max_nodes']),
             'maxTTL': str(metadata['max_ttl']),
             'tokenIssuedAt': str(metadata['iat']),

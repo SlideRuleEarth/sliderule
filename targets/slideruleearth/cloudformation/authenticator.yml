@@ -233,6 +233,7 @@ Resources:
   # API Mapping (connects custom domain to API)
   ApiMapping:
     Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
     Properties:
       DomainName: !Ref ApiCustomDomain
       ApiId: !Ref HttpApi
