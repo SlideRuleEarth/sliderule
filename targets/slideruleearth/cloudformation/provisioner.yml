@@ -25,6 +25,8 @@ Parameters:
     Type: CommaDelimitedList
   HostedZoneId:
     Type: String
+  CertificateArn:
+    Type: String
   LambdaZipFile:
     Type: String
 
@@ -303,25 +305,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
 
-  # ACM Certificate
-  Certificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: !Ref ProvisionerUrl
-      ValidationMethod: DNS
-      DomainValidationOptions:
-        - DomainName: !Ref ProvisionerUrl
-          HostedZoneId: !Ref HostedZoneId
-
   # API Gateway Custom Domain Name
   ApiCustomDomain:
     Type: AWS::ApiGatewayV2::DomainName
-    DependsOn: Certificate
     Properties:
       DomainName: !Ref ProvisionerUrl
       DomainNameConfigurations:
         - EndpointType: REGIONAL
-          CertificateArn: !Ref Certificate
+          CertificateArn: !Ref CertificateArn
 
   ## API Mapping (connects custom domain to API)
   ApiMapping:

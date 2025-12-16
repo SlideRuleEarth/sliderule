@@ -88,6 +88,11 @@ HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
   --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
   --output text | sed 's|/hostedzone/||')
+CERTIFICATE_ARN=$(shell aws cloudformation describe-stacks \
+  --stack-name certificate \
+  --region us-west-2 \
+  --query 'Stacks[0].Outputs[?OutputKey==`CertificateArn`].OutputValue' \
+  --output text)
 
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
@@ -393,6 +398,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
 						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
@@ -454,6 +460,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
@@ -466,8 +473,27 @@ provisioner-delete: ## deletes the lambda provisioner functions
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
 
 ########################
-# Certbot Targets
+# Certificate Targets
 ########################
+
+CERTIFICATE_DOMAINS ?= '*.$(DOMAIN)'
+
+certificate-create: certbot-build ## creates the certificate
+	aws cloudformation create-stack \
+		--stack-name 	certificate \
+		--template-body file://cloudformation/certificate.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters 	ParameterKey=CertificateDomains,ParameterValue=$(CERTIFICATE_DOMAINS) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID)
+	aws cloudformation wait stack-create-complete --stack-name certbot
+
+certificate-describe: ## status the creation/deletion of the certificate
+	aws cloudformation describe-stack-events --stack-name certificate
+
+certificate-delete: ## deletes the certificate
+	aws cloudformation delete-stack --stack-name certificate
+	aws cloudformation wait stack-delete-complete --stack-name certificate
 
 certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)

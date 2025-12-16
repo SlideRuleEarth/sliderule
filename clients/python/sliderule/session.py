@@ -28,7 +28,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import netrc
 import requests
 import threading
 import json
@@ -37,8 +36,8 @@ import ctypes
 import time
 import logging
 import numpy
+from urllib import parse as urllib_parse
 import webbrowser
-from urllib.parse import urljoin
 from sliderule import version
 
 ###############################################################################
@@ -555,9 +554,12 @@ class Session:
             device_info         = response.json()
             user_code           = device_info['user_code']
             device_code         = device_info['device_code']
-            verification_uri    = device_info.get('verification_uri_complete') or device_info['verification_uri']
+            verification_uri    = device_info['verification_uri']
             interval            = device_info.get('interval', 5) # default to check every 5 seconds
             expires_in          = device_info.get('expires_in', timeout)
+
+            # construct complete url for verification
+            verification_uri_complete = f"{verification_uri}?user_code={urllib_parse.quote(user_code)}"
 
             # display instructions to user
             print("\n" + "=" * 60)
@@ -570,7 +572,7 @@ class Session:
             # Open browser if possible
             try:
                 print("\nAttempting to open browser... ", end='')
-                webbrowser.open(verification_uri)
+                webbrowser.open(verification_uri_complete)
                 print("success.")
             except Exception:
                 print("failed (must manually open).")
