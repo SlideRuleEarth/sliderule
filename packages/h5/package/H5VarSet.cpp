@@ -36,9 +36,6 @@
 #include "OsApi.h"
 #include "H5Coro.h"
 #include "H5VarSet.h"
-#include <vector>
-
-using std::vector;
 
 /******************************************************************************
  * STATIC FUNCTIONS
