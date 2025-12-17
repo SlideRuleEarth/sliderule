@@ -52,14 +52,14 @@ except:
 
 DEFAULT_CRS = "EPSG:4326"
 logger = logging.getLogger(__name__)
-slideruleSession = Session()
+slideruleSession = None
 
 ###############################################################################
 # APIs
 ###############################################################################
 
 #
-#  Initialize
+#  init
 #
 def init (
     url=Session.PUBLIC_URL,
@@ -110,13 +110,14 @@ def init (
     # create new global session
     slideruleSession = Session(
         domain=url,
-        verbose=verbose,
-        loglevel=loglevel,
         organization=organization,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
-        log_handler=log_handler,
         rethrow=rethrow)
+    # configure logging
+    slideruleSession.set_verbose(verbose, loglevel)
+    if log_handler != None:
+        logger.addHandler(log_handler)
     # verify compatibility between client and server versions
     try:
         status = check_version(plugins=plugins)
@@ -127,6 +128,25 @@ def init (
             logger.error(f'Initialization check failed: {e}')
         status = False
     return status
+
+#
+#  create_session
+#
+def create_session(**kwargs):
+    '''
+    Creates a SlideRule Session and returns it to the user
+
+    Returns
+    -------
+    Session
+        SlideRule session object which handles communication with SlideRule servers
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> session = sliderule.create_session(organization="myorg")
+    '''
+    return Session(**kwargs)
 
 #
 #  source

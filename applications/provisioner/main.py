@@ -110,7 +110,7 @@ def lambda_scheduler(event, context):
                 Targets=[{
                     'Id': '1',
                     'Arn': deletion_lambda_arn,
-                    'Input': json.dumps({'StackName': stack_name})
+                    'Input': json.dumps({'stack_name': stack_name})
                 }]
             )
 
@@ -135,7 +135,7 @@ def lambda_scheduler(event, context):
 def lambda_deploy(event, context):
 
     # initialize response state
-    state = {"Status": True}
+    state = {"status": True}
 
     try:
         # get environment variables
@@ -148,19 +148,19 @@ def lambda_deploy(event, context):
         lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
 
         # get required request variables
-        cluster = event["Cluster"]
-        is_public = event["IsPublic"]
-        node_capacity = event["NodeCapacity"]
-        ttl = event["TTL"]
+        cluster = event["cluster"]
+        is_public = event["is_public"]
+        node_capacity = event["node_capacity"]
+        ttl = event["ttl"]
 
         # get optional request variables
-        version = event.get("Version", "latest")
-        organization = event.get("Organization", cluster)
-        region = event.get("Region", "us-west-2")
-        dryrun = event.get("DryRun", False)
+        version = event.get("version", "latest")
+        organization = event.get("organization", cluster)
+        region = event.get("region", "us-west-2")
+        dryrun = event.get("dryrun", False)
 
         # build parameters for stack creation
-        state["StackParameters"] = [
+        state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": version},
             {"ParameterKey": "IsPublic", "ParameterValue": str(is_public)},
             {"ParameterKey": "Organization", "ParameterValue": organization},
@@ -180,7 +180,7 @@ def lambda_deploy(event, context):
         templateBody = open("cluster.yml").read()
 
         # the stack name naming convention is required by Makefile
-        state["StackName"] = build_stack_name(cluster)
+        state["stack_name"] = build_stack_name(cluster)
 
         # check rules for valid deployment
         if ttl >= 0 and ttl < MIN_TTL_FOR_AUTOSHUTDOWN:
@@ -189,15 +189,15 @@ def lambda_deploy(event, context):
         # create stack
         cf = boto3.client("cloudformation", region_name=region)
         if not dryrun:
-            state["Response"] = cf.create_stack(StackName=state["StackName"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["StackParameters"])
-        print(f"Deploy initiated for {state["StackName"]}")
+            state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        print(f"Deploy initiated for {state["stack_name"]}")
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in deploy: {e}")
-        state["Exception"] = f'{e}'
-        state["Status"] = False
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     # return response
     return state
@@ -209,20 +209,20 @@ def lambda_deploy(event, context):
 def lambda_extend(event, context):
 
     # initialize response state
-    state = {"Status": True}
+    state = {"status": True}
 
     try:
 
         # get required request variables
-        cluster = event["Cluster"]
-        ttl = event["TTL"]
+        cluster = event["cluster"]
+        ttl = event["ttl"]
 
         # get rule name
         rule_name = f'{build_stack_name(cluster)}-auto-shutdown'
 
         # calculate new shutdown time
         new_shutdown_time = datetime.utcnow() + timedelta(minutes=ttl)
-        state["CronExpression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
+        state["cron_expression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
 
         # check rules for valid extension
         if ttl >= 0 and ttl < MIN_TTL_FOR_AUTOSHUTDOWN:
@@ -230,9 +230,9 @@ def lambda_extend(event, context):
 
         # extend rule
         events = boto3.client('events')
-        state["Response"] = events.put_rule(
+        state["response"] = events.put_rule(
             Name=rule_name,
-            ScheduleExpression=state["CronExpression"],
+            ScheduleExpression=state["cron_expression"],
             State='ENABLED',
             Description=f"Automatic shutdown for {rule_name} (updated)"
         )
@@ -241,8 +241,8 @@ def lambda_extend(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in extend: {e}")
-        state["Exception"] = f'{e}'
-        state["Status"] = False
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     # return response
     return state
@@ -254,19 +254,17 @@ def lambda_extend(event, context):
 def lambda_destroy(event, context):
 
     # initialize response status
-    state = {"Status": True}
+    state = {"status": True}
 
     try:
-        # get required request variables
-        cluster = event["Cluster"]
-
         # get optional request variables
-        state["StackName"] = event.get("StackName", build_stack_name(cluster)) # scheduled deletions pass stack name
-        region = event.get("Region", "us-west-2")
+        cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
+        state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
+        region = event.get("region", "us-west-2")
 
         # delete eventbridge target and rule
         events = boto3.client("events")
-        rule_name = f"{state["StackName"]}-auto-shutdown"
+        rule_name = f"{state["stack_name"]}-auto-shutdown"
         print(f'Delete initiated for {rule_name}')
         try:
             events.remove_targets(Rule=rule_name, Ids=["1"])
@@ -283,15 +281,15 @@ def lambda_destroy(event, context):
 
         # delete stack
         cf = boto3.client("cloudformation", region_name=region)
-        state["Response"] = cf.delete_stack(StackName=state["StackName"])
-        print(f"Delete initiated for {state["StackName"]}")
+        state["response"] = cf.delete_stack(StackName=state["stack_name"])
+        print(f"Delete initiated for {state["stack_name"]}")
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in destroy: {e}")
-        state["Exception"] = f'{e}'
-        state["Status"] = False
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     # return response
     return state
@@ -303,23 +301,23 @@ def lambda_destroy(event, context):
 def lambda_status(event, context):
 
     # initialize response state
-    state = {"Status": True}
+    state = {"status": True}
 
     try:
         # get required request variables
-        cluster = event["Cluster"]
+        cluster = event["cluster"]
 
         # get optional request variables
-        region = event.get("Region", "us-west-2")
+        region = event.get("region", "us-west-2")
 
         # get stack name
-        state["StackName"] = build_stack_name(cluster)
+        state["stack_name"] = build_stack_name(cluster)
 
         # status stack
         cf = boto3.client("cloudformation", region_name=region)
-        description  = cf.describe_stacks(StackName=state["StackName"])
+        description  = cf.describe_stacks(StackName=state["stack_name"])
         stack = description["Stacks"][0]
-        print(f"Status requested for {state["StackName"]}")
+        print(f"Status requested for {state["stack_name"]}")
 
         # build cleaned response
         response = {}
@@ -330,14 +328,14 @@ def lambda_status(event, context):
                 response[k] = v.isoformat()
             elif not isinstance(v, (bytes, bytearray)):
                 response[k] = v
-        state["Response"] = response
+        state["response"] = response
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in status: {e}")
-        state["Exception"] = f'{e}'
-        state["Status"] = False
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     # return response
     return state
@@ -349,23 +347,23 @@ def lambda_status(event, context):
 def lambda_events(event, context):
 
     # initialize response state
-    state = {"Status": True}
+    state = {"status": True}
 
     try:
         # get required request variables
-        cluster = event["Cluster"]
+        cluster = event["cluster"]
 
         # get optional request variables
-        region = event.get("Region", "us-west-2")
+        region = event.get("region", "us-west-2")
 
         # get stack name
-        state["StackName"] = build_stack_name(cluster)
+        state["stack_name"] = build_stack_name(cluster)
 
         # get events for stack
         cf = boto3.client("cloudformation", region_name="us-west-2")
         description = cf.describe_stack_events(StackName="developers-cluster")
         stack_events = description["StackEvents"]
-        print(f"Events requested for {state["StackName"]}")
+        print(f"Events requested for {state["stack_name"]}")
 
         # build cleaned response
         response = []
@@ -379,14 +377,14 @@ def lambda_events(event, context):
                 elif not isinstance(v, (bytes, bytearray)):
                     stack_event[k] = v
             response.append(stack_event)
-        state["Response"] = response
+        state["response"] = response
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in events: {e}")
-        state["Exception"] = f'{e}'
-        state["Status"] = False
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     # return response
     return state
@@ -398,24 +396,24 @@ def lambda_events(event, context):
 def lambda_test(event, context):
 
     # initialize response status
-    state = {"Status": True}
+    state = {"status": True}
 
     try:
         # get require parameters
-        version = event["Version"]
-        domain = event["Domain"]
-        project_bucket = event["ProjectBucket"]
-        project_folder = event["ProjectFolder"]
-        lambda_zip_file = event["LambdaZipFile"]
-        container_registry = event["ContainerRegistry"]
-        deploy_date = event["DeployDate"]
-        region = event["Region"]
+        version = event["version"]
+        domain = event["domain"]
+        project_bucket = event["project_bucket"]
+        project_folder = event["project_folder"]
+        lambda_zip_file = event["lambda_zip_file"]
+        container_registry = event["container_registry"]
+        deploy_date = event["deploy_date"]
+        region = event["region"]
 
         # get optional parameters
-        state["StackName"] = event.get('StackName', 'testrunner') # default to hardcoded stack name so only one can run at a time
+        state["stack_name"] = event.get('stack_name', 'testrunner') # default to hardcoded stack name so only one can run at a time
 
         # build parameters for stack creation
-        state["StackParameters"] = [
+        state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": version},
             {"ParameterKey": "Domain", "ParameterValue": domain},
             {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
@@ -434,14 +432,14 @@ def lambda_test(event, context):
 
         # create stack
         cf = boto3.client("cloudformation", region_name=region)
-        state["Response"] = cf.create_stack(StackName=state["StackName"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["StackParameters"])
+        state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in test: {e}")
-        state["Exception"] = f'{e}'
-        state["Status"] = False
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     # return response
     return state

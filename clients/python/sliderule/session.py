@@ -127,15 +127,12 @@ class Session:
     #
     def __init__ (self,
         domain          = PUBLIC_URL,
-        verbose         = False,
-        loglevel        = logging.INFO,
         organization    = 0,
         desired_nodes   = None,
         time_to_live    = 60, # minutes
         trust_env       = False,
         ssl_verify      = True,
         rqst_timeout    = (10, 120), # (connection, read) in seconds
-        log_handler     = None,
         decode_aux      = True,
         rethrow         = False,
         github_token    = None):
@@ -158,11 +155,6 @@ class Session:
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
 
-        # configure logging
-        self.set_verbose(verbose, loglevel)
-        if log_handler != None:
-            logger.addHandler(log_handler)
-
         # configure domain
         self.service_domain = domain
 
@@ -177,7 +169,7 @@ class Session:
 
         # configure credentials (if any) for organization
         if organization != 0:
-            self.authenticate(organization, github_token=github_token, verbose=verbose)
+            self.authenticate(organization, github_token=github_token)
             self.scaleout(desired_nodes, time_to_live)
         else:
             organization = self.PUBLIC_ORG
@@ -359,35 +351,15 @@ class Session:
             logger.debug(f'Failed to retrieve number of nodes registered: {e}')
             available_servers = 0
 
-        # update number of nodes
+        # make provisioning request
         if isinstance(desired_nodes, int):
-            headers = {}
-            rsps_body = {}
-            requested_nodes = desired_nodes
-            self.__buildauthheader(headers)
-
-            # build request
-            url = "https://provisioner." + self.service_domain + "/deploy"
-            payload = json.dumps({
+            rsps = self.session.provisioner("deploy", {
                 "Cluster": self.service_org,
                 "IsPublic": False,
                 "NodeCapacity": desired_nodes,
                 "TTL": time_to_live
             })
-
-            # make provisioning request
-            try:
-                rsps = self.session.post(url, data=payload, headers=headers, timeout=self.rqst_timeout)
-                rsps_body = rsps.json()
-                rsps.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                logger.error(f'Provisioning system update request error => {rsps_body.get("Exception")}')
-                if self.throw_exceptions:
-                    raise
-            except Exception as e:
-                logger.info(f'Failed to update available servers: {e}')
-                if self.throw_exceptions:
-                    raise
+            logger.info(f'Provisioning request status: {rsps['status']}')
 
         # return status
         return available_servers, requested_nodes
@@ -429,7 +401,7 @@ class Session:
     #
     # authenticate
     #
-    def authenticate (self, organization, github_token=None, verbose=False):
+    def authenticate (self, organization, github_token=None):
         '''
         gets a bearer token (ps_access_token) from sliderule
         to use in requests to private clusters
@@ -470,8 +442,6 @@ class Session:
         # log status
         if organization != self.PUBLIC_ORG:
             logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
-        if verbose:
-            logger.info(f'Login metadata\n{json.dumps(metadata, indent=2)}')
 
         # return response metadata
         return metadata
@@ -522,6 +492,40 @@ class Session:
         return rsps
 
     #
+    #  provisioner
+    #
+    def provisioner (self, api, data=None, headers=None):
+        '''
+        handles making the HTTP request to the sliderule provisioner
+        '''
+        try:
+            # Build Authorization Header
+            if headers == None:
+                headers = {}
+            self.__buildauthheader(headers)
+
+            # Perform Request
+            url = f'https://provisioner.{self.service_domain}/{api}'
+            data = self.session.post(url, data=json.dumps(data), headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            data.raise_for_status()
+
+            # Parse Response
+            stream_source = self.__StreamSource(data)
+            lines = [line for line in stream_source]
+            rsps = b''.join(lines)
+            rsps = json.loads(rsps)
+
+            # Return Response
+            return {'status': 'success', 'result': rsps}
+
+        except Exception as e:
+            logger.error(f'Failed to make request to {url}: {e}')
+            if self.throw_exceptions:
+                raise
+            return {'status': 'error', 'result': f'{e}'}
+
+
+    #
     # __StreamSource
     #
     class __StreamSource:
@@ -547,7 +551,6 @@ class Session:
         """
         Prompt the user through the device flow authentication to GitHub
         """
-        result = {'status': 'error'}
         try:
             # get device info from github
             response            = self.session.post(login_url + '/auth/github/device')
@@ -587,7 +590,8 @@ class Session:
                 result = response.json()
                 if result['status'] == 'success':
                     print(f"success")
-                    break
+                    # return metadata
+                    return result
                 elif result['status'] == 'error':
                     logger.error(f'error polling for authorization: {result.get('error')}')
                 else: # result['status'] == 'pending'
@@ -606,8 +610,8 @@ class Session:
         except Exception as e:
             logger.error(f"internal error: {e}")
 
-        # return result (which includes status)
-        return result
+        # return error
+        return {'status': 'error'}
 
     #
     #  __buildauthheader
