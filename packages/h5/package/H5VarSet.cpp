@@ -72,18 +72,15 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
     while(dataset_name != NULL)
     {
         array->join(timeout_ms, throw_exception);
-        const long row_size = array->rowSize();
-        bool column_ok = true;
-        if(row_size > 1)
+
+        uint32_t encoding = array->elementType();
+        if(array->numDimensions() > 1)
         {
-            column_ok = gdf->addNewListColumn(dataset_name, array->elementType());
-        }
-        else
-        {
-            column_ok = gdf->addNewColumn(dataset_name, array->elementType());
+            /* Could be NESTED_ARRAY or NESTED_LIST, both go through list path from here */
+            encoding |= Field::NESTED_LIST;
         }
 
-        if(!column_ok)
+        if(!gdf->addNewColumn(dataset_name, encoding))
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add column for <%s>", dataset_name);
         }

@@ -230,21 +230,6 @@ static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf
 }
 
  /*----------------------------------------------------------------------------
- * _addListColumn - internal helper
- *----------------------------------------------------------------------------*/
-template<typename T>
-static FieldColumn<FieldList<T>>* _addListColumn(GeoDataFrame* gdf, const char* name)
-{
-    FieldColumn<FieldList<T>>* column = new FieldColumn<FieldList<T>>();
-    if(!gdf->addColumn(name, column, true))
-    {
-        delete column;
-        column = NULL;
-    }
-    return column;
-}
-
- /*----------------------------------------------------------------------------
  * _getListColumn - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
@@ -688,35 +673,58 @@ bool GeoDataFrame::addColumn (const char* name, FieldUntypedColumn* column, bool
 /*----------------------------------------------------------------------------
  * addNewColumn - allocates name and field
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
+bool GeoDataFrame::addNewColumn (const char* name, uint32_t column_encoding)
 {
     FieldUntypedColumn* column = NULL;
+    const uint32_t nested_encoding = column_encoding & Field::NESTED_MASK;
+    const uint32_t value_encoding  = column_encoding & Field::TYPE_MASK;
+    const uint32_t encoding_mask   = column_encoding & ~Field::VALUE_MASK; /* column flags without value bits */
 
-    if(columnFields.fields.find(name))
+    /* NESTED_LIST and NESTED_ARRAY both go through the list path */
+    if(nested_encoding == Field::NESTED_LIST || nested_encoding == Field::NESTED_ARRAY)
     {
-        print2term("Column <%s> already exists\n", name);
-    }
-    else print2term("Adding column <%s> of type %d\n", name, _type);
-
-    switch(_type)
-    {
-        case Field::BOOL:   column = new FieldColumn<bool>();       break;
-        case Field::INT8:   column = new FieldColumn<int8_t>();     break;
-        case Field::INT16:  column = new FieldColumn<int16_t>();    break;
-        case Field::INT32:  column = new FieldColumn<int32_t>();    break;
-        case Field::INT64:  column = new FieldColumn<int64_t>();    break;
-        case Field::UINT8:  column = new FieldColumn<uint8_t>();    break;
-        case Field::UINT16: column = new FieldColumn<uint16_t>();   break;
-        case Field::UINT32: column = new FieldColumn<uint32_t>();   break;
-        case Field::UINT64: column = new FieldColumn<uint64_t>();   break;
-        case Field::FLOAT:  column = new FieldColumn<float>();      break;
-        case Field::DOUBLE: column = new FieldColumn<double>();     break;
-        case Field::STRING: column = new FieldColumn<string>();     break;
-        case Field::TIME8:  column = new FieldColumn<time8_t>();    break;
-        default:
+        switch(value_encoding)
         {
-            mlog(ERROR, "Cannot add column <%s> of type %d", name, _type);
-            return false;
+            case RecordObject::INT8:    column = new FieldColumn<FieldList<int8_t>>  (encoding_mask); break;
+            case RecordObject::INT16:   column = new FieldColumn<FieldList<int16_t>> (encoding_mask); break;
+            case RecordObject::INT32:   column = new FieldColumn<FieldList<int32_t>> (encoding_mask); break;
+            case RecordObject::INT64:   column = new FieldColumn<FieldList<int64_t>> (encoding_mask); break;
+            case RecordObject::UINT8:   column = new FieldColumn<FieldList<uint8_t>> (encoding_mask); break;
+            case RecordObject::UINT16:  column = new FieldColumn<FieldList<uint16_t>>(encoding_mask); break;
+            case RecordObject::UINT32:  column = new FieldColumn<FieldList<uint32_t>>(encoding_mask); break;
+            case RecordObject::UINT64:  column = new FieldColumn<FieldList<uint64_t>>(encoding_mask); break;
+            case RecordObject::FLOAT:   column = new FieldColumn<FieldList<float>>   (encoding_mask); break;
+            case RecordObject::DOUBLE:  column = new FieldColumn<FieldList<double>>  (encoding_mask); break;
+            case RecordObject::TIME8:   column = new FieldColumn<FieldList<time8_t>> (encoding_mask); break;
+            default:
+            {
+                mlog(ERROR, "Cannot add nested column <%s> of type %d", name, value_encoding);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        switch(value_encoding)
+        {
+            case Field::BOOL:   column = new FieldColumn<bool>   (encoding_mask); break;
+            case Field::INT8:   column = new FieldColumn<int8_t> (encoding_mask); break;
+            case Field::INT16:  column = new FieldColumn<int16_t>(encoding_mask); break;
+            case Field::INT32:  column = new FieldColumn<int32_t>(encoding_mask); break;
+            case Field::INT64:  column = new FieldColumn<int64_t>(encoding_mask); break;
+            case Field::UINT8:  column = new FieldColumn<uint8_t>(encoding_mask); break;
+            case Field::UINT16: column = new FieldColumn<uint16_t>(encoding_mask); break;
+            case Field::UINT32: column = new FieldColumn<uint32_t>(encoding_mask); break;
+            case Field::UINT64: column = new FieldColumn<uint64_t>(encoding_mask); break;
+            case Field::FLOAT:  column = new FieldColumn<float>  (encoding_mask); break;
+            case Field::DOUBLE: column = new FieldColumn<double> (encoding_mask); break;
+            case Field::STRING: column = new FieldColumn<string> (encoding_mask); break;
+            case Field::TIME8:  column = new FieldColumn<time8_t>(encoding_mask); break;
+            default:
+            {
+                mlog(ERROR, "Cannot add column <%s> of type %d", name, value_encoding);
+                return false;
+            }
         }
     }
 
@@ -728,38 +736,6 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
     }
 
     return true;
-}
-
-/*----------------------------------------------------------------------------
- * addNewListColumn
- *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addNewListColumn(const char* name, RecordObject::fieldType_t _type)
-{
-    if(columnFields.fields.find(name))
-    {
-        print2term("List column <%s> already exists\n", name);
-    }
-    else print2term("Adding list column <%s> of type %d\n", name, _type);
-
-    switch(_type)
-    {
-        case RecordObject::INT8:    return _addListColumn<int8_t>(this, name)   != NULL;
-        case RecordObject::INT16:   return _addListColumn<int16_t>(this, name)  != NULL;
-        case RecordObject::INT32:   return _addListColumn<int32_t>(this, name)  != NULL;
-        case RecordObject::INT64:   return _addListColumn<int64_t>(this, name)  != NULL;
-        case RecordObject::UINT8:   return _addListColumn<uint8_t>(this, name)  != NULL;
-        case RecordObject::UINT16:  return _addListColumn<uint16_t>(this, name) != NULL;
-        case RecordObject::UINT32:  return _addListColumn<uint32_t>(this, name) != NULL;
-        case RecordObject::UINT64:  return _addListColumn<uint64_t>(this, name) != NULL;
-        case RecordObject::FLOAT:   return _addListColumn<float>(this, name)    != NULL;
-        case RecordObject::DOUBLE:  return _addListColumn<double>(this, name)   != NULL;
-        case RecordObject::TIME8:   return _addListColumn<time8_t>(this, name)  != NULL;
-        default:
-        {
-            mlog(ERROR, "Cannot add list column <%s> of type %d", name, static_cast<int>(_type));
-            return false;
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------
