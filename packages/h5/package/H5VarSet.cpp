@@ -38,24 +38,6 @@
 #include "H5VarSet.h"
 
 /******************************************************************************
- * STATIC FUNCTIONS
- ******************************************************************************/
-static long computeRowSize(const H5DArray* array)
-{
-    long row_size = array->rowSize();
-
-    if(row_size <= 1 && array->h5f)
-    {
-        const int64_t rows = array->h5f->info.shape[0];
-        if(rows > 0 && array->numElements() % rows == 0)
-        {
-            row_size = array->numElements() / rows;
-        }
-    }
-    return row_size;
-}
-
-/******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
@@ -90,7 +72,7 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
     while(dataset_name != NULL)
     {
         array->join(timeout_ms, throw_exception);
-        const long row_size = computeRowSize(array);
+        const long row_size = array->rowSize();
         bool column_ok = true;
         if(row_size > 1)
         {
@@ -119,7 +101,7 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
     {
         const char* dataset_name = iter[i].key;
         H5DArray* array = iter[i].value;
-        const long row_size = computeRowSize(array);
+        const long row_size = array->rowSize();
         const bool multidim = (row_size > 1);
         bool append_ok = true;
 

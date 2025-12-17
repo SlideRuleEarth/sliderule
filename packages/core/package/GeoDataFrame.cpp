@@ -95,11 +95,145 @@ const char* GeoDataFrame::CRS_KEY = "crs";
  * STATIC FUNCTIONS
  ******************************************************************************/
 
+/*----------------------------------------------------------------------------
+ * _addColumn - internal helper
+ *----------------------------------------------------------------------------*/
+template<class T>
+static void _addColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
+{
+    // get column from dataframe
+    FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(dataframe->getColumn(gdf_rec_data->name, true));
+
+    // create new column if not found
+    if(!column)
+    {
+        column = new FieldColumn<T>(gdf_rec_data->encoding, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
+        if(!dataframe->addColumn(gdf_rec_data->name, column, true))
+        {
+            delete column;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", gdf_rec_data->name);
+        }
+    }
+    else if(column->encoding != gdf_rec_data->encoding)
+    {
+        throw RunTimeException(ERROR, RTE_FAILURE, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
+    }
+
+    // append data to column
+    if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
+    {
+        dataframe->numRows = column->appendBuffer(gdf_rec_data->data, gdf_rec_data->size);
+    }
+    else if(gdf_rec_data->type == GeoDataFrame::META_REC)
+    {
+        if(gdf_rec_data->encoding & GeoDataFrame::META_COLUMN)
+        {
+            T* value_ptr = reinterpret_cast<T*>(gdf_rec_data->data);
+            dataframe->numRows = column->appendValue(*value_ptr, gdf_rec_data->num_rows);
+        }
+    }
+    else
+    {
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%u> with invalid type", gdf_rec_data->type);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * _addSourceColumn - internal helper
+ *----------------------------------------------------------------------------*/
+static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id)
+{
+    // get source id column from dataframe
+    FieldColumn<int32_t>* column = dynamic_cast<FieldColumn<int32_t>*>(dataframe->getColumn(GeoDataFrame::SOURCE_ID, true));
+
+    // create new source id column if not found
+    if(!column)
+    {
+        const uint32_t encoding_mask = 0;
+        column = new FieldColumn<int32_t>(encoding_mask, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
+        if(!dataframe->addColumn(GeoDataFrame::SOURCE_ID, column, true))
+        {
+            delete column;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", GeoDataFrame::SOURCE_ID);
+        }
+    }
+
+    // append source_id to column
+    dataframe->numRows = column->appendValue(source_id, gdf_rec_data->num_rows);
+
+    // get source table from metadata
+    FieldDictionary* dict = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
+
+    // create new source table if not found
+    if(!dict)
+    {
+        dict = new FieldDictionary();
+        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_TABLE, dict, true))
+        {
+            delete dict;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s> to dataframe", GeoDataFrame::SOURCE_TABLE);
+        }
+    }
+
+    // add source_id to meta data
+    const string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
+    FieldElement<string>* source_id_field = new FieldElement<string>(value);
+    if(!dict->add(FString("%d", source_id).c_str(), source_id_field, true))
+    {
+        delete source_id_field;
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add <%s=%d> to <%s>", GeoDataFrame::SOURCE_ID, source_id, GeoDataFrame::SOURCE_TABLE);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * _addListColumn - internal helper
+ *----------------------------------------------------------------------------*/
+template<class T>
+static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
+{
+    // get column from dataframe
+    FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(dataframe->getColumn(gdf_rec_data->name, true));
+
+    // create new column if not found
+    if(!column)
+    {
+        column = new FieldColumn<FieldList<T>>(gdf_rec_data->encoding & ~Field::NESTED_MASK, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
+        if(!dataframe->addColumn(gdf_rec_data->name, column, true))
+        {
+            delete column;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%s> to dataframe", gdf_rec_data->name);
+        }
+    }
+    else if((column->encoding & ~Field::NESTED_MASK) != (gdf_rec_data->encoding & ~Field::NESTED_MASK))
+    {
+        throw RunTimeException(ERROR, RTE_FAILURE, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
+    }
+
+    // append data to column
+    if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
+    {
+        uint32_t* sizes_ptr = reinterpret_cast<uint32_t*>(gdf_rec_data->data);
+        const long size_of_sizes = sizeof(uint32_t) * gdf_rec_data->num_rows;
+        long data_offset = size_of_sizes;
+        for(uint32_t j = 0; j < gdf_rec_data->num_rows; j++)
+        {
+            FieldList<T> field_list;
+            field_list.appendBuffer(&gdf_rec_data->data[data_offset], sizes_ptr[j]);
+            data_offset += sizes_ptr[j];
+            dataframe->numRows = column->append(field_list);
+        }
+    }
+    else
+    {
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%u> with invalid type", gdf_rec_data->type);
+    }
+}
+
  /*----------------------------------------------------------------------------
- * getListColumn - internal helper
+ * _getListColumn - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
-static FieldColumn<FieldList<T>>* getListColumn(GeoDataFrame* gdf, const char* name)
+static FieldColumn<FieldList<T>>* _getListColumn(GeoDataFrame* gdf, const char* name)
 {
     FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
     if(!column)
@@ -591,17 +725,17 @@ bool GeoDataFrame::addNewListColumn(const char* name, RecordObject::fieldType_t 
 {
     switch(_type)
     {
-        case RecordObject::INT8:    return getListColumn<int8_t>(this, name)   != NULL;
-        case RecordObject::INT16:   return getListColumn<int16_t>(this, name)  != NULL;
-        case RecordObject::INT32:   return getListColumn<int32_t>(this, name)  != NULL;
-        case RecordObject::INT64:   return getListColumn<int64_t>(this, name)  != NULL;
-        case RecordObject::UINT8:   return getListColumn<uint8_t>(this, name)  != NULL;
-        case RecordObject::UINT16:  return getListColumn<uint16_t>(this, name) != NULL;
-        case RecordObject::UINT32:  return getListColumn<uint32_t>(this, name) != NULL;
-        case RecordObject::UINT64:  return getListColumn<uint64_t>(this, name) != NULL;
-        case RecordObject::FLOAT:   return getListColumn<float>(this, name)    != NULL;
-        case RecordObject::DOUBLE:  return getListColumn<double>(this, name)   != NULL;
-        case RecordObject::TIME8:   return getListColumn<time8_t>(this, name)  != NULL;
+        case RecordObject::INT8:    return _getListColumn<int8_t>(this, name)   != NULL;
+        case RecordObject::INT16:   return _getListColumn<int16_t>(this, name)  != NULL;
+        case RecordObject::INT32:   return _getListColumn<int32_t>(this, name)  != NULL;
+        case RecordObject::INT64:   return _getListColumn<int64_t>(this, name)  != NULL;
+        case RecordObject::UINT8:   return _getListColumn<uint8_t>(this, name)  != NULL;
+        case RecordObject::UINT16:  return _getListColumn<uint16_t>(this, name) != NULL;
+        case RecordObject::UINT32:  return _getListColumn<uint32_t>(this, name) != NULL;
+        case RecordObject::UINT64:  return _getListColumn<uint64_t>(this, name) != NULL;
+        case RecordObject::FLOAT:   return _getListColumn<float>(this, name)    != NULL;
+        case RecordObject::DOUBLE:  return _getListColumn<double>(this, name)   != NULL;
+        case RecordObject::TIME8:   return _getListColumn<time8_t>(this, name)  != NULL;
         default:
         {
             mlog(ERROR, "Cannot add list column <%s> of type %d", name, static_cast<int>(_type));
@@ -1024,17 +1158,17 @@ bool GeoDataFrame::appendListValues(const char* name, RecordObject::fieldType_t 
 
     switch(_type)
     {
-        case RecordObject::INT8:    _appendListValues<int8_t>  (getListColumn<int8_t>(this, name),  values, count, nodata); break;
-        case RecordObject::INT16:   _appendListValues<int16_t> (getListColumn<int16_t>(this, name), values, count, nodata); break;
-        case RecordObject::INT32:   _appendListValues<int32_t> (getListColumn<int32_t>(this, name), values, count, nodata); break;
-        case RecordObject::INT64:   _appendListValues<int64_t> (getListColumn<int64_t>(this, name), values, count, nodata); break;
-        case RecordObject::UINT8:   _appendListValues<uint8_t> (getListColumn<uint8_t>(this, name), values, count, nodata); break;
-        case RecordObject::UINT16:  _appendListValues<uint16_t>(getListColumn<uint16_t>(this, name),values, count, nodata); break;
-        case RecordObject::UINT32:  _appendListValues<uint32_t>(getListColumn<uint32_t>(this, name),values, count, nodata); break;
-        case RecordObject::UINT64:  _appendListValues<uint64_t>(getListColumn<uint64_t>(this, name),values, count, nodata); break;
-        case RecordObject::FLOAT:   _appendListValues<float>   (getListColumn<float>(this, name),   values, count, nodata); break;
-        case RecordObject::DOUBLE:  _appendListValues<double>  (getListColumn<double>(this, name),  values, count, nodata); break;
-        case RecordObject::TIME8:   _appendListValues<time8_t> (getListColumn<time8_t>(this, name), values, count, nodata); break;
+        case RecordObject::INT8:    _appendListValues<int8_t>  (_getListColumn<int8_t>(this, name),  values, count, nodata); break;
+        case RecordObject::INT16:   _appendListValues<int16_t> (_getListColumn<int16_t>(this, name), values, count, nodata); break;
+        case RecordObject::INT32:   _appendListValues<int32_t> (_getListColumn<int32_t>(this, name), values, count, nodata); break;
+        case RecordObject::INT64:   _appendListValues<int64_t> (_getListColumn<int64_t>(this, name), values, count, nodata); break;
+        case RecordObject::UINT8:   _appendListValues<uint8_t> (_getListColumn<uint8_t>(this, name), values, count, nodata); break;
+        case RecordObject::UINT16:  _appendListValues<uint16_t>(_getListColumn<uint16_t>(this, name),values, count, nodata); break;
+        case RecordObject::UINT32:  _appendListValues<uint32_t>(_getListColumn<uint32_t>(this, name),values, count, nodata); break;
+        case RecordObject::UINT64:  _appendListValues<uint64_t>(_getListColumn<uint64_t>(this, name),values, count, nodata); break;
+        case RecordObject::FLOAT:   _appendListValues<float>   (_getListColumn<float>(this, name),   values, count, nodata); break;
+        case RecordObject::DOUBLE:  _appendListValues<double>  (_getListColumn<double>(this, name),  values, count, nodata); break;
+        case RecordObject::TIME8:   _appendListValues<time8_t> (_getListColumn<time8_t>(this, name), values, count, nodata); break;
         default:
         {
             mlog(ERROR, "Cannot append to list column <%s> value of type %d", name, static_cast<int>(_type));
@@ -1126,140 +1260,6 @@ GeoDataFrame::~GeoDataFrame(void)
 }
 
 /*----------------------------------------------------------------------------
- * add_column
- *----------------------------------------------------------------------------*/
-template<class T>
-void add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
-{
-    // get column from dataframe
-    FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(dataframe->getColumn(gdf_rec_data->name, true));
-
-    // create new column if not found
-    if(!column)
-    {
-        column = new FieldColumn<T>(gdf_rec_data->encoding, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        if(!dataframe->addColumn(gdf_rec_data->name, column, true))
-        {
-            delete column;
-            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", gdf_rec_data->name);
-        }
-    }
-    else if(column->encoding != gdf_rec_data->encoding)
-    {
-        throw RunTimeException(ERROR, RTE_FAILURE, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
-    }
-
-    // append data to column
-    if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
-    {
-        dataframe->numRows = column->appendBuffer(gdf_rec_data->data, gdf_rec_data->size);
-    }
-    else if(gdf_rec_data->type == GeoDataFrame::META_REC)
-    {
-        if(gdf_rec_data->encoding & GeoDataFrame::META_COLUMN)
-        {
-            T* value_ptr = reinterpret_cast<T*>(gdf_rec_data->data);
-            dataframe->numRows = column->appendValue(*value_ptr, gdf_rec_data->num_rows);
-        }
-    }
-    else
-    {
-        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%u> with invalid type", gdf_rec_data->type);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * add_source_column
- *----------------------------------------------------------------------------*/
-void add_source_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id)
-{
-    // get source id column from dataframe
-    FieldColumn<int32_t>* column = dynamic_cast<FieldColumn<int32_t>*>(dataframe->getColumn(GeoDataFrame::SOURCE_ID, true));
-
-    // create new source id column if not found
-    if(!column)
-    {
-        const uint32_t encoding_mask = 0;
-        column = new FieldColumn<int32_t>(encoding_mask, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        if(!dataframe->addColumn(GeoDataFrame::SOURCE_ID, column, true))
-        {
-            delete column;
-            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", GeoDataFrame::SOURCE_ID);
-        }
-    }
-
-    // append source_id to column
-    dataframe->numRows = column->appendValue(source_id, gdf_rec_data->num_rows);
-
-    // get source table from metadata
-    FieldDictionary* dict = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
-
-    // create new source table if not found
-    if(!dict)
-    {
-        dict = new FieldDictionary();
-        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_TABLE, dict, true))
-        {
-            delete dict;
-            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s> to dataframe", GeoDataFrame::SOURCE_TABLE);
-        }
-    }
-
-    // add source_id to meta data
-    const string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
-    FieldElement<string>* source_id_field = new FieldElement<string>(value);
-    if(!dict->add(FString("%d", source_id).c_str(), source_id_field, true))
-    {
-        delete source_id_field;
-        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add <%s=%d> to <%s>", GeoDataFrame::SOURCE_ID, source_id, GeoDataFrame::SOURCE_TABLE);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * add_list_column
- *----------------------------------------------------------------------------*/
-template<class T>
-void add_list_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
-{
-    // get column from dataframe
-    FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(dataframe->getColumn(gdf_rec_data->name, true));
-
-    // create new column if not found
-    if(!column)
-    {
-        column = new FieldColumn<FieldList<T>>(gdf_rec_data->encoding & ~Field::NESTED_MASK, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        if(!dataframe->addColumn(gdf_rec_data->name, column, true))
-        {
-            delete column;
-            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%s> to dataframe", gdf_rec_data->name);
-        }
-    }
-    else if((column->encoding & ~Field::NESTED_MASK) != (gdf_rec_data->encoding & ~Field::NESTED_MASK))
-    {
-        throw RunTimeException(ERROR, RTE_FAILURE, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
-    }
-
-    // append data to column
-    if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
-    {
-        uint32_t* sizes_ptr = reinterpret_cast<uint32_t*>(gdf_rec_data->data);
-        const long size_of_sizes = sizeof(uint32_t) * gdf_rec_data->num_rows;
-        long data_offset = size_of_sizes;
-        for(uint32_t j = 0; j < gdf_rec_data->num_rows; j++)
-        {
-            FieldList<T> field_list;
-            field_list.appendBuffer(&gdf_rec_data->data[data_offset], sizes_ptr[j]);
-            data_offset += sizes_ptr[j];
-            dataframe->numRows = column->append(field_list);
-        }
-    }
-    else
-    {
-        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%u> with invalid type", gdf_rec_data->type);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * appendDataframe
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id)
@@ -1270,24 +1270,24 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
     if((gdf_rec_data->type == GeoDataFrame::META_REC) &&
        (gdf_rec_data->encoding & GeoDataFrame::META_SOURCE_ID))
     {
-        add_source_column(this, gdf_rec_data, source_id);
+        _addSourceColumn(this, gdf_rec_data, source_id);
     }
     else if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
     {
         switch(encoded_type)
         {
-            // case BOOL:      add_status = add_list_column<bool>    (this, gdf_rec_data); break;
-            case INT8:      add_list_column<int8_t>  (this, gdf_rec_data); break;
-            case INT16:     add_list_column<int16_t> (this, gdf_rec_data); break;
-            case INT32:     add_list_column<int32_t> (this, gdf_rec_data); break;
-            case INT64:     add_list_column<int64_t> (this, gdf_rec_data); break;
-            case UINT8:     add_list_column<uint8_t> (this, gdf_rec_data); break;
-            case UINT16:    add_list_column<uint16_t>(this, gdf_rec_data); break;
-            case UINT32:    add_list_column<uint32_t>(this, gdf_rec_data); break;
-            case UINT64:    add_list_column<uint64_t>(this, gdf_rec_data); break;
-            case FLOAT:     add_list_column<float>   (this, gdf_rec_data); break;
-            case DOUBLE:    add_list_column<double>  (this, gdf_rec_data); break;
-            case TIME8:     add_list_column<time8_t> (this, gdf_rec_data); break;
+            // case BOOL:      add_status = _addListColumn<bool>    (this, gdf_rec_data); break;
+            case INT8:      _addListColumn<int8_t>  (this, gdf_rec_data); break;
+            case INT16:     _addListColumn<int16_t> (this, gdf_rec_data); break;
+            case INT32:     _addListColumn<int32_t> (this, gdf_rec_data); break;
+            case INT64:     _addListColumn<int64_t> (this, gdf_rec_data); break;
+            case UINT8:     _addListColumn<uint8_t> (this, gdf_rec_data); break;
+            case UINT16:    _addListColumn<uint16_t>(this, gdf_rec_data); break;
+            case UINT32:    _addListColumn<uint32_t>(this, gdf_rec_data); break;
+            case UINT64:    _addListColumn<uint64_t>(this, gdf_rec_data); break;
+            case FLOAT:     _addListColumn<float>   (this, gdf_rec_data); break;
+            case DOUBLE:    _addListColumn<double>  (this, gdf_rec_data); break;
+            case TIME8:     _addListColumn<time8_t> (this, gdf_rec_data); break;
             default:        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add nested column <%s> with unsupported encoding %X", gdf_rec_data->name, gdf_rec_data->encoding); break;
         }
     }
@@ -1295,18 +1295,18 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
     {
         switch(encoded_type)
         {
-            case BOOL:      add_column<bool>    (this, gdf_rec_data); break;
-            case INT8:      add_column<int8_t>  (this, gdf_rec_data); break;
-            case INT16:     add_column<int16_t> (this, gdf_rec_data); break;
-            case INT32:     add_column<int32_t> (this, gdf_rec_data); break;
-            case INT64:     add_column<int64_t> (this, gdf_rec_data); break;
-            case UINT8:     add_column<uint8_t> (this, gdf_rec_data); break;
-            case UINT16:    add_column<uint16_t>(this, gdf_rec_data); break;
-            case UINT32:    add_column<uint32_t>(this, gdf_rec_data); break;
-            case UINT64:    add_column<uint64_t>(this, gdf_rec_data); break;
-            case FLOAT:     add_column<float>   (this, gdf_rec_data); break;
-            case DOUBLE:    add_column<double>  (this, gdf_rec_data); break;
-            case TIME8:     add_column<time8_t> (this, gdf_rec_data); break;
+            case BOOL:      _addColumn<bool>    (this, gdf_rec_data); break;
+            case INT8:      _addColumn<int8_t>  (this, gdf_rec_data); break;
+            case INT16:     _addColumn<int16_t> (this, gdf_rec_data); break;
+            case INT32:     _addColumn<int32_t> (this, gdf_rec_data); break;
+            case INT64:     _addColumn<int64_t> (this, gdf_rec_data); break;
+            case UINT8:     _addColumn<uint8_t> (this, gdf_rec_data); break;
+            case UINT16:    _addColumn<uint16_t>(this, gdf_rec_data); break;
+            case UINT32:    _addColumn<uint32_t>(this, gdf_rec_data); break;
+            case UINT64:    _addColumn<uint64_t>(this, gdf_rec_data); break;
+            case FLOAT:     _addColumn<float>   (this, gdf_rec_data); break;
+            case DOUBLE:    _addColumn<double>  (this, gdf_rec_data); break;
+            case TIME8:     _addColumn<time8_t> (this, gdf_rec_data); break;
             default:        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> with unsupported encoding %X", gdf_rec_data->name, gdf_rec_data->encoding); break;
         }
     }
