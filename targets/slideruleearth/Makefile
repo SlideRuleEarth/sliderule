@@ -263,14 +263,14 @@ CLUSTER ?= $(ORGANIZATION)
 NODE_CAPACITY ?= 1
 TTL ?= 60
 CLUSTER_PARMS = '{\
-	"Version": "$(VERSION)",\
-	"IsPublic": $(IS_PUBLIC),\
-	"Domain": "$(DOMAIN)",\
-	"Organization": "$(ORGANIZATION)",\
-	"Cluster": "$(CLUSTER)",\
-	"NodeCapacity": $(NODE_CAPACITY),\
-	"TTL": $(TTL),\
-	"Region": "$(AWS_REGION)"\
+	"version": "$(VERSION)",\
+	"is_public": $(IS_PUBLIC),\
+	"domain": "$(DOMAIN)",\
+	"organization": "$(ORGANIZATION)",\
+	"cluster": "$(CLUSTER)",\
+	"node_capacity": $(NODE_CAPACITY),\
+	"ttl": $(TTL),\
+	"region": "$(AWS_REGION)"\
 }'
 
 cluster-docker: ## build all cluster docker images
@@ -338,14 +338,14 @@ cluster-take-offline: ## destroy dns entry of public cluster
 #	- The testrunner automatically destroys itself after one hour
 
 TESTBOT_PARMS = '{\
-	"Version": "$(VERSION)",\
-	"Domain": "$(DOMAIN)",\
-	"ProjectBucket": "$(PROJECT_BUCKET)",\
-	"ProjectFolder": "$(PROJECT_FOLDER)",\
-	"LambdaZipFile": "$(PROJECT_FOLDER)/provisioner.zip",\
-	"ContainerRegistry": "$(ECR)",\
-	"DeployDate": "$(TIMESTAMP)",\
-	"Region": "$(AWS_REGION)"\
+	"version": "$(VERSION)",\
+	"domain": "$(DOMAIN)",\
+	"project_bucket": "$(PROJECT_BUCKET)",\
+	"project_folder": "$(PROJECT_FOLDER)",\
+	"lambda_zip_file": "$(PROJECT_FOLDER)/provisioner.zip",\
+	"container_registry": "$(ECR)",\
+	"deploy_date": "$(TIMESTAMP)",\
+	"region": "$(AWS_REGION)"\
 }'
 
 testrunner-describe: ## status the creation/deletion of the test runner
