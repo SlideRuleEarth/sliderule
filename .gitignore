@@ -53,3 +53,4 @@ report.pdf
 report.xml
 # infracost
 .infracost/
+__pycache__/

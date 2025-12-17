@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import sys
 import requests
 import threading
 import json
@@ -553,16 +554,14 @@ class Session:
         """
         try:
             # get device info from github
-            response            = self.session.post(login_url + '/auth/github/device')
-            device_info         = response.json()
-            user_code           = device_info['user_code']
-            device_code         = device_info['device_code']
-            verification_uri    = device_info['verification_uri']
-            interval            = device_info.get('interval', 5) # default to check every 5 seconds
-            expires_in          = device_info.get('expires_in', timeout)
-
-            # construct complete url for verification
-            verification_uri_complete = f"{verification_uri}?user_code={urllib_parse.quote(user_code)}"
+            response                    = self.session.post(login_url + '/auth/github/device')
+            device_info                 = response.json()
+            user_code                   = device_info['user_code']
+            device_code                 = device_info['device_code']
+            verification_uri            = device_info['verification_uri']
+            verification_uri_complete   = device_info['verification_uri_complete'] or f"{verification_uri}?user_code={urllib_parse.quote(user_code)}"
+            interval                    = device_info.get('interval', 5) # default to check every 5 seconds
+            expires_in                  = device_info.get('expires_in', timeout)
 
             # display instructions to user
             print("\n" + "=" * 60)
@@ -572,7 +571,7 @@ class Session:
             print(f"\nAnd enter this code: {user_code}")
             print("\n" + "=" * 60)
 
-            # Open browser if possible
+            # open browser if possible
             try:
                 print("\nAttempting to open browser... ", end='')
                 webbrowser.open(verification_uri_complete)
@@ -580,16 +579,21 @@ class Session:
             except Exception:
                 print("failed (must manually open).")
 
-            # Poll for authorization
-            print("\nWaiting for authorization ", end='')
+            # poll for authorization
+            print("\nWaiting for authorization...  ", end='')
+            print_mod = 0
             start_time = time.time()
             actual_timeout = min(timeout, expires_in)
             while time.time() - start_time < actual_timeout:
-                print(".", end='')
+                # display wait symbol
+                sys.stdout.write(f"\b{['/','-','\\','-'][print_mod]}")
+                sys.stdout.flush()
+                print_mod = (print_mod + 1) % 4
+                # make polling request
                 response = self.session.post(login_url + '/auth/github/device/poll', json={'device_code': device_code}, headers={'Content-Type': 'application/json'})
                 result = response.json()
                 if result['status'] == 'success':
-                    print(f"success")
+                    print(f"\bsuccess")
                     # return metadata
                     return result
                 elif result['status'] == 'error':
@@ -599,7 +603,7 @@ class Session:
                     time.sleep(wait_interval)
 
             # if here then we failed to authenticate
-            print('failure')
+            print('\bfailure')
             logger.error(f'failed to authenticate to {login_url}')
 
         # handle exceptions

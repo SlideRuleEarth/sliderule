@@ -442,7 +442,8 @@ def create_auth_token(metadata):
     # Build JWT header
     header = {
         'alg': JWT_ALGORITHM,
-        'typ': 'JWT'
+        'typ': 'JWT',
+        'kid': JWT_SIGNING_KEY_ARN.split("/")[-1] # JWKS kid = key UUID
     }
 
     # Helper function
@@ -832,6 +833,7 @@ def handle_device_code_request(event):
             })
 
         data = response.json()
+        print(f"Response from GitHub: {data}")
 
         if 'error' in data:
             return json_response(400, {

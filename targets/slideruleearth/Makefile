@@ -436,7 +436,8 @@ provisioner-build: ## create the provisioner lambda zipfile
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package requests"
-	cp $(ROOT)/applications/provisioner/main.py $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.sh $(PROVISIONER_STAGE_DIR)/package/

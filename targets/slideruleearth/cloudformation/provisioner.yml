@@ -43,7 +43,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_deploy
+      Handler: provisioner.lambda_deploy
       Description: Deploy the cluster
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -69,7 +69,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_destroy
+      Handler: provisioner.lambda_destroy
       Description: Destroy the cluster
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -86,7 +86,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_status
+      Handler: provisioner.lambda_status
       Description: Status the cluster
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -103,7 +103,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_events
+      Handler: provisioner.lambda_events
       Description: Get events from provisioner stack operations
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -120,7 +120,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_test
+      Handler: provisioner.lambda_test
       Description: Kick off execution of the testrunner
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -137,7 +137,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: main.lambda_gateway
+      Handler: provisioner.lambda_gateway
       Description: Routes requests based on path
       Code:
         S3Bucket: !Ref ProjectBucket

@@ -733,7 +733,7 @@ Resources:
     Properties:
       FunctionName: !Sub '${AWS::StackName}-auto-shutdown'
       Runtime: python3.13
-      Handler: main.lambda_destroy
+      Handler: provisioner.lambda_destroy
       Role: !GetAtt DestroyLambdaRole.Arn
       Timeout: 60
       Code:
@@ -771,7 +771,7 @@ Resources:
     Properties:
       FunctionName: !Sub '${AWS::StackName}-scheduler'
       Runtime: python3.13
-      Handler: main.lambda_scheduler
+      Handler: scheduler.lambda_scheduler
       Role: !GetAtt SchedulerLambdaRole.Arn
       Timeout: 60
       Code:
