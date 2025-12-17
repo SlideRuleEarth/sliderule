@@ -423,8 +423,8 @@ class Session:
         # authenticate user
         try:
             if github_user_token:
-                # github user tokens currently unsupported
-                rsps = {'status': 'unsupported'}
+                # directly login using a PAT key
+                rsps = self.__patlogin(login_url, github_user_token)
             else:
                 # attempt device flow login
                 rsps = self.__deviceflow(login_url)
@@ -573,14 +573,14 @@ class Session:
 
             # open browser if possible
             try:
-                print("\nAttempting to open browser... ", end='')
+                print("Attempting to open browser... ", end='')
                 webbrowser.open(verification_uri_complete)
                 print("success.")
             except Exception:
                 print("failed (must manually open).")
 
             # poll for authorization
-            print("\nWaiting for authorization...  ", end='')
+            print("Waiting for authorization...  ", end='')
             print_mod = 0
             start_time = time.time()
             actual_timeout = min(timeout, expires_in)
@@ -605,6 +605,32 @@ class Session:
             # if here then we failed to authenticate
             print('\bfailure')
             logger.error(f'failed to authenticate to {login_url}')
+
+        # handle exceptions
+        except requests.RequestException as e:
+            logger.error(f"request failed: {e}")
+        except json.JSONDecodeError:
+            logger.error(f"invalid json response")
+        except Exception as e:
+            logger.error(f"internal error: {e}")
+
+        # return error
+        return {'status': 'error'}
+
+    #
+    #  __patlogin
+    #
+    def __patlogin(self, login_url, pat):
+        """
+        Login directly with a GitHub Personal Access Token (PAT) key
+        """
+        try:
+            # make login request
+            response = self.session.post(login_url + '/auth/github/pat', json={'pat': pat})
+            result = response.json()
+
+            # return success
+            return result
 
         # handle exceptions
         except requests.RequestException as e:

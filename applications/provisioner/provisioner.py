@@ -350,19 +350,20 @@ def lambda_gateway(event, context):
     Route requests based on path
     """
     path = event.get('rawPath', '')
+    body = event.get('body', {})
     print(f"Received request: {path}")
     if path == '/depoy':
-        return lambda_deploy(event, context)
+        return lambda_deploy(body, context)
     elif path == '/extend':
-        return lambda_extend(event, context)
+        return lambda_extend(body, context)
     elif path == '/destroy':
-        return lambda_destroy(event, context)
+        return lambda_destroy(body, context)
     elif path == '/status':
-        return lambda_status(event, context)
+        return lambda_status(body, context)
     elif path == '/events':
-        return lambda_events(event, context)
+        return lambda_events(body, context)
     elif path == '/test':
-        return lambda_test(event, context)
+        return lambda_test(body, context)
     else:
         print(f"Path not found: {path}")
         return {

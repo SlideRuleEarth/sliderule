@@ -246,12 +246,12 @@ def verify_with_kms(message_bytes, signature):
 # GitHub Helper Functions
 # =============================================================================
 
-def get_github_user(access_token):
+def get_github_user(authorization_str):
     """Get authenticated user's GitHub profile."""
     response = requests.get(
         f"{GITHUB_API_URL}/user",
         headers={
-            'Authorization': f'Bearer {access_token}',
+            'Authorization': authorization_str,
             'Accept': 'application/vnd.github.v3+json'
         },
         timeout=HTTP_TIMEOUT_SECONDS
@@ -263,7 +263,7 @@ def get_github_user(access_token):
     return response.json()
 
 
-def get_organization_roles(access_token, username):
+def get_organization_roles(authorization_str, username):
     """
     Builds a list of roles for the user
     Raises:
@@ -279,7 +279,7 @@ def get_organization_roles(access_token, username):
     response = requests.get(
         f"{GITHUB_API_URL}/orgs/{GITHUB_ORG}/memberships/{username}",
         headers={
-            'Authorization': f'Bearer {access_token}',
+            'Authorization': authorization_str,
             'Accept': 'application/vnd.github.v3+json'
         },
         timeout=HTTP_TIMEOUT_SECONDS
@@ -317,7 +317,7 @@ def get_organization_roles(access_token, username):
     return roles
 
 
-def get_user_teams(access_token, username, org_roles):
+def get_user_teams(authorization_str, org_roles):
     """
     Get all teams the user belongs to in the SlideRuleEarth organization.
 
@@ -344,7 +344,7 @@ def get_user_teams(access_token, username, org_roles):
         response = requests.get(
             url,
             headers={
-                'Authorization': f'Bearer {access_token}',
+                'Authorization': authorization_str,
                 'Accept': 'application/vnd.github.v3+json'
             },
             params={
@@ -522,12 +522,12 @@ def refresh_auth_token(token, event):
         raise Exception(f"Token refresh failed: {e}")
 
 
-def authenticate_user(access_token, event):
+def authenticate_user(authorization_str, event):
     """
     Build the authentication token and metadata for the user
     """
     # Get user info
-    user_info = get_github_user(access_token)
+    user_info = get_github_user(authorization_str)
 
     # Get username
     username = user_info.get('login')
@@ -535,8 +535,8 @@ def authenticate_user(access_token, event):
         raise RuntimeError('Could not get GitHub username')
 
     # Get user metadata
-    org_roles = get_organization_roles(access_token, username)
-    teams = get_user_teams(access_token, username, org_roles)
+    org_roles = get_organization_roles(authorization_str, username)
+    teams = get_user_teams(authorization_str, org_roles)
     allowed_clusters = get_allowed_clusters(username, teams, org_roles)
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
@@ -648,7 +648,7 @@ def handle_callback(event):
     try:
         # Authenticate user (gets token and metadata)
         access_token = exchange_code_for_token(code, event)
-        token, metadata = authenticate_user(access_token, event)
+        token, metadata = authenticate_user(f'Bearer {access_token}', event)
 
         # Build known clusters (what the user can possibly connect to)
         known_clusters = ['sliderule'] + [cluster for cluster in metadata['allowed_clusters'] if cluster != "*"]
@@ -876,7 +876,6 @@ def handle_device_poll(event):
         # Parse request body
         body = event.get('body', '{}')
         if event.get('isBase64Encoded', False):
-            import base64
             body = base64.b64decode(body).decode('utf-8')
 
         try:
@@ -951,7 +950,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata
-        token, metadata = authenticate_user(access_token, event)
+        token, metadata = authenticate_user(f'Bearer {access_token}', event)
 
         # Response with a successful authentication
         return json_response(200, {"status": "success", "token": token, "metadata": metadata})
@@ -978,6 +977,64 @@ def json_response(status_code, body):
         'body': json.dumps(body)
     }
 
+
+# =============================================================================
+# Refresh tokens
+# =============================================================================
+
+def handle_pat_login(event):
+    """
+    Handle GitHub login via Personal Access Token (PAT).
+    Client sends their PAT, and we verify it and return JWT and metadata.
+
+    POST /auth/github/pat
+    Body: { "pat": "..." }
+    """
+
+    try:
+        # Parse request body
+        body = event.get('body', '{}')
+        if event.get('isBase64Encoded', False):
+            body = base64.b64decode(body).decode('utf-8')
+
+        try:
+            params = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            params = dict(urllib.parse.parse_qsl(body))
+
+        pat = params.get('pat')
+        if not pat:
+            return json_response(400, {
+                'error': 'missing_pat',
+                'error_description': 'Personal Access Token (pat) is required'
+            })
+
+        # Verify token by calling GitHub API
+        user_resp = requests.get(
+            'https://api.github.com/user',
+            headers={
+                'Authorization': f'token {pat}',
+                'Accept': 'application/json'
+            },
+            timeout=HTTP_TIMEOUT_SECONDS
+        )
+        if user_resp.status_code != 200:
+            return json_response(400, {
+                'error': 'invalid_token',
+                'error_description': 'GitHub token invalid or insufficient scope'
+            })
+
+        # Token is valid! Authenticate user to get your own session token/metadata
+        token, metadata = authenticate_user(f'token {pat}', event)
+        return json_response(200, {'status': 'success', 'token': token, 'metadata': metadata})
+
+    except Exception as e:
+        print(f"Error in PAT login: {e}")
+        return json_response(500, {
+            'status': 'error',
+            'error': 'internal_error',
+            'error_description': 'Error processing PAT login'
+        })
 
 # =============================================================================
 # Refresh tokens
@@ -1152,6 +1209,9 @@ def lambda_handler(event, context):
         return handle_device_code_request(event)
     elif path == '/auth/github/device/poll':
         return handle_device_poll(event)
+    # PAT Key login
+    elif path == '/auth/github/pat':
+        return handle_pat_login(event)
     # Refresh token
     elif path == '/auth/refresh':
         return handle_refresh(event)

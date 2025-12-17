@@ -181,6 +181,14 @@ Resources:
       RouteKey: 'POST /auth/github/device/poll'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
+  # Route: POST /auth/github/pat (user supplied PAT key)
+  PatKeyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /auth/github/pat'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
   # Route: POST /auth/refresh (get refresh token)
   JwksRoute:
     Type: AWS::ApiGatewayV2::Route
