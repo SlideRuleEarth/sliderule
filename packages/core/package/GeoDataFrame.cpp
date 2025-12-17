@@ -230,21 +230,27 @@ static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf
 }
 
  /*----------------------------------------------------------------------------
+ * _addListColumn - internal helper
+ *----------------------------------------------------------------------------*/
+template<typename T>
+static FieldColumn<FieldList<T>>* _addListColumn(GeoDataFrame* gdf, const char* name)
+{
+    FieldColumn<FieldList<T>>* column = new FieldColumn<FieldList<T>>();
+    if(!gdf->addColumn(name, column, true))
+    {
+        delete column;
+        column = NULL;
+    }
+    return column;
+}
+
+ /*----------------------------------------------------------------------------
  * _getListColumn - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
 static FieldColumn<FieldList<T>>* _getListColumn(GeoDataFrame* gdf, const char* name)
 {
     FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
-    if(!column)
-    {
-        column = new FieldColumn<FieldList<T>>();
-        if(!gdf->addColumn(name, column, true))
-        {
-            delete column;
-            column = NULL;
-        }
-    }
     return column;
 }
 
@@ -686,6 +692,12 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
 {
     FieldUntypedColumn* column = NULL;
 
+    if(columnFields.fields.find(name))
+    {
+        print2term("Column <%s> already exists\n", name);
+    }
+    else print2term("Adding column <%s> of type %d\n", name, _type);
+
     switch(_type)
     {
         case Field::BOOL:   column = new FieldColumn<bool>();       break;
@@ -723,19 +735,25 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::addNewListColumn(const char* name, RecordObject::fieldType_t _type)
 {
+    if(columnFields.fields.find(name))
+    {
+        print2term("List column <%s> already exists\n", name);
+    }
+    else print2term("Adding list column <%s> of type %d\n", name, _type);
+
     switch(_type)
     {
-        case RecordObject::INT8:    return _getListColumn<int8_t>(this, name)   != NULL;
-        case RecordObject::INT16:   return _getListColumn<int16_t>(this, name)  != NULL;
-        case RecordObject::INT32:   return _getListColumn<int32_t>(this, name)  != NULL;
-        case RecordObject::INT64:   return _getListColumn<int64_t>(this, name)  != NULL;
-        case RecordObject::UINT8:   return _getListColumn<uint8_t>(this, name)  != NULL;
-        case RecordObject::UINT16:  return _getListColumn<uint16_t>(this, name) != NULL;
-        case RecordObject::UINT32:  return _getListColumn<uint32_t>(this, name) != NULL;
-        case RecordObject::UINT64:  return _getListColumn<uint64_t>(this, name) != NULL;
-        case RecordObject::FLOAT:   return _getListColumn<float>(this, name)    != NULL;
-        case RecordObject::DOUBLE:  return _getListColumn<double>(this, name)   != NULL;
-        case RecordObject::TIME8:   return _getListColumn<time8_t>(this, name)  != NULL;
+        case RecordObject::INT8:    return _addListColumn<int8_t>(this, name)   != NULL;
+        case RecordObject::INT16:   return _addListColumn<int16_t>(this, name)  != NULL;
+        case RecordObject::INT32:   return _addListColumn<int32_t>(this, name)  != NULL;
+        case RecordObject::INT64:   return _addListColumn<int64_t>(this, name)  != NULL;
+        case RecordObject::UINT8:   return _addListColumn<uint8_t>(this, name)  != NULL;
+        case RecordObject::UINT16:  return _addListColumn<uint16_t>(this, name) != NULL;
+        case RecordObject::UINT32:  return _addListColumn<uint32_t>(this, name) != NULL;
+        case RecordObject::UINT64:  return _addListColumn<uint64_t>(this, name) != NULL;
+        case RecordObject::FLOAT:   return _addListColumn<float>(this, name)    != NULL;
+        case RecordObject::DOUBLE:  return _addListColumn<double>(this, name)   != NULL;
+        case RecordObject::TIME8:   return _addListColumn<time8_t>(this, name)  != NULL;
         default:
         {
             mlog(ERROR, "Cannot add list column <%s> of type %d", name, static_cast<int>(_type));
