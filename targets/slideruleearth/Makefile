@@ -430,12 +430,13 @@ authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time
 provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
-	docker run -it --rm \
+	cp $(ROOT)/applications/provisioner/requirements.txt $(PROVISIONER_STAGE_DIR)/
+		docker run -it --rm \
 		-v $(PROVISIONER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
-		-c "pip install --target /host/package requests"
+		-c "pip install --target /host/package requests croniter"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
 	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/

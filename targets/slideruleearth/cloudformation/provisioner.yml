@@ -50,6 +50,7 @@ Resources:
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
+          STACK_NAME: !Ref AWS::StackName
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
           DOMAIN: !Ref Domain
           PROJECT_BUCKET: !Ref ProjectBucket
@@ -158,7 +159,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/PowerUserAccess
       Policies:
-        - PolicyName: AllowCFStackCreation
+        - PolicyName: AllowCFStackManagement
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -334,3 +335,11 @@ Resources:
         DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
         EvaluateTargetHealth: false
+
+Outputs:
+
+  DestroyLambdaArn:
+    Description: Lambda that deletes a cluster; available for auto-shutdown
+    Value: !GetAtt DestroyLambda.Arn
+    Export:
+      Name: sliderule-provisioner-destroy-arn

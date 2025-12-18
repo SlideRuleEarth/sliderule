@@ -269,6 +269,7 @@ Resources:
         EvaluateTargetHealth: false
 
 Outputs:
+
   ApiGatewayUrl:
     Description: API Gateway endpoint URL
     Value: !GetAtt HttpApi.ApiEndpoint

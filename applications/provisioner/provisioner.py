@@ -1,6 +1,7 @@
 import os
 import boto3
 import json
+import base64
 from datetime import datetime, timedelta
 import scheduler
 
@@ -32,6 +33,7 @@ def lambda_deploy(event, context):
 
     try:
         # get environment variables
+        stack_name = os.environ["STACK_NAME"]
         environment_version = os.environ['ENVIRONMENT_VERSION']
         domain = os.environ["DOMAIN"]
         project_bucket = os.environ["PROJECT_BUCKET"]
@@ -50,7 +52,12 @@ def lambda_deploy(event, context):
         version = event.get("version", "latest")
         organization = event.get("organization", cluster)
         region = event.get("region", "us-west-2")
-        dryrun = event.get("dryrun", False)
+
+        # get arn for auto-shutdown
+        cf = boto3.client("cloudformation", region_name=region)
+        resp = cf.describe_stacks(StackName=stack_name)
+        outputs = resp["Stacks"][0].get("Outputs", [])
+        destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
 
         # build parameters for stack creation
         state["parms"] = [
@@ -65,6 +72,7 @@ def lambda_deploy(event, context):
             {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
             {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
             {"ParameterKey": "ProjectPublicBucket", "ParameterValue": project_public_bucket},
+            {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
         ]
@@ -80,9 +88,7 @@ def lambda_deploy(event, context):
             raise RuntimeError(f'Invalid TTL of {ttl} minutes, must be at least {MIN_TTL_FOR_AUTOSHUTDOWN} minutes to guarantee scheduled deletion')
 
         # create stack
-        cf = boto3.client("cloudformation", region_name=region)
-        if not dryrun:
-            state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
         print(f"Deploy initiated for {state["stack_name"]}")
 
     except Exception as e:
@@ -207,10 +213,10 @@ def lambda_status(event, context):
         state["stack_name"] = build_stack_name(cluster)
 
         # status stack
-        cf = boto3.client("cloudformation", region_name=region)
-        description  = cf.describe_stacks(StackName=state["stack_name"])
-        stack = description["Stacks"][0]
         print(f"Status requested for {state["stack_name"]}")
+        cf = boto3.client("cloudformation", region_name=region)
+        description = cf.describe_stacks(StackName=state["stack_name"])
+        stack = description["Stacks"][0]
 
         # build cleaned response
         response = {}
@@ -350,9 +356,16 @@ def lambda_gateway(event, context):
     Route requests based on path
     """
     path = event.get('rawPath', '')
-    body = event.get('body', {})
-    print(f"Received request: {path}")
-    if path == '/depoy':
+    body_raw = event.get("body")
+    if body_raw:
+        if event.get("isBase64Encoded"):
+            body_raw = base64.b64decode(body_raw).decode("utf-8")
+        body = json.loads(body_raw)
+    else:
+        body = {}
+
+    print(f"Received request: {path} {body}")
+    if path == '/deploy':
         return lambda_deploy(body, context)
     elif path == '/extend':
         return lambda_extend(body, context)

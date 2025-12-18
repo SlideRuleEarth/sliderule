@@ -503,7 +503,7 @@ local function ams (parms, poly, _with_meta, _short_name)
             elseif data["granules"] then -- pulls out just the granules from the AMS
                 local num_granules = #data["granules"]
                 if num_granules > max_resources then
-                    return RC_RSPS_TRUNCATED, string.format("%s resources exceeded maximum allowed: %d > %d", dataset["name"] or "unknown", num_granules, max_resources)
+                    return RC_RSPS_TRUNCATED, string.format("%s resources exceeded maximum allowed: %d > %d", dataset["name"] or "", num_granules, max_resources)
                 else
                     return RC_SUCCESS, data["granules"]
                 end

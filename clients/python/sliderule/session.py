@@ -151,6 +151,7 @@ class Session:
         # initialize to empty
         self.ps_access_token = None
         self.ps_token_exp = None
+        self.ps_metadata = None
         self.ps_lock = threading.Lock()
         self.console = None
         self.recdef_table = {}
@@ -411,7 +412,6 @@ class Session:
         login_status = False
         github_user_token = os.environ.get("SLIDERULE_GITHUB_TOKEN", github_token)
         login_url = "https://login." + self.service_domain
-        metadata = {}
 
         # set organization on any authentication request
         self.service_org = organization
@@ -432,9 +432,9 @@ class Session:
             # set internal session data
             if rsps['status'] == 'success':
                 now = time.time()
-                metadata = rsps['metadata']
+                self.ps_metadata = rsps['metadata']
                 self.ps_access_token = rsps['token']
-                self.ps_token_exp =  int(((metadata['exp'] - now) / 2) + now)
+                self.ps_token_exp =  int(((self.ps_metadata['exp'] - now) / 2) + now)
                 login_status = True
 
         except Exception as e:
@@ -445,12 +445,12 @@ class Session:
             logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
 
         # return response metadata
-        return metadata
+        return self.ps_metadata
 
     #
-    #  manager
+    #  manage
     #
-    def manager (self, api, content_json=True, as_post=False, headers=None):
+    def manage (self, api, content_json=True, as_post=False, headers=None):
         '''
         handles making the HTTP request to the sliderule manager
         '''
@@ -493,9 +493,9 @@ class Session:
         return rsps
 
     #
-    #  provisioner
+    #  provision
     #
-    def provisioner (self, api, data=None, headers=None):
+    def provision (self, api, data=None, headers=None):
         '''
         handles making the HTTP request to the sliderule provisioner
         '''

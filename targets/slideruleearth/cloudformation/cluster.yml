@@ -24,6 +24,8 @@ Parameters:
     Type: String
   ProjectPublicBucket:
     Type: String
+  DestroyLambdaArn:
+    Type: String
   ContainerRegistry:
     Type: String
   NodeCapacity:
@@ -715,30 +717,6 @@ Resources:
   #
   # Auto-Shutdown
   #
-  DestroyLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/PowerUserAccess  # broad permissions for deletion
-  DestroyLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-auto-shutdown'
-      Runtime: python3.13
-      Handler: provisioner.lambda_destroy
-      Role: !GetAtt DestroyLambdaRole.Arn
-      Timeout: 60
-      Code:
-        S3Bucket: !Ref ProjectBucket
-        S3Key: !Ref ProvisionerLambdaZipFile
   SchedulerLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -785,4 +763,4 @@ Resources:
       ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
       StackName: !Ref AWS::StackName
       DeleteAfterMinutes: !Ref TTL
-      DeletionLambdaArn: !GetAtt DestroyLambdaFunction.Arn
+      DeletionLambdaArn: !Ref DestroyLambdaArn

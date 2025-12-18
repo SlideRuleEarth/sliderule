@@ -96,7 +96,7 @@ def value_counts(table, field, db=None):
         return {key:value for (key,value) in result}
     else:
         api = {"telemetry": "telemetry_counts", "alerts": "alert_counts"}.get(table)
-        return session.manager(f'status/{api}/{field}')
+        return session.manage(f'status/{api}/{field}')
 
 def timespan(table, field, db=None):
     if db != None:
@@ -112,7 +112,7 @@ def timespan(table, field, db=None):
         data = db.execute(cmd).fetchall()
         result = {"start": data[0][0].isoformat(), "end": data[0][1].isoformat(), "span": (data[0][1] - data[0][0]).total_seconds()}
     else:
-        result = session.manager(f'status/timespan/{field}')
+        result = session.manage(f'status/timespan/{field}')
     # return response
     return {"start": datetime.fromisoformat(result["start"]), "end": datetime.fromisoformat(result["end"]), "span": timedelta(seconds=result["span"])}
 
@@ -121,7 +121,7 @@ def timespan(table, field, db=None):
 ##############################
 
 if args.export:
-    response = session.manager("db/export", content_json=False, as_post=True, headers={"x-sliderule-api-key": args.apikey})
+    response = session.manage("db/export", content_json=False, as_post=True, headers={"x-sliderule-api-key": args.apikey})
     print(response)
     sys.exit(0)
 
