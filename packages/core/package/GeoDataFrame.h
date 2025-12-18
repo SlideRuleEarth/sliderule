@@ -177,7 +177,7 @@ class GeoDataFrame: public LuaObject, public Field
         long                        length              (void) const override;
 
         long                        addRow              (void);
-        long                        appendFromBuffer    (const char* name, const uint8_t* buffer, int size) const;
+        long                        appendFromBuffer    (const char* name, const uint8_t* buffer, int size, uint32_t column_encoding=0, bool nodata=false);
         vector<string>              getColumnNames      (void) const;
         bool                        addColumn           (const char* name, FieldUntypedColumn* column, bool free_on_delete);
         bool                        addNewColumn        (const char* name, uint32_t column_encoding);
@@ -216,7 +216,6 @@ class GeoDataFrame: public LuaObject, public Field
         static void         createAncillaryColumns      (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields);
         static void         populateAncillaryColumns    (Dictionary<ancillary_t>* ancillary_columns, const GeoDataFrame& df, int32_t start_index, int32_t num_elements);
         static void         addAncillaryColumns         (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe);
-        bool                appendListValues            (const char* name, RecordObject::fieldType_t _type, const void* values, long count, bool nodata);
 
         /*--------------------------------------------------------------------
          * Data

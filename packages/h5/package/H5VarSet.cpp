@@ -73,12 +73,9 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
     {
         array->join(timeout_ms, throw_exception);
 
-        uint32_t encoding = array->elementType();
-        if(array->numDimensions() > 1)
-        {
-            /* Could be NESTED_ARRAY or NESTED_LIST, both go through list path from here */
-            encoding |= Field::NESTED_LIST;
-        }
+        const uint32_t encoding = array->numDimensions() > 1 ?
+                                  (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
+                                  static_cast<uint32_t>(array->elementType());
 
         if(!gdf->addNewColumn(dataset_name, encoding))
         {
@@ -98,38 +95,36 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
     {
         const char* dataset_name = iter[i].key;
         H5DArray* array = iter[i].value;
-        const long row_size = array->rowSize();
-        const bool multidim = (row_size > 1);
-        bool append_ok = true;
+        const bool multidim = array->numDimensions() > 1;
+        const uint32_t encoding = multidim ?
+                                  (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
+                                  static_cast<uint32_t>(array->elementType());
 
-        if(element != static_cast<int32_t>(INVALID_KEY))
+        const bool nodata = (element == static_cast<int32_t>(INVALID_KEY));
+        long append_count = 0;
+
+        if(multidim)
         {
-            if(multidim)
+            const long row_size = array->rowSize();
+            const int size = static_cast<int>(row_size);
+            vector<uint8_t> row_buffer;
+            const uint8_t* data_ptr = NULL;
+            if(!nodata)
             {
-                vector<uint8_t> row_buffer(row_size * array->elementSize(), 0);
+                row_buffer.resize(static_cast<size_t>(row_size * array->elementSize()), 0);
                 array->serializeRow(row_buffer.data(), element);
-                append_ok = gdf->appendListValues(dataset_name, array->elementType(), row_buffer.data(), row_size, false);
+                data_ptr = row_buffer.data();
             }
-            else
-            {
-                append_ok = (gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize()) != 0);
-            }
+            append_count = gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata);
         }
         else
         {
-            if(multidim)
-            {
-                vector<uint8_t> row_buffer(row_size * array->elementSize(), 0);
-                append_ok = gdf->appendListValues(dataset_name, array->elementType(), row_buffer.data(), row_size, true);
-            }
-            else
-            {
-                const uint8_t nodata_buf[8] = {0,0,0,0,0,0,0,0};
-                append_ok = (gdf->appendFromBuffer(dataset_name, nodata_buf, 8) != 0);
-            }
+            const int size = array->elementSize();
+            const uint8_t* data_ptr = nodata ? NULL : array->referenceElement(element);
+            append_count = gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata);
         }
 
-        if(!append_ok)
+        if(append_count == 0)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);
         }

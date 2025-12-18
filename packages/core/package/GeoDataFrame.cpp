@@ -229,22 +229,13 @@ static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf
     }
 }
 
- /*----------------------------------------------------------------------------
- * _getListColumn - internal helper
- *----------------------------------------------------------------------------*/
-template<typename T>
-static FieldColumn<FieldList<T>>* _getListColumn(GeoDataFrame* gdf, const char* name)
-{
-    FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
-    return column;
-}
-
 /*----------------------------------------------------------------------------
  * _appendListValues - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
-static void _appendListValues(FieldColumn<FieldList<T>>* column, const void* values, long count, bool nodata)
+static long _appendListValues(GeoDataFrame* gdf, const char* name, const void* values, long count, bool nodata)
 {
+    FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
     FieldList<T> list;
     if(nodata)
     {
@@ -255,7 +246,26 @@ static void _appendListValues(FieldColumn<FieldList<T>>* column, const void* val
         const T* typed = reinterpret_cast<const T*>(values);
         for(long i = 0; i < count; i++) list.append(typed[i]);
     }
-    column->append(list);
+    return column->append(list);
+}
+
+/*----------------------------------------------------------------------------
+ * _appendColumnBuffer - internal helper
+ *----------------------------------------------------------------------------*/
+template<typename T>
+static long _appendColumnBuffer(Field* field, const uint8_t* data, int size, bool nodata)
+{
+    FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(field);
+    if(nodata)
+    {
+        const long count = size / sizeof(T);
+        const T zero_value{};
+        return column->appendValue(zero_value, count);
+    }
+    else
+    {
+        return column->appendBuffer(data, size);
+    }
 }
 
 
@@ -567,82 +577,58 @@ long GeoDataFrame::addRow(void)
 /*----------------------------------------------------------------------------
  * appendFromBuffer
  *----------------------------------------------------------------------------*/
-long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, int size) const
+long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, int size, uint32_t column_encoding, bool nodata)
 {
-    Field* field = getColumn(name);
-    switch(field->getValueEncoding())
+    const uint32_t nested_encoding = column_encoding & Field::NESTED_MASK;
+    long elements = 0;
+
+    if(nested_encoding == Field::NESTED_LIST || nested_encoding == Field::NESTED_ARRAY)
     {
-        case Field::BOOL:
+        const uint32_t value_encoding = column_encoding & Field::TYPE_MASK;
+        switch(value_encoding)
         {
-            FieldColumn<bool>* column = dynamic_cast<FieldColumn<bool>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::INT8:
-        {
-            FieldColumn<int8_t>* column = dynamic_cast<FieldColumn<int8_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::INT16:
-        {
-            FieldColumn<int16_t>* column = dynamic_cast<FieldColumn<int16_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::INT32:
-        {
-            FieldColumn<int32_t>* column = dynamic_cast<FieldColumn<int32_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::INT64:
-        {
-            FieldColumn<int64_t>* column = dynamic_cast<FieldColumn<int64_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::UINT8:
-        {
-            FieldColumn<uint8_t>* column = dynamic_cast<FieldColumn<uint8_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::UINT16:
-        {
-            FieldColumn<uint16_t>* column = dynamic_cast<FieldColumn<uint16_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::UINT32:
-        {
-            FieldColumn<uint32_t>* column = dynamic_cast<FieldColumn<uint32_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::UINT64:
-        {
-            FieldColumn<uint64_t>* column = dynamic_cast<FieldColumn<uint64_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::FLOAT:
-        {
-            FieldColumn<float>* column = dynamic_cast<FieldColumn<float>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::DOUBLE:
-        {
-            FieldColumn<double>* column = dynamic_cast<FieldColumn<double>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::STRING:
-        {
-            FieldColumn<string>* column = dynamic_cast<FieldColumn<string>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        case Field::TIME8:
-        {
-            FieldColumn<time8_t>* column = dynamic_cast<FieldColumn<time8_t>*>(field);
-            return column->appendBuffer(buffer, size);
-        }
-        default:
-        {
-            mlog(ERROR, "Cannot add column <%s> of type %d", name, field->getValueEncoding());
-            return 0;
+            case RecordObject::INT8:    elements = _appendListValues<int8_t>  (this, name, buffer, size, nodata); break;
+            case RecordObject::INT16:   elements = _appendListValues<int16_t> (this, name, buffer, size, nodata); break;
+            case RecordObject::INT32:   elements = _appendListValues<int32_t> (this, name, buffer, size, nodata); break;
+            case RecordObject::INT64:   elements = _appendListValues<int64_t> (this, name, buffer, size, nodata); break;
+            case RecordObject::UINT8:   elements = _appendListValues<uint8_t> (this, name, buffer, size, nodata); break;
+            case RecordObject::UINT16:  elements = _appendListValues<uint16_t>(this, name, buffer, size, nodata); break;
+            case RecordObject::UINT32:  elements = _appendListValues<uint32_t>(this, name, buffer, size, nodata); break;
+            case RecordObject::UINT64:  elements = _appendListValues<uint64_t>(this, name, buffer, size, nodata); break;
+            case RecordObject::FLOAT:   elements = _appendListValues<float>   (this, name, buffer, size, nodata); break;
+            case RecordObject::DOUBLE:  elements = _appendListValues<double>  (this, name, buffer, size, nodata); break;
+            case RecordObject::TIME8:   elements = _appendListValues<time8_t> (this, name, buffer, size, nodata); break;
+            default:
+            {
+                mlog(ERROR, "Cannot append to list column <%s> value of type %d", name, static_cast<int>(value_encoding));
+            }
         }
     }
+    else
+    {
+        Field* field = getColumn(name);
+        switch(field->getValueEncoding())
+        {
+            case Field::BOOL:   elements = _appendColumnBuffer<bool>    (field, buffer, size, nodata); break;
+            case Field::INT8:   elements = _appendColumnBuffer<int8_t>  (field, buffer, size, nodata); break;
+            case Field::INT16:  elements = _appendColumnBuffer<int16_t> (field, buffer, size, nodata); break;
+            case Field::INT32:  elements = _appendColumnBuffer<int32_t> (field, buffer, size, nodata); break;
+            case Field::INT64:  elements = _appendColumnBuffer<int64_t> (field, buffer, size, nodata); break;
+            case Field::UINT8:  elements = _appendColumnBuffer<uint8_t> (field, buffer, size, nodata); break;
+            case Field::UINT16: elements = _appendColumnBuffer<uint16_t>(field, buffer, size, nodata); break;
+            case Field::UINT32: elements = _appendColumnBuffer<uint32_t>(field, buffer, size, nodata); break;
+            case Field::UINT64: elements = _appendColumnBuffer<uint64_t>(field, buffer, size, nodata); break;
+            case Field::FLOAT:  elements = _appendColumnBuffer<float>   (field, buffer, size, nodata); break;
+            case Field::DOUBLE: elements = _appendColumnBuffer<double>  (field, buffer, size, nodata); break;
+            case Field::STRING: elements = _appendColumnBuffer<string>  (field, buffer, size, nodata); break;
+            case Field::TIME8:  elements = _appendColumnBuffer<time8_t> (field, buffer, size, nodata); break;
+            default:
+            {
+                mlog(ERROR, "Cannot add column <%s> of type %d", name, field->getValueEncoding());
+            }
+        }
+    }
+    return elements;
 }
 
 /*----------------------------------------------------------------------------
@@ -1141,35 +1127,6 @@ void GeoDataFrame::populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_c
             name = ancillary_columns->next(&entry);
         }
     }
-}
-
-/*----------------------------------------------------------------------------
- * appendListValues
- *----------------------------------------------------------------------------*/
-bool GeoDataFrame::appendListValues(const char* name, RecordObject::fieldType_t _type, const void* values, long count, bool nodata)
-{
-    bool status = true;
-
-    switch(_type)
-    {
-        case RecordObject::INT8:    _appendListValues<int8_t>  (_getListColumn<int8_t>(this, name),  values, count, nodata); break;
-        case RecordObject::INT16:   _appendListValues<int16_t> (_getListColumn<int16_t>(this, name), values, count, nodata); break;
-        case RecordObject::INT32:   _appendListValues<int32_t> (_getListColumn<int32_t>(this, name), values, count, nodata); break;
-        case RecordObject::INT64:   _appendListValues<int64_t> (_getListColumn<int64_t>(this, name), values, count, nodata); break;
-        case RecordObject::UINT8:   _appendListValues<uint8_t> (_getListColumn<uint8_t>(this, name), values, count, nodata); break;
-        case RecordObject::UINT16:  _appendListValues<uint16_t>(_getListColumn<uint16_t>(this, name),values, count, nodata); break;
-        case RecordObject::UINT32:  _appendListValues<uint32_t>(_getListColumn<uint32_t>(this, name),values, count, nodata); break;
-        case RecordObject::UINT64:  _appendListValues<uint64_t>(_getListColumn<uint64_t>(this, name),values, count, nodata); break;
-        case RecordObject::FLOAT:   _appendListValues<float>   (_getListColumn<float>(this, name),   values, count, nodata); break;
-        case RecordObject::DOUBLE:  _appendListValues<double>  (_getListColumn<double>(this, name),  values, count, nodata); break;
-        case RecordObject::TIME8:   _appendListValues<time8_t> (_getListColumn<time8_t>(this, name), values, count, nodata); break;
-        default:
-        {
-            mlog(ERROR, "Cannot append to list column <%s> value of type %d", name, static_cast<int>(_type));
-            status = false;
-        }
-    }
-    return status;
 }
 
 /*----------------------------------------------------------------------------
