@@ -253,7 +253,7 @@ static long _appendListBufferToColumn(GeoDataFrame* gdf, const char* name, const
  * _appendScalarBufferToColumn - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
-static long _appendScalarBufferToColumn(Field* field, const uint8_t* data, int size, bool nodata)
+static long _appendScalarBufferToColumn(Field* field, const uint8_t* data, long size, bool nodata)
 {
     FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(field);
     if(nodata)
@@ -577,7 +577,7 @@ long GeoDataFrame::addRow(void)
 /*----------------------------------------------------------------------------
  * appendFromBuffer
  *----------------------------------------------------------------------------*/
-long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, int size, uint32_t column_encoding, bool nodata)
+long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, long size, uint32_t column_encoding, bool nodata)
 {
     const uint32_t nested_encoding = column_encoding & Field::NESTED_MASK;
     long elements = 0;
@@ -585,19 +585,20 @@ long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, int
     if(nested_encoding == Field::NESTED_LIST || nested_encoding == Field::NESTED_ARRAY)
     {
         const uint32_t value_encoding = column_encoding & Field::TYPE_MASK;
+        const long count = size / RecordObject::FIELD_TYPE_BYTES[value_encoding];
         switch(value_encoding)
         {
-            case RecordObject::INT8:    elements = _appendListBufferToColumn<int8_t>  (this, name, buffer, size, nodata); break;
-            case RecordObject::INT16:   elements = _appendListBufferToColumn<int16_t> (this, name, buffer, size, nodata); break;
-            case RecordObject::INT32:   elements = _appendListBufferToColumn<int32_t> (this, name, buffer, size, nodata); break;
-            case RecordObject::INT64:   elements = _appendListBufferToColumn<int64_t> (this, name, buffer, size, nodata); break;
-            case RecordObject::UINT8:   elements = _appendListBufferToColumn<uint8_t> (this, name, buffer, size, nodata); break;
-            case RecordObject::UINT16:  elements = _appendListBufferToColumn<uint16_t>(this, name, buffer, size, nodata); break;
-            case RecordObject::UINT32:  elements = _appendListBufferToColumn<uint32_t>(this, name, buffer, size, nodata); break;
-            case RecordObject::UINT64:  elements = _appendListBufferToColumn<uint64_t>(this, name, buffer, size, nodata); break;
-            case RecordObject::FLOAT:   elements = _appendListBufferToColumn<float>   (this, name, buffer, size, nodata); break;
-            case RecordObject::DOUBLE:  elements = _appendListBufferToColumn<double>  (this, name, buffer, size, nodata); break;
-            case RecordObject::TIME8:   elements = _appendListBufferToColumn<time8_t> (this, name, buffer, size, nodata); break;
+            case RecordObject::INT8:    elements = _appendListBufferToColumn<int8_t>  (this, name, buffer, count, nodata); break;
+            case RecordObject::INT16:   elements = _appendListBufferToColumn<int16_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::INT32:   elements = _appendListBufferToColumn<int32_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::INT64:   elements = _appendListBufferToColumn<int64_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::UINT8:   elements = _appendListBufferToColumn<uint8_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::UINT16:  elements = _appendListBufferToColumn<uint16_t>(this, name, buffer, count, nodata); break;
+            case RecordObject::UINT32:  elements = _appendListBufferToColumn<uint32_t>(this, name, buffer, count, nodata); break;
+            case RecordObject::UINT64:  elements = _appendListBufferToColumn<uint64_t>(this, name, buffer, count, nodata); break;
+            case RecordObject::FLOAT:   elements = _appendListBufferToColumn<float>   (this, name, buffer, count, nodata); break;
+            case RecordObject::DOUBLE:  elements = _appendListBufferToColumn<double>  (this, name, buffer, count, nodata); break;
+            case RecordObject::TIME8:   elements = _appendListBufferToColumn<time8_t> (this, name, buffer, count, nodata); break;
             default:
             {
                 mlog(ERROR, "Cannot append to list column <%s> value of type %d", name, static_cast<int>(value_encoding));

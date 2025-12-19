@@ -101,30 +101,29 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
                                   static_cast<uint32_t>(array->elementType());
 
         const bool nodata = (element == static_cast<int32_t>(INVALID_KEY));
-        long append_count = 0;
+
+        vector<uint8_t> row_buffer;
+        const uint8_t* data_ptr = NULL;
+        long size;
 
         if(multidim)
         {
-            const long row_size = array->rowSize();
-            const int size = static_cast<int>(row_size);
-            vector<uint8_t> row_buffer;
-            const uint8_t* data_ptr = NULL;
+            size = static_cast<long>(array->rowSize() * array->elementSize());
             if(!nodata)
             {
-                row_buffer.resize(static_cast<size_t>(row_size * array->elementSize()), 0);
+                row_buffer.resize(static_cast<size_t>(size), 0);
                 array->serializeRow(row_buffer.data(), element);
                 data_ptr = row_buffer.data();
             }
-            append_count = gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata);
         }
         else
         {
-            const int size = array->elementSize();
-            const uint8_t* data_ptr = nodata ? NULL : array->referenceElement(element);
-            append_count = gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata);
+
+            size = array->elementSize();
+            if(!nodata) data_ptr = array->referenceElement(element);
         }
 
-        if(append_count == 0)
+        if(gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata) == 0)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);
         }
