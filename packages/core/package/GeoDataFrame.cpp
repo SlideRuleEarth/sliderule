@@ -37,6 +37,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <cassert>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -230,10 +231,10 @@ static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf
 }
 
 /*----------------------------------------------------------------------------
- * _appendListBufferToColumn - internal helper
+ * _appendListBuffer - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
-static long _appendListBufferToColumn(GeoDataFrame* gdf, const char* name, const void* values, long count, bool nodata)
+static long _appendListBuffer(GeoDataFrame* gdf, const char* name, const void* values, long count, bool nodata)
 {
     FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(gdf->getColumn(name, true));
     FieldList<T> list;
@@ -250,14 +251,15 @@ static long _appendListBufferToColumn(GeoDataFrame* gdf, const char* name, const
 }
 
 /*----------------------------------------------------------------------------
- * _appendScalarBufferToColumn - internal helper
+ * _appendScalarBuffer - internal helper
  *----------------------------------------------------------------------------*/
 template<typename T>
-static long _appendScalarBufferToColumn(Field* field, const uint8_t* data, long size, bool nodata)
+static long _appendScalarBuffer(Field* field, const uint8_t* data, long size, bool nodata)
 {
     FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(field);
     if(nodata)
     {
+        assert((size % sizeof(T)) == 0);
         const long count = size / sizeof(T);
         const T zero_value{};
         return column->appendValue(zero_value, count);
@@ -585,20 +587,22 @@ long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, lon
     if(nested_encoding == Field::NESTED_LIST || nested_encoding == Field::NESTED_ARRAY)
     {
         const uint32_t value_encoding = column_encoding & Field::TYPE_MASK;
-        const long count = size / RecordObject::FIELD_TYPE_BYTES[value_encoding];
+        const long value_size = RecordObject::FIELD_TYPE_BYTES[value_encoding];
+        assert((size % value_size) == 0);
+        const long count = size / value_size;
         switch(value_encoding)
         {
-            case RecordObject::INT8:    elements = _appendListBufferToColumn<int8_t>  (this, name, buffer, count, nodata); break;
-            case RecordObject::INT16:   elements = _appendListBufferToColumn<int16_t> (this, name, buffer, count, nodata); break;
-            case RecordObject::INT32:   elements = _appendListBufferToColumn<int32_t> (this, name, buffer, count, nodata); break;
-            case RecordObject::INT64:   elements = _appendListBufferToColumn<int64_t> (this, name, buffer, count, nodata); break;
-            case RecordObject::UINT8:   elements = _appendListBufferToColumn<uint8_t> (this, name, buffer, count, nodata); break;
-            case RecordObject::UINT16:  elements = _appendListBufferToColumn<uint16_t>(this, name, buffer, count, nodata); break;
-            case RecordObject::UINT32:  elements = _appendListBufferToColumn<uint32_t>(this, name, buffer, count, nodata); break;
-            case RecordObject::UINT64:  elements = _appendListBufferToColumn<uint64_t>(this, name, buffer, count, nodata); break;
-            case RecordObject::FLOAT:   elements = _appendListBufferToColumn<float>   (this, name, buffer, count, nodata); break;
-            case RecordObject::DOUBLE:  elements = _appendListBufferToColumn<double>  (this, name, buffer, count, nodata); break;
-            case RecordObject::TIME8:   elements = _appendListBufferToColumn<time8_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::INT8:    elements = _appendListBuffer<int8_t>  (this, name, buffer, count, nodata); break;
+            case RecordObject::INT16:   elements = _appendListBuffer<int16_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::INT32:   elements = _appendListBuffer<int32_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::INT64:   elements = _appendListBuffer<int64_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::UINT8:   elements = _appendListBuffer<uint8_t> (this, name, buffer, count, nodata); break;
+            case RecordObject::UINT16:  elements = _appendListBuffer<uint16_t>(this, name, buffer, count, nodata); break;
+            case RecordObject::UINT32:  elements = _appendListBuffer<uint32_t>(this, name, buffer, count, nodata); break;
+            case RecordObject::UINT64:  elements = _appendListBuffer<uint64_t>(this, name, buffer, count, nodata); break;
+            case RecordObject::FLOAT:   elements = _appendListBuffer<float>   (this, name, buffer, count, nodata); break;
+            case RecordObject::DOUBLE:  elements = _appendListBuffer<double>  (this, name, buffer, count, nodata); break;
+            case RecordObject::TIME8:   elements = _appendListBuffer<time8_t> (this, name, buffer, count, nodata); break;
             default:
             {
                 mlog(ERROR, "Cannot append to list column <%s> value of type %d", name, static_cast<int>(value_encoding));
@@ -610,22 +614,22 @@ long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, lon
         Field* field = getColumn(name);
         switch(field->getValueEncoding())
         {
-            case Field::BOOL:   elements = _appendScalarBufferToColumn<bool>    (field, buffer, size, nodata); break;
-            case Field::INT8:   elements = _appendScalarBufferToColumn<int8_t>  (field, buffer, size, nodata); break;
-            case Field::INT16:  elements = _appendScalarBufferToColumn<int16_t> (field, buffer, size, nodata); break;
-            case Field::INT32:  elements = _appendScalarBufferToColumn<int32_t> (field, buffer, size, nodata); break;
-            case Field::INT64:  elements = _appendScalarBufferToColumn<int64_t> (field, buffer, size, nodata); break;
-            case Field::UINT8:  elements = _appendScalarBufferToColumn<uint8_t> (field, buffer, size, nodata); break;
-            case Field::UINT16: elements = _appendScalarBufferToColumn<uint16_t>(field, buffer, size, nodata); break;
-            case Field::UINT32: elements = _appendScalarBufferToColumn<uint32_t>(field, buffer, size, nodata); break;
-            case Field::UINT64: elements = _appendScalarBufferToColumn<uint64_t>(field, buffer, size, nodata); break;
-            case Field::FLOAT:  elements = _appendScalarBufferToColumn<float>   (field, buffer, size, nodata); break;
-            case Field::DOUBLE: elements = _appendScalarBufferToColumn<double>  (field, buffer, size, nodata); break;
-            case Field::STRING: elements = _appendScalarBufferToColumn<string>  (field, buffer, size, nodata); break;
-            case Field::TIME8:  elements = _appendScalarBufferToColumn<time8_t> (field, buffer, size, nodata); break;
+            case Field::BOOL:   elements = _appendScalarBuffer<bool>    (field, buffer, size, nodata); break;
+            case Field::INT8:   elements = _appendScalarBuffer<int8_t>  (field, buffer, size, nodata); break;
+            case Field::INT16:  elements = _appendScalarBuffer<int16_t> (field, buffer, size, nodata); break;
+            case Field::INT32:  elements = _appendScalarBuffer<int32_t> (field, buffer, size, nodata); break;
+            case Field::INT64:  elements = _appendScalarBuffer<int64_t> (field, buffer, size, nodata); break;
+            case Field::UINT8:  elements = _appendScalarBuffer<uint8_t> (field, buffer, size, nodata); break;
+            case Field::UINT16: elements = _appendScalarBuffer<uint16_t>(field, buffer, size, nodata); break;
+            case Field::UINT32: elements = _appendScalarBuffer<uint32_t>(field, buffer, size, nodata); break;
+            case Field::UINT64: elements = _appendScalarBuffer<uint64_t>(field, buffer, size, nodata); break;
+            case Field::FLOAT:  elements = _appendScalarBuffer<float>   (field, buffer, size, nodata); break;
+            case Field::DOUBLE: elements = _appendScalarBuffer<double>  (field, buffer, size, nodata); break;
+            case Field::STRING: elements = _appendScalarBuffer<string>  (field, buffer, size, nodata); break;
+            case Field::TIME8:  elements = _appendScalarBuffer<time8_t> (field, buffer, size, nodata); break;
             default:
             {
-                mlog(ERROR, "Cannot add column <%s> of type %d", name, field->getValueEncoding());
+                mlog(ERROR, "Cannot append to scalar column <%s> of type %d", name, field->getValueEncoding());
             }
         }
     }

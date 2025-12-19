@@ -91,6 +91,8 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
 void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
 {
     Dictionary<H5DArray*>::Iterator iter(variables);
+    vector<uint8_t> row_buffer;
+
     for(int i = 0; i < iter.length; i++)
     {
         const char* dataset_name = iter[i].key;
@@ -102,7 +104,6 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
 
         const bool nodata = (element == static_cast<int32_t>(INVALID_KEY));
 
-        vector<uint8_t> row_buffer;
         const uint8_t* data_ptr = NULL;
         long size;
 
@@ -111,7 +112,7 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
             size = static_cast<long>(array->rowSize() * array->elementSize());
             if(!nodata)
             {
-                row_buffer.resize(static_cast<size_t>(size), 0);
+                row_buffer.resize(static_cast<size_t>(size));
                 array->serializeRow(row_buffer.data(), element);
                 data_ptr = row_buffer.data();
             }
