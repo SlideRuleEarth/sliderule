@@ -389,6 +389,7 @@ def lambda_gateway(event, context):
     """
     # get JWT claims (validated by API Gateway)
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+    username = claims.get('username', '<anonymous>')
     org_roles = claims.get('org_roles', [])
     allowed_clusters = claims.get('allowed_clusters', [])
     max_nodes = claims.get('max_nodes', 0)
@@ -407,7 +408,7 @@ def lambda_gateway(event, context):
 
     # check organization membership
     if 'member' not in org_roles:
-        print(f"Access denied to {claims.get('username', '<anonymous>')}, organization roles: {org_roles}")
+        print(f"Access denied to {username}, organization roles: {org_roles}")
         return {
             'statusCode': 403,
             'body': json.dumps({'error': 'access denied'})
@@ -417,7 +418,7 @@ def lambda_gateway(event, context):
     if '*' not in allowed_clusters:
         cluster = body.get("cluster")
         if (not cluster) or (cluster not in allowed_clusters):
-            print(f"Access denied to {claims.get('username', '<anonymous>')}, allowed clusters: {allowed_clusters}")
+            print(f"Access denied to {username}, allowed clusters: {allowed_clusters}")
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -426,8 +427,8 @@ def lambda_gateway(event, context):
     # check node_capacity
     if path == '/deploy':
         node_capacity = body.get("node_capacity")
-        if (not node_capacity) or (node_capacity > max_nodes):
-            print(f"Access denied to {claims.get('username', '<anonymous>')}, node capacity: {node_capacity}, max nodes: {max_nodes}")
+        if (not node_capacity) or (int(node_capacity) > int(max_nodes)):
+            print(f"Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}")
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -436,8 +437,8 @@ def lambda_gateway(event, context):
     # check ttl
     if path == '/deploy' or path == '/extend':
         ttl = body.get("ttl")
-        if (not ttl) or (ttl > max_ttl):
-            print(f"Access denied to {claims.get('username', '<anonymous>')}, ttl: {ttl}, max ttl: {max_ttl}")
+        if (not ttl) or (int(ttl) > int(max_ttl)):
+            print(f"Access denied to {username}, ttl: {ttl}, max ttl: {max_ttl}")
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -446,7 +447,7 @@ def lambda_gateway(event, context):
     # check test runner
     if path == '/test':
         if 'owner' not in org_roles:
-            print(f"Access denied to {claims.get('username', '<anonymous>')}, organization roles: {org_roles}, path: {path}")
+            print(f"Access denied to {username}, organization roles: {org_roles}, path: {path}")
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
