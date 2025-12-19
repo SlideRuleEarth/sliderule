@@ -72,9 +72,14 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
     while(dataset_name != NULL)
     {
         array->join(timeout_ms, throw_exception);
-        if(!gdf->addNewColumn(dataset_name, array->elementType()))
+
+        const uint32_t encoding = array->numDimensions() > 1 ?
+                                  (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
+                                  static_cast<uint32_t>(array->elementType());
+
+        if(!gdf->addNewColumn(dataset_name, encoding))
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to join array for <%s>", dataset_name);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add column for <%s>", dataset_name);
         }
         dataset_name = variables.next(&array);
     }
@@ -86,18 +91,42 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
 void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
 {
     Dictionary<H5DArray*>::Iterator iter(variables);
+    vector<uint8_t> row_buffer;
+
     for(int i = 0; i < iter.length; i++)
     {
         const char* dataset_name = iter[i].key;
         H5DArray* array = iter[i].value;
-        if(element != static_cast<int32_t>(INVALID_KEY))
+        const bool multidim = array->numDimensions() > 1;
+        const uint32_t encoding = multidim ?
+                                  (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
+                                  static_cast<uint32_t>(array->elementType());
+
+        const bool nodata = (element == static_cast<int32_t>(INVALID_KEY));
+
+        const uint8_t* data_ptr = NULL;
+        long size;
+
+        if(multidim)
         {
-            gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize());
+            size = static_cast<long>(array->rowSize() * array->elementSize());
+            if(!nodata)
+            {
+                row_buffer.resize(static_cast<size_t>(size));
+                array->serializeRow(row_buffer.data(), element);
+                data_ptr = row_buffer.data();
+            }
         }
         else
         {
-            const uint8_t nodata_buf[8] = {0,0,0,0,0,0,0,0};
-            gdf->appendFromBuffer(dataset_name, nodata_buf, 8);
+
+            size = array->elementSize();
+            if(!nodata) data_ptr = array->referenceElement(element);
+        }
+
+        if(gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata) == 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);
         }
     }
 }
