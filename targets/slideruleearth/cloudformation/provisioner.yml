@@ -143,6 +143,16 @@ Resources:
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          DOMAIN: !Ref Domain
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          CONTAINER_REGISTRY: !Ref ContainerRegistry
+          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
 
   ## IAM Role
   LambdaExecutionRole:

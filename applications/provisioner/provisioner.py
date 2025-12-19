@@ -21,6 +21,22 @@ MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 def build_stack_name(cluster):
     return f'{cluster}-cluster'
 
+#
+# Get tags for EC2 instances
+#
+def get_instances_by_name(name):
+    ec2 = boto3.client("ec2")
+    try:
+        response = ec2.describe_instances(
+            Filters=[
+                {"Name": "tag:Name", "Values": [name]},
+                {"Name": "instance-state-name", "Values": ["pending", "running", "stopped"]}
+            ]
+        )
+        return [instance for reservation in response["Reservations"] for instance in reservation["Instances"]]
+    except Exception as e:
+        print("Unable to get <{name}> instances: {e}")
+        return []
 
 # ###############################
 # Lambda: Deploy Cluster
@@ -233,6 +249,22 @@ def lambda_status(event, context):
         rule_name = scheduler.build_rule_name(state["stack_name"])
         state["auto_shutdown"] = scheduler.get_next_trigger_time(rule_name)
 
+        # get number of nodes
+        node_instances = get_instances_by_name(f'{cluster}-node')
+        state["current_nodes"] = len(node_instances)
+
+        # get version and node capacity
+        ilb_instance = get_instances_by_name(f'{cluster}-ilb')
+        if len(ilb_instance) == 1:
+            tags = ilb_instance[0]["Tags"]
+            for tag in tags:
+                if tag["Key"] == "Version":
+                    state["version"] = tag["Value"]
+                if tag["Key"] == "IsPublic":
+                    state["is_public"] = tag["Value"]
+                if tag["Key"] == "NodeCapacity":
+                    state["node_capacity"] = tag["Value"]
+
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
@@ -355,6 +387,14 @@ def lambda_gateway(event, context):
     """
     Route requests based on path
     """
+    # get JWT claims (validated by API Gateway)
+    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+    org_roles = claims.get('org_roles', [])
+    allowed_clusters = claims.get('allowed_clusters', [])
+    max_nodes = claims.get('max_nodes', 0)
+    max_ttl = claims.get('max_ttl', 0)
+
+    # get path and body of request
     path = event.get('rawPath', '')
     body_raw = event.get("body")
     if body_raw:
@@ -363,8 +403,56 @@ def lambda_gateway(event, context):
         body = json.loads(body_raw)
     else:
         body = {}
-
     print(f"Received request: {path} {body}")
+
+    # check organization membership
+    if 'member' not in org_roles:
+        print(f"Access denied to {claims.get('username', '<anonymous>')}, organization roles: {org_roles}")
+        return {
+            'statusCode': 403,
+            'body': json.dumps({'error': 'access denied'})
+        }
+
+    # check cluster
+    if '*' not in allowed_clusters:
+        cluster = body.get("cluster")
+        if (not cluster) or (cluster not in allowed_clusters):
+            print(f"Access denied to {claims.get('username', '<anonymous>')}, allowed clusters: {allowed_clusters}")
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+    # check node_capacity
+    if path == '/deploy':
+        node_capacity = body.get("node_capacity")
+        if (not node_capacity) or (node_capacity > max_nodes):
+            print(f"Access denied to {claims.get('username', '<anonymous>')}, node capacity: {node_capacity}, max nodes: {max_nodes}")
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+    # check ttl
+    if path == '/deploy' or path == '/extend':
+        ttl = body.get("ttl")
+        if (not ttl) or (ttl > max_ttl):
+            print(f"Access denied to {claims.get('username', '<anonymous>')}, ttl: {ttl}, max ttl: {max_ttl}")
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+    # check test runner
+    if path == '/test':
+        if 'owner' not in org_roles:
+            print(f"Access denied to {claims.get('username', '<anonymous>')}, organization roles: {org_roles}, path: {path}")
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+    # route request
     if path == '/deploy':
         return lambda_deploy(body, context)
     elif path == '/extend':

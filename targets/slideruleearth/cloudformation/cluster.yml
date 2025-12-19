@@ -325,6 +325,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-ilb"
+        - Key: Version
+          Value: !Ref Version
+        - Key: IsPublic
+          Value: !Ref IsPublic
+        - Key: NodeCapacity
+          Value: !Ref NodeCapacity
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash

@@ -349,17 +349,17 @@ class Session:
         try:
             rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
             available_servers = rsps["nodes"]
-        except FatalError as e:
+        except Exception as e:
             logger.debug(f'Failed to retrieve number of nodes registered: {e}')
             available_servers = 0
 
         # make provisioning request
         if isinstance(desired_nodes, int):
-            rsps = self.session.provisioner("deploy", {
-                "Cluster": self.service_org,
-                "IsPublic": False,
-                "NodeCapacity": desired_nodes,
-                "TTL": time_to_live
+            rsps = self.provision("deploy", {
+                "cluster": self.service_org,
+                "is_public": False,
+                "node_capacity": desired_nodes,
+                "ttl": time_to_live
             })
             logger.info(f'Provisioning request status: {rsps['status']}')
 
