@@ -82,11 +82,11 @@ def lambda_deploy(event, context):
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": version},
-            {"ParameterKey": "IsPublic", "ParameterValue": is_public},
+            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(is_public)},
             {"ParameterKey": "Organization", "ParameterValue": organization},
             {"ParameterKey": "Cluster", "ParameterValue": cluster},
-            {"ParameterKey": "NodeCapacity", "ParameterValue": node_capacity},
-            {"ParameterKey": "TTL", "ParameterValue": ttl},
+            {"ParameterKey": "NodeCapacity", "ParameterValue": str(node_capacity)},
+            {"ParameterKey": "TTL", "ParameterValue": str(ttl)},
             {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
             {"ParameterKey": "Domain", "ParameterValue": domain},
             {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},

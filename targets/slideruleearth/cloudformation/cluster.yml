@@ -11,7 +11,10 @@ Parameters:
   EnvironmentVersion:
     Type: String
   IsPublic:
-    Type: Boolean
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
   Domain:
     Type: String
   Cluster:
@@ -35,7 +38,7 @@ Parameters:
   ProvisionerLambdaZipFile:
     Type: String
   CorsAllowOrigins:
-    Type: String
+    Type: CommaDelimitedList
   JwtAudience:
     Type: String
   JwtIssuer:
@@ -67,7 +70,7 @@ Parameters:
 
 Conditions:
 
-  UseJwt: !Equals [!Ref IsPublic, false]
+  UseJwt: !Equals [!Ref IsPublic, "false"]
 
 Resources:
 
@@ -848,12 +851,6 @@ Resources:
       TargetType: ip
       Protocol: TCP
       VpcId: !Ref SlideruleVPC
-      HealthCheckEnabled: true
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /discovery/health
-      HealthCheckIntervalSeconds: 30
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 2
       Targets:
         - Id: !GetAtt IlbInstance.PrivateIp
           Port: 80
