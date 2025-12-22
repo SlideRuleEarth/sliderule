@@ -1,0 +1,104 @@
+"""Tests for atl06x"""
+
+import numpy as np
+from pathlib import Path
+from sliderule import sliderule, icesat2
+
+TESTDIR = Path(__file__).parent
+GRANULE = "ATL06_20200303180710_10390603_007_01.h5"
+
+class TestAtl06x:
+    def test_nominal(self, init):
+        parms = {
+            "cnf": 4,
+            "srt": icesat2.SRT_LAND_ICE,
+            "beams": "gt1l",
+        }
+        gdf = sliderule.run("atl06x", parms, resources=[GRANULE])
+        assert init
+        assert len(gdf) == 114336
+        assert len(gdf.keys()) >= 20
+
+        row = gdf.iloc[15]  # First row with all valid fields
+        time_ns = row.name.value  # datetime index → ns since epoch
+        lat_val = row.geometry.y
+        lon_val = row.geometry.x
+        np.testing.assert_allclose(
+            [
+                time_ns,
+                lat_val,
+                lon_val,
+                row["x_atc"],
+                row["y_atc"],
+                row["h_li"],
+                row["h_li_sigma"],
+                row["sigma_geo_h"],
+                row["atl06_quality_summary"],
+                row["segment_id"],
+                row["seg_azimuth"],
+                row["dh_fit_dx"],
+                row["h_robust_sprd"],
+                row["w_surface_window_final"],
+                row["bsnow_conf"],
+                row["bsnow_h"],
+                row["r_eff"],
+                row["tide_ocean"],
+                row["n_fit_photons"],
+            ],
+            [
+                1583258831569810944,
+                59.529772793835,
+                -44.325544216762,
+                6633831.0618938,
+                3260.5561523438,
+                40.553344726562,
+                0.41705507040024,
+                0.28224530816078,
+                0,
+                330916,
+                -5.8324255943298,
+                -0.047380782663822,
+                0.50711327791214,
+                3.0426795482635,
+                127,
+                29.979246139526,
+                0.10466815531254,
+                -0.25118598341942,
+                14,
+            ],
+            rtol=0,
+            atol=1e-5,
+        )
+
+        assert gdf["spot"].unique().tolist() == [6]
+        assert gdf["cycle"].unique().tolist() == [6]
+        assert gdf["region"].unique().tolist() == [3]
+        assert gdf["rgt"].unique().tolist() == [1039]
+        assert gdf["gt"].unique().tolist() == [10]
+
+
+    def test_ancillary(self, init):
+        parms = {
+            "cnf": 4,
+            "srt": icesat2.SRT_LAND_ICE,
+            "atl06_fields": ["dem/dem_flag", "dem/dem_h"],
+            "beams": "gt2r"
+        }
+        gdf = sliderule.run("atl06x", parms, resources=[GRANULE])
+        assert init
+        assert len(gdf) == 114605
+        assert len(gdf.keys()) >= 22
+
+        row = gdf.iloc[0]
+        np.testing.assert_allclose(
+            [
+                row["dem/dem_flag"],
+                row["dem/dem_h"],
+            ],
+            [
+                3,
+                42.131591796875,
+            ],
+            rtol=0,
+            atol=1e-6,
+        )

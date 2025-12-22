@@ -9,6 +9,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
@@ -41,6 +42,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
@@ -72,6 +74,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06sp.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06x.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13s.lua

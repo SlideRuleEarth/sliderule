@@ -41,6 +41,7 @@
 #include "Atl03Reader.h"
 #include "Atl03Viewer.h"
 #include "Atl03Indexer.h"
+#include "Atl06DataFrame.h"
 #include "Atl06Reader.h"
 #include "Atl06Dispatch.h"
 #include "Atl08Dispatch.h"
@@ -84,6 +85,7 @@ int icesat2_open (lua_State *L)
         {"atl13s",              Atl13Reader::luaCreate},
         // dataframes
         {"atl03x",              Atl03DataFrame::luaCreate},
+        {"atl06x",              Atl06DataFrame::luaCreate},
         {"fit",                 SurfaceFitter::luaCreate},
         {"phoreal",             PhoReal::luaCreate},
         {"atl13x",              Atl13DataFrame::luaCreate},
