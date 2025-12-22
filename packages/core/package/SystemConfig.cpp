@@ -157,6 +157,7 @@ SystemConfig::SystemConfig(void):
     })
 {
     // populate environment variables
+    setIfProvidedBool(isPublic, "IS_PUBLIC");
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
@@ -180,6 +181,19 @@ void SystemConfig::setIfProvided(FieldElement<string>& field, const char* env)
 {
     const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
     if(str) field = str;
+}
+
+/*----------------------------------------------------------------------------
+ * setIfProvidedBool
+ *----------------------------------------------------------------------------*/
+void SystemConfig::setIfProvidedBool(FieldElement<bool>& field, const char* env)
+{
+    const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
+    if(str)
+    {
+        if(StringLib::match(str, "true")) field = true;
+        else if(StringLib::match(str, "false")) field = false;
+    }
 }
 
 /******************************************************************************

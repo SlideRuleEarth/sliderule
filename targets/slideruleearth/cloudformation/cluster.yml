@@ -11,7 +11,7 @@ Parameters:
   EnvironmentVersion:
     Type: String
   IsPublic:
-    Type: String
+    Type: Boolean
   Domain:
     Type: String
   Cluster:
@@ -33,6 +33,14 @@ Parameters:
   TTL:
     Type: Number
   ProvisionerLambdaZipFile:
+    Type: String
+  CorsAllowOrigins:
+    Type: String
+  JwtAudience:
+    Type: String
+  JwtIssuer:
+    Type: String
+  CertificateArn:
     Type: String
 
   #
@@ -57,6 +65,10 @@ Parameters:
     Type: String
     Default: "10.0.0.0/16"
 
+Conditions:
+
+  UseJwt: !Equals [!Ref IsPublic, false]
+
 Resources:
 
   #
@@ -76,7 +88,7 @@ Resources:
     Properties:
       VpcId: !Ref SlideruleVPC
       CidrBlock: !Ref VpcCIDRBlock
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       AvailabilityZone: !Ref AvailabilityZone
       Tags:
         - Key: Name
@@ -219,11 +231,11 @@ Resources:
       GroupDescription: ILB Security Group
       VpcId: !Ref SlideruleVPC
       SecurityGroupIngress:
-        # HAProxy
+        # HTTP (from NLB)
         - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: !Ref PublicCIDRBlock
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VpcCIDRBlock
         # Orchestrator (from HAProxy)
         - IpProtocol: tcp
           FromPort: 8050
@@ -312,7 +324,6 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref IlbIP
-          AssociatePublicIpAddress: true
           SubnetId: !Ref SlideruleSubnet
           GroupSet:
             - !Ref IlbSG
@@ -408,7 +419,6 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref ManagerIP
-          AssociatePublicIpAddress: true
           SubnetId: !Ref SlideruleSubnet
           GroupSet:
             - !Ref ManagerSG
@@ -499,7 +509,6 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref MonitorIP
-          AssociatePublicIpAddress: true
           SubnetId: !Ref SlideruleSubnet
           GroupSet:
             - !Ref MonitorSG
@@ -588,8 +597,7 @@ Resources:
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
-          - AssociatePublicIpAddress: true
-            DeviceIndex: 0
+          - DeviceIndex: 0
             Groups:
               - !Ref SlideruleSG
         BlockDeviceMappings:
@@ -708,19 +716,6 @@ Resources:
           PropagateAtLaunch: true
 
   #
-  # DNS
-  #
-  IlbRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: !Sub "${Domain}."   # ensure trailing dot or you can pass HostedZoneId instead
-      Name: !Sub "${Cluster}.${Domain}"
-      Type: A
-      TTL: "300"
-      ResourceRecords:
-        - !GetAtt IlbInstance.PublicIp
-
-  #
   # Auto-Shutdown
   #
   SchedulerLambdaRole:
@@ -770,3 +765,127 @@ Resources:
       StackName: !Ref AWS::StackName
       DeleteAfterMinutes: !Ref TTL
       DeletionLambdaArn: !Ref DestroyLambdaArn
+
+  #
+  # API Gateway
+  #
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: API gateway for SlideRule cluster
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref CorsAllowOrigins
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - !Ref JwtAudience
+        Issuer: !Ref JwtIssuer
+  IlbRoute:
+    Type: AWS::ApiGatewayV2::Route
+    DependsOn: ProxyIntegration
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'ANY /{proxy+}'
+      AuthorizationType: !If [UseJwt, JWT, NONE]
+      AuthorizerId: !If [UseJwt, !Ref JwtAuthorizer, !Ref AWS::NoValue]
+      Target: !Sub 'integrations/${ProxyIntegration}'
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Sub '${Cluster}.${Domain}'
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref CertificateArn
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn:
+      - ApiCustomDomain
+      - ApiStage
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Sub '${Cluster}.${Domain}'
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false
+
+  #
+  # Network Load Balancer (NLB)
+  #
+  ProxyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      TargetType: ip
+      Protocol: TCP
+      VpcId: !Ref SlideruleVPC
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /discovery/health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Targets:
+        - Id: !GetAtt IlbInstance.PrivateIp
+          Port: 80
+  ProxyNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      Subnets:
+        - !Ref SlideruleSubnet
+  ProxyListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ProxyNLB
+      Protocol: TCP
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ProxyTargetGroup
+  ApiVpcLink:
+    Type: AWS::ApiGatewayV2::VpcLink
+    Properties:
+      Name: !Sub '${AWS::StackName}-vpclink'
+      SubnetIds:
+        - !Ref SlideruleSubnet
+  ProxyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    DependsOn: ApiVpcLink
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      ConnectionType: VPC_LINK
+      ConnectionId: !Ref ApiVpcLink
+      IntegrationUri: !Ref ProxyListener
+      PayloadFormatVersion: '1.0'

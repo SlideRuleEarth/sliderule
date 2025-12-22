@@ -57,6 +57,10 @@ def lambda_deploy(event, context):
         project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
         container_registry = os.environ['CONTAINER_REGISTRY']
         lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
+        cors_allow_origins = os.environ['CORS_ALLOW_ORIGINS']
+        jwt_audience = os.environ['JWT_AUDIENCE']
+        jwt_issuer = os.environ['JWT_ISSUER']
+        certificate_arn = os.environ['CERTIFICATE_ARN']
 
         # get required request variables
         cluster = event["cluster"]
@@ -78,11 +82,11 @@ def lambda_deploy(event, context):
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": version},
-            {"ParameterKey": "IsPublic", "ParameterValue": str(is_public)},
+            {"ParameterKey": "IsPublic", "ParameterValue": is_public},
             {"ParameterKey": "Organization", "ParameterValue": organization},
             {"ParameterKey": "Cluster", "ParameterValue": cluster},
-            {"ParameterKey": "NodeCapacity", "ParameterValue": str(node_capacity)},
-            {"ParameterKey": "TTL", "ParameterValue": str(ttl)},
+            {"ParameterKey": "NodeCapacity", "ParameterValue": node_capacity},
+            {"ParameterKey": "TTL", "ParameterValue": ttl},
             {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
             {"ParameterKey": "Domain", "ParameterValue": domain},
             {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
@@ -91,6 +95,10 @@ def lambda_deploy(event, context):
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
+            {"ParameterKey": "CorsAllowOrigins", "ParameterValue": cors_allow_origins},
+            {"ParameterKey": "JwtAudience", "ParameterValue": jwt_audience},
+            {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
+            {"ParameterKey": "CertificateArn", "ParameterValue": certificate_arn},
         ]
 
         # read template

@@ -58,6 +58,10 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
+          CORS_ALLOW_ORIGINS: !Ref CorsAllowOrigins
+          JWT_AUDIENCE: !Ref JwtAudience
+          JWT_ISSUER: !Ref JwtIssuer
+          CERTIFICATE_ARN: !Ref CertificateArn
 
   ## Destroy Lambda Function
   DestroyLambda:
@@ -153,6 +157,10 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
+          CORS_ALLOW_ORIGINS: !Ref CorsAllowOrigins
+          JWT_AUDIENCE: !Ref JwtAudience
+          JWT_ISSUER: !Ref JwtIssuer
+          CERTIFICATE_ARN: !Ref CertificateArn
 
   ## IAM Role
   LambdaExecutionRole:

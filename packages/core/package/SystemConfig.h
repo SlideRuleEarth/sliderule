@@ -129,6 +129,7 @@ class SystemConfig: public FieldDictionary
         SystemConfig ();
         virtual ~SystemConfig  (void) override;
         static void setIfProvided(FieldElement<string>& field, const char* env);
+        static void setIfProvidedBool(FieldElement<bool>& field, const char* env);
 };
 
 /******************************************************************************
