@@ -387,7 +387,6 @@ void* Atl06DataFrame::subsettingThread (void* parm)
 
         /* Set MetaData */
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], df->beam);
-        df->gt = Icesat2Fields::getGroundTrack(df->beam);
 
         /* Check Spot Filter */
         if(!parms.spots[static_cast<Icesat2Fields::spot_t>(df->spot.value)])
@@ -406,6 +405,9 @@ void* Atl06DataFrame::subsettingThread (void* parm)
         if     (df->beam[3] == 'l') pair = Icesat2Fields::RPT_L;
         else if(df->beam[3] == 'r') pair = Icesat2Fields::RPT_R;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", df->beam);
+
+        /* Ground track depends on spacecraft orientation and track/pair */
+        df->gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], track, pair);
 
         /* Loop Through Each Segment */
         uint32_t extent_counter = 0;

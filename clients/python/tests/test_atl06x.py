@@ -102,3 +102,73 @@ class TestAtl06x:
             rtol=0,
             atol=1e-6,
         )
+
+    def test_atl06_reader_vs_dataframe(self, init):
+        parms = {
+            "cnf": 4,
+            "srt": icesat2.SRT_LAND_ICE,
+            "beams": "gt1l",
+        }
+
+        # Run both implementations on the same granule
+        gdf_x = sliderule.run("atl06x", parms.copy(), resources=[GRANULE])
+        gdf_s = icesat2.atl06sp(parms.copy(), resources=[GRANULE], keep_id=True)
+
+        assert init
+        assert len(gdf_x) == len(gdf_s)
+
+        def normalize(gdf):
+            # The two APIs return identical rows but with different layouts: atl06x comes back as a GeoDataFrame
+            # with time as the index, while atl06s arrives as plain records that get flattened into a DataFrame,
+            # so row order can differ. Sorting on extent_id and preserving the original time index lets us compare
+            # the same extents deterministically regardless of stream ordering or column/index naming differences.
+            sorted_gdf = gdf.sort_values("extent_id")
+            time_ns = sorted_gdf.index.astype("int64")
+            df = sorted_gdf.reset_index(drop=True)
+            df["time_ns"] = time_ns
+            df["longitude"] = df.geometry.x.to_numpy()
+            df["latitude"] = df.geometry.y.to_numpy()
+            return df
+
+        df_x = normalize(gdf_x)
+        df_s = normalize(gdf_s)
+
+        int_fields = [
+            "extent_id",
+            "segment_id",
+            "atl06_quality_summary",
+            "bsnow_conf",
+            "n_fit_photons",
+            "spot",
+            "gt",
+            "cycle",
+            "rgt",
+        ]
+        for field in int_fields:
+            np.testing.assert_array_equal(df_x[field].to_numpy(), df_s[field].to_numpy())
+
+        np.testing.assert_array_equal(df_x["time_ns"].to_numpy(), df_s["time_ns"].to_numpy())
+
+        float_fields = [
+            "x_atc",
+            "y_atc",
+            "h_li",
+            "h_li_sigma",
+            "sigma_geo_h",
+            "seg_azimuth",
+            "dh_fit_dx",
+            "h_robust_sprd",
+            "w_surface_window_final",
+            "bsnow_h",
+            "r_eff",
+            "tide_ocean",
+            "latitude",
+            "longitude",
+        ]
+        np.testing.assert_allclose(
+            df_x[float_fields].to_numpy(),
+            df_s[float_fields].to_numpy(),
+            rtol=0,
+            atol=1e-9,
+            equal_nan=True,
+        )
