@@ -120,7 +120,7 @@ class TestAtl08x:
             atol=1e-4,
         )
 
-    def test_ancillary(self, init):
+    def test_ancillary_as_scalar(self, init):
         parms = {
             "beams": "gt3r",
             "atl08_fields": ["segment_landcover", "segment_snowcover"],
@@ -142,3 +142,26 @@ class TestAtl08x:
                 2,
             ],
         )
+
+    def test_ancillary_as_array(self, init):
+        parms = {
+            "beams": "gt3r",
+            "atl08_fields": [
+                "terrain/h_te_best_fit_20m",
+                "canopy/h_canopy_20m",
+            ],
+        }
+
+        gdf = sliderule.run("atl08x", parms, resources=[GRANULE])
+        assert init
+        assert len(gdf) == 10214
+
+        # These fields should remain nested arrays (N,5) when requested
+        for column in [
+            "terrain/h_te_best_fit_20m",
+            "canopy/h_canopy_20m",
+        ]:
+            assert column in gdf.columns
+            sample = gdf[column].iloc[0]
+            assert isinstance(sample, (list, tuple, np.ndarray))
+            assert len(sample) == 5
