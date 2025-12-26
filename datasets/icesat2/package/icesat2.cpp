@@ -58,6 +58,7 @@
 #include "SurfaceFitter.h"
 #ifdef __unittesting__
 #include "UT_Atl06Dispatch.h"
+#include "UT_AOIHelpers.h"
 #endif
 
 /******************************************************************************
@@ -95,6 +96,7 @@ int icesat2_open (lua_State *L)
         {"atl24granule",        Atl24Granule::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
+        {"ut_aoi",              UT_AOIHelpers::luaCreate},
 #endif
         {NULL,                  NULL}
     };

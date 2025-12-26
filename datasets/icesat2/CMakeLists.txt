@@ -27,6 +27,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/PhoReal.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SurfaceFitter.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_Atl06Dispatch.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_AOIHelpers.cpp>
 )
 
 target_include_directories (slideruleLib
