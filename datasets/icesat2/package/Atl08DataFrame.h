@@ -85,8 +85,9 @@ class Atl08DataFrame: public GeoDataFrame
                 void polyregion         (const Atl08DataFrame* df);
                 void rasterregion       (const Atl08DataFrame* df);
 
-                H5Array<double>         latitude;
-                H5Array<double>         longitude;
+                /* ATL08 land_segments latitude/longitude are float32 (unlike ATL03/06/13, which are float64). */
+                H5Array<float>          latitude;
+                H5Array<float>          longitude;
 
                 bool*                   inclusion_mask;
                 bool*                   inclusion_ptr;
