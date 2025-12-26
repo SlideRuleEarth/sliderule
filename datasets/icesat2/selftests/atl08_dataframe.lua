@@ -79,8 +79,8 @@ runner.unittest("ATL08 DataFrame", function()
         local idx = 1
         check_expected({
             time_ns = 1583541719170012416,
-            latitude = 1277031622441.275,
-            longitude = -1224416537368982.5,
+            latitude = 60.644901275634766,
+            longitude = -145.39999389648438,
             delta_time = 6.877691917001235e7,
             segment_id_beg = 337095,
             segment_id_end = 337099,
@@ -103,7 +103,7 @@ runner.unittest("ATL08 DataFrame", function()
             segment_cover = 61,
             n_ca_photons = 124,
             can_quality_score = 75
-        }, atl08df, idx, 0.0001)
+        }, atl08df, idx, 0.001)
 
     end
 

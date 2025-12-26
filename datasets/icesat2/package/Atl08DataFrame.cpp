@@ -446,8 +446,8 @@ void* Atl08DataFrame::subsettingThread (void* parm)
             df->extent_id.append(extent_id);
             df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl08.delta_time[segment]));
             df->delta_time_col.append(atl08.delta_time[segment]);
-            df->latitude.append(aoi.latitude[segment]);
-            df->longitude.append(aoi.longitude[segment]);
+            df->latitude.append(static_cast<double>(aoi.latitude[segment]));
+            df->longitude.append(static_cast<double>(aoi.longitude[segment]));
             df->segment_id_beg.append(atl08.segment_id_beg[segment]);
             df->segment_id_end.append(atl08.segment_id_end[segment]);
             df->night_flag.append(atl08.night_flag[segment]);
