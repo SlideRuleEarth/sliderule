@@ -34,9 +34,6 @@
  ******************************************************************************/
 
 #include "Atl08DataFrame.h"
-#include "LuaObject.h"
-#include "StringLib.h"
-#include "RunTimeException.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -186,146 +183,10 @@ okey_t Atl08DataFrame::getKey (void) const
  * AreaOfInterest Subclass
  ******************************************************************************/
 
-Atl08DataFrame::AreaOfInterest::AreaOfInterest (const Atl08DataFrame* df):
-    latitude        (df->hdf08, FString("/%s/%s", df->beam, "land_segments/latitude").c_str()),
-    longitude       (df->hdf08, FString("/%s/%s", df->beam, "land_segments/longitude").c_str()),
-    inclusion_mask  {NULL},
-    inclusion_ptr   {NULL}
-{
-    try
-    {
-        /* Join Reads */
-        latitude.join(df->readTimeoutMs, true);
-        longitude.join(df->readTimeoutMs, true);
-
-        /* Initialize Region */
-        first_segment = 0;
-        num_segments = H5Coro::ALL_ROWS;
-
-        /* Determine Spatial Extent */
-        if(df->parms->regionMask.valid())
-        {
-            rasterregion(df);
-        }
-        else if(df->parms->pointsInPolygon.value > 0)
-        {
-            polyregion(df);
-        }
-        else
-        {
-            num_segments = latitude.size;
-        }
-
-        /* Check If Anything to Process */
-        if(num_segments <= 0)
-        {
-            throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
-        }
-
-        /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        latitude.trim(first_segment);
-        longitude.trim(first_segment);
-    }
-    catch(const RunTimeException& e)
-    {
-        cleanup();
-        throw;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::Destructor
- *----------------------------------------------------------------------------*/
-Atl08DataFrame::AreaOfInterest::~AreaOfInterest (void)
-{
-    cleanup();
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::cleanup
- *----------------------------------------------------------------------------*/
-void Atl08DataFrame::AreaOfInterest::cleanup (void)
-{
-    delete [] inclusion_mask;
-    inclusion_mask = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::polyregion
- *----------------------------------------------------------------------------*/
-void Atl08DataFrame::AreaOfInterest::polyregion (const Atl08DataFrame* df)
-{
-    bool first_segment_found = false;
-    int segment = 0;
-    while(segment < latitude.size)
-    {
-        const bool inclusion = df->parms->polyIncludes(longitude[segment], latitude[segment]);
-
-        if(!first_segment_found && inclusion)
-        {
-            first_segment_found = true;
-            first_segment = segment;
-        }
-        else if(first_segment_found && !inclusion)
-        {
-            break;
-        }
-
-        segment++;
-    }
-
-    if(first_segment_found)
-    {
-        num_segments = segment - first_segment;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::rasterregion
- *----------------------------------------------------------------------------*/
-void Atl08DataFrame::AreaOfInterest::rasterregion (const Atl08DataFrame* df)
-{
-    bool first_segment_found = false;
-
-    if(latitude.size <= 0)
-    {
-        return;
-    }
-
-    inclusion_mask = new bool [latitude.size];
-    inclusion_ptr = inclusion_mask;
-
-    long last_segment = 0;
-    int segment = 0;
-    while(segment < latitude.size)
-    {
-        const bool inclusion = df->parms->maskIncludes(longitude[segment], latitude[segment]);
-        inclusion_mask[segment] = inclusion;
-
-        if(inclusion)
-        {
-            if(!first_segment_found)
-            {
-                first_segment_found = true;
-                first_segment = segment;
-            }
-            last_segment = segment;
-        }
-
-        segment++;
-    }
-
-    if(first_segment_found)
-    {
-        num_segments = last_segment - first_segment + 1;
-        inclusion_ptr = &inclusion_mask[first_segment];
-    }
-}
-
 /*----------------------------------------------------------------------------
  * Atl08Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest& aoi):
+Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterestT<float>& aoi):
     sc_orient               (df->hdf08, "/orbit_info/sc_orient"),
     /* Land Segment Datasets */
     delta_time              (df->hdf08, FString("%s/%s", df->beam, "land_segments/delta_time").c_str(),                            0, aoi.first_segment, aoi.num_segments),
@@ -399,7 +260,12 @@ void* Atl08DataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterest aoi(df);
+        const AreaOfInterestT<float> aoi(df->hdf08,
+                                         df->beam,
+                                         "land_segments/latitude",
+                                         "land_segments/longitude",
+                                         df->parms,
+                                         df->readTimeoutMs);
 
         /* Read ATL08 Datasets */
         const Atl08Data atl08(df, aoi);

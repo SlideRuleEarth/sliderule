@@ -34,13 +34,9 @@
  ******************************************************************************/
 
 #include "AreaOfInterest.h"
-#include "Icesat2Fields.h"
-#include "RunTimeException.h"
 
-/*----------------------------------------------------------------------------
- * AreaOfInterest::Constructor
- *----------------------------------------------------------------------------*/
-AreaOfInterest::AreaOfInterest (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs):
+template<typename CoordT>
+AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs):
     latitude        (hdf, FString("/%s/%s", beam, latitude_name).c_str()),
     longitude       (hdf, FString("/%s/%s", beam, longitude_name).c_str()),
     inclusion_mask  {NULL},
@@ -90,7 +86,8 @@ AreaOfInterest::AreaOfInterest (H5Object* hdf, const char* beam, const char* lat
 /*----------------------------------------------------------------------------
  * AreaOfInterest::Destructor
  *----------------------------------------------------------------------------*/
-AreaOfInterest::~AreaOfInterest (void)
+template<typename CoordT>
+AreaOfInterestT<CoordT>::~AreaOfInterestT (void)
 {
     cleanup();
 }
@@ -98,7 +95,8 @@ AreaOfInterest::~AreaOfInterest (void)
 /*----------------------------------------------------------------------------
  * AreaOfInterest::cleanup
  *----------------------------------------------------------------------------*/
-void AreaOfInterest::cleanup (void)
+template<typename CoordT>
+void AreaOfInterestT<CoordT>::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
@@ -107,7 +105,8 @@ void AreaOfInterest::cleanup (void)
 /*----------------------------------------------------------------------------
  * AreaOfInterest::polyregion
  *----------------------------------------------------------------------------*/
-void AreaOfInterest::polyregion (const Icesat2Fields* parms)
+template<typename CoordT>
+void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 {
     bool first_segment_found = false;
     int segment = 0;
@@ -137,7 +136,8 @@ void AreaOfInterest::polyregion (const Icesat2Fields* parms)
 /*----------------------------------------------------------------------------
  * AreaOfInterest::rasterregion
  *----------------------------------------------------------------------------*/
-void AreaOfInterest::rasterregion (const Icesat2Fields* parms)
+template<typename CoordT>
+void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
 {
     bool first_segment_found = false;
 
@@ -175,3 +175,6 @@ void AreaOfInterest::rasterregion (const Icesat2Fields* parms)
         inclusion_ptr = &inclusion_mask[first_segment];
     }
 }
+
+template class AreaOfInterestT<double>;
+template class AreaOfInterestT<float>;

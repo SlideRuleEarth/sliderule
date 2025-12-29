@@ -37,14 +37,7 @@
  ******************************************************************************/
 
 #include "GeoDataFrame.h"
-#include "H5Object.h"
-#include "Icesat2Fields.h"
-#include "H5Array.h"
 #include "H5VarSet.h"
-#include "FieldColumn.h"
-#include "FieldElement.h"
-#include "MsgQ.h"
-#include "OsApi.h"
 #include "AreaOfInterest.h"
 
 /******************************************************************************
@@ -77,7 +70,7 @@ class Atl06DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl06Data           (Atl06DataFrame* df, const AreaOfInterest& aoi);
+                Atl06Data           (Atl06DataFrame* df, const AreaOfInterestT<double>& aoi);
                 ~Atl06Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

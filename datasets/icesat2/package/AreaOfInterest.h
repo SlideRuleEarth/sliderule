@@ -44,7 +44,8 @@
  * CLASS DEFINITION
  ******************************************************************************/
 
-class AreaOfInterest
+template<typename CoordT>
+class AreaOfInterestT
 {
     public:
 
@@ -52,15 +53,15 @@ class AreaOfInterest
          * Methods
          *--------------------------------------------------------------------*/
 
-         AreaOfInterest  (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs);
-         ~AreaOfInterest (void);
+         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs);
+         ~AreaOfInterestT(void);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Array<double>         latitude;
-        H5Array<double>         longitude;
+        H5Array<CoordT>         latitude;
+        H5Array<CoordT>         longitude;
 
         bool*                   inclusion_mask;
         bool*                   inclusion_ptr;
