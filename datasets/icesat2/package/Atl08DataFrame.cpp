@@ -186,7 +186,7 @@ okey_t Atl08DataFrame::getKey (void) const
 /*----------------------------------------------------------------------------
  * Atl08Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterestT<float>& aoi):
+Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest08& aoi):
     sc_orient               (df->hdf08, "/orbit_info/sc_orient"),
     /* Land Segment Datasets */
     delta_time              (df->hdf08, FString("%s/%s", df->beam, "land_segments/delta_time").c_str(),                            0, aoi.first_segment, aoi.num_segments),
@@ -260,12 +260,7 @@ void* Atl08DataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterestT<float> aoi(df->hdf08,
-                                         df->beam,
-                                         "land_segments/latitude",
-                                         "land_segments/longitude",
-                                         df->parms,
-                                         df->readTimeoutMs);
+        const AreaOfInterest08 aoi(df->hdf08, df->beam, "land_segments/latitude", "land_segments/longitude", df->parms, df->readTimeoutMs);
 
         /* Read ATL08 Datasets */
         const Atl08Data atl08(df, aoi);

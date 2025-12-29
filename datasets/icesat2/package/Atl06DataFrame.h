@@ -70,7 +70,7 @@ class Atl06DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl06Data           (Atl06DataFrame* df, const AreaOfInterestT<double>& aoi);
+                Atl06Data           (Atl06DataFrame* df, const AreaOfInterest06& aoi);
                 ~Atl06Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

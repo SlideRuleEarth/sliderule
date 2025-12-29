@@ -72,7 +72,7 @@ class Atl08DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl08Data           (Atl08DataFrame* df, const AreaOfInterestT<float>& aoi);
+                Atl08Data           (Atl08DataFrame* df, const AreaOfInterest08& aoi);
                 ~Atl08Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

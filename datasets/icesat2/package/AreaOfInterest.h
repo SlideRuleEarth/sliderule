@@ -80,4 +80,7 @@ class AreaOfInterestT
         void rasterregion       (const Icesat2Fields* parms);
 };
 
+using AreaOfInterest06 = AreaOfInterestT<double>;
+using AreaOfInterest08 = AreaOfInterestT<float>;
+
 #endif  /* __area_of_interest__ */
