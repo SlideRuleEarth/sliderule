@@ -34,9 +34,6 @@
  ******************************************************************************/
 
 #include "Atl06DataFrame.h"
-#include "LuaObject.h"
-#include "StringLib.h"
-#include "RunTimeException.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -176,150 +173,10 @@ okey_t Atl06DataFrame::getKey (void) const
     return dfKey;
 }
 
-/******************************************************************************
- * AreaOfInterest Subclass
- ******************************************************************************/
-
-Atl06DataFrame::AreaOfInterest::AreaOfInterest (const Atl06DataFrame* df):
-    latitude        (df->hdf06, FString("/%s/%s", df->beam, "land_ice_segments/latitude").c_str()),
-    longitude       (df->hdf06, FString("/%s/%s", df->beam, "land_ice_segments/longitude").c_str()),
-    inclusion_mask  {NULL},
-    inclusion_ptr   {NULL}
-{
-    try
-    {
-        /* Join Reads */
-        latitude.join(df->readTimeoutMs, true);
-        longitude.join(df->readTimeoutMs, true);
-
-        /* Initialize Region */
-        first_segment = 0;
-        num_segments = H5Coro::ALL_ROWS;
-
-        /* Determine Spatial Extent */
-        if(df->parms->regionMask.valid())
-        {
-            rasterregion(df);
-        }
-        else if(df->parms->pointsInPolygon.value > 0)
-        {
-            polyregion(df);
-        }
-        else
-        {
-            num_segments = latitude.size;
-        }
-
-        /* Check If Anything to Process */
-        if(num_segments <= 0)
-        {
-            throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
-        }
-
-        /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        latitude.trim(first_segment);
-        longitude.trim(first_segment);
-    }
-    catch(const RunTimeException& e)
-    {
-        cleanup();
-        throw;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::Destructor
- *----------------------------------------------------------------------------*/
-Atl06DataFrame::AreaOfInterest::~AreaOfInterest (void)
-{
-    cleanup();
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::cleanup
- *----------------------------------------------------------------------------*/
-void Atl06DataFrame::AreaOfInterest::cleanup (void)
-{
-    delete [] inclusion_mask;
-    inclusion_mask = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::polyregion
- *----------------------------------------------------------------------------*/
-void Atl06DataFrame::AreaOfInterest::polyregion (const Atl06DataFrame* df)
-{
-    bool first_segment_found = false;
-    int segment = 0;
-    while(segment < latitude.size)
-    {
-        const bool inclusion = df->parms->polyIncludes(longitude[segment], latitude[segment]);
-
-        if(!first_segment_found && inclusion)
-        {
-            first_segment_found = true;
-            first_segment = segment;
-        }
-        else if(first_segment_found && !inclusion)
-        {
-            break;
-        }
-
-        segment++;
-    }
-
-    if(first_segment_found)
-    {
-        num_segments = segment - first_segment;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::rasterregion
- *----------------------------------------------------------------------------*/
-void Atl06DataFrame::AreaOfInterest::rasterregion (const Atl06DataFrame* df)
-{
-    bool first_segment_found = false;
-
-    if(latitude.size <= 0)
-    {
-        return;
-    }
-
-    inclusion_mask = new bool [latitude.size];
-    inclusion_ptr = inclusion_mask;
-
-    long last_segment = 0;
-    int segment = 0;
-    while(segment < latitude.size)
-    {
-        const bool inclusion = df->parms->maskIncludes(longitude[segment], latitude[segment]);
-        inclusion_mask[segment] = inclusion;
-
-        if(inclusion)
-        {
-            if(!first_segment_found)
-            {
-                first_segment_found = true;
-                first_segment = segment;
-            }
-            last_segment = segment;
-        }
-
-        segment++;
-    }
-
-    if(first_segment_found)
-    {
-        num_segments = last_segment - first_segment + 1;
-        inclusion_ptr = &inclusion_mask[first_segment];
-    }
-}
-
 /*----------------------------------------------------------------------------
  * Atl06Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl06DataFrame::Atl06Data::Atl06Data (Atl06DataFrame* df, const AreaOfInterest& aoi):
+Atl06DataFrame::Atl06Data::Atl06Data (Atl06DataFrame* df, const AreaOfInterest06& aoi):
     sc_orient               (df->hdf06, "/orbit_info/sc_orient"),
     delta_time              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/delta_time").c_str(),                            0, aoi.first_segment, aoi.num_segments),
     h_li                    (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/h_li").c_str(),                                  0, aoi.first_segment, aoi.num_segments),
@@ -380,7 +237,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterest aoi(df);
+        const AreaOfInterest06 aoi(df->hdf06, df->beam, "land_ice_segments/latitude", "land_ice_segments/longitude", df->parms, df->readTimeoutMs);
 
         /* Read ATL06 Datasets */
         const Atl06Data atl06(df, aoi);

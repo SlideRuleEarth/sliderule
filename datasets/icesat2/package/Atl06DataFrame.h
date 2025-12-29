@@ -37,14 +37,8 @@
  ******************************************************************************/
 
 #include "GeoDataFrame.h"
-#include "H5Object.h"
-#include "Icesat2Fields.h"
-#include "H5Array.h"
 #include "H5VarSet.h"
-#include "FieldColumn.h"
-#include "FieldElement.h"
-#include "MsgQ.h"
-#include "OsApi.h"
+#include "AreaOfInterest.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -72,35 +66,11 @@ class Atl06DataFrame: public GeoDataFrame
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        /* Area of Interest Subclass */
-        class AreaOfInterest
-        {
-            public:
-
-                explicit AreaOfInterest (const Atl06DataFrame* df);
-                ~AreaOfInterest         (void);
-
-                void cleanup            (void);
-                void polyregion         (const Atl06DataFrame* df);
-                void rasterregion       (const Atl06DataFrame* df);
-
-                H5Array<double>         latitude;
-                H5Array<double>         longitude;
-
-                bool*                   inclusion_mask;
-                bool*                   inclusion_ptr;
-
-                long                    first_segment;
-                long                    num_segments;
-        };
-
-        /* Atl06 Data Subclass */
         class Atl06Data
         {
             public:
 
-                Atl06Data           (Atl06DataFrame* df, const AreaOfInterest& aoi);
+                Atl06Data           (Atl06DataFrame* df, const AreaOfInterest06& aoi);
                 ~Atl06Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

@@ -37,14 +37,8 @@
  ******************************************************************************/
 
 #include "GeoDataFrame.h"
-#include "H5Object.h"
-#include "Icesat2Fields.h"
-#include "H5Array.h"
 #include "H5VarSet.h"
-#include "FieldColumn.h"
-#include "FieldElement.h"
-#include "MsgQ.h"
-#include "OsApi.h"
+#include "AreaOfInterest.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -73,35 +67,12 @@ class Atl08DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Area of Interest Subclass */
-        class AreaOfInterest
-        {
-            public:
-
-                explicit AreaOfInterest (const Atl08DataFrame* df);
-                ~AreaOfInterest         (void);
-
-                void cleanup            (void);
-                void polyregion         (const Atl08DataFrame* df);
-                void rasterregion       (const Atl08DataFrame* df);
-
-                /* ATL08 land_segments latitude/longitude are float32 (unlike ATL03/06/13, which are float64). */
-                H5Array<float>          latitude;
-                H5Array<float>          longitude;
-
-                bool*                   inclusion_mask;
-                bool*                   inclusion_ptr;
-
-                long                    first_segment;
-                long                    num_segments;
-        };
-
         /* Atl08 Data Subclass */
         class Atl08Data
         {
             public:
 
-                Atl08Data           (Atl08DataFrame* df, const AreaOfInterest& aoi);
+                Atl08Data           (Atl08DataFrame* df, const AreaOfInterest08& aoi);
                 ~Atl08Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;
