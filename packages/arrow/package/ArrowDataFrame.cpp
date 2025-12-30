@@ -45,6 +45,7 @@
 #include <arrow/csv/writer.h>
 #include <regex>
 #include "OsApi.h"
+#include "TraceGuard.h"
 #include "GeoDataFrame.h"
 #include "FieldList.h"
 #include "FieldArray.h"
@@ -430,7 +431,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, vector<shared_
         }
 
         // encode field to arrow
-        const uint32_t field_trace_id = start_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
+        const TraceGuard field_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
         if(field->type == Field::COLUMN)
         {
             switch(field->getValueEncoding())
@@ -494,16 +495,14 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, vector<shared_
         {
             mlog(WARNING, "Skipping field %s of type %d", name, static_cast<int>(field->type));
         }
-        stop_trace(INFO, field_trace_id);
     }
 
     // build geo columns
     if(parms.format == OutputFields::GEOPARQUET)
     {
-        const uint32_t geo_trace_id = start_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
+        const TraceGuard geo_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
         encodeGeometry(dataframe, columns);
         fields.push_back(arrow::field("geometry", arrow::binary()));
-        stop_trace(INFO, geo_trace_id);
     }
 }
 
@@ -568,16 +567,16 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
         // start trace
         const uint32_t parent_trace_id = EventLib::grabId();
-        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
+        const TraceGuard trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
 
         // process dataframe to arrow table
         vector<shared_ptr<arrow::Array>> columns; // data
         vector<shared_ptr<arrow::Field>> field_list; // schema
-        processDataFrame(columns, field_list, arrow_parms, dataframe, trace_id);
+        processDataFrame(columns, field_list, arrow_parms, dataframe, trace.id());
         shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(field_list); // create schema
 
         // write out table
-        const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        const TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
         if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
         {
             // set arrow output stream
@@ -706,10 +705,6 @@ int ArrowDataFrame::luaExport (lua_State* L)
         {
             mlog(CRITICAL, "Unsupported format: %d", format);
         }
-        stop_trace(INFO, write_trace_id);
-
-        // stop trace
-        stop_trace(INFO, trace_id);
     }
     catch(const RunTimeException& e)
     {

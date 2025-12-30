@@ -39,6 +39,7 @@
 
 #include "OsApi.h"
 #include "H5Coro.h"
+#include "TraceGuard.h"
 #include "SwotFields.h"
 #include "SwotL2Reader.h"
 
@@ -441,13 +442,13 @@ void* SwotL2Reader::varThread (void* parm)
     results.data = NULL;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
+    const TraceGuard trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
 
     try
     {
         /* Read Dataset */
         const H5Coro::range_t slice[2] = {{reader->region->first_line, reader->region->first_line + reader->region->num_lines}, {0, H5Coro::EOR}};
-        results = H5Coro::read(reader->context, info->variable_name, RecordObject::DYNAMIC, slice, 2, false, trace_id);
+        results = H5Coro::read(reader->context, info->variable_name, RecordObject::DYNAMIC, slice, 2, false, trace.id());
 
         /* Post Results to Output Queue */
         if(results.data)
@@ -506,9 +507,6 @@ void* SwotL2Reader::varThread (void* parm)
     operator delete[](results.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     delete [] info->variable_name;
     delete info;
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

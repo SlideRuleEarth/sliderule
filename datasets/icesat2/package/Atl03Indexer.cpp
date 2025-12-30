@@ -38,6 +38,7 @@
 #include "H5Coro.h"
 #include "H5Array.h"
 #include "Atl03Indexer.h"
+#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -203,8 +204,8 @@ void* Atl03Indexer::indexerThread (void* parm)
     Atl03Indexer* indexer = reinterpret_cast<Atl03Indexer*>(parm);
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Lib
+    const TraceGuard trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
+    trace.stash(); // set thread specific trace id for H5Lib
 
     /* Build Prefix */
     char prefix[MAX_STR_SIZE];
@@ -313,9 +314,6 @@ void* Atl03Indexer::indexerThread (void* parm)
         }
     }
     indexer->threadMut.unlock();
-
-    /* Stop Trace */
-    stop_trace(CRITICAL, trace_id);
 
     /* Return */
     return NULL;

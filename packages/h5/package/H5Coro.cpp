@@ -35,6 +35,7 @@
 
 #include "MsgQ.h"
 #include "OsApi.h"
+#include "TraceGuard.h"
 #include "EventLib.h"
 #include "RecordObject.h"
 #include "H5Dataset.h"
@@ -460,7 +461,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
     info_t info;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"context\":\"%s\", \"dataset\":\"%s\"}", context->name, datasetname);
+    const TraceGuard trace(INFO, parent_trace_id, "h5coro_read", "{\"context\":\"%s\", \"dataset\":\"%s\"}", context->name, datasetname);
 
     /* Open Resource and Read Dataset */
     const H5Dataset dataset(&info, context, datasetname, slice, slicendims, _meta_only);
@@ -706,9 +707,6 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read dataset: %s", datasetname);
     }
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Log Info Message */
     mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, context->name, datasetname);

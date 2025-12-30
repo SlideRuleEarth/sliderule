@@ -56,6 +56,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "OsApi.h"
+#include "TraceGuard.h"
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
 #include "SystemConfig.h"
@@ -98,7 +99,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 
     /* Start Trace */
     const uint32_t parent_trace_id = EventLib::grabId();
-    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
+    const TraceGuard trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
 
     /* Allocate Columns for this Batch */
     vector<shared_ptr<arrow::Array>> columns;
@@ -106,7 +107,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     /* Loop Through Fields in Primary Record */
     for(int i = 0; i < fieldList.length(); i++)
     {
-        const uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
+        const TraceGuard field_trace(INFO, trace.id(), "append_field", "{\"field\": %d}", i);
         RecordObject::field_t& field = fieldList.get(i);
 
         /* Build Column */
@@ -116,17 +117,15 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 
         /* Add Column to Columns */
         columns.push_back(column);
-        stop_trace(INFO, field_trace_id);
     }
 
     /* Add Geometry Column (if GeoParquet) */
     if(format == OutputFields::GEOPARQUET)
     {
-        const uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
+        const TraceGuard geo_trace(INFO, trace.id(), "geo_column", "%s", "{}");
         shared_ptr<arrow::Array> column;
         processGeometry(arrowBuilder->getXField(), arrowBuilder->getYField(), &column, record_batch, num_rows, batch_row_size_bits);
         columns.push_back(column);
-        stop_trace(INFO, geo_trace_id);
     }
 
     /* Add Ancillary Columns */
@@ -148,12 +147,11 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
     {
         /* Build and Write Table */
-        const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        const TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
         const arrow::Status s = parquetWriter->WriteTable(*table, num_rows);
         if(s.ok()) status = true;
         else mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
-        stop_trace(INFO, write_trace_id);
 
         /* Close Parquet Writer */
         if(file_finished)
@@ -164,12 +162,11 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     else if(format == OutputFields::FEATHER)
     {
         /* Write the Table to a FEATHER file */
-        const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        const TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
         const arrow::Status s = arrow::ipc::feather::WriteTable(*table, featherWriter.get());
         if(s.ok()) status = true;
         else mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
-        stop_trace(INFO, write_trace_id);
 
         /* Close Feather Writer */
         if(file_finished)
@@ -191,9 +188,6 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)csvWriter->Close();
         }
     }
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Return Status */
     return status;
