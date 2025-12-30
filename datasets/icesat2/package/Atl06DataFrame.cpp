@@ -130,13 +130,8 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     assert(_parms);
     assert(_hdf06);
 
-    /* Calculate Key (simple sum of beam characters) */
-    const int exp_beam_str_len = 4;
-    for(int i = 0; i < exp_beam_str_len; i++)
-    {
-        if(beam[i] == '\0') break;
-        dfKey += static_cast<int>(beam[i]);
-    }
+    /* Calculate Key */
+    dfKey = calculateBeamKey(beam);
 
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);

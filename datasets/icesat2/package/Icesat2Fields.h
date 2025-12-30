@@ -629,4 +629,6 @@ inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return
 inline uint32_t toEncoding(Atl24Fields::class_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Atl24Fields::flag_t& v) { (void)v; return Field::INT32; }
 
+okey_t calculateBeamKey(const char* beam, int max_len = 4);
+
 #endif  /* __icesat2_fields__ */

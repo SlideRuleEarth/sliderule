@@ -1263,3 +1263,16 @@ void convertFromIndex(int index, Atl24Fields::flag_t& v)
         default:    v = Atl24Fields::FLAG_OFF;  break;
     }
 }
+
+/*----------------------------------------------------------------------------
+ * calculateBeamKey - compute a simple key for a beam string
+ *----------------------------------------------------------------------------*/
+okey_t calculateBeamKey(const char* beam, int max_len)
+{
+    okey_t key = 0;
+    for(int i = 0; i < max_len && beam && beam[i]; i++)
+    {
+        key += static_cast<int>(beam[i]);
+    }
+    return key;
+}
