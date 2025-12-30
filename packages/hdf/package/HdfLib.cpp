@@ -40,6 +40,7 @@
 #include "HdfLib.h"
 #include "RecordObject.h"
 #include "OsApi.h"
+#include "TraceGuard.h"
 
  /******************************************************************************
  * LOCAL FUNCTIONS
@@ -361,7 +362,7 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
         /* Start Trace */
         mlog(INFO, "Reading %d elements (%ld bytes) from %s %s", elements, datasize, filename, datasetname);
         const uint32_t parent_trace_id = EventLib::grabId();
-        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "HdfLib_read", "{\"filename\":\"%s\", \"dataset\":\"%s\"}", filename, datasetname);
+        TraceGuard trace(INFO, parent_trace_id, "HdfLib_read", "{\"filename\":\"%s\", \"dataset\":\"%s\"}", filename, datasetname);
 
         /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
@@ -382,9 +383,6 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
             mlog(CRITICAL, "Failed to read data from %s", datasetname);
             delete [] data;
         }
-
-        /* Stop Trace */
-        stop_trace(INFO, trace_id);
     }
     while(false);
 

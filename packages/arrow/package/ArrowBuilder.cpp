@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "TraceGuard.h"
 #include "OutputFields.h"
 #include "ArrowBuilder.h"
 #include "ArrowBuilderImpl.h"
@@ -348,8 +349,8 @@ void* ArrowBuilder::builderThread(void* parm)
     int row_cnt = 0;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
-    EventLib::stashId(trace_id);
+    TraceGuard trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
+    trace.stash();
 
     /* Loop Forever */
     while(builder->active.load())
@@ -510,20 +511,17 @@ void* ArrowBuilder::builderThread(void* parm)
     if(!builder->keepLocal)
     {
         /* Send File to User */
-        OutputLib::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
+        OutputLib::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace.id(), &builder->parms, builder->outQ);
 
         /* Send Metadata File to User */
         if(OutputLib::fileExists(builder->metadataFile))
         {
-            OutputLib::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
+            OutputLib::send2User(builder->metadataFile, builder->outputMetadataPath, trace.id(), &builder->parms, builder->outQ);
         }
     }
 
     /* Signal Completion */
     builder->signalComplete();
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Exit Thread */
     return NULL;
