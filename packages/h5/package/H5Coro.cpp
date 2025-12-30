@@ -461,7 +461,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
     info_t info;
 
     /* Start Trace */
-    TraceGuard trace(INFO, parent_trace_id, "h5coro_read", "{\"context\":\"%s\", \"dataset\":\"%s\"}", context->name, datasetname);
+    const TraceGuard trace(INFO, parent_trace_id, "h5coro_read", "{\"context\":\"%s\", \"dataset\":\"%s\"}", context->name, datasetname);
 
     /* Open Resource and Read Dataset */
     const H5Dataset dataset(&info, context, datasetname, slice, slicendims, _meta_only);

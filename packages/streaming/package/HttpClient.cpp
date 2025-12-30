@@ -176,7 +176,7 @@ HttpClient::~HttpClient(void)
  *----------------------------------------------------------------------------*/
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
-    TraceGuard trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
+    const TraceGuard trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
 
     if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace.id()))
     {
@@ -223,7 +223,7 @@ TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
 bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, int32_t parent_trace_id)
 {
     /* Start Trace */
-    TraceGuard trace(INFO, parent_trace_id, "make_request", "%s", "{}");
+    const TraceGuard trace(INFO, parent_trace_id, "make_request", "%s", "{}");
 
     bool status = true;
     try
@@ -313,7 +313,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
 HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int32_t parent_trace_id)
 {
     /* Start Trace */
-    TraceGuard trace(INFO, parent_trace_id, "parse_response", "%s", "{}");
+    const TraceGuard trace(INFO, parent_trace_id, "parse_response", "%s", "{}");
 
     /* Initialize Response */
     rsps_t rsps = {
@@ -341,7 +341,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         while(active.load() && !response_complete)
         {
             int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
-            TraceGuard sock_trace(DEBUG, trace.id(), "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
+            const TraceGuard sock_trace(DEBUG, trace.id(), "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
             if(bytes_read > 0)
             {
                 int line_start = 0;

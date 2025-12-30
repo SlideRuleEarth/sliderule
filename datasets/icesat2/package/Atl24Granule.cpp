@@ -174,7 +174,7 @@ void* Atl24Granule::readingThread (void* parm)
     const Icesat2Fields& parms = granule.parms;
 
     /* Start Trace */
-    TraceGuard trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
+    const TraceGuard trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

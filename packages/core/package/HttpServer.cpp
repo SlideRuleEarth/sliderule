@@ -408,7 +408,7 @@ int HttpServer::onRead(int fd)
     int status = 0;
     Connection* connection = connections[fd];
     rqst_state_t* state = &connection->rqst_state;
-    TraceGuard trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
+    const TraceGuard trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
 
     /* Determine Buffer to Read Into */
     uint8_t* buf; // pointer to buffer to read into
@@ -567,7 +567,7 @@ int HttpServer::onWrite(int fd)
     int status = 0;
     Connection* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
-    TraceGuard trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
+    const TraceGuard trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
 
     /* If Something to Send */
     if(state->ref_status > 0)

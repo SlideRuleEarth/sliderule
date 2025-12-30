@@ -761,7 +761,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
     const Icesat2Fields& parms = *df->parms;
 
     /* Start Trace */
-    TraceGuard trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf03->name, df->beam);
+    const TraceGuard trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf03->name, df->beam);
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

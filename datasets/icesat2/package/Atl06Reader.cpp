@@ -475,7 +475,7 @@ void* Atl06Reader::subsettingThread (void* parm)
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    TraceGuard trace(INFO, reader->traceId, "atl06_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
+    const TraceGuard trace(INFO, reader->traceId, "atl06_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

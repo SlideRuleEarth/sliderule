@@ -349,7 +349,7 @@ void* ArrowBuilder::builderThread(void* parm)
     int row_cnt = 0;
 
     /* Start Trace */
-    TraceGuard trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
+    const TraceGuard trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
     trace.stash();
 
     /* Loop Forever */

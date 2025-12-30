@@ -1216,7 +1216,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     List<int32_t>* atl08_indices = NULL;      // used for ancillary data
 
     /* Start Trace */
-    TraceGuard trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track);
+    const TraceGuard trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track);
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

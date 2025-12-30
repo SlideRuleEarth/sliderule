@@ -106,7 +106,7 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath,
 
     /* Send File to User */
     const char* _path = outputPath;
-    TraceGuard trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
+    const TraceGuard trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
     const int _path_len = StringLib::size(_path);
     if( (_path_len > 5) &&
         (_path[0] == 's') &&

@@ -150,7 +150,7 @@ void* ArrowSampler::mainThread(void* parm)
     ArrowSampler* s = reinterpret_cast<ArrowSampler*>(parm);
 
     /* Start Trace */
-    TraceGuard trace(INFO, s->traceId, "arrow_sampler", "{\"filename\":\"%s\"}", s->dataFile);
+    const TraceGuard trace(INFO, s->traceId, "arrow_sampler", "{\"filename\":\"%s\"}", s->dataFile);
     trace.stash();
 
     /* Get samples for all user RasterObjects */

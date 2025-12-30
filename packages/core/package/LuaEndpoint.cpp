@@ -142,7 +142,7 @@ void* LuaEndpoint::requestThread (void* parm)
     const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
 
     /* Start Trace */
-    TraceGuard trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+    const TraceGuard trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
     const event_level_t log_level =  info->streaming ? INFO : DEBUG;

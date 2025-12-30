@@ -417,7 +417,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    TraceGuard trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
+    const TraceGuard trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

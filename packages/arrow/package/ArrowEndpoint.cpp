@@ -103,7 +103,7 @@ void* ArrowEndpoint::requestThread (void* parm)
     const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
 
     /* Start Trace */
-    TraceGuard trace(INFO, request->trace_id, "arrow_endpoint_request", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+    const TraceGuard trace(INFO, request->trace_id, "arrow_endpoint_request", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
     mlog(INFO, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
@@ -185,7 +185,7 @@ void* ArrowEndpoint::responseThread (void* parm)
     rsps_info_t* info = static_cast<rsps_info_t*>(parm);
 
     /* Start Trace */
-    TraceGuard trace(INFO, info->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", info->rqst_id);
+    const TraceGuard trace(INFO, info->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", info->rqst_id);
 
     /* Create Subscriber to Arrow Response Queue */
     const FString arrow_rspq("%s-arrow", info->rqst_id); // well known, must match requestThread

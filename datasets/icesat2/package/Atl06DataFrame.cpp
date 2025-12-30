@@ -227,7 +227,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
     using std::numeric_limits;
 
     /* Start Trace */
-    TraceGuard trace(INFO, df->traceId, "atl06_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf06->name, df->beam);
+    const TraceGuard trace(INFO, df->traceId, "atl06_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf06->name, df->beam);
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

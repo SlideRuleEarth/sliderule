@@ -442,7 +442,7 @@ void* SwotL2Reader::varThread (void* parm)
     results.data = NULL;
 
     /* Start Trace */
-    TraceGuard trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
+    const TraceGuard trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
 
     try
     {

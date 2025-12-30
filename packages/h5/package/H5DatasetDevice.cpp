@@ -109,7 +109,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     DeviceObject(L, _role)
 {
     /* Start Trace */
-    TraceGuard trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
+    const TraceGuard trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
 
     /* Set Record */
     recObj = new RecordObject(recType);

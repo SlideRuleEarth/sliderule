@@ -431,7 +431,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, vector<shared_
         }
 
         // encode field to arrow
-        TraceGuard field_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
+        const TraceGuard field_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
         if(field->type == Field::COLUMN)
         {
             switch(field->getValueEncoding())
@@ -500,7 +500,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, vector<shared_
     // build geo columns
     if(parms.format == OutputFields::GEOPARQUET)
     {
-        TraceGuard geo_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
+        const TraceGuard geo_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
         encodeGeometry(dataframe, columns);
         fields.push_back(arrow::field("geometry", arrow::binary()));
     }
@@ -567,7 +567,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
         // start trace
         const uint32_t parent_trace_id = EventLib::grabId();
-        TraceGuard trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
+        const TraceGuard trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
 
         // process dataframe to arrow table
         vector<shared_ptr<arrow::Array>> columns; // data
@@ -576,7 +576,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
         shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(field_list); // create schema
 
         // write out table
-        TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
+        const TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
         if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
         {
             // set arrow output stream

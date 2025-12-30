@@ -99,7 +99,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 
     /* Start Trace */
     const uint32_t parent_trace_id = EventLib::grabId();
-    TraceGuard trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
+    const TraceGuard trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
 
     /* Allocate Columns for this Batch */
     vector<shared_ptr<arrow::Array>> columns;
@@ -107,7 +107,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     /* Loop Through Fields in Primary Record */
     for(int i = 0; i < fieldList.length(); i++)
     {
-        TraceGuard field_trace(INFO, trace.id(), "append_field", "{\"field\": %d}", i);
+        const TraceGuard field_trace(INFO, trace.id(), "append_field", "{\"field\": %d}", i);
         RecordObject::field_t& field = fieldList.get(i);
 
         /* Build Column */
@@ -122,7 +122,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     /* Add Geometry Column (if GeoParquet) */
     if(format == OutputFields::GEOPARQUET)
     {
-        TraceGuard geo_trace(INFO, trace.id(), "geo_column", "%s", "{}");
+        const TraceGuard geo_trace(INFO, trace.id(), "geo_column", "%s", "{}");
         shared_ptr<arrow::Array> column;
         processGeometry(arrowBuilder->getXField(), arrowBuilder->getYField(), &column, record_batch, num_rows, batch_row_size_bits);
         columns.push_back(column);
@@ -147,7 +147,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
     {
         /* Build and Write Table */
-        TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
+        const TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
         const arrow::Status s = parquetWriter->WriteTable(*table, num_rows);
         if(s.ok()) status = true;
@@ -162,7 +162,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     else if(format == OutputFields::FEATHER)
     {
         /* Write the Table to a FEATHER file */
-        TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
+        const TraceGuard write_trace(INFO, trace.id(), "write_table", "%s", "{}");
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
         const arrow::Status s = arrow::ipc::feather::WriteTable(*table, featherWriter.get());
         if(s.ok()) status = true;

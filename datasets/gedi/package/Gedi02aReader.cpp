@@ -170,7 +170,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    TraceGuard trace(INFO, reader->traceId, "Gedi02a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), info->beam);
+    const TraceGuard trace(INFO, reader->traceId, "Gedi02a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), info->beam);
     trace.stash(); // set thread specific trace id for H5Coro
 
     try

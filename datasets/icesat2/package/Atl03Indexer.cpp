@@ -204,7 +204,7 @@ void* Atl03Indexer::indexerThread (void* parm)
     Atl03Indexer* indexer = reinterpret_cast<Atl03Indexer*>(parm);
 
     /* Start Trace */
-    TraceGuard trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
+    const TraceGuard trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
     trace.stash(); // set thread specific trace id for H5Lib
 
     /* Build Prefix */

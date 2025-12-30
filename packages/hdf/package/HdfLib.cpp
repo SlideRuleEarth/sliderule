@@ -362,7 +362,7 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
         /* Start Trace */
         mlog(INFO, "Reading %d elements (%ld bytes) from %s %s", elements, datasize, filename, datasetname);
         const uint32_t parent_trace_id = EventLib::grabId();
-        TraceGuard trace(INFO, parent_trace_id, "HdfLib_read", "{\"filename\":\"%s\", \"dataset\":\"%s\"}", filename, datasetname);
+        const TraceGuard trace(INFO, parent_trace_id, "HdfLib_read", "{\"filename\":\"%s\", \"dataset\":\"%s\"}", filename, datasetname);
 
         /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
