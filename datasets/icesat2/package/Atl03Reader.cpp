@@ -42,6 +42,7 @@
 #include "LuaObject.h"
 #include "AncillaryFields.h"
 #include "Atl03Reader.h"
+#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -1215,8 +1216,8 @@ void* Atl03Reader::subsettingThread (void* parm)
     List<int32_t>* atl08_indices = NULL;      // used for ancillary data
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
+    TraceGuard trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track);
+    trace.stash(); // set thread specific trace id for H5Coro
 
     try
     {
@@ -1641,9 +1642,6 @@ void* Atl03Reader::subsettingThread (void* parm)
 
     /* Clean Up Info */
     delete info;
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

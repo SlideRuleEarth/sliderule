@@ -41,6 +41,7 @@
 #include "Atl13Reader.h"
 #include "Icesat2Fields.h"
 #include "AncillaryFields.h"
+#include "TraceGuard.h"
 
 using std::numeric_limits;
 
@@ -453,8 +454,8 @@ void* Atl13Reader::subsettingThread (void* parm)
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.asset->getName(), parms->resource.value.c_str(), info->track);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
+    TraceGuard trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.asset->getName(), parms->resource.value.c_str(), info->track);
+    trace.stash(); // set thread specific trace id for H5Coro
 
     try
     {
@@ -641,9 +642,6 @@ void* Atl13Reader::subsettingThread (void* parm)
 
     /* Clean Up */
     delete info;
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

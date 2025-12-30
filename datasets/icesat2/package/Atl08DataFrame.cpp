@@ -34,6 +34,11 @@
  ******************************************************************************/
 
 #include "Atl08DataFrame.h"
+#include "TraceGuard.h"
+#include "AreaOfInterest.h"
+#include "LuaObject.h"
+#include "StringLib.h"
+#include "RunTimeException.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -249,8 +254,8 @@ void* Atl08DataFrame::subsettingThread (void* parm)
     using std::numeric_limits;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, df->traceId, "atl08_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf08->name, df->beam);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
+    TraceGuard trace(INFO, df->traceId, "atl08_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf08->name, df->beam);
+    trace.stash(); // set thread specific trace id for H5Coro
 
     try
     {
@@ -343,9 +348,6 @@ void* Atl08DataFrame::subsettingThread (void* parm)
 
     /* Dataframe Complete */
     df->signalComplete();
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;
