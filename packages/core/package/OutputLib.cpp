@@ -40,6 +40,7 @@
 #include "RequestFields.h"
 #include "OutputLib.h"
 #include "RecordObject.h"
+#include "TraceGuard.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -105,7 +106,7 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath,
 
     /* Send File to User */
     const char* _path = outputPath;
-    const uint32_t send_trace_id = start_trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
+    TraceGuard trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
     const int _path_len = StringLib::size(_path);
     if( (_path_len > 5) &&
         (_path[0] == 's') &&
@@ -138,7 +139,6 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath,
     /* Delete File Locally */
     removeFile(fileName);
 
-    stop_trace(INFO, send_trace_id);
     return status;
 }
 

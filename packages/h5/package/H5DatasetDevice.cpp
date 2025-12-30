@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "TraceGuard.h"
 #include "EventLib.h"
 #include "H5DatasetDevice.h"
 #include "H5Coro.h"
@@ -108,7 +109,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     DeviceObject(L, _role)
 {
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
+    TraceGuard trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
 
     /* Set Record */
     recObj = new RecordObject(recType);
@@ -138,7 +139,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     {
         H5Coro::Context context(asset, resource);
         H5Coro::range_t slice[2] = COLUMN_SLICE(col, startrow, numrows);
-        const H5Coro::info_t info = H5Coro::read(&context, dataName, datatype, slice, 2, false, trace_id);
+        const H5Coro::info_t info = H5Coro::read(&context, dataName, datatype, slice, 2, false, trace.id());
         recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;
@@ -151,9 +152,6 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
         dataSize = false;
         connected = false;
     }
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
 }
 
 /*----------------------------------------------------------------------------
