@@ -245,41 +245,41 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        for(point_sample_t& ps : ur->pointSamples)
+        auto it = ur->pointToSampleMap.find(pointIndx);
+        if(it != ur->pointToSampleMap.end())
         {
-            if(ps.pointIndex == pointIndx)
+            point_sample_t& ps = *it->second;
+
+            for(size_t i = 0; i < ps.bandSample.size(); i++)
             {
-                for(size_t i = 0; i < ps.bandSample.size(); i++)
+                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                if(ps.bandSample[i] == NULL) continue;;
+
+                RasterSample* sample;
+                if(!ps.bandSampleReturned[i]->exchange(true))
                 {
-                    /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                    if(ps.bandSample[i] == NULL) continue;;
-
-                    RasterSample* sample;
-                    if(!ps.bandSampleReturned[i]->exchange(true))
-                    {
-                        sample = ps.bandSample[i];
-                    }
-                    else
-                    {
-                        /* Sample has already been returned, must create a copy */
-                        sample = new RasterSample(*ps.bandSample[i]);
-                    }
-
-                    /* Set time for this sample */
-                    sample->time = rgroup->gpsTime;
-
-                    /* Set flags for this sample, add it to the list */
-                    sample->flags = flags;
-                    slist->add(sample);
-                    errors |= ps.ssErrors;
+                    sample = ps.bandSample[i];
+                }
+                else
+                {
+                    /* Sample has already been returned, must create a copy */
+                    sample = new RasterSample(*ps.bandSample[i]);
                 }
 
-                /*
-                 * This function assumes that there is only one raster with VALUE_TAG in a group.
-                 * If group has other value rasters the dataset must override this function.
-                 */
-                return errors;
+                /* Set time for this sample */
+                sample->time = rgroup->gpsTime;
+
+                /* Set flags for this sample, add it to the list */
+                sample->flags = flags;
+                slist->add(sample);
+                errors |= ps.ssErrors;
             }
+
+            /*
+             * This function assumes that there is only one raster with VALUE_TAG in a group.
+             * If group has other value rasters the dataset must override this function.
+             */
+            return errors;
         }
     }
 
@@ -300,29 +300,29 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        for(const point_sample_t& ps : ur->pointSamples)
+        auto it = ur->pointToSampleMap.find(pointIndx);
+        if(it != ur->pointToSampleMap.end())
         {
-            if(ps.pointIndex == pointIndx)
+            const point_sample_t& ps = *it->second;
+
+            /*
+             * This function assumes that there is only one raster with FLAGS_TAG in a group.
+             * The flags value must be in the first band.
+             * If these assumptions are not met the dataset must override this function.
+             */
+            RasterSample* sample = NULL;
+
+            /* bandSample can be empty if raster failed to open */
+            if(!ps.bandSample.empty())
             {
-                /*
-                 * This function assumes that there is only one raster with FLAGS_TAG in a group.
-                 * The flags value must be in the first band.
-                 * If these assumptions are not met the dataset must override this function.
-                 */
-                RasterSample* sample = NULL;
-
-                /* bandSample can be empty if raster failed to open */
-                if(!ps.bandSample.empty())
-                {
-                    sample = ps.bandSample[0];
-                }
-
-
-                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(sample == NULL) break;;
-
-                return sample->value;
+                sample = ps.bandSample[0];
             }
+
+
+            /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+            if(sample == NULL) break;;
+
+            return sample->value;
         }
     }
 
@@ -745,12 +745,20 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
             auto it = rasterToPointsMap.find(fileDict.get(ur->rinfo->fileId));
             if(it != rasterToPointsMap.end())
             {
+                /* Reserve to avoid rehash when building index */
+                ur->pointToSampleMap.reserve(it->second.size());
+
+                /* Reserve to keep pointSample pointers stable while indexing */
+                ur->pointSamples.reserve(it->second.size());
+
                 for(const uint32_t pointIndx : it->second)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
                     ur->pointSamples.emplace_back(pg.point, pg.pointIndex);
+
+                    /* Index by point index for O(1) lookup during collection */
+                    ur->pointToSampleMap[pg.pointIndex] = &ur->pointSamples.back();
                 }
-                ur->pointSamples.shrink_to_fit();
             }
         }
 
