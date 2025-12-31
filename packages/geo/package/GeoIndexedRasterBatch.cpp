@@ -452,13 +452,25 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         gf->obj->geoRtree.query(&ogrPoint, threadGeosContext, foundFeatures);
         // mlog(DEBUG, "Found %zu features for point %u", foundFeatures.size(), i);
 
-        /* Clone found features since OGRFeature is not thread safe */
+        /* Clone found features once per thread and reuse cached copies.
+           OGRFeature is not thread safe, this avoids repeated clone/free churn when many points hit the same feature */
         std::vector<OGRFeature*> threadFeatures;
         threadFeatures.reserve(foundFeatures.size());
 
         for(OGRFeature* feature : foundFeatures)
         {
-            threadFeatures.push_back(feature->Clone());
+            const long fid = feature->GetFID();
+            auto cacheIt = gf->featureCache.find(fid);
+            if(cacheIt != gf->featureCache.end())
+            {
+                threadFeatures.push_back(cacheIt->second);
+            }
+            else
+            {
+                OGRFeature* clonedFeature = feature->Clone();
+                gf->featureCache[fid] = clonedFeature;
+                threadFeatures.push_back(clonedFeature);
+            }
         }
 
         /* Set finder for the found features */
@@ -466,12 +478,6 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
         /* Find rasters intersecting with ogrPoint */
         gf->obj->findRasters(&finder);
-
-        /* Destroy cloned features */
-        for(OGRFeature* feature : threadFeatures)
-        {
-            OGRFeature::DestroyFeature(feature);
-        }
 
         /* Copy rasterGroups from finder to local groupList */
         GroupOrdering* groupList = new GroupOrdering();
@@ -502,8 +508,15 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
     mlog(DEBUG, "Found %zu point groups for range: %u - %u", gf->pointsGroups.size(), start, end);
 
-    /* Thread must initialize GEOS context */
+    /* Thread must deinitialize GEOS context */
     GeoRtree::deinit(threadGeosContext);
+
+    /* Destroy cached cloned features */
+    for(const auto& pair : gf->featureCache)
+    {
+        OGRFeature::DestroyFeature(pair.second);
+    }
+    gf->featureCache.clear();
 
     return NULL;
 }

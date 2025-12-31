@@ -183,6 +183,7 @@ class GeoIndexedRaster: public RasterObject
             std::vector<point_groups_t>      pointsGroups;
             raster_points_map_t              rasterToPointsMap;
             RasterFileDictionary             threadFileDict;
+            std::unordered_map<long, OGRFeature*> featureCache; /* Cache cloned features by FID to avoid repeated clones */
 
             explicit GroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
         } groups_finder_t;
