@@ -411,7 +411,8 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
             breader->sync.lock();
             {
                 breader->uraster = NULL; /* Done with this raster and all points */
-                breader->sync.signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+                breader->obj->readerDone.signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+                breader->obj->activeReaders.fetch_sub(1);
             }
             breader->sync.unlock();
         }
@@ -807,18 +808,17 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
 
         /* Sample unique rasters utilizing numThreads */
         uint32_t currentRaster = 0;
+        activeReaders.store(0);
 
         while(currentRaster < numRasters)
         {
             /* Calculate how many rasters we can process in this batch */
             const uint32_t batchSize = std::min(numThreads, numRasters - currentRaster);
 
-            /* Keep track of how many threads have been assigned work */
-            uint32_t activeReaders = 0;
-
             /* Assign rasters to batch readers as soon as they are free */
-            while(currentRaster < numRasters || activeReaders > 0)
+            while(currentRaster < numRasters || activeReaders.load() > 0)
             {
+                bool dispatched = false;
                 for(uint32_t i = 0; i < batchSize; i++)
                 {
                     BatchReader* breader = batchReaders[i];
@@ -829,8 +829,9 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
                         if(breader->uraster == NULL && currentRaster < numRasters)
                         {
                             breader->uraster = uniqueRasters[currentRaster++];
+                            activeReaders.fetch_add(1);
                             breader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-                            activeReaders++;
+                            dispatched = true;
                         }
                     }
                     breader->sync.unlock();
@@ -838,40 +839,22 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
                     if(!sampling())
                     {
                         /* Sampling has been stopped, stop assigning new rasters */
-                        activeReaders = 0;
                         currentRaster = numRasters;
                         break;
                     }
-
-                    /* Check if the current breader has completed its work */
-                    breader->sync.lock();
-                    {
-                        if(breader->uraster == NULL && activeReaders > 0)
-                        {
-                            /* Mark one reader as free */
-                            activeReaders--;
-                        }
-                    }
-                    breader->sync.unlock();
                 }
 
-                /* Short wait before checking again to avoid busy waiting */
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                /* If no new work was dispatched, wait for any reader to finish */
+                if(activeReaders.load() > 0 && !dispatched)
+                {
+                    readerDone.wait(DATA_SAMPLED, SYS_TIMEOUT);
+                }
             }
         }
 
         /* Wait for all batch readers to finish sampling */
-        for(int32_t i = 0; i < batchReaders.length(); i++)
-        {
-            BatchReader* breader = batchReaders[i];
-
-            breader->sync.lock();
-            {
-                while(breader->uraster != NULL)
-                    breader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
-            }
-            breader->sync.unlock();
-        }
+        while(activeReaders.load() > 0)
+            readerDone.wait(DATA_SAMPLED, SYS_TIMEOUT);
 
         status = true;
     }
@@ -992,4 +975,3 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
 
     return bufferedConvexHull;
 }
-

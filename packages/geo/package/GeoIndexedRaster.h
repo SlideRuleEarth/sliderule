@@ -280,6 +280,8 @@ class GeoIndexedRaster: public RasterObject
         List<reader_t*>           serialReaders;
         List<batch_reader_t*>     batchReaders;
         perf_stats_t              perfStats;
+        Cond                      readerDone;         // Signals when any batch reader finishes work
+        std::atomic<uint32_t>     activeReaders;      // Number of batch readers currently processing work
         GdalRaster::overrideGeoTransform_t gtfcb;
         GdalRaster::overrideCRS_t crscb;
 
