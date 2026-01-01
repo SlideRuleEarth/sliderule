@@ -233,7 +233,19 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        point_sample_t* psPtr = (pointIndx < ur->pointIndexLookup.size()) ? ur->pointIndexLookup[pointIndx] : NULL;
+        point_sample_t* psPtr = NULL;
+        if(ur->useDenseLookup)
+        {
+            if(pointIndx < ur->pointIndexLookup.size())
+                psPtr = ur->pointIndexLookup[pointIndx];
+        }
+        else
+        {
+            auto pit = ur->pointIndexMap.find(pointIndx);
+            if(pit != ur->pointIndexMap.end())
+                psPtr = pit->second;
+        }
+
         if(psPtr != NULL)
         {
             point_sample_t& ps = *psPtr;
@@ -289,7 +301,18 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        point_sample_t* psPtr = (pointIndx < ur->pointIndexLookup.size()) ? ur->pointIndexLookup[pointIndx] : NULL;
+        point_sample_t* psPtr = NULL;
+        if(ur->useDenseLookup)
+        {
+            if(pointIndx < ur->pointIndexLookup.size())
+                psPtr = ur->pointIndexLookup[pointIndx];
+        }
+        else
+        {
+            auto pit = ur->pointIndexMap.find(pointIndx);
+            if(pit != ur->pointIndexMap.end())
+                psPtr = pit->second;
+        }
         if(psPtr != NULL)
         {
             const point_sample_t& ps = *psPtr;
@@ -796,14 +819,30 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 /* Keep pointSample pointers stable */
                 ur->pointSamples.reserve(numPoints);
 
-                /* Build a dense lookup sized to the max point index in this raster */
+                /* Build lookup: prefer dense vector unless the span is too large relative to count */
                 int64_t maxPointIndex = -1;
                 for(const uint32_t pointIndx : it->second)
                 {
                     if(static_cast<int64_t>(pointIndx) > maxPointIndex)
                         maxPointIndex = pointIndx;
                 }
-                ur->pointIndexLookup.assign(maxPointIndex + 1, NULL);
+
+                /* Use dense vector if index span is within 8x of actual count, otherwise fall back to sparse map to avoid huge dense vector allocation */
+                const size_t span = (maxPointIndex >= 0) ? static_cast<size_t>(maxPointIndex) + 1 : 0;
+                const size_t denseThreshold = numPoints * 8;
+                ur->useDenseLookup = (span > 0) && (span <= denseThreshold);
+
+                if(ur->useDenseLookup)
+                {
+                    ur->pointIndexLookup.assign(span, NULL);
+                    ur->pointIndexMap.clear();
+                }
+                else
+                {
+                    ur->pointIndexLookup.clear();
+                    ur->pointIndexMap.clear();
+                    ur->pointIndexMap.reserve(numPoints);
+                }
 
                 for(const uint32_t pointIndx : it->second)
                 {
@@ -811,7 +850,14 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     ur->pointSamples.emplace_back(pg.point, pg.pointIndex);
 
                     /* Index by point index for O(1) lookup during collection */
-                    ur->pointIndexLookup[pg.pointIndex] = &ur->pointSamples.back();
+                    if(ur->useDenseLookup)
+                    {
+                        ur->pointIndexLookup[pg.pointIndex] = &ur->pointSamples.back();
+                    }
+                    else
+                    {
+                        ur->pointIndexMap[pg.pointIndex] = &ur->pointSamples.back();
+                    }
                 }
             }
         }
