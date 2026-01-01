@@ -106,16 +106,17 @@ class GeoIndexedRaster: public RasterObject
             std::vector<raster_info_t> infovect;   // vector of rasters belonging to the same stac catalog feature
             TimeLib::gmt_time_t        gmtDate;    // feature date (can be computed from start/end dates)
             int64_t                    gpsTime;    // feature gps time in seconds
+            bool                       hasFlags;   // true if this group contains a FLAGS_TAG raster
 
-            RaserGroup(void): featureId(NULL), gmtDate{0,0,0,0,0,0}, gpsTime(0) {}
+            RaserGroup(void): featureId(NULL), gmtDate{0,0,0,0,0,0}, gpsTime(0), hasFlags(false) {}
            ~RaserGroup(void) { delete[] featureId; }
         } rasters_group_t;
 
         /* Raster and associated points to sample, used by batch sampling */
         typedef struct UniqueRaster {
-            const raster_info_t*        rinfo;
-            std::vector<point_sample_t> pointSamples;                      // vector of samples for each point in this raster
-            std::unordered_map<int64_t, point_sample_t*> pointToSampleMap; // map of point index to sample pointer for O(1) lookup
+            const raster_info_t*         rinfo;
+            std::vector<point_sample_t>  pointSamples;                       // vector of samples for each point in this raster
+            std::vector<point_sample_t*> pointIndexLookup;                   // direct lookup by point index
             explicit UniqueRaster(const raster_info_t* _rinfo): rinfo(_rinfo) {}
         } unique_raster_t;
 

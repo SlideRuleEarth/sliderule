@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include <algorithm> // Required for std::all_of
+#include <unordered_set>
 
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
@@ -232,10 +233,10 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        auto it = ur->pointToSampleMap.find(pointIndx);
-        if(it != ur->pointToSampleMap.end())
+        point_sample_t* psPtr = (pointIndx < ur->pointIndexLookup.size()) ? ur->pointIndexLookup[pointIndx] : NULL;
+        if(psPtr != NULL)
         {
-            point_sample_t& ps = *it->second;
+            point_sample_t& ps = *psPtr;
 
             for(size_t i = 0; i < ps.bandSample.size(); i++)
             {
@@ -288,10 +289,10 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        auto it = ur->pointToSampleMap.find(pointIndx);
-        if(it != ur->pointToSampleMap.end())
+        point_sample_t* psPtr = (pointIndx < ur->pointIndexLookup.size()) ? ur->pointIndexLookup[pointIndx] : NULL;
+        if(psPtr != NULL)
         {
-            const point_sample_t& ps = *it->second;
+            const point_sample_t& ps = *psPtr;
 
             /*
              * This function assumes that there is only one raster with FLAGS_TAG in a group.
@@ -426,6 +427,10 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
     mlog(DEBUG, "Finding groups for points range: %u - %u", start, end);
 
+    /* Reuse scratch vectors to avoid per-point allocations */
+    std::vector<OGRFeature*> foundFeatures;
+    std::vector<OGRFeature*> threadFeatures;
+
     for(uint32_t i = start; i < end; i++)
     {
         if(!gf->obj->sampling())
@@ -438,13 +443,13 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         const OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
 
         /* Query the R-tree with the OGRPoint and get the result features */
-        std::vector<OGRFeature*> foundFeatures;
+        foundFeatures.clear();
         gf->obj->geoRtree.query(&ogrPoint, threadGeosContext, foundFeatures);
         // mlog(DEBUG, "Found %zu features for point %u", foundFeatures.size(), i);
 
         /* Clone found features once per thread and reuse cached copies.
            OGRFeature is not thread safe, this avoids repeated clone/free churn when many points hit the same feature */
-        std::vector<OGRFeature*> threadFeatures;
+        threadFeatures.clear();
         threadFeatures.reserve(foundFeatures.size());
 
         for(OGRFeature* feature : foundFeatures)
@@ -473,6 +478,19 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         GroupOrdering* groupList = new GroupOrdering();
         for(rasters_group_t* rgroup : finder.rasterGroups)
         {
+            /* Precompute whether this group has a flags raster */
+            if(!rgroup->hasFlags)
+            {
+                for(const raster_info_t& rinfo : rgroup->infovect)
+                {
+                    if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) == 0)
+                    {
+                        rgroup->hasFlags = true;
+                        break;
+                    }
+                }
+            }
+
             groupList->add(groupList->length(), rgroup);
         }
 
@@ -543,7 +561,7 @@ void* GeoIndexedRaster::samplesCollectThread(void* param)
             uint32_t flags = 0;
 
             /* Get flags value for this group of rasters */
-            if(sc->obj->parms->flags_file)
+            if(sc->obj->parms->flags_file && rgroup->hasFlags)
                 flags = getBatchGroupFlags(rgroup, pointIndx);
 
             sc->ssErrors |= sc->obj->getBatchGroupSamples(rgroup, slist, flags, pointIndx);
@@ -713,6 +731,22 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
 
     try
     {
+        /* Precompute distinct raster ids to reserve space up front */
+        std::unordered_set<uint32_t> uniqueIds;
+        for(const point_groups_t& pg : pointsGroups)
+        {
+            const GroupOrdering::Iterator iter(*pg.groupList);
+            for(int64_t i = 0; i < iter.length; i++)
+            {
+                const rasters_group_t* rgroup = iter[i].value;
+                for(const raster_info_t& rinfo : rgroup->infovect)
+                {
+                    uniqueIds.insert(rinfo.fileId);
+                }
+            }
+        }
+        uniqueRasters.reserve(uniqueIds.size());
+
         /* Map to track the index of each unique raster in the uniqueRasters vector */
         std::unordered_map<uint32_t, size_t> fileIndexMap;
 
@@ -757,11 +791,19 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
             auto it = rasterToPointsMap.find(ur->rinfo->fileId);
             if(it != rasterToPointsMap.end())
             {
-                /* Reserve to avoid rehash when building index */
-                ur->pointToSampleMap.reserve(it->second.size());
+                const size_t numPoints = it->second.size();
 
-                /* Reserve to keep pointSample pointers stable while indexing */
-                ur->pointSamples.reserve(it->second.size());
+                /* Keep pointSample pointers stable */
+                ur->pointSamples.reserve(numPoints);
+
+                /* Build a dense lookup sized to the max point index in this raster */
+                int64_t maxPointIndex = -1;
+                for(const uint32_t pointIndx : it->second)
+                {
+                    if(static_cast<int64_t>(pointIndx) > maxPointIndex)
+                        maxPointIndex = pointIndx;
+                }
+                ur->pointIndexLookup.assign(maxPointIndex + 1, NULL);
 
                 for(const uint32_t pointIndx : it->second)
                 {
@@ -769,7 +811,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     ur->pointSamples.emplace_back(pg.point, pg.pointIndex);
 
                     /* Index by point index for O(1) lookup during collection */
-                    ur->pointToSampleMap[pg.pointIndex] = &ur->pointSamples.back();
+                    ur->pointIndexLookup[pg.pointIndex] = &ur->pointSamples.back();
                 }
             }
         }
