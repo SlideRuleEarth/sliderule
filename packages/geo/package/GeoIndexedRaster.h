@@ -172,8 +172,8 @@ class GeoIndexedRaster: public RasterObject
             explicit SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups);
         } sample_collector_t;
 
-        /* Map of raster file name and unique ordered points to be sampled in that raster */
-        typedef std::unordered_map<std::string, std::set<uint32_t>> raster_points_map_t;
+        /* Map of raster file id and unique ordered points to be sampled in that raster */
+        typedef std::unordered_map<uint32_t, std::set<uint32_t>> raster_points_map_t;
 
         /* GroupsFinder thread info used by batch sampling code */
         typedef struct GroupsFinder {
@@ -183,7 +183,8 @@ class GeoIndexedRaster: public RasterObject
             std::vector<point_groups_t>      pointsGroups;
             raster_points_map_t              rasterToPointsMap;
             RasterFileDictionary             threadFileDict;
-            std::unordered_map<long, OGRFeature*> featureCache; /* Cache cloned features by FID to avoid repeated clones */
+            std::unordered_map<uint32_t, uint32_t> localToGlobalFileIds; // cache for mapping thread-local file ids to global ids
+            std::unordered_map<long, OGRFeature*>  featureCache;         // cache cloned features by FID to avoid repeated clones
 
             explicit GroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
         } groups_finder_t;

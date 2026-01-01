@@ -493,15 +493,14 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         /* Add found rasters which passed the filter to pointsGroups */
         gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList});
 
-        /* Add raster file names from this groupList to raster to points map */
+        /* Add raster file ids from this groupList to raster to points map */
         const GroupOrdering::Iterator iter(*groupList);
         for(int j = 0; j < iter.length; j++)
         {
             const rasters_group_t* rgroup = iter[j].value;
             for(const raster_info_t& rinfo : rgroup->infovect)
             {
-                const char* fileName = gf->threadFileDict.get(rinfo.fileId);
-                gf->rasterToPointsMap[fileName].insert(i);
+                gf->rasterToPointsMap[rinfo.fileId].insert(i);
             }
         }
     }
@@ -647,6 +646,19 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         mlog(INFO, "Merging point groups from all threads");
         for(GroupsFinder* gf : rgroupFinders)
         {
+            /* Map thread-local file ids to global file ids once per unique id */
+            auto mapLocalToGlobal = [&](uint32_t localId) -> uint32_t
+            {
+                auto it = gf->localToGlobalFileIds.find(localId);
+                if(it != gf->localToGlobalFileIds.end())
+                    return it->second;
+
+                const std::string fileName = gf->threadFileDict.get(localId);
+                const uint32_t globalId = fileDict.add(fileName);
+                gf->localToGlobalFileIds[localId] = globalId;
+                return globalId;
+            };
+
             /* Threads used local file dictionary, combine them and update fileId */
             for(const point_groups_t& pg: gf->pointsGroups)
             {
@@ -656,11 +668,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
                     rasters_group_t *rgroup = iter[i].value;
                     for (raster_info_t &rinfo : rgroup->infovect)
                     {
-                        /* Get file from thread file dictionary */
-                        const std::string fileName = gf->threadFileDict.get(rinfo.fileId);
-
-                        /* Add to main file dictionary */
-                        rinfo.fileId = fileDict.add(fileName);
+                        rinfo.fileId = mapLocalToGlobal(rinfo.fileId);
                     }
                 }
 
@@ -670,7 +678,8 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             /* Merge the rasterToPointsMap for each thread */
             for (const raster_points_map_t::value_type &pair : gf->rasterToPointsMap)
             {
-                rasterToPointsMap[pair.first].insert(pair.second.begin(), pair.second.end());
+                const uint32_t globalId = mapLocalToGlobal(pair.first);
+                rasterToPointsMap[globalId].insert(pair.second.begin(), pair.second.end());
             }
 
             delete gf;
@@ -715,7 +724,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
     try
     {
         /* Map to track the index of each unique raster in the uniqueRasters vector */
-        std::unordered_map<std::string, size_t> fileIndexMap;
+        std::unordered_map<uint32_t, size_t> fileIndexMap;
 
         /* Create vector of unique rasters. */
         mlog(DEBUG, "Finding unique rasters");
@@ -728,8 +737,8 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(raster_info_t& rinfo : rgroup->infovect)
                 {
                     /* Is this raster already in the list of unique rasters? */
-                    const std::string fileName = fileDict.get(rinfo.fileId);
-                    auto it = fileIndexMap.find(fileName);
+                    const uint32_t fileId = rinfo.fileId;
+                    auto it = fileIndexMap.find(fileId);
                     if(it != fileIndexMap.end())
                     {
                         /* Raster is already in the vector of unique rasters, get index from map and update uraster pointer */
@@ -745,7 +754,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                         rinfo.uraster = ur;
 
                         /* Update index map */
-                        fileIndexMap[fileName] = uniqueRasters.size() - 1;
+                        fileIndexMap[fileId] = uniqueRasters.size() - 1;
                     }
                 }
             }
@@ -755,7 +764,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
         mlog(DEBUG, "Finding points for unique rasters");
         for(unique_raster_t* ur : uniqueRasters)
         {
-            auto it = rasterToPointsMap.find(fileDict.get(ur->rinfo->fileId));
+            auto it = rasterToPointsMap.find(ur->rinfo->fileId);
             if(it != rasterToPointsMap.end())
             {
                 /* Reserve to avoid rehash when building index */
