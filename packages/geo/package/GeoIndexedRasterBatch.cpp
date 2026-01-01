@@ -54,20 +54,7 @@ GeoIndexedRaster::PointSample::PointSample(const OGRPoint& _point, int64_t _poin
 GeoIndexedRaster::PointSample::PointSample(const PointSample& ps):
     point(ps.point), pointIndex(ps.pointIndex), bandSample(ps.bandSample), ssErrors(ps.ssErrors)
 {
-    bandSampleReturned.resize(ps.bandSampleReturned.size());
-
-    for (size_t i = 0; i < ps.bandSampleReturned.size(); ++i)
-    {
-        if(ps.bandSampleReturned[i])
-        {
-            /* Create a new atomic<bool> with the value loaded from the original */
-            bandSampleReturned[i] = std::make_unique<std::atomic<bool>>(ps.bandSampleReturned[i]->load());
-        }
-        else
-        {
-            bandSampleReturned[i] = NULL;
-        }
-    }
+    bandSampleReturned = ps.bandSampleReturned;
 }
 
 /*----------------------------------------------------------------------------
@@ -180,7 +167,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             /* Delete samples which have not been returned (quality masks, etc) */
             for(size_t i = 0; i < ps.bandSample.size(); i++)
             {
-                if(!ps.bandSampleReturned[i]->load())
+                if(!ps.bandSampleReturned[i])
                 {
                     delete ps.bandSample[i];
                 }
@@ -256,9 +243,10 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
                 if(ps.bandSample[i] == NULL) continue;;
 
                 RasterSample* sample;
-                if(!ps.bandSampleReturned[i]->exchange(true))
+                if(!ps.bandSampleReturned[i])
                 {
                     sample = ps.bandSample[i];
+                    ps.bandSampleReturned[i] = 1;
                 }
                 else
                 {
@@ -384,11 +372,13 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                     {
                         RasterSample* sample = raster->samplePOI(&ps.point, bands[0]);
                         ps.bandSample.push_back(sample);
-                        ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
+                        ps.bandSampleReturned.push_back(0);
                     }
                     else
                     {
                         /* Multiple bands */
+                        ps.bandSample.reserve(ps.bandSample.size() + bands.size());
+                        ps.bandSampleReturned.reserve(ps.bandSampleReturned.size() + bands.size());
                         for(const int bandNum : bands)
                         {
                             /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
@@ -396,7 +386,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 
                             RasterSample* sample = raster->samplePOI(&point, bandNum);
                             ps.bandSample.push_back(sample);
-                            ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
+                            ps.bandSampleReturned.push_back(0);
                             ps.ssErrors |= raster->getSSerror();
                         }
                     }

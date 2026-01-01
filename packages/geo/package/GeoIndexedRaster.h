@@ -78,8 +78,8 @@ class GeoIndexedRaster: public RasterObject
             OGRPoint                       point;
             int64_t                        pointIndex;    // index to the user provided list of points to sample
             std::vector<RasterSample*>     bandSample;    // vector of samples for each band
-            std::vector<std::unique_ptr<std::atomic<bool>>> bandSampleReturned; // multiple rasters may share the same sample,
-                                                                                // these flags are used to avoid returning the same sample, if set a copy of the sample is returned
+            std::vector<uint8_t>           bandSampleReturned; // multiple rasters may share the same sample,
+                                                               // these flags are used to avoid returning the same sample, if set a copy of the sample is returned
             uint32_t                       ssErrors;      // sampling errors
 
             PointSample(const OGRPoint& _point, int64_t _pointIndex);
