@@ -390,6 +390,9 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                 /* Sample all points for this raster */
                 for(point_sample_t& ps : ur->pointSamples)
                 {
+                    ps.bandSample.reserve(bands.size());
+                    ps.bandSampleReturned.reserve(bands.size());
+
                     /* Sample raster bands */
                     const bool oneBand = bands.size() == 1;
                     if(oneBand)
@@ -450,9 +453,9 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
     mlog(DEBUG, "Finding groups for points range: %u - %u", start, end);
 
-    /* Reuse scratch vectors to avoid per-point allocations */
     std::vector<OGRFeature*> foundFeatures;
     std::vector<OGRFeature*> threadFeatures;
+    OGRPoint                 ogrPoint;
 
     for(uint32_t i = start; i < end; i++)
     {
@@ -463,7 +466,11 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         const point_info_t& pinfo = gf->points->at(i);
-        const OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
+
+        /* Set OGRPoint from point_info_t */
+        ogrPoint.setX(pinfo.point3d.x);
+        ogrPoint.setY(pinfo.point3d.y);
+        ogrPoint.setZ(pinfo.point3d.z);
 
         /* Query the R-tree with the OGRPoint and get the result features */
         foundFeatures.clear();
@@ -562,6 +569,8 @@ void* GeoIndexedRaster::samplesCollectThread(void* param)
     const uint32_t end   = sc->pGroupsRange.end;
 
     mlog(DEBUG, "Collecting samples for range: %u - %u", start, end);
+
+    sc->slvector.reserve(end - start);
 
     u_int32_t numSamples = 0;
     for(uint32_t pointIndx = start; pointIndx < end; pointIndx++)
