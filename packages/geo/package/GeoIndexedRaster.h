@@ -175,8 +175,8 @@ class GeoIndexedRaster: public RasterObject
             explicit SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups);
         } sample_collector_t;
 
-        /* Map of raster file id and unique ordered points to be sampled in that raster */
-        typedef std::unordered_map<uint32_t, std::set<uint32_t>> raster_points_map_t;
+        /* Map of raster file id to list of points to be sampled in that raster */
+        typedef std::unordered_map<uint32_t, std::vector<uint32_t>> raster_points_map_t;
 
         /* GroupsFinder thread info used by batch sampling code */
         typedef struct GroupsFinder {

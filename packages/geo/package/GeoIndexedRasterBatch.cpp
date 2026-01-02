@@ -538,7 +538,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
             const rasters_group_t* rgroup = iter[j].value;
             for(const raster_info_t& rinfo : rgroup->infovect)
             {
-                gf->rasterToPointsMap[rinfo.fileId].insert(i);
+                gf->rasterToPointsMap[rinfo.fileId].push_back(i);
             }
         }
     }
@@ -715,11 +715,12 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
                 pointsGroups.push_back(pg);
             }
 
-            /* Merge the rasterToPointsMap for each thread */
+            /* Merge the rasterToPointsMap for each thread (append vectors) */
             for (const raster_points_map_t::value_type &pair : gf->rasterToPointsMap)
             {
                 const uint32_t globalId = mapLocalToGlobal(pair.first);
-                rasterToPointsMap[globalId].insert(pair.second.begin(), pair.second.end());
+                std::vector<uint32_t>& dest = rasterToPointsMap[globalId];
+                dest.insert(dest.end(), pair.second.begin(), pair.second.end());
             }
 
             delete gf;
@@ -823,7 +824,15 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
             auto it = rasterToPointsMap.find(ur->rinfo->fileId);
             if(it != rasterToPointsMap.end())
             {
-                const size_t numPoints = it->second.size();
+                /* Remove duplicates and sort point indices */
+                std::vector<uint32_t>& pts = it->second;
+                if(!pts.empty())
+                {
+                    std::sort(pts.begin(), pts.end());
+                    pts.erase(std::unique(pts.begin(), pts.end()), pts.end());
+                }
+
+                const size_t numPoints = pts.size();
 
                 /* Keep pointSample pointers stable */
                 ur->pointSamples.reserve(numPoints);
@@ -853,7 +862,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     ur->pointIndexMap.reserve(numPoints);
                 }
 
-                for(const uint32_t pointIndx : it->second)
+                for(const uint32_t pointIndx : pts)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
                     ur->pointSamples.emplace_back(pg.point, pg.pointIndex);
