@@ -72,6 +72,8 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, cons
     RasterObject    (L, rqst_parms, key),
     cache           (MAX_READER_THREADS),
     ssErrors        (SS_NO_ERRORS),
+    readerDone      (NUM_SYNC_SIGNALS),
+    activeReaders   (0),
     gtfcb           (gtf_cb),
     crscb           (crs_cb),
     bbox            {0, 0, 0, 0},
