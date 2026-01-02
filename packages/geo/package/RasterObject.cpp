@@ -668,13 +668,10 @@ void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
         return;
     }
 
-    uint32_t numThreads = std::min(maxNumThreads, num / minPerThread);
-
-    /* Ensure at least two threads if num > minPerThread */
-    if(numThreads == 1 && maxNumThreads > 1)
-    {
-        numThreads = 2;
-    }
+    /* Divide and round up to get needed threads, clamp to [1, maxNumThreads] */
+    uint32_t numThreads = (minPerThread > 0) ? ((num + minPerThread - 1) / minPerThread) : 1;
+    if(numThreads == 0) numThreads = 1;
+    numThreads = std::min(maxNumThreads, numThreads);
 
     const uint32_t pointsPerThread = num / numThreads;
     uint32_t remainingPoints = num % numThreads;
@@ -896,4 +893,3 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
 
     return ssErrors;
 }
-

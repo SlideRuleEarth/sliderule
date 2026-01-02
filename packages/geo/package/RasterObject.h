@@ -44,6 +44,7 @@
 #include "RasterSample.h"
 #include "RasterSubset.h"
 #include "RasterFileDictionary.h"
+#include "core.h"
 
 /******************************************************************************
  * RASTER OBJECT CLASS
@@ -193,6 +194,8 @@ class RasterObject: public LuaObject
 
         bool sampling(void)
         {
+            /* If the app is shutting down, disable sampling */
+            if(!checkactive()) samplingEnabled.store(false);
             return samplingEnabled;
         }
 
