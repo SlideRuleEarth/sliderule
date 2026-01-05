@@ -850,6 +850,7 @@ Resources:
     Properties:
       TargetType: ip
       Protocol: TCP
+      Port: 80
       VpcId: !Ref SlideruleVPC
       Targets:
         - Id: !GetAtt IlbInstance.PrivateIp
@@ -858,6 +859,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Type: network
+      Scheme: internal
       Subnets:
         - !Ref SlideruleSubnet
   ProxyListener:
@@ -877,7 +879,9 @@ Resources:
         - !Ref SlideruleSubnet
   ProxyIntegration:
     Type: AWS::ApiGatewayV2::Integration
-    DependsOn: ApiVpcLink
+    DependsOn:
+      - ApiVpcLink
+      - ProxyListener
     Properties:
       ApiId: !Ref HttpApi
       IntegrationType: HTTP_PROXY
