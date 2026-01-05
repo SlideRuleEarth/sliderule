@@ -288,7 +288,7 @@ cluster-docker: ## build all cluster docker images
 	make manager-docker
 	make ams-docker
 
-cluster-docker-push: cluster-cf-update ## push all cluster images to container registries (and docker compose files to S3)
+cluster-docker-push: ## push all cluster images to container registries (and docker compose files to S3)
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
