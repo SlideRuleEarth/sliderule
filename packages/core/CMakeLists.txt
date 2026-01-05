@@ -59,7 +59,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/TraceGuard.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
@@ -133,7 +132,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/TraceGuard.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h

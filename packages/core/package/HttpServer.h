@@ -43,7 +43,6 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointObject.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * HTTP SERVER CLASS
@@ -115,7 +114,6 @@ class HttpServer: public LuaObject
             const char*                 name;
             char*                       id;
             uint32_t                    trace_id;
-            TraceGuard*                 trace_guard;
             rqst_state_t                rqst_state;
             rsps_state_t                rsps_state;
             bool                        keep_alive;

@@ -45,7 +45,6 @@
 #include "H5Element.h"
 #include "BathyFields.h"
 #include "BathyGranule.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -171,8 +170,8 @@ void* BathyGranule::readingThread (void* parm)
     const BathyFields& parms = granule.parms;
 
     /* Start Trace */
-    const TraceGuard trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
-    trace.stash(); // set thread specific trace id for H5Coro
+    const uint32_t trace_id = start_trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
@@ -255,6 +254,9 @@ void* BathyGranule::readingThread (void* parm)
 
     /* Mark Completion */
     granule.signalComplete();
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

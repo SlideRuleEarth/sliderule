@@ -39,7 +39,6 @@
 #include "EndpointObject.h"
 #include "LuaEngine.h"
 #include "EventLib.h"
-#include "TraceGuard.h"
 #include "OsApi.h"
 
 /******************************************************************************
@@ -176,11 +175,13 @@ HttpClient::~HttpClient(void)
  *----------------------------------------------------------------------------*/
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
-    const TraceGuard trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
+    const uint32_t trace_id = start_trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
 
-    if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace.id()))
+    if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace_id))
     {
-        return parseResponse(outq, timeout, trace.id());
+        rsps_t rsps = parseResponse(outq, timeout, trace_id);
+        stop_trace(INFO, trace_id);
+        return rsps;
     }
 
     rsps_t rsps = {
@@ -188,6 +189,7 @@ HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char*
         .response = NULL,
         .size = 0
     };
+    stop_trace(INFO, trace_id);
     return rsps;
 }
 
@@ -223,7 +225,7 @@ TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
 bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, int32_t parent_trace_id)
 {
     /* Start Trace */
-    const TraceGuard trace(INFO, parent_trace_id, "make_request", "%s", "{}");
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "make_request", "%s", "{}");
 
     bool status = true;
     try
@@ -304,6 +306,9 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         status = false;
     }
 
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
+
     /* Return Status */
     return status;
 }
@@ -313,7 +318,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
 HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int32_t parent_trace_id)
 {
     /* Start Trace */
-    const TraceGuard trace(INFO, parent_trace_id, "parse_response", "%s", "{}");
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "parse_response", "%s", "{}");
 
     /* Initialize Response */
     rsps_t rsps = {
@@ -341,7 +346,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         while(active.load() && !response_complete)
         {
             int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
-            const TraceGuard sock_trace(DEBUG, trace.id(), "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
+            const uint32_t sock_trace_id = start_trace(DEBUG, trace_id, "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
             if(bytes_read > 0)
             {
                 int line_start = 0;
@@ -575,6 +580,9 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to read socket: %d", bytes_read);
             }
+
+            /* Stop Trace */
+            stop_trace(DEBUG, sock_trace_id);
         }
     }
     catch(const RunTimeException& e)
@@ -582,6 +590,9 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         mlog(CRITICAL, "Failed to process response: %s", e.what());
         rsps.code = EndpointObject::Internal_Server_Error;
     }
+
+    /* Stop Trace */
+    stop_trace(DEBUG, trace_id);
 
     /* Return Response */
     return rsps;

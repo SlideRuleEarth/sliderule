@@ -42,7 +42,6 @@
 #include "RecordObject.h"
 #include "Icesat2Fields.h"
 #include "Atl03Viewer.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -417,8 +416,8 @@ void* Atl03Viewer::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const TraceGuard trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
-    trace.stash(); // set thread specific trace id for H5Coro
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
@@ -529,6 +528,9 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
     /* Clean Up Info */
     delete info;
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

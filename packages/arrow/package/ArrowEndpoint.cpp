@@ -38,7 +38,6 @@
 #include "TimeLib.h"
 #include "OutputLib.h"
 #include "SystemConfig.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -103,7 +102,7 @@ void* ArrowEndpoint::requestThread (void* parm)
     const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
 
     /* Start Trace */
-    const TraceGuard trace(INFO, request->trace_id, "arrow_endpoint_request", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+    const uint32_t trace_id = start_trace(INFO, request->trace_id, "arrow_endpoint_request", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
     mlog(INFO, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
@@ -119,7 +118,7 @@ void* ArrowEndpoint::requestThread (void* parm)
     if(authorized)
     {
         /* Create Engine */
-        LuaEngine* engine = new LuaEngine(script_path, reinterpret_cast<const char*>(request->body), trace.id(), NULL, true);
+        LuaEngine* engine = new LuaEngine(script_path, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
         /* Supply Global Variables to Script */
         request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument_ptr);
@@ -173,6 +172,9 @@ void* ArrowEndpoint::requestThread (void* parm)
     delete request; // deleted here only
     delete info;
 
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
+
     /* Return */
     return NULL;
 }
@@ -185,7 +187,7 @@ void* ArrowEndpoint::responseThread (void* parm)
     rsps_info_t* info = static_cast<rsps_info_t*>(parm);
 
     /* Start Trace */
-    const TraceGuard trace(INFO, info->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", info->rqst_id);
+    const uint32_t trace_id = start_trace(INFO, info->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", info->rqst_id);
 
     /* Create Subscriber to Arrow Response Queue */
     const FString arrow_rspq("%s-arrow", info->rqst_id); // well known, must match requestThread
@@ -317,6 +319,9 @@ void* ArrowEndpoint::responseThread (void* parm)
     /* Clean Up */
     delete [] info->rqst_id;
     delete info;
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

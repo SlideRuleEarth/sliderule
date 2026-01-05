@@ -42,7 +42,6 @@
 #include "H5Object.h"
 #include "Icesat2Fields.h"
 #include "Atl24DataFrame.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -426,8 +425,8 @@ void* Atl24DataFrame::subsettingThread (void* parm)
     const Icesat2Fields& parms = *df->parms;
 
     /* Start Trace */
-    const TraceGuard trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf24->name, df->beam);
-    trace.stash(); // set thread specific trace id for H5Coro
+    const uint32_t trace_id = start_trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf24->name, df->beam);
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
@@ -518,6 +517,9 @@ void* Atl24DataFrame::subsettingThread (void* parm)
 
     /* Dataframe Complete */
     df->signalComplete();
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

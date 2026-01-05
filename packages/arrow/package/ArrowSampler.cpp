@@ -34,7 +34,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "TraceGuard.h"
 #include "ArrowSampler.h"
 #include "ArrowSamplerImpl.h"
 
@@ -150,8 +149,8 @@ void* ArrowSampler::mainThread(void* parm)
     ArrowSampler* s = reinterpret_cast<ArrowSampler*>(parm);
 
     /* Start Trace */
-    const TraceGuard trace(INFO, s->traceId, "arrow_sampler", "{\"filename\":\"%s\"}", s->dataFile);
-    trace.stash();
+    const uint32_t trace_id = start_trace(INFO, s->traceId, "arrow_sampler", "{\"filename\":\"%s\"}", s->dataFile);
+    EventLib::stashId(trace_id);
 
     /* Get samples for all user RasterObjects */
     for(batch_sampler_t* sampler : s->batchSamplers)
@@ -178,22 +177,26 @@ void* ArrowSampler::mainThread(void* parm)
             s->impl->createOutpuFiles();
 
             /* Send Data File to User */
-            OutputLib::send2User(s->dataFile, s->parms.path.value.c_str(), trace.id(), &s->parms, s->outQ);
+            OutputLib::send2User(s->dataFile, s->parms.path.value.c_str(), trace_id, &s->parms, s->outQ);
 
             /* Send Metadata File to User */
             if(OutputLib::fileExists(s->metadataFile))
             {
-                OutputLib::send2User(s->metadataFile, s->outputMetadataPath, trace.id(), &s->parms, s->outQ);
+                OutputLib::send2User(s->metadataFile, s->outputMetadataPath, trace_id, &s->parms, s->outQ);
             }
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating output file, PARQUET_ARROW reported: %s", e.what());
+        stop_trace(INFO, trace_id);
     }
 
     /* Signal Completion */
     s->signalComplete();
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     return NULL;
 }
