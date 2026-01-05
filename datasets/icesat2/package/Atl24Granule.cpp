@@ -45,7 +45,6 @@
 #include "H5Element.h"
 #include "Icesat2Fields.h"
 #include "Atl24Granule.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -174,8 +173,8 @@ void* Atl24Granule::readingThread (void* parm)
     const Icesat2Fields& parms = granule.parms;
 
     /* Start Trace */
-    const TraceGuard trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
-    trace.stash(); // set thread specific trace id for H5Coro
+    const uint32_t trace_id = start_trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
@@ -274,6 +273,9 @@ void* Atl24Granule::readingThread (void* parm)
 
     /* Mark Completion */
     granule.signalComplete();
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

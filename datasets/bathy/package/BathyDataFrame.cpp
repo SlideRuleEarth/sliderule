@@ -47,7 +47,6 @@
 #include "GeoLib.h"
 #include "BathyFields.h"
 #include "BathyMask.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -524,8 +523,8 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const TraceGuard trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.getResource(), dataframe.track.value);
-    trace.stash(); // set thread specific trace id for H5Coro
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.getResource(), dataframe.track.value);
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
@@ -757,6 +756,9 @@ void* BathyDataFrame::subsettingThread (void* parm)
     /* Mark Completion */
     mlog(INFO, "Completed processing spot %d for resource %s (%ld rows)", dataframe.spot.value, parms.resource.value.c_str(), dataframe.length());
     dataframe.signalComplete();
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

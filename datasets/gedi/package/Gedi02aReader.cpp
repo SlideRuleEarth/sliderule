@@ -42,7 +42,6 @@
 #include "Gedi02aReader.h"
 #include "RecordObject.h"
 #include "FootprintReader.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -170,8 +169,8 @@ void* Gedi02aReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const TraceGuard trace(INFO, reader->traceId, "Gedi02a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), info->beam);
-    trace.stash(); // set thread specific trace id for H5Coro
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi02a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), info->beam);
+    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
@@ -327,6 +326,9 @@ void* Gedi02aReader::subsettingThread (void* parm)
 
     /* Clean Up Info */
     delete info;
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

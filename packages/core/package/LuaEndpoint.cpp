@@ -37,7 +37,6 @@
 #include "OsApi.h"
 #include "SystemConfig.h"
 #include "TimeLib.h"
-#include "TraceGuard.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -142,7 +141,7 @@ void* LuaEndpoint::requestThread (void* parm)
     const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
 
     /* Start Trace */
-    const TraceGuard trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+    const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
     const event_level_t log_level =  info->streaming ? INFO : DEBUG;
@@ -160,11 +159,11 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Handle Response */
         if(info->streaming)
         {
-            status_code = streamResponse(script_path, argument_ptr, request, rspq, trace.id());
+            status_code = streamResponse(script_path, argument_ptr, request, rspq, trace_id);
         }
         else
         {
-            status_code = normalResponse(script_path, argument_ptr, request, rspq, trace.id());
+            status_code = normalResponse(script_path, argument_ptr, request, rspq, trace_id);
         }
     }
     else
@@ -200,6 +199,9 @@ void* LuaEndpoint::requestThread (void* parm)
     delete [] script_path;
     delete request;
     delete info;
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;

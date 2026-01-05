@@ -166,7 +166,8 @@ HttpServer::Connection::~Connection (void)
     /* Request freed only if present, o/w memory owned by EndpointObject */
     delete request;
 
-    delete trace_guard;
+    /* Stop Trace */
+    stop_trace(DEBUG, trace_id);
 }
 
 /*----------------------------------------------------------------------------
@@ -194,8 +195,7 @@ void HttpServer::Connection::initialize (const char* _name)
     StringLib::format(id, REQUEST_ID_LEN, "%s.%ld", name, cnt);
 
     /* Start Trace */
-    trace_guard = new TraceGuard(DEBUG, ORIGIN, "http_server", "{\"rqst_id\":\"%s\"}", id);
-    trace_id = trace_guard->id();
+    trace_id = start_trace(DEBUG, ORIGIN, "http_server", "{\"rqst_id\":\"%s\"}", id);
 
     /* Subscribe to Response Q (data return by endpoint) */
     rsps_state.rspq = new Subscriber(id);
@@ -408,7 +408,7 @@ int HttpServer::onRead(int fd)
     int status = 0;
     Connection* connection = connections[fd];
     rqst_state_t* state = &connection->rqst_state;
-    const TraceGuard trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
+    const uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
 
     /* Determine Buffer to Read Into */
     uint8_t* buf; // pointer to buffer to read into
@@ -554,6 +554,9 @@ int HttpServer::onRead(int fd)
         status = INVALID_RC; // will close socket
     }
 
+    /* Stop Trace */
+    stop_trace(DEBUG, trace_id);
+
     return status;
 }
 
@@ -567,7 +570,7 @@ int HttpServer::onWrite(int fd)
     int status = 0;
     Connection* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
-    const TraceGuard trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
+    const uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
 
     /* If Something to Send */
     if(state->ref_status > 0)
@@ -698,6 +701,9 @@ int HttpServer::onWrite(int fd)
             }
         }
     }
+
+    /* Stop Trace */
+    stop_trace(DEBUG, trace_id);
 
     return status;
 }
