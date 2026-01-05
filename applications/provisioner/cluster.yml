@@ -216,6 +216,11 @@ Resources:
           FromPort: 8040
           ToPort: 8040
           CidrIp: !Ref VpcCIDRBlock
+        # SSH from Instance Connect Endpoint
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -249,6 +254,11 @@ Resources:
           FromPort: 9100
           ToPort: 9100
           CidrIp: !Ref VpcCIDRBlock
+        # SSH from Instance Connect Endpoint
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -273,6 +283,11 @@ Resources:
           FromPort: 8030
           ToPort: 8030
           CidrIp: !Ref VpcCIDRBlock
+        # SSH from Instance Connect Endpoint
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -302,6 +317,11 @@ Resources:
           FromPort: 9100
           ToPort: 9100
           CidrIp: !Ref VpcCIDRBlock
+        # SSH from Instance Connect Endpoint
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -324,6 +344,7 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       SourceDestCheck: true
       Monitoring: false
+      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref IlbIP
@@ -419,6 +440,7 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       SourceDestCheck: true
       Monitoring: false
+      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref ManagerIP
@@ -509,6 +531,7 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       SourceDestCheck: true
       Monitoring: false
+      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref MonitorIP
@@ -599,6 +622,7 @@ Resources:
         InstanceType: t4g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile
+        KeyName: !Ref SSHKeyPair
         NetworkInterfaces:
           - DeviceIndex: 0
             Groups:
@@ -751,7 +775,7 @@ Resources:
   SchedulerLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-scheduler'
+      FunctionName: !Sub '${Cluster}-scheduler'
       Runtime: python3.13
       Handler: scheduler.lambda_scheduler
       Role: !GetAtt SchedulerLambdaRole.Arn
@@ -775,7 +799,7 @@ Resources:
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: !Sub '${AWS::StackName}-gateway'
+      Name: !Sub '${Cluster}-gateway'
       Description: API gateway for SlideRule cluster
       ProtocolType: HTTP
       CorsConfiguration:
@@ -791,7 +815,7 @@ Resources:
   JwtAuthorizer:
     Type: AWS::ApiGatewayV2::Authorizer
     Properties:
-      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      Name: !Sub '${Cluster}-jwt-authorizer'
       ApiId: !Ref HttpApi
       AuthorizerType: JWT
       IdentitySource:
@@ -874,7 +898,7 @@ Resources:
   ApiVpcLink:
     Type: AWS::ApiGatewayV2::VpcLink
     Properties:
-      Name: !Sub '${AWS::StackName}-vpclink'
+      Name: !Sub '${Cluster}-vpclink'
       SubnetIds:
         - !Ref SlideruleSubnet
   ProxyIntegration:
@@ -890,3 +914,56 @@ Resources:
       ConnectionId: !Ref ApiVpcLink
       IntegrationUri: !Ref ProxyListener
       PayloadFormatVersion: '1.0'
+
+  #
+  # EC2 SSH Client Connection
+  #
+  SSHKeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Sub '${Cluster}-key'
+      KeyType: ed25519
+      Tags:
+        - Key: Name
+          Value: !Sub '${Cluster}-key'
+  SSHKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${Cluster}-ssh-key'
+      SecretString: !GetAtt SSHKeyPair.KeyPairId
+  InstanceConnectEndpoint:
+    Type: AWS::EC2::InstanceConnectEndpoint
+    Properties:
+      SubnetId: !Ref SlideruleSubnet
+      SecurityGroupIds:
+        - !Ref InstanceConnectEndpointSG
+  InstanceConnectEndpointSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EC2 Instance Connect Endpoint
+      VpcId: !Ref SlideruleVPC
+      SecurityGroupEgress:
+        # Allow the endpoint to connect to SSH on any instance in the VPC
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref VpcCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-ic-endpoint-sg"
+
+Outputs:
+
+  #
+  # SSH Access
+  #
+  KeyPairName:
+    Description: Name of the created SSH key pair
+    Value: !Ref SSHKeyPair
+  KeyPairId:
+    Description: ID to retrieve private key from Parameter Store
+    Value: !GetAtt SSHKeyPair.KeyPairId
+  RetrieveKeyCommand:
+    Description: Command to retrieve private key
+    Value: !Sub |
+      aws ssm get-parameter --name /ec2/keypair/${SSHKeyPair.KeyPairId} --with-decryption --query Parameter.Value --output text > ${Cluster}-key.pem && chmod 400 ${Cluster}-key.pem

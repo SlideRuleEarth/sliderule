@@ -388,7 +388,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
 	aws cloudformation create-stack \
 		--stack-name 	authenticator \
-		--template-body file://cloudformation/authenticator.yml \
+		--template-body file://$(ROOT)/applications/authenticator/authenticator.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
@@ -439,8 +439,8 @@ provisioner-build: ## create the provisioner lambda zipfile
 		-c "pip install --target /host/package requests croniter"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
-	cp cloudformation/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
-	cp cloudformation/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
@@ -448,7 +448,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation create-stack \
 		--stack-name 	provisioner \
-		--template-body file://cloudformation/provisioner.yml \
+		--template-body file://$(ROOT)/applications/provisioner/provisioner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
