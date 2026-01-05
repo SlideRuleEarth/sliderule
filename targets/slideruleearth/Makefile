@@ -188,7 +188,8 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
-	cp docker/ilb/* $(ILB_STAGE_DIR)
+	cp docker/ilb/Dockerfile $(ILB_STAGE_DIR)
+	cp $(ROOT)/applications/ilb/haproxy.cfg $(ILB_STAGE_DIR)
 	cp $(ROOT)/applications/ilb/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
