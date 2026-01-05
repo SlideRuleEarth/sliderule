@@ -255,11 +255,6 @@ Resources:
           FromPort: 8040
           ToPort: 8040
           CidrIp: !Ref VpcCIDRBlock
-        # SSH from Instance Connect Endpoint
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -293,11 +288,6 @@ Resources:
           FromPort: 9100
           ToPort: 9100
           CidrIp: !Ref VpcCIDRBlock
-        # SSH from Instance Connect Endpoint
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -322,11 +312,6 @@ Resources:
           FromPort: 8030
           ToPort: 8030
           CidrIp: !Ref VpcCIDRBlock
-        # SSH from Instance Connect Endpoint
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -340,7 +325,7 @@ Resources:
   #
   # Security Group - Cluster
   #
-  SlideruleSG:
+  ClusterNodeSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Sliderule app SG
@@ -356,11 +341,6 @@ Resources:
           FromPort: 9100
           ToPort: 9100
           CidrIp: !Ref VpcCIDRBlock
-        # SSH from Instance Connect Endpoint
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          SourceSecurityGroupId: !Ref InstanceConnectEndpointSG
       SecurityGroupEgress:
         # ALL
         - IpProtocol: -1
@@ -652,7 +632,7 @@ Resources:
   #
   # Autoscaling Group - Cluster
   #
-  SlideruleLaunchTemplate:
+  ClusterLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateName: !Sub "${Cluster}-lt"
@@ -665,7 +645,7 @@ Resources:
         NetworkInterfaces:
           - DeviceIndex: 0
             Groups:
-              - !Ref SlideruleSG
+              - !Ref ClusterNodeSG
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
             Ebs:
@@ -762,7 +742,7 @@ Resources:
             EOF
             ./docker-compose -p cluster up --detach
 
-  SlideruleAutoScalingGroup:
+  ClusterAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AutoScalingGroupName: !Sub "${Cluster}-asg"
@@ -774,8 +754,8 @@ Resources:
       HealthCheckType: EC2
       CapacityRebalance: true
       LaunchTemplate:
-        LaunchTemplateId: !Ref SlideruleLaunchTemplate
-        Version: !GetAtt SlideruleLaunchTemplate.LatestVersionNumber
+        LaunchTemplateId: !Ref ClusterLaunchTemplate
+        Version: !GetAtt ClusterLaunchTemplate.LatestVersionNumber
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-node"
@@ -825,7 +805,7 @@ Resources:
   AutoShutdownCustomResource:
     Type: Custom::ScheduleStackDeletion
     DependsOn:
-      - SlideruleAutoScalingGroup
+      - ClusterAutoScalingGroup
     Properties:
       ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
       StackName: !Ref AWS::StackName
@@ -953,40 +933,3 @@ Resources:
       ConnectionId: !Ref ApiVpcLink
       IntegrationUri: !Ref ProxyListener
       PayloadFormatVersion: '1.0'
-
-  #
-  # EC2 Connection
-  #
-  SSHKeyPair:
-    Type: AWS::EC2::KeyPair
-    Properties:
-      KeyName: !Sub '${Cluster}-key'
-      KeyType: ed25519
-      Tags:
-        - Key: Name
-          Value: !Sub '${Cluster}-key'
-  SSHKeySecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub '${Cluster}-ssh-key'
-      SecretString: !GetAtt SSHKeyPair.KeyPairId
-  InstanceConnectEndpoint:
-    Type: AWS::EC2::InstanceConnectEndpoint
-    Properties:
-      SubnetId: !Ref ClusterSubnet
-      SecurityGroupIds:
-        - !Ref InstanceConnectEndpointSG
-  InstanceConnectEndpointSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for EC2 Instance Connect Endpoint
-      VpcId: !Ref ClusterVPC
-      SecurityGroupEgress:
-        # Allow the endpoint to connect to SSH on any instance in the VPC
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref VpcCIDRBlock
-      Tags:
-        - Key: Name
-          Value: !Sub "${Cluster}-ic-endpoint-sg"
