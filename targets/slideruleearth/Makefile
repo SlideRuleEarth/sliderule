@@ -93,6 +93,11 @@ CERTIFICATE_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`CertificateArn`].OutputValue' \
   --output text)
+DESTROY_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
+  --stack-name provisioner \
+  --region us-west-2 \
+  --query 'Stacks[0].Outputs[?OutputKey==`DestroyLambdaArn`].OutputValue' \
+  --output text)
 
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
@@ -253,9 +258,9 @@ manager-run: ## run manager locally; uses VERSION
 ########################
 # Cluster Targets
 ########################
-# 	- For public clusters the CLUSTER variable is set to sliderule-blue|green while the ORGANIZATION remains as sliderule.
+# 	- For public clusters the CLUSTER variable is set to sliderule-<tag> while the ORGANIZATION remains as sliderule.
 #	- To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
-#	- To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<color> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
+#	- To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<tag> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
 
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= false
@@ -320,7 +325,7 @@ cluster-events: ## invokes the provisioner *events* lambda function and displays
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
 		--stack-name 			dns \
-		--template-file 		cloudformation/dns.yml \
+		--template-file 		$(ROOT)/applications/provisioner/dns.yml \
 		--capabilities 			CAPABILITY_NAMED_IAM \
 		--region 				$(AWS_REGION) \
 		--parameter-overrides 	Domain=$(DOMAIN) \
@@ -329,6 +334,39 @@ cluster-go-live: ## switch dns entry of public cluster
 
 cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
+
+cluster-direct-deploy: ## directly deploys cluster via cloud formation
+	aws cloudformation create-stack \
+		--stack-name 	$(CLUSTER)-cluster \
+		--template-body file://$(ROOT)/applications/provisioner/cluster.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=Version,ParameterValue=$(VERSION) \
+						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
+						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
+						ParameterKey=TTL,ParameterValue=$(TTL) \
+						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
+						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN)
+	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
+
+cluster-direct-describe: ## directly status cluster created via cloud formation
+	aws cloudformation describe-stack-events --stack-name $(CLUSTER)-cluster
+
+cluster-direct-destroy: ## directly destroys cluster via cloud formation
+	aws cloudformation delete-stack --stack-name $(CLUSTER)-cluster
+	aws cloudformation wait stack-delete-complete --stack-name $(CLUSTER)-cluster
 
 ########################
 # Test Runner Targets
@@ -483,7 +521,7 @@ CERTIFICATE_DOMAINS ?= '*.$(DOMAIN)'
 certificate-create: ## creates the certificate
 	aws cloudformation create-stack \
 		--stack-name 	certificate \
-		--template-body file://cloudformation/certificate.yml \
+		--template-body file://$(ROOT)/applications/authenticator/certificate.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=CertificateDomains,ParameterValue=$(CERTIFICATE_DOMAINS) \
@@ -589,7 +627,7 @@ website-cffunc-create: ## create the uri rewrite function for cloudfront
 	aws cloudformation create-stack \
 		--stack-name 	cffunc \
 		--region		us-east-1 \
-		--template-body file://cloudformation/cffunc.yml
+		--template-body file://cloudfront/cffunc.yml
 	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name cffunc
 
 website-cffunc-describe: ## create the uri rewrite function for cloudfront
@@ -605,7 +643,7 @@ website-cffunc-delete: ## deletes the uri rewrite function for cloudfront
 website-create: ## create website stack
 	aws cloudformation create-stack \
 		--stack-name 	website \
-		--template-body file://cloudformation/website.yml \
+		--template-body file://cloudfront/website.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-east-1 \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \

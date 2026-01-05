@@ -67,6 +67,12 @@ Parameters:
   VpcCIDRBlock:
     Type: String
     Default: "10.0.0.0/16"
+  InternetGatewayCIDRBlock:
+    Type: String
+    Default: "10.0.128.0/17"
+  ClusterCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/17"
 
 Conditions:
 
@@ -77,7 +83,7 @@ Resources:
   #
   # Network
   #
-  SlideruleVPC:
+  ClusterVPC:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCIDRBlock
@@ -86,45 +92,78 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-vpc"
-  SlideruleSubnet:
+  # Internet Gateway (used only by NAT Gateway)
+  InternetGatewaySubnet:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref SlideruleVPC
-      CidrBlock: !Ref VpcCIDRBlock
+      VpcId: !Ref ClusterVPC
+      CidrBlock: !Ref InternetGatewayCIDRBlock
       MapPublicIpOnLaunch: false
       AvailabilityZone: !Ref AvailabilityZone
-      Tags:
-        - Key: Name
-          Value: !Sub "${Cluster}-subnet"
-  SlideruleIGW:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub "${Cluster}-gateway"
-  AttachIGW:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref SlideruleIGW
-      VpcId: !Ref SlideruleVPC
-  SlideruleRouteTable:
+  InternetGatewayRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref SlideruleVPC
-      Tags:
-        - Key: Name
-          Value: !Sub "${Cluster}-route"
-  SlideruleRoute:
+      VpcId: !Ref ClusterVPC
+  InternetGatewayRoute:
     Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttach
     Properties:
-      RouteTableId: !Ref SlideruleRouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref SlideruleIGW
-  RouteAssoc:
+      RouteTableId: !Ref InternetGatewayRouteTable
+      DestinationCidrBlock: !Ref PublicCIDRBlock
+      GatewayId: !Ref InternetGateway
+  InternetGatewayRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref SlideruleSubnet
-      RouteTableId: !Ref SlideruleRouteTable
+      SubnetId: !Ref InternetGatewaySubnet
+      RouteTableId: !Ref InternetGatewayRouteTable
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  InternetGatewayAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref ClusterVPC
+  # Private Subnet for Cluster
+  ClusterSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref ClusterVPC
+      CidrBlock: !Ref ClusterCIDRBlock
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Ref AvailabilityZone
+  ClusterRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref ClusterVPC
+  ClusterRoute:
+    Type: AWS::EC2::Route
+    DependsOn: ClusterNatGateway
+    Properties:
+      RouteTableId: !Ref ClusterRouteTable
+      DestinationCidrBlock: !Ref PublicCIDRBlock
+      NatGatewayId: !Ref ClusterNatGateway
+  ClusterRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ClusterSubnet
+      RouteTableId: !Ref ClusterRouteTable
+  ClusterNatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  ClusterNatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref InternetGatewaySubnet
+      AllocationId: !GetAtt ClusterNatEIP.AllocationId
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref ClusterVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref ClusterRouteTable
 
   #
   # IAM Roles
@@ -204,7 +243,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Monitor Security Group
-      VpcId: !Ref SlideruleVPC
+      VpcId: !Ref ClusterVPC
       SecurityGroupIngress:
         # Loki (from Promtail)
         - IpProtocol: tcp
@@ -237,7 +276,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: ILB Security Group
-      VpcId: !Ref SlideruleVPC
+      VpcId: !Ref ClusterVPC
       SecurityGroupIngress:
         # HTTP (from NLB)
         - IpProtocol: tcp
@@ -276,7 +315,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Manager Security Group
-      VpcId: !Ref SlideruleVPC
+      VpcId: !Ref ClusterVPC
       SecurityGroupIngress:
         # Manager (from HAProxy)
         - IpProtocol: tcp
@@ -305,7 +344,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Sliderule app SG
-      VpcId: !Ref SlideruleVPC
+      VpcId: !Ref ClusterVPC
       SecurityGroupIngress:
         # SlideRule (from HAProxy)
         - IpProtocol: tcp
@@ -348,7 +387,7 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref IlbIP
-          SubnetId: !Ref SlideruleSubnet
+          SubnetId: !Ref ClusterSubnet
           GroupSet:
             - !Ref IlbSG
       BlockDeviceMappings:
@@ -444,7 +483,7 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref ManagerIP
-          SubnetId: !Ref SlideruleSubnet
+          SubnetId: !Ref ClusterSubnet
           GroupSet:
             - !Ref ManagerSG
       BlockDeviceMappings:
@@ -535,7 +574,7 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref MonitorIP
-          SubnetId: !Ref SlideruleSubnet
+          SubnetId: !Ref ClusterSubnet
           GroupSet:
             - !Ref MonitorSG
       BlockDeviceMappings:
@@ -731,7 +770,7 @@ Resources:
       MaxSize: !Ref NodeCapacity
       DesiredCapacity: !Ref NodeCapacity
       VPCZoneIdentifier:
-        - !Ref SlideruleSubnet
+        - !Ref ClusterSubnet
       HealthCheckType: EC2
       CapacityRebalance: true
       LaunchTemplate:
@@ -875,7 +914,7 @@ Resources:
       TargetType: ip
       Protocol: TCP
       Port: 80
-      VpcId: !Ref SlideruleVPC
+      VpcId: !Ref ClusterVPC
       Targets:
         - Id: !GetAtt IlbInstance.PrivateIp
           Port: 80
@@ -885,7 +924,7 @@ Resources:
       Type: network
       Scheme: internal
       Subnets:
-        - !Ref SlideruleSubnet
+        - !Ref ClusterSubnet
   ProxyListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -900,7 +939,7 @@ Resources:
     Properties:
       Name: !Sub '${Cluster}-vpclink'
       SubnetIds:
-        - !Ref SlideruleSubnet
+        - !Ref ClusterSubnet
   ProxyIntegration:
     Type: AWS::ApiGatewayV2::Integration
     DependsOn:
@@ -916,7 +955,7 @@ Resources:
       PayloadFormatVersion: '1.0'
 
   #
-  # EC2 SSH Client Connection
+  # EC2 Connection
   #
   SSHKeyPair:
     Type: AWS::EC2::KeyPair
@@ -934,14 +973,14 @@ Resources:
   InstanceConnectEndpoint:
     Type: AWS::EC2::InstanceConnectEndpoint
     Properties:
-      SubnetId: !Ref SlideruleSubnet
+      SubnetId: !Ref ClusterSubnet
       SecurityGroupIds:
         - !Ref InstanceConnectEndpointSG
   InstanceConnectEndpointSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for EC2 Instance Connect Endpoint
-      VpcId: !Ref SlideruleVPC
+      VpcId: !Ref ClusterVPC
       SecurityGroupEgress:
         # Allow the endpoint to connect to SSH on any instance in the VPC
         - IpProtocol: tcp
@@ -951,19 +990,3 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-ic-endpoint-sg"
-
-Outputs:
-
-  #
-  # SSH Access
-  #
-  KeyPairName:
-    Description: Name of the created SSH key pair
-    Value: !Ref SSHKeyPair
-  KeyPairId:
-    Description: ID to retrieve private key from Parameter Store
-    Value: !GetAtt SSHKeyPair.KeyPairId
-  RetrieveKeyCommand:
-    Description: Command to retrieve private key
-    Value: !Sub |
-      aws ssm get-parameter --name /ec2/keypair/${SSHKeyPair.KeyPairId} --with-decryption --query Parameter.Value --output text > ${Cluster}-key.pem && chmod 400 ${Cluster}-key.pem
