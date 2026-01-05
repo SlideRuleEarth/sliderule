@@ -363,7 +363,6 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       SourceDestCheck: true
       Monitoring: false
-      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref IlbIP
@@ -459,7 +458,6 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       SourceDestCheck: true
       Monitoring: false
-      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref ManagerIP
@@ -550,7 +548,6 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       SourceDestCheck: true
       Monitoring: false
-      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref MonitorIP
@@ -641,7 +638,6 @@ Resources:
         InstanceType: t4g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile
-        KeyName: !Ref SSHKeyPair
         NetworkInterfaces:
           - DeviceIndex: 0
             Groups:
