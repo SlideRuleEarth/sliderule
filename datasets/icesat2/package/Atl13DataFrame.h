@@ -45,6 +45,7 @@
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
+#include "AOI.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -92,38 +93,12 @@ class Atl13DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Area of Interest Subclass */
-        class AreaOfInterest
-        {
-            public:
-
-                explicit AreaOfInterest (const Atl13DataFrame* df);
-                ~AreaOfInterest         (void);
-
-                void cleanup            (void);
-                void polyregion         (const Atl13DataFrame* df);
-                void rasterregion       (const Atl13DataFrame* df);
-
-                bool                    useRefId;
-
-                H5Array<int64_t>        atl13refid;
-                H5Array<double>         latitude;
-                H5Array<double>         longitude;
-
-                bool*                   inclusionMask;
-                bool*                   inclusionPtr;
-
-                long                    firstSegment;
-                long                    lastSegment;
-                long                    numSegments;
-        };
-
         /* Atl03 Data Subclass */
         class Atl13Data
         {
             public:
 
-                Atl13Data           (Atl13DataFrame* df, const AreaOfInterest& aoi);
+                Atl13Data           (Atl13DataFrame* df, const AOI& aoi);
                 ~Atl13Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

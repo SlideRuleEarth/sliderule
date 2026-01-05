@@ -159,3 +159,44 @@ class TestAtl24x:
         assert gdf["index_seg"].median() == 53168
         assert gdf["index_ph"].median() == 12949300
 
+    def test_poly_subset(self, init):
+        # Full run
+        gdf_full = sliderule.run("atl24x", {}, resources=RESOURCES)
+        assert init
+
+        # Small polygon around a subset of the track (pick mid-quantiles)
+        lat_series_full = gdf_full.geometry.y
+        lon_series_full = gdf_full.geometry.x
+        # Fixed bbox from quantiles to make this deterministic on the known resource
+        lat_min, lat_max = lat_series_full.quantile([0.25, 0.75])
+        lon_min, lon_max = lon_series_full.quantile([0.25, 0.75])
+        poly = [
+            {"lon": lon_min, "lat": lat_min},
+            {"lon": lon_min, "lat": lat_max},
+            {"lon": lon_max, "lat": lat_max},
+            {"lon": lon_max, "lat": lat_min},
+            {"lon": lon_min, "lat": lat_min},
+        ]
+        gdf_poly = sliderule.run("atl24x", {"poly": poly}, resources=RESOURCES)
+
+        assert len(gdf_poly) <= len(gdf_full)
+        lat_series_poly = gdf_poly.geometry.y
+        lon_series_poly = gdf_poly.geometry.x
+
+        assert lat_series_poly.between(lat_min, lat_max).all()
+        assert lon_series_poly.between(lon_min, lon_max).all()
+        assert len(gdf_poly) == 19, f"poly_len={len(gdf_poly)} expected_len=19"
+        assert gdf_poly["class_ph"].value_counts().iloc[0] == len(gdf_poly)
+        assert gdf_poly["region"].value_counts().iloc[0] == len(gdf_poly)
+
+    def test_empty_poly(self, init):
+        empty_poly = [
+            {"lon": 0.0, "lat": 0.0},
+            {"lon": 0.1, "lat": 0.0},
+            {"lon": 0.1, "lat": 0.1},
+            {"lon": 0.0, "lat": 0.1},
+            {"lon": 0.0, "lat": 0.0},
+        ]
+        gdf_empty = sliderule.run("atl24x", {"poly": empty_poly}, resources=RESOURCES)
+        assert init
+        assert len(gdf_empty) == 0
