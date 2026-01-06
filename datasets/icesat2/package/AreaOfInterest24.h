@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __aoi24__
-#define __aoi24__
+#ifndef __areaofinterest24__
+#define __areaofinterest24__
 
 /******************************************************************************
  * INCLUDES
@@ -43,7 +43,7 @@
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
-class AOI24
+class AreaOfInterest24
 {
     public:
 
@@ -51,8 +51,8 @@ class AOI24
          * Methods
          *--------------------------------------------------------------------*/
 
-        AOI24           (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs);
-        ~AOI24          (void);
+        AreaOfInterest24 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs);
+        ~AreaOfInterest24(void);
 
         /*--------------------------------------------------------------------
          * Data
@@ -78,4 +78,4 @@ class AOI24
         void rasterregion       (const Icesat2Fields* parms);
 };
 
-#endif  /* __aoi24__ */
+#endif  /* __areaofinterest24__ */

@@ -33,13 +33,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "AOI24.h"
+#include "AreaOfInterest24.h"
 #include "OsApi.h"
 
 /*----------------------------------------------------------------------------
- * AOI24::Constructor
+ * AreaOfInterest24::Constructor
  *----------------------------------------------------------------------------*/
-AOI24::AOI24 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs):
+AreaOfInterest24::AreaOfInterest24 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs):
     lat_ph          (hdf, FString("%s/%s", beam, "lat_ph").c_str()),
     lon_ph          (hdf, FString("%s/%s", beam, "lon_ph").c_str()),
     inclusion_mask  {NULL},
@@ -87,26 +87,26 @@ AOI24::AOI24 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int r
 }
 
 /*----------------------------------------------------------------------------
- * AOI24::Destructor
+ * AreaOfInterest24::Destructor
  *----------------------------------------------------------------------------*/
-AOI24::~AOI24 (void)
+AreaOfInterest24::~AreaOfInterest24 (void)
 {
     cleanup();
 }
 
 /*----------------------------------------------------------------------------
- * AOI24::cleanup
+ * AreaOfInterest24::cleanup
  *----------------------------------------------------------------------------*/
-void AOI24::cleanup (void)
+void AreaOfInterest24::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
 }
 
 /*----------------------------------------------------------------------------
- * AOI24::polyregion
+ * AreaOfInterest24::polyregion
  *----------------------------------------------------------------------------*/
-void AOI24::polyregion (const Icesat2Fields* parms)
+void AreaOfInterest24::polyregion (const Icesat2Fields* parms)
 {
     /* Find First Photon In Polygon */
     bool first_photon_found = false;
@@ -153,9 +153,9 @@ void AOI24::polyregion (const Icesat2Fields* parms)
 }
 
 /*----------------------------------------------------------------------------
- * AOI24::rasterregion
+ * AreaOfInterest24::rasterregion
  *----------------------------------------------------------------------------*/
-void AOI24::rasterregion (const Icesat2Fields* parms)
+void AreaOfInterest24::rasterregion (const Icesat2Fields* parms)
 {
     /* Find First Photon In Polygon */
     bool first_photon_found = false;

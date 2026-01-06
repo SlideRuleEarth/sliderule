@@ -177,7 +177,7 @@ okey_t Atl24DataFrame::getKey(void) const
 /*----------------------------------------------------------------------------
  * Atl24Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl24DataFrame::Atl24Data::Atl24Data (Atl24DataFrame* df, const AOI24& aoi):
+Atl24DataFrame::Atl24Data::Atl24Data (Atl24DataFrame* df, const AreaOfInterest24& aoi):
     compact                 (df->parms->atl24.compact.value),
     sc_orient               (                 df->hdf24,                            "orbit_info/sc_orient"),
     class_ph                (                 df->hdf24, FString("%s/%s", df->beam, "class_ph").c_str(),                0, aoi.first_photon, aoi.num_photons),
@@ -235,7 +235,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to AreaOfInterest of Interest */
-        const AOI24 aoi(df->hdf24, df->beam, df->parms, df->readTimeoutMs);
+        const AreaOfInterest24 aoi(df->hdf24, df->beam, df->parms, df->readTimeoutMs);
 
         /* Read ATL24 Datasets */
         const Atl24Data atl24(df, aoi);

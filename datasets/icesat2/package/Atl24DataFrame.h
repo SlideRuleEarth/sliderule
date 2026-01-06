@@ -46,7 +46,7 @@
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
-#include "AOI24.h"
+#include "AreaOfInterest24.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -110,7 +110,7 @@ class Atl24DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl24Data           (Atl24DataFrame* df, const AOI24& aoi);
+                Atl24Data           (Atl24DataFrame* df, const AreaOfInterest24& aoi);
                 ~Atl24Data          (void) = default;
 
                 bool                compact;
