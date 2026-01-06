@@ -218,235 +218,9 @@ okey_t Atl03DataFrame::getKey(void) const
 }
 
 /*----------------------------------------------------------------------------
- * AreaOfInterest::Constructor
- *----------------------------------------------------------------------------*/
-Atl03DataFrame::AreaOfInterest::AreaOfInterest (const Atl03DataFrame* df):
-    segment_lat    (df->hdf03, FString("/%s/%s", df->beam, "geolocation/reference_photon_lat").c_str()),
-    segment_lon    (df->hdf03, FString("/%s/%s", df->beam, "geolocation/reference_photon_lon").c_str()),
-    segment_ph_cnt (df->hdf03, FString("/%s/%s", df->beam, "geolocation/segment_ph_cnt").c_str()),
-    inclusion_mask {NULL},
-    inclusion_ptr  {NULL}
-{
-    try
-    {
-        /* Join Reads */
-        segment_lat.join(df->readTimeoutMs, true);
-        segment_lon.join(df->readTimeoutMs, true);
-        segment_ph_cnt.join(df->readTimeoutMs, true);
-
-        /* Initialize AreaOfInterest */
-        first_segment = 0;
-        num_segments = H5Coro::ALL_ROWS;
-        first_photon = 0;
-        num_photons = H5Coro::ALL_ROWS;
-
-        /* Determine Spatial Extent */
-        if(df->parms->regionMask.valid())
-        {
-            rasterregion(df);
-        }
-        else if(df->parms->pointsInPolygon.value > 0)
-        {
-            polyregion(df);
-        }
-        else
-        {
-            num_segments = segment_ph_cnt.size;
-            num_photons  = 0;
-            for(int i = 0; i < num_segments; i++)
-            {
-                num_photons += segment_ph_cnt[i];
-            }
-        }
-
-        /* Check If Anything to Process */
-        if(num_photons <= 0)
-        {
-            throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
-        }
-
-        /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        segment_lat.trim(first_segment);
-        segment_lon.trim(first_segment);
-        segment_ph_cnt.trim(first_segment);
-    }
-    catch(const RunTimeException& e)
-    {
-        cleanup();
-        throw;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::Destructor
- *----------------------------------------------------------------------------*/
-Atl03DataFrame::AreaOfInterest::~AreaOfInterest (void)
-{
-    cleanup();
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::cleanup
- *----------------------------------------------------------------------------*/
-void Atl03DataFrame::AreaOfInterest::cleanup (void)
-{
-    delete [] inclusion_mask;
-    inclusion_mask = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::polyregion
- *----------------------------------------------------------------------------*/
-void Atl03DataFrame::AreaOfInterest::polyregion (const Atl03DataFrame* df)
-{
-    /* Find First Segment In Polygon */
-    bool first_segment_found = false;
-    int segment = 0;
-    while(segment < segment_ph_cnt.size)
-    {
-        /* Test Inclusion */
-        const bool inclusion = df->parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
-
-        /* Segments with zero photon count may contain invalid coordinates,
-           making them unsuitable for inclusion in polygon tests. */
-
-        /* Check First Segment */
-        if(!first_segment_found)
-        {
-            /* If Coordinate Is In Polygon */
-            if(inclusion && segment_ph_cnt[segment] != 0)
-            {
-                /* Set First Segment */
-                first_segment_found = true;
-                first_segment = segment;
-
-                /* Include Photons From First Segment */
-                num_photons = segment_ph_cnt[segment];
-            }
-            else
-            {
-                /* Update Photon Index */
-                first_photon += segment_ph_cnt[segment];
-            }
-        }
-        else
-        {
-            /* If Coordinate Is NOT In Polygon */
-            if(!inclusion && segment_ph_cnt[segment] != 0)
-            {
-                break; // full extent found!
-            }
-
-            /* Update Photon Index */
-            num_photons += segment_ph_cnt[segment];
-        }
-
-        /* Bump Segment */
-        segment++;
-    }
-
-    /* Set Number of Segments */
-    if(first_segment_found)
-    {
-        num_segments = segment - first_segment;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest::rasterregion
- *----------------------------------------------------------------------------*/
-void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
-{
-    /* Find First Segment In Polygon */
-    bool first_segment_found = false;
-
-    /* Check Size */
-    if(segment_ph_cnt.size <= 0)
-    {
-        return;
-    }
-
-    /* Allocate Inclusion Mask */
-    inclusion_mask = new bool [segment_ph_cnt.size];
-    inclusion_ptr = inclusion_mask;
-
-    /* Loop Throuh Segments */
-    long curr_num_photons = 0;
-    long last_segment = 0;
-    int segment = 0;
-    while(segment < segment_ph_cnt.size)
-    {
-        if(segment_ph_cnt[segment] != 0)
-        {
-            /* Check Inclusion */
-            const bool inclusion = df->parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
-            inclusion_mask[segment] = inclusion;
-
-            /* Check For First Segment */
-            if(!first_segment_found)
-            {
-                /* If Coordinate Is In Raster */
-                if(inclusion)
-                {
-                    first_segment_found = true;
-
-                    /* Set First Segment */
-                    first_segment = segment;
-                    last_segment = segment;
-
-                    /* Include Photons From First Segment */
-                    curr_num_photons = segment_ph_cnt[segment];
-                    num_photons = curr_num_photons;
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    first_photon += segment_ph_cnt[segment];
-                }
-            }
-            else
-            {
-                /* Update Photon Count and Segment */
-                curr_num_photons += segment_ph_cnt[segment];
-
-                /* If Coordinate Is In Raster */
-                if(inclusion)
-                {
-                    /* Update Number of Photons to Current Count */
-                    num_photons = curr_num_photons;
-
-                    /* Update Number of Segments to Current Segment Count */
-                    last_segment = segment;
-                }
-            }
-        }
-        else
-        {
-            inclusion_mask[segment] = false;
-        }
-
-        /* Bump Segment */
-        segment++;
-    }
-
-    /* Set Number of Segments */
-    if(first_segment_found)
-    {
-        num_segments = last_segment - first_segment + 1;
-
-        /* Trim Inclusion Mask */
-        inclusion_ptr = &inclusion_mask[first_segment];
-    }
-    else
-    {
-        num_segments = 0;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& aoi):
+Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03& aoi):
     sc_orient           (df->hdf03,                            "/orbit_info/sc_orient"),
     velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, aoi.first_segment, aoi.num_segments),
@@ -536,7 +310,7 @@ Atl03DataFrame::Atl08Class::~Atl08Class (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03)
+void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const AreaOfInterest03& aoi, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!enabled)
@@ -715,7 +489,7 @@ Atl03DataFrame::Atl24Class::~Atl24Class (void)
 /*----------------------------------------------------------------------------
  * Atl24Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Atl24Class::classify (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03)
+void Atl03DataFrame::Atl24Class::classify (const Atl03DataFrame* df, const AreaOfInterest03& aoi, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!enabled) return;
@@ -771,8 +545,8 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         /* Start Reading ATL24 Data */
         Atl24Class atl24(df);
 
-        /* Subset to AreaOfInterest of Interest */
-        const AreaOfInterest aoi(df);
+        /* Subset to Area of Interest */
+        const AreaOfInterest03 aoi(df->hdf03, df->beam, df->parms, df->readTimeoutMs);
 
         /* Read ATL03 Datasets */
         const Atl03Data atl03(df, aoi);

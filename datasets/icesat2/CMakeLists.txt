@@ -5,13 +5,14 @@ target_compile_definitions (slideruleLib PUBLIC __icesat2__)
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/icesat2.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest03.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest24.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest24.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.cpp
@@ -41,13 +42,14 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/icesat2.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest03.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest24.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest24.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.h
