@@ -188,6 +188,29 @@ class TestAtl24x:
         assert len(gdf_poly) == 19, f"poly_len={len(gdf_poly)} expected_len=19"
         assert gdf_poly["class_ph"].value_counts().iloc[0] == len(gdf_poly)
         assert gdf_poly["region"].value_counts().iloc[0] == len(gdf_poly)
+        # Per-beam counts for this resource/poly
+        expected_gt_counts = {
+            10: 1,  # gt1l
+            20: 16, # gt2r
+            40: 1,  # gt2l
+            50: 1,  # gt3l
+        }
+        actual_gt_counts = gdf_poly["gt"].value_counts().to_dict()
+        assert actual_gt_counts == expected_gt_counts, f"gt counts changed: {actual_gt_counts}"
+        # Per-beam counts should not exceed full run
+        for gt_val, full_count in gdf_full["gt"].value_counts().to_dict().items():
+            poly_count = len(gdf_poly[gdf_poly["gt"] == gt_val])
+            assert poly_count <= full_count, f"poly count exceeds full for gt {gt_val}: {poly_count} > {full_count}"
+
+        # Anchor min/max coordinates for regression
+        expected_lat_min =   68.95691287431000
+        expected_lat_max =   69.02783394800493
+        expected_lon_min = -136.81647349295903
+        expected_lon_max = -136.65514419526238
+        assert abs(lat_series_poly.min() - expected_lat_min) < 1e-9
+        assert abs(lat_series_poly.max() - expected_lat_max) < 1e-9
+        assert abs(lon_series_poly.min() - expected_lon_min) < 1e-9
+        assert abs(lon_series_poly.max() - expected_lon_max) < 1e-9
 
     def test_empty_poly(self, init):
         empty_poly = [
@@ -200,3 +223,7 @@ class TestAtl24x:
         gdf_empty = sliderule.run("atl24x", {"poly": empty_poly}, resources=RESOURCES)
         assert init
         assert len(gdf_empty) == 0
+        # Ensure no beam slipped through
+        assert gdf_empty.empty
+        assert len(gdf_empty.columns) == len(sliderule.run("atl24x", {}, resources=RESOURCES).columns)
+        assert gdf_empty["gt"].value_counts().empty
