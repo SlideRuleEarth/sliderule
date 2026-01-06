@@ -79,8 +79,6 @@ class AreaOfInterestT
          *--------------------------------------------------------------------*/
 
         void cleanup            (void);
-        void polyregion         (const Icesat2Fields* parms);
-        void rasterregion       (const Icesat2Fields* parms);
 };
 
 using AreaOfInterest06 = AreaOfInterestT<double>;

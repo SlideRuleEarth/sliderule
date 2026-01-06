@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "AreaOfInterest24.h"
+#include "AreaSubset.h"
 #include "OsApi.h"
 
 /*----------------------------------------------------------------------------
@@ -51,22 +52,18 @@ AreaOfInterest24::AreaOfInterest24 (H5Object* hdf, const char* beam, const Icesa
         lat_ph.join(readTimeoutMs, true);
         lon_ph.join(readTimeoutMs, true);
 
-        /* Initialize AreaOfInterest */
-        first_photon = 0;
-        num_photons = H5Coro::ALL_ROWS;
-
         /* Determine Spatial Extent */
-        if(parms->regionMask.valid())
+        AreaSubset::SubsetResult subset = AreaSubset::computeSubset(lat_ph, lon_ph, parms, 0, H5Coro::ALL_ROWS);
+        first_photon = subset.first;
+        num_photons = subset.count;
+        if(!subset.mask.empty())
         {
-            rasterregion(parms);
-        }
-        else if(parms->pointsInPolygon.value > 0)
-        {
-            polyregion(parms);
-        }
-        else
-        {
-            num_photons = lat_ph.size;
+            inclusion_mask = new bool [subset.mask.size()];
+            for(size_t i = 0; i < subset.mask.size(); i++)
+            {
+                inclusion_mask[i] = subset.mask[i] != 0;
+            }
+            inclusion_ptr = &inclusion_mask[first_photon];
         }
 
         /* Check If Anything to Process */
@@ -101,133 +98,4 @@ void AreaOfInterest24::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest24::polyregion
- *----------------------------------------------------------------------------*/
-void AreaOfInterest24::polyregion (const Icesat2Fields* parms)
-{
-    /* Find First Photon In Polygon */
-    bool first_photon_found = false;
-    int photon = 0;
-    while(photon < lat_ph.size)
-    {
-        /* Test Inclusion */
-        const bool inclusion = parms->polyIncludes(lon_ph[photon], lat_ph[photon]);
-
-        /* Check First Photon */
-        if(!first_photon_found)
-        {
-            /* If Coordinate Is In Polygon */
-            if(inclusion)
-            {
-                /* Set First Segment */
-                first_photon_found = true;
-                first_photon = photon;
-            }
-            else
-            {
-                /* Update Photon Index */
-                first_photon++;
-            }
-        }
-        else
-        {
-            /* If Coordinate Is NOT In Polygon */
-            if(!inclusion)
-            {
-                break; // full extent found!
-            }
-        }
-
-        /* Bump Photon */
-        photon++;
-    }
-
-    /* Set Number of Photons */
-    if(first_photon_found)
-    {
-        num_photons = photon - first_photon;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * AreaOfInterest24::rasterregion
- *----------------------------------------------------------------------------*/
-void AreaOfInterest24::rasterregion (const Icesat2Fields* parms)
-{
-    /* Find First Photon In Polygon */
-    bool first_photon_found = false;
-
-    /* Check Size */
-    if(lat_ph.size <= 0)
-    {
-        return;
-    }
-
-    /* Allocate Inclusion Mask */
-    inclusion_mask = new bool [lat_ph.size];
-    inclusion_ptr = inclusion_mask;
-
-    /* Loop Throuh Segments */
-    long last_photon = 0;
-    int photon = 0;
-    while(photon < lat_ph.size)
-    {
-        if(lat_ph[photon] != 0)
-        {
-            /* Check Inclusion */
-            const bool inclusion = parms->maskIncludes(lon_ph[photon], lat_ph[photon]);
-            inclusion_mask[photon] = inclusion;
-
-            /* Check For First Photon */
-            if(!first_photon_found)
-            {
-                /* If Coordinate Is In Raster */
-                if(inclusion)
-                {
-                    first_photon_found = true;
-
-                    /* Set First Photon */
-                    first_photon = photon;
-                    last_photon = photon;
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    first_photon += lat_ph[photon];
-                }
-            }
-            else
-            {
-                /* If Coordinate Is In Raster */
-                if(inclusion)
-                {
-                    /* Update Last Photon */
-                    last_photon = photon;
-                }
-            }
-        }
-        else
-        {
-            inclusion_mask[photon] = false;
-        }
-
-        /* Bump Photon */
-        photon++;
-    }
-
-    /* Set Number of Photons */
-    if(first_photon_found)
-    {
-        num_photons = last_photon - first_photon + 1;
-
-        /* Trim Inclusion Mask */
-        inclusion_ptr = &inclusion_mask[first_photon];
-    }
-    else
-    {
-        num_photons = 0;
-    }
 }

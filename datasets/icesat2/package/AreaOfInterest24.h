@@ -74,8 +74,6 @@ class AreaOfInterest24
          *--------------------------------------------------------------------*/
 
         void cleanup            (void);
-        void polyregion         (const Icesat2Fields* parms);
-        void rasterregion       (const Icesat2Fields* parms);
 };
 
 #endif  /* __areaofinterest24__ */
