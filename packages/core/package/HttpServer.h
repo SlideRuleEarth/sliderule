@@ -56,7 +56,7 @@ class HttpServer: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int HEADER_BUF_LEN             = MAX_STR_SIZE;
+        static const int HEADER_BUF_LEN             = 2048;
         static const int REQUEST_ID_LEN             = 128;
         static const int CONNECTION_TIMEOUT         = 5; // seconds
         static const int INITIAL_POLL_SIZE          = 16;

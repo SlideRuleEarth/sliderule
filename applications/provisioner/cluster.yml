@@ -891,6 +891,13 @@ Resources:
       Protocol: TCP
       Port: 80
       VpcId: !Ref ClusterVPC
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /discovery/health
+      HealthCheckPort: 8050
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
       Targets:
         - Id: !GetAtt IlbInstance.PrivateIp
           Port: 80

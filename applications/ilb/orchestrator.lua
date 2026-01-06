@@ -801,7 +801,7 @@ end
 -- Fetch: next_node
 --
 local function orchestrator_next_node(txn, service)
-    local address = "127.0.0.1:9081"
+    local address = nil
 
     -- start exclusion block
     GlobalMutex.lock()
