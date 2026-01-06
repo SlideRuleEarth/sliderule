@@ -37,6 +37,13 @@
 
 template<typename CoordT>
 AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs):
+    AreaOfInterestT(hdf, beam, latitude_name, longitude_name, NULL, parms, readTimeoutMs, std::function<void(const H5Array<int64_t>&, long&, long&)>())
+{
+}
+
+template<typename CoordT>
+AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const char* refid_name,
+                                          const Icesat2Fields* parms, int readTimeoutMs, const std::function<void(const H5Array<int64_t>&, long&, long&)>& prefilter):
     latitude        (hdf, FString("/%s/%s", beam, latitude_name).c_str()),
     longitude       (hdf, FString("/%s/%s", beam, longitude_name).c_str()),
     inclusion_mask  {NULL},
@@ -44,13 +51,34 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
 {
     try
     {
+        /* Optional Reference ID */
+        const bool use_refid = (refid_name != NULL) && (refid_name[0] != 0) && static_cast<bool>(prefilter);
+        std::unique_ptr<H5Array<int64_t>> refid;
+
         /* Join Reads */
+        if(use_refid)
+        {
+            refid = std::make_unique<H5Array<int64_t>>(hdf, FString("/%s/%s", beam, refid_name).c_str());
+            refid->join(readTimeoutMs, true);
+        }
         latitude.join(readTimeoutMs, true);
         longitude.join(readTimeoutMs, true);
 
         /* Initialize Region */
         first_segment = 0;
         num_segments = H5Coro::ALL_ROWS;
+
+        /* Apply Prefilter */
+        if(use_refid)
+        {
+            prefilter(*refid, first_segment, num_segments);
+
+            /* Require Valid Prefilter Result */
+            if(num_segments <= 0)
+            {
+                throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "reference id not found");
+            }
+        }
 
         /* Determine Spatial Extent */
         if(parms->regionMask.valid())
@@ -63,7 +91,11 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         }
         else
         {
-            num_segments = latitude.size;
+            /* If Prefilter Did Not Set Span, Default to Full Length */
+            if(num_segments == H5Coro::ALL_ROWS)
+            {
+                num_segments = latitude.size;
+            }
         }
 
         /* Check If Anything to Process */
@@ -109,8 +141,9 @@ template<typename CoordT>
 void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 {
     bool first_segment_found = false;
-    int segment = 0;
-    while(segment < latitude.size)
+    int segment = first_segment;
+    const long max_segment = (num_segments < 0 || num_segments == H5Coro::ALL_ROWS) ? latitude.size : num_segments;
+    while(segment < max_segment)
     {
         const bool inclusion = parms->polyIncludes(longitude[segment], latitude[segment]);
 
@@ -131,6 +164,10 @@ void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
     {
         num_segments = segment - first_segment;
     }
+    else
+    {
+        num_segments = 0;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -150,8 +187,9 @@ void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
     inclusion_ptr = inclusion_mask;
 
     long last_segment = 0;
-    int segment = 0;
-    while(segment < latitude.size)
+    int segment = first_segment;
+    const long max_segment = (num_segments < 0 || num_segments == H5Coro::ALL_ROWS) ? latitude.size : num_segments;
+    while(segment < max_segment)
     {
         const bool inclusion = parms->maskIncludes(longitude[segment], latitude[segment]);
         inclusion_mask[segment] = inclusion;
@@ -173,6 +211,10 @@ void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
     {
         num_segments = last_segment - first_segment + 1;
         inclusion_ptr = &inclusion_mask[first_segment];
+    }
+    else
+    {
+        num_segments = 0;
     }
 }
 

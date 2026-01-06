@@ -45,7 +45,7 @@
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
-#include "AOI.h"
+#include "AreaOfInterest.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -98,7 +98,7 @@ class Atl13DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl13Data           (Atl13DataFrame* df, const AOI& aoi);
+                Atl13Data           (Atl13DataFrame* df, const AreaOfInterest13& aoi);
                 ~Atl13Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

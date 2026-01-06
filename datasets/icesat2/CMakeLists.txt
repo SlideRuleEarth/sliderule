@@ -11,7 +11,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/AOI.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AOI24.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
@@ -48,7 +47,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/AOI.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AOI24.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h

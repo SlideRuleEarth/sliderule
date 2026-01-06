@@ -163,14 +163,14 @@ okey_t Atl13DataFrame::getKey(void) const
 /*----------------------------------------------------------------------------
  * Atl13Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AOI& aoi):
+Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest13& aoi):
     sc_orient               (df->hdf13,                            "/orbit_info/sc_orient"),
-    delta_time              (df->hdf13, FString("%s/%s", df->beam, "delta_time").c_str(),               0, aoi.firstSegment, aoi.numSegments),
-    ht_ortho                (df->hdf13, FString("%s/%s", df->beam, "ht_ortho").c_str(),                 0, aoi.firstSegment, aoi.numSegments),
-    ht_water_surf           (df->hdf13, FString("%s/%s", df->beam, "ht_water_surf").c_str(),            0, aoi.firstSegment, aoi.numSegments),
-    stdev_water_surf        (df->hdf13, FString("%s/%s", df->beam, "stdev_water_surf").c_str(),         0, aoi.firstSegment, aoi.numSegments),
-    water_depth             (df->hdf13, FString("%s/%s", df->beam, "water_depth").c_str(),              0, aoi.firstSegment, aoi.numSegments),
-    anc_data                (df->parms->atl13.anc_fields, df->hdf13, FString("%s", df->beam).c_str(),   0, aoi.firstSegment, aoi.numSegments)
+    delta_time              (df->hdf13, FString("%s/%s", df->beam, "delta_time").c_str(),               0, aoi.first_segment, aoi.num_segments),
+    ht_ortho                (df->hdf13, FString("%s/%s", df->beam, "ht_ortho").c_str(),                 0, aoi.first_segment, aoi.num_segments),
+    ht_water_surf           (df->hdf13, FString("%s/%s", df->beam, "ht_water_surf").c_str(),            0, aoi.first_segment, aoi.num_segments),
+    stdev_water_surf        (df->hdf13, FString("%s/%s", df->beam, "stdev_water_surf").c_str(),         0, aoi.first_segment, aoi.num_segments),
+    water_depth             (df->hdf13, FString("%s/%s", df->beam, "water_depth").c_str(),              0, aoi.first_segment, aoi.num_segments),
+    anc_data                (df->parms->atl13.anc_fields, df->hdf13, FString("%s", df->beam).c_str(),   0, aoi.first_segment, aoi.num_segments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
@@ -191,7 +191,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl13DataFrame* df = static_cast<Atl13DataFrame*>(parm);
-//    const Icesat2Fields& parms = *df->parms;
+    const Icesat2Fields& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl13_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf13->name, df->beam);
@@ -199,8 +199,35 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 
     try
     {
+        /* Reference ID Prefilter */
+        const bool use_refid = (parms.atl13.reference_id.value > 0);
+        std::function<void(const H5Array<int64_t>&, long&, long&)> prefilter;
+        const char* refid_name = NULL;
+        if(use_refid)
+        {
+            refid_name = "atl13refid";
+            prefilter = [&parms](const H5Array<int64_t>& refid, long& first_segment, long& num_segments)
+            {
+                bool first_found = false;
+                long last_segment = -1;
+                for(long i = 0; i < refid.size; i++)
+                {
+                    if(refid[i] == parms.atl13.reference_id.value)
+                    {
+                        if(!first_found)
+                        {
+                            first_found = true;
+                            first_segment = i;
+                        }
+                        last_segment = i;
+                    }
+                }
+                num_segments = (first_found) ? (last_segment - first_segment + 1) : 0;
+            };
+        }
+
         /* Subset to AreaOfInterest of Interest */
-        const AOI aoi(df->hdf13, df->beam, df->parms, df->readTimeoutMs);
+        const AreaOfInterest13 aoi(df->hdf13, df->beam, "segment_lat", "segment_lon", refid_name, df->parms, df->readTimeoutMs, prefilter);
 
         /* Read ATL03 Datasets */
         const Atl13Data atl13(df, aoi);
@@ -211,12 +238,12 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 
         /* Traverse All Photons In Dataset */
         int32_t current_segment = -1;
-        while(df->active.load() && (++current_segment < aoi.numSegments))
+        while(df->active.load() && (++current_segment < aoi.num_segments))
         {
             /* Check AreaOfInterest Mask */
-            if(aoi.inclusionPtr)
+            if(aoi.inclusion_ptr)
             {
-                if(!aoi.inclusionPtr[current_segment])
+                if(!aoi.inclusion_ptr[current_segment])
                 {
                     continue;
                 }
