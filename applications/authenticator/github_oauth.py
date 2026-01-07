@@ -29,7 +29,6 @@ JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JW
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
 ALLOWED_REDIRECT_HOSTS = os.environ.get('ALLOWED_REDIRECT_HOSTS', '').split(' ') # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '12'))
-JWT_AUDIENCE = os.environ.get('JWT_AUDIENCE') # JWT audience claim - services validating the token should check this
 
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
@@ -48,6 +47,9 @@ GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
 GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code'
 GITHUB_API_URL = 'https://api.github.com'
+
+# JWT base audiences
+JWT_AUDIENCES = ['provisioner']
 
 # Cache for secrets (Lambda container reuse)
 _secrets_cache = {}
@@ -385,29 +387,29 @@ def get_user_teams(authorization_str, org_roles):
 
 def get_allowed_clusters(username, teams, org_roles):
     """
-    Returns a list of cluster names the user can deploy.
+    Returns a list of cluster names the user can access and deploy.
     """
-    # Initialize deployable clusters
-    deployable = []
+    # Initialize allowed clusters
+    allowed = []
 
     # Early check if member
     if 'member' not in org_roles:
-        return deployable
+        return allowed
 
     # All members can deploy to their personal cluster
     if username:
-        deployable.append(f"{username}-cluster")
+        allowed.append(f"{username}-cluster")
 
     # All members can deploy to their team clusters
     if teams:
-        deployable.extend(teams)
+        allowed.extend(teams)
 
     # Owners can deploy anything
     if 'owner' in org_roles:
-        deployable.extend(['*'])
+        allowed.extend(['*'])
 
-    # Return deployable clusters
-    return deployable
+    # Return allowed clusters
+    return allowed
 
 
 def get_max_nodes(org_roles):
@@ -552,14 +554,11 @@ def authenticate_user(authorization_str, event):
 
     # Build metadata dictionary
     metadata = {
-        'username': username,
         'org_roles': org_roles,
-        'teams': teams,
-        'allowed_clusters': allowed_clusters,
         'max_nodes': max_nodes,
         'max_ttl': max_ttl,
         'sub': username,
-        'aud': JWT_AUDIENCE,
+        'aud': JWT_AUDIENCES + allowed_clusters,
         'org': GITHUB_ORG,
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
@@ -650,19 +649,19 @@ def handle_callback(event):
         access_token = exchange_code_for_token(code, event)
         token, metadata = authenticate_user(f'Bearer {access_token}', event)
 
-        # Build known clusters (what the user can possibly connect to)
-        known_clusters = ['sliderule'] + [cluster for cluster in metadata['allowed_clusters'] if cluster != "*"]
+        # Build known and deployable clusters (user interface hints)
+        known_clusters = ['sliderule'] + [audience for audience in metadata['aud'] if (audience != "*" and audience not in JWT_AUDIENCES)]
+        deployable_clusters = [audience for audience in metadata['aud'] if (audience not in JWT_AUDIENCES)]
 
         # Build parameters for callback
         parms = {
-            'username': metadata['username'],
+            'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
             'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
             'org': metadata['org'],
-            'teams': ','.join(metadata['teams']),
             'orgRoles': ','.join(metadata['org_roles']),
             'knownClusters': ','.join(known_clusters),
-            'deployableClusters': ','.join(metadata['allowed_clusters']),
+            'deployableClusters': ','.join(deployable_clusters),
             'maxNodes': str(metadata['max_nodes']),
             'maxTTL': str(metadata['max_ttl']),
             'tokenIssuedAt': str(metadata['iat']),

@@ -39,8 +39,6 @@ Parameters:
     Type: String
   CorsAllowOrigins:
     Type: CommaDelimitedList
-  JwtAudience:
-    Type: String
   JwtIssuer:
     Type: String
   CertificateArn:
@@ -837,7 +835,8 @@ Resources:
         - $request.header.Authorization
       JwtConfiguration:
         Audience:
-          - !Ref JwtAudience
+          - "*"
+          - !Ref Cluster
         Issuer: !Ref JwtIssuer
   IlbRoute:
     Type: AWS::ApiGatewayV2::Route

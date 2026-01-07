@@ -82,7 +82,6 @@ VERSION ?= latest
 
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
-JWT_AUDIENCE ?= sliderule
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -357,7 +356,6 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
-						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
 						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
@@ -432,7 +430,6 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=AuthenticatorUrl,ParameterValue=$(AUTHENTICATOR_URL) \
-						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
 						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
 						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
 						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
@@ -493,7 +490,6 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=ProvisionerUrl,ParameterValue=$(PROVISIONER_URL) \
-						ParameterKey=JwtAudience,ParameterValue=$(JWT_AUDIENCE) \
 						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \

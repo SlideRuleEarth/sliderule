@@ -10,6 +10,7 @@ import scheduler
 # ###############################
 
 MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
+SYSTEM_KEYWORDS = ['login','provisioner','client']
 
 # ###############################
 # Utilities
@@ -58,7 +59,6 @@ def lambda_deploy(event, context):
         container_registry = os.environ['CONTAINER_REGISTRY']
         lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
         cors_allow_origins = os.environ['CORS_ALLOW_ORIGINS']
-        jwt_audience = os.environ['JWT_AUDIENCE']
         jwt_issuer = os.environ['JWT_ISSUER']
         certificate_arn = os.environ['CERTIFICATE_ARN']
 
@@ -96,7 +96,7 @@ def lambda_deploy(event, context):
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
             {"ParameterKey": "CorsAllowOrigins", "ParameterValue": cors_allow_origins},
-            {"ParameterKey": "JwtAudience", "ParameterValue": jwt_audience},
+            {"ParameterKey": "JwtAudience", "ParameterValue": cluster},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
             {"ParameterKey": "CertificateArn", "ParameterValue": certificate_arn},
         ]
@@ -106,6 +106,10 @@ def lambda_deploy(event, context):
 
         # the stack name naming convention is required by Makefile
         state["stack_name"] = build_stack_name(cluster)
+
+        # check keywords
+        if cluster in SYSTEM_KEYWORDS or organization in SYSTEM_KEYWORDS:
+            raise RuntimeError(f'Illegal cluster name <{cluster}> or organization name <{organization}>')
 
         # check rules for valid deployment
         if ttl >= 0 and ttl < MIN_TTL_FOR_AUTOSHUTDOWN:
@@ -397,9 +401,9 @@ def lambda_gateway(event, context):
     """
     # get JWT claims (validated by API Gateway)
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-    username = claims.get('username', '<anonymous>')
+    username = claims.get('sub', '<anonymous>')
     org_roles = claims.get('org_roles', [])
-    allowed_clusters = claims.get('allowed_clusters', [])
+    allowed_clusters = [audience for audience in claims.get('aud', []) if audience not in SYSTEM_KEYWORDS]
     max_nodes = claims.get('max_nodes', 0)
     max_ttl = claims.get('max_ttl', 0)
 

@@ -37,6 +37,7 @@ import ctypes
 import time
 import logging
 import numpy
+import base64
 from urllib import parse as urllib_parse
 import webbrowser
 from sliderule import version
@@ -175,6 +176,10 @@ class Session:
             self.scaleout(desired_nodes, time_to_live)
         else:
             organization = self.PUBLIC_ORG
+
+        # create wrappers for subclasses
+        self.provisioner = self.__Provisioner(self)
+        self.authenticator = self.__Authenticator(self)
 
     #
     #  source
@@ -544,6 +549,36 @@ class Session:
             self.source = data
         def __iter__(self):
             yield self.source
+
+    #
+    # __Provisioner
+    #
+    class __Provisioner:
+        def __init__ (self, session):
+            self.session = session
+        def deploy (self, cluster, is_public=False, node_capacity=1, ttl=60, version="latest"):
+            return self.session.provision("deploy", {"cluster": cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+        def extend (self, cluster, ttl=60):
+            return self.session.provision("extend", {"cluster": cluster, "ttl": ttl})
+        def destroy (self, cluster):
+            return self.session.provision("status", {"cluster": cluster})
+        def status (self, cluster):
+            return self.session.provision("status", {"cluster": cluster})
+
+    #
+    # __Authenticator
+    #
+    class __Authenticator:
+        def __init__ (self, session):
+            self.session = session
+        def decode (self):
+            def decode_part(part):
+                padded = part + "=" * (-len(part) % 4)
+                return json.loads(base64.urlsafe_b64decode(padded))
+            header_b64, payload_b64, signature_b64 = self.session.ps_access_token.split(".")
+            header = decode_part(header_b64)
+            claims = decode_part(payload_b64)
+            return header, claims
 
     #
     #  __deviceflow

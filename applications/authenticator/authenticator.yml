@@ -6,8 +6,6 @@ Parameters:
     Type: String
   AuthenticatorUrl:
     Type: String
-  JwtAudience:
-    Type: String
   GitHubOrg:
     Type: String
   GitHubClientId:
@@ -120,7 +118,6 @@ Resources:
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
           ALLOWED_REDIRECT_HOSTS: !Ref AllowedRedirectHosts
-          JWT_AUDIENCE: !Ref JwtAudience
 
   # API Gateway HTTP API
   HttpApi:
