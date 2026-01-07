@@ -355,7 +355,6 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
-						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster

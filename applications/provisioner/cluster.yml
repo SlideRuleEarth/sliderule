@@ -37,8 +37,6 @@ Parameters:
     Type: Number
   ProvisionerLambdaZipFile:
     Type: String
-  CorsAllowOrigins:
-    Type: CommaDelimitedList
   JwtIssuer:
     Type: String
   CertificateArn:
@@ -816,7 +814,8 @@ Resources:
       Description: API gateway for SlideRule cluster
       ProtocolType: HTTP
       CorsConfiguration:
-        AllowOrigins: !Ref CorsAllowOrigins
+        AllowOrigins:
+          - "*"
         AllowMethods:
           - GET
           - POST

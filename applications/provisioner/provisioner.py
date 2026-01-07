@@ -58,7 +58,6 @@ def lambda_deploy(event, context):
         project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
         container_registry = os.environ['CONTAINER_REGISTRY']
         lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
-        cors_allow_origins = os.environ['CORS_ALLOW_ORIGINS']
         jwt_issuer = os.environ['JWT_ISSUER']
         certificate_arn = os.environ['CERTIFICATE_ARN']
 
@@ -95,7 +94,6 @@ def lambda_deploy(event, context):
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
-            {"ParameterKey": "CorsAllowOrigins", "ParameterValue": cors_allow_origins},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
             {"ParameterKey": "CertificateArn", "ParameterValue": certificate_arn},
         ]
