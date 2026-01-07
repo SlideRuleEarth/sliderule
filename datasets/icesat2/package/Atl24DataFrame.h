@@ -46,6 +46,7 @@
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
+#include "AreaOfInterest.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -104,34 +105,12 @@ class Atl24DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Area of Interest Subclass */
-        class AreaOfInterest
-        {
-            public:
-
-                explicit AreaOfInterest (const Atl24DataFrame* df);
-                ~AreaOfInterest         (void);
-
-                void cleanup            (void);
-                void polyregion         (const Atl24DataFrame* df);
-                void rasterregion       (const Atl24DataFrame* df);
-
-                H5Array<double>         lat_ph;
-                H5Array<double>         lon_ph;
-
-                bool*                   inclusion_mask;
-                bool*                   inclusion_ptr;
-
-                long                    first_photon;
-                long                    num_photons;
-        };
-
         /* Atl24 Data Subclass */
         class Atl24Data
         {
             public:
 
-                Atl24Data           (Atl24DataFrame* df, const AreaOfInterest& aoi);
+                Atl24Data           (Atl24DataFrame* df, const AreaOfInterest24& aoi);
                 ~Atl24Data          (void) = default;
 
                 bool                compact;

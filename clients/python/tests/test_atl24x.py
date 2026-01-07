@@ -159,3 +159,71 @@ class TestAtl24x:
         assert gdf["index_seg"].median() == 53168
         assert gdf["index_ph"].median() == 12949300
 
+    def test_poly_subset(self, init):
+        # Full run
+        gdf_full = sliderule.run("atl24x", {}, resources=RESOURCES)
+        assert init
+
+        # Small polygon around a subset of the track (pick mid-quantiles)
+        lat_series_full = gdf_full.geometry.y
+        lon_series_full = gdf_full.geometry.x
+        # Fixed bbox from quantiles to make this deterministic on the known resource
+        lat_min, lat_max = lat_series_full.quantile([0.25, 0.75])
+        lon_min, lon_max = lon_series_full.quantile([0.25, 0.75])
+        poly = [
+            {"lon": lon_min, "lat": lat_min},
+            {"lon": lon_min, "lat": lat_max},
+            {"lon": lon_max, "lat": lat_max},
+            {"lon": lon_max, "lat": lat_min},
+            {"lon": lon_min, "lat": lat_min},
+        ]
+        gdf_poly = sliderule.run("atl24x", {"poly": poly}, resources=RESOURCES)
+
+        assert len(gdf_poly) <= len(gdf_full)
+        lat_series_poly = gdf_poly.geometry.y
+        lon_series_poly = gdf_poly.geometry.x
+
+        assert lat_series_poly.between(lat_min, lat_max).all()
+        assert lon_series_poly.between(lon_min, lon_max).all()
+        assert len(gdf_poly) == 19, f"poly_len={len(gdf_poly)} expected_len=19"
+        assert gdf_poly["class_ph"].value_counts().iloc[0] == len(gdf_poly)
+        assert gdf_poly["region"].value_counts().iloc[0] == len(gdf_poly)
+        # Per-beam counts for this resource/poly
+        expected_gt_counts = {
+            10: 1,  # gt1l
+            20: 16, # gt2r
+            40: 1,  # gt2l
+            50: 1,  # gt3l
+        }
+        actual_gt_counts = gdf_poly["gt"].value_counts().to_dict()
+        assert actual_gt_counts == expected_gt_counts, f"gt counts changed: {actual_gt_counts}"
+        # Per-beam counts should not exceed full run
+        for gt_val, full_count in gdf_full["gt"].value_counts().to_dict().items():
+            poly_count = len(gdf_poly[gdf_poly["gt"] == gt_val])
+            assert poly_count <= full_count, f"poly count exceeds full for gt {gt_val}: {poly_count} > {full_count}"
+
+        # Anchor min/max coordinates for regression
+        expected_lat_min =   68.95691287431000
+        expected_lat_max =   69.02783394800493
+        expected_lon_min = -136.81647349295903
+        expected_lon_max = -136.65514419526238
+        assert abs(lat_series_poly.min() - expected_lat_min) < 1e-9
+        assert abs(lat_series_poly.max() - expected_lat_max) < 1e-9
+        assert abs(lon_series_poly.min() - expected_lon_min) < 1e-9
+        assert abs(lon_series_poly.max() - expected_lon_max) < 1e-9
+
+    def test_empty_poly(self, init):
+        empty_poly = [
+            {"lon": 0.0, "lat": 0.0},
+            {"lon": 0.1, "lat": 0.0},
+            {"lon": 0.1, "lat": 0.1},
+            {"lon": 0.0, "lat": 0.1},
+            {"lon": 0.0, "lat": 0.0},
+        ]
+        gdf_empty = sliderule.run("atl24x", {"poly": empty_poly}, resources=RESOURCES)
+        assert init
+        assert len(gdf_empty) == 0
+        # Ensure no beam slipped through
+        assert gdf_empty.empty
+        assert len(gdf_empty.columns) == len(sliderule.run("atl24x", {}, resources=RESOURCES).columns)
+        assert gdf_empty["gt"].value_counts().empty

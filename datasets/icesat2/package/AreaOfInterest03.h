@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __area_of_interest__
-#define __area_of_interest__
+#ifndef __areaofinterest03__
+#define __areaofinterest03__
 
 /******************************************************************************
  * INCLUDES
@@ -39,14 +39,12 @@
 #include "H5Array.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
-#include <functional>
 
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
-
-template<typename CoordT>
-class AreaOfInterestT
+/* Spatial subset for ATL03 beams and segments */
+class AreaOfInterest03
 {
     public:
 
@@ -54,22 +52,24 @@ class AreaOfInterestT
          * Methods
          *--------------------------------------------------------------------*/
 
-         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms,
-                          int readTimeoutMs, const std::function<void(long&, long&)>& prefilter = std::function<void(long&, long&)>());
-         ~AreaOfInterestT(void);
+        AreaOfInterest03 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs);
+        ~AreaOfInterest03(void);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Array<CoordT>         latitude;
-        H5Array<CoordT>         longitude;
+        H5Array<double>         segment_lat;
+        H5Array<double>         segment_lon;
+        H5Array<int32_t>        segment_ph_cnt;
 
         bool*                   inclusion_mask;
         bool*                   inclusion_ptr;
 
-        long                    first_index;
-        long                    count;
+        long                    first_segment;
+        long                    num_segments;
+        long                    first_photon;
+        long                    num_photons;
 
     private:
 
@@ -82,9 +82,4 @@ class AreaOfInterestT
         void rasterregion       (const Icesat2Fields* parms);
 };
 
-using AreaOfInterest06 = AreaOfInterestT<double>;
-using AreaOfInterest08 = AreaOfInterestT<float>;
-using AreaOfInterest13 = AreaOfInterestT<double>;
-using AreaOfInterest24 = AreaOfInterestT<double>;
-
-#endif  /* __area_of_interest__ */
+#endif  /* __areaofinterest03__ */

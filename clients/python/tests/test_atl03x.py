@@ -188,6 +188,148 @@ class TestAtl03x:
         assert gdf["yapc_score"].min() == 0
         assert gdf["atl24_class"].value_counts()[40] == 4
 
+    def test_polygon_track_pair(self, init):
+        poly = [
+            { "lat": -80.75, "lon": -70.00 },
+            { "lat": -81.00, "lon": -70.00 },
+            { "lat": -81.00, "lon": -65.00 },
+            { "lat": -80.75, "lon": -65.00 },
+            { "lat": -80.75, "lon": -70.00 },
+        ]
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "srt": 3,
+            "poly": poly,
+        }
+        gdf = sliderule.run("atl03x", parms, resources=RESOURCES)
+        assert init
+        # Track pair check (gt1l + gt1r) using the nominal polygon
+        assert len(gdf) == 488670
+        spot_counts = gdf.spot.value_counts().to_dict()
+        assert spot_counts.get(5, 0) == 386717
+        assert spot_counts.get(6, 0) == 101953
+        assert gdf.ph_index.is_monotonic_increasing
+        lat_min = gdf.geometry.y.min()
+        lat_max = gdf.geometry.y.max()
+        tol = 1e-2  # allow small expansion due to dataset coordinates
+        assert lat_min >= min(p["lat"] for p in poly) - tol
+        assert lat_max <= max(p["lat"] for p in poly) + tol
+
+    def test_polygon_tiny_offtrack_returns_empty(self, init):
+        # Tiny polygon well away from the granule track; should return zero rows if AOI masking works
+        poly = [
+            { "lat": 0.0, "lon": 0.0 },
+            { "lat": 0.001, "lon": 0.0 },
+            { "lat": 0.001, "lon": 0.001 },
+            { "lat": 0.0, "lon": 0.001 },
+            { "lat": 0.0, "lon": 0.0 },
+        ]
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "srt": 3,
+            "poly": poly,
+        }
+        gdf = sliderule.run("atl03x", parms, resources=RESOURCES)
+        assert init
+        # Regression guard: AOI refactors must not leak data outside the polygon
+        assert len(gdf) == 0
+
+    def test_empty_poly(self, init):
+        empty_poly = [
+            {"lon": 0.0, "lat": 0.0},
+            {"lon": 0.1, "lat": 0.0},
+            {"lon": 0.1, "lat": 0.1},
+            {"lon": 0.0, "lat": 0.1},
+            {"lon": 0.0, "lat": 0.0},
+        ]
+        # Using the nominal-track parameters to avoid scanning the entire granule; an empty AOI on the full
+        # dataset would take too long just to confirm zero rows.
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "srt": 3,
+        }
+        gdf_empty = sliderule.run("atl03x", parms, empty_poly, resources=RESOURCES)
+        assert init
+        assert len(gdf_empty) == 0
+        # Ensure no beam slipped through and columns are consistent
+        assert gdf_empty.empty
+        # Default output columns should remain stable (matches nominal test expectation)
+        assert len(gdf_empty.columns) == 16
+        assert gdf_empty["gt"].value_counts().empty
+
+    def test_aoi_mask_alignment_track_pair(self, init):
+        # Alignment check across the track pair to catch AOI mask/offset regressions
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "srt": 3,
+            "poly": AOI,
+        }
+        gdf = sliderule.run("atl03x", parms, resources=RESOURCES)
+        assert init
+        gdf = gdf.sort_values("ph_index").reset_index(drop=True)
+        # Total row count should match the nominal track-pair baseline
+        assert len(gdf) == 488670
+        # Photon-derived columns should stay aligned and non-null
+        for col in ["ph_index", "atl03_cnf", "geometry"]:
+            assert len(gdf[col]) == len(gdf)
+            assert gdf[col].isnull().sum() == 0
+        assert gdf.ph_index.nunique() == len(gdf)
+
+        sample = list(zip(gdf.ph_index.iloc[:20], gdf.atl03_cnf.iloc[:20], gdf.geometry.y.iloc[:20]))
+        expected = [
+            (722068, 4, -80.755388647042),
+            (722069, 1, -80.75539481025555),
+            (722070, 1, -80.75539481084313),
+            (722071, 0, -80.75540100533962),
+            (722072, 4, -80.75540097681643),
+            (722073, 4, -80.75540097602799),
+            (722074, 4, -80.75540097680276),
+            (722075, 0, -80.75541326304908),
+            (722076, 4, -80.7554194713626),
+            (722077, 4, -80.75541947101154),
+            (722078, 4, -80.75542563636772),
+            (722079, 4, -80.75542563634947),
+            (722080, 4, -80.75542563636304),
+            (722081, 4, -80.75542563678194),
+            (722082, 4, -80.75543180234568),
+            (722083, 1, -80.75543179165159),
+            (722084, 4, -80.75543180161971),
+            (722085, 4, -80.75543796820105),
+            (722086, 4, -80.75543796811675),
+            (722087, 4, -80.75543796823739),
+        ]
+        assert sample == expected
+        assert gdf.ph_index.is_monotonic_increasing
+
+    def test_polygon_narrow_span_offsets(self, init):
+        # Narrow AOI to capture a small non-zero subset; hardcoded to catch offset regressions
+        # Tight box around a known photon from the nominal run (lon ~ -65.9572, lat ~ -80.75539)
+        narrow_poly = [
+            {"lat": -80.7556, "lon": -65.9580},
+            {"lat": -80.7552, "lon": -65.9580},
+            {"lat": -80.7552, "lon": -65.9570},
+            {"lat": -80.7556, "lon": -65.9570},
+            {"lat": -80.7556, "lon": -65.9580},
+        ]
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "srt": 3,
+            "poly": narrow_poly,
+        }
+        gdf = sliderule.run("atl03x", parms, resources=RESOURCES)
+        assert init
+        assert len(gdf) == 147
+        assert gdf.ph_index.min() == 721993
+        assert gdf.ph_index.max() == 722141
+        assert gdf.spot.value_counts().to_dict() == {6: 147}
+        assert gdf.ph_index.nunique() == len(gdf)
+        assert gdf.ph_index.is_monotonic_increasing
+
     def test_final_fields(self, init):
         parms = {
             "t0": "2019-12-02T01:00:00Z",

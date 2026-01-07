@@ -184,31 +184,31 @@ okey_t Atl08DataFrame::getKey (void) const
 Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest08& aoi):
     sc_orient               (df->hdf08, "/orbit_info/sc_orient"),
     /* Land Segment Datasets */
-    delta_time              (df->hdf08, FString("%s/%s", df->beam, "land_segments/delta_time").c_str(),                            0, aoi.first_segment, aoi.num_segments),
-    segment_id_beg          (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_id_beg").c_str(),                        0, aoi.first_segment, aoi.num_segments),
-    segment_id_end          (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_id_end").c_str(),                        0, aoi.first_segment, aoi.num_segments),
-    night_flag              (df->hdf08, FString("%s/%s", df->beam, "land_segments/night_flag").c_str(),                            0, aoi.first_segment, aoi.num_segments),
-    n_seg_ph                (df->hdf08, FString("%s/%s", df->beam, "land_segments/n_seg_ph").c_str(),                              0, aoi.first_segment, aoi.num_segments),
-    solar_elevation         (df->hdf08, FString("%s/%s", df->beam, "land_segments/solar_elevation").c_str(),                       0, aoi.first_segment, aoi.num_segments),
-    solar_azimuth           (df->hdf08, FString("%s/%s", df->beam, "land_segments/solar_azimuth").c_str(),                         0, aoi.first_segment, aoi.num_segments),
-    terrain_flg             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain_flg").c_str(),                           0, aoi.first_segment, aoi.num_segments),
-    brightness_flag         (df->hdf08, FString("%s/%s", df->beam, "land_segments/brightness_flag").c_str(),                       0, aoi.first_segment, aoi.num_segments),
-    cloud_flag_atm          (df->hdf08, FString("%s/%s", df->beam, "land_segments/cloud_flag_atm").c_str(),                        0, aoi.first_segment, aoi.num_segments),
+    delta_time              (df->hdf08, FString("%s/%s", df->beam, "land_segments/delta_time").c_str(),                            0, aoi.first_index, aoi.count),
+    segment_id_beg          (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_id_beg").c_str(),                        0, aoi.first_index, aoi.count),
+    segment_id_end          (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_id_end").c_str(),                        0, aoi.first_index, aoi.count),
+    night_flag              (df->hdf08, FString("%s/%s", df->beam, "land_segments/night_flag").c_str(),                            0, aoi.first_index, aoi.count),
+    n_seg_ph                (df->hdf08, FString("%s/%s", df->beam, "land_segments/n_seg_ph").c_str(),                              0, aoi.first_index, aoi.count),
+    solar_elevation         (df->hdf08, FString("%s/%s", df->beam, "land_segments/solar_elevation").c_str(),                       0, aoi.first_index, aoi.count),
+    solar_azimuth           (df->hdf08, FString("%s/%s", df->beam, "land_segments/solar_azimuth").c_str(),                         0, aoi.first_index, aoi.count),
+    terrain_flg             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain_flg").c_str(),                           0, aoi.first_index, aoi.count),
+    brightness_flag         (df->hdf08, FString("%s/%s", df->beam, "land_segments/brightness_flag").c_str(),                       0, aoi.first_index, aoi.count),
+    cloud_flag_atm          (df->hdf08, FString("%s/%s", df->beam, "land_segments/cloud_flag_atm").c_str(),                        0, aoi.first_index, aoi.count),
     /* Terrain Datasets */
-    h_te_best_fit           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_best_fit").c_str(),                 0, aoi.first_segment, aoi.num_segments),
-    h_te_interp             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_interp").c_str(),                   0, aoi.first_segment, aoi.num_segments),
-    terrain_slope           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/terrain_slope").c_str(),                 0, aoi.first_segment, aoi.num_segments),
-    n_te_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/n_te_photons").c_str(),                  0, aoi.first_segment, aoi.num_segments),
-    te_quality_score        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(),              0, aoi.first_segment, aoi.num_segments),
-    h_te_uncertainty        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_uncertainty").c_str(),              0, aoi.first_segment, aoi.num_segments),
+    h_te_best_fit           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_best_fit").c_str(),                 0, aoi.first_index, aoi.count),
+    h_te_interp             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_interp").c_str(),                   0, aoi.first_index, aoi.count),
+    terrain_slope           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/terrain_slope").c_str(),                 0, aoi.first_index, aoi.count),
+    n_te_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/n_te_photons").c_str(),                  0, aoi.first_index, aoi.count),
+    te_quality_score        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(),              0, aoi.first_index, aoi.count),
+    h_te_uncertainty        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_uncertainty").c_str(),              0, aoi.first_index, aoi.count),
     /* Canopy Datasets */
-    h_canopy                (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy").c_str(),                       0, aoi.first_segment, aoi.num_segments),
-    h_canopy_abs            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_abs").c_str(),                   0, aoi.first_segment, aoi.num_segments),
-    h_canopy_uncertainty    (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_uncertainty").c_str(),           0, aoi.first_segment, aoi.num_segments),
-    segment_cover           (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/segment_cover").c_str(),                  0, aoi.first_segment, aoi.num_segments),
-    n_ca_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/n_ca_photons").c_str(),                   0, aoi.first_segment, aoi.num_segments),
-    can_quality_score       (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(),              0, aoi.first_segment, aoi.num_segments),
-    anc_data                (df->parms->atl08Fields, df->hdf08, FString("%s/%s", df->beam, "land_segments").c_str(),H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments)
+    h_canopy                (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy").c_str(),                       0, aoi.first_index, aoi.count),
+    h_canopy_abs            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_abs").c_str(),                   0, aoi.first_index, aoi.count),
+    h_canopy_uncertainty    (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_uncertainty").c_str(),           0, aoi.first_index, aoi.count),
+    segment_cover           (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/segment_cover").c_str(),                  0, aoi.first_index, aoi.count),
+    n_ca_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/n_ca_photons").c_str(),                   0, aoi.first_index, aoi.count),
+    can_quality_score       (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(),              0, aoi.first_index, aoi.count),
+    anc_data                (df->parms->atl08Fields, df->hdf08, FString("%s/%s", df->beam, "land_segments").c_str(),H5Coro::ALL_COLS, aoi.first_index, aoi.count)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
@@ -286,7 +286,7 @@ void* Atl08DataFrame::subsettingThread (void* parm)
 
         /* Loop Through Each Segment */
         uint32_t extent_counter = 0;
-        for(long segment = 0; df->active.load() && segment < aoi.num_segments; segment++)
+        for(long segment = 0; df->active.load() && segment < aoi.count; segment++)
         {
             /* Check for Inclusion Mask */
             if(aoi.inclusion_ptr && !aoi.inclusion_ptr[segment])

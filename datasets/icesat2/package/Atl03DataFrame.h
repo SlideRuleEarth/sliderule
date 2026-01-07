@@ -45,6 +45,7 @@
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
+#include "AreaOfInterest03.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -106,37 +107,12 @@ class Atl03DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Area of Interest Subclass */
-        class AreaOfInterest
-        {
-            public:
-
-                explicit AreaOfInterest (const Atl03DataFrame* df);
-                ~AreaOfInterest         (void);
-
-                void cleanup            (void);
-                void polyregion         (const Atl03DataFrame* df);
-                void rasterregion       (const Atl03DataFrame* df);
-
-                H5Array<double>         segment_lat;
-                H5Array<double>         segment_lon;
-                H5Array<int32_t>        segment_ph_cnt;
-
-                bool*                   inclusion_mask;
-                bool*                   inclusion_ptr;
-
-                long                    first_segment;
-                long                    num_segments;
-                long                    first_photon;
-                long                    num_photons;
-        };
-
         /* Atl03 Data Subclass */
         class Atl03Data
         {
             public:
 
-                Atl03Data           (Atl03DataFrame* df, const AreaOfInterest& aoi);
+                Atl03Data           (Atl03DataFrame* df, const AreaOfInterest03& aoi);
                 ~Atl03Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;
@@ -176,7 +152,7 @@ class Atl03DataFrame: public GeoDataFrame
                 /* Methods */
                 explicit Atl08Class (Atl03DataFrame* df);
                 ~Atl08Class         (void);
-                void classify       (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03);
+                void classify       (const Atl03DataFrame* df, const AreaOfInterest03& aoi, const Atl03Data& atl03);
                 uint8_t operator[]  (int index) const;
 
                 /* Class Data */
@@ -214,7 +190,7 @@ class Atl03DataFrame: public GeoDataFrame
                 /* Methods */
                 explicit Atl24Class (Atl03DataFrame* df);
                 ~Atl24Class         (void);
-                void classify       (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03);
+                void classify       (const Atl03DataFrame* df, const AreaOfInterest03& aoi, const Atl03Data& atl03);
 
                 /* Class Data */
                 bool                enabled;

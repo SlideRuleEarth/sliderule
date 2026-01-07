@@ -36,7 +36,8 @@
 #include "AreaOfInterest.h"
 
 template<typename CoordT>
-AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs):
+AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name,
+                                          const Icesat2Fields* parms, int readTimeoutMs, const std::function<void(long&, long&)>& prefilter):
     latitude        (hdf, FString("/%s/%s", beam, latitude_name).c_str()),
     longitude       (hdf, FString("/%s/%s", beam, longitude_name).c_str()),
     inclusion_mask  {NULL},
@@ -49,8 +50,20 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         longitude.join(readTimeoutMs, true);
 
         /* Initialize Region */
-        first_segment = 0;
-        num_segments = H5Coro::ALL_ROWS;
+        first_index = 0;
+        count = H5Coro::ALL_ROWS;
+
+        /* Apply Prefilter */
+        if(prefilter)
+        {
+            prefilter(first_index, count);
+
+            /* Require Valid Prefilter Result */
+            if(count <= 0)
+            {
+                throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "reference id not found");
+            }
+        }
 
         /* Determine Spatial Extent */
         if(parms->regionMask.valid())
@@ -63,18 +76,22 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         }
         else
         {
-            num_segments = latitude.size;
+            /* If Prefilter Did Not Set Span, Default to Full Length */
+            if(count == H5Coro::ALL_ROWS)
+            {
+                count = latitude.size;
+            }
         }
 
         /* Check If Anything to Process */
-        if(num_segments <= 0)
+        if(count <= 0)
         {
             throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        latitude.trim(first_segment);
-        longitude.trim(first_segment);
+        latitude.trim(first_index);
+        longitude.trim(first_index);
     }
     catch(const RunTimeException& e)
     {
@@ -108,28 +125,33 @@ void AreaOfInterestT<CoordT>::cleanup (void)
 template<typename CoordT>
 void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 {
-    bool first_segment_found = false;
-    int segment = 0;
-    while(segment < latitude.size)
+    bool first_index_found = false;
+    int index = first_index;
+    const long mas_index = (count < 0 || count == H5Coro::ALL_ROWS) ? latitude.size : count;
+    while(index < mas_index)
     {
-        const bool inclusion = parms->polyIncludes(longitude[segment], latitude[segment]);
+        const bool inclusion = parms->polyIncludes(longitude[index], latitude[index]);
 
-        if(!first_segment_found && inclusion)
+        if(!first_index_found && inclusion)
         {
-            first_segment_found = true;
-            first_segment = segment;
+            first_index_found = true;
+            first_index = index;
         }
-        else if(first_segment_found && !inclusion)
+        else if(first_index_found && !inclusion)
         {
             break;
         }
 
-        segment++;
+        index++;
     }
 
-    if(first_segment_found)
+    if(first_index_found)
     {
-        num_segments = segment - first_segment;
+        count = index - first_index;
+    }
+    else
+    {
+        count = 0;
     }
 }
 
@@ -139,40 +161,48 @@ void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 template<typename CoordT>
 void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
 {
-    bool first_segment_found = false;
+    bool first_index_found = false;
 
     if(latitude.size <= 0)
     {
         return;
     }
 
+    /* Allocate Inclusion Mask */
     inclusion_mask = new bool [latitude.size];
     inclusion_ptr = inclusion_mask;
 
-    long last_segment = 0;
-    int segment = 0;
-    while(segment < latitude.size)
+    /* Loop Throuh Segments or Photons */
+    long last_index = 0;
+    int index = first_index;
+    const long mas_index = (count < 0 || count == H5Coro::ALL_ROWS) ? latitude.size : count;
+    while(index < mas_index)
     {
-        const bool inclusion = parms->maskIncludes(longitude[segment], latitude[segment]);
-        inclusion_mask[segment] = inclusion;
+        /* Check Inclusion */
+        const bool inclusion = parms->maskIncludes(longitude[index], latitude[index]);
+        inclusion_mask[index] = inclusion;
 
         if(inclusion)
         {
-            if(!first_segment_found)
+            if(!first_index_found)
             {
-                first_segment_found = true;
-                first_segment = segment;
+                first_index_found = true;
+                first_index = index;
             }
-            last_segment = segment;
+            last_index = index;
         }
 
-        segment++;
+        index++;
     }
 
-    if(first_segment_found)
+    if(first_index_found)
     {
-        num_segments = last_segment - first_segment + 1;
-        inclusion_ptr = &inclusion_mask[first_segment];
+        count = last_index - first_index + 1;
+        inclusion_ptr = &inclusion_mask[first_index];
+    }
+    else
+    {
+        count = 0;
     }
 }
 
