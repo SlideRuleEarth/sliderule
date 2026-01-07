@@ -36,14 +36,8 @@
 #include "AreaOfInterest.h"
 
 template<typename CoordT>
-AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs):
-    AreaOfInterestT(hdf, beam, latitude_name, longitude_name, NULL, parms, readTimeoutMs, std::function<void(const H5Array<int64_t>&, long&, long&)>())
-{
-}
-
-template<typename CoordT>
-AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const char* refid_name,
-                                          const Icesat2Fields* parms, int readTimeoutMs, const std::function<void(const H5Array<int64_t>&, long&, long&)>& prefilter):
+AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name,
+                                          const Icesat2Fields* parms, int readTimeoutMs, const std::function<void(long&, long&)>& prefilter):
     latitude        (hdf, FString("/%s/%s", beam, latitude_name).c_str()),
     longitude       (hdf, FString("/%s/%s", beam, longitude_name).c_str()),
     inclusion_mask  {NULL},
@@ -51,16 +45,7 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
 {
     try
     {
-        /* Optional Reference ID */
-        const bool use_refid = (refid_name != NULL) && (refid_name[0] != 0) && static_cast<bool>(prefilter);
-        std::unique_ptr<H5Array<int64_t>> refid;
-
         /* Join Reads */
-        if(use_refid)
-        {
-            refid = std::make_unique<H5Array<int64_t>>(hdf, FString("/%s/%s", beam, refid_name).c_str());
-            refid->join(readTimeoutMs, true);
-        }
         latitude.join(readTimeoutMs, true);
         longitude.join(readTimeoutMs, true);
 
@@ -69,9 +54,9 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         count = H5Coro::ALL_ROWS;
 
         /* Apply Prefilter */
-        if(use_refid)
+        if(prefilter)
         {
-            prefilter(*refid, first_index, count);
+            prefilter(first_index, count);
 
             /* Require Valid Prefilter Result */
             if(count <= 0)

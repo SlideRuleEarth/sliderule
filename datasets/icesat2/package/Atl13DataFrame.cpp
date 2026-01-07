@@ -201,33 +201,34 @@ void* Atl13DataFrame::subsettingThread (void* parm)
     {
         /* Reference ID Prefilter */
         const bool use_refid = (parms.atl13.reference_id.value > 0);
-        std::function<void(const H5Array<int64_t>&, long&, long&)> prefilter;
-        const char* refid_name = NULL;
+        std::function<void(long&, long&)> prefilter;
+        std::unique_ptr<H5Array<int64_t>> refid;
         if(use_refid)
         {
-            refid_name = "atl13refid";
-            prefilter = [&parms](const H5Array<int64_t>& refid, long& first_index, long& count)
+            refid = std::make_unique<H5Array<int64_t>>(df->hdf13, FString("/%s/%s", df->beam, "atl13refid").c_str());
+            refid->join(df->readTimeoutMs, true);
+            prefilter = [&parms, &refid](long& first_index, long& count)
             {
-                bool first_found = false;
-                long last_segment = -1;
-                for(long i = 0; i < refid.size; i++)
+                bool first_index_found = false;
+                long last_index = -1;
+                for(long i = 0; i < refid->size; i++)
                 {
-                    if(refid[i] == parms.atl13.reference_id.value)
+                    if((*refid)[i] == parms.atl13.reference_id.value)
                     {
-                        if(!first_found)
+                        if(!first_index_found)
                         {
-                            first_found = true;
+                            first_index_found = true;
                             first_index = i;
                         }
-                        last_segment = i;
+                        last_index = i;
                     }
                 }
-                count = (first_found) ? (last_segment - first_index + 1) : 0;
+                count = (first_index_found) ? (last_index - first_index + 1) : 0;
             };
         }
 
-        /* Subset to AreaOfInterest of Interest */
-        const AreaOfInterest13 aoi(df->hdf13, df->beam, "segment_lat", "segment_lon", refid_name, df->parms, df->readTimeoutMs, prefilter);
+        /* Subset to Area of Interest */
+        const AreaOfInterest13 aoi(df->hdf13, df->beam, "segment_lat", "segment_lon", df->parms, df->readTimeoutMs, prefilter);
 
         /* Read ATL03 Datasets */
         const Atl13Data atl13(df, aoi);

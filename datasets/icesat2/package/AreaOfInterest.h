@@ -54,9 +54,8 @@ class AreaOfInterestT
          * Methods
          *--------------------------------------------------------------------*/
 
-         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs);
-         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const char* refid_name,
-                          const Icesat2Fields* parms, int readTimeoutMs, const std::function<void(const H5Array<int64_t>&, long&, long&)>& prefilter);
+         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms,
+                          int readTimeoutMs, const std::function<void(long&, long&)>& prefilter = std::function<void(long&, long&)>());
          ~AreaOfInterestT(void);
 
         /*--------------------------------------------------------------------
