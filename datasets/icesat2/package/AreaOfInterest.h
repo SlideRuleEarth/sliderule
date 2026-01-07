@@ -69,8 +69,8 @@ class AreaOfInterestT
         bool*                   inclusion_mask;
         bool*                   inclusion_ptr;
 
-        long                    first_segment;
-        long                    num_segments;
+        long                    first_index;
+        long                    count;
 
     private:
 

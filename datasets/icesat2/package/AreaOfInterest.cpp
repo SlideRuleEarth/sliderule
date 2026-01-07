@@ -65,16 +65,16 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         longitude.join(readTimeoutMs, true);
 
         /* Initialize Region */
-        first_segment = 0;
-        num_segments = H5Coro::ALL_ROWS;
+        first_index = 0;
+        count = H5Coro::ALL_ROWS;
 
         /* Apply Prefilter */
         if(use_refid)
         {
-            prefilter(*refid, first_segment, num_segments);
+            prefilter(*refid, first_index, count);
 
             /* Require Valid Prefilter Result */
-            if(num_segments <= 0)
+            if(count <= 0)
             {
                 throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "reference id not found");
             }
@@ -92,21 +92,21 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         else
         {
             /* If Prefilter Did Not Set Span, Default to Full Length */
-            if(num_segments == H5Coro::ALL_ROWS)
+            if(count == H5Coro::ALL_ROWS)
             {
-                num_segments = latitude.size;
+                count = latitude.size;
             }
         }
 
         /* Check If Anything to Process */
-        if(num_segments <= 0)
+        if(count <= 0)
         {
             throw RunTimeException(DEBUG, RTE_RESOURCE_EMPTY, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        latitude.trim(first_segment);
-        longitude.trim(first_segment);
+        latitude.trim(first_index);
+        longitude.trim(first_index);
     }
     catch(const RunTimeException& e)
     {
@@ -141,32 +141,32 @@ template<typename CoordT>
 void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 {
     bool first_segment_found = false;
-    int segment = first_segment;
-    const long max_segment = (num_segments < 0 || num_segments == H5Coro::ALL_ROWS) ? latitude.size : num_segments;
-    while(segment < max_segment)
+    int index = first_index;
+    const long mas_index = (count < 0 || count == H5Coro::ALL_ROWS) ? latitude.size : count;
+    while(index < mas_index)
     {
-        const bool inclusion = parms->polyIncludes(longitude[segment], latitude[segment]);
+        const bool inclusion = parms->polyIncludes(longitude[index], latitude[index]);
 
         if(!first_segment_found && inclusion)
         {
             first_segment_found = true;
-            first_segment = segment;
+            first_index = index;
         }
         else if(first_segment_found && !inclusion)
         {
             break;
         }
 
-        segment++;
+        index++;
     }
 
     if(first_segment_found)
     {
-        num_segments = segment - first_segment;
+        count = index - first_index;
     }
     else
     {
-        num_segments = 0;
+        count = 0;
     }
 }
 
@@ -186,35 +186,35 @@ void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
     inclusion_mask = new bool [latitude.size];
     inclusion_ptr = inclusion_mask;
 
-    long last_segment = 0;
-    int segment = first_segment;
-    const long max_segment = (num_segments < 0 || num_segments == H5Coro::ALL_ROWS) ? latitude.size : num_segments;
-    while(segment < max_segment)
+    long last_index = 0;
+    int index = first_index;
+    const long mas_index = (count < 0 || count == H5Coro::ALL_ROWS) ? latitude.size : count;
+    while(index < mas_index)
     {
-        const bool inclusion = parms->maskIncludes(longitude[segment], latitude[segment]);
-        inclusion_mask[segment] = inclusion;
+        const bool inclusion = parms->maskIncludes(longitude[index], latitude[index]);
+        inclusion_mask[index] = inclusion;
 
         if(inclusion)
         {
             if(!first_segment_found)
             {
                 first_segment_found = true;
-                first_segment = segment;
+                first_index = index;
             }
-            last_segment = segment;
+            last_index = index;
         }
 
-        segment++;
+        index++;
     }
 
     if(first_segment_found)
     {
-        num_segments = last_segment - first_segment + 1;
-        inclusion_ptr = &inclusion_mask[first_segment];
+        count = last_index - first_index + 1;
+        inclusion_ptr = &inclusion_mask[first_index];
     }
     else
     {
-        num_segments = 0;
+        count = 0;
     }
 }
 

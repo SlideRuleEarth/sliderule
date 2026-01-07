@@ -173,24 +173,24 @@ okey_t Atl06DataFrame::getKey (void) const
  *----------------------------------------------------------------------------*/
 Atl06DataFrame::Atl06Data::Atl06Data (Atl06DataFrame* df, const AreaOfInterest06& aoi):
     sc_orient               (df->hdf06, "/orbit_info/sc_orient"),
-    delta_time              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/delta_time").c_str(),                            0, aoi.first_segment, aoi.num_segments),
-    h_li                    (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/h_li").c_str(),                                  0, aoi.first_segment, aoi.num_segments),
-    h_li_sigma              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/h_li_sigma").c_str(),                            0, aoi.first_segment, aoi.num_segments),
-    atl06_quality_summary   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/atl06_quality_summary").c_str(),                 0, aoi.first_segment, aoi.num_segments),
-    segment_id              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/segment_id").c_str(),                            0, aoi.first_segment, aoi.num_segments),
-    sigma_geo_h             (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/sigma_geo_h").c_str(),                           0, aoi.first_segment, aoi.num_segments),
-    x_atc                   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/ground_track/x_atc").c_str(),                    0, aoi.first_segment, aoi.num_segments),
-    y_atc                   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/ground_track/y_atc").c_str(),                    0, aoi.first_segment, aoi.num_segments),
-    seg_azimuth             (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/ground_track/seg_azimuth").c_str(),              0, aoi.first_segment, aoi.num_segments),
-    dh_fit_dx               (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/dh_fit_dx").c_str(),              0, aoi.first_segment, aoi.num_segments),
-    h_robust_sprd           (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/h_robust_sprd").c_str(),          0, aoi.first_segment, aoi.num_segments),
-    n_fit_photons           (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/n_fit_photons").c_str(),          0, aoi.first_segment, aoi.num_segments),
-    w_surface_window_final  (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/w_surface_window_final").c_str(), 0, aoi.first_segment, aoi.num_segments),
-    bsnow_conf              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/bsnow_conf").c_str(),                0, aoi.first_segment, aoi.num_segments),
-    bsnow_h                 (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/bsnow_h").c_str(),                   0, aoi.first_segment, aoi.num_segments),
-    r_eff                   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/r_eff").c_str(),                     0, aoi.first_segment, aoi.num_segments),
-    tide_ocean              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/tide_ocean").c_str(),                0, aoi.first_segment, aoi.num_segments),
-    anc_data                (df->parms->atl06Fields, df->hdf06, FString("%s/%s", df->beam, "land_ice_segments").c_str(),H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments)
+    delta_time              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/delta_time").c_str(),                            0, aoi.first_index, aoi.count),
+    h_li                    (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/h_li").c_str(),                                  0, aoi.first_index, aoi.count),
+    h_li_sigma              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/h_li_sigma").c_str(),                            0, aoi.first_index, aoi.count),
+    atl06_quality_summary   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/atl06_quality_summary").c_str(),                 0, aoi.first_index, aoi.count),
+    segment_id              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/segment_id").c_str(),                            0, aoi.first_index, aoi.count),
+    sigma_geo_h             (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/sigma_geo_h").c_str(),                           0, aoi.first_index, aoi.count),
+    x_atc                   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/ground_track/x_atc").c_str(),                    0, aoi.first_index, aoi.count),
+    y_atc                   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/ground_track/y_atc").c_str(),                    0, aoi.first_index, aoi.count),
+    seg_azimuth             (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/ground_track/seg_azimuth").c_str(),              0, aoi.first_index, aoi.count),
+    dh_fit_dx               (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/dh_fit_dx").c_str(),              0, aoi.first_index, aoi.count),
+    h_robust_sprd           (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/h_robust_sprd").c_str(),          0, aoi.first_index, aoi.count),
+    n_fit_photons           (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/n_fit_photons").c_str(),          0, aoi.first_index, aoi.count),
+    w_surface_window_final  (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/fit_statistics/w_surface_window_final").c_str(), 0, aoi.first_index, aoi.count),
+    bsnow_conf              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/bsnow_conf").c_str(),                0, aoi.first_index, aoi.count),
+    bsnow_h                 (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/bsnow_h").c_str(),                   0, aoi.first_index, aoi.count),
+    r_eff                   (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/r_eff").c_str(),                     0, aoi.first_index, aoi.count),
+    tide_ocean              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/geophysical/tide_ocean").c_str(),                0, aoi.first_index, aoi.count),
+    anc_data                (df->parms->atl06Fields, df->hdf06, FString("%s/%s", df->beam, "land_ice_segments").c_str(),H5Coro::ALL_COLS, aoi.first_index, aoi.count)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
@@ -263,7 +263,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
 
         /* Loop Through Each Segment */
         uint32_t extent_counter = 0;
-        for(long segment = 0; df->active.load() && segment < aoi.num_segments; segment++)
+        for(long segment = 0; df->active.load() && segment < aoi.count; segment++)
         {
             /* Check for Inclusion Mask */
             if(aoi.inclusion_ptr && !aoi.inclusion_ptr[segment])
