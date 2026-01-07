@@ -140,19 +140,19 @@ void AreaOfInterestT<CoordT>::cleanup (void)
 template<typename CoordT>
 void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 {
-    bool first_segment_found = false;
+    bool first_index_found = false;
     int index = first_index;
     const long mas_index = (count < 0 || count == H5Coro::ALL_ROWS) ? latitude.size : count;
     while(index < mas_index)
     {
         const bool inclusion = parms->polyIncludes(longitude[index], latitude[index]);
 
-        if(!first_segment_found && inclusion)
+        if(!first_index_found && inclusion)
         {
-            first_segment_found = true;
+            first_index_found = true;
             first_index = index;
         }
-        else if(first_segment_found && !inclusion)
+        else if(first_index_found && !inclusion)
         {
             break;
         }
@@ -160,7 +160,7 @@ void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
         index++;
     }
 
-    if(first_segment_found)
+    if(first_index_found)
     {
         count = index - first_index;
     }
@@ -176,29 +176,32 @@ void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
 template<typename CoordT>
 void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
 {
-    bool first_segment_found = false;
+    bool first_index_found = false;
 
     if(latitude.size <= 0)
     {
         return;
     }
 
+    /* Allocate Inclusion Mask */
     inclusion_mask = new bool [latitude.size];
     inclusion_ptr = inclusion_mask;
 
+    /* Loop Throuh Segments or Photons */
     long last_index = 0;
     int index = first_index;
     const long mas_index = (count < 0 || count == H5Coro::ALL_ROWS) ? latitude.size : count;
     while(index < mas_index)
     {
+        /* Check Inclusion */
         const bool inclusion = parms->maskIncludes(longitude[index], latitude[index]);
         inclusion_mask[index] = inclusion;
 
         if(inclusion)
         {
-            if(!first_segment_found)
+            if(!first_index_found)
             {
-                first_segment_found = true;
+                first_index_found = true;
                 first_index = index;
             }
             last_index = index;
@@ -207,7 +210,7 @@ void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
         index++;
     }
 
-    if(first_segment_found)
+    if(first_index_found)
     {
         count = last_index - first_index + 1;
         inclusion_ptr = &inclusion_mask[first_index];
