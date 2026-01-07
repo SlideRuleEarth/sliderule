@@ -7,7 +7,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest03.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest24.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.cpp
@@ -44,7 +43,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/icesat2.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest03.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest24.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.h

@@ -46,7 +46,7 @@
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"
-#include "AreaOfInterest24.h"
+#include "AreaOfInterest.h"
 
 /******************************************************************************
  * CLASS DEFINITION

@@ -86,5 +86,6 @@ class AreaOfInterestT
 using AreaOfInterest06 = AreaOfInterestT<double>;
 using AreaOfInterest08 = AreaOfInterestT<float>;
 using AreaOfInterest13 = AreaOfInterestT<double>;
+using AreaOfInterest24 = AreaOfInterestT<double>;
 
 #endif  /* __area_of_interest__ */
