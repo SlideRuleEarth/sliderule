@@ -96,7 +96,6 @@ def lambda_deploy(event, context):
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
             {"ParameterKey": "CorsAllowOrigins", "ParameterValue": cors_allow_origins},
-            {"ParameterKey": "JwtAudience", "ParameterValue": cluster},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
             {"ParameterKey": "CertificateArn", "ParameterValue": certificate_arn},
         ]
