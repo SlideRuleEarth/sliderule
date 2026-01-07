@@ -34,7 +34,6 @@
  ******************************************************************************/
 
 #include "AreaOfInterest.h"
-#include "AreaSubset.h"
 
 template<typename CoordT>
 AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms, int readTimeoutMs):
@@ -82,17 +81,21 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
         }
 
         /* Determine Spatial Extent */
-        AreaSubset::SubsetResult subset = AreaSubset::computeSubset(latitude, longitude, parms, first_segment, num_segments);
-        first_segment = subset.first;
-        num_segments = subset.count;
-        if(!subset.mask.empty())
+        if(parms->regionMask.valid())
         {
-            inclusion_mask = new bool [subset.mask.size()];
-            for(size_t i = 0; i < subset.mask.size(); i++)
+            rasterregion(parms);
+        }
+        else if(parms->pointsInPolygon.value > 0)
+        {
+            polyregion(parms);
+        }
+        else
+        {
+            /* If Prefilter Did Not Set Span, Default to Full Length */
+            if(num_segments == H5Coro::ALL_ROWS)
             {
-                inclusion_mask[i] = subset.mask[i] != 0;
+                num_segments = latitude.size;
             }
-            inclusion_ptr = &inclusion_mask[first_segment];
         }
 
         /* Check If Anything to Process */
@@ -129,6 +132,90 @@ void AreaOfInterestT<CoordT>::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * AreaOfInterest::polyregion
+ *----------------------------------------------------------------------------*/
+template<typename CoordT>
+void AreaOfInterestT<CoordT>::polyregion (const Icesat2Fields* parms)
+{
+    bool first_segment_found = false;
+    int segment = first_segment;
+    const long max_segment = (num_segments < 0 || num_segments == H5Coro::ALL_ROWS) ? latitude.size : num_segments;
+    while(segment < max_segment)
+    {
+        const bool inclusion = parms->polyIncludes(longitude[segment], latitude[segment]);
+
+        if(!first_segment_found && inclusion)
+        {
+            first_segment_found = true;
+            first_segment = segment;
+        }
+        else if(first_segment_found && !inclusion)
+        {
+            break;
+        }
+
+        segment++;
+    }
+
+    if(first_segment_found)
+    {
+        num_segments = segment - first_segment;
+    }
+    else
+    {
+        num_segments = 0;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * AreaOfInterest::rasterregion
+ *----------------------------------------------------------------------------*/
+template<typename CoordT>
+void AreaOfInterestT<CoordT>::rasterregion (const Icesat2Fields* parms)
+{
+    bool first_segment_found = false;
+
+    if(latitude.size <= 0)
+    {
+        return;
+    }
+
+    inclusion_mask = new bool [latitude.size];
+    inclusion_ptr = inclusion_mask;
+
+    long last_segment = 0;
+    int segment = first_segment;
+    const long max_segment = (num_segments < 0 || num_segments == H5Coro::ALL_ROWS) ? latitude.size : num_segments;
+    while(segment < max_segment)
+    {
+        const bool inclusion = parms->maskIncludes(longitude[segment], latitude[segment]);
+        inclusion_mask[segment] = inclusion;
+
+        if(inclusion)
+        {
+            if(!first_segment_found)
+            {
+                first_segment_found = true;
+                first_segment = segment;
+            }
+            last_segment = segment;
+        }
+
+        segment++;
+    }
+
+    if(first_segment_found)
+    {
+        num_segments = last_segment - first_segment + 1;
+        inclusion_ptr = &inclusion_mask[first_segment];
+    }
+    else
+    {
+        num_segments = 0;
+    }
 }
 
 template class AreaOfInterestT<double>;
