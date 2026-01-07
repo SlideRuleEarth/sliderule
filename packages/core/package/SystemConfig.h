@@ -100,7 +100,6 @@ class SystemConfig: public FieldDictionary
         FieldElement<float>             normalMemoryThreshold       {1.0};
         FieldElement<float>             streamMemoryThreshold       {0.75};
         FieldElement<int>               msgQDepth                   {10000};
-        FieldElement<bool>              authenticateToProvSys       {false};
         FieldElement<bool>              isPublic                    {false};
         FieldElement<bool>              inCloud                     {false};
         FieldElement<string>            systemBucket                {"sliderule"};
@@ -115,7 +114,6 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            orchestratorURL             {"http://127.0.0.1:8050"};
         FieldElement<string>            organization                {"localhost"};
         FieldElement<string>            cluster                     {"localhost"};
-        FieldElement<string>            provSysURL                  {"https://ps.localhost"};
         FieldElement<string>            managerURL                  {"http://127.0.0.1:8030"};
         FieldElement<string>            amsURL                      {"http://127.0.0.1:9082"};
         FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};

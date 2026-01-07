@@ -55,7 +55,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.cpp
@@ -128,7 +127,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.h

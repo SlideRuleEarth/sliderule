@@ -138,7 +138,6 @@ SystemConfig::SystemConfig(void):
         {"normal_mem_thresh",           &normalMemoryThreshold},
         {"stream_mem_thresh",           &streamMemoryThreshold},
         {"msgq_depth",                  &msgQDepth},
-        {"authenticate_to_prov_sys",    &authenticateToProvSys},
         {"is_public",                   &isPublic},
         {"in_cloud",                    &inCloud},
         {"sys_bucket",                  &systemBucket},
@@ -150,7 +149,6 @@ SystemConfig::SystemConfig(void):
         {"orchestrator_url;",           &orchestratorURL},
         {"organization",                &organization},
         {"cluster",                     &cluster},
-        {"prov_sys_url",                &provSysURL},
         {"manager_url",                 &managerURL},
         {"ams_url",                     &amsURL},
         {"container_registry",          &containerRegistry}
@@ -163,7 +161,6 @@ SystemConfig::SystemConfig(void):
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
     setIfProvided(organization, "ORGANIZATION");
     setIfProvided(cluster, "CLUSTER");
-    setIfProvided(provSysURL, "PROVISIONING_SYSTEM");
     setIfProvided(managerURL, "MANAGER");
     setIfProvided(amsURL, "AMS");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");

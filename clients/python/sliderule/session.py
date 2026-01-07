@@ -522,13 +522,13 @@ class Session:
             rsps = json.loads(rsps)
 
             # Return Response
-            return {'status': 'success', 'result': rsps}
+            return {'status': True, 'result': rsps}
 
         except Exception as e:
             logger.error(f'Failed to make request to {url}: {e}')
             if self.throw_exceptions:
                 raise
-            return {'status': 'error', 'result': f'{e}'}
+            return {'status': False, 'result': f'{e}'}
 
 
     #

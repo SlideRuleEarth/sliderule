@@ -64,7 +64,6 @@
 #include "Ordering.h"
 #include "OutputFields.h"
 #include "OutputLib.h"
-#include "ProvisioningSystemLib.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
 #include "RequestFields.h"
@@ -146,9 +145,6 @@ static int core_open (lua_State *L)
         {"orchunlock",      OrchestratorLib::luaUnlock},
         {"orchhealth",      OrchestratorLib::luaHealth},
         {"orchnodes",       OrchestratorLib::luaGetNodes},
-        {"pslogin",         ProvisioningSystemLib::luaLogin},
-        {"psvalidate",      ProvisioningSystemLib::luaValidate},
-        {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
         {"manager",         ManagerLib::luaRequest},
         {"ams",             AmsLib::luaRequest},
         {"parms",           RequestFields::luaCreate},

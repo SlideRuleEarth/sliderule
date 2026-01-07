@@ -86,13 +86,6 @@ end
 local source_endpoint = core.endpoint():global("SourceEndpoint")
 local arrow_endpoint = arrow.endpoint():global("ArrowEndpoint")
 
--- Configure Provisioning System Authentication --
-if sys.getcfg("authenticate_to_prov_sys") then
-    local authenticator = core.psauth()
-    source_endpoint:auth(authenticator)
-    arrow_endpoint:auth(authenticator)
-end
-
 -- Run Application HTTP Server --
 local app_server = core.httpd(sys.getcfg("app_port")):global("AppServer")
 app_server:attach(source_endpoint, "/source")

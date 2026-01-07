@@ -69,11 +69,6 @@ class ArrowEndpoint: public EndpointObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            ArrowEndpoint*  endpoint;
-            Request*        request;
-        } rqst_info_t;
-
-        typedef struct {
             uint32_t        trace_id;
             const char*     rqst_id;
         } rsps_info_t;

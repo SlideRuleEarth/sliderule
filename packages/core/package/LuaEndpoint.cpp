@@ -92,7 +92,6 @@ bool LuaEndpoint::handleRequest (Request* request)
 {
     // Allocate and Initialize Endpoint Info Struct
     info_t* info = new info_t;
-    info->endpoint = this;
     info->request = request;
     info->streaming = true;
 
@@ -132,7 +131,6 @@ void* LuaEndpoint::requestThread (void* parm)
 {
     info_t* info = static_cast<info_t*>(parm);
     EndpointObject::Request* request = info->request;
-    LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
     const double start = TimeLib::latchtime();
     int status_code = RTE_STATUS;
 
@@ -150,29 +148,14 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
 
-    /* Check Authentication */
-    const bool authorized = lua_endpoint->authenticate(request);
-
-    /* Dispatch Handle Request */
-    if(authorized)
+    /* Handle Response */
+    if(info->streaming)
     {
-        /* Handle Response */
-        if(info->streaming)
-        {
-            status_code = streamResponse(script_path, argument_ptr, request, rspq, trace_id);
-        }
-        else
-        {
-            status_code = normalResponse(script_path, argument_ptr, request, rspq, trace_id);
-        }
+        status_code = streamResponse(script_path, argument_ptr, request, rspq, trace_id);
     }
     else
     {
-        /* Respond with Unauthorized Error */
-        char header[MAX_HDR_SIZE];
-        const int header_length = buildheader(header, Unauthorized);
-        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-        status_code = RTE_UNAUTHORIZED;
+        status_code = normalResponse(script_path, argument_ptr, request, rspq, trace_id);
     }
 
     /* End Response */

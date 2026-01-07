@@ -25,7 +25,6 @@ services:
       - IS_PUBLIC=false
       - ORGANIZATION=localhost
       - CLUSTER=localhost
-      - PROVISIONING_SYSTEM=https://ps.localhost
       - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
     labels:
