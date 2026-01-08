@@ -120,7 +120,7 @@ def lambda_deploy(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in deploy: {e}")
-        state["exception"] = f'{e}'
+        state["exception"] = f'Failure in deploy'
         state["status"] = False
 
     # return response
@@ -165,7 +165,7 @@ def lambda_extend(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in extend: {e}")
-        state["exception"] = f'{e}'
+        state["exception"] = f'Failure in extend'
         state["status"] = False
 
     # return response
@@ -212,7 +212,7 @@ def lambda_destroy(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in destroy: {e}")
-        state["exception"] = f'{e}'
+        state["exception"] = f'Failure in destroy'
         state["status"] = False
 
     # return response
@@ -278,7 +278,7 @@ def lambda_status(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in status: {e}")
-        state["exception"] = f'{e}'
+        state["exception"] = f'Failure in status'
         state["status"] = False
 
     # return response
@@ -305,7 +305,7 @@ def lambda_events(event, context):
 
         # get events for stack
         cf = boto3.client("cloudformation", region_name="us-west-2")
-        description = cf.describe_stack_events(StackName="developers-cluster")
+        description = cf.describe_stack_events(StackName=state["stack_name"])
         stack_events = description["StackEvents"]
         print(f"Events requested for {state["stack_name"]}")
 
@@ -327,7 +327,41 @@ def lambda_events(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in events: {e}")
-        state["exception"] = f'{e}'
+        state["exception"] = f'Failure in events'
+        state["status"] = False
+
+    # return response
+    return state
+
+# ###############################
+# Lambda: Report Running Clusters
+# ###############################
+
+def lambda_report(event, context):
+
+    # initialize response state
+    state = {"status": True, "report": {}}
+
+    try:
+        # get optional request variables
+        region = event.get("region", "us-west-2")
+
+        # get list of intelligent load balancers
+        for instance in get_instances_by_name('*-ilb'):
+            tags = {t['Key']: t['Value'] for t in instance.get('Tags', [])}
+            name = tags.get('Name')
+            if name:
+                # get status of each cluster containing the intelligent load balancer
+                cluster = name.split("-ilb")[0]
+                details = lambda_status({"cluster": cluster, "region": region}, None)
+                if details["status"]:
+                    state["report"][cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+
+    except Exception as e:
+
+        # handle exceptions (return to user for debugging)
+        print(f"Exception in report: {e}")
+        state["exception"] = f'Failure in report'
         state["status"] = False
 
     # return response
@@ -382,7 +416,7 @@ def lambda_test(event, context):
 
         # handle exceptions (return to user for debugging)
         print(f"Exception in test: {e}")
-        state["exception"] = f'{e}'
+        state["exception"] = f'Failure in test runner'
         state["status"] = False
 
     # return response
@@ -453,8 +487,8 @@ def lambda_gateway(event, context):
                 'body': json.dumps({'error': 'access denied'})
             }
 
-    # check test runner
-    if path == '/test':
+    # check report and test runner
+    if path == '/report' or path == '/test':
         if 'owner' not in org_roles:
             print(f"Access denied to {username}, organization roles: {org_roles}, path: {path}")
             return {
@@ -473,6 +507,8 @@ def lambda_gateway(event, context):
         return lambda_status(body, context)
     elif path == '/events':
         return lambda_events(body, context)
+    elif path == '/report':
+        return lambda_report(body, context)
     elif path == '/test':
         return lambda_test(body, context)
     else:

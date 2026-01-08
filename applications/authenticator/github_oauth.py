@@ -398,7 +398,7 @@ def get_allowed_clusters(username, teams, org_roles):
 
     # All members can deploy to their personal cluster
     if username:
-        allowed.append(f"{username}-cluster")
+        allowed.append(f"{username}")
 
     # All members can deploy to their team clusters
     if teams:

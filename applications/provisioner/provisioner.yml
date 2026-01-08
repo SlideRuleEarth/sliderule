@@ -297,6 +297,14 @@ Resources:
       AuthorizationType: JWT
       AuthorizerId: !Ref JwtAuthorizer
       Target: !Sub 'integrations/${LambdaIntegration}'
+  ReportRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /report'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
 
   ## API Gateway Stage
   ApiStage:
