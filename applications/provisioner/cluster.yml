@@ -813,17 +813,6 @@ Resources:
       Name: !Sub '${Cluster}-gateway'
       Description: API gateway for SlideRule cluster
       ProtocolType: HTTP
-      CorsConfiguration:
-        AllowOrigins:
-          - "*"
-        AllowMethods:
-          - GET
-          - POST
-          - OPTIONS
-        AllowHeaders:
-          - Content-Type
-          - Authorization
-        MaxAge: 300
   JwtAuthorizer:
     Type: AWS::ApiGatewayV2::Authorizer
     Properties:
