@@ -115,12 +115,15 @@ def lambda_deploy(event, context):
 
         # create stack
         state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
-        print(f"Deploy initiated for {state["stack_name"]}")
+        print(f'Deploy initiated for {state["stack_name"]}')
+
+    except RuntimeError as e:
+        print(f'User error in deploy: {e}')
+        state["exception"] = f'{e}'
+        state["status"] = False
 
     except Exception as e:
-
-        # handle exceptions (return to user for debugging)
-        print(f"Exception in deploy: {e}")
+        print(f'Exception in deploy: {e}')
         state["exception"] = f'Failure in deploy'
         state["status"] = False
 
@@ -159,19 +162,19 @@ def lambda_extend(event, context):
             Name=rule_name,
             ScheduleExpression=state["cron_expression"],
             State='ENABLED',
-            Description=f"Automatic shutdown for {rule_name} (updated)"
+            Description=f'Automatic shutdown for {rule_name} (updated)'
         )
 
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f"{e}")
+            print(f'{e}')
             state["exception"] = f'Not found'
             state["status"] = False
         else:
             raise
 
     except Exception as e:
-        print(f"Exception in extend: {e}")
+        print(f'Exception in extend: {e}')
         state["exception"] = f'Failure in extend'
         state["status"] = False
 
@@ -195,7 +198,7 @@ def lambda_destroy(event, context):
 
         # delete eventbridge target and rule
         events = boto3.client("events")
-        rule_name = f"{state["stack_name"]}-auto-shutdown"
+        rule_name = f'{state["stack_name"]}-auto-shutdown'
         print(f'Delete initiated for {rule_name}')
         try:
             events.remove_targets(Rule=rule_name, Ids=["1"])
@@ -213,18 +216,18 @@ def lambda_destroy(event, context):
         # delete stack
         cf = boto3.client("cloudformation", region_name=region)
         state["response"] = cf.delete_stack(StackName=state["stack_name"])
-        print(f"Delete initiated for {state["stack_name"]}")
+        print(f'Delete initiated for {state["stack_name"]}')
 
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f"{e}")
+            print(f'{e}')
             state["exception"] = f'Not found'
             state["status"] = False
         else:
             raise
 
     except Exception as e:
-        print(f"Exception in destroy: {e}")
+        print(f'Exception in destroy: {e}')
         state["exception"] = f'Failure in destroy'
         state["status"] = False
 
@@ -251,7 +254,7 @@ def lambda_status(event, context):
         state["stack_name"] = build_stack_name(cluster)
 
         # status stack
-        print(f"Status requested for {state["stack_name"]}")
+        print(f'Status requested for {state["stack_name"]}')
         cf = boto3.client("cloudformation", region_name=region)
         description = cf.describe_stacks(StackName=state["stack_name"])
         stack = description["Stacks"][0]
@@ -289,14 +292,14 @@ def lambda_status(event, context):
 
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f"{e}")
+            print(f'{e}')
             state["exception"] = f'Not found'
             state["status"] = False
         else:
             raise
 
     except Exception as e:
-        print(f"Exception in status: {e}")
+        print(f'Exception in status: {e}')
         state["exception"] = f'Failure in status'
         state["status"] = False
 
@@ -326,7 +329,7 @@ def lambda_events(event, context):
         cf = boto3.client("cloudformation", region_name="us-west-2")
         description = cf.describe_stack_events(StackName=state["stack_name"])
         stack_events = description["StackEvents"]
-        print(f"Events requested for {state["stack_name"]}")
+        print(f'Events requested for {state["stack_name"]}')
 
         # build cleaned response
         response = []
@@ -344,14 +347,14 @@ def lambda_events(event, context):
 
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f"{e}")
+            print(f'{e}')
             state["exception"] = f'Not found'
             state["status"] = False
         else:
             raise
 
     except Exception as e:
-        print(f"Exception in events: {e}")
+        print(f'Exception in events: {e}')
         state["exception"] = f'Failure in events'
         state["status"] = False
 
@@ -385,7 +388,7 @@ def lambda_report(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
-        print(f"Exception in report: {e}")
+        print(f'Exception in report: {e}')
         state["exception"] = f'Failure in report'
         state["status"] = False
 
@@ -431,7 +434,7 @@ def lambda_test(event, context):
 
         # copy test runner to S3 (where cloudformation can find it)
         s3 = boto3.client("s3")
-        s3.upload_file(Filename="testrunner.sh", Bucket=project_bucket, Key=f"{project_folder}/testrunner.sh")
+        s3.upload_file(Filename="testrunner.sh", Bucket=project_bucket, Key=f'{project_folder}/testrunner.sh')
 
         # create stack
         cf = boto3.client("cloudformation", region_name=region)
@@ -440,7 +443,7 @@ def lambda_test(event, context):
     except Exception as e:
 
         # handle exceptions (return to user for debugging)
-        print(f"Exception in test: {e}")
+        print(f'Exception in test: {e}')
         state["exception"] = f'Failure in test runner'
         state["status"] = False
 
@@ -472,11 +475,11 @@ def lambda_gateway(event, context):
         body = json.loads(body_raw)
     else:
         body = {}
-    print(f"Received request: {path} {body}")
+    print(f'Received request: {path} {body}')
 
     # check organization membership
     if 'member' not in org_roles:
-        print(f"Access denied to {username}, organization roles: {org_roles}")
+        print(f'Access denied to {username}, organization roles: {org_roles}')
         return {
             'statusCode': 403,
             'body': json.dumps({'error': 'access denied'})
@@ -486,7 +489,7 @@ def lambda_gateway(event, context):
     if '*' not in allowed_clusters:
         cluster = body.get("cluster")
         if (not cluster) or (cluster not in allowed_clusters):
-            print(f"Access denied to {username}, allowed clusters: {allowed_clusters}")
+            print(f'Access denied to {username}, allowed clusters: {allowed_clusters}')
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -496,7 +499,7 @@ def lambda_gateway(event, context):
     if path == '/deploy':
         node_capacity = body.get("node_capacity")
         if (not node_capacity) or (int(node_capacity) > int(max_nodes)):
-            print(f"Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}")
+            print(f'Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}')
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -506,7 +509,7 @@ def lambda_gateway(event, context):
     if path == '/deploy' or path == '/extend':
         ttl = body.get("ttl")
         if (not ttl) or (int(ttl) > int(max_ttl)):
-            print(f"Access denied to {username}, ttl: {ttl}, max ttl: {max_ttl}")
+            print(f'Access denied to {username}, ttl: {ttl}, max ttl: {max_ttl}')
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -515,7 +518,7 @@ def lambda_gateway(event, context):
     # check report and test runner
     if path == '/report' or path == '/test':
         if 'owner' not in org_roles:
-            print(f"Access denied to {username}, organization roles: {org_roles}, path: {path}")
+            print(f'Access denied to {username}, organization roles: {org_roles}, path: {path}')
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
@@ -537,7 +540,7 @@ def lambda_gateway(event, context):
     elif path == '/test':
         return lambda_test(body, context)
     else:
-        print(f"Path not found: {path}")
+        print(f'Path not found: {path}')
         return {
             'statusCode': 404,
             'body': json.dumps({'error': 'not found'})
