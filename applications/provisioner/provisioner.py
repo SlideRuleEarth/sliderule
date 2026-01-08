@@ -1,5 +1,6 @@
 import os
 import boto3
+import botocore.exceptions
 import json
 import base64
 from datetime import datetime, timedelta
@@ -161,9 +162,15 @@ def lambda_extend(event, context):
             Description=f"Automatic shutdown for {rule_name} (updated)"
         )
 
-    except Exception as e:
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'ValidationError':
+            print(f"{e}")
+            state["exception"] = f'Not found'
+            state["status"] = False
+        else:
+            raise
 
-        # handle exceptions (return to user for debugging)
+    except Exception as e:
         print(f"Exception in extend: {e}")
         state["exception"] = f'Failure in extend'
         state["status"] = False
@@ -208,9 +215,15 @@ def lambda_destroy(event, context):
         state["response"] = cf.delete_stack(StackName=state["stack_name"])
         print(f"Delete initiated for {state["stack_name"]}")
 
-    except Exception as e:
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'ValidationError':
+            print(f"{e}")
+            state["exception"] = f'Not found'
+            state["status"] = False
+        else:
+            raise
 
-        # handle exceptions (return to user for debugging)
+    except Exception as e:
         print(f"Exception in destroy: {e}")
         state["exception"] = f'Failure in destroy'
         state["status"] = False
@@ -274,9 +287,15 @@ def lambda_status(event, context):
                 if tag["Key"] == "NodeCapacity":
                     state["node_capacity"] = tag["Value"]
 
-    except Exception as e:
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'ValidationError':
+            print(f"{e}")
+            state["exception"] = f'Not found'
+            state["status"] = False
+        else:
+            raise
 
-        # handle exceptions (return to user for debugging)
+    except Exception as e:
         print(f"Exception in status: {e}")
         state["exception"] = f'Failure in status'
         state["status"] = False
@@ -323,9 +342,15 @@ def lambda_events(event, context):
             response.append(stack_event)
         state["response"] = response
 
-    except Exception as e:
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'ValidationError':
+            print(f"{e}")
+            state["exception"] = f'Not found'
+            state["status"] = False
+        else:
+            raise
 
-        # handle exceptions (return to user for debugging)
+    except Exception as e:
         print(f"Exception in events: {e}")
         state["exception"] = f'Failure in events'
         state["status"] = False
