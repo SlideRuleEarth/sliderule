@@ -346,7 +346,7 @@ def lambda_report(event, context):
         # get optional request variables
         region = event.get("region", "us-west-2")
 
-        # get list of intelligent load balancers
+        # get list of intelligent load balancers with their tags
         for instance in get_instances_by_name('*-ilb'):
             tags = {t['Key']: t['Value'] for t in instance.get('Tags', [])}
             name = tags.get('Name')
