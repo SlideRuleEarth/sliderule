@@ -522,13 +522,13 @@ class Session:
             rsps = json.loads(rsps)
 
             # Return Response
-            return {'status': True, 'result': rsps}
+            return rsps
 
         except Exception as e:
             logger.error(f'Failed to make request to {url}: {e}')
             if self.throw_exceptions:
                 raise
-            return {'status': False, 'result': f'{e}'}
+            return {'status': 'error', 'exception': f'{e}'}
 
 
     #
@@ -564,6 +564,8 @@ class Session:
             return self.session.provision("status", {"cluster": cluster})
         def status (self, cluster):
             return self.session.provision("status", {"cluster": cluster})
+        def report (self):
+            return self.session.provision("report", {})
 
     #
     # __Authenticator
