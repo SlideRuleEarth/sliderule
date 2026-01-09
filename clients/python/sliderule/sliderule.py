@@ -111,6 +111,8 @@ def init (
     slideruleSession = Session(
         domain=url,
         cluster=organization,
+        verbose=verbose,
+        loglevel=loglevel,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
         rethrow=rethrow)
