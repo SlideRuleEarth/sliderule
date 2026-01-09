@@ -62,10 +62,10 @@ slideruleSession = None
 #  init
 #
 def init (
-    url=Session.PUBLIC_URL,
+    url=Session.PUBLIC_DOMAIN,
     verbose=False,
     loglevel=logging.INFO,
-    organization=0,
+    organization=Session.PUBLIC_CLUSTER,
     desired_nodes=None,
     time_to_live=60,
     plugins=None,
@@ -84,7 +84,7 @@ def init (
         loglevel:       int
                         minimum severity of log message to output
         organization:   str
-                        SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
+                        Cluster name that the client should connect to
         desired_nodes:  int
                         requested number of processing nodes in the cluster
         time_to_live:   int
@@ -110,12 +110,11 @@ def init (
     # create new global session
     slideruleSession = Session(
         domain=url,
-        organization=organization,
+        cluster=organization,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
         rethrow=rethrow)
     # configure logging
-    slideruleSession.set_verbose(verbose, loglevel)
     if log_handler != None:
         logger.addHandler(log_handler)
     # verify compatibility between client and server versions
@@ -421,7 +420,7 @@ def get_version (session=None):
     session = checksession(session)
     rsps = session.source("version", {})
     if rsps != None:
-        rsps["client"] = {"version": version.full_version, "organization": session.service_org}
+        rsps["client"] = {"version": version.full_version, "organization": session.cluster}
     return rsps
 
 #
@@ -852,4 +851,8 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 #
 def checksession(session):
     global slideruleSession
-    return session if session != None else slideruleSession
+    if session != None:
+        return session # use user provided session
+    elif slideruleSession == None:
+        init() # creates global sliderule session
+    return slideruleSession # use global sliderule session

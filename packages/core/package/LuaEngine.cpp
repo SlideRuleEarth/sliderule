@@ -358,8 +358,8 @@ const char* LuaEngine::sanitize (const char* url, const char** argument)
 
     // the following two urls will
     // result in resource=endpoint and argument=arg
-    // https://organization.domain/source/endpoint/arg
-    // https://organization.domain/source/endpoint?arg
+    // https://cluster.domain/source/endpoint/arg
+    // https://cluster.domain/source/endpoint?arg
     int url_len = 0;
     int endpoint_len = 0;
 

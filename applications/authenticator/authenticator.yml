@@ -210,6 +210,14 @@ Resources:
       RouteKey: 'GET /.well-known/jwks.json'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
+  # Route: GET /auth/github/pem (PEM endpoint for JWT verification)
+  WellKnownPemRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /auth/github/pem'
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
   # Route: GET /.well-known/openid-configuration (Standard OIDC endpoint)
   WellKnownOpenidRoute:
     Type: AWS::ApiGatewayV2::Route

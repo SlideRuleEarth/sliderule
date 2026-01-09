@@ -112,7 +112,6 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            ipv4                        {"127.0.0.1"};
         FieldElement<string>            environmentVersion          {"unknown"};
         FieldElement<string>            orchestratorURL             {"http://127.0.0.1:8050"};
-        FieldElement<string>            organization                {"localhost"};
         FieldElement<string>            cluster                     {"localhost"};
         FieldElement<string>            managerURL                  {"http://127.0.0.1:8030"};
         FieldElement<string>            amsURL                      {"http://127.0.0.1:9082"};

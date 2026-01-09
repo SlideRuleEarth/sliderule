@@ -77,10 +77,12 @@ TIMESTAMP ?= $(shell date +%Y%m%d%H%M%S)
 CONFIG ?= release
 
 DOMAIN ?= slideruleearth.io
-ORGANIZATION ?= developers
+PUBLIC_CLUSTER ?= sliderule
+CLUSTER ?= developers
 VERSION ?= latest
 
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
+JWT_ISSUER = https://$(AUTHENTICATOR_URL)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
@@ -258,20 +260,15 @@ manager-run: ## run manager locally; uses VERSION
 ########################
 # Cluster Targets
 ########################
-# 	- For public clusters the CLUSTER variable is set to sliderule-<tag> while the ORGANIZATION remains as sliderule.
-#	- To associate sliderule.slideruleearth.io to a cluster ==> make cluster-go-live ORGANIZATION=sliderule PUBLIC_IP=<ip_address>
-#	- To deploy a possible public cluster ==> make provisioner-run ORGANIZATION=sliderule CLUSTER=sliderule-<tag> VERSION=<version> NODE_CAPACITY=7 IS_PUBLIC=True
 
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= false
-CLUSTER ?= $(ORGANIZATION)
 NODE_CAPACITY ?= 1
 TTL ?= 60
 CLUSTER_PARMS = '{\
 	"version": "$(VERSION)",\
 	"is_public": $(IS_PUBLIC),\
 	"domain": "$(DOMAIN)",\
-	"organization": "$(ORGANIZATION)",\
 	"cluster": "$(CLUSTER)",\
 	"node_capacity": $(NODE_CAPACITY),\
 	"ttl": $(TTL),\
@@ -329,7 +326,7 @@ cluster-go-live: ## switch dns entry of public cluster
 		--capabilities 			CAPABILITY_NAMED_IAM \
 		--region 				$(AWS_REGION) \
 		--parameter-overrides 	Domain=$(DOMAIN) \
-								Organization=$(ORGANIZATION) \
+								Subdomain=$(PUBLIC_CLUSTER) \
 								PublicIp=$(PUBLIC_IP)
 
 cluster-take-offline: ## destroy dns entry of public cluster
@@ -346,7 +343,6 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
-						ParameterKey=Organization,ParameterValue=$(ORGANIZATION) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
@@ -355,7 +351,7 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
-						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
+						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
 
@@ -458,6 +454,10 @@ authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time
 		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
 		--description "GitHub OAuth Client Secret for SlideRule"
 
+authenticator-public-key: ## get the public pem key for JWT verification
+	mkdir -p /etc/haproxy/pem
+	curl $(JWT_ISSUER)/auth/github/pem > /etc/haproxy/pem/pubkey.pem
+
 ########################
 # Provisioner Targets
 ########################
@@ -489,7 +489,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=ProvisionerUrl,ParameterValue=$(PROVISIONER_URL) \
-						ParameterKey=JwtIssuer,ParameterValue="https://$(AUTHENTICATOR_URL)" \
+						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
@@ -550,7 +550,7 @@ certbot-create: certbot-build ## creates the lambda certbot function
 	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
 	aws cloudformation create-stack \
 		--stack-name 	certbot \
-		--template-body file://cloudformation/certbot.yml \
+		--template-body file://$(ROOT)/applications/certbot/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
@@ -727,11 +727,11 @@ selftest: ## run the self test on the server code
 	ASAN_OPTIONS="detect_leaks=1" LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" $(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
 pytest: ## run python client tests; needs special conda environment
-	cd $(PYTHON_CLIENT_DIR) && coverage run -m pytest --domain $(DOMAIN) --organization $(ORGANIZATION) $(PYTEST)
+	cd $(PYTHON_CLIENT_DIR) && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(PYTEST)
 	cd $(PYTHON_CLIENT_DIR) && coverage report -m
 
 jest: ## run node.js client self tests
-	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) TEST=$(JEST)
+	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(CLUSTER) TEST=$(JEST)
 
 amstest: ## run ams tests; needs special conda environment
 	make -C $(ROOT)applications/ams test TEST=$(AMSTEST)
@@ -765,7 +765,6 @@ environment: ## echo the environment variables
 	@echo ENVVER: $(ENVVER)
 	@echo ARCH: $(ARCH)
 	@echo DOMAIN: $(DOMAIN)
-	@echo ORGANIZATION: $(ORGANIZATION)
 	@echo CLUSTER: $(CLUSTER)
 	@echo VERSION: $(VERSION)
 	@echo DOCKEROPTS: $(DOCKEROPTS)
@@ -775,6 +774,7 @@ environment: ## echo the environment variables
 	@echo RUNNER: $(RUNNER)
 	@echo DEBUG_CFG: $(DEBUG_CFG)
 	@echo RELEASE_CFG: $(RELEASE_CFG)
+	@echo CERTIFICATE_ARN: $(CERTIFICATE_ARN)
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

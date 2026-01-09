@@ -147,7 +147,6 @@ SystemConfig::SystemConfig(void):
         {"ipv4",                        &ipv4},
         {"environment_version",         &environmentVersion},
         {"orchestrator_url;",           &orchestratorURL},
-        {"organization",                &organization},
         {"cluster",                     &cluster},
         {"manager_url",                 &managerURL},
         {"ams_url",                     &amsURL},
@@ -159,7 +158,6 @@ SystemConfig::SystemConfig(void):
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
-    setIfProvided(organization, "ORGANIZATION");
     setIfProvided(cluster, "CLUSTER");
     setIfProvided(managerURL, "MANAGER");
     setIfProvided(amsURL, "AMS");

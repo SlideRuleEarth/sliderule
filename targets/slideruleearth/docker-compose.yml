@@ -46,6 +46,7 @@ services:
     volumes:
       - ./:/haproxy
       - /etc/ssl/private:/etc/ssl/private
+      - /etc/haproxy/pem/:/etc/haproxy/pem/
     environment:
       - ORGANIZATION=localhost
       - IS_PUBLIC=true

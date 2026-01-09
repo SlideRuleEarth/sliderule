@@ -134,7 +134,7 @@ void OutputFields::fromLua (lua_State* L, int index)
             }
             else
             {
-                const FString path_name("%s.%016lX%s", SystemConfig::settings().organization.value.c_str(), OsApi::time(OsApi::CPU_CLK), path_suffix);
+                const FString path_name("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), path_suffix);
                 path = FString("%s%s/%s", path_prefix, asset->getPath(), path_name.c_str()).c_str();
             }
             mlog(INFO, "Generating unique path: %s", path.value.c_str());

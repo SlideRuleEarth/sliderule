@@ -84,7 +84,7 @@ P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40'
 #
 #  Initialize
 #
-def init (url=Session.PUBLIC_URL, verbose=False, max_resources=None, loglevel=logging.CRITICAL, organization=Session.PUBLIC_ORG, desired_nodes=None, time_to_live=60, rethrow=False):
+def init (url=Session.PUBLIC_DOMAIN, verbose=False, max_resources=None, loglevel=logging.CRITICAL, organization=Session.PUBLIC_CLUSTER, desired_nodes=None, time_to_live=60, rethrow=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.

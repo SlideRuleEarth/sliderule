@@ -120,18 +120,20 @@ class FatalError(RuntimeError):
 #
 class Session:
 
-    PUBLIC_URL = "slideruleearth.io"
-    PUBLIC_ORG = "sliderule"
+    PUBLIC_DOMAIN = "slideruleearth.io"
+    PUBLIC_CLUSTER = "sliderule"
     MAX_PS_CLUSTER_WAIT_SECS = 600
 
     #
     # constructor
     #
     def __init__ (self,
-        domain          = PUBLIC_URL,
-        organization    = 0,
+        domain          = PUBLIC_DOMAIN,
+        cluster         = PUBLIC_CLUSTER,
         desired_nodes   = None,
         time_to_live    = 60, # minutes
+        verbose         = False,
+        loglevel        = logging.INFO,
         trust_env       = False,
         ssl_verify      = True,
         rqst_timeout    = (10, 120), # (connection, read) in seconds
@@ -148,6 +150,8 @@ class Session:
         self.rqst_timeout = rqst_timeout
         self.decode_aux = decode_aux
         self.throw_exceptions = rethrow
+        self.domain = domain
+        self.cluster = cluster
 
         # initialize to empty
         self.ps_access_token = None
@@ -158,8 +162,8 @@ class Session:
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
 
-        # configure domain
-        self.service_domain = domain
+        # set log level
+        self.set_verbose(verbose, loglevel)
 
         # configure callbacks
         self.callbacks = {
@@ -170,12 +174,10 @@ class Session:
             'arrowrec.eof': Session.__arrowrec
         }
 
-        # configure credentials (if any) for organization
-        if organization != 0:
-            self.authenticate(organization, github_token=github_token)
+        # authenticate for non-public clusters
+        if self.cluster != self.PUBLIC_CLUSTER:
+            self.authenticate(github_token=github_token)
             self.scaleout(desired_nodes, time_to_live)
-        else:
-            organization = self.PUBLIC_ORG
 
         # create wrappers for subclasses
         self.provisioner = self.__Provisioner(self)
@@ -202,10 +204,10 @@ class Session:
                 callbacks[c] = self.callbacks[c]
 
         # Construct Request URL
-        if self.service_org:
-            url = f'https://{self.service_org}.{self.service_domain}{path}/{api}'
+        if self.cluster:
+            url = f'https://{self.cluster}.{self.domain}{path}/{api}'
         else:
-            url = f'http://{self.service_domain}{path}/{api}'
+            url = f'http://{self.domain}{path}/{api}'
 
         # Construct Payload
         if isinstance(parm, dict):
@@ -224,7 +226,7 @@ class Session:
             remaining_attempts -= 1
             try:
                 # Build Authorization Header
-                if self.service_org:
+                if self.cluster:
                     self.__buildauthheader(headers)
 
                 # Perform Request
@@ -361,7 +363,7 @@ class Session:
         # make provisioning request
         if isinstance(desired_nodes, int):
             rsps = self.provision("deploy", {
-                "cluster": self.service_org,
+                "cluster": self.cluster,
                 "is_public": False,
                 "node_capacity": desired_nodes,
                 "ttl": time_to_live
@@ -408,7 +410,7 @@ class Session:
     #
     # authenticate
     #
-    def authenticate (self, organization, github_token=None):
+    def authenticate (self, github_token=None):
         '''
         gets a bearer token (ps_access_token) from sliderule
         to use in requests to private clusters
@@ -416,14 +418,7 @@ class Session:
         # initialize local variables
         login_status = False
         github_user_token = os.environ.get("SLIDERULE_GITHUB_TOKEN", github_token)
-        login_url = "https://login." + self.service_domain
-
-        # set organization on any authentication request
-        self.service_org = organization
-
-        # check for direct or public access
-        if self.service_org == None:
-            return True
+        login_url = "https://login." + self.domain
 
         # authenticate user
         try:
@@ -446,8 +441,7 @@ class Session:
             logger.error(f'Failure attempting to authenticate: {e}')
 
         # log status
-        if organization != self.PUBLIC_ORG:
-            logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
+        logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
 
         # return response metadata
         return self.ps_metadata
@@ -467,14 +461,14 @@ class Session:
         rsps = ""
 
         # Construct Request URL
-        if self.service_org:
-            url = 'https://%s.%s/manager/%s' % (self.service_org, self.service_domain, api)
+        if self.cluster:
+            url = 'https://%s.%s/manager/%s' % (self.cluster, self.domain, api)
         else:
-            url = 'http://%s/manager/%s' % (self.service_domain, api)
+            url = 'http://%s/manager/%s' % (self.domain, api)
 
         try:
             # Build Authorization Header
-            if self.service_org:
+            if self.cluster:
                 self.__buildauthheader(headers)
 
             # Perform Request
@@ -511,7 +505,7 @@ class Session:
             self.__buildauthheader(headers)
 
             # Perform Request
-            url = f'https://provisioner.{self.service_domain}/{api}'
+            url = f'https://provisioner.{self.domain}/{api}'
             data = self.session.post(url, data=json.dumps(data), headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
             data.raise_for_status()
 
@@ -556,14 +550,16 @@ class Session:
     class __Provisioner:
         def __init__ (self, session):
             self.session = session
-        def deploy (self, cluster, is_public=False, node_capacity=1, ttl=60, version="latest"):
-            return self.session.provision("deploy", {"cluster": cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
-        def extend (self, cluster, ttl=60):
-            return self.session.provision("extend", {"cluster": cluster, "ttl": ttl})
-        def destroy (self, cluster):
-            return self.session.provision("status", {"cluster": cluster})
-        def status (self, cluster):
-            return self.session.provision("status", {"cluster": cluster})
+        def deploy (self, is_public=False, node_capacity=1, ttl=60, version="latest"):
+            return self.session.provision("deploy", {"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+        def extend (self, ttl=60):
+            return self.session.provision("extend", {"cluster": self.session.cluster, "ttl": ttl})
+        def destroy (self):
+            return self.session.provision("status", {"cluster": self.session.cluster})
+        def status (self):
+            return self.session.provision("status", {"cluster": self.session.cluster})
+        def events (self):
+            return self.session.provision("events", {"cluster": self.session.cluster})
         def report (self):
             return self.session.provision("report", {})
 
@@ -693,7 +689,7 @@ class Session:
             now = time.time()
             with self.ps_lock:
                 if now > self.ps_token_exp or force_refresh:
-                    host = "https://login." + self.service_domain + "/auth/refresh/"
+                    host = "https://login." + self.domain + "/auth/refresh/"
                     hdrs = {'Authorization': 'Bearer ' + self.ps_access_token}
                     try:
                         rsps = self.session.get(host, headers=hdrs, timeout=self.rqst_timeout).json()

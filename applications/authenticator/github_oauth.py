@@ -978,7 +978,7 @@ def json_response(status_code, body):
 
 
 # =============================================================================
-# Refresh tokens
+# GitHub PAT key login
 # =============================================================================
 
 def handle_pat_login(event):
@@ -1063,6 +1063,38 @@ def handle_refresh(event):
 # Public Key / JWKS endpoints (for JWT verification)
 # =============================================================================
 
+# Local Utility Function
+#   Parse DER-encoded RSA SubjectPublicKeyInfo returned by KMS.get_public_key()
+#   to extract PEM, RSA modulus n, and exponent e
+def parse_rsa_public_key_spki(der_bytes):
+    # import dependencies needed for just this function
+    from pyasn1.codec.der import decoder
+    from pyasn1_modules.rfc2459 import SubjectPublicKeyInfo
+    from pyasn1_modules.rfc2437 import RSAPublicKey
+    # parse top-level SubjectPublicKeyInfo
+    spki, _ = decoder.decode(der_bytes, asn1Spec=SubjectPublicKeyInfo())
+    # extract the inner RSAPublicKey DER
+    rsa_der = spki['subjectPublicKey'].asOctets()
+    # parse actual RSA key
+    rsa_key, _ = decoder.decode(rsa_der, asn1Spec=RSAPublicKey())
+    n = int(rsa_key['modulus'])
+    e = int(rsa_key['publicExponent'])
+    # convert SPKI to PEM
+    pem = (
+        "-----BEGIN PUBLIC KEY-----\n" +
+        base64.encodebytes(der_bytes).decode().replace("\n", "") +
+        "\n-----END PUBLIC KEY-----\n"
+    )
+    # return
+    return {"pem": pem, "n": n, "e": e}
+
+
+# Local Utility Function
+#   Base64url-encode an unsigned big integer
+def b64url_uint(n):
+    return base64.urlsafe_b64encode(n.to_bytes((n.bit_length() + 7) // 8, "big")).rstrip(b"=").decode()
+
+
 def handle_jwks(event):
     """
     Return the public key in JWKS (JSON Web Key Set) format.
@@ -1072,37 +1104,7 @@ def handle_jwks(event):
     JWKS is the standard format for distributing public keys for JWT verification.
     This format is compatible with most JWT libraries and OIDC implementations.
     """
-    # Local Utility Function
-    #   Parse DER-encoded RSA SubjectPublicKeyInfo returned by KMS.get_public_key()
-    #   to extract PEM, RSA modulus n, and exponent e
-    def parse_rsa_public_key_spki(der_bytes):
-        # parse top-level SubjectPublicKeyInfo
-        spki, _ = decoder.decode(der_bytes, asn1Spec=SubjectPublicKeyInfo())
-        # extract the inner RSAPublicKey DER
-        rsa_der = spki['subjectPublicKey'].asOctets()
-        # parse actual RSA key
-        rsa_key, _ = decoder.decode(rsa_der, asn1Spec=RSAPublicKey())
-        n = int(rsa_key['modulus'])
-        e = int(rsa_key['publicExponent'])
-        # convert SPKI to PEM
-        pem = (
-            "-----BEGIN PUBLIC KEY-----\n" +
-            base64.encodebytes(der_bytes).decode().replace("\n", "") +
-            "\n-----END PUBLIC KEY-----\n"
-        )
-        # return
-        return {"pem": pem, "n": n, "e": e}
-
-    # Local Utility Function
-    #   Base64url-encode an unsigned big integer
-    def b64url_uint(n):
-        return base64.urlsafe_b64encode(n.to_bytes((n.bit_length() + 7) // 8, "big")).rstrip(b"=").decode()
-
     try:
-        # import dependencies needed for just this function
-        from pyasn1.codec.der import decoder
-        from pyasn1_modules.rfc2459 import SubjectPublicKeyInfo
-        from pyasn1_modules.rfc2437 import RSAPublicKey
 
         # check for signing key
         if not JWT_SIGNING_KEY_ARN:
@@ -1138,6 +1140,43 @@ def handle_jwks(event):
         return json_response(500, {
             'error': 'jwks_error',
             'error_description': 'error generating JWKS'
+        })
+
+
+def handle_pem(event):
+    """
+    Return the public key in PEM format (needed by HAProxy).
+
+    GET /auth/github/pem
+    """
+    try:
+
+        # check for signing key
+        if not JWT_SIGNING_KEY_ARN:
+            raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
+
+        # get public key from kms
+        kms = get_kms_client()
+        response = kms.get_public_key(KeyId=JWT_SIGNING_KEY_ARN)
+        der = response["PublicKey"]
+        parsed = parse_rsa_public_key_spki(der)
+
+        # return response
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                # Recommended for browser-based OIDC discovery
+                "Cache-Control": "public, max-age=3600"
+            },
+            "body": parsed["pem"]
+        }
+
+    except Exception as e:
+        print(f"Error generating PEM: {e}")
+        return json_response(500, {
+            'error': 'pem_error',
+            'error_description': 'error generating PEM'
         })
 
 
@@ -1214,9 +1253,12 @@ def lambda_handler(event, context):
     # Refresh token
     elif path == '/auth/refresh':
         return handle_refresh(event)
-    # Public key endpoint for JWT verification
+    # Public key endpoint for JWT verification (JWKS)
     elif path == '/auth/github/jwks' or path == '/.well-known/jwks.json':
         return handle_jwks(event)
+    # Public key endpoint for JWT verification (PEM)
+    elif path == '/auth/github/pem':
+        return handle_pem(event)
     # OpenID Configuration Discovery
     elif path == '/.well-known/openid-configuration':
         return handle_openid(event)

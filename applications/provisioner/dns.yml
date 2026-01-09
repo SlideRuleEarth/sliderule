@@ -1,14 +1,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: "Route53 A record for an organization subdomain"
+Description: "Route53 A record for a cluster subdomain"
 
 Parameters:
   Domain:
     Type: String
-    Description: "The base domain (e.g. slideruleearth.io)"
-  Organization:
+    Description: "The base domain of the cluster (e.g. slideruleearth.io)"
+  Subdomain:
     Type: String
-    Description: "The organization subdomain (e.g., org)"
+    Description: "The subdomain of the cluster (e.g. sliderule)"
   PublicIp:
     Type: String
     Description: "The public IPv4 address"
@@ -18,7 +18,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Sub "${Domain}."
-      Name: !Sub "${Organization}.${Domain}"
+      Name: !Sub "${Subdomain}.${Domain}"
       Type: A
       TTL: "300"
       ResourceRecords:

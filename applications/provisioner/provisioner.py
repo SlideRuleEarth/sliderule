@@ -70,7 +70,6 @@ def lambda_deploy(event, context):
 
         # get optional request variables
         version = event.get("version", "latest")
-        organization = event.get("organization", cluster)
         region = event.get("region", "us-west-2")
 
         # get arn for auto-shutdown
@@ -83,7 +82,6 @@ def lambda_deploy(event, context):
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": version},
             {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(is_public)},
-            {"ParameterKey": "Organization", "ParameterValue": organization},
             {"ParameterKey": "Cluster", "ParameterValue": cluster},
             {"ParameterKey": "NodeCapacity", "ParameterValue": str(node_capacity)},
             {"ParameterKey": "TTL", "ParameterValue": str(ttl)},
@@ -106,8 +104,8 @@ def lambda_deploy(event, context):
         state["stack_name"] = build_stack_name(cluster)
 
         # check keywords
-        if cluster in SYSTEM_KEYWORDS or organization in SYSTEM_KEYWORDS:
-            raise RuntimeError(f'Illegal cluster name <{cluster}> or organization name <{organization}>')
+        if cluster in SYSTEM_KEYWORDS:
+            raise RuntimeError(f'Illegal cluster name <{cluster}>')
 
         # check rules for valid deployment
         if ttl >= 0 and ttl < MIN_TTL_FOR_AUTOSHUTDOWN:

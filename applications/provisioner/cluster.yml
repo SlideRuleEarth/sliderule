@@ -19,8 +19,6 @@ Parameters:
     Type: String
   Cluster:
     Type: String
-  Organization:
-    Type: String
   ProjectBucket:
     Type: String
   ProjectFolder:
@@ -53,7 +51,7 @@ Parameters:
     Default: "10.0.1.4"
   IlbIP:
     Type: String
-    Default: "10.0.1.5"
+    Default: "10.0.128.5"
   AvailabilityZone:
     Type: String
     Default: "us-west-2d"
@@ -70,10 +68,6 @@ Parameters:
     Type: String
     Default: "10.0.0.0/17"
 
-Conditions:
-
-  UseJwt: !Equals [!Ref IsPublic, "false"]
-
 Resources:
 
   #
@@ -88,13 +82,13 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-vpc"
-  # Internet Gateway (used only by NAT Gateway)
+  # Internet Gateway (used by NAT Gateway and ILB)
   InternetGatewaySubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref ClusterVPC
       CidrBlock: !Ref InternetGatewayCIDRBlock
-      MapPublicIpOnLaunch: false
+      MapPublicIpOnLaunch: true
       AvailabilityZone: !Ref AvailabilityZone
   InternetGatewayRouteTable:
     Type: AWS::EC2::RouteTable
@@ -227,6 +221,16 @@ Resources:
                   - ec2:DescribeInstances
                   - ec2:TerminateInstances
                 Resource: "*"
+        - PolicyName: !Sub "${Cluster}-acm-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:GetCertificate
+                  - acm:DescribeCertificate
+                Resource:
+                  - !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/*
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -269,11 +273,11 @@ Resources:
       GroupDescription: ILB Security Group
       VpcId: !Ref ClusterVPC
       SecurityGroupIngress:
-        # HTTP (from NLB)
+        # Public Internet
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: !Ref VpcCIDRBlock
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref PublicCIDRBlock
         # Orchestrator (from HAProxy)
         - IpProtocol: tcp
           FromPort: 8050
@@ -362,7 +366,8 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           PrivateIpAddress: !Ref IlbIP
-          SubnetId: !Ref ClusterSubnet
+          SubnetId: !Ref InternetGatewaySubnet
+          AssociatePublicIpAddress: true
           GroupSet:
             - !Ref IlbSG
       BlockDeviceMappings:
@@ -384,8 +389,8 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
-          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
-          export OAUTH_HMAC_SECRET=$(echo $SECRET | jq -r .jwt_secret_key)
+          mkdir -p /etc/haproxy/pem
+          curl ${JwtIssuer}/auth/github/pem > /etc/haproxy/pem/pubkey.pem
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
@@ -401,11 +406,12 @@ Resources:
               volumes:
                 - /haproxy:/haproxy
                 - /etc/ssl/private:/etc/ssl/private
+                - /etc/haproxy/pem/:/etc/haproxy/pem/
               environment:
                 - IS_PUBLIC=${IsPublic}
-                - ORGANIZATION=${Organization}
                 - DOMAIN=${Domain}
-                - OAUTH_HMAC_SECRET=$OAUTH_HMAC_SECRET
+                - CLUSTER=${Cluster}
+                - JWT_ISSUER=${JwtIssuer}
               healthcheck:
                 test: curl -f http://localhost:8050/discovery/health
                 interval: 30s
@@ -501,7 +507,7 @@ Resources:
                 - MANAGER_API_KEY=$MANAGER_API_KEY
                 - DUCKDB_LOCAL_FILE='/data/manager-${Cluster}.db'
                 - DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Cluster}-${Version}.db'
-                - ORCHESTRATOR=http://10.0.1.5:8050
+                - ORCHESTRATOR=http://${IlbIP}:8050
               labels:
                 - autoheal=true
             monitor-agent:
@@ -679,10 +685,9 @@ Resources:
                   - /plugins:/plugins
                 environment:
                   - IPV4=$IPV4
-                  - ORCHESTRATOR=http://10.0.1.5:8050
+                  - ORCHESTRATOR=http://{IlbIP}:8050
                   - MANAGER=http://10.0.1.3:8030
                   - AMS=http://127.0.0.1:9082
-                  - ORGANIZATION=${Organization}
                   - CLUSTER=${Cluster}
                   - IS_PUBLIC=${IsPublic}
                   - PROVISIONING_SYSTEM="https://ps.${Domain}"
@@ -805,121 +810,14 @@ Resources:
       DeletionLambdaArn: !Ref DestroyLambdaArn
 
   #
-  # API Gateway
+  # DNS
   #
-  HttpApi:
-    Type: AWS::ApiGatewayV2::Api
-    Properties:
-      Name: !Sub '${Cluster}-gateway'
-      Description: API gateway for SlideRule cluster
-      ProtocolType: HTTP
-  JwtAuthorizer:
-    Type: AWS::ApiGatewayV2::Authorizer
-    Properties:
-      Name: !Sub '${Cluster}-jwt-authorizer'
-      ApiId: !Ref HttpApi
-      AuthorizerType: JWT
-      IdentitySource:
-        - $request.header.Authorization
-      JwtConfiguration:
-        Audience:
-          - "*"
-          - !Ref Cluster
-        Issuer: !Ref JwtIssuer
-  IlbRoute:
-    Type: AWS::ApiGatewayV2::Route
-    DependsOn: ProxyIntegration
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'ANY /{proxy+}'
-      AuthorizationType: !If [UseJwt, JWT, NONE]
-      AuthorizerId: !If [UseJwt, !Ref JwtAuthorizer, !Ref AWS::NoValue]
-      Target: !Sub 'integrations/${ProxyIntegration}'
-  ApiStage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref HttpApi
-      StageName: '$default'
-      AutoDeploy: true
-  ApiCustomDomain:
-    Type: AWS::ApiGatewayV2::DomainName
-    Properties:
-      DomainName: !Sub '${Cluster}.${Domain}'
-      DomainNameConfigurations:
-        - EndpointType: REGIONAL
-          CertificateArn: !Ref CertificateArn
-  ApiMapping:
-    Type: AWS::ApiGatewayV2::ApiMapping
-    DependsOn:
-      - ApiCustomDomain
-      - ApiStage
-    Properties:
-      DomainName: !Ref ApiCustomDomain
-      ApiId: !Ref HttpApi
-      Stage: $default
-  ApiDnsRecord:
+  IlbRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneName: !Sub "${Domain}."
-      Name: !Sub '${Cluster}.${Domain}'
+      HostedZoneName: !Sub "${Domain}."   # ensure trailing dot or you can pass HostedZoneId instead
+      Name: !Sub "${Cluster}.${Domain}"
       Type: A
-      AliasTarget:
-        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
-        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
-        EvaluateTargetHealth: false
-
-  #
-  # Network Load Balancer (NLB)
-  #
-  ProxyTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      TargetType: ip
-      Protocol: TCP
-      Port: 80
-      VpcId: !Ref ClusterVPC
-      HealthCheckEnabled: true
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /discovery/health
-      HealthCheckPort: 8050
-      HealthCheckIntervalSeconds: 30
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 2
-      Targets:
-        - Id: !GetAtt IlbInstance.PrivateIp
-          Port: 80
-  ProxyNLB:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Type: network
-      Scheme: internal
-      Subnets:
-        - !Ref ClusterSubnet
-  ProxyListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      LoadBalancerArn: !Ref ProxyNLB
-      Protocol: TCP
-      Port: 80
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref ProxyTargetGroup
-  ApiVpcLink:
-    Type: AWS::ApiGatewayV2::VpcLink
-    Properties:
-      Name: !Sub '${Cluster}-vpclink'
-      SubnetIds:
-        - !Ref ClusterSubnet
-  ProxyIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    DependsOn:
-      - ApiVpcLink
-      - ProxyListener
-    Properties:
-      ApiId: !Ref HttpApi
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      ConnectionType: VPC_LINK
-      ConnectionId: !Ref ApiVpcLink
-      IntegrationUri: !Ref ProxyListener
-      PayloadFormatVersion: '1.0'
+      TTL: "300"
+      ResourceRecords:
+        - !GetAtt IlbInstance.PublicIp
