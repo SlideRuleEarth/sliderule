@@ -685,7 +685,7 @@ Resources:
                   - /plugins:/plugins
                 environment:
                   - IPV4=$IPV4
-                  - ORCHESTRATOR=http://{IlbIP}:8050
+                  - ORCHESTRATOR=http://${IlbIP}:8050
                   - MANAGER=http://10.0.1.3:8030
                   - AMS=http://127.0.0.1:9082
                   - CLUSTER=${Cluster}
