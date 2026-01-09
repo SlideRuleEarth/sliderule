@@ -33,13 +33,16 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <aws/core/Aws.h>
+#include <aws/firehose/FirehoseClient.h>
+#include <aws/firehose/model/PutRecordRequest.h>
+
 #include "TelemetryMonitor.h"
 #include "Monitor.h"
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "RecordObject.h"
-#include "OrchestratorLib.h"
-#include "ManagerLib.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * METHODS
@@ -79,16 +82,57 @@ void TelemetryMonitor::processEvent(const unsigned char* event_buf_ptr, int even
     /* Filter Events */
     if(event->level < eventLevel) return;
 
-    /* Post Telemetry to Manager */
-    ManagerLib::recordTelemetry(event);
+    /* Build Telemetry JSON */
+    const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
+    const TimeLib::date_t date = TimeLib::gmt2date(gmt);
+    const FString rqst(R"json({
+        "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
+        "source_ip": "%s",
+        "aoi": {"x": %lf, "y": %lf},
+        "client": "%s",
+        "endpoint": "%s",
+        "duration": %f,
+        "status_code": %d,
+        "account": "%s",
+        "version": "%s"
+    }\n)json",
+        date.year, date.month, date.day,
+        gmt.hour, gmt.minute, gmt.second,
+        event->source_ip,
+        event->longitude, event->latitude,
+        event->client,
+        event->endpoint,
+        event->duration,
+        event->code,
+        event->account,
+        event->version);
+
+    /* Post Telemetry to Firehose */
+    Aws::Firehose::Model::Record record;
+    record.SetData(Aws::Utils::ByteBuffer(reinterpret_cast<const unsigned char*>(rqst.c_str()), rqst.length()));
+    request.SetRecord(record);
+    auto outcome = firehoseClient.PutRecord(request);
+
+    /* Log Errors */
+    if(outcome.IsSuccess())
+    {
+        inError = false;
+    }
+    else if(!inError)
+    {
+        inError = true;
+        mlog(CRITICAL, "Failed to post telemetry to firehose: %s", outcome.GetError().GetMessage().c_str());
+    }
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 TelemetryMonitor::TelemetryMonitor(lua_State* L, event_level_t level, const char* eventq_name):
-    Monitor(L, level, eventq_name, EventLib::telemetryRecType)
+    Monitor(L, level, eventq_name, EventLib::telemetryRecType),
+    inError(false)
 {
+    request.SetDeliveryStreamName(SystemConfig::settings().recorderStream.value.c_str());
 }
 
 /*----------------------------------------------------------------------------

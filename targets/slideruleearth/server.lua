@@ -27,8 +27,8 @@ aws_utils.config_aws()
 
 -- Configure Monitoring --
 core.logmon(core.DEBUG):global("LogMonitor") -- monitor logs and write to stdout
-core.tlmmon(core.DEBUG):global("TelemetryMonitor") -- monitor telementry and push to orchestrator and manager
-core.alrmon(core.DEBUG):global("AlertMonitor") -- monitor alerts and push to manager
+aws.tlmmon(core.DEBUG):global("TelemetryMonitor") -- monitor telementry and push to firehose
+aws.alrmon(core.DEBUG):global("AlertMonitor") -- monitor alerts and push to firehose
 
 -- Update Leap Seconds File --
 local leap_seconds_file = "/tmp/leap-seconds.list"

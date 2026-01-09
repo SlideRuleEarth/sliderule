@@ -31,11 +31,14 @@ RUN git clone https://github.com/Tencent/rapidjson.git && \
     cd rapidjson && \
     #    VERSION=`curl -s https://api.github.com/repos/Tencent/rapidjson/releases/latest | jq '.tag_name' | tr -d "\""` && \
     #    git checkout $VERSION && \    ### version v1.1.0 (latest as of 8/25/16) is broken with recent compilers
+    echo rapidjson: $(git --git-dir /rapidjson/.git --work-tree /rapidjson describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/rapidjson && \
     cd /build/rapidjson && \
     cmake /rapidjson && \
     make -j8 && \
     make install && \
+    rm -Rf /rapidjson && \
+    rm -Rf /build/rapidjson && \
     ldconfig
 
 # install arrow dependency
@@ -44,11 +47,14 @@ RUN git clone https://github.com/apache/arrow.git && \
     #    VERSION=`git describe --tags --abbrev=0` && \  ### arrow does not have releases, only tags
     #    git checkout $VERSION && \                     ### and often the latest tagged versions are not stable (e.g. *.dev tags)
     git checkout apache-arrow-19.0.1 && \
+    echo arrow: $(git --git-dir /arrow/.git --work-tree /arrow describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/arrow && \
     cd /build/arrow && \
     cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZSTD=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON -DARROW_CSV=ON -DARROW_FILESYSTEM=ON && \
     make -j8 && \
     make install && \
+    rm -Rf /arrow && \
+    rm -Rf /build/arrow && \
     ldconfig
 
 # install libtiff dependency (not officially on github)
@@ -59,6 +65,8 @@ RUN curl -LO https://download.osgeo.org/libtiff/tiff-4.6.0.tar.gz && \
     cmake /tiff-4.6.0 -DCMAKE_BUILD_TYPE=Release && \
     make -j8 && \
     make install && \
+    rm -Rf /tiff-4.6.0 && \
+    rm -Rf /build/tiff-4.6.0 && \
     ldconfig
 
 # install proj9 dependency
@@ -66,11 +74,14 @@ RUN git clone https://github.com/OSGeo/PROJ.git && \
     cd PROJ && \
     VERSION=`curl -s https://api.github.com/repos/OSGeo/PROJ/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
+    echo PROJ: $(git --git-dir /PROJ/.git --work-tree /PROJ describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/proj && \
     cd /build/proj && \
     cmake /PROJ -DCMAKE_BUILD_TYPE=Release && \
     make -j8 && \
     make install && \
+    rm -Rf /PROJ && \
+    rm -Rf /build/PROJ && \
     ldconfig
 
 # install geos dependency
@@ -78,11 +89,14 @@ RUN git clone https://github.com/libgeos/geos.git && \
     cd geos && \
     VERSION=`curl -s https://api.github.com/repos/libgeos/geos/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
+    echo geos: $(git --git-dir /geos/.git --work-tree /geos describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/geos && \
     cd /build/geos && \
     cmake /geos -DCMAKE_BUILD_TYPE=Release && \
     make -j8 && \
     make install && \
+    rm -Rf /geos && \
+    rm -Rf /build/geos && \
     ldconfig
 
 # install hdf5 library dependency
@@ -91,10 +105,13 @@ RUN git clone https://github.com/HDFGroup/hdf5.git && \
 #    VERSION=`curl -s https://api.github.com/repos/HDFGroup/hdf5/releases/latest | jq '.tag_name' | tr -d "\""` && \
 #    git checkout $VERSION && \ # version 2.0.0 is a breaking change
     git checkout hdf5-1.14.6 && \
+    echo hdf5: $(git --git-dir /hdf5/.git --work-tree /hdf5 describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/hdf5 && \
     cd /build/hdf5 && \
     CFLAGS=-fPIC /hdf5/configure --prefix=/usr/local --disable-shared --enable-build-mode=production --enable-threadsafe --disable-hl && \
     make install -j8 && \
+    rm -Rf /hdf5 && \
+    rm -Rf /build/hdf5 && \
     ldconfig
 
 # install gdal dependency
@@ -102,10 +119,13 @@ RUN git clone https://github.com/OSGeo/gdal.git && \
     cd gdal && \
     VERSION=`curl -s https://api.github.com/repos/OSGeo/gdal/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
+    echo gdal: $(git --git-dir /gdal/.git --work-tree /gdal describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/gdal && \
     cd /build/gdal && \
     cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF -DGDAL_USE_HDF5=ON -DGDAL_ENABLE_HDF5_GLOBAL_LOCK=OFF && \
     make -j8 install && \
+    rm -Rf /gdal && \
+    rm -Rf /build/gdal && \
     ldconfig
 
 # install geotiff dependency (must be built after GDAL)
@@ -113,11 +133,14 @@ RUN git clone https://github.com/OSGeo/libgeotiff.git && \
     cd libgeotiff && \
     VERSION=`curl -s https://api.github.com/repos/OSGeo/libgeotiff/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
+    echo libgeotiff: $(git --git-dir /libgeotiff/.git --work-tree /libgeotiff describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/geotiff && \
     cd /build/geotiff && \
     cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release && \
     make -j8 && \
     make install && \
+    rm -Rf /libgeotiff && \
+    rm -Rf /build/libgeotiff && \
     ldconfig
 
 # install pdal dependency (must be built after GDAL and libgeotiff)
@@ -125,10 +148,26 @@ RUN git clone https://github.com/PDAL/PDAL.git && \
     cd PDAL && \
     VERSION=`curl -s https://api.github.com/repos/PDAL/PDAL/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
+    echo PDAL: $(git --git-dir /PDAL/.git --work-tree /PDAL describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/pdal && \
     cd /build/pdal && \
     cmake /PDAL -DCMAKE_BUILD_TYPE=Release && \
     make -j8 install && \
+    rm -Rf /PDAL && \
+    rm -Rf /build/PDAL && \
+    ldconfig
+
+# install AWS SDK
+RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git && \
+    cd aws-sdk-cpp && \
+    echo aws-sdk-cpp: $(git --git-dir /aws-sdk-cpp/.git --work-tree /aws-sdk-cpp describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
+    mkdir -p /build/aws-sdk-cpp && \
+    cd /build/aws-sdk-cpp && \
+    cmake /aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="firehose" && \
+    make -j 8 && \
+    make install && \
+    rm -Rf /aws-sdk-cpp && \
+    rm -Rf /build/aws-sdk-cpp && \
     ldconfig
 
 # configure any new shared libraries

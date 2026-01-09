@@ -148,7 +148,7 @@ SystemConfig::SystemConfig(void):
         {"environment_version",         &environmentVersion},
         {"orchestrator_url;",           &orchestratorURL},
         {"cluster",                     &cluster},
-        {"manager_url",                 &managerURL},
+        {"recorder_stream",             &recorderStream},
         {"ams_url",                     &amsURL},
         {"container_registry",          &containerRegistry}
     })
@@ -159,7 +159,7 @@ SystemConfig::SystemConfig(void):
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
     setIfProvided(cluster, "CLUSTER");
-    setIfProvided(managerURL, "MANAGER");
+    setIfProvided(recorderStream, "RECORDER_STREAM");
     setIfProvided(amsURL, "AMS");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }

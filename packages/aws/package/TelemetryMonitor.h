@@ -36,6 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <aws/firehose/FirehoseClient.h>
+#include <aws/firehose/model/PutRecordRequest.h>
+
 #include "Monitor.h"
 #include "OsApi.h"
 
@@ -69,6 +72,14 @@ class TelemetryMonitor: public Monitor
 
         TelemetryMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
         ~TelemetryMonitor (void) override;
-    };
 
-#endif  /* __publish_monitor__ */
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool inError;
+        Aws::Firehose::FirehoseClient firehoseClient;
+        Aws::Firehose::Model::PutRecordRequest request;
+};
+
+#endif  /* __telemetry_monitor */

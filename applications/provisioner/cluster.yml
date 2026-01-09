@@ -39,6 +39,8 @@ Parameters:
     Type: String
   CertificateArn:
     Type: String
+  RecorderStream:
+    Type: String
 
   #
   # Constants
@@ -686,7 +688,7 @@ Resources:
                 environment:
                   - IPV4=$IPV4
                   - ORCHESTRATOR=http://${IlbIP}:8050
-                  - MANAGER=http://10.0.1.3:8030
+                  - RECORDER_STREAM=${RecorderStream}
                   - AMS=http://127.0.0.1:9082
                   - CLUSTER=${Cluster}
                   - IS_PUBLIC=${IsPublic}

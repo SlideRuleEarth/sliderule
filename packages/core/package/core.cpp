@@ -33,7 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "AlertMonitor.h"
 #include "AmsLib.h"
 #include "Asset.h"
 #include "AssetIndex.h"
@@ -56,7 +55,6 @@
 #include "LuaLibraryTime.h"
 #include "LuaObject.h"
 #include "LuaScript.h"
-#include "ManagerLib.h"
 #include "MathLib.h"
 #include "Monitor.h"
 #include "MsgQ.h"
@@ -72,7 +70,6 @@
 #include "StringLib.h"
 #include "SystemConfig.h"
 #include "Table.h"
-#include "TelemetryMonitor.h"
 #include "TimeLib.h"
 #include "OsApi.h"
 #ifdef __unittesting__
@@ -122,8 +119,6 @@ static int core_open (lua_State *L)
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
         {"logmon",          LogMonitor::luaCreate},
-        {"tlmmon",          TelemetryMonitor::luaCreate},
-        {"alrmon",          AlertMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
@@ -145,7 +140,6 @@ static int core_open (lua_State *L)
         {"orchunlock",      OrchestratorLib::luaUnlock},
         {"orchhealth",      OrchestratorLib::luaHealth},
         {"orchnodes",       OrchestratorLib::luaGetNodes},
-        {"manager",         ManagerLib::luaRequest},
         {"ams",             AmsLib::luaRequest},
         {"parms",           RequestFields::luaCreate},
         {"send2user",       OutputLib::luaSend2User},

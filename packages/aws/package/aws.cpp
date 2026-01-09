@@ -33,14 +33,27 @@
  *INCLUDES
  ******************************************************************************/
 
+#include <aws/core/Aws.h>
+
 #include "OsApi.h"
 #include "aws.h"
+#include "AlertMonitor.h"
+#include "CredentialStore.h"
+#include "S3CacheIODriver.h"
+#include "S3CurlIODriver.h"
+#include "TelemetryMonitor.h"
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
 #define LUA_AWS_LIBNAME         "aws"
+
+/******************************************************************************
+ * GLOBALS
+ ******************************************************************************/
+
+ Aws::SDKOptions options;
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -59,6 +72,8 @@ int aws_open (lua_State *L)
         {"s3read",      S3CurlIODriver::luaRead},
         {"s3upload",    S3CurlIODriver::luaUpload},
         {"s3cache",     S3CacheIODriver::luaCreateCache},
+        {"tlmmon",      TelemetryMonitor::luaCreate},
+        {"alrmon",      AlertMonitor::luaCreate},
         {NULL,          NULL}
     };
 
@@ -79,6 +94,9 @@ int aws_open (lua_State *L)
 extern "C" {
 void initaws (void)
 {
+    /* Initialize AWS SDK */
+    Aws::InitAPI(options);
+
     /* Register I/O Drivers */
     Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
     Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
@@ -92,5 +110,6 @@ void initaws (void)
 
 void deinitaws (void)
 {
+    Aws::ShutdownAPI(options);
 }
 }

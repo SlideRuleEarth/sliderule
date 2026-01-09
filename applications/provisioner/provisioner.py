@@ -61,6 +61,7 @@ def lambda_deploy(event, context):
         lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
         jwt_issuer = os.environ['JWT_ISSUER']
         certificate_arn = os.environ['CERTIFICATE_ARN']
+        recorder_stream = os.environ['RECORDER_STREAM']
 
         # get required request variables
         cluster = event["cluster"]
@@ -95,6 +96,7 @@ def lambda_deploy(event, context):
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
             {"ParameterKey": "CertificateArn", "ParameterValue": certificate_arn},
+            {"ParameterKey": "RecorderStream", "ParameterValue": recorder_stream},
         ]
 
         # read template

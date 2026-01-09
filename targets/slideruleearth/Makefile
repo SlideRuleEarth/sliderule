@@ -84,6 +84,7 @@ VERSION ?= latest
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
 JWT_ISSUER = https://$(AUTHENTICATOR_URL)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
+RECORDER_STREAM ?= recorder-firehose-logger
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -352,7 +353,8 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
-						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN)
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=RecorderStream,ParameterValue=$(RECORDER_STREAM)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
 
 cluster-direct-describe: ## directly status cluster created via cloud formation
@@ -497,6 +499,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=RecorderStream,ParameterValue=$(RECORDER_STREAM) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 

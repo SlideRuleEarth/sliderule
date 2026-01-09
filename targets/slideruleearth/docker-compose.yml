@@ -20,7 +20,6 @@ services:
     environment:
       - IPV4=127.0.0.1
       - ORCHESTRATOR=http://127.0.0.1:8050
-      - MANAGER=http://127.0.0.1:8030
       - AMS=http://127.0.0.1:9082
       - IS_PUBLIC=false
       - ORGANIZATION=localhost

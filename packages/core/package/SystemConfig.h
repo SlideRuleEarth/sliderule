@@ -113,7 +113,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            environmentVersion          {"unknown"};
         FieldElement<string>            orchestratorURL             {"http://127.0.0.1:8050"};
         FieldElement<string>            cluster                     {"localhost"};
-        FieldElement<string>            managerURL                  {"http://127.0.0.1:8030"};
+        FieldElement<string>            recorderStream              {""};
         FieldElement<string>            amsURL                      {"http://127.0.0.1:9082"};
         FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};
 
