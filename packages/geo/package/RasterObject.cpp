@@ -207,119 +207,6 @@ int RasterObject::luaFatories (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * getSamples
- *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
-{
-    static_cast<void>(param);
-    uint32_t ssErrors = SS_NO_ERRORS;
-
-    samplingMut.lock();
-    try
-    {
-        /* Get maximum number of batch processing threads allowed */
-        const uint32_t maxNumThreads = std::min(std::thread::hardware_concurrency(), static_cast<uint32_t>(16));
-
-        /* Get readers ranges */
-        std::vector<range_t> ranges;
-        getThreadsRanges(ranges, points.size(), 5, maxNumThreads);
-
-        for(uint32_t i = 0; i < ranges.size(); i++)
-        {
-            const range_t& range = ranges[i];
-            mlog(DEBUG, "range-%u: %u to %u", i, range.start, range.end);
-        }
-
-        const uint32_t numThreads = ranges.size();
-        mlog(DEBUG, "Number of reader threads: %u", numThreads);
-
-        if(numThreads == 1)
-        {
-            /* Single thread, read all samples in one thread using this RasterObject */
-            std::vector<sample_list_t*> samples;
-            ssErrors = readSamples(this, ranges[0], points, samples);
-            for(sample_list_t* slist : samples)
-            {
-                sllist.add(slist);
-            }
-        }
-        else
-        {
-            /* Start reader threads */
-            std::vector<Thread*> pids;
-
-            for(uint32_t i = 0; i < numThreads; i++)
-            {
-                /* Create a RasterObject for each reader thread.
-                 * These objects are local and will be deleted in the reader destructor.
-                 * The user's (this) RasterObject is not directly used for sampling; it is used to accumulate samples from all readers.
-                 */
-                RasterObject* _robj = RasterObject::cppCreate(this);
-                reader_t* reader = new reader_t(_robj, points);
-                reader->range = ranges[i];
-                readersMut.lock();
-                {
-                    readers.push_back(reader);
-                }
-                readersMut.unlock();
-                Thread* pid = new Thread(readerThread, reader);
-                pids.push_back(pid);
-            }
-
-            /* Wait for all reader threads to finish */
-            for(Thread* pid : pids)
-            {
-                delete pid;
-            }
-
-            /* Copy samples lists (slist pointers only) from each reader. */
-            for(const reader_t* reader : readers)
-            {
-                /* Acumulate errors from all reader threads */
-                ssErrors |= reader->ssErrors;
-
-                for(sample_list_t* slist : reader->samples)
-                {
-                    for(int32_t i = 0; i < slist->length(); i++)
-                    {
-                        /* NOTE: sample.fileId is an index of the file name in the reader's file dictionary.
-                         *        we need to convert it to the index in the batch sampler's dictionary (user's RasterObject dict).
-                         */
-                        RasterSample* sample = slist->get(i);
-
-                        /* Find the file name for the sample id in reader's dictionary */
-                        const char* name = reader->robj->fileDict.get(sample->fileId);
-
-                        /* Use user's RasterObject dictionary to store the file names. */
-                        sample->fileId = fileDict.add(name, true);
-                    }
-
-                    sllist.add(slist);
-                }
-            }
-
-            /* Clear readers */
-            readersMut.lock();
-            {
-                for(const reader_t* reader : readers)
-                    delete reader;
-
-                readers.clear();
-            }
-            readersMut.unlock();
-
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting samples: %s", e.what());
-    }
-    samplingMut.unlock();
-
-    return ssErrors;
-}
-
-/*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
 uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, int bandNum, void* param)
@@ -399,12 +286,7 @@ RasterObject::~RasterObject(void)
 void RasterObject::stopSampling(void)
 {
     samplingEnabled = false;
-    readersMut.lock();
-    {
-        for(const reader_t* reader : readers)
-            reader->robj->samplingEnabled = false;
-    }
-    readersMut.unlock();
+    onStopSampling();
 }
 
 /******************************************************************************
@@ -765,27 +647,6 @@ void RasterObject::setLuaSamples(lua_State *L, const List<RasterSample*> &slist,
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Reader Constructor
- *----------------------------------------------------------------------------*/
-RasterObject::Reader::Reader(RasterObject* _robj, const std::vector<RasterObject::point_info_t>& _points) :
-    robj(_robj),
-    range({0, 0}),
-    points(_points),
-    ssErrors(SS_NO_ERRORS)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Reader Destructor
- *----------------------------------------------------------------------------*/
-RasterObject::Reader::~Reader(void)
-{
-    delete robj;  /* This is locally created RasterObject, not lua created */
-}
-
-
-
-/*----------------------------------------------------------------------------
  * slist2table
  *----------------------------------------------------------------------------*/
 int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State *L)
@@ -835,61 +696,4 @@ int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors,
     else mlog(DEBUG, "No subsets read");
 
     return num_ret;
-}
-
-/*----------------------------------------------------------------------------
- * readerThread
- *----------------------------------------------------------------------------*/
-void* RasterObject::readerThread(void* parm)
-{
-    reader_t* reader = static_cast<reader_t*>(parm);
-    reader->ssErrors = readSamples(reader->robj, reader->range, reader->points, reader->samples);
-
-    /* Exit Thread */
-    return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * readSamples
- *----------------------------------------------------------------------------*/
-uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
-                                   const std::vector<point_info_t>& points,
-                                   std::vector<sample_list_t*>& samples)
-{
-    uint32_t ssErrors = SS_NO_ERRORS;
-
-    for(uint32_t i = range.start; i < range.end; i++)
-    {
-        if(!robj->sampling())
-        {
-            mlog(DEBUG, "Sampling stopped");
-            samples.clear();
-            break;
-        }
-
-        sample_list_t* slist = new sample_list_t;
-        const RasterObject::point_info_t& pinfo = points[i];
-        const uint32_t err = robj->getSamples(pinfo, *slist, NULL);
-        bool listvalid = true;
-
-        /* Acumulate errors from all getSamples calls */
-        ssErrors |= err;
-
-        if(err & SS_THREADS_LIMIT_ERROR)
-        {
-            listvalid = false;
-            mlog(CRITICAL, "Too many rasters to sample");
-        }
-
-        if(!listvalid)
-        {
-            /* Clear the list but don't delete it, empty slist indicates no samples for this point */
-            slist->clear();
-        }
-
-        /* Add sample list */
-        samples.push_back(slist);
-    }
-
-    return ssErrors;
 }

@@ -69,6 +69,7 @@ class GeoRaster: public RasterObject
 
                      ~GeoRaster  (void) override;
         uint32_t      getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) final;
+        uint32_t      getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t      getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
         uint8_t*      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL) override;
 
@@ -83,6 +84,7 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
+        void onStopSampling(void) override;
 
          std::string getFileName(void)
          {
@@ -92,14 +94,36 @@ class GeoRaster: public RasterObject
     private:
 
         /*--------------------------------------------------------------------
+        * Typedefs
+        *--------------------------------------------------------------------*/
+
+        typedef struct Reader
+        {
+            RasterObject*                     robj;
+            range_t                           range;
+            const std::vector<point_info_t>&  points;
+            std::vector<sample_list_t*>       samples;
+            uint32_t                          ssErrors;
+
+            explicit Reader (RasterObject* _robj, const std::vector<point_info_t>& _points);
+                    ~Reader (void);
+        } reader_t;
+
+        /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
-        GdalRaster raster;
+        GdalRaster             raster;
+        Mutex                  readersMut;
+        std::vector<reader_t*> readers;
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
+
+        static void*    readerThread (void* parm);
+        static uint32_t readSamples  (RasterObject* robj, const range_t& range,
+                                      const std::vector<point_info_t>& points, std::vector<sample_list_t*>& samples);
 
         static int luaDimensions(lua_State* L);
         static int luaBoundingBox(lua_State* L);

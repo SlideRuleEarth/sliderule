@@ -210,6 +210,49 @@ uint32_t MeritRaster::getSamples (const point_info_t& pinfo, sample_list_t& slis
 }
 
 /*----------------------------------------------------------------------------
+ * getSamples
+ *----------------------------------------------------------------------------*/
+uint32_t MeritRaster::getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
+{
+    static_cast<void>(param);
+    uint32_t ssErrors = SS_NO_ERRORS;
+
+    for(uint32_t i = 0; i < points.size(); i++)
+    {
+        if(!sampling())
+        {
+            mlog(DEBUG, "Sampling stopped");
+            break;
+        }
+
+        sample_list_t* slist = new sample_list_t;
+        const RasterObject::point_info_t& pinfo = points[i];
+        const uint32_t err = getSamples(pinfo, *slist, NULL);
+        bool listvalid = true;
+
+        /* Acumulate errors from all getSamples calls */
+        ssErrors |= err;
+
+        if(err & SS_THREADS_LIMIT_ERROR)
+        {
+            listvalid = false;
+            mlog(CRITICAL, "Too many rasters to sample");
+        }
+
+        if(!listvalid)
+        {
+            /* Clear the list but don't delete it, empty slist indicates no samples for this point */
+            slist->clear();
+        }
+
+        /* Add sample list */
+        sllist.add(slist);
+    }
+
+    return ssErrors;
+}
+
+/*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
 uint32_t MeritRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
@@ -220,4 +263,3 @@ uint32_t MeritRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, L
     static_cast<void>(param);
     return SS_NO_ERRORS;
 }
-

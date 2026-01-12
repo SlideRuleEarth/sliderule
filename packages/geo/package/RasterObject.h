@@ -85,18 +85,6 @@ class RasterObject: public LuaObject
         } range_t;
 
         typedef List<RasterSample*> sample_list_t;
-        typedef struct Reader
-        {
-            RasterObject*                     robj;
-            range_t                           range;
-            const std::vector<point_info_t>&  points;
-            std::vector<sample_list_t*>       samples;
-            uint32_t                          ssErrors;
-
-            explicit Reader (RasterObject* _robj, const std::vector<point_info_t>& _points);
-                    ~Reader (void);
-        } reader_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -107,7 +95,7 @@ class RasterObject: public LuaObject
         static bool          registerRaster  (const char* _name, factory_f create);
         static int           luaFatories     (lua_State* L);
         virtual uint32_t     getSamples      (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) = 0;
-        virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL);
+        virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) = 0;
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL);
         void                 getBands        (std::vector<std::string>& bands);
@@ -199,6 +187,12 @@ class RasterObject: public LuaObject
             return samplingEnabled;
         }
 
+        virtual void onStopSampling(void) {}
+        static  void disableSampling(RasterObject* robj)
+        {
+            if(robj) robj->samplingEnabled.store(false);
+        }
+
                     RasterObject    (lua_State* L, RequestFields* rqst_parms, const char* key);
         static int  luaBatchSamples (lua_State* L);
         static int  luaSamples      (lua_State* L);
@@ -229,10 +223,6 @@ class RasterObject: public LuaObject
 
         static int      slist2table  (const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
 
-        static void*    readerThread (void* parm);
-        static uint32_t readSamples  (RasterObject* robj, const range_t& range,
-                                      const std::vector<point_info_t>& points, std::vector<sample_list_t*>& samples);
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -240,10 +230,8 @@ class RasterObject: public LuaObject
         static Mutex                    factoryMut;
         static Dictionary<factory_t>    factories;
 
-        Mutex                           readersMut;
         Mutex                           samplingMut;
         std::atomic<bool>               samplingEnabled;  /* Used by batch getSample code */
-        std::vector<reader_t*>          readers;
 
         string                          crs;
 };
