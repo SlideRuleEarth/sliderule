@@ -251,15 +251,3 @@ uint32_t MeritRaster::getSamples (const std::vector<point_info_t>& points, List<
 
     return ssErrors;
 }
-
-/*----------------------------------------------------------------------------
- * getSubset
- *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
-{
-    static_cast<void>(extent);
-    static_cast<void>(gps);
-    static_cast<void>(slist);
-    static_cast<void>(param);
-    return SS_NO_ERRORS;
-}

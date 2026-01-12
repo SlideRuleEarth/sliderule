@@ -75,41 +75,6 @@ GeoIndexedRaster::Reader::~Reader (void)
     OGRGeometryFactory::destroyGeometry(geo);
 }
 
-/*----------------------------------------------------------------------------
- * getSubset
- *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
-{
-    static_cast<void>(param);
-
-    lockSampling();
-    try
-    {
-        GroupOrdering groupList;
-        OGRPolygon    poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
-        ssErrors = SS_NO_ERRORS;
-
-        /* Sample Subsets */
-        if(serialSample(&poly, gps, &groupList))
-        {
-            /* Populate Return Vector of Subsets (slist) */
-            const GroupOrdering::Iterator iter(groupList);
-            for(int i = 0; i < iter.length; i++)
-            {
-                const rasters_group_t* rgroup = iter[i].value;
-                getSerialGroupSubsets(rgroup, slist);
-            }
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error subsetting raster: %s", e.what());
-    }
-    unlockSampling();
-
-    return ssErrors;
-}
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/

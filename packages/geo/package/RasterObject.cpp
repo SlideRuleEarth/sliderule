@@ -257,6 +257,18 @@ uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uin
 }
 
 /*----------------------------------------------------------------------------
+ * getSubsets
+ *----------------------------------------------------------------------------*/
+uint32_t RasterObject::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
+{
+    static_cast<void>(extent);
+    static_cast<void>(gps);
+    static_cast<void>(slist);
+    static_cast<void>(param);
+    return SS_NO_ERRORS;
+}
+
+/*----------------------------------------------------------------------------
  * getBands
  *----------------------------------------------------------------------------*/
 void RasterObject::getBands(std::vector<std::string>& bands)

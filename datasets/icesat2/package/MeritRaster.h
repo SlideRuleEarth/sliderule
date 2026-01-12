@@ -87,7 +87,6 @@ class MeritRaster: public RasterObject
         using RasterObject::getSamples;
 
         uint32_t getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
-        uint32_t getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
     private:
 
         /*--------------------------------------------------------------------

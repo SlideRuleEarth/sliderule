@@ -96,7 +96,7 @@ class RasterObject: public LuaObject
         static int           luaFatories     (lua_State* L);
         uint32_t             getSamples      (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL);
         virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) = 0;
-        virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
+        virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL);
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL);
         void                 getBands        (std::vector<std::string>& bands);
         virtual void         getInnerBands   (std::vector<std::string>& bands);
