@@ -89,7 +89,6 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     lockSampling();
 
     perfStats.clear();
-    cache.clear();       /* Clear cache used by serial sampling */
     fileDict.clear();    /* Start with empty file dictionary    */
 
     /* Vector of points and their associated raster groups */

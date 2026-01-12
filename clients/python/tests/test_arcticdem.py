@@ -177,11 +177,14 @@ class TestMosaic:
 
 class TestStrips:
     def test_indexed_raster(self, init):
-        region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
-                                {'lon': -46.34013213284274, 'lat': 65.49860245693627},
-                                {'lon': -46.35015561146599, 'lat': 65.67523503534576},
-                                {'lon': -46.77853429879463, 'lat': 65.67041017142712},
-                                {'lon': -46.76533411521963, 'lat': 65.4938164756588}  ]
+        region_of_interest = [
+            {'lon': -46.769450, 'lat': 65.538550},
+            {'lon': -46.684410, 'lat': 65.539510},
+            {'lon': -46.686420, 'lat': 65.574840},
+            {'lon': -46.770090, 'lat': 65.573880},
+            {'lon': -46.769450, 'lat': 65.538550}
+        ]
+
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=region_of_interest, as_str=True)
         parms = { "poly": region_of_interest,
                   "cnf": "atl03_high",
@@ -197,13 +200,24 @@ class TestStrips:
                   "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True, "catalog": catalog}} }
         gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_007_01.h5'])
         assert init
-        assert len(gdf.attrs['file_directory']) == 14
-        for file_id in range(0, 16, 2):
-            assert file_id in gdf.attrs['file_directory'].keys()
-            assert '/pgc-opendata-dems/arcticdem/strips/' in gdf.attrs['file_directory'][file_id]
-            assert '_dem.tif' in gdf.attrs['file_directory'][file_id]  # only dems, no flags
+        assert 'file_directory' in gdf.attrs
+        file_directory = gdf.attrs['file_directory']
+        file_ids = set()
+        for item in gdf["strips.file_id"].dropna():
+            if hasattr(item, "__iter__") and not isinstance(item, (str, bytes)):
+                for file_id in item:
+                    file_ids.add(int(file_id))
+            else:
+                file_ids.add(int(item))
+        assert len(file_directory) == len(file_ids)
+        for file_id in file_ids:
+            file_id = int(file_id)
+            # print(f'Checking file_id: {file_id}')
+            assert file_id in file_directory
+            assert '/pgc-opendata-dems/arcticdem/strips/' in file_directory[file_id]
+            assert '_dem.tif' in file_directory[file_id]  # only dems, no flags
 
-    def test_sample_api_serial(self, init):
+    def test_sample_one_point(self, init):
         arcticdem_test_point = [
             { "lon": -150.0, "lat": 70.0 }
         ]
@@ -212,7 +226,7 @@ class TestStrips:
         assert init
         assert len(gdf) == 11
 
-    def test_sample_api_batch(self, init):
+    def test_sample_many_points(self, init):
         arcticdem_test_region = [
             { "lon": -150.0, "lat": 70.0 },
             { "lon": -150.0, "lat": 71.0 },
@@ -224,4 +238,3 @@ class TestStrips:
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"catalog": catalog})
         assert init
         assert len(gdf) == 22
-
