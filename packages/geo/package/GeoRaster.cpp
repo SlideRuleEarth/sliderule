@@ -63,9 +63,9 @@ GeoRaster::~GeoRaster(void) = default;
 
 
 /*----------------------------------------------------------------------------
- * getSamples
+ * samplePoint
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getSamples(const point_info_t& pinfo, sample_list_t& slist, void* param)
+uint32_t GeoRaster::samplePoint(const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
     static_cast<void>(param);
 
@@ -361,7 +361,7 @@ uint32_t GeoRaster::readSamples(RasterObject* robj, const range_t& range,
 
         sample_list_t* slist = new sample_list_t;
         const RasterObject::point_info_t& pinfo = points[i];
-        const uint32_t err = robj->getSamples(pinfo, *slist, NULL);
+        const uint32_t err = grobj->samplePoint(pinfo, *slist, NULL);
         bool listvalid = true;
 
         /* Acumulate errors from all getSamples calls */

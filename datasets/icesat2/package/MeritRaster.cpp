@@ -110,9 +110,9 @@ MeritRaster::MeritRaster(lua_State *L, RequestFields* rqst_parms, const char* ke
 }
 
 /*----------------------------------------------------------------------------
- * getSamples
+ * samplePoint
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param)
+uint32_t MeritRaster::samplePoint (const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
     (void)param;
 
@@ -227,7 +227,7 @@ uint32_t MeritRaster::getSamples (const std::vector<point_info_t>& points, List<
 
         sample_list_t* slist = new sample_list_t;
         const RasterObject::point_info_t& pinfo = points[i];
-        const uint32_t err = getSamples(pinfo, *slist, NULL);
+        const uint32_t err = samplePoint(pinfo, *slist, NULL);
         bool listvalid = true;
 
         /* Acumulate errors from all getSamples calls */

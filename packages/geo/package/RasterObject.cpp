@@ -207,6 +207,42 @@ int RasterObject::luaFatories (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * getSamples
+ *----------------------------------------------------------------------------*/
+uint32_t RasterObject::getSamples(const point_info_t& pinfo, sample_list_t& slist, void* param)
+{
+    std::vector<point_info_t> points;
+    points.push_back(pinfo);
+
+    List<sample_list_t*> sllist;
+    const uint32_t ssErrors = getSamples(points, sllist, param);
+
+    if(sllist.length() != 1)
+    {
+        if(sllist.length() > 1)
+        {
+            mlog(CRITICAL, "getSamples returned %u elements", sllist.length());
+        }
+        return ssErrors;
+    }
+
+    sample_list_t* batch_slist = sllist[0];
+    if(batch_slist)
+    {
+        for(int i = 0; i < batch_slist->length(); i++)
+        {
+            RasterSample* sample = batch_slist->get(i);
+            slist.add(sample);
+
+            /* Set sample to NULL, don't delete since slist owns samples now */
+            batch_slist->set(i, NULL, false);
+        }
+    }
+
+    return ssErrors;
+}
+
+/*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
 uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, int bandNum, void* param)

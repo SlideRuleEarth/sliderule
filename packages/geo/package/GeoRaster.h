@@ -68,7 +68,10 @@ class GeoRaster: public RasterObject
                                   GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
 
                      ~GeoRaster  (void) override;
-        uint32_t      getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) final;
+
+        /* import getSamples with single point */
+        using RasterObject::getSamples;
+
         uint32_t      getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t      getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
         uint8_t*      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL) override;
@@ -120,6 +123,8 @@ class GeoRaster: public RasterObject
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
+
+        uint32_t samplePoint(const point_info_t& pinfo, sample_list_t& slist, void* param=NULL);
 
         static void*    readerThread (void* parm);
         static uint32_t readSamples  (RasterObject* robj, const range_t& range,
