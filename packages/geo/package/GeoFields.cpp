@@ -218,9 +218,9 @@ std::string GeoFields::sserror2str(uint32_t error)
         return errorStr;
     }
 
-    if(error & SS_THREADS_LIMIT_ERROR)
+    if(error & SS_UNUSED_PLACEHOLDER)
     {
-        errorStr += "SS_THREADS_LIMIT_ERROR, ";
+        errorStr += "SS_UNUSED_PLACEHOLDER, ";
     }
     if(error & SS_MEMPOOL_ERROR)
     {

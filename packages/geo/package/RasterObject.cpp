@@ -505,12 +505,6 @@ int RasterObject::luaSamples(lua_State *L)
         const point_info_t pinfo = {{lon, lat, height}, gps};
         err = lua_obj->getSamples(pinfo, slist, NULL);
 
-        if(err & SS_THREADS_LIMIT_ERROR)
-        {
-            listvalid = false;
-            mlog(CRITICAL, "Too many rasters to sample, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
-        }
-
         if(err & SS_RESOURCE_LIMIT_ERROR)
         {
             listvalid = false;
@@ -702,12 +696,6 @@ int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors,
     int num_ret = 0;
 
     bool listvalid = true;
-    if(errors & SS_THREADS_LIMIT_ERROR)
-    {
-        listvalid = false;
-        mlog(CRITICAL, "Too many rasters to subset, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
-    }
-
     if(errors & SS_MEMPOOL_ERROR)
     {
         listvalid = false;

@@ -62,8 +62,6 @@ class GeoIndexedRaster: public RasterObject
 
         static const double TOLERANCE;
 
-        static const int   MAX_READER_THREADS = 200;
-
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;
         static const char* DATE_TAG;

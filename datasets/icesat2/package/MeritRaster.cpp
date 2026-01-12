@@ -228,22 +228,9 @@ uint32_t MeritRaster::getSamples (const std::vector<point_info_t>& points, List<
         sample_list_t* slist = new sample_list_t;
         const RasterObject::point_info_t& pinfo = points[i];
         const uint32_t err = samplePoint(pinfo, *slist, NULL);
-        bool listvalid = true;
 
         /* Acumulate errors from all getSamples calls */
         ssErrors |= err;
-
-        if(err & SS_THREADS_LIMIT_ERROR)
-        {
-            listvalid = false;
-            mlog(CRITICAL, "Too many rasters to sample");
-        }
-
-        if(!listvalid)
-        {
-            /* Clear the list but don't delete it, empty slist indicates no samples for this point */
-            slist->clear();
-        }
 
         /* Add sample list */
         sllist.add(slist);
