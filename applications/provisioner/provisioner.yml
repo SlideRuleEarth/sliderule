@@ -25,7 +25,9 @@ Parameters:
     Type: String
   CertificateArn:
     Type: String
-  RecorderStream:
+  AlertStream:
+    Type: String
+  TelemetryStream:
     Type: String
   LambdaZipFile:
     Type: String
@@ -60,7 +62,8 @@ Resources:
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
           JWT_ISSUER: !Ref JwtIssuer
           CERTIFICATE_ARN: !Ref CertificateArn
-          RECORDER_STREAM: !Ref RecorderStream
+          ALERT_STREAM: !Ref AlertStream
+          TELEMETRY_STREAM: !Ref TelemetryStream
 
   ## Destroy Lambda Function
   DestroyLambda:
@@ -158,7 +161,8 @@ Resources:
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
           JWT_ISSUER: !Ref JwtIssuer
           CERTIFICATE_ARN: !Ref CertificateArn
-          RECORDER_STREAM: !Ref RecorderStream
+          ALERT_STREAM: !Ref AlertStream
+          TELEMETRY_STREAM: !Ref TelemetryStream
 
   ## IAM Role
   LambdaExecutionRole:

@@ -27,8 +27,14 @@ aws_utils.config_aws()
 
 -- Configure Monitoring --
 core.logmon(core.DEBUG):global("LogMonitor") -- monitor logs and write to stdout
-aws.tlmmon(core.DEBUG):global("TelemetryMonitor") -- monitor telementry and push to firehose
-aws.alrmon(core.DEBUG):global("AlertMonitor") -- monitor alerts and push to firehose
+local alert_stream = sys.getcfg("alert_stream")
+if #alert_stream > 0 then
+    aws.firehose(core.DEBUG, core.ALERT_REC_TYPE, alert_stream):global("AlertMonitor") -- monitor alerts and push to firehose
+end
+local telemetry_stream = sys.getcfg("telemetry_stream")
+if #telemetry_stream > 0 then
+    aws.firehose(core.DEBUG, core.TLM_REC_TYPE, telemetry_stream):global("TelemetryMonitor") -- monitor telementry and push to firehose
+end
 
 -- Update Leap Seconds File --
 local leap_seconds_file = "/tmp/leap-seconds.list"

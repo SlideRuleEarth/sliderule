@@ -36,12 +36,10 @@
 #include <aws/core/Aws.h>
 
 #include "OsApi.h"
-#include "aws.h"
-#include "AlertMonitor.h"
 #include "CredentialStore.h"
+#include "FirehoseMonitor.h"
 #include "S3CacheIODriver.h"
 #include "S3CurlIODriver.h"
-#include "TelemetryMonitor.h"
 
 /******************************************************************************
  * DEFINES
@@ -72,8 +70,7 @@ int aws_open (lua_State *L)
         {"s3read",      S3CurlIODriver::luaRead},
         {"s3upload",    S3CurlIODriver::luaUpload},
         {"s3cache",     S3CacheIODriver::luaCreateCache},
-        {"tlmmon",      TelemetryMonitor::luaCreate},
-        {"alrmon",      AlertMonitor::luaCreate},
+        {"firehose",    FirehoseMonitor::luaCreate},
         {NULL,          NULL}
     };
 

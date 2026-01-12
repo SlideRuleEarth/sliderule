@@ -100,22 +100,23 @@ class SystemConfig: public FieldDictionary
         FieldElement<float>             normalMemoryThreshold       {1.0};
         FieldElement<float>             streamMemoryThreshold       {0.75};
         FieldElement<int>               msgQDepth                   {10000};
-        FieldElement<bool>              isPublic                    {false};
         FieldElement<bool>              inCloud                     {false};
         FieldElement<string>            systemBucket                {"sliderule"};
-        FieldList<string>               postStartupScripts;
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};
+        FieldList<string>               postStartupScripts;
 
         // ENVIRONMENT VARIABLES
-        FieldElement<string>            ipv4                        {"127.0.0.1"};
-        FieldElement<string>            environmentVersion          {"unknown"};
-        FieldElement<string>            orchestratorURL             {"http://127.0.0.1:8050"};
-        FieldElement<string>            cluster                     {"localhost"};
-        FieldElement<string>            recorderStream              {""};
-        FieldElement<string>            amsURL                      {"http://127.0.0.1:9082"};
-        FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};
+        FieldElement<string>            ipv4;
+        FieldElement<string>            environmentVersion;
+        FieldElement<string>            orchestratorURL;
+        FieldElement<string>            alertStream;
+        FieldElement<string>            telemetryStream;
+        FieldElement<string>            cluster;
+        FieldElement<string>            amsURL;
+        FieldElement<bool>              isPublic;
+        FieldElement<string>            containerRegistry;
 
     private:
 

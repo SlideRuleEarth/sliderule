@@ -36,6 +36,7 @@
 #include "OsApi.h"
 #include "OutputFields.h"
 #include "SystemConfig.h"
+#include "Asset.h"
 
 /******************************************************************************
  * STATIC DATA

@@ -172,6 +172,10 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FMT_TEXT",                 LogMonitor::TEXT);
     LuaEngine::setAttrInt   (L, "FMT_CLOUD",                LogMonitor::CLOUD);
     LuaEngine::setAttrStr   (L, "EVENTQ",                   EVENTQ);
+    LuaEngine::setAttrStr   (L, "LOG_REC_TYPE",             EventLib::logRecType);
+    LuaEngine::setAttrStr   (L, "TRACE_REC_TYPE",           EventLib::traceRecType);
+    LuaEngine::setAttrStr   (L, "TLM_REC_TYPE",             EventLib::telemetryRecType);
+    LuaEngine::setAttrStr   (L, "ALERT_REC_TYPE",           EventLib::alertRecType);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",                  RecordObject::INTEGER);

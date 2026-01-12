@@ -89,7 +89,6 @@ static RecordObject::fieldDef_t telemetryRecDef[] =
     {"ip",          RecordObject::STRING,   offsetof(EventLib::telemetry_t, source_ip), EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
     {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),    EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
     {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),   EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
-    {"version",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, version),   EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS}
 };
 
 static RecordObject::fieldDef_t alertRecDef[] =
@@ -336,7 +335,6 @@ bool EventLib::sendTlm (event_level_t lvl, const tlm_input_t& tlm)
     StringLib::copy(event->source_ip, tlm.source_ip, EventLib::MAX_TLM_STR);
     StringLib::copy(event->client, tlm.client, EventLib::MAX_TLM_STR);
     StringLib::copy(event->account, tlm.account, EventLib::MAX_TLM_STR);
-    StringLib::copy(event->version, LIBID, EventLib::MAX_TLM_STR);
 
     /* Post Telemetry Message */
     return record.post(outq, 0, NULL, false);

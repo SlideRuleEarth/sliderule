@@ -29,21 +29,26 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __alert_monitor__
-#define __alert_monitor__
+#ifndef __firehose_monitor__
+#define __firehose_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include <aws/firehose/FirehoseClient.h>
+#include <aws/firehose/model/PutRecordRequest.h>
+
 #include "Monitor.h"
+#include "EventLib.h"
+#include "StringLib.h"
 #include "OsApi.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class AlertMonitor: public Monitor
+class FirehoseMonitor: public Monitor
 {
     public:
 
@@ -64,11 +69,29 @@ class AlertMonitor: public Monitor
     private:
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+         typedef const FString* (*convert_f) (const unsigned char* event_buf_ptr, event_level_t lvl);
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        AlertMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
-        ~AlertMonitor (void) override;
+        FirehoseMonitor  (lua_State* L, event_level_t level, const char* rec_type, const char* stream_name, const char* eventq_name);
+        ~FirehoseMonitor (void) override;
+
+        static const FString* jsonAlert (const unsigned char* event_buf_ptr, event_level_t lvl);
+        static const FString* jsonTlm   (const unsigned char* event_buf_ptr, event_level_t lvl);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        convert_f convertToJson;
+        bool inError;
+        Aws::Firehose::FirehoseClient firehoseClient;
+        Aws::Firehose::Model::PutRecordRequest request;
     };
 
-#endif  /* __publish_monitor__ */
+#endif  /* __firehose_monitor__ */

@@ -138,29 +138,31 @@ SystemConfig::SystemConfig(void):
         {"normal_mem_thresh",           &normalMemoryThreshold},
         {"stream_mem_thresh",           &streamMemoryThreshold},
         {"msgq_depth",                  &msgQDepth},
-        {"is_public",                   &isPublic},
         {"in_cloud",                    &inCloud},
         {"sys_bucket",                  &systemBucket},
-        {"post_startup_scripts",        &postStartupScripts},
         {"publish_timeout_ms",          &publishTimeoutMs},
         {"request_timeout_sec",         &requestTimeoutSec},
+        {"post_startup_scripts",        &postStartupScripts},
         {"ipv4",                        &ipv4},
         {"environment_version",         &environmentVersion},
         {"orchestrator_url;",           &orchestratorURL},
+        {"alert_stream",                &alertStream},
+        {"telemetry_stream",            &telemetryStream},
         {"cluster",                     &cluster},
-        {"recorder_stream",             &recorderStream},
         {"ams_url",                     &amsURL},
+        {"is_public",                   &isPublic},
         {"container_registry",          &containerRegistry}
     })
 {
     // populate environment variables
-    setIfProvidedBool(isPublic, "IS_PUBLIC");
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
+    setIfProvided(alertStream, "ALERT_STREAM");
+    setIfProvided(telemetryStream, "TELEMETRY_STREAM");
     setIfProvided(cluster, "CLUSTER");
-    setIfProvided(recorderStream, "RECORDER_STREAM");
     setIfProvided(amsURL, "AMS");
+    setIfProvidedBool(isPublic, "IS_PUBLIC");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 

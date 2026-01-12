@@ -6,7 +6,7 @@
 #           See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
 #           The user must have up-to-date aws credentials
 #     * Docker
-#           The user must be logged into the AWS Elastic Container Registry (ECR)
+#           The user must be logged into the AWS Elastic Container Registry
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
 #     * conda-lock
@@ -46,11 +46,11 @@ ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
-MANAGER_STAGE_DIR = $(STAGE)/manager
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
+RECORDER_STAGE_DIR = $(STAGE)/recorder
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 WEBSITE_STAGE_DIR = $(STAGE)/website
 WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
@@ -68,7 +68,7 @@ PROJECT_PUBLIC_BUCKET = sliderule-public
 PROJECT_WEBSITE_BUCKET = sliderule-website
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
-ECR = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
+CONTAINER_REGISTRY = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
@@ -84,7 +84,8 @@ VERSION ?= latest
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
 JWT_ISSUER = https://$(AUTHENTICATOR_URL)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
-RECORDER_STREAM ?= recorder-firehose-logger
+ALERT_STREAM ?= recorder-firehose-alerts
+TELEMETRY_STREAM ?= recorder-firehose-telemetry
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -144,7 +145,17 @@ sliderule: ## build the server using the local configuration
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=false ASAN_OPTIONS="detect_leaks=1" LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
+	IPV4=$(MYIP) \
+	ENVIRONMENT_VERSION=$(ENVVER) \
+	ORCHESTRATOR=http://127.0.0.1:8050 \
+	CLUSTER=$(CLUSTER) \
+	AMS=http://127.0.0.1:9082 \
+	IS_PUBLIC=false \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	ASAN_OPTIONS="detect_leaks=1" \
+	LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" \
+	$(RUNNER) \
+	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
 
 build: ## build the code using the build environment docker container
 	docker run \
@@ -160,7 +171,7 @@ build: ## build the code using the build environment docker container
 		-e GITEMAIL="$(shell git config user.email)" \
 		--rm \
 		--name buildenv \
-		$(ECR)/sliderule-buildenv:$(VERSION) \
+		$(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION) \
 		$(BUILD_CMD)
 
 ########################
@@ -172,11 +183,11 @@ buildenv-docker: ## build sliderule build environment docker image
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 buildenv-docker-push: ## push build environment docker image to registry
-	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -185,7 +196,17 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/docker-entrypoint.sh $(SLIDERULE_STAGE_DIR)/
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
-	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
+
+sliderule-run: ## run the server locally
+	IPV4=$(MYIP) \
+	ENVIRONMENT_VERSION=$(ENVVER) \
+	ORCHESTRATOR=http://127.0.0.1:8050 \
+	CLUSTER=$(CLUSTER) \
+	AMS=http://127.0.0.1:9082 \
+	IS_PUBLIC=false \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	docker compose up $(DOCKEROPTS) sliderule
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -195,27 +216,27 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/applications/ilb/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
 
 proxy-docker: # make the reverse proxy docker image; needs VERSION
 	-rm -Rf $(PROXY_STAGE_DIR)
 	mkdir -p $(PROXY_STAGE_DIR)
 	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/proxy:$(VERSION) $(DOCKER_PLATFORM) .
 
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
 	cp -R docker/monitor/rootfs/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
-	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
 monitor-agent-docker: ## build monitor agent docker image; needs VERSION
 	-rm -Rf $(MONITOR_AGENT_STAGE_DIR)
 	mkdir -p $(MONITOR_AGENT_STAGE_DIR)
 	cp -R docker/monitor-agent/rootfs/* $(MONITOR_AGENT_STAGE_DIR)
 	cp docker/monitor-agent/Dockerfile.$(ARCH) $(MONITOR_AGENT_STAGE_DIR)/Dockerfile
-	cd $(MONITOR_AGENT_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor-agent:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(MONITOR_AGENT_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-lock: ## update dependencies of ams
 	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
@@ -232,31 +253,10 @@ ams-docker: ## build ams docker image; uses VERSION
 	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(AMS_STAGE_DIR)/ams
 	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
-	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ams:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) $(DOCKER_PLATFORM) .
 
 ams-run: ## run ams locally; uses VERSION
-	docker run -it -p 8060:8060 --rm --name ams $(ECR)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
-
-manager-lock: ## update dependencies of manager
-	cd docker/manager && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/manager/environment.yml
-	cd docker/manager && conda-lock render -p linux-$(ARCH)
-
-manager-docker: ## build manager docker image; uses VERSION
-	-rm -Rf $(MANAGER_STAGE_DIR)
-	mkdir -p $(MANAGER_STAGE_DIR)
-	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
-	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
-	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
-	cp $(ROOT)/applications/manager/pyproject.toml $(MANAGER_STAGE_DIR)
-	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
-	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
-	mkdir $(MANAGER_STAGE_DIR)/manager
-	cp $(ROOT)/applications/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
-	cp $(ROOT)/applications/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
-	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
-
-manager-run: ## run manager locally; uses VERSION
-	docker run -it -p 8040:8040 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
+	docker run -it -p 8060:8060 --rm --name ams $(CONTAINER_REGISTRY)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
 
 ########################
 # Cluster Targets
@@ -282,17 +282,15 @@ cluster-docker: ## build all cluster docker images
 	make proxy-docker
 	make monitor-docker
 	make monitor-agent-docker
-	make manager-docker
 	make ams-docker
 
 cluster-docker-push: ## push all cluster images to container registries (and docker compose files to S3)
-	docker push $(ECR)/sliderule:$(VERSION)
-	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/proxy:$(VERSION)
-	docker push $(ECR)/monitor:$(VERSION)
-	docker push $(ECR)/monitor-agent:$(VERSION)
-	docker push $(ECR)/manager:$(VERSION)
-	docker push $(ECR)/ams:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/sliderule:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/ilb:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/proxy:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/monitor:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/ams:$(VERSION)
 
 cluster-cf-init: ## initialize S3 cloudformation subfolder; only needs to be run once
 	-rm -Rf $(CF_STAGE_DIR)
@@ -348,13 +346,14 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
-						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
-						ParameterKey=RecorderStream,ParameterValue=$(RECORDER_STREAM)
+						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
 
 cluster-direct-describe: ## directly status cluster created via cloud formation
@@ -377,7 +376,7 @@ TESTBOT_PARMS = '{\
 	"project_bucket": "$(PROJECT_BUCKET)",\
 	"project_folder": "$(PROJECT_FOLDER)",\
 	"lambda_zip_file": "$(PROJECT_FOLDER)/provisioner.zip",\
-	"container_registry": "$(ECR)",\
+	"container_registry": "$(CONTAINER_REGISTRY)",\
 	"deploy_date": "$(TIMESTAMP)",\
 	"region": "$(AWS_REGION)"\
 }'
@@ -395,6 +394,51 @@ testrunner-run: ## invokes the provisioner lambda function and displays the resp
 	echo $(TESTBOT_PARMS) > /tmp/payload.json
 	aws lambda invoke --function-name provisioner-test --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
+
+########################
+# Recorder Targets
+########################
+
+recorder-build: ## builds the recorder lambda package zipfile
+	-rm -Rf $(RECORDER_STAGE_DIR)
+	mkdir -p $(RECORDER_STAGE_DIR)
+	cp $(ROOT)/applications/recorder/requirements.txt $(RECORDER_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(RECORDER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/applications/recorder/recorder.py $(RECORDER_STAGE_DIR)/package/
+	cd $(RECORDER_STAGE_DIR)/package/ && zip -r -q $(RECORDER_STAGE_DIR)/recorder.zip . -x "/*__pycache__/*"
+
+recorder-create: recorder-build  ## creates the lambda recorder functions
+	aws s3 cp $(RECORDER_STAGE_DIR)/recorder.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/recorder.zip
+	aws cloudformation create-stack \
+		--stack-name 	recorder \
+		--template-body file://$(ROOT)/applications/recorder/recorder.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=AuthenticatorUrl,ParameterValue=$(AUTHENTICATOR_URL) \
+						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
+						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
+						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/recorder.zip
+	aws cloudformation wait stack-create-complete --stack-name recorder
+
+recorder-describe: ## status the creation/deletion of the recorder functions
+	aws cloudformation describe-stack-events --stack-name recorder
+
+recorder-delete: ## deletes the lambda recorder functions
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/recorder.zip
+	aws cloudformation delete-stack --stack-name recorder
+	aws cloudformation wait stack-delete-complete --stack-name recorder
 
 ########################
 # Authenticator Targets
@@ -495,11 +539,12 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
-						ParameterKey=ContainerRegistry,ParameterValue=$(ECR) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
-						ParameterKey=RecorderStream,ParameterValue=$(RECORDER_STREAM) \
+						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
@@ -608,15 +653,15 @@ website-docker: ## make the website docker image; needs VERSION
 	cp docker/website/Dockerfile.$(ARCH) $(WEBSITE_STAGE_DIR)/Dockerfile
 	cp docker/website/nginx.conf $(WEBSITE_STAGE_DIR)
 	cp docker/website/docker-entrypoint.sh $(WEBSITE_STAGE_DIR)
-	cd $(WEBSITE_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/website:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(WEBSITE_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/website:$(VERSION) $(DOCKER_PLATFORM) .
 
 website-run: ## locally run the website; needs VERSION
-	docker run -it -p 4000:4000 --rm --name website $(ECR)/website:$(VERSION)
+	docker run -it -p 4000:4000 --rm --name website $(CONTAINER_REGISTRY)/website:$(VERSION)
 
 website-export: ## export website to local host directory; needs VERSION
 	-rm -Rf $(WEBSITE_EXPORT_DIR)
 	mkdir -p $(WEBSITE_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/website:/host -v $(WEBSITE_EXPORT_DIR):/output --rm --name website $(ECR)/website:$(VERSION) /host/export_dist.sh
+	docker run -it --entrypoint /bin/bash  -v ./docker/website:/host -v $(WEBSITE_EXPORT_DIR):/output --rm --name website $(CONTAINER_REGISTRY)/website:$(VERSION) /host/export_dist.sh
 
 website-live-update: website-export # Update the website docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(PROJECT_WEBSITE_BUCKET) --delete
@@ -667,14 +712,12 @@ website: ## build and update website
 # Release Target
 ########################
 
-release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and release sliderule; needs VERSION
+release: buildenv-docker buildenv-docker-push ams-lock ## tag and release sliderule; needs VERSION
 	echo $(VERSION) > $(ROOT)/version.txt
 	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth/docker/manager/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
@@ -690,15 +733,14 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 ########################
 
 docker-clean: ## clean out old version of docker images; needs VERSION
-	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
-	- docker image rm $(ECR)/sliderule:$(VERSION)
-	- docker image rm $(ECR)/ilb:$(VERSION)
-	- docker image rm $(ECR)/proxy:$(VERSION)
-	- docker image rm $(ECR)/monitor:$(VERSION)
-	- docker image rm $(ECR)/monitor-agent:$(VERSION)
-	- docker image rm $(ECR)/manager:$(VERSION)
-	- docker image rm $(ECR)/ams:$(VERSION)
-	- docker image rm $(ECR)/website:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/sliderule:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/ilb:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/proxy:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/monitor:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/ams:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/website:$(VERSION)
 	- docker system prune -f
 
 distclean: ## fully remove all non-version controlled files and directories
@@ -706,7 +748,6 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
-	- cd $(ROOT)/applications/manager && ./clean.sh
 	- cd $(ROOT)/applications/ams && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
@@ -720,7 +761,6 @@ TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua cloud
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
 AMSTEST ?= # specific ams tests and additional pytest options can be supplied here
-MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here
 
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
 MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
@@ -738,9 +778,6 @@ jest: ## run node.js client self tests
 
 amstest: ## run ams tests; needs special conda environment
 	make -C $(ROOT)applications/ams test TEST=$(AMSTEST)
-
-mngrtest: ## run manager tests; needs special conda environment
-	make -C $(ROOT)applications/manager test TEST=$(MNGRTEST)
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
@@ -763,7 +800,7 @@ environment: ## echo the environment variables
 	@echo PROJECT_WEBSITE_BUCKET: $(PROJECT_WEBSITE_BUCKET)
 	@echo AWS_ACCOUNT: $(AWS_ACCOUNT)
 	@echo AWS_REGION: $(AWS_REGION)
-	@echo ECR: $(ECR)
+	@echo CONTAINER_REGISTRY: $(CONTAINER_REGISTRY)
 	@echo MYIP: $(MYIP)
 	@echo ENVVER: $(ENVVER)
 	@echo ARCH: $(ARCH)

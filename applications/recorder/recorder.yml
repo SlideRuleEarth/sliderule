@@ -3,9 +3,11 @@ Description: 'Kinesis Firehose with Lambda transformation and S3 delivery'
 
 Parameters:
 
-  RecorderStream:
-    Type: String
   ProjectBucket:
+    Type: String
+  AlertStream:
+    Type: String
+  TelemetryStream:
     Type: String
   LambdaZipFile:
     Type: String
@@ -113,7 +115,7 @@ Resources:
       - FirehoseRole
       - ProcessingLambdaFunction
     Properties:
-      DeliveryStreamName: !Ref RecorderStream
+      DeliveryStreamName: !Ref TelemetryStream
       DeliveryStreamType: DirectPut
       ExtendedS3DestinationConfiguration:
         BucketARN: !Sub 'arn:aws:s3:::${DestinationBucketName}'

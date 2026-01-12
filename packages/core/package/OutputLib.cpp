@@ -42,7 +42,7 @@
 #include "RecordObject.h"
 
 #ifdef __aws__
-#include "aws.h"
+#include "S3CurlIODriver.h"
 #endif
 
 /******************************************************************************

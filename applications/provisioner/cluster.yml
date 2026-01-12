@@ -39,7 +39,9 @@ Parameters:
     Type: String
   CertificateArn:
     Type: String
-  RecorderStream:
+  AlertStream:
+    Type: String
+  TelemetryStream:
     Type: String
 
   #
@@ -688,7 +690,8 @@ Resources:
                 environment:
                   - IPV4=$IPV4
                   - ORCHESTRATOR=http://${IlbIP}:8050
-                  - RECORDER_STREAM=${RecorderStream}
+                  - ALERT_STREAM=${AlertStream}
+                  - TELEMETRY_STREAM=${TelemetryStream}
                   - AMS=http://127.0.0.1:9082
                   - CLUSTER=${Cluster}
                   - IS_PUBLIC=${IsPublic}
