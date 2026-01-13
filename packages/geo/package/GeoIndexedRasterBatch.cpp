@@ -155,8 +155,6 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "Error finding unique rasters");
             }
-
-            /* rastersToPointsMap is no longer needed */
         }
 
         /* Sample all unique rasters */
