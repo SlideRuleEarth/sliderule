@@ -34,31 +34,44 @@ local errorChecking = true
 
 local starttime = time.latch();
 
+local lons = {}
+local lats = {}
+local heights = {}
 for i=1,#arr do
-    local  lon = arr[i][1]
-    local  lat = arr[i][2]
-    local  height = 0
-    local  tbl, err = dem:sample(lon, lat, height)
-    if err ~= 0 then
-        failedRead = failedRead + 1
-        print(string.format("======> FAILED to read", lon, lat))
-    else
-        local value, fname, time
-        for j, v in ipairs(tbl) do
-            value = v["value"]
-            fname = v["file"]
-            time  = v["time"]
-            -- print(string.format("value %12.3f, time %.2f, fname: %s", value, time, fname))
+    lons[i] = arr[i][1]
+    lats[i] = arr[i][2]
+    heights[i] = 0
+end
+
+local  tbl, err = dem:batchsample(lons, lats, heights)
+if err ~= 0 then
+    print("======> FAILED to batchsample")
+else
+    for i=1,#arr do
+        local  lon = lons[i]
+        local  lat = lats[i]
+        local  pointSamples = tbl[i]
+        if pointSamples == nil then
+            failedRead = failedRead + 1
+            print(string.format("======> FAILED to read %0.16f, %0.16f", lon, lat))
+        else
+            local value, fname, time
+            for j, v in ipairs(pointSamples) do
+                value = v["value"]
+                fname = v["file"]
+                time  = v["time"]
+                -- print(string.format("value %12.3f, time %.2f, fname: %s", value, time, fname))
+            end
         end
+
+        samplesCnt = samplesCnt + 1
+
+        local modulovalue = 5000
+        if (i % modulovalue == 0) then
+            print(string.format("Sample: %d", samplesCnt))
+        end
+
     end
-
-    samplesCnt = samplesCnt + 1
-
-    local modulovalue = 5000
-    if (i % modulovalue == 0) then
-        print(string.format("Sample: %d", samplesCnt))
-    end
-
 end
 
 local stoptime = time.latch();
