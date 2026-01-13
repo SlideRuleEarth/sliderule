@@ -88,7 +88,8 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
     lockSampling();
 
-    if(points.size() > 1)
+    const bool multiPoints = points.size() > 1;
+    if(multiPoints)
     {
         samplingLogLevel = INFO;
         fileDict.clear();
@@ -97,7 +98,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     {
         /* Reduce noise for single-point calls */
         samplingLogLevel = DEBUG;
-        /* Don't clear fileDict for single-point calls */
+        /* Don't clear fileDict for single-point calls to allow caching across calls for backward compatibility */
     }
 
     perfStats.clear();
@@ -116,14 +117,23 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         std::string ifile;
         getIndexFile(&points, ifile);
 
-        /* Create a convex hull that wraps around all the points, used for spatial filter */
-        OGRGeometry* filter = getConvexHull(&points);
+        /* Create a convex hull that wraps around all the points, used for spatial filter.
+         * Skip it for single-point calls so we don't cache a point-filtered R-tree that would
+         * hide rasters on subsequent single-point calls. */
+        OGRGeometry* filter = NULL;
+        if(multiPoints)
+        {
+            filter = getConvexHull(&points);
+        }
 
         /* Open the index file */
         const bool indexOpenedOk = openGeoIndex(ifile, filter);
 
         /* Clean up convex hull */
-        OGRGeometryFactory::destroyGeometry(filter);
+        if(filter)
+        {
+            OGRGeometryFactory::destroyGeometry(filter);
+        }
 
         if(!indexOpenedOk)
         {
@@ -669,7 +679,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         const uint32_t numMaxThreads = std::thread::hardware_concurrency();
         const uint32_t minPointsPerThread = 100;
 
-        mlog(DEBUG, "Finding rasters groups for all points with %u threads", numMaxThreads);
+        mlog(samplingLogLevel, "Finding rasters groups for all points with %u threads", numMaxThreads);
 
         std::vector<range_t> pointsRanges;
         getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
