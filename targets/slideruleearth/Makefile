@@ -79,7 +79,7 @@ CONFIG ?= release
 DOMAIN ?= slideruleearth.io
 PUBLIC_CLUSTER ?= sliderule
 CLUSTER ?= developers
-VERSION ?= latest
+VERSION ?= unstable
 
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
@@ -153,6 +153,8 @@ run: ## run the server locally
 	AMS=http://127.0.0.1:9082 \
 	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	ALERT_STREAM=$(ALERT_STREAM) \
+	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
 	ASAN_OPTIONS="detect_leaks=1" \
 	LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" \
 	$(RUNNER) \
@@ -172,7 +174,7 @@ build: ## build the code using the build environment docker container
 		-e GITEMAIL="$(shell git config user.email)" \
 		--rm \
 		--name buildenv \
-		$(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION) \
+		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
 		$(BUILD_CMD)
 
 ########################
@@ -184,11 +186,11 @@ buildenv-docker: ## build sliderule build environment docker image
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(CONTAINER_REGISTRY)/sliderule-buildenv:latest /bin/bash -c "cat /libdep.lock > /host/libdep-$(ARCH).lock"
 
 buildenv-docker-push: ## push build environment docker image to registry
-	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION)
+	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -732,7 +734,7 @@ release: buildenv-docker buildenv-docker-push ams-lock ## tag and release slider
 ########################
 
 docker-clean: ## clean out old version of docker images; needs VERSION
-	- docker image rm $(CONTAINER_REGISTRY)/sliderule-buildenv:$(VERSION)
+	- docker image rm $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 	- docker image rm $(CONTAINER_REGISTRY)/sliderule:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/ilb:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/proxy:$(VERSION)
