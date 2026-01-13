@@ -67,6 +67,7 @@ RUN curl -LO https://download.osgeo.org/libtiff/tiff-4.6.0.tar.gz && \
     make install && \
     rm -Rf /tiff-4.6.0 && \
     rm -Rf /build/tiff-4.6.0 && \
+    rm -Rf /tiff-4.6.0.tar.gz && \
     ldconfig
 
 # install proj9 dependency

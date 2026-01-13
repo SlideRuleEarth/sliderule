@@ -1,4 +1,3 @@
 {
-    "log_format": "FMT_CLOUD",
-    "post_startup_scripts": []
+    "log_format": "FMT_CLOUD"
 }

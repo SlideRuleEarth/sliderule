@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   sliderule:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule:latest
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule:unstable
     container_name: sliderule
     network_mode: "host"
     restart: unless-stopped
@@ -34,7 +34,7 @@ services:
       retries: 1
       start_period: 30s
   ilb:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ilb:latest
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ilb:unstable
     container_name: ilb
     network_mode: "host"
     restart: unless-stopped
@@ -56,13 +56,13 @@ services:
       retries: 1
       start_period: 30s
   monitor:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:unstable
     container_name: monitor
     network_mode: host
     restart: unless-stopped
     pull_policy: if_not_present
   monitor-agent:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor-agent:latest
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor-agent:unstable
     container_name: monitor-agent
     network_mode: host
     restart: unless-stopped
@@ -77,7 +77,7 @@ services:
       - /etc/machine-id:/etc/machine-id:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
   proxy:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/proxy:latest
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/proxy:unstable
     container_name: proxy
     network_mode: "host"
     restart: unless-stopped
@@ -93,7 +93,7 @@ services:
       - DOMAIN=$DOMAIN
       - REDIRECT_URI_SCHEME=http
   ams:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ams:latest
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ams:unstable
     container_name: ams
     network_mode: "host"
     restart: always
