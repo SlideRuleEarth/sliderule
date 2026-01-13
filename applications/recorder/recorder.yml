@@ -1,22 +1,33 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Kinesis Firehose with Lambda transformation and S3 delivery'
+Description: 'Kinesis Firehose with S3 delivery'
 
 Parameters:
 
+  Domain:
+    Type: String
+  RecorderUrl:
+    Type: String
+  JwtIssuer:
+    Type: String
   ProjectBucket:
     Type: String
   AlertStream:
     Type: String
   TelemetryStream:
     Type: String
+  CorsAllowOrigins:
+    Type: CommaDelimitedList
+  CertificateArn:
+    Type: String
   LambdaZipFile:
     Type: String
 
-
 Resources:
 
-  # IAM Role for Lambda processing function
-  ProcessingLambdaRole:
+  #
+  # IAM Roles
+  #
+  LambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -28,33 +39,6 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-      Policies:
-        - PolicyName: LambdaProcessingPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
-
-  # Lambda function for processing records
-  ProcessingLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-telemetry'
-      Runtime: python3.11
-      Handler: recorder.lambda_telemetry
-      Role: !GetAtt ProcessingLambdaRole.Arn
-      Timeout: 300
-      MemorySize: 512
-      Code:
-        S3Bucket: !Ref ProjectBucket
-        S3Key: !Ref LambdaZipFile
-
-  # IAM Role for Kinesis Firehose
   FirehoseRole:
     Type: AWS::IAM::Role
     Properties:
@@ -88,37 +72,86 @@ Resources:
                 Action:
                   - 'lambda:InvokeFunction'
                   - 'lambda:GetFunctionConfiguration'
-                Resource: !GetAtt ProcessingLambdaFunction.Arn
+                Resource: !GetAtt GatewayLambda.Arn
               - Effect: Allow
                 Action:
                   - 'logs:PutLogEvents'
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*'
 
-  # CloudWatch Log Group for Firehose
-  FirehoseLogGroup:
+  #
+  # Gateway Lambda Function
+  #
+  GatewayLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-reporter'
+      Runtime: python3.13
+      Handler: main.lambda_gateway
+      Role: !GetAtt LambdaRole.Arn
+      Architectures:
+        - arm64
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  #
+  # Kinesis Firehose Alert Stream
+  #
+  AlertWatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/kinesisfirehose/${AWS::StackName}-delivery-stream'
+      LogGroupName: !Sub '/aws/kinesisfirehose/${AWS::StackName}-alert-stream'
       RetentionInDays: 7
-
-  # CloudWatch Log Stream for Firehose
-  FirehoseLogStream:
+  AlertCloudWatchLogStream:
     Type: AWS::Logs::LogStream
     Properties:
-      LogGroupName: !Ref FirehoseLogGroup
+      LogGroupName: !Ref AlertWatchLogGroup
       LogStreamName: S3Delivery
-
-  # Kinesis Firehose Delivery Stream
-  FirehoseDeliveryStream:
+  AlertFirehoseDeliveryStream:
     Type: AWS::KinesisFirehose::DeliveryStream
     DependsOn:
       - FirehoseRole
-      - ProcessingLambdaFunction
+    Properties:
+      DeliveryStreamName: !Ref AlertStream
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
+        RoleARN: !GetAtt FirehoseRole.Arn
+        Prefix: 'alerts/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/'
+        ErrorOutputPrefix: 'errors/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/!{firehose:error-output-type}/'
+        BufferingHints:
+          SizeInMBs: 5
+          IntervalInSeconds: 300
+        CompressionFormat: GZIP
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref AlertWatchLogGroup
+          LogStreamName: !Ref AlertCloudWatchLogStream
+
+  #
+  # Kinesis Firehose Telemetry Stream
+  #
+  TelemetryWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/kinesisfirehose/${AWS::StackName}-telemetry-stream'
+      RetentionInDays: 7
+  TelemetryCloudWatchLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref TelemetryWatchLogGroup
+      LogStreamName: S3Delivery
+  TelemetryFirehoseDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    DependsOn:
+      - FirehoseRole
     Properties:
       DeliveryStreamName: !Ref TelemetryStream
       DeliveryStreamType: DirectPut
       ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub 'arn:aws:s3:::${DestinationBucketName}'
+        BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
         RoleARN: !GetAtt FirehoseRole.Arn
         Prefix: 'telemetry/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/'
         ErrorOutputPrefix: 'errors/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/!{firehose:error-output-type}/'
@@ -126,27 +159,94 @@ Resources:
           SizeInMBs: 5
           IntervalInSeconds: 300
         CompressionFormat: GZIP
-        ProcessingConfiguration:
-          Enabled: true
-          Processors:
-            - Type: Lambda
-              Parameters:
-                - ParameterName: LambdaArn
-                  ParameterValue: !GetAtt ProcessingLambdaFunction.Arn
-                - ParameterName: BufferSizeInMBs
-                  ParameterValue: '5'
-                - ParameterName: BufferIntervalInSeconds
-                  ParameterValue: '300'
         CloudWatchLoggingOptions:
           Enabled: true
-          LogGroupName: !Ref FirehoseLogGroup
-          LogStreamName: !Ref FirehoseLogStream
-        S3BackupMode: Enabled
-        S3BackupConfiguration:
-          BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
-          RoleARN: !GetAtt FirehoseRole.Arn
-          Prefix: 'errors/backup/'
-          BufferingHints:
-            SizeInMBs: 5
-            IntervalInSeconds: 300
-          CompressionFormat: GZIP
+          LogGroupName: !Ref TelemetryWatchLogGroup
+          LogStreamName: !Ref TelemetryCloudWatchLogStream
+
+  #
+  # API Gateway (HTTP)
+  #
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: Recorder API for SlideRule
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref CorsAllowOrigins
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - recorder
+        Issuer: !Ref JwtIssuer
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+  ReportRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /report'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref RecorderUrl
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref CertificateArn
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Ref RecorderUrl
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false

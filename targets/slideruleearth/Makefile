@@ -82,10 +82,11 @@ CLUSTER ?= developers
 VERSION ?= latest
 
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
-JWT_ISSUER = https://$(AUTHENTICATOR_URL)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
+RECORDER_URL ?= recorder.$(DOMAIN)
 ALERT_STREAM ?= recorder-firehose-alerts
 TELEMETRY_STREAM ?= recorder-firehose-telemetry
+JWT_ISSUER = https://$(AUTHENTICATOR_URL)
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -409,7 +410,7 @@ recorder-build: ## builds the recorder lambda package zipfile
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/recorder/recorder.py $(RECORDER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/recorder/main.py $(RECORDER_STAGE_DIR)/package/
 	cd $(RECORDER_STAGE_DIR)/package/ && zip -r -q $(RECORDER_STAGE_DIR)/recorder.zip . -x "/*__pycache__/*"
 
 recorder-create: recorder-build  ## creates the lambda recorder functions
@@ -420,15 +421,13 @@ recorder-create: recorder-build  ## creates the lambda recorder functions
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=AuthenticatorUrl,ParameterValue=$(AUTHENTICATOR_URL) \
-						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
-						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
-						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
-						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
-						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
-						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
-						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=RecorderUrl,ParameterValue=$(RECORDER_URL) \
+						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/recorder.zip
 	aws cloudformation wait stack-create-complete --stack-name recorder
 

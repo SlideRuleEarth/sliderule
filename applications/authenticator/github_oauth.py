@@ -49,7 +49,7 @@ GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code'
 GITHUB_API_URL = 'https://api.github.com'
 
 # JWT base audiences
-JWT_AUDIENCES = ['provisioner']
+JWT_AUDIENCES = ['provisioner', 'recorder']
 
 # Cache for secrets (Lambda container reuse)
 _secrets_cache = {}
