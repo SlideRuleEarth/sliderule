@@ -175,7 +175,7 @@ class Session:
         }
 
         # authenticate for non-public clusters
-        if self.cluster != self.PUBLIC_CLUSTER:
+        if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
             self.authenticate(github_token=github_token)
             self.scaleout(desired_nodes, time_to_live)
 

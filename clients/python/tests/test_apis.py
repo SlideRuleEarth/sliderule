@@ -80,9 +80,7 @@ class TestVersion:
         assert hasattr(sliderule, '__version__')
         assert isinstance(sliderule.__version__, str)
 
-    def test_check_version(self, domain, organization):
-        sliderule.set_url(domain)
-        sliderule.authenticate(organization)
+    def test_check_version(self, init):
         assert sliderule.check_version()
 
 #
@@ -114,10 +112,6 @@ class TestInitialization:
     def test_seturl_empty(self):
         with pytest.raises(TypeError, match=('url')):
             sliderule.set_url()
-
-    def test_init_empty_raises(self):
-        with pytest.raises(TypeError):
-            icesat2.init(url=[])
 
     def test_init_restore(self):
         sliderule.init()

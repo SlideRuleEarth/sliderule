@@ -212,7 +212,7 @@ def set_url (domain, session=None):
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
     session = checksession(session)
-    session.service_domain = domain
+    session.domain = domain
 
 #
 #  set_verbose
@@ -447,7 +447,7 @@ def check_version (plugins=None, session=None):
 
     # check response from server
     if info == None:
-        raise FatalError(f'error connecting to {session.service_org}.{session.service_domain}')
+        raise FatalError(f'error connecting to {session.cluster}.{session.domain}')
 
     # populate version info
     versions = {}

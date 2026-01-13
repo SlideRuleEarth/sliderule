@@ -24,7 +24,7 @@ services:
       - ORCHESTRATOR=$ORCHESTRATOR
       - CLUSTER=$CLUSTER
       - AMS=$AMS
-      - IS_PUBLIC=false
+      - IS_PUBLIC=$IS_PUBLIC
       - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
     labels:
       - autoheal=true
