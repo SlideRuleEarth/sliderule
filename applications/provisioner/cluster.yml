@@ -688,6 +688,7 @@ Resources:
                   - /data:/data
                   - /plugins:/plugins
                 environment:
+                  - LOG_FORMAT="FMT_CLOUD"
                   - IPV4=$IPV4
                   - ORCHESTRATOR=http://${IlbIP}:8050
                   - ALERT_STREAM=${AlertStream}

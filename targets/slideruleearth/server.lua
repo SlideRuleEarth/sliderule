@@ -6,22 +6,6 @@ local aws_utils = require("aws_utils")
 -- System Configuration
 --------------------------------------------------
 
--- Read JSON Configuration File --
-local cfgtbl = {}
-local json_input = arg[1]
-if json_input and string.match(json_input, ".json") then
-    sys.log(core.INFO, string.format('Reading json file: %s', json_input))
-    local f = io.open(json_input, "r")
-    if f ~= nil then
-        local content = f:read("*all")
-        f:close()
-        cfgtbl = json.decode(content)
-    end
-end
-
--- Populate System Configuration --
-sys.initcfg(cfgtbl)
-
 -- Configure In Cloud --
 aws_utils.config_aws()
 
@@ -105,13 +89,4 @@ app_server:attach(arrow_endpoint, "/arrow")
 if sys.getcfg("register_as_service") then
     local service_url = "http://"..sys.getcfg("ipv4")..":"..tostring(sys.getcfg("app_port"))
     core.script("service_registry", service_url):global("ServiceScript")
-end
-
---------------------------------------------------
--- Post Startup
---------------------------------------------------
-
--- Scripts --
-for _,script in ipairs(sys.getcfg("post_startup_scripts")) do
-    core.script(script)
 end

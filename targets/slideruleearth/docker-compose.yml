@@ -18,6 +18,7 @@ services:
       - /data:/data
       - /plugins:/plugins
     environment:
+      - LOG_FORMAT="FMT_TEXT"
       - IPV4=$IPV4
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
       - ORCHESTRATOR=$ORCHESTRATOR

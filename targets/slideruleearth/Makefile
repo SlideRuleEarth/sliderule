@@ -146,6 +146,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
+	LOG_FORMAT="FMT_TEXT" \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
@@ -158,7 +159,7 @@ run: ## run the server locally
 	ASAN_OPTIONS="detect_leaks=1" \
 	LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" \
 	$(RUNNER) \
-	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
+	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
 
 build: ## build the code using the build environment docker container
 	docker run \
@@ -198,7 +199,6 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR) --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/docker-entrypoint.sh $(SLIDERULE_STAGE_DIR)/
-	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
 
 sliderule-run: ## run the server locally

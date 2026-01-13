@@ -105,7 +105,6 @@ class SystemConfig: public FieldDictionary
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};
-        FieldList<string>               postStartupScripts;
 
         // ENVIRONMENT VARIABLES
         FieldElement<string>            ipv4;
@@ -128,6 +127,8 @@ class SystemConfig: public FieldDictionary
         virtual ~SystemConfig  (void) override;
         static void setIfProvided(FieldElement<string>& field, const char* env);
         static void setIfProvidedBool(FieldElement<bool>& field, const char* env);
+        static void setIfProvidedFormat(FieldElement<event_format_t>& field, const char* env);
+        static void setIfProvidedLevel(FieldElement<event_level_t>& field, const char* env);
 };
 
 /******************************************************************************
@@ -137,10 +138,12 @@ class SystemConfig: public FieldDictionary
 string convertToJson(const SystemConfig::event_format_t& v);
 int convertToLua(lua_State* L, const SystemConfig::event_format_t& v);
 void convertFromLua(lua_State* L, int index, SystemConfig::event_format_t& v);
+void convertFromStr(const char* str, SystemConfig::event_format_t& v);
 
 string convertToJson(const event_level_t& v);
 int convertToLua(lua_State* L, const event_level_t& v);
 void convertFromLua(lua_State* L, int index, event_level_t& v);
+void convertFromStr(const char* str, event_level_t& v);
 
 inline uint32_t toEncoding(SystemConfig::event_format_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(event_level_t& v) { (void)v; return Field::INT32; }

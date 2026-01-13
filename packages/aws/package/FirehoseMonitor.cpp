@@ -139,13 +139,7 @@ const FString* FirehoseMonitor::jsonAlert (const unsigned char* event_buf_ptr, e
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
     const char* encoded_str = StringLib::jsonize(event->text);
-    const FString* json = new FString(R"json({
-        "timestamp": "%04d-%02d-%02d %02d:%02d:%02d",
-        "code": %d,
-        "cluster": "%s",
-        "version": "%s",
-        "message": "%s"
-    }\n)json",
+    const FString* json = new FString(R"json({"timestamp":"%04d-%02d-%02dT%02d:%02d:%02dZ","code":%d,"cluster":"%s","version":"%s","message":"%s"})json""\n",
         date.year, date.month, date.day,
         gmt.hour, gmt.minute, gmt.second,
         event->code,
@@ -165,19 +159,7 @@ const FString* FirehoseMonitor::jsonTlm (const unsigned char* event_buf_ptr, eve
     if(event->level < lvl) return NULL;
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
-    const FString* json = new FString(R"json({
-        "timestamp": "%04d-%02d-%02d %02d:%02d:%02d",
-        "source_ip": "%s",
-        "aoi_x": %lf,
-        "aoi_y": %lf,
-        "client": "%s",
-        "endpoint": "%s",
-        "duration": %f,
-        "code": %d,
-        "account": "%s",
-        "cluster": "%s",
-        "version": "%s"
-    }\n)json",
+    const FString* json = new FString(R"json({"timestamp":"%04d-%02d-%02dT%02d:%02d:%02dZ","source_ip":"%s","aoi_x":%lf,"aoi_y":%lf,"client":"%s","endpoint":"%s","duration":%f,"code":%d,"account":"%s","cluster":"%s","version":"%s"})json""\n",
         date.year, date.month, date.day,
         gmt.hour, gmt.minute, gmt.second,
         event->source_ip,

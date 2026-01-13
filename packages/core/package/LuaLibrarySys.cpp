@@ -76,7 +76,6 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"memu",        LuaLibrarySys::lsys_memu},
     {"upleap",      LuaLibrarySys::lsys_updateleapsecs},
     {"lsdev",       DeviceObject::luaList},
-    {"initcfg",     SystemConfig::luaPopulate},
     {"getcfg",      SystemConfig::luaGetField},
     {"setcfg",      SystemConfig::luaSetField},
     {NULL,          NULL}
