@@ -209,10 +209,6 @@ def response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     """
     return {
         'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'  # Adjust based on your CORS needs
-        },
         'body': json.dumps(body)
     }
 
@@ -271,7 +267,7 @@ if __name__ == '__main__':
             'start_date': '2025-01-01',
             'end_date': '2025-01-13',
             'filters': {
-                'severity': 'high'
+                'cluster': 'developers'
             }
         })
     }

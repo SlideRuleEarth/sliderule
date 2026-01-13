@@ -136,12 +136,10 @@ const FString* FirehoseMonitor::jsonAlert (const unsigned char* event_buf_ptr, e
 {
     const EventLib::alert_t* event = reinterpret_cast<const EventLib::alert_t*>(event_buf_ptr);
     if(event->level < lvl) return NULL;
-    const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
-    const TimeLib::date_t date = TimeLib::gmt2date(gmt);
+    const uint64_t unixtime = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000; // convert GPS time to Unix seconds
     const char* encoded_str = StringLib::jsonize(event->text);
-    const FString* json = new FString(R"json({"timestamp":"%04d-%02d-%02dT%02d:%02d:%02dZ","code":%d,"cluster":"%s","version":"%s","message":"%s"})json""\n",
-        date.year, date.month, date.day,
-        gmt.hour, gmt.minute, gmt.second,
+    const FString* json = new FString(R"json({"timestamp":%ld,"code":%d,"cluster":"%s","version":"%s","message":"%s"})json""\n",
+        unixtime,
         event->code,
         SystemConfig::settings().cluster.value.c_str(),
         LIBID,
@@ -157,11 +155,9 @@ const FString* FirehoseMonitor::jsonTlm (const unsigned char* event_buf_ptr, eve
 {
     const EventLib::telemetry_t* event = reinterpret_cast<const EventLib::telemetry_t*>(event_buf_ptr);
     if(event->level < lvl) return NULL;
-    const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
-    const TimeLib::date_t date = TimeLib::gmt2date(gmt);
-    const FString* json = new FString(R"json({"timestamp":"%04d-%02d-%02dT%02d:%02d:%02dZ","source_ip":"%s","aoi_x":%lf,"aoi_y":%lf,"client":"%s","endpoint":"%s","duration":%f,"code":%d,"account":"%s","cluster":"%s","version":"%s"})json""\n",
-        date.year, date.month, date.day,
-        gmt.hour, gmt.minute, gmt.second,
+    const uint64_t unixtime = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000; // convert GPS time to Unix seconds
+    const FString* json = new FString(R"json({"timestamp":%ld,"source_ip":"%s","aoi_x":%lf,"aoi_y":%lf,"client":"%s","endpoint":"%s","duration":%f,"code":%d,"account":"%s","cluster":"%s","version":"%s"})json""\n",
+        unixtime,
         event->source_ip,
         event->longitude, event->latitude,
         event->client,
