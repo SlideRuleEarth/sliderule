@@ -140,7 +140,7 @@ const FString* FirehoseMonitor::jsonAlert (const unsigned char* event_buf_ptr, e
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
     const char* encoded_str = StringLib::jsonize(event->text);
     const FString* json = new FString(R"json({
-        "time": "%04d-%02d-%02d %02d:%02d:%02d",
+        "timestamp": "%04d-%02d-%02d %02d:%02d:%02d",
         "code": %d,
         "cluster": "%s",
         "version": "%s",
@@ -166,9 +166,10 @@ const FString* FirehoseMonitor::jsonTlm (const unsigned char* event_buf_ptr, eve
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
     const FString* json = new FString(R"json({
-        "time": "%04d-%02d-%02d %02d:%02d:%02d",
+        "timestamp": "%04d-%02d-%02d %02d:%02d:%02d",
         "source_ip": "%s",
-        "aoi": {"x": %lf, "y": %lf},
+        "aoi_x": %lf,
+        "aoi_y": %lf,
         "client": "%s",
         "endpoint": "%s",
         "duration": %f,
