@@ -73,6 +73,7 @@ Resources:
                   - !Sub 'arn:aws:s3:::${ProjectBucket}'
                   - !Sub 'arn:aws:s3:::${ProjectBucket}/telemetry/*'
                   - !Sub 'arn:aws:s3:::${ProjectBucket}/alerts/*'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/errors/*'
                   - !Sub 'arn:aws:s3:::${ProjectBucket}/athena-results/*'
               - Effect: Allow
                 Action:
@@ -86,9 +87,7 @@ Resources:
                 Action:
                   - 'firehose:DescribeDeliveryStream'
                   - 'firehose:ListDeliveryStreams'
-                Resource:
-                  - !GetAtt AlertFirehoseDeliveryStream.Arn
-                  - !GetAtt TelemetryFirehoseDeliveryStream.Arn
+                Resource: "*"
 
   FirehoseRole:
     Type: AWS::IAM::Role
@@ -120,7 +119,7 @@ Resources:
                 Action:
                   - 'lambda:InvokeFunction'
                   - 'lambda:GetFunctionConfiguration'
-                Resource: !GetAtt GatewayLambda.Arn
+                Resource: "*"
               - Effect: Allow
                 Action:
                   - 'logs:PutLogEvents'
@@ -174,12 +173,23 @@ Resources:
       ExtendedS3DestinationConfiguration:
         BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
         RoleARN: !GetAtt FirehoseRole.Arn
-        Prefix: 'alerts/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/'
+        Prefix: 'alerts/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/'
         ErrorOutputPrefix: 'errors/alerts/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/!{firehose:error-output-type}/'
         BufferingHints:
-          SizeInMBs: 5
+          SizeInMBs: 64
           IntervalInSeconds: 300
         CompressionFormat: GZIP
+        DynamicPartitioningConfiguration:
+          Enabled: true
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+            - Type: MetadataExtraction
+              Parameters:
+                - ParameterName: MetadataExtractionQuery
+                  ParameterValue: '{year: .timestamp | strftime("%Y"), month: .timestamp | strftime("%m"), day: .timestamp | strftime("%d")}'
+                - ParameterName: JsonParsingEngine
+                  ParameterValue: JQ-1.6
         CloudWatchLoggingOptions:
           Enabled: true
           LogGroupName: !Ref AlertWatchLogGroup
@@ -208,12 +218,23 @@ Resources:
       ExtendedS3DestinationConfiguration:
         BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
         RoleARN: !GetAtt FirehoseRole.Arn
-        Prefix: 'telemetry/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/'
+        Prefix: 'telemetry/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/'
         ErrorOutputPrefix: 'errors/telemetry/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/!{firehose:error-output-type}/'
         BufferingHints:
-          SizeInMBs: 5
+          SizeInMBs: 64
           IntervalInSeconds: 300
         CompressionFormat: GZIP
+        DynamicPartitioningConfiguration:
+          Enabled: true
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+            - Type: MetadataExtraction
+              Parameters:
+                - ParameterName: MetadataExtractionQuery
+                  ParameterValue: '{year: .timestamp | strftime("%Y"), month: .timestamp | strftime("%m"), day: .timestamp | strftime("%d")}'
+                - ParameterName: JsonParsingEngine
+                  ParameterValue: JQ-1.6
         CloudWatchLoggingOptions:
           Enabled: true
           LogGroupName: !Ref TelemetryWatchLogGroup
@@ -424,20 +445,3 @@ Resources:
         DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
         EvaluateTargetHealth: false
-
-Outputs:
-  GlueDatabaseName:
-    Description: Glue Database Name
-    Value: !Ref GlueDatabase
-  AlertTableName:
-    Description: Alert Table Name
-    Value: !Ref AlertTable
-  TelemetryTableName:
-    Description: Telemetry Table Name
-    Value: !Ref TelemetryTable
-  AthenaWorkGroupName:
-    Description: Athena WorkGroup Name
-    Value: !Ref AthenaWorkGroup
-  AthenaResultsLocation:
-    Description: S3 location for Athena query results
-    Value: !Sub 's3://${ProjectBucket}/athena-results/'
