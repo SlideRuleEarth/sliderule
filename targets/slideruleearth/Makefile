@@ -154,8 +154,6 @@ run: ## run the server locally
 	AMS=http://127.0.0.1:9082 \
 	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	ALERT_STREAM=$(ALERT_STREAM) \
-	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
 	ASAN_OPTIONS="detect_leaks=1" \
 	LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" \
 	$(RUNNER) \
@@ -217,6 +215,7 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp docker/ilb/Dockerfile $(ILB_STAGE_DIR)
 	cp $(ROOT)/applications/ilb/haproxy.cfg $(ILB_STAGE_DIR)
 	cp $(ROOT)/applications/ilb/orchestrator.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/applications/ilb/ratelimiter.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) $(DOCKER_PLATFORM) .

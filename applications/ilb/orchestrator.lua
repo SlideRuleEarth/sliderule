@@ -30,28 +30,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
 
 --
--- Notes
---
---[[
-  * This file is an HAProxy lua service script which implements service discovery and node orchestration.
-
-  * To load this script, the following configuration must be inserted into the HAProxy config file:
-      global
-        lua-load /path/to/orchestrator.lua
-
-      frontend orchestrator
-        bind :8050
-        http-request use-service lua.orchestrator_register if { path /discovery/register }
-        http-request use-service lua.orchestrator_lock if { path /discovery/lock }
-        http-request use-service lua.orchestrator_unlock if { path /discovery/unlock }
-        http-request use-service lua.orchestrator_prometheus if { path /discovery/prometheus }
-        http-request use-service lua.orchestrator_health if { path /discovery/health }
-
-  * cURL can be used to test out basic functionality of the endpoints
-      % curl -X POST -d "{\"service\":\"test\", \"lifetime\":10, \"address\":\"127.0.0.1\"}" http://127.0.0.1:8050/discovery/register
---]]
-
---
 -- Globals
 --
 core.log(core.info, "Loading orchestrator...")
@@ -164,14 +142,6 @@ StatData = {
     memberCounts = {}
 }
 
---
--- BlockedIPs
---
---  {
---      "<ip_address>": <timestamp when ip is no longer blocked>
---  }
---
-BlockedIPs = {}
 
 --
 -- Constants
@@ -668,52 +638,6 @@ local function api_status(applet)
 end
 
 --
--- API: /discovery/block
---
---  Rate limits listed IP address
---
---  INPUT:
---  {
---      "address": "<ip address>"
---      "duration": <seconds to block>
---  }
---
-local function api_block(applet)
-
-    -- process request
-    local body = applet:receive()
-    local request = json.decode(body)
-    local address = request["address"]
-    local duration = request["duration"]
-
-    -- block ip for duration specified
-    local now = os.time()
-    BlockedIPs[address] = now + duration
-
-    -- send response
-    applet:set_status(200)
-    applet:start_response()
-
-end
-
---
--- Action: ratelimit
---
-local function ratelimit(txn)
-    local client_ip = txn.sf:src()
-    local blocked_until = BlockedIPs[client_ip]
-    if blocked_until then
-        local now = os.time()
-        if blocked_until > now then
-            txn:set_var("txn.block_this_ip", true)
-            txn:set_var("txn.retry_after", tostring(blocked_until - now))
-        else
-            BlockedIPs[client_ip] = nil
-        end
-    end
-end
-
---
 -- Task: scrubber
 --
 local function backgroud_scrubber()
@@ -860,8 +784,6 @@ core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_service("orchestrator_status", "http", api_status)
-core.register_service("orchestrator_block", "http", api_block)
-core.register_action("orchestrator_ratelimit", { "http-req" }, ratelimit)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
 core.register_converters("extract_ip", orchestrator_extract_ip)
