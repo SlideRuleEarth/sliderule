@@ -87,19 +87,6 @@ NisarDataset::~NisarDataset(void)
     VSIUnlink(indexFile.c_str());
 }
 
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void NisarDataset::getIndexFile(const OGRGeometry* geo, std::string& file)
-{
-    static_cast<void>(geo);
-    file = indexFile;
-    mlog(DEBUG, "Using %s", file.c_str());
-}
-
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
 void NisarDataset::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
 {
     static_cast<void>(points);

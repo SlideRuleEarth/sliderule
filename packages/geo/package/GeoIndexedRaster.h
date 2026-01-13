@@ -184,7 +184,7 @@ class GeoIndexedRaster: public RasterObject
         /* import getSamples with single point */
         using RasterObject::getSamples;
 
-        uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
+        uint32_t        getSamples            (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
 
     protected:
 
@@ -199,7 +199,6 @@ class GeoIndexedRaster: public RasterObject
         virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         bool             openGeoIndex          (const std::string& newFile, OGRGeometry* filter=NULL);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual void     getIndexFile          (const std::vector<point_info_t>* points, std::string& file) = 0;
         virtual bool     findRasters           (raster_finder_t* finder) = 0;
 
