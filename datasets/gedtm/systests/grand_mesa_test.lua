@@ -2,6 +2,8 @@ local runner = require("test_executive")
 
 -- Setup --
 
+runner.authenticate({})
+
 local _,td = runner.srcscript()
 local poifile = td.."../../landsat/data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")

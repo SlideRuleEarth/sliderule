@@ -7,6 +7,9 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
 end
 
 -- Setup --
+runner.authenticate({})
+
+-- runner.log(core.DEBUG)
 
 -- Self Test --
 
