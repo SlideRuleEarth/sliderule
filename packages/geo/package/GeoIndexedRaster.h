@@ -259,6 +259,7 @@ class GeoIndexedRaster: public RasterObject
         uint32_t                  cols;
 
         GeoRtree                  geoRtree;
+        event_level_t             samplingLogLevel;    // per-call log level, set in getSamples
 
         /*--------------------------------------------------------------------
          * Methods

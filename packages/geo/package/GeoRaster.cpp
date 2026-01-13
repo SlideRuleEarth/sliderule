@@ -351,7 +351,7 @@ uint32_t GeoRaster::readSamples(RasterObject* robj, const range_t& range,
 
     for(uint32_t i = range.start; i < range.end; i++)
     {
-        GeoRaster* grobj = static_cast<GeoRaster*>(robj);
+        GeoRaster* grobj = dynamic_cast<GeoRaster*>(robj);
         if(!grobj->sampling())
         {
             mlog(DEBUG, "Sampling stopped");
