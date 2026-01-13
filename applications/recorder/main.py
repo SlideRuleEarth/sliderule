@@ -19,11 +19,15 @@ ATHENA_OUTPUT_LOCATION = os.environ['ATHENA_OUTPUT_LOCATION']
 ALERT_TABLE = os.environ['ALERT_TABLE']
 TELEMETRY_TABLE = os.environ['TELEMETRY_TABLE']
 
-# Configuration
+# Athena Configuration
 QUERY_WAIT_SECONDS = 60
 QUERY_POLL_SECONDS = 2
 QUERY_PAGE_SIZE = 1000
 QUERY_LIMIT = 1000
+
+# Geolite Configuration
+GEOLITE2_COUNTRY_DB = 'GeoLite2-Country.mmdb'
+GEOLITE2_CITY_DB = 'GeoLite2-City.mmdb'
 
 # ###############################
 # Report (Athena)
@@ -92,22 +96,9 @@ def build_query(report_type: str, start_date: str, end_date: str, filters: Dict[
         )
     """
 
-    # Add custom filters based on report type
-    if report_type == 'alerts':
-        if 'severity' in filters:
-            query += f" AND severity = '{filters['severity']}'"
-        if 'alert_type' in filters:
-            query += f" AND alert_type = '{filters['alert_type']}'"
-
-    elif report_type == 'telemetry':
-        if 'metric_name' in filters:
-            query += f" AND metric_name = '{filters['metric_name']}'"
-        if 'device_id' in filters:
-            query += f" AND device_id = '{filters['device_id']}'"
-        if 'min_value' in filters:
-            query += f" AND metric_value >= {filters['min_value']}"
-        if 'max_value' in filters:
-            query += f" AND metric_value <= {filters['max_value']}"
+    # Add custom filters
+    for filter in filters:
+        query += f" AND {filter} = '{filters[filter]}'"
 
     # Add timestamp filter for more precise date filtering
     query += f" AND timestamp >= '{start_date}' AND timestamp < DATE_ADD('day', 1, CAST('{end_date}' AS DATE))"
@@ -214,6 +205,35 @@ def response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ###############################
+# Geolocate (geolite2)
+# ###############################
+
+def geolocate(event):
+    """
+    Expects POST /geolocate with a JSON body containing ip address
+    """
+    try:
+        # get request parameters
+        source_ip = event["source_ip"]
+        if source_ip == "0.0.0.0" or source_ip == "127.0.0.1":
+            return f'localhost, localhost'
+
+        # import and open database
+        import geoip2.database
+        geo_country = geoip2.database.Reader(GEOLITE2_COUNTRY_DB)
+        geo_city = geoip2.database.Reader(GEOLITE2_CITY_DB)
+
+        # query geolite2 database
+        country = geo_country.country(source_ip).country.name
+        city = geo_city.city(source_ip).city.name
+        return f'{country}, {city}'
+
+    except Exception as e:
+        print(f'Failed to get location information for {source_ip}: {e}')
+        return f'unknown, unknown'
+
+
+# ###############################
 # Lambda: Gateway Handler
 # ###############################
 
@@ -248,6 +268,8 @@ def lambda_gateway(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # route request
     if path == '/report':
         return report(body)
+    elif path == '/geolocate':
+        return geolocate(body)
     else:
         print(f'Path not found: {path}')
         return {

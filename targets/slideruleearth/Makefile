@@ -150,7 +150,7 @@ run: ## run the server locally
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
-	CLUSTER=$(CLUSTER) \
+	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
 	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
@@ -205,7 +205,7 @@ sliderule-run: ## run the server locally
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
-	CLUSTER=$(CLUSTER) \
+	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
 	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
