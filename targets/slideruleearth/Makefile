@@ -23,14 +23,14 @@
 #        $ nvm use 20
 #     5. Login to NPMJS
 #        $ cd sliderule/clients/nodejs && make login
-#     6. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make release VERSION=vX.Y.Z
+#     6. Execute the makefile target to release the code; X.Y.Z is the tag
+#        $ make release RELEASE=vX.Y.Z
 #
 # To update the build environment for GitHub actions
 #     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
 #        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
 #     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
-#        $ make buildenv-docker
+#        $ make sliderule-buildenv-docker
 #     3. Push to GitHub container registry
 #        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
 #
@@ -61,6 +61,7 @@ NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 CF_STAGE_DIR = $(STAGE)/cf
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
+DOCKEROPTS ?= # --progress=plain --no-cache
 
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
@@ -74,7 +75,6 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 ARCH ?= $(shell arch)
 TIMESTAMP ?= $(shell date +%Y%m%d%H%M%S)
-CONFIG ?= release
 
 DOMAIN ?= slideruleearth.io
 PUBLIC_CLUSTER ?= sliderule
@@ -103,12 +103,14 @@ DESTROY_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`DestroyLambdaArn`].OutputValue' \
   --output text)
 
-DOCKEROPTS ?= # --progress=plain --no-cache
-BUILDX ?= # buildx
-DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
+########################
+# Local Build Targets
+########################
+
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
-BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(CONFIG) && make"
+BUILD_CONFIG ?= release
+BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(BUILD_CONFIG) && make"
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -126,11 +128,9 @@ DEBUG_CFG += $(COMMON_CFG)
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += $(COMMON_CFG)
 
-########################
-# Local Build Targets
-########################
-
-all: sliderule
+all: ## build the server using the local configuration
+	make -j8 -C $(SLIDERULE_BUILD_DIR)
+	make -C $(SLIDERULE_BUILD_DIR) install
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
@@ -140,10 +140,6 @@ config-debug: prep ## configure the server for running locally with debug symbol
 
 config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
-
-sliderule: ## build the server using the local configuration
-	make -j8 -C $(SLIDERULE_BUILD_DIR)
-	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
 	LOG_FORMAT="FMT_TEXT" \
@@ -180,16 +176,13 @@ build: ## build the code using the build environment docker container
 # Docker Build Targets
 ########################
 
-buildenv-docker: ## build sliderule build environment docker image
+sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
+	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/sliderule-buildenv:latest .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(CONTAINER_REGISTRY)/sliderule-buildenv:latest /bin/bash -c "cat /libdep.lock > /host/libdep-$(ARCH).lock"
-
-buildenv-docker-push: ## push build environment docker image to registry
-	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -197,17 +190,7 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR) --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/docker-entrypoint.sh $(SLIDERULE_STAGE_DIR)/
-	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
-
-sliderule-run: ## run the server locally
-	IPV4=$(MYIP) \
-	ENVIRONMENT_VERSION=$(ENVVER) \
-	ORCHESTRATOR=http://127.0.0.1:8050 \
-	CLUSTER=local \
-	AMS=http://127.0.0.1:9082 \
-	IS_PUBLIC=false \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	docker compose up $(DOCKEROPTS) sliderule
+	cd $(SLIDERULE_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) .
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -218,27 +201,27 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/applications/ilb/ratelimiter.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
 
 proxy-docker: # make the reverse proxy docker image; needs VERSION
 	-rm -Rf $(PROXY_STAGE_DIR)
 	mkdir -p $(PROXY_STAGE_DIR)
 	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/proxy:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(PROXY_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/proxy:$(VERSION) .
 
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
 	cp -R docker/monitor/rootfs/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
-	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor:$(VERSION) .
 
 monitor-agent-docker: ## build monitor agent docker image; needs VERSION
 	-rm -Rf $(MONITOR_AGENT_STAGE_DIR)
 	mkdir -p $(MONITOR_AGENT_STAGE_DIR)
 	cp -R docker/monitor-agent/rootfs/* $(MONITOR_AGENT_STAGE_DIR)
 	cp docker/monitor-agent/Dockerfile.$(ARCH) $(MONITOR_AGENT_STAGE_DIR)/Dockerfile
-	cd $(MONITOR_AGENT_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(MONITOR_AGENT_STAGE_DIR); docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION) .
 
 ams-lock: ## update dependencies of ams
 	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
@@ -255,10 +238,7 @@ ams-docker: ## build ams docker image; uses VERSION
 	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(AMS_STAGE_DIR)/ams
 	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
-	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) $(DOCKER_PLATFORM) .
-
-ams-run: ## run ams locally; uses VERSION
-	docker run -it -p 8060:8060 --rm --name ams $(CONTAINER_REGISTRY)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
+	cd $(AMS_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) .
 
 ########################
 # Cluster Targets
@@ -318,6 +298,10 @@ cluster-status: ## invokes the provisioner *status* lambda function and displays
 cluster-events: ## invokes the provisioner *events* lambda function and displays the response
 	echo $(CLUSTER_PARMS) > /tmp/payload.json
 	aws lambda invoke --function-name provisioner-events --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
+
+cluster-report: ## invokes the provisioner *report* lambda function and displays the response
+	aws lambda invoke --function-name provisioner-report /tmp/response.json
 	cat /tmp/response.json | jq
 
 cluster-go-live: ## switch dns entry of public cluster
@@ -653,7 +637,7 @@ website-docker: ## make the website docker image; needs VERSION
 	cp docker/website/Dockerfile.$(ARCH) $(WEBSITE_STAGE_DIR)/Dockerfile
 	cp docker/website/nginx.conf $(WEBSITE_STAGE_DIR)
 	cp docker/website/docker-entrypoint.sh $(WEBSITE_STAGE_DIR)
-	cd $(WEBSITE_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/website:$(VERSION) $(DOCKER_PLATFORM) .
+	cd $(WEBSITE_STAGE_DIR) && docker build -t $(CONTAINER_REGISTRY)/website:$(VERSION) .
 
 website-run: ## locally run the website; needs VERSION
 	docker run -it -p 4000:4000 --rm --name website $(CONTAINER_REGISTRY)/website:$(VERSION)
@@ -712,21 +696,26 @@ website: ## build and update website
 # Release Target
 ########################
 
-release: buildenv-docker buildenv-docker-push ams-lock ## tag and release sliderule; needs VERSION
-	echo $(VERSION) > $(ROOT)/version.txt
-	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
+RELEASE ?= # vX.Y.Z
+
+release: ## tag and release sliderule; needs RELEASE
+	make sliderule-buildenv-docker
+	make ams-lock
+	echo $(RELEASE) > $(ROOT)/version.txt
+	node $(ROOT)/clients/nodejs/utils/modpkg.js $(RELEASE)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
-	git commit -m "Version $(VERSION)"
-	git tag -a $(VERSION) -m "Version $(VERSION)"
+	git commit -m "Version $(RELEASE)"
+	git tag -a $(RELEASE) -m "Version $(RELEASE)"
 	git push --tags && git push
-	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
-	make cluster-docker
-	make cluster-docker-push
+	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
+	make cluster-docker VERSION=latest
+	make cluster-docker-push VERSION=latest
+	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 
 ########################
 # Clean Up Targets
@@ -808,8 +797,6 @@ environment: ## echo the environment variables
 	@echo CLUSTER: $(CLUSTER)
 	@echo VERSION: $(VERSION)
 	@echo DOCKEROPTS: $(DOCKEROPTS)
-	@echo BUILDX: $(BUILDX)
-	@echo DOCKER_PLATFORM: $(DOCKER_PLATFORM)
 	@echo USERCFG: $(USERCFG)
 	@echo RUNNER: $(RUNNER)
 	@echo DEBUG_CFG: $(DEBUG_CFG)

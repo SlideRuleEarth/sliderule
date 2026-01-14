@@ -116,6 +116,23 @@ Resources:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
 
+  ## Report Lambda Function
+  ReportLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-report'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_report
+      Description: Get report of currently deployed clusters
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
   ## Test Lambda Function
   TestLambda:
     Type: AWS::Lambda::Function

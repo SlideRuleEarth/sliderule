@@ -268,6 +268,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-monitor-sg"
+
   #
   # Security Group - ILB
   #
@@ -301,30 +302,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-ilb-sg"
-
-  #
-  # Security Group - Manager
-  #
-  ManagerSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Manager Security Group
-      VpcId: !Ref ClusterVPC
-      SecurityGroupIngress:
-        # Manager (from HAProxy)
-        - IpProtocol: tcp
-          FromPort: 8030
-          ToPort: 8030
-          CidrIp: !Ref VpcCIDRBlock
-      SecurityGroupEgress:
-        # ALL
-        - IpProtocol: -1
-          FromPort: 0
-          ToPort: 0
-          CidrIp: !Ref PublicCIDRBlock
-      Tags:
-        - Key: Name
-          Value: !Sub "${Cluster}-manager-sg"
 
   #
   # Security Group - Cluster
@@ -422,96 +399,6 @@ Resources:
                 timeout: 10s
                 retries: 1
                 start_period: 30s
-              labels:
-                - autoheal=true
-            monitor-agent:
-              image: ${ContainerRegistry}/monitor-agent:${Version}
-              network_mode: host
-              restart: unless-stopped
-              pull_policy: if_not_present
-              volumes:
-                - /proc:/host/proc:ro
-                - /sys:/host/sys:ro
-                - /:/rootfs:ro
-                - /var/log:/var/log:ro
-                - /var/log/journal:/var/log/journal:ro
-                - /run/log/journal:/run/log/journal:ro
-                - /etc/machine-id:/etc/machine-id:ro
-                - /var/lib/docker/containers:/var/lib/docker/containers:ro
-              labels:
-                - autoheal=true
-            autoheal:
-              image: willfarrell/autoheal:latest
-              container_name: autoheal
-              restart: always
-              environment:
-                - AUTOHEAL_CONTAINER_LABEL=all
-                - AUTOHEAL_INTERVAL=30
-              volumes:
-                - /var/run/docker.sock:/var/run/docker.sock
-          EOF
-          ./docker-compose -p cluster up --detach
-
-  #
-  # EC2 Instance -  Manager
-  #
-  ManagerInstance:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
-      InstanceType: r8g.large
-      AvailabilityZone: !Ref AvailabilityZone
-      IamInstanceProfile: !Ref InstanceProfile
-      SourceDestCheck: true
-      Monitoring: false
-      NetworkInterfaces:
-        - DeviceIndex: 0
-          PrivateIpAddress: !Ref ManagerIP
-          SubnetId: !Ref ClusterSubnet
-          GroupSet:
-            - !Ref ManagerSG
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: 40
-            VolumeType: gp3
-            DeleteOnTermination: true
-      Tags:
-        - Key: Name
-          Value: !Sub "${Cluster}-manager"
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          echo ${Cluster} > ./Cluster.txt
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
-          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
-          export MANAGER_SECRET_SALT=$(echo $SECRET | jq -r .manager_secret_salt)
-          export MANAGER_API_KEY=$(echo $SECRET | jq -r .manager_api_key)
-          mkdir /data
-          aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
-          chmod +x docker-compose
-          cat > docker-compose.yml << EOF
-          version: "3.9"
-          services:
-            manager:
-              image: ${ContainerRegistry}/manager:${Version}
-              network_mode: host
-              restart: always
-              pull_policy: if_not_present
-              entrypoint: /docker-entrypoint.sh
-              volumes:
-                - /data:/data
-              environment:
-                - IS_PUBLIC=${IsPublic}
-                - MANAGER_SECRET_SALT=$MANAGER_SECRET_SALT
-                - MANAGER_API_KEY=$MANAGER_API_KEY
-                - DUCKDB_LOCAL_FILE='/data/manager-${Cluster}.db'
-                - DUCKDB_REMOTE_FILE='s3://${ProjectBucket}/${ProjectFolder}/manager/manager-${Cluster}-${Version}.db'
-                - ORCHESTRATOR=http://${IlbIP}:8050
               labels:
                 - autoheal=true
             monitor-agent:

@@ -19,13 +19,13 @@ services:
       - /plugins:/plugins
     environment:
       - LOG_FORMAT="FMT_TEXT"
-      - IPV4=$IPV4
-      - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
-      - ORCHESTRATOR=$ORCHESTRATOR
-      - CLUSTER=$CLUSTER
-      - AMS=$AMS
-      - IS_PUBLIC=$IS_PUBLIC
-      - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
+      - IPV4=127.0.0.1
+      - ENVIRONMENT_VERSION=unknown
+      - ORCHESTRATOR=http://127.0.0.1:8050
+      - CLUSTER=local
+      - AMS=http://127.0.0.1:9082
+      - IS_PUBLIC=false
+      - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
     labels:
       - autoheal=true
     healthcheck:
@@ -48,6 +48,8 @@ services:
       - /etc/haproxy/pem/:/etc/haproxy/pem/
     environment:
       - IS_PUBLIC=true
+      - JWT_ISSUER=https://login.slideruleearth.io
+      - CLUSTER=local
     labels:
       - autoheal=true
     healthcheck:
