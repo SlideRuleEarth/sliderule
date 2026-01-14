@@ -30,14 +30,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
 
 --
--- Globals
---
-core.log(core.info, "Loading orchestrator...")
-package.path = package.path .. ';/usr/local/etc/haproxy/?.lua'
-
---
 -- Imports
 --
+package.path = package.path .. ';/usr/local/etc/haproxy/?.lua'
 local json = require("json")
 
 --

@@ -1,5 +1,5 @@
 --[[
-Copyright (c) 2021, University of Washington
+Copyright (c) 2026, University of Washington
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,8 +29,6 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
 
-core.log(core.info, "Loading rate limiter...")
-
 --
 -- Globals
 --
@@ -45,14 +43,28 @@ WeekOfLastRequest = {} -- "<ip_address or username>": <week number of last reque
 RequestCount = {} -- "<ip_address or username>": <number of accumulated requests in the week>
 BlockTime = {} -- "<ip_address or username>": <os time until which ip address will be blocked>
 
+-- Analysis Data
+EndpointMetric = {} -- "<endpoint>": <number of requests>
+SuccessfulRequestCount = 0
+FailedRequestCount = 0
+
+-- Utility: table_size
+local function table_size(t)
+    local n = 0
+    for _ in next, t do
+        n = n + 1
+    end
+    return n
+end
+
 --
 -- Action: ratelimit
 --
 local function ratelimit(txn)
     local client_ip = txn.sf:src()
     local username = txn:get_var("txn.sub")
-    local mode = #username > 0 and "user" or "ip"
-    local originator = #username > 0 and username or client_ip
+    local mode = username and #username > 0 and "user" or "ip"
+    local originator = username and #username > 0 and username or client_ip
 
     -- check blocked status
     local now = os.time()
@@ -83,6 +95,72 @@ local function ratelimit(txn)
 end
 
 --
+-- Action: metric
+--
+local function metric(txn)
+    local path = txn:get_var("txn.request_path")
+    local status = txn.sf:status()
+    -- accumulate requests
+    if tonumber(status) >= 200 and tonumber(status) < 300 then
+        EndpointMetric[path] = (EndpointMetric[path] or 0) + 1
+        SuccessfulRequestCount = SuccessfulRequestCount + 1
+    else -- count errors
+        FailedRequestCount = FailedRequestCount + 1
+    end
+end
+
+--
+-- API: /stats/prometheus
+--
+--  Provide metrics to prometheus scraper
+--
+local function api_prometheus(applet)
+
+    -- create endpoint count metrics
+    local endpoint_metric = ""
+    for endpoint,count in pairs(EndpointMetric) do
+        endpoint_metric = endpoint_metric .. string.format([[
+
+# TYPE %s counter
+%s %d
+]], endpoint, endpoint, count)
+    end
+
+    -- count originators
+    local unique_originators = table_size(RequestCount)
+    local blocked_originators = table_size(BlockTime)
+
+    -- build full response
+    local response = string.format([[
+# TYPE successful_request_count counter
+successful_request_count %d
+
+# TYPE failed_request_count counter
+failed_request_count %d
+
+# TYPE unique_originators counter
+unique_originators %d
+
+# TYPE blocked_originators counter
+blocked_originators %d
+%s
+]], SuccessfulRequestCount,
+    FailedRequestCount,
+    unique_originators,
+    blocked_originators,
+    endpoint_metric)
+
+    -- send response
+    applet:set_status(200)
+    applet:add_header("content-length", string.len(response))
+    applet:add_header("content-type", "text/plain")
+    applet:start_response()
+    applet:send(response)
+end
+
+--
 -- Register with HAProxy
 --
-core.register_action("ratelimit", { "http-req" }, ratelimit)
+core.register_action("analyzer_ratelimit", { "http-req" }, ratelimit)
+core.register_action("analyzer_metric", { "http-res" }, metric)
+core.register_service("analyzer_prometheus", "http", api_prometheus)
