@@ -65,40 +65,6 @@ end
 runner.assert(sampleCnt == #expResults)
 
 
-print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM subset\n-------------------------------------------------"))
-
--- AOI extent (extent of grandmesa.geojson)
-local gm_llx = -108.3412
-local gm_lly =   38.8236
-local gm_urx = -107.7292
-local gm_ury =   39.1956
-
-local starttime = time.latch();
-local tbl, err = dem:subset(gm_llx, gm_lly, gm_llx+0.01, gm_lly+0.4)
-local stoptime = time.latch();
-
-runner.assert(err == 0)
-runner.assert(tbl ~= nil)
-
-local threadCnt = 0
-for i, v in ipairs(tbl) do
-    threadCnt = threadCnt + 1
-end
-print(string.format("subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.assert(threadCnt == 4)
-
-for i, v in ipairs(tbl) do
-    local size = v["size"]
-
-    local mbytes = size / (1024*1024)
-    -- This results in 4 threads, all the same size, cols, buffs data type. Print only first one
-    if i == 1 then
-        print(string.format("AOI subset datasize: %.1f MB", mbytes))
-    end
-
-    runner.assert(size > 0)
-end
-
 -- Report Results --
 
 runner.report()

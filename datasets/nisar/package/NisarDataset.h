@@ -74,11 +74,9 @@ class NisarDataset: public GeoIndexedRaster
                 NisarDataset (lua_State* L, RequestFields* rqst_parms, const char* key);
                ~NisarDataset (void) override;
 
-        void    getIndexFile (const OGRGeometry* geo, std::string& file) final;
         void    getIndexFile (const std::vector<point_info_t>* points, std::string& file) final;
         bool    findRasters  (raster_finder_t* finder) final;
 
-        void    getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final;
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;
 
         static CPLErr overrideGeoTransform (double* gtf, const void* param);

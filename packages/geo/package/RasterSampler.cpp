@@ -311,11 +311,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         const int num_samples = slist.length();
 
         /* Generate Error Messages */
-        if(err & SS_THREADS_LIMIT_ERROR)
+        if(err & SS_RESOURCE_LIMIT_ERROR)
         {
-            alert(CRITICAL, RTE_FAILURE, outQ, NULL,
-                    "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
-                    rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
+            alert(CRITICAL, RTE_FAILURE, outQ, NULL, "System resource limit reached, could not sample some rasters");
         }
 
         if(raster->hasZonalStats())

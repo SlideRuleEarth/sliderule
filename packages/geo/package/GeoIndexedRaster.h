@@ -62,9 +62,6 @@ class GeoIndexedRaster: public RasterObject
 
         static const double TOLERANCE;
 
-        static const int   MAX_CACHE_SIZE     =  20;
-        static const int   MAX_READER_THREADS = 200;
-
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;
         static const char* DATE_TAG;
@@ -135,27 +132,6 @@ class GeoIndexedRaster: public RasterObject
             ~BatchReader(void);
         } batch_reader_t;
 
-        /* Cache used by serial sampling code */
-        typedef struct CacheItem {
-            bool                        enabled;
-            std::vector<RasterSample*>  bandSample;
-            std::vector<RasterSubset*>  bandSubset;
-            GdalRaster*                 raster;
-            ~CacheItem(void) {delete raster;}
-        } cacheitem_t;
-
-        /* Reader thread info used by serial sampling code */
-        typedef struct Reader {
-            GeoIndexedRaster*   obj;
-            OGRGeometry*        geo;
-            Thread*             thread;
-            cacheitem_t*        entry;
-            Cond                sync;
-            std::atomic<bool>   run;
-            explicit Reader(GeoIndexedRaster* _obj);
-            ~Reader(void);
-        } reader_t;
-
         typedef RasterObject::range_t range_t;
 
         /* Point and it's asociated group list */
@@ -205,17 +181,12 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        uint32_t        getSamples        (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) final;
-        uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
-        uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
+        /* import getSamples with single point */
+        using RasterObject::getSamples;
+
+        uint32_t        getSamples            (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
 
     protected:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef Dictionary<cacheitem_t*> CacheDictionary;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -225,25 +196,17 @@ class GeoIndexedRaster: public RasterObject
         virtual uint32_t getBatchGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx);
         static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
 
-        virtual void     getSerialGroupSamples (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
-        virtual void     getSerialGroupSubsets (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
-        uint32_t         getSerialGroupFlags   (const rasters_group_t* rgroup);
-
         virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         bool             openGeoIndex          (const std::string& newFile, OGRGeometry* filter=NULL);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual void     getIndexFile          (const std::vector<point_info_t>* points, std::string& file) = 0;
         virtual bool     findRasters           (raster_finder_t* finder) = 0;
-        void             sampleRasters         (OGRGeometry* geo);
-        bool             serialSample          (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        CacheDictionary          cache;     // Used by serial sampling
-        uint32_t                 ssErrors;
+        uint32_t         ssErrors;
 
     private:
 
@@ -283,7 +246,6 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        List<reader_t*>           serialReaders;
         List<batch_reader_t*>     batchReaders;
         perf_stats_t              perfStats;
         Cond                      readerDone;         // Signals when any batch reader finishes work
@@ -297,6 +259,7 @@ class GeoIndexedRaster: public RasterObject
         uint32_t                  cols;
 
         GeoRtree                  geoRtree;
+        event_level_t             samplingLogLevel;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -306,16 +269,12 @@ class GeoIndexedRaster: public RasterObject
         static int      luaBoundingBox      (lua_State* L);
         static int      luaCellSize         (lua_State* L);
 
-        static void*    serialReaderThread  (void *param);
         static void*    batchReaderThread   (void *param);
 
         static void*    groupsFinderThread  (void *param);
         static void*    samplesCollectThread(void *param);
 
-        bool            createSerialReaderThreads (uint32_t rasters2sample);
         bool            createBatchReaderThreads  (uint32_t rasters2sample);
-
-        bool            updateSerialCache   (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, OGRGeometry* filter);

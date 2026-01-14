@@ -92,19 +92,6 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
     return true;
 }
 
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
-{
-    static_cast<void>(geo);
-    file = indexFile;
-    // mlog(DEBUG, "Using %s", file.c_str());
-}
-
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
 void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
 {
     static_cast<void>(points);

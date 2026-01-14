@@ -70,7 +70,6 @@ GeoIndexedRaster::RasterFinder::RasterFinder (const OGRGeometry* _geo,
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject    (L, rqst_parms, key),
-    cache           (MAX_READER_THREADS),
     ssErrors        (SS_NO_ERRORS),
     readerDone      (NUM_SYNC_SIGNALS),
     activeReaders   (0),
@@ -88,6 +87,9 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, cons
 
     /* Establish Credentials */
     GdalRaster::initAwsAccess(parms);
+
+    /* Default to INFO for batch paths */
+    samplingLogLevel = INFO;
 }
 
 
@@ -436,7 +438,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps_secs, GroupOrdering* groupList,
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, OGRGeometry* filter)
 {
-    mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
+    mlog(DEBUG, "Features before spatial filter: %lld", layer->GetFeatureCount());
 
     const double startTime = TimeLib::latchtime();
 
@@ -445,6 +447,6 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, OGRGeometry* filter)
      */
     layer->SetSpatialFilter(filter);
     perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Features after spatial filter: %lld", layer->GetFeatureCount());
+    mlog(DEBUG, "Features after spatial filter: %lld", layer->GetFeatureCount());
     mlog(DEBUG, "Spatial filter time: %.3lf", perfStats.spatialFilterTime);
 }

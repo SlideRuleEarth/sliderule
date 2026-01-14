@@ -76,30 +76,16 @@ class LandsatHlsRaster: public GeoIndexedRaster
     protected:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            BATCH,
-            SERIAL,
-        } sample_mode_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                  LandsatHlsRaster    (lua_State* L, RequestFields* rqst_parms, const char* key);
                 ~LandsatHlsRaster    (void) override;
 
-        void     getIndexFile        (const OGRGeometry* geo, std::string& file) final;
         void     getIndexFile        (const std::vector<point_info_t>* points, std::string& file) final;
         bool     findRasters         (raster_finder_t* finder) final;
 
-        void     getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final
-                                     { _getGroupSamples(SERIAL, rgroup, &slist, flags);}
-
-        uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final
-                                     { return _getGroupSamples(BATCH, rgroup, slist, flags, pointIndx);}
+        uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;
 
         void     getInnerBands       (std::vector<std::string>& bands) final
                                      { bands.clear(); } /* Landsat bands are in seperate rasters */
@@ -117,9 +103,6 @@ class LandsatHlsRaster: public GeoIndexedRaster
         static bool validS2Band   (const char* bandName)  {return validateBand(SENTINEL2,bandName);}
         static bool validAlgoBand (const char* bandName)  {return validateBand(ALGOBAND, bandName);}
         static bool validAlgoName (const char* bandName)  {return validateBand(ALGONAME, bandName);}
-
-        uint32_t _getGroupSamples(sample_mode_t mode, const rasters_group_t* rgroup,
-                                  List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx=0);
 
         /*--------------------------------------------------------------------
          * Data

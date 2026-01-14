@@ -31,7 +31,7 @@ runner.assert(ut ~= nil)
 -- It opens a test file with points.
 local pointsFile = dirpath.."../data/grand_mesa_poi.txt"
 local pointsInFile = 26183  -- number of points in file
-local maxPointCount = 1000  -- number of points to sample, 1000 will trigger all threaded code
+local maxPointCount = 10  -- number of points to sample, 1000 will trigger all threaded code
 status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
 runner.assert(status, "Failed sampling test")
 

@@ -87,19 +87,6 @@ NisarDataset::~NisarDataset(void)
     VSIUnlink(indexFile.c_str());
 }
 
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void NisarDataset::getIndexFile(const OGRGeometry* geo, std::string& file)
-{
-    static_cast<void>(geo);
-    file = indexFile;
-    mlog(DEBUG, "Using %s", file.c_str());
-}
-
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
 void NisarDataset::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
 {
     static_cast<void>(points);
@@ -163,30 +150,7 @@ bool NisarDataset::findRasters(raster_finder_t* finder)
 
 
 /*----------------------------------------------------------------------------
- * getSerialGroupSamples
- *----------------------------------------------------------------------------*/
-void NisarDataset::getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags)
-{
-    //TODO: for L2 GEOFF we will be processing all 3 layers of datasets, for now return them all
-    for(const auto& rinfo : rgroup->infovect)
-    {
-        const char* key = fileDictGet(rinfo.fileId);
-        cacheitem_t* item;
-        if(cache.find(key, &item) && !item->bandSample.empty())
-        {
-            RasterSample* sample = new RasterSample(*item->bandSample[0]);
-
-            /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-            if(sample == NULL) continue;
-
-            sample->flags = flags;
-            slist.add(sample);
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * getSerialGroupSamples
+ * getBatchGroupSamples
  *----------------------------------------------------------------------------*/
 uint32_t NisarDataset::getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
 {

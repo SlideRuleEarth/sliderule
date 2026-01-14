@@ -82,8 +82,11 @@ class MeritRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                  MeritRaster (lua_State *L, RequestFields* rqst_parms, const char* key);
-        uint32_t getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) final;
-        uint32_t getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
+
+        /* import getSamples with single point */
+        using RasterObject::getSamples;
+
+        uint32_t getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
     private:
 
         /*--------------------------------------------------------------------
@@ -97,6 +100,8 @@ class MeritRaster: public RasterObject
 
         Asset*      asset;
         int64_t     gpsTime;
+
+        uint32_t samplePoint (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL);
 };
 
 #endif  /* __merit_raster_ */

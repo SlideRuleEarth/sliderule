@@ -80,19 +80,6 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, cons
  *----------------------------------------------------------------------------*/
 GebcoBathyRaster::~GebcoBathyRaster(void) = default;
 
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void GebcoBathyRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
-{
-    static_cast<void>(geo);
-    file = filePath + "/" + indexFile;
-    mlog(DEBUG, "Using index file: %s", file.c_str());
-}
-
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
 void GebcoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
 {
     static_cast<void>(points);

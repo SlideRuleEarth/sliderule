@@ -27,7 +27,7 @@ local llx = -149.90
 local lly = 70.10
 local urx = -149.80
 local ury = 70.15
-local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
+local demTypes = {"arcticdem-mosaic"}
 
 for i = 1, #demTypes do
     local demType = demTypes[i];

@@ -17,7 +17,7 @@ local jsonfile = td .. "../data/arcticdem_strips.geojson"
 local contents = readgeojson.load(jsonfile)
 
 local generator = require("arctictdem_test_points_generator")
-local maxPoints = 5
+local maxPoints = 100
 local lons, lats, heights = generator.generate_points(maxPoints)
 local verbose = true
 

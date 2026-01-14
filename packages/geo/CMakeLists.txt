@@ -30,7 +30,6 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/GdalRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRasterSerial.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRasterBatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoJsonRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserRaster.cpp

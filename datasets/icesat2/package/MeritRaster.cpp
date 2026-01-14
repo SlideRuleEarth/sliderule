@@ -110,9 +110,9 @@ MeritRaster::MeritRaster(lua_State *L, RequestFields* rqst_parms, const char* ke
 }
 
 /*----------------------------------------------------------------------------
- * getSamples
+ * samplePoint
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param)
+uint32_t MeritRaster::samplePoint (const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
     (void)param;
 
@@ -210,14 +210,31 @@ uint32_t MeritRaster::getSamples (const point_info_t& pinfo, sample_list_t& slis
 }
 
 /*----------------------------------------------------------------------------
- * getSubset
+ * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
+uint32_t MeritRaster::getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
 {
-    static_cast<void>(extent);
-    static_cast<void>(gps);
-    static_cast<void>(slist);
     static_cast<void>(param);
-    return SS_NO_ERRORS;
-}
+    uint32_t ssErrors = SS_NO_ERRORS;
 
+    for(uint32_t i = 0; i < points.size(); i++)
+    {
+        if(!sampling())
+        {
+            mlog(DEBUG, "Sampling stopped");
+            break;
+        }
+
+        sample_list_t* slist = new sample_list_t;
+        const RasterObject::point_info_t& pinfo = points[i];
+        const uint32_t err = samplePoint(pinfo, *slist, NULL);
+
+        /* Acumulate errors from all getSamples calls */
+        ssErrors |= err;
+
+        /* Add sample list */
+        sllist.add(slist);
+    }
+
+    return ssErrors;
+}

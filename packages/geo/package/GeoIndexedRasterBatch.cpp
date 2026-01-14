@@ -88,9 +88,20 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
     lockSampling();
 
+    const bool multiPoints = points.size() > 1;
+    if(multiPoints)
+    {
+        samplingLogLevel = INFO;
+        fileDict.clear();
+    }
+    else
+    {
+        /* Reduce noise for single-point calls */
+        samplingLogLevel = DEBUG;
+        /* Don't clear fileDict for single-point calls to allow caching across calls for backward compatibility */
+    }
+
     perfStats.clear();
-    cache.clear();       /* Clear cache used by serial sampling */
-    fileDict.clear();    /* Start with empty file dictionary    */
 
     /* Vector of points and their associated raster groups */
     std::vector<point_groups_t> pointsGroups;
@@ -106,14 +117,23 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         std::string ifile;
         getIndexFile(&points, ifile);
 
-        /* Create a convex hull that wraps around all the points, used for spatial filter */
-        OGRGeometry* filter = getConvexHull(&points);
+        /* Create a convex hull that wraps around all the points, used for spatial filter.
+         * Skip it for single-point calls so we don't cache a point-filtered R-tree that would
+         * hide rasters on subsequent single-point calls. */
+        OGRGeometry* filter = NULL;
+        if(multiPoints)
+        {
+            filter = getConvexHull(&points);
+        }
 
         /* Open the index file */
         const bool indexOpenedOk = openGeoIndex(ifile, filter);
 
         /* Clean up convex hull */
-        OGRGeometryFactory::destroyGeometry(filter);
+        if(filter)
+        {
+            OGRGeometryFactory::destroyGeometry(filter);
+        }
 
         if(!indexOpenedOk)
         {
@@ -135,8 +155,6 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "Error finding unique rasters");
             }
-
-            /* rastersToPointsMap is no longer needed */
         }
 
         /* Sample all unique rasters */
@@ -181,7 +199,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     unlockSampling();
 
     /* Print performance stats */
-    perfStats.log(INFO);
+    perfStats.log(DEBUG);
 
     return ssErrors;
 }
@@ -659,7 +677,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         const uint32_t numMaxThreads = std::thread::hardware_concurrency();
         const uint32_t minPointsPerThread = 100;
 
-        mlog(INFO, "Finding rasters groups for all points with %u threads", numMaxThreads);
+        mlog(samplingLogLevel, "Finding rasters groups for %zu points with %u threads", points->size(), numMaxThreads);
 
         std::vector<range_t> pointsRanges;
         getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
@@ -680,10 +698,10 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             delete pid;
         }
 
-        mlog(INFO, "All groups finders time: %lf", TimeLib::latchtime() - startTime);
+        mlog(DEBUG, "All groups finders time: %lf", TimeLib::latchtime() - startTime);
 
         /* Merge the pointGroups from each thread */
-        mlog(INFO, "Merging point groups from all threads");
+        mlog(DEBUG, "Merging point groups from all threads");
         for(GroupsFinder* gf : rgroupFinders)
         {
             /* Map thread-local file ids to global file ids once per unique id */
@@ -903,7 +921,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
     }
 
     perfStats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Unique rasters time: %lf", perfStats.findUniqueRastersTime);
+    mlog(DEBUG, "Unique rasters time: %lf", perfStats.findUniqueRastersTime);
 
     return status;
 }
@@ -930,7 +948,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
         createBatchReaderThreads(std::min(maxThreads, numRasters));
 
         const uint32_t numThreads = batchReaders.length();
-        mlog(INFO, "Sampling %u rasters with %u threads", numRasters, numThreads);
+        mlog(samplingLogLevel, "Sampling %u rasters with %u threads", numRasters, numThreads);
 
         /* Sample unique rasters utilizing numThreads */
         uint32_t currentRaster = 0;
@@ -990,7 +1008,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
     }
 
     perfStats.samplesTime = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Done Sampling, time: %lf", perfStats.samplesTime);
+    mlog(samplingLogLevel, "Done Sampling, time: %.2lf secs", perfStats.samplesTime);
     return status;
 }
 
@@ -1020,7 +1038,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     getThreadsRanges(pGroupRanges, pointsGroups.size(), minPointGroupsPerThread, numMaxThreads);
     const uint32_t numThreads = pGroupRanges.size();
 
-    mlog(INFO, "Collecting samples for %zu points with %u threads", pointsGroups.size(), numThreads);
+    mlog(DEBUG, "Collecting samples for %zu points with %u threads", pointsGroups.size(), numThreads);
 
     for(uint32_t i = 0; i < numThreads; i++)
     {
@@ -1056,7 +1074,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     mlog(DEBUG, "Merged %d sample lists, time: %lf", sllist.length(), TimeLib::latchtime() - mergeStart);
 
     perfStats.collectSamplesTime = TimeLib::latchtime() - start;
-    mlog(INFO, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);
+    mlog(DEBUG, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);
 
     return true;
 }
@@ -1072,7 +1090,7 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
     /* Create an empty geometry collection to hold all points */
     OGRGeometryCollection geometryCollection;
 
-    mlog(INFO, "Creating convex hull from %zu points", points->size());
+    mlog(DEBUG, "Creating convex hull from %zu points", points->size());
 
     /* Collect all points into a geometry collection */
     for(const point_info_t& pinfo : *points)

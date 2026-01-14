@@ -53,47 +53,59 @@ local errorChecking = true
 
 local starttime = time.latch();
 
+local lons = {}
+local lats = {}
+local heights = {}
 for i=1,#arr do
--- for i=1, 14 do
-    local  lon = arr[i][1]
-    local  lat = arr[i][2]
-    local  height = 0
-    -- print(string.format("%0.16f, %0.16f", lon, lat))
-    local  tbl, err = dem:sample(lon, lat, height)
-    if err ~= 0 then
-        print(string.format("======> FAILED to read", lon, lat, height))
-    else
-        local ndvi, fname
-        for j, v in ipairs(tbl) do
-            ndvi = v["value"]
-            fname = v["file"]
+    lons[i] = arr[i][1]
+    lats[i] = arr[i][2]
+    heights[i] = 0
+end
 
-            if errorChecking then
-                if fname ~= expectedFile then
-                    print(string.format("======> wrong group: %s", fname))
-                    badFileCnt = badFileCnt + 1
-                end
+local  tbl, err = dem:batchsample(lons, lats, heights)
+if err ~= 0 then
+    print("======> FAILED to batchsample")
+else
+    for i=1,#arr do
+        -- for i=1, 14 do
+        local  lon = lons[i]
+        local  lat = lats[i]
+        local  pointSamples = tbl[i]
+        if pointSamples == nil then
+            print(string.format("======> FAILED to read %0.16f, %0.16f", lon, lat))
+        else
+            local ndvi, fname
+            for j, v in ipairs(pointSamples) do
+                ndvi = v["value"]
+                fname = v["file"]
 
-                local expectedNDVI = ndvi_results[i]
-                local delta = 0.0000000000000001
-                local min = expectedNDVI - delta
-                local max = expectedNDVI + delta
-                if (ndvi > max or ndvi < min) then
-                    print(string.format("======> wrong ndvi: %0.16f, expected: %0.16f", ndvi, expectedNDVI))
-                    badNDVICnt = badNDVICnt + 1
+                if errorChecking then
+                    if fname ~= expectedFile then
+                        print(string.format("======> wrong group: %s", fname))
+                        badFileCnt = badFileCnt + 1
+                    end
+
+                    local expectedNDVI = ndvi_results[i]
+                    local delta = 0.0000000000000001
+                    local min = expectedNDVI - delta
+                    local max = expectedNDVI + delta
+                    if (ndvi > max or ndvi < min) then
+                        print(string.format("======> wrong ndvi: %0.16f, expected: %0.16f", ndvi, expectedNDVI))
+                        badNDVICnt = badNDVICnt + 1
+                    end
                 end
+                -- print(string.format("%0.16f, fname: %s", ndvi, fname))
             end
-            -- print(string.format("%0.16f, fname: %s", ndvi, fname))
         end
+
+        samplesCnt = samplesCnt + 1
+
+        local modulovalue = 3000
+        if (i % modulovalue == 0) then
+            print(string.format("Sample: %d", samplesCnt))
+        end
+
     end
-
-    samplesCnt = samplesCnt + 1
-
-    local modulovalue = 3000
-    if (i % modulovalue == 0) then
-        print(string.format("Sample: %d", samplesCnt))
-    end
-
 end
 
 local stoptime = time.latch();
@@ -101,4 +113,3 @@ local dtime = stoptime - starttime
 
 print(string.format("\nSamples: %d, wrong NDVI: %d, wrong groupID: %d", samplesCnt, badNDVICnt, badFileCnt))
 print(string.format("ExecTime: %f", dtime))
-
