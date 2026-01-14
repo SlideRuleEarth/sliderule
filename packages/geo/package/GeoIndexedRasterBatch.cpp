@@ -677,7 +677,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         const uint32_t numMaxThreads = std::thread::hardware_concurrency();
         const uint32_t minPointsPerThread = 100;
 
-        mlog(samplingLogLevel, "Finding rasters groups for all points with %u threads", numMaxThreads);
+        mlog(samplingLogLevel, "Finding rasters groups for %zu points with %u threads", points->size(), numMaxThreads);
 
         std::vector<range_t> pointsRanges;
         getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
@@ -1008,7 +1008,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
     }
 
     perfStats.samplesTime = TimeLib::latchtime() - startTime;
-    mlog(samplingLogLevel, "Done Sampling, time: %lf", perfStats.samplesTime);
+    mlog(samplingLogLevel, "Done Sampling, time: %.2lf secs", perfStats.samplesTime);
     return status;
 }
 
@@ -1038,7 +1038,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     getThreadsRanges(pGroupRanges, pointsGroups.size(), minPointGroupsPerThread, numMaxThreads);
     const uint32_t numThreads = pGroupRanges.size();
 
-    mlog(samplingLogLevel, "Collecting samples for %zu points with %u threads", pointsGroups.size(), numThreads);
+    mlog(DEBUG, "Collecting samples for %zu points with %u threads", pointsGroups.size(), numThreads);
 
     for(uint32_t i = 0; i < numThreads; i++)
     {

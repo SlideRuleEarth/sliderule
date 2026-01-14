@@ -217,11 +217,13 @@ uint32_t RasterObject::getSamples(const point_info_t& pinfo, sample_list_t& slis
     List<sample_list_t*> sllist;
     const uint32_t ssErrors = getSamples(points, sllist, param);
 
+    /* Single point wrapper expects exactly one samples list or 0 if no samples for the point */
     if(sllist.length() != 1)
     {
+        /* More than one samples list returned for single point should never happen */
         if(sllist.length() > 1)
         {
-            mlog(CRITICAL, "getSamples returned %u elements", sllist.length());
+            mlog(CRITICAL, "getSamples for single point returned too many samples lists (%d)", sllist.length());
         }
         return ssErrors;
     }
