@@ -36,45 +36,48 @@ core.log(core.info, "Loading rate limiter...")
 --
 
 -- Rate Limiting Parameters
-RATELIMIT_WEEKLY_COUNT = 50000 -- maximum number of requests that can be made in one week
-RATELIMIT_BACKOFF_COUNT = 10 -- after the max count is reached, this is the number of new requests that can be made before the next backoff
-RATELIMIT_BLOCK_PERIOD = 10 * 60 -- user will not be able to make requests for this number of seconds
+RATELIMIT_WEEKLY_COUNT = {ip=50000, user=100000} -- maximum number of requests that can be made in one week
+RATELIMIT_BACKOFF_COUNT = {ip=10, user=100} -- after the max count is reached, this is the number of new requests that can be made before the next backoff
+RATELIMIT_BLOCK_PERIOD = {ip=600, user=600} -- user will not be able to make requests for this number of seconds
 
 -- Rate Limiting Data
-WeekOfLastRequest = {} -- "<ip_address>": <week number of last request>
-RequestCount = {} -- "<ip_address>": <number of accumulated requests in the week>
-BlockTime = {} -- "<ip_address>": <os time until which ip address will be blocked>
+WeekOfLastRequest = {} -- "<ip_address or username>": <week number of last request>
+RequestCount = {} -- "<ip_address or username>": <number of accumulated requests in the week>
+BlockTime = {} -- "<ip_address or username>": <os time until which ip address will be blocked>
 
 --
 -- Action: ratelimit
 --
 local function ratelimit(txn)
     local client_ip = txn.sf:src()
+    local username = txn:get_var("txn.sub")
+    local mode = #username > 0 and "user" or "ip"
+    local originator = #username > 0 and username or client_ip
 
     -- check blocked status
     local now = os.time()
-    if now <= (BlockTime[client_ip] or 0) then
+    if now <= (BlockTime[originator] or 0) then
         txn:set_var("txn.block_this_ip", true)
         return
     end
 
     -- clear any blocks
-    BlockTime[client_ip] = nil
+    BlockTime[originator] = nil
 
     -- track requests per ip
     local this_week_number = os.date("%V")
-    local last_week_number = WeekOfLastRequest[client_ip]
+    local last_week_number = WeekOfLastRequest[originator]
     if this_week_number == last_week_number then
-        RequestCount[client_ip] = (RequestCount[client_ip] or 0) + 1
+        RequestCount[originator] = (RequestCount[originator] or 0) + 1
     else
-        RequestCount[client_ip] = 1
+        RequestCount[originator] = 1
     end
-    WeekOfLastRequest[client_ip] = this_week_number
+    WeekOfLastRequest[originator] = this_week_number
 
     -- check ip rates
-    if RequestCount[client_ip] >= RATELIMIT_WEEKLY_COUNT then
-        RequestCount[client_ip] = RequestCount[client_ip] - RATELIMIT_BACKOFF_COUNT
-        BlockTime[client_ip] = os.time() + RATELIMIT_BLOCK_PERIOD
+    if RequestCount[originator] >= RATELIMIT_WEEKLY_COUNT[mode] then
+        RequestCount[originator] = RequestCount[originator] - RATELIMIT_BACKOFF_COUNT[mode]
+        BlockTime[originator] = os.time() + RATELIMIT_BLOCK_PERIOD[mode]
     end
 
 end
