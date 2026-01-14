@@ -217,11 +217,6 @@ std::string GeoFields::sserror2str(uint32_t error)
         errorStr = "SS_NO_ERRORS";
         return errorStr;
     }
-
-    if(error & SS_UNUSED_PLACEHOLDER)
-    {
-        errorStr += "SS_UNUSED_PLACEHOLDER, ";
-    }
     if(error & SS_MEMPOOL_ERROR)
     {
         errorStr += "SS_MEMPOOL_ERROR, ";
