@@ -47,9 +47,6 @@ Parameters:
   #
   # Constants
   #
-  ManagerIP:
-    Type: String
-    Default: "10.0.1.3"
   MonitorIP:
     Type: String
     Default: "10.0.1.4"
@@ -254,10 +251,10 @@ Resources:
           FromPort: 3100
           ToPort: 3100
           CidrIp: !Ref VpcCIDRBlock
-        # NGINX (from HAProxy)
+        # HAProxy (from internet)
         - IpProtocol: tcp
-          FromPort: 8040
-          ToPort: 8040
+          FromPort: 3000
+          ToPort: 3000
           CidrIp: !Ref VpcCIDRBlock
       SecurityGroupEgress:
         # ALL
