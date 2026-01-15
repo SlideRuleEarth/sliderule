@@ -42,15 +42,21 @@ parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
 args,_ = parser.parse_known_args()
 
 # Create Session
-session = sliderule.create_session(domain=args.domain, cluster=args.cluster, desired_nodes=args.node_capacity, time_to_live=args.ttl)
+session = sliderule.create_session(domain=args.domain, cluster=args.cluster)
 
 # Command Runner
 CommandRunner = {
+
+    # Provisioner
     "deploy": lambda: session.provisioner.deploy(is_public=args.is_public, node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
     "destroy": session.provisioner.destroy,
     "status": session.provisioner.status,
     "events": session.provisioner.events,
-    "report": session.provisioner.report
+    "report": session.provisioner.report,
+
+    # Cluster
+    "version": lambda: session.source("version")
+
 }
 
 # Execute Commands

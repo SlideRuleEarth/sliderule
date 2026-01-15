@@ -524,7 +524,6 @@ class Session:
                 raise
             return {'status': 'error', 'exception': f'{e}'}
 
-
     #
     # __StreamSource
     #
@@ -550,12 +549,12 @@ class Session:
     class __Provisioner:
         def __init__ (self, session):
             self.session = session
-        def deploy (self, is_public=False, node_capacity=1, ttl=60, version="latest"):
+        def deploy (self, *, is_public, node_capacity, ttl, version):
             return self.session.provision("deploy", {"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
-        def extend (self, ttl=60):
+        def extend (self, *, ttl):
             return self.session.provision("extend", {"cluster": self.session.cluster, "ttl": ttl})
         def destroy (self):
-            return self.session.provision("status", {"cluster": self.session.cluster})
+            return self.session.provision("destroy", {"cluster": self.session.cluster})
         def status (self):
             return self.session.provision("status", {"cluster": self.session.cluster})
         def events (self):

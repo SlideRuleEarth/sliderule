@@ -58,7 +58,6 @@ WEBSITE_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
-CF_STAGE_DIR = $(STAGE)/cf
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
@@ -274,12 +273,6 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 	docker push $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
 	docker push $(CONTAINER_REGISTRY)/ams:$(VERSION)
 
-cluster-cf-init: ## initialize S3 cloudformation subfolder; only needs to be run once
-	-rm -Rf $(CF_STAGE_DIR)
-	mkdir -p $(CF_STAGE_DIR)
-	wget --directory-prefix=$(CF_STAGE_DIR) https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-linux-aarch64
-	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
-
 cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy
 
@@ -294,6 +287,9 @@ cluster-events: ## invokes the provisioner *events* lambda function and displays
 
 cluster-report: ## invokes the provisioner *report* lambda function and displays the response
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report
+
+cluster-version: ## calls the cluster version API and displays the response
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \

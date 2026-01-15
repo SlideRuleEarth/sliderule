@@ -787,13 +787,25 @@ def redirect_to_frontend(redirect_uri, parms):
     # Build full parameterized redirect url
     redirect_url = f"{base_url}?{urllib.parse.urlencode(parms)}"
 
+    # Initialize headers
+    headers = {
+        'Location': redirect_url,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    }
+
+    # Add JWT cookie if token exists
+    token = parms.get('token', '')
+    if token:
+        # Get domain from redirect url
+        host = urllib.parse.urlparse(redirect_url).hostname
+        domain = ".".join(host.split(".")[-2:])
+        # Set cookie for the entire domain
+        headers['Set-Cookie'] = f'token={token}; Domain=.{domain}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=86400'
+
     # Return response
     return {
         'statusCode': 302,
-        'headers': {
-            'Location': redirect_url,
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
-        },
+        'headers': headers,
         'body': ''
     }
 

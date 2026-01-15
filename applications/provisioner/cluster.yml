@@ -68,6 +68,9 @@ Parameters:
   ClusterCIDRBlock:
     Type: String
     Default: "10.0.0.0/17"
+  DockerComposeVersion:
+    Type: String
+    Default: "v2.24.5"
 
 Resources:
 
@@ -335,7 +338,7 @@ Resources:
   IlbInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
       InstanceType: c8g.large
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
@@ -366,18 +369,55 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+
+          # Retry function
+          retry() {
+            local max_attempts=3
+            local attempt=1
+            local delay=5
+
+            until "$@"; do
+              if [ $attempt -eq $max_attempts ]; then
+                echo "Command failed after $max_attempts attempts: $*"
+                return 1
+              fi
+              echo "Attempt $attempt failed. Retrying in $delay seconds..."
+              sleep $delay
+              delay=$((delay * 2))
+              ((attempt++))
+            done
+            return 0
+          }
+
+          # Install and configure docker
+          retry dnf update -y
+          retry dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ec2-user
+
+          # Install Docker Compose V2
+          retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+          # Log into ECR
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+          # Setup directories and download files
           mkdir -p /etc/haproxy/pem
-          curl ${JwtIssuer}/auth/github/pem > /etc/haproxy/pem/pubkey.pem
+          retry curl ${JwtIssuer}/auth/github/pem > /etc/haproxy/pem/pubkey.pem
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
-          chmod +x docker-compose
+
+          # Create docker-compose.yml
           cat > docker-compose.yml << EOF
           version: "3.9"
           services:
             ilb:
               image: ${ContainerRegistry}/ilb:${Version}
+              container_name: ilb
               network_mode: host
               restart: always
               pull_policy: if_not_present
@@ -400,6 +440,7 @@ Resources:
                 - autoheal=true
             monitor-agent:
               image: ${ContainerRegistry}/monitor-agent:${Version}
+              container_name: monitor-agent
               network_mode: host
               restart: unless-stopped
               pull_policy: if_not_present
@@ -424,7 +465,9 @@ Resources:
               volumes:
                 - /var/run/docker.sock:/var/run/docker.sock
           EOF
-          ./docker-compose -p cluster up --detach
+
+          # Start services
+          docker compose -p cluster up --detach
 
   #
   # EC2 Instance - Monitor
@@ -432,7 +475,7 @@ Resources:
   MonitorInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
       InstanceType: c8g.large
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
@@ -456,18 +499,54 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          echo ${Cluster} > ./Cluster.txt
+
+          # Retry function
+          retry() {
+            local max_attempts=3
+            local attempt=1
+            local delay=5
+
+            until "$@"; do
+              if [ $attempt -eq $max_attempts ]; then
+                echo "Command failed after $max_attempts attempts: $*"
+                return 1
+              fi
+              echo "Attempt $attempt failed. Retrying in $delay seconds..."
+              sleep $delay
+              delay=$((delay * 2))
+              ((attempt++))
+            done
+            return 0
+          }
+
+          # Install and configure docker
+          retry dnf update -y
+          retry dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ec2-user
+
+          # Install Docker Compose V2
+          retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+          # Log into ECR
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+          # Setup environment
           SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
           export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
           export CLIENT_SECRET=$(echo $SECRET | jq -r .client_secret)
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
-          chmod +x docker-compose
+
+          # Create docker-compose.yml
           cat > docker-compose.yml << EOF
           version: "3.9"
           services:
             monitor:
               image: ${ContainerRegistry}/monitor:${Version}
+              container_name: monitor
               network_mode: host
               restart: always
               pull_policy: if_not_present
@@ -475,6 +554,7 @@ Resources:
                 - autoheal=true
             monitor-agent:
               image: ${ContainerRegistry}/proxy:${Version}
+              container_name: monitor-agent
               network_mode: host
               restart: unless-stopped
               pull_policy: if_not_present
@@ -489,21 +569,6 @@ Resources:
                 - /var/lib/docker/containers:/var/lib/docker/containers:ro
               labels:
                 - autoheal=true
-            proxy:
-              image: ${ContainerRegistry}/monitor-agent:${Version}
-              network_mode: host
-              restart: always
-              pull_policy: if_not_present
-              entrypoint: /usr/local/etc/docker-entrypoint.sh
-              volumes:
-                - /etc/ssl/private:/etc/ssl/private
-              environment:
-                - CLIENT_ID=$CLIENT_ID
-                - CLIENT_SECRET=$CLIENT_SECRET
-                - DOMAIN=${Domain}
-                - REDIRECT_URI_SCHEME=https
-              labels:
-                - autoheal=true
             autoheal:
               image: willfarrell/autoheal:latest
               container_name: autoheal
@@ -514,7 +579,9 @@ Resources:
               volumes:
                 - /var/run/docker.sock:/var/run/docker.sock
           EOF
-          ./docker-compose -p cluster up --detach
+
+          # Start services
+          docker compose -p cluster up --detach
 
   #
   # Autoscaling Group - Cluster
@@ -524,7 +591,7 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub "${Cluster}-lt"
       LaunchTemplateData:
-        ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
         InstanceType: t4g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile
@@ -541,8 +608,46 @@ Resources:
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
-            export IPV4=$(hostname -I | awk '{print $1}')
+
+            # Retry function
+            retry() {
+              local max_attempts=3
+              local attempt=1
+              local delay=5
+
+              until "$@"; do
+                if [ $attempt -eq $max_attempts ]; then
+                  echo "Command failed after $max_attempts attempts: $*"
+                  return 1
+                fi
+                echo "Attempt $attempt failed. Retrying in $delay seconds..."
+                sleep $delay
+                delay=$((delay * 2))
+                ((attempt++))
+              done
+              return 0
+            }
+
+            # Install and configure docker
+            retry dnf update -y
+            retry dnf install -y docker
+            systemctl enable docker
+            systemctl start docker
+            usermod -aG docker ec2-user
+
+            # Install Docker Compose V2
+            retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+            mkdir -p /usr/local/lib/docker/cli-plugins
+            ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+            # Log into ECR
             aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+            # Setup environment
+            export IPV4=$(hostname -I | awk '{print $1}')
+
+            # Setup directories and download files
             mkdir -p /data/ATL13
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.db /data/ATL13/atl13.db
@@ -552,13 +657,14 @@ Resources:
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
             mkdir -p /plugins
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
-            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
-            chmod +x docker-compose
+
+            # Create docker-compose.yml
             cat > docker-compose.yml << EOF
             version: "3.9"
             services:
               sliderule:
                 image: ${ContainerRegistry}/sliderule:${Version}
+                container_name: sliderule
                 network_mode: host
                 restart: always
                 pull_policy: if_not_present
@@ -593,6 +699,7 @@ Resources:
                   start_period: 30s
               ams:
                 image: ${ContainerRegistry}/ams:${Version}
+                container_name: ams
                 network_mode: host
                 restart: always
                 pull_policy: if_not_present
@@ -603,6 +710,7 @@ Resources:
                   - autoheal=true
               monitor-agent:
                 image: ${ContainerRegistry}/monitor-agent:${Version}
+                container_name: monitor-agent
                 network_mode: host
                 restart: unless-stopped
                 pull_policy: if_not_present
@@ -627,7 +735,9 @@ Resources:
                 volumes:
                   - /var/run/docker.sock:/var/run/docker.sock
             EOF
-            ./docker-compose -p cluster up --detach
+
+            # Start services
+            docker compose -p cluster up --detach
 
   ClusterAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
