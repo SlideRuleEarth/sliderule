@@ -172,8 +172,8 @@ okey_t Gedi01bDataFrame::getKey (void) const
 /*----------------------------------------------------------------------------
  * Gedi01bData::Constructor
  *----------------------------------------------------------------------------*/
-Gedi01bDataFrame::Gedi01bData::Gedi01bData (Gedi01bDataFrame* df, const GediAreaOfInterest& aoi):
-    shot_number     (df->hdf01b, FString("%s/shot_number",                  df->group).c_str(), 0, aoi.first_index, aoi.count),
+Gedi01bDataFrame::Gedi01bData::Gedi01bData (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi):
+    shot_number     (df->hdf01b, FString("%s/shot_number",                   df->group).c_str(), 0, aoi.first_index, aoi.count),
     delta_time      (df->hdf01b, FString("%s/geolocation/delta_time",        df->group).c_str(), 0, aoi.first_index, aoi.count),
     elev_bin0       (df->hdf01b, FString("%s/geolocation/elevation_bin0",    df->group).c_str(), 0, aoi.first_index, aoi.count),
     elev_lastbin    (df->hdf01b, FString("%s/geolocation/elevation_lastbin", df->group).c_str(), 0, aoi.first_index, aoi.count),
@@ -216,11 +216,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to Area of Interest */
-        const GediAreaOfInterest aoi(df->hdf01b,
-                                     FString("%s/geolocation/latitude_bin0", df->group).c_str(),
-                                     FString("%s/geolocation/longitude_bin0", df->group).c_str(),
-                                     df->parms,
-                                     df->readTimeoutMs);
+        const AreaOfInterestGedi aoi(df->hdf01b, df->group, "geolocation/latitude_bin0", "geolocation/longitude_bin0", df->parms, df->readTimeoutMs);
 
         /* Read GEDI Datasets */
         const Gedi01bData gedi01b(df, aoi);
@@ -264,7 +260,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
             df->time_ns.append(GediFields::deltatime2timestamp(gedi01b.delta_time[footprint]));
             df->latitude.append(aoi.latitude[footprint]);
             df->longitude.append(aoi.longitude[footprint]);
-            df->elevation_start.append(gedi01b.elev_bin0[footprint]);
+            df->elevation_start.append(static_cast<float>(gedi01b.elev_bin0[footprint]));
             df->elevation_stop.append(gedi01b.elev_lastbin[footprint]);
             df->solar_elevation.append(static_cast<double>(gedi01b.solar_elevation[footprint]));
             df->tx_size.append(gedi01b.tx_sample_count[footprint]);
@@ -275,7 +271,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
             df->flags.append(row_flags);
 
             /* Populate Tx Waveform */
-            FieldList<float> tx_list(GEDI01B_TX_SAMPLES_MAX, 0.0f);
+            FieldList<float> tx_list(GEDI01B_TX_SAMPLES_MAX, 0.0);
             const long tx_start = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];
             const long tx_end = tx_start + MIN(gedi01b.tx_sample_count[footprint], static_cast<uint16_t>(GEDI01B_TX_SAMPLES_MAX));
             for(long i = tx_start, j = 0; i < tx_end; i++, j++)
@@ -285,7 +281,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
             df->tx_waveform.append(tx_list);
 
             /* Populate Rx Waveform */
-            FieldList<float> rx_list(GEDI01B_RX_SAMPLES_MAX, 0.0f);
+            FieldList<float> rx_list(GEDI01B_RX_SAMPLES_MAX, 0.0);
             const long rx_start = gedi01b.rx_start_index[footprint] - gedi01b.rx_start_index[0];
             const long rx_end = rx_start + MIN(gedi01b.rx_sample_count[footprint], static_cast<uint16_t>(GEDI01B_RX_SAMPLES_MAX));
             for(long i = rx_start, j = 0; i < rx_end; i++, j++)

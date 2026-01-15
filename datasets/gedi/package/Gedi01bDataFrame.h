@@ -44,9 +44,10 @@
 #include "H5Object.h"
 #include "H5VarSet.h"
 #include "StringLib.h"
-
-#include "GediAreaOfInterest.h"
 #include "GediFields.h"
+#include "AreaOfInterest.h"
+
+using AreaOfInterestGedi = AreaOfInterestT<double>;
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -83,7 +84,7 @@ class Gedi01bDataFrame: public GeoDataFrame
         {
             public:
 
-                Gedi01bData      (Gedi01bDataFrame* df, const GediAreaOfInterest& aoi);
+                Gedi01bData      (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi);
                 ~Gedi01bData     (void) = default;
 
                 H5Array<uint64_t>   shot_number;
@@ -109,7 +110,7 @@ class Gedi01bDataFrame: public GeoDataFrame
         FieldColumn<time8_t>            time_ns   {Field::TIME_COLUMN};
         FieldColumn<double>             latitude  {Field::Y_COLUMN};
         FieldColumn<double>             longitude {Field::X_COLUMN};
-        FieldColumn<double>             elevation_start {Field::Z_COLUMN};
+        FieldColumn<float>              elevation_start {Field::Z_COLUMN};
         FieldColumn<double>             elevation_stop;
         FieldColumn<double>             solar_elevation;
         FieldColumn<uint16_t>           tx_size;

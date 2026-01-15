@@ -39,6 +39,9 @@
 #include "GeoDataFrame.h"
 #include "H5VarSet.h"
 #include "AreaOfInterest.h"
+#include "Icesat2Fields.h"
+
+using AreaOfInterest08 = AreaOfInterestT<float>;
 
 /******************************************************************************
  * CLASS DEFINITION

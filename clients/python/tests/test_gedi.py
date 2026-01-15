@@ -69,15 +69,15 @@ class TestL1B:
 
         np.testing.assert_array_equal(df_reader["time_ns"].to_numpy(), df_dframe["time_ns"].to_numpy())
 
-        float_fields = [
-            "latitude",
-            "longitude",
-            "elevation_start",
-            "elevation_stop",
-            "solar_elevation",
-        ]
-        for field in float_fields:
-            np.testing.assert_allclose(df_reader[field].to_numpy(), df_dframe[field].to_numpy(), rtol=0, atol=1e-6)
+        float_fields = {
+            "latitude": 1e-6,
+            "longitude": 1e-6,
+            "elevation_start": 1e-3,
+            "elevation_stop": 1e-6,
+            "solar_elevation": 1e-6,
+        }
+        for field, atol in float_fields.items():
+            np.testing.assert_allclose(df_reader[field].to_numpy(), df_dframe[field].to_numpy(), rtol=0, atol=atol)
 
         max_rows = min(5, len(df_reader))
         for i in range(max_rows):

@@ -23,7 +23,6 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/gedi.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FootprintReader.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/GediAreaOfInterest.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.h
