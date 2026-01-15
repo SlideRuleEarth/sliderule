@@ -178,6 +178,7 @@ int convertToLua(lua_State* L, const GediFields::beam_t& v);
 void convertFromLua(lua_State* L, int index, GediFields::beam_t& v);
 int convertToIndex(const GediFields::beam_t& v);
 void convertFromIndex(int index, GediFields::beam_t& v);
+int beamIndexFromString(const char* beam_str);
 
 inline uint32_t toEncoding(GediFields::beam_t& v) { (void)v; return Field::INT32; }
 

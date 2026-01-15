@@ -36,6 +36,7 @@
 #include "OsApi.h"
 #include "FootprintReader.h"
 #include "Gedi01bReader.h"
+#include "Gedi01bDataFrame.h"
 #include "Gedi02aReader.h"
 #include "Gedi04aReader.h"
 #include "GediRaster.h"
@@ -66,6 +67,7 @@ int gedi_open (lua_State *L)
     static const struct luaL_Reg gedi_functions[] = {
         {"parms",               GediFields::luaCreate},
         {"gedi01b",             Gedi01bReader::luaCreate},
+        {"gedi01bx",            Gedi01bDataFrame::luaCreate},
         {"gedi02a",             Gedi02aReader::luaCreate},
         {"gedi04a",             Gedi04aReader::luaCreate},
         {NULL,                  NULL}
