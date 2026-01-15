@@ -553,7 +553,7 @@ Resources:
               labels:
                 - autoheal=true
             monitor-agent:
-              image: ${ContainerRegistry}/proxy:${Version}
+              image: ${ContainerRegistry}/monitor-agent:${Version}
               container_name: monitor-agent
               network_mode: host
               restart: unless-stopped

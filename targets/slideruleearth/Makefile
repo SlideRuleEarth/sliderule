@@ -43,7 +43,6 @@ SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 SLIDERULE_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 ILB_STAGE_DIR = $(STAGE)/ilb
-PROXY_STAGE_DIR = $(STAGE)/proxy
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 AMS_STAGE_DIR = $(STAGE)/ams
@@ -202,12 +201,6 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
 
-proxy-docker: # make the reverse proxy docker image; needs VERSION
-	-rm -Rf $(PROXY_STAGE_DIR)
-	mkdir -p $(PROXY_STAGE_DIR)
-	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/proxy:$(VERSION) .
-
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
@@ -260,7 +253,6 @@ CLUSTER_PARMS = '{\
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker
 	make ilb-docker
-	make proxy-docker
 	make monitor-docker
 	make monitor-agent-docker
 	make ams-docker
@@ -268,7 +260,6 @@ cluster-docker: ## build all cluster docker images
 cluster-docker-push: ## push all cluster images to container registries (and docker compose files to S3)
 	docker push $(CONTAINER_REGISTRY)/sliderule:$(VERSION)
 	docker push $(CONTAINER_REGISTRY)/ilb:$(VERSION)
-	docker push $(CONTAINER_REGISTRY)/proxy:$(VERSION)
 	docker push $(CONTAINER_REGISTRY)/monitor:$(VERSION)
 	docker push $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
 	docker push $(CONTAINER_REGISTRY)/ams:$(VERSION)
@@ -712,7 +703,6 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 	- docker image rm $(CONTAINER_REGISTRY)/sliderule:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/ilb:$(VERSION)
-	- docker image rm $(CONTAINER_REGISTRY)/proxy:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/monitor:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/ams:$(VERSION)

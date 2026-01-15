@@ -121,8 +121,8 @@ local function api_prometheus(applet)
     for endpoint,count in pairs(EndpointMetric) do
         endpoint_metric = endpoint_metric .. string.format([[
 
-# TYPE %s counter
-%s %d
+# TYPE %s_count counter
+%s_count %d
 ]], endpoint, endpoint, count)
     end
 
