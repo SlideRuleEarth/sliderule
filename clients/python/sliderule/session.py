@@ -368,7 +368,7 @@ class Session:
                 "node_capacity": desired_nodes,
                 "ttl": time_to_live
             })
-            logger.info(f'Provisioning request status: {rsps['status']}')
+            logger.info(f'Provisioning request status: {rsps["status"]}')
 
         # return status
         return available_servers, requested_nodes
@@ -619,7 +619,8 @@ class Session:
             actual_timeout = min(timeout, expires_in)
             while time.time() - start_time < actual_timeout:
                 # display wait symbol
-                sys.stdout.write(f"\b{['/','-','\\','-'][print_mod]}")
+                spinner = ['/', '-', '\\', '-']
+                sys.stdout.write(f"\b{spinner[print_mod]}")
                 sys.stdout.flush()
                 print_mod = (print_mod + 1) % 4
                 # make polling request
@@ -630,7 +631,7 @@ class Session:
                     # return metadata
                     return result
                 elif result['status'] == 'error':
-                    logger.error(f'error polling for authorization: {result.get('error')}')
+                    logger.error(f'error polling for authorization: {result.get("error")}')
                 else: # result['status'] == 'pending'
                     wait_interval = result.get('interval', interval)
                     time.sleep(wait_interval)

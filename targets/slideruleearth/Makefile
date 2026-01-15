@@ -281,28 +281,19 @@ cluster-cf-init: ## initialize S3 cloudformation subfolder; only needs to be run
 	aws s3 cp $(CF_STAGE_DIR)/docker-compose-linux-aarch64 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 
 cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
-	echo $(CLUSTER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-deploy --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy
 
 cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
-	echo $(CLUSTER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-destroy --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy
 
 cluster-status: ## invokes the provisioner *status* lambda function and displays the response
-	echo $(CLUSTER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-status --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands status
 
 cluster-events: ## invokes the provisioner *events* lambda function and displays the response
-	echo $(CLUSTER_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-events --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands events
 
 cluster-report: ## invokes the provisioner *report* lambda function and displays the response
-	aws lambda invoke --function-name provisioner-report /tmp/response.json
-	cat /tmp/response.json | jq
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
