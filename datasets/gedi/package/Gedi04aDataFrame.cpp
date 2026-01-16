@@ -33,7 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
 #include "Gedi04aDataFrame.h"
 
 /******************************************************************************
@@ -81,7 +80,7 @@ int Gedi04aDataFrame::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf04a, const char* outq_name):
-    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"shot_number",         &shot_number},
         {"time_ns",             &time_ns},
@@ -93,43 +92,11 @@ Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFiel
         {"sensitivity",         &sensitivity},
         {"flags",               &flags}
     },
-    {
-        {"beam",                &beam},
-        {"orbit",               &orbit},
-        {"track",               &track},
-        {"granule",             &granule}
-    },
-    "\"EPSG:4326\""),
-    beam(0, META_COLUMN),
-    orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
-    track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
-    granule(_hdf04a->name, META_SOURCE_ID),
-    active(false),
-    readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
-    outQ(NULL),
-    parms(_parms),
-    hdf04a(_hdf04a),
-    dfKey(0),
-    beamStr(StringLib::duplicate(beam_str)),
-    group{0}
+    _parms,
+    _hdf04a,
+    beam_str,
+    outq_name)
 {
-    assert(_parms);
-    assert(_hdf04a);
-
-    /* Resolve Beam */
-    const int beam_index = beamIndexFromString(beam_str);
-    StringLib::format(group, sizeof(group), "%s", GediFields::beam2group(beam_index));
-    GediFields::beam_t beam_id;
-    convertFromIndex(beam_index, beam_id);
-    beam = static_cast<uint8_t>(beam_id);
-
-    /* Set DataFrame Key */
-    dfKey = static_cast<okey_t>(beam_index);
-
-    /* Optional Output Queue (for messages) */
-    if(outq_name) outQ = new Publisher(outq_name);
-
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();
 
@@ -142,41 +109,20 @@ Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFiel
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-Gedi04aDataFrame::~Gedi04aDataFrame (void)
-{
-    active.store(false);
-    delete readerPid;
-    delete [] beamStr;
-    delete outQ;
-    parms->releaseLuaObject();
-    hdf04a->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Gedi04aDataFrame::getKey (void) const
-{
-    return dfKey;
-}
-
-/*----------------------------------------------------------------------------
  * Gedi04aData::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aDataFrame::Gedi04aData::Gedi04aData (Gedi04aDataFrame* df, const AreaOfInterestGedi& aoi):
-    shot_number     (df->hdf04a, FString("%s/shot_number",     df->group).c_str(), 0, aoi.first_index, aoi.count),
-    delta_time      (df->hdf04a, FString("%s/delta_time",      df->group).c_str(), 0, aoi.first_index, aoi.count),
-    agbd            (df->hdf04a, FString("%s/agbd",            df->group).c_str(), 0, aoi.first_index, aoi.count),
-    elev_lowestmode (df->hdf04a, FString("%s/elev_lowestmode", df->group).c_str(), 0, aoi.first_index, aoi.count),
-    solar_elevation (df->hdf04a, FString("%s/solar_elevation", df->group).c_str(), 0, aoi.first_index, aoi.count),
-    sensitivity     (df->hdf04a, FString("%s/sensitivity",     df->group).c_str(), 0, aoi.first_index, aoi.count),
-    degrade_flag    (df->hdf04a, FString("%s/degrade_flag",    df->group).c_str(), 0, aoi.first_index, aoi.count),
-    l2_quality_flag (df->hdf04a, FString("%s/l2_quality_flag", df->group).c_str(), 0, aoi.first_index, aoi.count),
-    l4_quality_flag (df->hdf04a, FString("%s/l4_quality_flag", df->group).c_str(), 0, aoi.first_index, aoi.count),
-    surface_flag    (df->hdf04a, FString("%s/surface_flag",    df->group).c_str(), 0, aoi.first_index, aoi.count),
-    anc_data        (df->parms->anc_fields, df->hdf04a, df->group, H5Coro::ALL_COLS, aoi.first_index, aoi.count)
+    shot_number     (df->hdf, FString("%s/shot_number",     df->group).c_str(), 0, aoi.first_index, aoi.count),
+    delta_time      (df->hdf, FString("%s/delta_time",      df->group).c_str(), 0, aoi.first_index, aoi.count),
+    agbd            (df->hdf, FString("%s/agbd",            df->group).c_str(), 0, aoi.first_index, aoi.count),
+    elev_lowestmode (df->hdf, FString("%s/elev_lowestmode", df->group).c_str(), 0, aoi.first_index, aoi.count),
+    solar_elevation (df->hdf, FString("%s/solar_elevation", df->group).c_str(), 0, aoi.first_index, aoi.count),
+    sensitivity     (df->hdf, FString("%s/sensitivity",     df->group).c_str(), 0, aoi.first_index, aoi.count),
+    degrade_flag    (df->hdf, FString("%s/degrade_flag",    df->group).c_str(), 0, aoi.first_index, aoi.count),
+    l2_quality_flag (df->hdf, FString("%s/l2_quality_flag", df->group).c_str(), 0, aoi.first_index, aoi.count),
+    l4_quality_flag (df->hdf, FString("%s/l4_quality_flag", df->group).c_str(), 0, aoi.first_index, aoi.count),
+    surface_flag    (df->hdf, FString("%s/surface_flag",    df->group).c_str(), 0, aoi.first_index, aoi.count),
+    anc_data        (df->parms->anc_fields, df->hdf, df->group, H5Coro::ALL_COLS, aoi.first_index, aoi.count)
 {
     /* Join Hardcoded Reads */
     shot_number.join(df->readTimeoutMs, true);
@@ -203,13 +149,13 @@ void* Gedi04aDataFrame::subsettingThread (void* parm)
     const GediFields& parms = *df->parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi04a_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf04a->name, df->beamStr);
+    const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi04a_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf->name, df->beamStr);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterestGedi aoi(df->hdf04a, df->group, "lat_lowestmode", "lon_lowestmode", df->parms, df->readTimeoutMs);
+        const AreaOfInterestGedi aoi(df->hdf, df->group, "lat_lowestmode", "lon_lowestmode", df->parms, df->readTimeoutMs);
 
         /* Read GEDI Datasets */
         const Gedi04aData gedi04a(df, aoi);
@@ -291,7 +237,7 @@ void* Gedi04aDataFrame::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), df->outQ, &df->active, "Failure on resource %s beam %s: %s", df->hdf04a->name, df->beamStr, e.what());
+        alert(e.level(), e.code(), df->outQ, &df->active, "Failure on resource %s beam %s: %s", df->hdf->name, df->beamStr, e.what());
     }
 
     /* Dataframe Complete */

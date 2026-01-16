@@ -29,81 +29,72 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedi02a_dataframe__
-#define __gedi02a_dataframe__
+#ifndef __gedi_dataframe__
+#define __gedi_dataframe__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GediDataFrame.h"
+#include <atomic>
+
+#include "GeoDataFrame.h"
+#include "H5Object.h"
+#include "H5Array.h"
+#include "H5Coro.h"
+#include "H5VarSet.h"
+#include "OsApi.h"
+#include "StringLib.h"
+#include "AreaOfInterest.h"
+#include "GediFields.h"
+
+using AreaOfInterestGedi = AreaOfInterestT<double>;
 
 /******************************************************************************
- * CLASS DEFINITION
+ * GEDI DATAFRAME BASE
  ******************************************************************************/
 
-class Gedi02aDataFrame: public GediDataFrame
+class GediDataFrame: public GeoDataFrame
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+         static const char* GEDI_CRS;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
+        GediDataFrame  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[],
+                        const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
+                        GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name);
 
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        ~GediDataFrame (void) override;
+        okey_t getKey  (void) const override;
 
-    private:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        /* Gedi02a Data Subclass */
-        class Gedi02aData
-        {
-            public:
-
-                Gedi02aData      (Gedi02aDataFrame* df, const AreaOfInterestGedi& aoi);
-                ~Gedi02aData     (void) = default;
-
-                H5Array<uint64_t>   shot_number;
-                H5Array<double>     delta_time;
-                H5Array<float>      elev_lowestmode;
-                H5Array<float>      elev_highestreturn;
-                H5Array<float>      solar_elevation;
-                H5Array<float>      sensitivity;
-                H5Array<uint8_t>    degrade_flag;
-                H5Array<uint8_t>    quality_flag;
-                H5Array<uint8_t>    surface_flag;
-
-                H5VarSet            anc_data;
-        };
+    protected:
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        /* DataFrame Columns */
-        FieldColumn<uint64_t>   shot_number;
-        FieldColumn<time8_t>    time_ns   {Field::TIME_COLUMN};
-        FieldColumn<double>     latitude  {Field::Y_COLUMN};
-        FieldColumn<double>     longitude {Field::X_COLUMN};
-        FieldColumn<float>      elevation_lm {Field::Z_COLUMN};
-        FieldColumn<float>      elevation_hr;
-        FieldColumn<float>      solar_elevation;
-        FieldColumn<float>      sensitivity;
-        FieldColumn<uint8_t>    flags;
+        FieldElement<uint8_t>  beam;
+        FieldElement<uint32_t> orbit;
+        FieldElement<uint16_t> track;
+        FieldElement<string>   granule;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                        Gedi02aDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name);
-                        ~Gedi02aDataFrame (void) override = default;
-        static void*    subsettingThread  (void* parm);
+        std::atomic<bool> active;
+        Thread*           readerPid;
+        int               readTimeoutMs;
+        Publisher*        outQ;
+        GediFields*       parms;
+        H5Object*         hdf;
+        okey_t            dfKey;
+        const char*       beamStr;
+        char              group[9];
 };
 
-#endif  /* __gedi02a_dataframe__ */
+#endif  /* __gedi_dataframe__ */

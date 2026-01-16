@@ -5,6 +5,7 @@ target_compile_definitions (slideruleLib PUBLIC __gedi__)
 target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/gedi.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/GediDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.cpp
@@ -25,6 +26,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/gedi.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FootprintReader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/GediDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.h

@@ -33,7 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
 #include "Gedi01bDataFrame.h"
 
 /******************************************************************************
@@ -85,7 +84,7 @@ int Gedi01bDataFrame::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name):
-    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"shot_number",         &shot_number},
         {"time_ns",             &time_ns},
@@ -100,43 +99,11 @@ Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFiel
         {"tx_waveform",         &tx_waveform},
         {"rx_waveform",         &rx_waveform}
     },
-    {
-        {"beam",                &beam},
-        {"orbit",               &orbit},
-        {"track",               &track},
-        {"granule",             &granule}
-    },
-    "\"EPSG:4326\""),
-    beam(0, META_COLUMN),
-    orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
-    track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
-    granule(_hdf01b->name, META_SOURCE_ID),
-    active(false),
-    readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
-    outQ(NULL),
-    parms(_parms),
-    hdf01b(_hdf01b),
-    dfKey(0),
-    beamStr(StringLib::duplicate(beam_str)),
-    group{0}
+    _parms,
+    _hdf01b,
+    beam_str,
+    outq_name)
 {
-    assert(_parms);
-    assert(_hdf01b);
-
-    /* Resolve Beam */
-    const int beam_index = beamIndexFromString(beam_str);
-    StringLib::format(group, sizeof(group), "%s", GediFields::beam2group(beam_index));
-    GediFields::beam_t beam_id;
-    convertFromIndex(beam_index, beam_id);
-    beam = static_cast<uint8_t>(beam_id);
-
-    /* Set DataFrame Key */
-    dfKey = static_cast<okey_t>(beam_index);
-
-    /* Optional Output Queue (for messages) */
-    if(outq_name) outQ = new Publisher(outq_name);
-
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();
 
@@ -149,41 +116,20 @@ Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFiel
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-Gedi01bDataFrame::~Gedi01bDataFrame (void)
-{
-    active.store(false);
-    delete readerPid;
-    delete [] beamStr;
-    delete outQ;
-    parms->releaseLuaObject();
-    hdf01b->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Gedi01bDataFrame::getKey (void) const
-{
-    return dfKey;
-}
-
-/*----------------------------------------------------------------------------
  * Gedi01bData::Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bDataFrame::Gedi01bData::Gedi01bData (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi):
-    shot_number     (df->hdf01b, FString("%s/shot_number",                   df->group).c_str(), 0, aoi.first_index, aoi.count),
-    delta_time      (df->hdf01b, FString("%s/geolocation/delta_time",        df->group).c_str(), 0, aoi.first_index, aoi.count),
-    elev_bin0       (df->hdf01b, FString("%s/geolocation/elevation_bin0",    df->group).c_str(), 0, aoi.first_index, aoi.count),
-    elev_lastbin    (df->hdf01b, FString("%s/geolocation/elevation_lastbin", df->group).c_str(), 0, aoi.first_index, aoi.count),
-    solar_elevation (df->hdf01b, FString("%s/geolocation/solar_elevation",   df->group).c_str(), 0, aoi.first_index, aoi.count),
-    degrade_flag    (df->hdf01b, FString("%s/geolocation/degrade",           df->group).c_str(), 0, aoi.first_index, aoi.count),
-    tx_sample_count (df->hdf01b, FString("%s/tx_sample_count",               df->group).c_str(), 0, aoi.first_index, aoi.count),
-    tx_start_index  (df->hdf01b, FString("%s/tx_sample_start_index",         df->group).c_str(), 0, aoi.first_index, aoi.count),
-    rx_sample_count (df->hdf01b, FString("%s/rx_sample_count",               df->group).c_str(), 0, aoi.first_index, aoi.count),
-    rx_start_index  (df->hdf01b, FString("%s/rx_sample_start_index",         df->group).c_str(), 0, aoi.first_index, aoi.count),
-    anc_data        (df->parms->anc_fields, df->hdf01b, df->group, H5Coro::ALL_COLS, aoi.first_index, aoi.count)
+    shot_number     (df->hdf, FString("%s/shot_number",                   df->group).c_str(), 0, aoi.first_index, aoi.count),
+    delta_time      (df->hdf, FString("%s/geolocation/delta_time",        df->group).c_str(), 0, aoi.first_index, aoi.count),
+    elev_bin0       (df->hdf, FString("%s/geolocation/elevation_bin0",    df->group).c_str(), 0, aoi.first_index, aoi.count),
+    elev_lastbin    (df->hdf, FString("%s/geolocation/elevation_lastbin", df->group).c_str(), 0, aoi.first_index, aoi.count),
+    solar_elevation (df->hdf, FString("%s/geolocation/solar_elevation",   df->group).c_str(), 0, aoi.first_index, aoi.count),
+    degrade_flag    (df->hdf, FString("%s/geolocation/degrade",           df->group).c_str(), 0, aoi.first_index, aoi.count),
+    tx_sample_count (df->hdf, FString("%s/tx_sample_count",               df->group).c_str(), 0, aoi.first_index, aoi.count),
+    tx_start_index  (df->hdf, FString("%s/tx_sample_start_index",         df->group).c_str(), 0, aoi.first_index, aoi.count),
+    rx_sample_count (df->hdf, FString("%s/rx_sample_count",               df->group).c_str(), 0, aoi.first_index, aoi.count),
+    rx_start_index  (df->hdf, FString("%s/rx_sample_start_index",         df->group).c_str(), 0, aoi.first_index, aoi.count),
+    anc_data        (df->parms->anc_fields, df->hdf, df->group, H5Coro::ALL_COLS, aoi.first_index, aoi.count)
 {
     /* Join Hardcoded Reads */
     shot_number.join(df->readTimeoutMs, true);
@@ -210,13 +156,13 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
     const GediFields& parms = *df->parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi01b_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf01b->name, df->beamStr);
+    const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi01b_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf->name, df->beamStr);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterestGedi aoi(df->hdf01b, df->group, "geolocation/latitude_bin0", "geolocation/longitude_bin0", df->parms, df->readTimeoutMs);
+        const AreaOfInterestGedi aoi(df->hdf, df->group, "geolocation/latitude_bin0", "geolocation/longitude_bin0", df->parms, df->readTimeoutMs);
 
         /* Read GEDI Datasets */
         const Gedi01bData gedi01b(df, aoi);
@@ -226,8 +172,8 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
         const long txN = gedi01b.tx_start_index[aoi.count - 1] - 1 + gedi01b.tx_sample_count[aoi.count - 1] - tx0;
         const long rx0 = gedi01b.rx_start_index[0] - 1;
         const long rxN = gedi01b.rx_start_index[aoi.count - 1] - 1 + gedi01b.rx_sample_count[aoi.count - 1] - rx0;
-        H5Array<float> txwaveform(df->hdf01b, FString("%s/txwaveform", df->group).c_str(), 0, tx0, txN);
-        H5Array<float> rxwaveform(df->hdf01b, FString("%s/rxwaveform", df->group).c_str(), 0, rx0, rxN);
+        H5Array<float> txwaveform(df->hdf, FString("%s/txwaveform", df->group).c_str(), 0, tx0, txN);
+        H5Array<float> rxwaveform(df->hdf, FString("%s/rxwaveform", df->group).c_str(), 0, rx0, rxN);
         txwaveform.join(df->readTimeoutMs, true);
         rxwaveform.join(df->readTimeoutMs, true);
 
@@ -299,7 +245,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), df->outQ, &df->active, "Failure on resource %s beam %s: %s", df->hdf01b->name, df->beamStr, e.what());
+        alert(e.level(), e.code(), df->outQ, &df->active, "Failure on resource %s beam %s: %s", df->hdf->name, df->beamStr, e.what());
     }
 
     /* Dataframe Complete */

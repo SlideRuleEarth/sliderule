@@ -36,24 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
-#include "GeoDataFrame.h"
-#include "H5Array.h"
-#include "H5Coro.h"
-#include "H5Object.h"
-#include "H5VarSet.h"
-#include "StringLib.h"
-#include "GediFields.h"
-#include "AreaOfInterest.h"
-
-using AreaOfInterestGedi = AreaOfInterestT<double>;
+#include "GediDataFrame.h"
 
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
 
-class Gedi01bDataFrame: public GeoDataFrame
+class Gedi01bDataFrame: public GediDataFrame
 {
     public:
 
@@ -119,29 +108,12 @@ class Gedi01bDataFrame: public GeoDataFrame
         FieldColumn<FieldList<float>>   tx_waveform;
         FieldColumn<FieldList<float>>   rx_waveform;
 
-        /* DataFrame MetaData */
-        FieldElement<uint8_t>           beam;
-        FieldElement<uint32_t>          orbit;
-        FieldElement<uint16_t>          track;
-        FieldElement<string>            granule;
-
-        std::atomic<bool>   active;
-        Thread*             readerPid;
-        int                 readTimeoutMs;
-        Publisher*          outQ;
-        GediFields*         parms;
-        H5Object*           hdf01b;
-        okey_t              dfKey;
-        const char*         beamStr;
-        char                group[9];
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                         Gedi01bDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name);
-                        ~Gedi01bDataFrame (void) override;
-        okey_t          getKey            (void) const override;
+                        ~Gedi01bDataFrame (void) override = default;
         static void*    subsettingThread  (void* parm);
 };
 
