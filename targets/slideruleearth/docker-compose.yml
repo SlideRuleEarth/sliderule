@@ -79,8 +79,6 @@ services:
       - /run/log/journal:/run/log/journal:ro
       - /etc/machine-id:/etc/machine-id:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    environment:
-      - DISABLE_PROMTAIL=true
   ams:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ams:unstable
     container_name: ams

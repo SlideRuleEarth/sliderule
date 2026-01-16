@@ -46,6 +46,7 @@ BlockTime = {} -- "<ip_address or username>": <os time until which ip address wi
 -- Analysis Data
 EndpointMetric = {} -- "<endpoint>": <number of requests>
 SuccessfulRequestCount = 0
+UntrackedRequestCount = 0
 FailedRequestCount = 0
 
 -- Utility: table_size
@@ -100,10 +101,15 @@ end
 local function metric(txn)
     local path = txn:get_var("txn.request_path")
     local status = txn.sf:status()
+    local endpoint = path:gsub("/$", ""):match("([^/]+)$")
     -- accumulate requests
     if tonumber(status) >= 200 and tonumber(status) < 300 then
-        EndpointMetric[path] = (EndpointMetric[path] or 0) + 1
-        SuccessfulRequestCount = SuccessfulRequestCount + 1
+        if endpoint:match("^[A-Za-z][A-Za-z0-9_]*$") then
+            EndpointMetric[endpoint] = (EndpointMetric[endpoint] or 0) + 1
+            SuccessfulRequestCount = SuccessfulRequestCount + 1
+        else
+            UntrackedRequestCount = UntrackedRequestCount + 1
+        end
     else -- count errors
         FailedRequestCount = FailedRequestCount + 1
     end
@@ -135,6 +141,9 @@ local function api_prometheus(applet)
 # TYPE successful_request_count counter
 successful_request_count %d
 
+# TYPE untracked_request_count counter
+untracked_request_count %d
+
 # TYPE failed_request_count counter
 failed_request_count %d
 
@@ -145,6 +154,7 @@ unique_originators %d
 blocked_originators %d
 %s
 ]], SuccessfulRequestCount,
+    UntrackedRequestCount,
     FailedRequestCount,
     unique_originators,
     blocked_originators,

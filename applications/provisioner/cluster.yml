@@ -568,7 +568,7 @@ Resources:
                 - /etc/machine-id:/etc/machine-id:ro
                 - /var/lib/docker/containers:/var/lib/docker/containers:ro
               environment:
-                - DISABLE_PROMTAIL="true"
+                - DISABLE_PROMTAIL=true
               labels:
                 - autoheal=true
             autoheal:
