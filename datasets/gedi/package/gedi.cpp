@@ -38,6 +38,7 @@
 #include "Gedi01bReader.h"
 #include "Gedi01bDataFrame.h"
 #include "Gedi02aReader.h"
+#include "Gedi02aDataFrame.h"
 #include "Gedi04aReader.h"
 #include "GediRaster.h"
 #include "GediFields.h"
@@ -69,6 +70,7 @@ int gedi_open (lua_State *L)
         {"gedi01b",             Gedi01bReader::luaCreate},
         {"gedi01bx",            Gedi01bDataFrame::luaCreate},
         {"gedi02a",             Gedi02aReader::luaCreate},
+        {"gedi02ax",            Gedi02aDataFrame::luaCreate},
         {"gedi04a",             Gedi04aReader::luaCreate},
         {NULL,                  NULL}
     };

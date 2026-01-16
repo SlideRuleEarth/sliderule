@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedi01b_dataframe__
-#define __gedi01b_dataframe__
+#ifndef __gedi02a_dataframe__
+#define __gedi02a_dataframe__
 
 /******************************************************************************
  * INCLUDES
@@ -53,19 +53,9 @@ using AreaOfInterestGedi = AreaOfInterestT<double>;
  * CLASS DEFINITION
  ******************************************************************************/
 
-class Gedi01bDataFrame: public GeoDataFrame
+class Gedi02aDataFrame: public GeoDataFrame
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int GEDI01B_TX_SAMPLES_MAX = 128;
-        static const int GEDI01B_RX_SAMPLES_MAX = 2048;
-
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -73,30 +63,32 @@ class Gedi01bDataFrame: public GeoDataFrame
 
         static int  luaCreate   (lua_State* L);
 
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
     private:
 
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Gedi01b Data Subclass */
-        class Gedi01bData
+        /* Gedi02a Data Subclass */
+        class Gedi02aData
         {
             public:
 
-                Gedi01bData      (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi);
-                ~Gedi01bData     (void) = default;
+                Gedi02aData      (Gedi02aDataFrame* df, const AreaOfInterestGedi& aoi);
+                ~Gedi02aData     (void) = default;
 
                 H5Array<uint64_t>   shot_number;
                 H5Array<double>     delta_time;
-                H5Array<double>     elev_bin0;
-                H5Array<double>     elev_lastbin;
+                H5Array<float>      elev_lowestmode;
+                H5Array<float>      elev_highestreturn;
                 H5Array<float>      solar_elevation;
+                H5Array<float>      sensitivity;
                 H5Array<uint8_t>    degrade_flag;
-                H5Array<uint16_t>   tx_sample_count;
-                H5Array<uint64_t>   tx_start_index;
-                H5Array<uint16_t>   rx_sample_count;
-                H5Array<uint64_t>   rx_start_index;
+                H5Array<uint8_t>    quality_flag;
+                H5Array<uint8_t>    surface_flag;
 
                 H5VarSet            anc_data;
         };
@@ -106,31 +98,28 @@ class Gedi01bDataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<uint64_t>           shot_number;
-        FieldColumn<time8_t>            time_ns   {Field::TIME_COLUMN};
-        FieldColumn<double>             latitude  {Field::Y_COLUMN};
-        FieldColumn<double>             longitude {Field::X_COLUMN};
-        FieldColumn<float>              elevation_start {Field::Z_COLUMN};
-        FieldColumn<double>             elevation_stop;
-        FieldColumn<double>             solar_elevation;
-        FieldColumn<uint16_t>           tx_size;
-        FieldColumn<uint16_t>           rx_size;
-        FieldColumn<uint8_t>            flags;
-        FieldColumn<FieldList<float>>   tx_waveform;
-        FieldColumn<FieldList<float>>   rx_waveform;
+        FieldColumn<uint64_t>   shot_number;
+        FieldColumn<time8_t>    time_ns   {Field::TIME_COLUMN};
+        FieldColumn<double>     latitude  {Field::Y_COLUMN};
+        FieldColumn<double>     longitude {Field::X_COLUMN};
+        FieldColumn<float>      elevation_lm {Field::Z_COLUMN};
+        FieldColumn<float>      elevation_hr;
+        FieldColumn<float>      solar_elevation;
+        FieldColumn<float>      sensitivity;
+        FieldColumn<uint8_t>    flags;
 
         /* DataFrame MetaData */
-        FieldElement<uint8_t>           beam;
-        FieldElement<uint32_t>          orbit;
-        FieldElement<uint16_t>          track;
-        FieldElement<string>            granule;
+        FieldElement<uint8_t>   beam;
+        FieldElement<uint32_t>  orbit;
+        FieldElement<uint16_t>  track;
+        FieldElement<string>    granule;
 
         std::atomic<bool>   active;
         Thread*             readerPid;
         int                 readTimeoutMs;
         Publisher*          outQ;
         GediFields*         parms;
-        H5Object*           hdf01b;
+        H5Object*           hdf02a;
         okey_t              dfKey;
         const char*         beamStr;
         char                group[9];
@@ -139,10 +128,10 @@ class Gedi01bDataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Gedi01bDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name);
-                        ~Gedi01bDataFrame (void) override;
+                        Gedi02aDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name);
+                        ~Gedi02aDataFrame (void) override;
         okey_t          getKey            (void) const override;
         static void*    subsettingThread  (void* parm);
 };
 
-#endif  /* __gedi01b_dataframe__ */
+#endif  /* __gedi02a_dataframe__ */

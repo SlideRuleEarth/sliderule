@@ -8,6 +8,7 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04aReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GediFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GediIODriver.cpp
@@ -26,6 +27,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04aReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GediRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GediFields.h
@@ -41,6 +43,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi01bx.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi02a.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi02ap.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi02ax.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04a.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04ap.lua
     DESTINATION

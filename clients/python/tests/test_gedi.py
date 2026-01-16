@@ -72,7 +72,7 @@ class TestL1B:
         float_fields = {
             "latitude": 1e-6,
             "longitude": 1e-6,
-            "elevation_start": 1e-3,
+            "elevation_start": 1e-3,  # float32 precision
             "elevation_stop": 1e-6,
             "solar_elevation": 1e-6,
         }
@@ -92,7 +92,6 @@ class TestL1B:
             rx_dframe = np.asarray(df_dframe["rx_waveform"].iloc[i])[:rx_size]
             np.testing.assert_allclose(rx_reader, rx_dframe, rtol=0, atol=0)
 
-        # Ensure both methods return identical data
 
     def test_cmr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
@@ -100,31 +99,65 @@ class TestL1B:
         assert len(granules) >= 130
         assert 'GEDI01_B_' in granules[0]
 
-# class TestL2A:
-#     def test_gedi(self, init):
-#         resource = "GEDI02_A_2022288203631_O21758_03_T00021_02_003_02_V002.h5"
-#         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
-#         parms = {
-#             "poly": region["poly"],
-#             "degrade_filter": True,
-#             "quality_filter": True,
-#             "beams": 0
-#         }
-#         gdf = gedi.gedi02ap(parms, resources=[resource])
-#         assert init
-#         assert gdf.describe()["beam"]["mean"] == 0.0
-#         assert gdf.describe()["flags"]["max"] == 130.0
-#         assert gdf["orbit"].sum() == 21758 * len(gdf)
-#         assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
-#         assert abs(gdf.describe()["elevation_hr"]["min"] - 667.862000) < 0.001
-#         assert abs(gdf.describe()["sensitivity"]["min"] - 0.785598) < 0.001
-#         assert abs(gdf.describe()["solar_elevation"]["min"] - 30.522356) < 0.001
+class TestL2A:
+    def test_gedi(self, init):
+        resource = "GEDI02_A_2022288203631_O21758_03_T00021_02_003_02_V002.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
+        parms = {
+            "poly": region["poly"],
+            "degrade_filter": True,
+            "quality_filter": True,
+            "beams": 0
+        }
+        gdf_reader = gedi.gedi02ap(parms, resources=[resource], keep_id=True)
+        gdf_dframe = sliderule.run("gedi02ax", parms, resources=[resource])
+        assert init
+        assert len(gdf_dframe) == len(gdf_reader)
+        for gdf in (gdf_reader, gdf_dframe):
+            assert gdf.describe()["beam"]["mean"] == 0.0
+            assert gdf.describe()["flags"]["max"] == 130.0
+            assert gdf["orbit"].sum() == 21758 * len(gdf)
+            assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
+            assert abs(gdf.describe()["elevation_hr"]["min"] - 667.862000) < 0.001
+            assert abs(gdf.describe()["sensitivity"]["min"] - 0.785598) < 0.001
+            assert abs(gdf.describe()["solar_elevation"]["min"] - 30.522356) < 0.001
 
-#     def test_cmr(self):
-#         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
-#         granules = earthdata.cmr(short_name="GEDI02_A", polygon=region["poly"])
-#         assert len(granules) >= 130
-#         assert 'GEDI02_A_' in granules[0]
+        # Ensure both methods return identical data
+        df_reader = normalize_reader(gdf_reader)
+        df_dframe = normalize_dframe(gdf_dframe)
+
+        int_fields = [
+            "shot_number",
+            "beam",
+            "flags",
+            "orbit",
+            "track",
+        ]
+        for field in int_fields:
+            np.testing.assert_array_equal(df_reader[field].to_numpy(), df_dframe[field].to_numpy())
+
+        np.testing.assert_array_equal(df_reader["time_ns"].to_numpy(), df_dframe["time_ns"].to_numpy())
+
+        float_fields = [
+            "latitude",
+            "longitude",
+            "elevation_lm",
+            "elevation_hr",
+            "solar_elevation",
+            "sensitivity",
+        ]
+        np.testing.assert_allclose(
+            df_reader[float_fields].to_numpy(),
+            df_dframe[float_fields].to_numpy(),
+            rtol=0,
+            atol=1e-6,
+        )
+
+    def test_cmr(self):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
+        granules = earthdata.cmr(short_name="GEDI02_A", polygon=region["poly"])
+        assert len(granules) >= 130
+        assert 'GEDI02_A_' in granules[0]
 
 # class TestL3:
 #     def test_gedi(self, init):
