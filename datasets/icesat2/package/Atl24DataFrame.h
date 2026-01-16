@@ -48,9 +48,12 @@
 #include "Icesat2Fields.h"
 #include "AreaOfInterest.h"
 
+using AreaOfInterest24 = AreaOfInterestT<double>;
+
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
+
 class Atl24DataFrame: public GeoDataFrame
 {
     public:

@@ -1,11 +1,29 @@
 """Tests for sliderule gedi plugin."""
 
 import pytest
+import numpy as np
 from sliderule import sliderule, gedi, earthdata, icesat2
 from pathlib import Path
 import os.path
 
 TESTDIR = Path(__file__).parent
+
+
+def normalize_reader(gdf):
+    df = gdf.sort_values("shot_number").copy()
+    df["time_ns"] = df.index.astype("int64")
+    df["longitude"] = df.geometry.x.to_numpy()
+    df["latitude"] = df.geometry.y.to_numpy()
+    return df.reset_index(drop=True)
+
+
+def normalize_dframe(gdf):
+    df = gdf.sort_values("shot_number").copy()
+    if "time_ns" not in df.columns:
+        df["time_ns"] = df.index.astype("int64")
+    df["longitude"] = df.geometry.x.to_numpy()
+    df["latitude"] = df.geometry.y.to_numpy()
+    return df.reset_index(drop=True)
 
 class TestL1B:
     def test_gedi(self, init):
@@ -17,16 +35,55 @@ class TestL1B:
             "quality_filter": True,
             "beams": 0
         }
-        gdf = gedi.gedi01bp(parms, resources=[resource])
+        gdf_reader = gedi.gedi01bp(parms, resources=[resource], keep_id=True)
+        gdf_dframe = sliderule.run("gedi01bx", parms, resources=[resource])
         assert init
-        assert gdf.describe()["beam"]["mean"] == 0.0
-        assert gdf.describe()["flags"]["mean"] == 0.0
-        assert gdf.describe()["tx_size"]["mean"] == 128.0
-        assert gdf.describe()["rx_size"]["min"] == 737.000000
-        assert gdf["orbit"].sum() == 1988 * len(gdf)
-        assert abs(gdf.describe()["elevation_start"]["min"] - 2882.457801) < 0.001
-        assert abs(gdf.describe()["elevation_stop"]["min"] - 2738.054259) < 0.001
-        assert abs(gdf.describe()["solar_elevation"]["min"] - 42.839184) < 0.001
+        assert len(gdf_dframe) == len(gdf_reader)
+        for gdf in (gdf_reader, gdf_dframe):
+            assert gdf.describe()["beam"]["mean"] == 0.0
+            assert gdf.describe()["flags"]["mean"] == 0.0
+            assert gdf.describe()["tx_size"]["mean"] == 128.0
+            assert gdf.describe()["rx_size"]["min"] == 737.000000
+            assert gdf["orbit"].sum() == 1988 * len(gdf)
+            assert abs(gdf.describe()["elevation_start"]["min"] - 2882.457801) < 0.001
+            assert abs(gdf.describe()["elevation_stop"]["min"] - 2738.054259) < 0.001
+            assert abs(gdf.describe()["solar_elevation"]["min"] - 42.839184) < 0.001
+            assert len(gdf["tx_waveform"].iloc[0]) == 128
+            assert len(gdf["rx_waveform"].iloc[0]) == 2048
+
+        # Ensure both methods return identical data
+        df_reader = normalize_reader(gdf_reader)
+        df_dframe = normalize_dframe(gdf_dframe)
+
+        int_fields = ["shot_number", "tx_size", "rx_size", "beam", "flags", "orbit", "track"]
+        for field in int_fields:
+            np.testing.assert_array_equal(df_reader[field].to_numpy(), df_dframe[field].to_numpy())
+
+        np.testing.assert_array_equal(df_reader["time_ns"].to_numpy(), df_dframe["time_ns"].to_numpy())
+
+        float_fields = {
+            "latitude": 1e-6,
+            "longitude": 1e-6,
+            "elevation_start": 1e-3,  # float32 precision
+            "elevation_stop": 1e-6,
+            "solar_elevation": 1e-6,
+        }
+        for field, atol in float_fields.items():
+            np.testing.assert_allclose(df_reader[field].to_numpy(), df_dframe[field].to_numpy(), rtol=0, atol=atol)
+
+        max_rows = min(5, len(df_reader))
+        for i in range(max_rows):
+            tx_size = int(df_reader["tx_size"].iloc[i])
+            rx_size = int(df_reader["rx_size"].iloc[i])
+
+            tx_reader = np.asarray(df_reader["tx_waveform"].iloc[i])[:tx_size]
+            tx_dframe = np.asarray(df_dframe["tx_waveform"].iloc[i])[:tx_size]
+            np.testing.assert_allclose(tx_reader, tx_dframe, rtol=0, atol=0)
+
+            rx_reader = np.asarray(df_reader["rx_waveform"].iloc[i])[:rx_size]
+            rx_dframe = np.asarray(df_dframe["rx_waveform"].iloc[i])[:rx_size]
+            np.testing.assert_allclose(rx_reader, rx_dframe, rtol=0, atol=0)
+
 
     def test_cmr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
@@ -44,15 +101,43 @@ class TestL2A:
             "quality_filter": True,
             "beams": 0
         }
-        gdf = gedi.gedi02ap(parms, resources=[resource])
+        gdf_reader = gedi.gedi02ap(parms, resources=[resource], keep_id=True)
+        gdf_dframe = sliderule.run("gedi02ax", parms, resources=[resource])
         assert init
-        assert gdf.describe()["beam"]["mean"] == 0.0
-        assert gdf.describe()["flags"]["max"] == 130.0
-        assert gdf["orbit"].sum() == 21758 * len(gdf)
-        assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
-        assert abs(gdf.describe()["elevation_hr"]["min"] - 667.862000) < 0.001
-        assert abs(gdf.describe()["sensitivity"]["min"] - 0.785598) < 0.001
-        assert abs(gdf.describe()["solar_elevation"]["min"] - 30.522356) < 0.001
+        assert len(gdf_dframe) == len(gdf_reader)
+        for gdf in (gdf_reader, gdf_dframe):
+            assert gdf.describe()["beam"]["mean"] == 0.0
+            assert gdf.describe()["flags"]["max"] == 130.0
+            assert gdf["orbit"].sum() == 21758 * len(gdf)
+            assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
+            assert abs(gdf.describe()["elevation_hr"]["min"] - 667.862000) < 0.001
+            assert abs(gdf.describe()["sensitivity"]["min"] - 0.785598) < 0.001
+            assert abs(gdf.describe()["solar_elevation"]["min"] - 30.522356) < 0.001
+
+        # Ensure both methods return identical data
+        df_reader = normalize_reader(gdf_reader)
+        df_dframe = normalize_dframe(gdf_dframe)
+
+        int_fields = ["shot_number", "beam", "flags", "orbit", "track"]
+        for field in int_fields:
+            np.testing.assert_array_equal(df_reader[field].to_numpy(), df_dframe[field].to_numpy())
+
+        np.testing.assert_array_equal(df_reader["time_ns"].to_numpy(), df_dframe["time_ns"].to_numpy())
+
+        float_fields = [
+            "latitude",
+            "longitude",
+            "elevation_lm",
+            "elevation_hr",
+            "solar_elevation",
+            "sensitivity",
+        ]
+        np.testing.assert_allclose(
+            df_reader[float_fields].to_numpy(),
+            df_dframe[float_fields].to_numpy(),
+            rtol=0,
+            atol=1e-6,
+        )
 
     def test_cmr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
@@ -92,15 +177,43 @@ class TestL4A:
             "l2_quality_filter": True,
             "beams": 0
         }
-        gdf = gedi.gedi04ap(parms, resources=[resource])
+        gdf_reader = gedi.gedi04ap(parms, resources=[resource], keep_id=True)
+        gdf_dframe = sliderule.run("gedi04ax", parms, resources=[resource])
         assert init
-        assert gdf.describe()["beam"]["mean"] == 0.0
-        assert gdf.describe()["flags"]["max"] == 134.0
-        assert gdf["orbit"].sum() == 2202 * len(gdf)
-        assert abs(gdf.describe()["elevation"]["min"] - 1499.137329) < 0.001
-        assert abs(gdf.describe()["agbd"]["min"] - 0.919862) < 0.001
-        assert abs(gdf.describe()["sensitivity"]["min"] - 0.900090) < 0.001
-        assert abs(gdf.describe()["solar_elevation"]["min"] - 49.353821) < 0.001
+        assert len(gdf_dframe) == len(gdf_reader)
+        for gdf in (gdf_reader, gdf_dframe):
+            assert gdf.describe()["beam"]["mean"] == 0.0
+            assert gdf.describe()["flags"]["max"] == 134.0
+            assert gdf["orbit"].sum() == 2202 * len(gdf)
+            assert abs(gdf.describe()["elevation"]["min"] - 1499.137329) < 0.001
+            assert abs(gdf.describe()["agbd"]["min"] - 0.919862) < 0.001
+            assert abs(gdf.describe()["sensitivity"]["min"] - 0.900090) < 0.001
+            assert abs(gdf.describe()["solar_elevation"]["min"] - 49.353821) < 0.001
+
+        # Ensure both methods return identical data
+        df_reader = normalize_reader(gdf_reader)
+        df_dframe = normalize_dframe(gdf_dframe)
+
+        int_fields = ["shot_number", "beam", "flags", "orbit", "track"]
+        for field in int_fields:
+            np.testing.assert_array_equal(df_reader[field].to_numpy(), df_dframe[field].to_numpy())
+
+        np.testing.assert_array_equal(df_reader["time_ns"].to_numpy(), df_dframe["time_ns"].to_numpy())
+
+        float_fields = [
+            "latitude",
+            "longitude",
+            "elevation",
+            "agbd",
+            "solar_elevation",
+            "sensitivity",
+        ]
+        np.testing.assert_allclose(
+            df_reader[float_fields].to_numpy(),
+            df_dframe[float_fields].to_numpy(),
+            rtol=0,
+            atol=1e-6,
+        )
 
     def test_cmr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))

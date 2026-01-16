@@ -76,7 +76,7 @@ void GediGranuleFields::parseResource (const char* resource)
 
     /* check resource */
     const int strsize = StringLib::size(resource);
-    if( strsize < 57 || 
+    if( strsize < 57 ||
         resource[0] != 'G' || resource[1] !='E' || resource[2] != 'D' || resource[3] != 'I' ||
         resource[23] != 'O' || resource[33] != 'T' || resource[50] != 'V')
     {
@@ -352,4 +352,23 @@ void convertFromIndex(int index, GediFields::beam_t& v)
         case 7:  v = GediFields::BEAM1011; break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam index: %d", index);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * beamIndexFromString - beam0/beam1/... -> dense beam index (0-7)
+ *----------------------------------------------------------------------------*/
+int beamIndexFromString(const char* beam_str)
+{
+    if(beam_str == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: <null>");
+
+    if(StringLib::match(beam_str, "beam0"))  return 0;
+    if(StringLib::match(beam_str, "beam1"))  return 1;
+    if(StringLib::match(beam_str, "beam2"))  return 2;
+    if(StringLib::match(beam_str, "beam3"))  return 3;
+    if(StringLib::match(beam_str, "beam5"))  return 4;
+    if(StringLib::match(beam_str, "beam6"))  return 5;
+    if(StringLib::match(beam_str, "beam8"))  return 6;
+    if(StringLib::match(beam_str, "beam11")) return 7;
+
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam_str);
 }

@@ -29,6 +29,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
@@ -90,6 +91,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/core.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetIndex.h

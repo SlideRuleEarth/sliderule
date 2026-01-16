@@ -29,31 +29,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl13_dataframe__
-#define __atl13_dataframe__
+#ifndef __gedi01b_dataframe__
+#define __gedi01b_dataframe__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
-#include "GeoDataFrame.h"
-#include "MsgQ.h"
-#include "OsApi.h"
-#include "H5Array.h"
-#include "H5VarSet.h"
-#include "H5Object.h"
-#include "Icesat2Fields.h"
-#include "AreaOfInterest.h"
-
-using AreaOfInterest13 = AreaOfInterestT<double>;
+#include "GediDataFrame.h"
 
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
 
-class Atl13DataFrame: public GeoDataFrame
+class Gedi01bDataFrame: public GediDataFrame
 {
     public:
 
@@ -61,28 +50,11 @@ class Atl13DataFrame: public GeoDataFrame
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int GEDI01B_TX_SAMPLES_MAX = 128;
+        static const int GEDI01B_RX_SAMPLES_MAX = 2048;
+
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        /* DataFrame Columns */
-        FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
-        FieldColumn<double>         latitude {Field::Y_COLUMN};
-        FieldColumn<double>         longitude {Field::X_COLUMN};
-        FieldColumn<float>          ht_ortho {Field::Z_COLUMN};
-        FieldColumn<float>          ht_water_surf;
-        FieldColumn<float>          stdev_water_surf;
-        FieldColumn<float>          water_depth;
-
-        /* DataFrame MetaData */
-        FieldElement<uint8_t>       spot;                           // 1, 2, 3, 4, 5, 6
-        FieldElement<uint8_t>       cycle;
-        FieldElement<uint16_t>      rgt;
-        FieldElement<uint8_t>       gt;                             // Icesat2Fields::gt_t
-        FieldElement<string>        granule;                        // name of the ATL13 granule
 
         /*--------------------------------------------------------------------
          * Methods
@@ -96,20 +68,24 @@ class Atl13DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Atl03 Data Subclass */
-        class Atl13Data
+        /* Gedi01b Data Subclass */
+        class Gedi01bData
         {
             public:
 
-                Atl13Data           (Atl13DataFrame* df, const AreaOfInterest13& aoi);
-                ~Atl13Data          (void) = default;
+                Gedi01bData      (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi);
+                ~Gedi01bData     (void) = default;
 
-                H5Array<int8_t>     sc_orient;
+                H5Array<uint64_t>   shot_number;
                 H5Array<double>     delta_time;
-                H5Array<float>      ht_ortho;
-                H5Array<float>      ht_water_surf;
-                H5Array<float>      stdev_water_surf;
-                H5Array<float>      water_depth;
+                H5Array<double>     elev_bin0;
+                H5Array<double>     elev_lastbin;
+                H5Array<float>      solar_elevation;
+                H5Array<uint8_t>    degrade_flag;
+                H5Array<uint16_t>   tx_sample_count;
+                H5Array<uint64_t>   tx_start_index;
+                H5Array<uint16_t>   rx_sample_count;
+                H5Array<uint64_t>   rx_start_index;
 
                 H5VarSet            anc_data;
         };
@@ -118,24 +94,27 @@ class Atl13DataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        std::atomic<bool>   active;
-        Thread*             readerPid;
-        const int           readTimeoutMs;
-        const char*         beam;
-        Publisher*          outQ;
-        Icesat2Fields*      parms;
-        H5Object*           hdf13;  // atl13 granule
-        okey_t              dfKey;
+        /* DataFrame Columns */
+        FieldColumn<uint64_t>           shot_number;
+        FieldColumn<time8_t>            time_ns   {Field::TIME_COLUMN};
+        FieldColumn<double>             latitude  {Field::Y_COLUMN};
+        FieldColumn<double>             longitude {Field::X_COLUMN};
+        FieldColumn<float>              elevation_start {Field::Z_COLUMN};
+        FieldColumn<double>             elevation_stop;
+        FieldColumn<double>             solar_elevation;
+        FieldColumn<uint16_t>           tx_size;
+        FieldColumn<uint16_t>           rx_size;
+        FieldColumn<uint8_t>            flags;
+        FieldColumn<FieldList<float>>   tx_waveform;
+        FieldColumn<FieldList<float>>   rx_waveform;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl13DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms,
-                                             H5Object* _hdf13, const char* outq_name);
-                        ~Atl13DataFrame     (void) override;
-        okey_t          getKey              (void) const override;
-        static void*    subsettingThread    (void* parm);
+                        Gedi01bDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name);
+                        ~Gedi01bDataFrame (void) override = default;
+        static void*    subsettingThread  (void* parm);
 };
 
-#endif  /* __atl13_dataframe__ */
+#endif  /* __gedi01b_dataframe__ */

@@ -38,7 +38,7 @@
 
 #include "H5Array.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "RequestFields.h"
 #include <functional>
 
 /******************************************************************************
@@ -54,7 +54,7 @@ class AreaOfInterestT
          * Methods
          *--------------------------------------------------------------------*/
 
-         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const Icesat2Fields* parms,
+         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const RequestFields* parms,
                           int readTimeoutMs, const std::function<void(long&, long&)>& prefilter = std::function<void(long&, long&)>());
          ~AreaOfInterestT(void);
 
@@ -78,13 +78,8 @@ class AreaOfInterestT
          *--------------------------------------------------------------------*/
 
         void cleanup            (void);
-        void polyregion         (const Icesat2Fields* parms);
-        void rasterregion       (const Icesat2Fields* parms);
+        void polyregion         (const RequestFields* parms);
+        void rasterregion       (const RequestFields* parms);
 };
-
-using AreaOfInterest06 = AreaOfInterestT<double>;
-using AreaOfInterest08 = AreaOfInterestT<float>;
-using AreaOfInterest13 = AreaOfInterestT<double>;
-using AreaOfInterest24 = AreaOfInterestT<double>;
 
 #endif  /* __area_of_interest__ */
