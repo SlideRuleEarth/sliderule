@@ -1,0 +1,6 @@
+#!/command/execlineb -P
+prometheus \
+    --config.file=/prometheus/prometheus.yml \
+    --web.console.templates=/prometheus/consoles \
+    --web.console.libraries=/prometheus/console_libraries \
+    --web.listen-address=0.0.0.0:9090

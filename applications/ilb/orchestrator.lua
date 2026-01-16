@@ -515,7 +515,7 @@ local function api_unlock(applet)
 end
 
 --
--- API: /discovery/prometheus
+-- API: /discovery/prometheus/orchestrator
 --
 --  Provide metrics to prometheus scraper
 --

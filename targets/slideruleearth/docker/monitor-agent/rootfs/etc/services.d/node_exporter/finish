@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "node_exporter exited with code $1"

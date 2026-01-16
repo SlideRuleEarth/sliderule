@@ -110,7 +110,7 @@ local function metric(txn)
 end
 
 --
--- API: /stats/prometheus
+-- API: /discovery/prometheus/analyzer
 --
 --  Provide metrics to prometheus scraper
 --

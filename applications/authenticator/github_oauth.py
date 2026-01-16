@@ -125,7 +125,7 @@ def sign_with_kms(message_bytes):
 # HMAC State Helper Functions
 # =============================================================================
 
-def create_signed_state(redirect_uri=None):
+def create_signed_state(redirect_uri='', use_cookie='false'):
     """
     Create an HMAC-signed OAuth state parameter for CSRF protection.
 
@@ -139,6 +139,7 @@ def create_signed_state(redirect_uri=None):
 
     Args:
         redirect_uri: Optional frontend redirect URI to include in state
+        use_cookie: Supply JWT as cookie instead of url parameter
 
     Returns:
         A signed state string
@@ -148,12 +149,10 @@ def create_signed_state(redirect_uri=None):
     timestamp = str(int(datetime.now(timezone.utc).timestamp()))
 
     # Base64 encode redirect_uri to avoid delimiter issues
-    redirect_uri_b64 = ''
-    if redirect_uri:
-        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
 
     # Create message to sign (nonce:timestamp:redirect_uri_b64)
-    message = f"{nonce}:{timestamp}:{redirect_uri_b64}"
+    message = f"{nonce}:{timestamp}:{redirect_uri_b64}:{use_cookie}"
 
     # Create HMAC signature
     signature = hmac.new(
@@ -180,18 +179,18 @@ def verify_signed_state(state):
         Tuple of (is_valid: bool, redirect_uri: str | None, error: str | None)
     """
     if not state:
-        return False, None, "Missing state parameter"
+        return False, None, None, "Missing state parameter"
 
     try:
         parts = state.split(':')
-        if len(parts) != 4:
-            return False, None, "Invalid state format"
+        if len(parts) != 5:
+            return False, None, None, "Invalid state format"
 
-        nonce, timestamp_str, redirect_uri_b64, provided_signature = parts
+        nonce, timestamp_str, redirect_uri_b64, use_cookie, provided_signature = parts
 
         # Verify HMAC signature
         signing_key = get_hmac_signing_key()
-        message = f"{nonce}:{timestamp_str}:{redirect_uri_b64}"
+        message = f"{nonce}:{timestamp_str}:{redirect_uri_b64}:{use_cookie}"
         expected_signature = hmac.new(
             signing_key.encode(),
             message.encode(),
@@ -199,24 +198,24 @@ def verify_signed_state(state):
         ).hexdigest()
 
         if not hmac.compare_digest(provided_signature, expected_signature):
-            return False, None, "Invalid state signature"
+            return False, None, None, "Invalid state signature"
 
         # Check timestamp expiration
         timestamp = int(timestamp_str)
         now = int(datetime.now(timezone.utc).timestamp())
         if now - timestamp > STATE_EXPIRATION_SECONDS:
-            return False, None, "State has expired"
+            return False, None, None, "State has expired"
 
         # Decode redirect URI if present
         redirect_uri = None
         if redirect_uri_b64:
             redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
 
-        return True, redirect_uri, None
+        return True, redirect_uri, use_cookie, None
 
     except (ValueError, TypeError, base64.binascii.Error) as e:
         print(f"Error verifying state: {e}")
-        return False, None, "Invalid state format"
+        return False, None, None, "Invalid state format"
 
 
 def verify_with_kms(message_bytes, signature):
@@ -590,6 +589,7 @@ def handle_login(event):
     # Get query parameters
     query_params = event.get('queryStringParameters') or {}
     redirect_uri = query_params.get('redirect_uri')
+    use_cookie = query_params.get('use_cookie', 'false')
 
     # Build the callback URL (this Lambda's callback endpoint)
     headers = event.get('headers', {})
@@ -599,7 +599,7 @@ def handle_login(event):
 
     # Create HMAC-signed state for CSRF protection
     # The state includes the redirect_uri securely encoded
-    state = create_signed_state(redirect_uri)
+    state = create_signed_state(redirect_uri, use_cookie)
 
     # Build GitHub authorization URL
     params = {
@@ -634,15 +634,15 @@ def handle_callback(event):
     error_description = query_params.get('error_description')
 
     # Verify state parameter FIRST (CSRF protection)
-    is_valid, redirect_uri, state_error = verify_signed_state(state)
+    is_valid, redirect_uri, use_cookie, state_error = verify_signed_state(state)
     if not is_valid:
         raise RuntimeError(f"Security: Invalid OAuth state - {state_error}")
 
     # Handle OAuth errors from GitHub
     if error:
-        return redirect_to_frontend(redirect_uri, {'error': error_description or error})
+        return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
     if not code:
-        return redirect_to_frontend(redirect_uri, {'error': 'No authorization code received'})
+        return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
 
     try:
         # Authenticate user (gets token and metadata)
@@ -653,29 +653,30 @@ def handle_callback(event):
         known_clusters = ['sliderule'] + [audience for audience in metadata['aud'] if (audience != "*" and audience not in JWT_AUDIENCES)]
         deployable_clusters = [audience for audience in metadata['aud'] if (audience not in JWT_AUDIENCES)]
 
-        # Build parameters for callback
-        parms = {
-            'username': metadata['sub'],
-            'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
-            'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
-            'org': metadata['org'],
-            'orgRoles': ','.join(metadata['org_roles']),
-            'knownClusters': ','.join(known_clusters),
-            'deployableClusters': ','.join(deployable_clusters),
-            'maxNodes': str(metadata['max_nodes']),
-            'maxTTL': str(metadata['max_ttl']),
-            'tokenIssuedAt': str(metadata['iat']),
-            'tokenExpiresAt': str(metadata['exp']),
-            'tokenIssuer': metadata['iss'],
-            'token': token
-        }
-
-        # Redirect to frontend with results
-        return redirect_to_frontend(redirect_uri, parms)
+        if use_cookie == 'true':
+            # Redirect to frontend with JWT in cookie
+            return redirect_to_frontend(redirect_uri, cookie=token)
+        else:
+            # Redirect to frontend with JWT in parameters
+            return redirect_to_frontend(redirect_uri, parms={
+                'username': metadata['sub'],
+                'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
+                'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
+                'org': metadata['org'],
+                'orgRoles': ','.join(metadata['org_roles']),
+                'knownClusters': ','.join(known_clusters),
+                'deployableClusters': ','.join(deployable_clusters),
+                'maxNodes': str(metadata['max_nodes']),
+                'maxTTL': str(metadata['max_ttl']),
+                'tokenIssuedAt': str(metadata['iat']),
+                'tokenExpiresAt': str(metadata['exp']),
+                'tokenIssuer': metadata['iss'],
+                'token': token
+            })
 
     except Exception as e:
         print(f"Exception in OAuth callback: {e}")
-        return redirect_to_frontend(redirect_uri, {'error': f"Error during OAuth callback"})
+        return redirect_to_frontend(redirect_uri, parms={'error': f"Error during OAuth callback"})
 
 
 def exchange_code_for_token(code, event):
@@ -769,7 +770,7 @@ def is_valid_redirect_uri(uri):
         return False
 
 
-def redirect_to_frontend(redirect_uri, parms):
+def redirect_to_frontend(redirect_uri, parms=None, cookie=''):
     """
     Validate redirection and respond with fully build redirection url to frontend.
     """
@@ -777,15 +778,18 @@ def redirect_to_frontend(redirect_uri, parms):
     if not is_valid_redirect_uri(redirect_uri):
         raise RuntimeError('Invalid request')
 
-    # Set base URL after validation
-    base_url = redirect_uri
+# TODO: Remove code below: clients should provide the full redirect_uri path they want
+#       there should not be a hardcoded path appended
+#
+#    # Check and build proper callback path if not provided
+#    if not redirect_uri.endswith('/auth/github/callback'):
+#        redirect_uri = redirect_uri.rstrip('/') + '/auth/github/callback'
 
-    # Check and build proper callback path if not provided
-    if not base_url.endswith('/auth/github/callback'):
-        base_url = base_url.rstrip('/') + '/auth/github/callback'
-
-    # Build full parameterized redirect url
-    redirect_url = f"{base_url}?{urllib.parse.urlencode(parms)}"
+    # Build full redirect url
+    if cookie:
+        redirect_url = f"{redirect_uri}"
+    else:
+        redirect_url = f"{redirect_uri}?{urllib.parse.urlencode(parms)}"
 
     # Initialize headers
     headers = {
@@ -793,14 +797,13 @@ def redirect_to_frontend(redirect_uri, parms):
         'Cache-Control': 'no-cache, no-store, must-revalidate'
     }
 
-    # Add JWT cookie if token exists
-    token = parms.get('token', '')
-    if token:
+    # Add JWT cookie
+    if cookie:
         # Get domain from redirect url
         host = urllib.parse.urlparse(redirect_url).hostname
         domain = ".".join(host.split(".")[-2:])
         # Set cookie for the entire domain
-        headers['Set-Cookie'] = f'token={token}; Domain=.{domain}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=86400'
+        headers['Set-Cookie'] = f'token={cookie}; Domain=.{domain}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=86400'
 
     # Return response
     return {

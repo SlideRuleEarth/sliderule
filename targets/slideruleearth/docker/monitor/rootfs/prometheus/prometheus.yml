@@ -48,10 +48,10 @@ scrape_configs:
   - job_name: 'orchestrator_app'
     static_configs:
       - targets: ['10.0.128.5:8050']
-    metrics_path: "/discovery/prometheus"
+    metrics_path: "/discovery/prometheus/orchestrator"
 
     # Application Metrics for Analyzer
   - job_name: 'analyzer_app'
     static_configs:
       - targets: ['10.0.128.5:8050']
-    metrics_path: "/stats/prometheus"
+    metrics_path: "/discovery/prometheus/analyzer"

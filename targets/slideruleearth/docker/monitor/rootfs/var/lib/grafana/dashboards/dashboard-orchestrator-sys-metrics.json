@@ -263,7 +263,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "node_filesystem_avail_bytes{device=\"/dev/root\",job=\"orchestrator_sys\"}",
+            "expr": "node_filesystem_avail_bytes{job=\"orchestrator_sys\"}",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
