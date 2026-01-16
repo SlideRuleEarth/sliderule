@@ -34,7 +34,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 0,
           "mappings": [
             {
               "options": {
@@ -63,7 +63,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -97,7 +97,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl03s{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(successful_request_count{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -108,7 +108,7 @@
           "step": 40
         }
       ],
-      "title": "max atl03s",
+      "title": "Successful Requests",
       "type": "stat"
     },
     {
@@ -120,7 +120,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 0,
           "mappings": [
             {
               "options": {
@@ -149,7 +149,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -157,92 +157,6 @@
         "h": 3,
         "w": 4,
         "x": 4,
-        "y": 0
-      },
-      "hideTimeOverride": true,
-      "id": 21,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "max_over_time(atl06{job=\"analyzer_app\"}[1y])",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "max atl06",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 8,
         "y": 0
       },
       "hideTimeOverride": true,
@@ -269,7 +183,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl08{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(failed_request_count{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -280,7 +194,7 @@
           "step": 40
         }
       ],
-      "title": "max atl08",
+      "title": "Failed Requests",
       "type": "stat"
     },
     {
@@ -292,7 +206,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 0,
           "mappings": [
             {
               "options": {
@@ -312,16 +226,90 @@
                 "value": null
               },
               {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
                 "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
+                "value": 1
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 23,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(version_count{job=\"analyzer_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "Version Count",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
         },
         "overrides": []
       },
@@ -355,7 +343,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl03x{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(unique_originators{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -366,7 +354,7 @@
           "step": 40
         }
       ],
-      "title": "max atl03x",
+      "title": "Unique Originators",
       "type": "stat"
     },
     {
@@ -378,7 +366,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 0,
           "mappings": [
             {
               "options": {
@@ -394,20 +382,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "rgba(245, 54, 54, 0.9)",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "rgba(237, 129, 40, 0.89)",
+                "color": "#EAB839",
                 "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -441,7 +425,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl24x{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(blocked_originators{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -452,7 +436,7 @@
           "step": 40
         }
       ],
-      "title": "max atl24x",
+      "title": "Blocked Originators",
       "type": "stat"
     },
     {
@@ -464,7 +448,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 0,
           "mappings": [
             {
               "options": {
@@ -493,7 +477,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -504,7 +488,7 @@
         "y": 0
       },
       "hideTimeOverride": true,
-      "id": 23,
+      "id": 21,
       "interval": null,
       "links": [],
       "maxDataPoints": 100,
@@ -527,7 +511,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl13x{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(untracked_request_count{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -538,523 +522,7 @@
           "step": 40
         }
       ],
-      "title": "max atl13x",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 0,
-        "y": 3
-      },
-      "hideTimeOverride": true,
-      "id": 25,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(atl03s_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl06_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl08_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl03x_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl24x_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl13x_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "total atl03 granules",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 4,
-        "y": 3
-      },
-      "hideTimeOverride": true,
-      "id": 26,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(atl03sp_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl06p_count{job=\"analyzer_app\"} OR on() vector(0)) + (atl08p_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "total icesat2 proxied requests",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 8,
-        "y": 3
-      },
-      "hideTimeOverride": true,
-      "id": 27,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(gedi01bp_count{job=\"analyzer_app\"} OR on() vector(0)) + (gedi02ap_count{job=\"analyzer_app\"} OR on() vector(0)) + (gedi04ap_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "total gedi proxied requests",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 12,
-        "y": 3
-      },
-      "hideTimeOverride": true,
-      "id": 28,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(gedi01b_count{job=\"analyzer_app\"} OR on() vector(0)) + (gedi02a_count{job=\"analyzer_app\"} OR on() vector(0)) + (gedi04a_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "total gedi granules",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 16,
-        "y": 3
-      },
-      "hideTimeOverride": true,
-      "id": 29,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "version_count{job=\"analyzer_app\"}",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "total version requests",
-      "type": "stat"
-    },
-    {
-      "cacheTimeout": null,
-      "datasource": "Prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(245, 54, 54, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 1
-              },
-              {
-                "color": "rgba(50, 172, 45, 0.97)",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 20,
-        "y": 3
-      },
-      "hideTimeOverride": true,
-      "id": 30,
-      "interval": null,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.1",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(samples_count{job=\"analyzer_app\"} OR on() vector(0)) + (subsets_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "format": "time_series",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 40
-        }
-      ],
-      "title": "total raster requests",
+      "title": "Untracked Requests",
       "type": "stat"
     },
     {
@@ -1113,7 +581,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -1129,85 +597,46 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(atl03s_count{job=\"analyzer_app\"} OR on() vector(0))",
+          "expr": "(atl03x_count{job=\"analyzer_app\"} OR on() vector(0))",
+          "hide": false,
           "interval": "",
-          "legendFormat": "atl03s",
+          "legendFormat": "",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "(atl06_count{job=\"analyzer_app\"} OR on() vector(0))",
+          "expr": "(atl06x_count{job=\"analyzer_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
-          "legendFormat": "atl06",
+          "legendFormat": "",
           "refId": "B"
         },
         {
           "exemplar": true,
-          "expr": "(atl08_count{job=\"analyzer_app\"} OR on() vector(0))",
+          "expr": "(atl08x_count{job=\"analyzer_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
-          "legendFormat": "atl08",
+          "legendFormat": "",
           "refId": "C"
-        },
-        {
-          "exemplar": true,
-          "expr": "(gedi01b_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi01b",
-          "refId": "D"
-        },
-        {
-          "exemplar": true,
-          "expr": "(gedi02a_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi02a",
-          "refId": "E"
-        },
-        {
-          "exemplar": true,
-          "expr": "(gedi04a_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi04a",
-          "refId": "F"
-        },
-        {
-          "exemplar": true,
-          "expr": "(h5_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "h5",
-          "refId": "G"
-        },
-        {
-          "exemplar": true,
-          "expr": "(atl03x_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl03x",
-          "refId": "H"
-        },
-        {
-          "exemplar": true,
-          "expr": "(atl24x_count{job=\"analyzer_app\"} OR on() vector(0))",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl24x",
-          "refId": "I"
         },
         {
           "exemplar": true,
           "expr": "(atl13x_count{job=\"analyzer_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
-          "legendFormat": "atl13x",
-          "refId": "J"
+          "legendFormat": "",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "(atl24x_count{job=\"analyzer_app\"} OR on() vector(0))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "E"
         }
       ],
-      "title": "Endpoint Counts",
+      "title": "DataFrame Endpoint Counts",
       "type": "timeseries"
     },
     {
@@ -1266,7 +695,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 6
+        "y": 3
       },
       "id": 9,
       "options": {
@@ -1395,7 +824,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 11
       },
       "id": 7,
       "options": {
@@ -1411,14 +840,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(atl03s_count{job=\"analyzer_app\"}[1m])",
+          "expr": "rate(atl03x_count{job=\"analyzer_app\"}[1m])",
           "interval": "",
           "legendFormat": "atl03s",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "rate(atl06_count{job=\"analyzer_app\"}[1m])",
+          "expr": "rate(atl06x_count{job=\"analyzer_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06",
@@ -1426,7 +855,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(atl08_count{job=\"analyzer_app\"}[1m])",
+          "expr": "rate(atl08x_count{job=\"analyzer_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08",
@@ -1434,15 +863,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi01b_count{job=\"analyzer_app\"}[1m])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi01b",
-          "refId": "D"
-        },
-        {
-          "exemplar": true,
-          "expr": "rate(gedi02a_count{job=\"analyzer_app\"}[1m])",
+          "expr": "rate(atl13x_count{job=\"analyzer_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02a",
@@ -1450,46 +871,14 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi04a_count{job=\"analyzer_app\"}[1m])  ",
+          "expr": "rate(atl24x_count{job=\"analyzer_app\"}[1m])  ",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04a",
           "refId": "F"
-        },
-        {
-          "exemplar": true,
-          "expr": "rate(h5_count{job=\"analyzer_app\"}[1m])  ",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "h5",
-          "refId": "G"
-        },
-        {
-          "exemplar": true,
-          "expr": "rate(atl03x_count{job=\"analyzer_app\"}[1m])  ",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl03x",
-          "refId": "H"
-        },
-        {
-          "exemplar": true,
-          "expr": "rate(atl24x_count{job=\"analyzer_app\"}[1m])  ",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl24x",
-          "refId": "I"
-        },
-        {
-          "exemplar": true,
-          "expr": "rate(atl13x_count{job=\"analyzer_app\"}[1m])  ",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl13x",
-          "refId": "J"
         }
       ],
-      "title": "Endpoint Rates",
+      "title": "DataFrame Endpoint Rates",
       "type": "timeseries"
     },
     {
@@ -1548,7 +937,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 14
+        "y": 11
       },
       "id": 8,
       "options": {
@@ -1620,790 +1009,6 @@
       ],
       "title": "Proxied Endpoint Rates",
       "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 22
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "atl03s{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "atl03s-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "atl03s_sum{job=\"analyzer_app\"} / atl03s_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl03s-average",
-          "refId": "B"
-        }
-      ],
-      "title": "atl03s durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
-      },
-      "id": 10,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "atl03sp{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "atl03sp-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "atl03sp_sum{job=\"analyzer_app\"} / atl03sp_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl03sp-average",
-          "refId": "B"
-        }
-      ],
-      "title": "atl03sp durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 30
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "atl06{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "atl06-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "atl06_sum{job=\"analyzer_app\"} / atl06_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl06-average",
-          "refId": "B"
-        }
-      ],
-      "title": "atl06 durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 30
-      },
-      "id": 12,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "atl06p{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "atl06p-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "atl06p_sum{job=\"analyzer_app\"} / atl06p_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl06p-average",
-          "refId": "B"
-        }
-      ],
-      "title": "atl06p durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 38
-      },
-      "id": 14,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "atl08{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "atl08-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "atl08_sum{job=\"analyzer_app\"} / atl08_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl08-average",
-          "refId": "B"
-        }
-      ],
-      "title": "atl08 durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 38
-      },
-      "id": 13,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "atl08p{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "atl08p-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "atl08p_sum{job=\"analyzer_app\"} / atl08p_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "atl08p-average",
-          "refId": "B"
-        }
-      ],
-      "title": "atl08p durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 46
-      },
-      "id": 17,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "gedi01b{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "gedi01b-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi01b_sum{job=\"analyzer_app\"} / gedi01b_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi01b-average",
-          "refId": "B"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi02a{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi02a-sampled",
-          "refId": "C"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi02a_sum{job=\"analyzer_app\"} / gedi02a_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi02a-average",
-          "refId": "D"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi04a{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi04a-sampled",
-          "refId": "E"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi04a_sum{job=\"analyzer_app\"} / gedi04a_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi04a-average",
-          "refId": "F"
-        }
-      ],
-      "title": "gedi durations (seconds)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": null,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 46
-      },
-      "id": 16,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "gedi01bp{job=\"analyzer_app\"}",
-          "interval": "",
-          "legendFormat": "gedi01bp-sampled",
-          "refId": "A"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi01bp_sum{job=\"analyzer_app\"} / gedi01bp_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi01bp-average",
-          "refId": "B"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi02ap{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi02ap-sampled",
-          "refId": "C"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi02ap_sum{job=\"analyzer_app\"} / gedi02ap_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi02ap-average",
-          "refId": "D"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi04ap{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi04ap-sampled",
-          "refId": "E"
-        },
-        {
-          "exemplar": true,
-          "expr": "gedi04ap_sum{job=\"analyzer_app\"} / gedi04ap_count{job=\"analyzer_app\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "gedi04ap-average",
-          "refId": "F"
-        }
-      ],
-      "title": "gedi[p] durations (seconds)",
-      "type": "timeseries"
     }
   ],
   "schemaVersion": 31,
@@ -2413,7 +1018,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {},
