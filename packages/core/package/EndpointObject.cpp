@@ -170,14 +170,6 @@ EndpointObject::EndpointObject (lua_State* L, const char* meta_name, const struc
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-EndpointObject::~EndpointObject (void)
-{
-}
-
-
-/*----------------------------------------------------------------------------
  * str2verb
  *----------------------------------------------------------------------------*/
 EndpointObject::verb_t EndpointObject::str2verb (const char* str)

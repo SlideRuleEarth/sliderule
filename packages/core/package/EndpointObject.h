@@ -125,7 +125,7 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
                             EndpointObject      (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-                            ~EndpointObject     (void) override;
+                            ~EndpointObject     (void) override = default;
 
         static verb_t       str2verb            (const char* str);
         static const char*  verb2str            (verb_t verb);
