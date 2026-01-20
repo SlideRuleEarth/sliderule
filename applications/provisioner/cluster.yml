@@ -453,6 +453,7 @@ Resources:
                 - /run/log/journal:/run/log/journal:ro
                 - /etc/machine-id:/etc/machine-id:ro
                 - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                - /var/run/docker.sock:/var/run/docker.sock
               labels:
                 - autoheal=true
             autoheal:
@@ -567,6 +568,7 @@ Resources:
                 - /run/log/journal:/run/log/journal:ro
                 - /etc/machine-id:/etc/machine-id:ro
                 - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                - /var/run/docker.sock:/var/run/docker.sock
               environment:
                 - DISABLE_PROMTAIL=true
               labels:
@@ -680,7 +682,7 @@ Resources:
                   - /data:/data
                   - /plugins:/plugins
                 environment:
-                  - LOG_FORMAT="FMT_CLOUD"
+                  - LOG_FORMAT=FMT_CLOUD
                   - IPV4=$IPV4
                   - ORCHESTRATOR=http://${IlbIP}:8050
                   - ALERT_STREAM=${AlertStream}
@@ -725,6 +727,7 @@ Resources:
                   - /run/log/journal:/run/log/journal:ro
                   - /etc/machine-id:/etc/machine-id:ro
                   - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                  - /var/run/docker.sock:/var/run/docker.sock
                 labels:
                   - autoheal=true
               autoheal:
