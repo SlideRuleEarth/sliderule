@@ -225,7 +225,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, const char* argument, R
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
         request->setLuaTable(engine->getLuaState(), request->id, "", argument);
-        const bool status = engine->executeEngine(SystemConfig::settings().requestTimeoutSec.value);
+        const bool status = engine->executeEngine(SystemConfig::settings().requestTimeoutSec.value * 1000);
 
         /* Send Response */
         if(status)
