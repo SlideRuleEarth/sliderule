@@ -1,0 +1,2 @@
+#!/command/execlineb -P
+loki -config.file=/loki/loki.yml

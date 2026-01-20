@@ -1,0 +1,8 @@
+#!/command/with-contenv bash
+if [ "${DISABLE_PROMTAIL}" == "true" ]; then
+    echo "Promtail service disabled"
+    exec s6-pause
+fi
+
+# Start the actual service
+exec /usr/local/bin/promtail -config.file=/usr/local/etc/promtail.yml

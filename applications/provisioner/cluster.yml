@@ -1,0 +1,828 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Cluster
+
+Parameters:
+
+  #
+  # Variables
+  #
+  Version:
+    Type: String
+  EnvironmentVersion:
+    Type: String
+  IsPublic:
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+  Domain:
+    Type: String
+  Cluster:
+    Type: String
+  ProjectBucket:
+    Type: String
+  ProjectFolder:
+    Type: String
+  ProjectPublicBucket:
+    Type: String
+  DestroyLambdaArn:
+    Type: String
+  ContainerRegistry:
+    Type: String
+  NodeCapacity:
+    Type: Number
+  TTL:
+    Type: Number
+  ProvisionerLambdaZipFile:
+    Type: String
+  JwtIssuer:
+    Type: String
+  CertificateArn:
+    Type: String
+  AlertStream:
+    Type: String
+  TelemetryStream:
+    Type: String
+
+  #
+  # Constants
+  #
+  MonitorIP:
+    Type: String
+    Default: "10.0.1.4"
+  IlbIP:
+    Type: String
+    Default: "10.0.128.5"
+  AvailabilityZone:
+    Type: String
+    Default: "us-west-2d"
+  PublicCIDRBlock:
+    Type: String
+    Default: "0.0.0.0/0"
+  VpcCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+  InternetGatewayCIDRBlock:
+    Type: String
+    Default: "10.0.128.0/17"
+  ClusterCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/17"
+  DockerComposeVersion:
+    Type: String
+    Default: "v2.24.5"
+
+Resources:
+
+  #
+  # Network
+  #
+  ClusterVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDRBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-vpc"
+  # Internet Gateway (used by NAT Gateway and ILB)
+  InternetGatewaySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref ClusterVPC
+      CidrBlock: !Ref InternetGatewayCIDRBlock
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref AvailabilityZone
+  InternetGatewayRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref ClusterVPC
+  InternetGatewayRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttach
+    Properties:
+      RouteTableId: !Ref InternetGatewayRouteTable
+      DestinationCidrBlock: !Ref PublicCIDRBlock
+      GatewayId: !Ref InternetGateway
+  InternetGatewayRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InternetGatewaySubnet
+      RouteTableId: !Ref InternetGatewayRouteTable
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  InternetGatewayAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref ClusterVPC
+  # Private Subnet for Cluster
+  ClusterSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref ClusterVPC
+      CidrBlock: !Ref ClusterCIDRBlock
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Ref AvailabilityZone
+  ClusterRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref ClusterVPC
+  ClusterRoute:
+    Type: AWS::EC2::Route
+    DependsOn: ClusterNatGateway
+    Properties:
+      RouteTableId: !Ref ClusterRouteTable
+      DestinationCidrBlock: !Ref PublicCIDRBlock
+      NatGatewayId: !Ref ClusterNatGateway
+  ClusterRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ClusterSubnet
+      RouteTableId: !Ref ClusterRouteTable
+  ClusterNatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  ClusterNatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref InternetGatewaySubnet
+      AllocationId: !GetAtt ClusterNatEIP.AllocationId
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref ClusterVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref ClusterRouteTable
+
+  #
+  # IAM Roles
+  #
+  ClusterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+      Policies:
+        - PolicyName: !Sub "${Cluster}-secrets-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:slideruleearth.io/secrets-*
+        - PolicyName: !Sub "${Cluster}-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:ListBucket"]
+                Resource:
+                  - arn:aws:s3:::sliderule
+                  - arn:aws:s3:::sliderule-public
+                  - arn:aws:s3:::pgc-opendata-dems
+                  - arn:aws:s3:::prd-tnm
+                  - arn:aws:s3:::esa-worldcover
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
+                  - arn:aws:s3:::dataforgood-fb-data
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - arn:aws:s3:::sliderule/*
+                  - arn:aws:s3:::sliderule-public/*
+                  - arn:aws:s3:::pgc-opendata-dems/*
+                  - arn:aws:s3:::prd-tnm/*
+                  - arn:aws:s3:::esa-worldcover/*
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
+                  - arn:aws:s3:::dataforgood-fb-data/*
+              - Effect: Allow
+                Action: ["s3:PutObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/manager/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+        - PolicyName: !Sub "${Cluster}-ec2-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:TerminateInstances
+                Resource: "*"
+        - PolicyName: !Sub "${Cluster}-acm-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:GetCertificate
+                  - acm:DescribeCertificate
+                Resource:
+                  - !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/*
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref ClusterRole]
+
+  #
+  # Security Group - Monitor
+  #
+  MonitorSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Monitor Security Group
+      VpcId: !Ref ClusterVPC
+      SecurityGroupIngress:
+        # Loki (from Promtail)
+        - IpProtocol: tcp
+          FromPort: 3100
+          ToPort: 3100
+          CidrIp: !Ref VpcCIDRBlock
+        # HAProxy (from internet)
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        # ALL
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-monitor-sg"
+
+  #
+  # Security Group - ILB
+  #
+  IlbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ILB Security Group
+      VpcId: !Ref ClusterVPC
+      SecurityGroupIngress:
+        # Public Internet
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref PublicCIDRBlock
+        # Orchestrator (from HAProxy)
+        - IpProtocol: tcp
+          FromPort: 8050
+          ToPort: 8050
+          CidrIp: !Ref VpcCIDRBlock
+        # Node Exporter (from Prometheus)
+        - IpProtocol: tcp
+          FromPort: 9100
+          ToPort: 9100
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        # ALL
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-ilb-sg"
+
+  #
+  # Security Group - Cluster
+  #
+  ClusterNodeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Sliderule app SG
+      VpcId: !Ref ClusterVPC
+      SecurityGroupIngress:
+        # SlideRule (from HAProxy)
+        - IpProtocol: tcp
+          FromPort: 9081
+          ToPort: 9081
+          CidrIp: !Ref VpcCIDRBlock
+        # Node Exporter (from Prometheus)
+        - IpProtocol: tcp
+          FromPort: 9100
+          ToPort: 9100
+          CidrIp: !Ref VpcCIDRBlock
+      SecurityGroupEgress:
+        # ALL
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-sliderule-sg"
+
+  #
+  # EC2 Instance - ILB
+  #
+  IlbInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+      InstanceType: c8g.large
+      AvailabilityZone: !Ref AvailabilityZone
+      IamInstanceProfile: !Ref InstanceProfile
+      SourceDestCheck: true
+      Monitoring: false
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          PrivateIpAddress: !Ref IlbIP
+          SubnetId: !Ref InternetGatewaySubnet
+          AssociatePublicIpAddress: true
+          GroupSet:
+            - !Ref IlbSG
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-ilb"
+        - Key: Version
+          Value: !Ref Version
+        - Key: IsPublic
+          Value: !Ref IsPublic
+        - Key: NodeCapacity
+          Value: !Ref NodeCapacity
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+
+          # Retry function
+          retry() {
+            local max_attempts=3
+            local attempt=1
+            local delay=5
+
+            until "$@"; do
+              if [ $attempt -eq $max_attempts ]; then
+                echo "Command failed after $max_attempts attempts: $*"
+                return 1
+              fi
+              echo "Attempt $attempt failed. Retrying in $delay seconds..."
+              sleep $delay
+              delay=$((delay * 2))
+              ((attempt++))
+            done
+            return 0
+          }
+
+          # Install and configure docker
+          retry dnf update -y
+          retry dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ec2-user
+
+          # Install Docker Compose V2
+          retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+          # Log into ECR
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+          # Setup directories and download files
+          mkdir -p /etc/haproxy/pem
+          retry curl ${JwtIssuer}/auth/github/pem > /etc/haproxy/pem/pubkey.pem
+          mkdir -p /etc/ssl/private
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
+
+          # Create docker-compose.yml
+          cat > docker-compose.yml << EOF
+          version: "3.9"
+          services:
+            ilb:
+              image: ${ContainerRegistry}/ilb:${Version}
+              container_name: ilb
+              network_mode: host
+              restart: always
+              pull_policy: if_not_present
+              volumes:
+                - /haproxy:/haproxy
+                - /etc/ssl/private:/etc/ssl/private
+                - /etc/haproxy/pem/:/etc/haproxy/pem/
+              environment:
+                - IS_PUBLIC=${IsPublic}
+                - DOMAIN=${Domain}
+                - CLUSTER=${Cluster}
+                - JWT_ISSUER=${JwtIssuer}
+              healthcheck:
+                test: curl -f http://localhost:8050/discovery/health
+                interval: 30s
+                timeout: 10s
+                retries: 1
+                start_period: 30s
+              labels:
+                - autoheal=true
+            monitor-agent:
+              image: ${ContainerRegistry}/monitor-agent:${Version}
+              container_name: monitor-agent
+              network_mode: host
+              restart: unless-stopped
+              pull_policy: if_not_present
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+                - /var/log:/var/log:ro
+                - /var/log/journal:/var/log/journal:ro
+                - /run/log/journal:/run/log/journal:ro
+                - /etc/machine-id:/etc/machine-id:ro
+                - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                - /var/run/docker.sock:/var/run/docker.sock
+              labels:
+                - autoheal=true
+            autoheal:
+              image: willfarrell/autoheal:latest
+              container_name: autoheal
+              restart: always
+              environment:
+                - AUTOHEAL_CONTAINER_LABEL=all
+                - AUTOHEAL_INTERVAL=30
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+          EOF
+
+          # Start services
+          docker compose -p cluster up --detach
+
+  #
+  # EC2 Instance - Monitor
+  #
+  MonitorInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+      InstanceType: c8g.large
+      AvailabilityZone: !Ref AvailabilityZone
+      IamInstanceProfile: !Ref InstanceProfile
+      SourceDestCheck: true
+      Monitoring: false
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          PrivateIpAddress: !Ref MonitorIP
+          SubnetId: !Ref ClusterSubnet
+          GroupSet:
+            - !Ref MonitorSG
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-monitor"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+
+          # Retry function
+          retry() {
+            local max_attempts=3
+            local attempt=1
+            local delay=5
+
+            until "$@"; do
+              if [ $attempt -eq $max_attempts ]; then
+                echo "Command failed after $max_attempts attempts: $*"
+                return 1
+              fi
+              echo "Attempt $attempt failed. Retrying in $delay seconds..."
+              sleep $delay
+              delay=$((delay * 2))
+              ((attempt++))
+            done
+            return 0
+          }
+
+          # Install and configure docker
+          retry dnf update -y
+          retry dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ec2-user
+
+          # Install Docker Compose V2
+          retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+          # Log into ECR
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+          # Setup environment
+          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
+          export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
+          export CLIENT_SECRET=$(echo $SECRET | jq -r .client_secret)
+
+          # Create docker-compose.yml
+          cat > docker-compose.yml << EOF
+          version: "3.9"
+          services:
+            monitor:
+              image: ${ContainerRegistry}/monitor:${Version}
+              container_name: monitor
+              network_mode: host
+              restart: always
+              pull_policy: if_not_present
+              labels:
+                - autoheal=true
+            monitor-agent:
+              image: ${ContainerRegistry}/monitor-agent:${Version}
+              container_name: monitor-agent
+              network_mode: host
+              restart: unless-stopped
+              pull_policy: if_not_present
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+                - /var/log:/var/log:ro
+                - /var/log/journal:/var/log/journal:ro
+                - /run/log/journal:/run/log/journal:ro
+                - /etc/machine-id:/etc/machine-id:ro
+                - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                - /var/run/docker.sock:/var/run/docker.sock
+              environment:
+                - DISABLE_PROMTAIL=true
+              labels:
+                - autoheal=true
+            autoheal:
+              image: willfarrell/autoheal:latest
+              container_name: autoheal
+              restart: always
+              environment:
+                - AUTOHEAL_CONTAINER_LABEL=all
+                - AUTOHEAL_INTERVAL=30
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+          EOF
+
+          # Start services
+          docker compose -p cluster up --detach
+
+  #
+  # Autoscaling Group - Cluster
+  #
+  ClusterLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${Cluster}-lt"
+      LaunchTemplateData:
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+        InstanceType: t4g.2xlarge
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            Groups:
+              - !Ref ClusterNodeSG
+        BlockDeviceMappings:
+          - DeviceName: "/dev/xvda"
+            Ebs:
+              VolumeSize: 100
+              VolumeType: gp3
+              DeleteOnTermination: true
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+
+            # Retry function
+            retry() {
+              local max_attempts=3
+              local attempt=1
+              local delay=5
+
+              until "$@"; do
+                if [ $attempt -eq $max_attempts ]; then
+                  echo "Command failed after $max_attempts attempts: $*"
+                  return 1
+                fi
+                echo "Attempt $attempt failed. Retrying in $delay seconds..."
+                sleep $delay
+                delay=$((delay * 2))
+                ((attempt++))
+              done
+              return 0
+            }
+
+            # Install and configure docker
+            retry dnf update -y
+            retry dnf install -y docker
+            systemctl enable docker
+            systemctl start docker
+            usermod -aG docker ec2-user
+
+            # Install Docker Compose V2
+            retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+            mkdir -p /usr/local/lib/docker/cli-plugins
+            ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+            # Log into ECR
+            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+            # Setup environment
+            export IPV4=$(hostname -I | awk '{print $1}')
+
+            # Setup directories and download files
+            mkdir -p /data/ATL13
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.db /data/ATL13/atl13.db
+            mkdir -p /data/ATL24
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl24r2.db /data/ATL24/atl24r2.db
+            mkdir -p /data/3DEP
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
+            mkdir -p /plugins
+            aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
+
+            # Create docker-compose.yml
+            cat > docker-compose.yml << EOF
+            version: "3.9"
+            services:
+              sliderule:
+                image: ${ContainerRegistry}/sliderule:${Version}
+                container_name: sliderule
+                network_mode: host
+                restart: always
+                pull_policy: if_not_present
+                ulimits:
+                  nofile:
+                    soft: 8192
+                    hard: 8192
+                volumes:
+                  - /etc/ssl/certs:/etc/ssl/certs
+                  - /var/run/docker.sock:/var/run/docker.sock
+                  - /data:/data
+                  - /plugins:/plugins
+                environment:
+                  - LOG_FORMAT=FMT_CLOUD
+                  - IPV4=$IPV4
+                  - ORCHESTRATOR=http://${IlbIP}:8050
+                  - ALERT_STREAM=${AlertStream}
+                  - TELEMETRY_STREAM=${TelemetryStream}
+                  - AMS=http://127.0.0.1:9082
+                  - CLUSTER=${Cluster}
+                  - IS_PUBLIC=${IsPublic}
+                  - PROVISIONING_SYSTEM="https://ps.${Domain}"
+                  - CONTAINER_REGISTRY=${ContainerRegistry}
+                  - ENVIRONMENT_VERSION=${EnvironmentVersion}
+                labels:
+                  - autoheal=true
+                healthcheck:
+                  test: curl -f -X GET -d "{}" http://localhost:9081/source/health
+                  interval: 30s
+                  timeout: 10s
+                  retries: 1
+                  start_period: 30s
+              ams:
+                image: ${ContainerRegistry}/ams:${Version}
+                container_name: ams
+                network_mode: host
+                restart: always
+                pull_policy: if_not_present
+                entrypoint: /docker-entrypoint.sh
+                volumes:
+                  - /data:/data
+                labels:
+                  - autoheal=true
+              monitor-agent:
+                image: ${ContainerRegistry}/monitor-agent:${Version}
+                container_name: monitor-agent
+                network_mode: host
+                restart: unless-stopped
+                pull_policy: if_not_present
+                volumes:
+                  - /proc:/host/proc:ro
+                  - /sys:/host/sys:ro
+                  - /:/rootfs:ro
+                  - /var/log:/var/log:ro
+                  - /var/log/journal:/var/log/journal:ro
+                  - /run/log/journal:/run/log/journal:ro
+                  - /etc/machine-id:/etc/machine-id:ro
+                  - /var/lib/docker/containers:/var/lib/docker/containers:ro
+                  - /var/run/docker.sock:/var/run/docker.sock
+                labels:
+                  - autoheal=true
+              autoheal:
+                image: willfarrell/autoheal:latest
+                container_name: autoheal
+                restart: always
+                environment:
+                  - AUTOHEAL_CONTAINER_LABEL=all
+                  - AUTOHEAL_INTERVAL=30
+                volumes:
+                  - /var/run/docker.sock:/var/run/docker.sock
+            EOF
+
+            # Start services
+            docker compose -p cluster up --detach
+
+  ClusterAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${Cluster}-asg"
+      MinSize: !Ref NodeCapacity
+      MaxSize: !Ref NodeCapacity
+      DesiredCapacity: !Ref NodeCapacity
+      VPCZoneIdentifier:
+        - !Ref ClusterSubnet
+      HealthCheckType: EC2
+      CapacityRebalance: true
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ClusterLaunchTemplate
+        Version: !GetAtt ClusterLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-node"
+          PropagateAtLaunch: true
+
+  #
+  # Auto-Shutdown
+  #
+  SchedulerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SchedulerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:DescribeRule
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                Resource: '*'
+  SchedulerLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Cluster}-scheduler'
+      Runtime: python3.13
+      Handler: scheduler.lambda_scheduler
+      Role: !GetAtt SchedulerLambdaRole.Arn
+      Timeout: 60
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref ProvisionerLambdaZipFile
+  AutoShutdownCustomResource:
+    Type: Custom::ScheduleStackDeletion
+    DependsOn:
+      - ClusterAutoScalingGroup
+    Properties:
+      ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
+      StackName: !Ref AWS::StackName
+      DeleteAfterMinutes: !Ref TTL
+      DeletionLambdaArn: !Ref DestroyLambdaArn
+
+  #
+  # DNS
+  #
+  IlbRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."   # ensure trailing dot or you can pass HostedZoneId instead
+      Name: !Sub "${Cluster}.${Domain}"
+      Type: A
+      TTL: "300"
+      ResourceRecords:
+        - !GetAtt IlbInstance.PublicIp

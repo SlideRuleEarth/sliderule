@@ -50,7 +50,7 @@ For **GitHub** social accounts, there are two ways to provide your credentials t
 
 Option 1. Set an environment variable with your access token:
 ```bash
-export PS_GITHUB_TOKEN=<your_github_access_token>
+export SLIDERULE_GITHUB_TOKEN=<your_github_access_token>
 ```
 
 Option 2. Provide your credentials directly to the Python client:

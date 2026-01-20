@@ -6,29 +6,19 @@ local aws_utils = require("aws_utils")
 -- System Configuration
 --------------------------------------------------
 
--- Read JSON Configuration File --
-local cfgtbl = {}
-local json_input = arg[1]
-if json_input and string.match(json_input, ".json") then
-    sys.log(core.INFO, string.format('Reading json file: %s', json_input))
-    local f = io.open(json_input, "r")
-    if f ~= nil then
-        local content = f:read("*all")
-        f:close()
-        cfgtbl = json.decode(content)
-    end
-end
-
--- Populate System Configuration --
-sys.initcfg(cfgtbl)
-
 -- Configure In Cloud --
 aws_utils.config_aws()
 
 -- Configure Monitoring --
 core.logmon(core.DEBUG):global("LogMonitor") -- monitor logs and write to stdout
-core.tlmmon(core.DEBUG):global("TelemetryMonitor") -- monitor telementry and push to orchestrator and manager
-core.alrmon(core.DEBUG):global("AlertMonitor") -- monitor alerts and push to manager
+local alert_stream = sys.getcfg("alert_stream")
+if #alert_stream > 0 then
+    aws.firehose(core.DEBUG, core.ALERT_REC_TYPE, alert_stream):global("AlertMonitor") -- monitor alerts and push to firehose
+end
+local telemetry_stream = sys.getcfg("telemetry_stream")
+if #telemetry_stream > 0 then
+    aws.firehose(core.DEBUG, core.TLM_REC_TYPE, telemetry_stream):global("TelemetryMonitor") -- monitor telementry and push to firehose
+end
 
 -- Update Leap Seconds File --
 local leap_seconds_file = "/tmp/leap-seconds.list"
@@ -86,13 +76,6 @@ end
 local source_endpoint = core.endpoint():global("SourceEndpoint")
 local arrow_endpoint = arrow.endpoint():global("ArrowEndpoint")
 
--- Configure Provisioning System Authentication --
-if sys.getcfg("authenticate_to_prov_sys") then
-    local authenticator = core.psauth()
-    source_endpoint:auth(authenticator)
-    arrow_endpoint:auth(authenticator)
-end
-
 -- Run Application HTTP Server --
 local app_server = core.httpd(sys.getcfg("app_port")):global("AppServer")
 app_server:attach(source_endpoint, "/source")
@@ -106,13 +89,4 @@ app_server:attach(arrow_endpoint, "/arrow")
 if sys.getcfg("register_as_service") then
     local service_url = "http://"..sys.getcfg("ipv4")..":"..tostring(sys.getcfg("app_port"))
     core.script("service_registry", service_url):global("ServiceScript")
-end
-
---------------------------------------------------
--- Post Startup
---------------------------------------------------
-
--- Scripts --
-for _,script in ipairs(sys.getcfg("post_startup_scripts")) do
-    core.script(script)
 end

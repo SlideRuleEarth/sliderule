@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ACM Certificate for SlideRule
+
+Parameters:
+
+  CertificateDomains:
+    Type: String
+  HostedZoneId:
+    Type: String
+
+Resources:
+
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref CertificateDomains
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref CertificateDomains
+          HostedZoneId: !Ref HostedZoneId
+
+Outputs:
+
+  CertificateArn:
+    Description: ARN of the ACM Certificate
+    Value: !Ref Certificate
+    Export:
+      Name: !Sub '${AWS::StackName}-CertificateArn'

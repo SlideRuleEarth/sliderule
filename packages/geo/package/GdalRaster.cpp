@@ -38,7 +38,7 @@
 #include "RasterObject.h"
 
 #ifdef __aws__
-#include "aws.h"
+#include "CredentialStore.h"
 #endif
 
 #include <algorithm>

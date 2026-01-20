@@ -138,33 +138,32 @@ SystemConfig::SystemConfig(void):
         {"normal_mem_thresh",           &normalMemoryThreshold},
         {"stream_mem_thresh",           &streamMemoryThreshold},
         {"msgq_depth",                  &msgQDepth},
-        {"authenticate_to_prov_sys",    &authenticateToProvSys},
-        {"is_public",                   &isPublic},
         {"in_cloud",                    &inCloud},
         {"sys_bucket",                  &systemBucket},
-        {"post_startup_scripts",        &postStartupScripts},
         {"publish_timeout_ms",          &publishTimeoutMs},
         {"request_timeout_sec",         &requestTimeoutSec},
         {"ipv4",                        &ipv4},
         {"environment_version",         &environmentVersion},
         {"orchestrator_url;",           &orchestratorURL},
-        {"organization",                &organization},
+        {"alert_stream",                &alertStream},
+        {"telemetry_stream",            &telemetryStream},
         {"cluster",                     &cluster},
-        {"prov_sys_url",                &provSysURL},
-        {"manager_url",                 &managerURL},
         {"ams_url",                     &amsURL},
+        {"is_public",                   &isPublic},
         {"container_registry",          &containerRegistry}
     })
 {
     // populate environment variables
+    setIfProvidedFormat(logFormat, "LOG_FORMAT");
+    setIfProvidedLevel(logLevel, "LOG_LEVEL");
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
-    setIfProvided(organization, "ORGANIZATION");
+    setIfProvided(alertStream, "ALERT_STREAM");
+    setIfProvided(telemetryStream, "TELEMETRY_STREAM");
     setIfProvided(cluster, "CLUSTER");
-    setIfProvided(provSysURL, "PROVISIONING_SYSTEM");
-    setIfProvided(managerURL, "MANAGER");
     setIfProvided(amsURL, "AMS");
+    setIfProvidedBool(isPublic, "IS_PUBLIC");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 
@@ -180,6 +179,37 @@ void SystemConfig::setIfProvided(FieldElement<string>& field, const char* env)
 {
     const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
     if(str) field = str;
+}
+
+/*----------------------------------------------------------------------------
+ * setIfProvidedBool
+ *----------------------------------------------------------------------------*/
+void SystemConfig::setIfProvidedBool(FieldElement<bool>& field, const char* env)
+{
+    const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
+    if(str)
+    {
+        if(StringLib::match(str, "true")) field = true;
+        else if(StringLib::match(str, "false")) field = false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * setIfProvidedFormat
+ *----------------------------------------------------------------------------*/
+void SystemConfig::setIfProvidedFormat(FieldElement<event_format_t>& field, const char* env)
+{
+    const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
+    if(str) convertFromStr(str, field.value);
+}
+
+/*----------------------------------------------------------------------------
+ * setIfProvidedLevel
+ *----------------------------------------------------------------------------*/
+void SystemConfig::setIfProvidedLevel(FieldElement<event_level_t>& field, const char* env)
+{
+    const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
+    if(str) convertFromStr(str, field.value);
 }
 
 /******************************************************************************
@@ -225,9 +255,17 @@ void convertFromLua(lua_State* L, int index, SystemConfig::event_format_t& v)
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if(StringLib::match(str, "FMT_TEXT")) v = SystemConfig::TEXT;
-        else if(StringLib::match(str, "FMT_CLOUD")) v = SystemConfig::CLOUD;
+        convertFromStr(str, v);
    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromStr - SystemConfig::event_format_t
+ *----------------------------------------------------------------------------*/
+void convertFromStr(const char* str, SystemConfig::event_format_t& v)
+{
+    if(StringLib::match(str, "FMT_TEXT")) v = SystemConfig::TEXT;
+    else if(StringLib::match(str, "FMT_CLOUD")) v = SystemConfig::CLOUD;
 }
 
 /*----------------------------------------------------------------------------
@@ -275,11 +313,19 @@ void convertFromLua(lua_State* L, int index, event_level_t& v)
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if(StringLib::match(str, "DEBUG")) v = DEBUG;
-        else if(StringLib::match(str, "INFO")) v = INFO;
-        else if(StringLib::match(str, "WARNING")) v = WARNING;
-        else if(StringLib::match(str, "ERROR")) v = ERROR;
-        else if(StringLib::match(str, "CRITICAL")) v = CRITICAL;
-        else v = INVALID_EVENT_LEVEL;
+        convertFromStr(str, v);
    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromStr - event_level_t
+ *----------------------------------------------------------------------------*/
+void convertFromStr(const char* str, event_level_t& v)
+{
+    if(StringLib::match(str, "DEBUG")) v = DEBUG;
+    else if(StringLib::match(str, "INFO")) v = INFO;
+    else if(StringLib::match(str, "WARNING")) v = WARNING;
+    else if(StringLib::match(str, "ERROR")) v = ERROR;
+    else if(StringLib::match(str, "CRITICAL")) v = CRITICAL;
+    else v = INVALID_EVENT_LEVEL;
 }

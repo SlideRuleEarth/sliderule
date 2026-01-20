@@ -28,16 +28,18 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import netrc
+import sys
 import requests
 import threading
-import socket
 import json
 import struct
 import ctypes
 import time
 import logging
 import numpy
+import base64
+from urllib import parse as urllib_parse
+import webbrowser
 from sliderule import version
 
 ###############################################################################
@@ -118,28 +120,25 @@ class FatalError(RuntimeError):
 #
 class Session:
 
-    PUBLIC_URL = "slideruleearth.io"
-    PUBLIC_ORG = "sliderule"
+    PUBLIC_DOMAIN = "slideruleearth.io"
+    PUBLIC_CLUSTER = "sliderule"
     MAX_PS_CLUSTER_WAIT_SECS = 600
 
     #
     # constructor
     #
     def __init__ (self,
-        domain          = PUBLIC_URL,
-        verbose         = False,
-        loglevel        = logging.INFO,
-        organization    = 0,
+        domain          = PUBLIC_DOMAIN,
+        cluster         = PUBLIC_CLUSTER,
         desired_nodes   = None,
         time_to_live    = 60, # minutes
+        verbose         = False,
+        loglevel        = logging.INFO,
         trust_env       = False,
         ssl_verify      = True,
         rqst_timeout    = (10, 120), # (connection, read) in seconds
-        log_handler     = None,
         decode_aux      = True,
         rethrow         = False,
-        ps_username     = None,
-        ps_password     = None,
         github_token    = None):
         '''
         creates and configures a sliderule session
@@ -151,24 +150,20 @@ class Session:
         self.rqst_timeout = rqst_timeout
         self.decode_aux = decode_aux
         self.throw_exceptions = rethrow
+        self.domain = domain
+        self.cluster = cluster
 
         # initialize to empty
-        self.ps_refresh_token = None
         self.ps_access_token = None
         self.ps_token_exp = None
+        self.ps_metadata = None
         self.ps_lock = threading.Lock()
         self.console = None
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
-        self.local_dns = {} # global dictionary of DNS entries to override
 
-        # configure logging
+        # set log level
         self.set_verbose(verbose, loglevel)
-        if log_handler != None:
-            logger.addHandler(log_handler)
-
-        # configure domain
-        self.service_domain = domain
 
         # configure callbacks
         self.callbacks = {
@@ -179,13 +174,14 @@ class Session:
             'arrowrec.eof': Session.__arrowrec
         }
 
-        # configure credentials (if any) for organization
-        if organization == 0:
-            organization = self.PUBLIC_ORG
-        self.authenticate(organization, ps_username=ps_username, ps_password=ps_password, github_token=github_token)
+        # authenticate for non-public clusters
+        if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
+            self.authenticate(github_token=github_token)
+            self.scaleout(desired_nodes, time_to_live)
 
-        # set cluster to desired number of nodes (if permitted based on credentials)
-        self.scaleout(desired_nodes, time_to_live)
+        # create wrappers for subclasses
+        self.provisioner = self.__Provisioner(self)
+        self.authenticator = self.__Authenticator(self)
 
     #
     #  source
@@ -208,10 +204,10 @@ class Session:
                 callbacks[c] = self.callbacks[c]
 
         # Construct Request URL
-        if self.service_org:
-            url = f'https://{self.service_org}.{self.service_domain}{path}/{api}'
+        if self.cluster:
+            url = f'https://{self.cluster}.{self.domain}{path}/{api}'
         else:
-            url = f'http://{self.service_domain}{path}/{api}'
+            url = f'http://{self.domain}{path}/{api}'
 
         # Construct Payload
         if isinstance(parm, dict):
@@ -230,7 +226,7 @@ class Session:
             remaining_attempts -= 1
             try:
                 # Build Authorization Header
-                if self.service_org:
+                if self.cluster:
                     self.__buildauthheader(headers)
 
                 # Perform Request
@@ -356,52 +352,25 @@ class Session:
         # initialize local variables
         requested_nodes = 0
 
-        # update number of nodes
-        if isinstance(desired_nodes, int):
-            headers = {}
-            rsps_body = {}
-            requested_nodes = desired_nodes
-            self.__buildauthheader(headers)
-
-            # get boundaries of cluster and calculate nodes to request
-            try:
-                host = "https://ps." + self.service_domain + "/api/org_num_nodes/" + self.service_org + "/"
-                rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout)
-                rsps_body = rsps.json()
-                rsps.raise_for_status()
-                requested_nodes = max(min(desired_nodes, rsps_body["max_nodes"]), rsps_body["min_nodes"])
-                if requested_nodes != desired_nodes:
-                    logger.info("Provisioning system desired nodes overridden to {}".format(requested_nodes))
-            except requests.exceptions.HTTPError as e:
-                logger.info('{}'.format(e))
-                logger.info('Provisioning system status request returned error => {}'.format(rsps_body["error_msg"]))
-                if self.throw_exceptions:
-                    raise
-
-            # Request number of nodes in cluster
-            try:
-                if isinstance(time_to_live, int):
-                    host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes_ttl/" + self.service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
-                    rsps = self.session.post(host, headers=headers, timeout=self.rqst_timeout)
-                else:
-                    host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes/" + self.service_org + "/" + str(requested_nodes) + "/"
-                    rsps = self.session.put(host, headers=headers, timeout=self.rqst_timeout)
-                rsps_body = rsps.json()
-                rsps.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                logger.info('{}'.format(e))
-                logger.error('Provisioning system update request error => {}'.format(rsps_body["error_msg"]))
-                if self.throw_exceptions:
-                    raise
-
-        # Get number of nodes currently registered
+        # get number of nodes currently registered
         try:
             rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
             available_servers = rsps["nodes"]
-        except FatalError as e:
+        except Exception as e:
             logger.debug(f'Failed to retrieve number of nodes registered: {e}')
             available_servers = 0
 
+        # make provisioning request
+        if isinstance(desired_nodes, int):
+            rsps = self.provision("deploy", {
+                "cluster": self.cluster,
+                "is_public": False,
+                "node_capacity": desired_nodes,
+                "ttl": time_to_live
+            })
+            logger.info(f'Provisioning request status: {rsps["status"]}')
+
+        # return status
         return available_servers, requested_nodes
 
     #
@@ -441,74 +410,46 @@ class Session:
     #
     # authenticate
     #
-    def authenticate (self, ps_organization, ps_username=None, ps_password=None, github_token=None):
+    def authenticate (self, github_token=None):
         '''
-        gets a bearer token (ps_access_token) from the provisioning system to use in requests
-        to private clusters
+        gets a bearer token (ps_access_token) from sliderule
+        to use in requests to private clusters
         '''
         # initialize local variables
         login_status = False
-        ps_url = "ps." + self.service_domain
+        github_user_token = os.environ.get("SLIDERULE_GITHUB_TOKEN", github_token)
+        login_url = "https://login." + self.domain
 
-        # set organization on any authentication request
-        self.service_org = ps_organization
+        # authenticate user
+        try:
+            if github_user_token:
+                # directly login using a PAT key
+                rsps = self.__patlogin(login_url, github_user_token)
+            else:
+                # attempt device flow login
+                rsps = self.__deviceflow(login_url)
 
-        # check for direct or public access
-        if self.service_org == None:
-            return True
-
-        # attempt retrieving from environment
-        if not github_token and not ps_username and not ps_password:
-            github_token = os.environ.get("PS_GITHUB_TOKEN")
-            ps_username = os.environ.get("PS_USERNAME")
-            ps_password = os.environ.get("PS_PASSWORD")
-
-        # attempt retrieving from netrc file
-        if not github_token and not ps_username and not ps_password:
-            try:
-                netrc_file = netrc.netrc()
-                login_credentials = netrc_file.hosts[ps_url]
-                ps_username = login_credentials[0]
-                ps_password = login_credentials[2]
-            except Exception as e:
-                pass
-
-        # build authentication request
-        user = None
-        if github_token:
-            user = "github"
-            rqst = {"org_name": ps_organization, "access_token": github_token}
-            headers = {'Content-Type': 'application/json'}
-            api = "https://" + ps_url + "/api/org_token_github/"
-        elif ps_username or ps_password:
-            user = "local"
-            rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
-            headers = {'Content-Type': 'application/json'}
-            api = "https://" + ps_url + "/api/org_token/"
-
-        # authenticate to provisioning system
-        if user:
-            try:
-                rsps = self.session.post(api, data=json.dumps(rqst), headers=headers, timeout=self.rqst_timeout)
-                rsps.raise_for_status()
-                rsps = rsps.json()
-                self.ps_refresh_token = rsps["refresh"]
-                self.ps_access_token = rsps["access"]
-                self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+            # set internal session data
+            if rsps['status'] == 'success':
+                now = time.time()
+                self.ps_metadata = rsps['metadata']
+                self.ps_access_token = rsps['token']
+                self.ps_token_exp =  int(((self.ps_metadata['exp'] - now) / 2) + now)
                 login_status = True
-            except:
-                if ps_organization != self.PUBLIC_ORG:
-                    logger.error("Unable to authenticate %s user to %s" % (user, api))
 
-        # return login status
-        if ps_organization != self.PUBLIC_ORG:
-            logger.info(f'Login status to {self.service_domain}/{self.service_org}: {login_status and "success" or "failure"}')
-        return login_status
+        except Exception as e:
+            logger.error(f'Failure attempting to authenticate: {e}')
+
+        # log status
+        logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
+
+        # return response metadata
+        return self.ps_metadata
 
     #
-    #  manager
+    #  manage
     #
-    def manager (self, api, content_json=True, as_post=False, headers=None):
+    def manage (self, api, content_json=True, as_post=False, headers=None):
         '''
         handles making the HTTP request to the sliderule manager
         '''
@@ -520,14 +461,14 @@ class Session:
         rsps = ""
 
         # Construct Request URL
-        if self.service_org:
-            url = 'https://%s.%s/manager/%s' % (self.service_org, self.service_domain, api)
+        if self.cluster:
+            url = 'https://%s.%s/manager/%s' % (self.cluster, self.domain, api)
         else:
-            url = 'http://%s/manager/%s' % (self.service_domain, api)
+            url = 'http://%s/manager/%s' % (self.domain, api)
 
         try:
             # Build Authorization Header
-            if self.service_org:
+            if self.cluster:
                 self.__buildauthheader(headers)
 
             # Perform Request
@@ -551,6 +492,39 @@ class Session:
         return rsps
 
     #
+    #  provision
+    #
+    def provision (self, api, data=None, headers=None):
+        '''
+        handles making the HTTP request to the sliderule provisioner
+        '''
+        try:
+            # Build Authorization Header
+            if headers == None:
+                headers = {}
+            self.__buildauthheader(headers)
+
+            # Perform Request
+            url = f'https://provisioner.{self.domain}/{api}'
+            data = self.session.post(url, data=json.dumps(data), headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            data.raise_for_status()
+
+            # Parse Response
+            stream_source = self.__StreamSource(data)
+            lines = [line for line in stream_source]
+            rsps = b''.join(lines)
+            rsps = json.loads(rsps)
+
+            # Return Response
+            return rsps
+
+        except Exception as e:
+            logger.error(f'Failed to make request to {url}: {e}')
+            if self.throw_exceptions:
+                raise
+            return {'status': 'error', 'exception': f'{e}'}
+
+    #
     # __StreamSource
     #
     class __StreamSource:
@@ -570,6 +544,139 @@ class Session:
             yield self.source
 
     #
+    # __Provisioner
+    #
+    class __Provisioner:
+        def __init__ (self, session):
+            self.session = session
+        def deploy (self, *, is_public, node_capacity, ttl, version):
+            return self.session.provision("deploy", {"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+        def extend (self, *, ttl):
+            return self.session.provision("extend", {"cluster": self.session.cluster, "ttl": ttl})
+        def destroy (self):
+            return self.session.provision("destroy", {"cluster": self.session.cluster})
+        def status (self):
+            return self.session.provision("status", {"cluster": self.session.cluster})
+        def events (self):
+            return self.session.provision("events", {"cluster": self.session.cluster})
+        def report (self):
+            return self.session.provision("report", {})
+
+    #
+    # __Authenticator
+    #
+    class __Authenticator:
+        def __init__ (self, session):
+            self.session = session
+        def decode (self):
+            def decode_part(part):
+                padded = part + "=" * (-len(part) % 4)
+                return json.loads(base64.urlsafe_b64decode(padded))
+            header_b64, payload_b64, signature_b64 = self.session.ps_access_token.split(".")
+            header = decode_part(header_b64)
+            claims = decode_part(payload_b64)
+            return header, claims
+
+    #
+    #  __deviceflow
+    #
+    def __deviceflow(self, login_url, timeout=60):
+        """
+        Prompt the user through the device flow authentication to GitHub
+        """
+        try:
+            # get device info from github
+            response                    = self.session.post(login_url + '/auth/github/device')
+            device_info                 = response.json()
+            user_code                   = device_info['user_code']
+            device_code                 = device_info['device_code']
+            verification_uri            = device_info['verification_uri']
+            verification_uri_complete   = device_info['verification_uri_complete'] or f"{verification_uri}?user_code={urllib_parse.quote(user_code)}"
+            interval                    = device_info.get('interval', 5) # default to check every 5 seconds
+            expires_in                  = device_info.get('expires_in', timeout)
+
+            # display instructions to user
+            print("\n" + "=" * 60)
+            print("GitHub Authentication Required")
+            print("=" * 60)
+            print(f"\nPlease visit: {verification_uri}")
+            print(f"\nAnd enter this code: {user_code}")
+            print("\n" + "=" * 60)
+
+            # open browser if possible
+            try:
+                print("Attempting to open browser... ", end='')
+                webbrowser.open(verification_uri_complete)
+                print("success.")
+            except Exception:
+                print("failed (must manually open).")
+
+            # poll for authorization
+            print("Waiting for authorization...  ", end='')
+            print_mod = 0
+            start_time = time.time()
+            actual_timeout = min(timeout, expires_in)
+            while time.time() - start_time < actual_timeout:
+                # display wait symbol
+                spinner = ['/', '-', '\\', '-']
+                sys.stdout.write(f"\b{spinner[print_mod]}")
+                sys.stdout.flush()
+                print_mod = (print_mod + 1) % 4
+                # make polling request
+                response = self.session.post(login_url + '/auth/github/device/poll', json={'device_code': device_code}, headers={'Content-Type': 'application/json'})
+                result = response.json()
+                if result['status'] == 'success':
+                    print(f"\bsuccess")
+                    # return metadata
+                    return result
+                elif result['status'] == 'error':
+                    logger.error(f'error polling for authorization: {result.get("error")}')
+                else: # result['status'] == 'pending'
+                    wait_interval = result.get('interval', interval)
+                    time.sleep(wait_interval)
+
+            # if here then we failed to authenticate
+            print('\bfailure')
+            logger.error(f'failed to authenticate to {login_url}')
+
+        # handle exceptions
+        except requests.RequestException as e:
+            logger.error(f"request failed: {e}")
+        except json.JSONDecodeError:
+            logger.error(f"invalid json response")
+        except Exception as e:
+            logger.error(f"internal error: {e}")
+
+        # return error
+        return {'status': 'error'}
+
+    #
+    #  __patlogin
+    #
+    def __patlogin(self, login_url, pat):
+        """
+        Login directly with a GitHub Personal Access Token (PAT) key
+        """
+        try:
+            # make login request
+            response = self.session.post(login_url + '/auth/github/pat', json={'pat': pat})
+            result = response.json()
+
+            # return success
+            return result
+
+        # handle exceptions
+        except requests.RequestException as e:
+            logger.error(f"request failed: {e}")
+        except json.JSONDecodeError:
+            logger.error(f"invalid json response")
+        except Exception as e:
+            logger.error(f"internal error: {e}")
+
+        # return error
+        return {'status': 'error'}
+
+    #
     #  __buildauthheader
     #
     def __buildauthheader(self, headers, force_refresh=False):
@@ -579,19 +686,17 @@ class Session:
         '''
         if self.ps_access_token:
             # Check if Refresh Needed
+            now = time.time()
             with self.ps_lock:
-                if time.time() > self.ps_token_exp or force_refresh:
-                    host = "https://ps." + self.service_domain + "/api/org_token/refresh/"
-                    rqst = {"refresh": self.ps_refresh_token}
-                    hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.ps_access_token}
+                if now > self.ps_token_exp or force_refresh:
+                    host = "https://login." + self.domain + "/auth/refresh/"
+                    hdrs = {'Authorization': 'Bearer ' + self.ps_access_token}
                     try:
-                        rsps = self.session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=self.rqst_timeout).json()
-                        self.ps_refresh_token = rsps["refresh"]
-                        self.ps_access_token = rsps["access"]
-                        self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+                        rsps = self.session.get(host, headers=hdrs, timeout=self.rqst_timeout).json()
+                        self.ps_access_token = rsps["token"]
+                        self.ps_token_exp = int(((rsps['exp'] - now) / 2) + now)
                     except Exception as e:
                         logger.error(f'Failed to refresh token: {e}')
-                        logger.error(f'Provisioning system response: {rsps}')
             # Build Authentication Header
             headers['Authorization'] = 'Bearer ' + self.ps_access_token
 

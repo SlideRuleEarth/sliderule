@@ -1,0 +1,390 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Provisioner Lambda
+
+Parameters:
+
+  EnvironmentVersion:
+    Type: String
+  Domain:
+    Type: String
+  ProvisionerUrl:
+    Type: String
+  JwtIssuer:
+    Type: String
+  ProjectBucket:
+    Type: String
+  ProjectFolder:
+    Type: String
+  ProjectPublicBucket:
+    Type: String
+  ContainerRegistry:
+    Type: String
+  CorsAllowOrigins:
+    Type: CommaDelimitedList
+  HostedZoneId:
+    Type: String
+  CertificateArn:
+    Type: String
+  AlertStream:
+    Type: String
+  TelemetryStream:
+    Type: String
+  LambdaZipFile:
+    Type: String
+
+Resources:
+
+  ## Deploy Lambda Function
+  DeployLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-deploy'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_deploy
+      Description: Deploy the cluster
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          DOMAIN: !Ref Domain
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          CONTAINER_REGISTRY: !Ref ContainerRegistry
+          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
+          JWT_ISSUER: !Ref JwtIssuer
+          CERTIFICATE_ARN: !Ref CertificateArn
+          ALERT_STREAM: !Ref AlertStream
+          TELEMETRY_STREAM: !Ref TelemetryStream
+
+  ## Destroy Lambda Function
+  DestroyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-destroy'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_destroy
+      Description: Destroy the cluster
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  ## Status Lambda Function
+  StatusLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-status'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_status
+      Description: Status the cluster
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  ## Events Lambda Function
+  EventsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-events'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_events
+      Description: Get events from provisioner stack operations
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  ## Report Lambda Function
+  ReportLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-report'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_report
+      Description: Get report of currently deployed clusters
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  ## Test Lambda Function
+  TestLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-test'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_test
+      Description: Kick off execution of the testrunner
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+
+  ## Gateway Lambda Function
+  GatewayLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-gateway'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_gateway
+      Description: Routes requests based on path
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          DOMAIN: !Ref Domain
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          CONTAINER_REGISTRY: !Ref ContainerRegistry
+          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
+          JWT_ISSUER: !Ref JwtIssuer
+          CERTIFICATE_ARN: !Ref CertificateArn
+          ALERT_STREAM: !Ref AlertStream
+          TELEMETRY_STREAM: !Ref TelemetryStream
+
+  ## IAM Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/PowerUserAccess
+      Policies:
+        - PolicyName: AllowCFStackManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:GetRole
+                  - iam:DeleteRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:TagRole
+                  - iam:PassRole
+                Resource: "arn:aws:iam::*:role/*"
+              - Effect: Allow
+                Action:
+                  - iam:CreateInstanceProfile
+                  - iam:GetInstanceProfile
+                  - iam:DeleteInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:TagInstanceProfile
+                Resource: "arn:aws:iam::*:instance-profile/*"
+              - Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:GetFunction
+                  - lambda:DeleteFunction
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                Resource: "arn:aws:lambda:*:*:function:*"
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:UpdateStack
+                Resource: "*"
+
+  ## API Gateway HTTP API
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: Provisioner API for SlideRule
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref CorsAllowOrigins
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+
+  # JWT Authorizer (Native API Gateway)
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - provisioner
+        Issuer: !Ref JwtIssuer
+
+  ## API Gateway Integration with Lambda
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  ## Routes
+  DeployRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /deploy'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ExtendRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /extend'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  DestroyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /destroy'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  StatusRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /status'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  EventsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /events'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ReportRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /report'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  ## API Gateway Stage
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+  # API Gateway Custom Domain Name
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref ProvisionerUrl
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref CertificateArn
+
+  ## API Mapping (connects custom domain to API)
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+
+  ## Route53 Alias Record
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Ref ProvisionerUrl
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false
+
+Outputs:
+
+  DestroyLambdaArn:
+    Description: Lambda that deletes a cluster; available for auto-shutdown
+    Value: !GetAtt DestroyLambda.Arn
+    Export:
+      Name: sliderule-provisioner-destroy-arn

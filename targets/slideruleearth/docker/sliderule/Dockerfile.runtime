@@ -8,9 +8,6 @@ COPY sliderule /sliderule
 WORKDIR /sliderule/targets/slideruleearth
 RUN make config-release INSTALLDIR=/usr/local && make
 
-# install project specific files
-COPY config.json /usr/local/etc/sliderule/
-
 # install runtime dependencies
 FROM amazonlinux:2023 AS runtime
 RUN dnf update \

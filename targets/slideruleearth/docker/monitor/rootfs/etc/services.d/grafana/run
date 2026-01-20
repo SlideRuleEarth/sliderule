@@ -1,0 +1,5 @@
+#!/command/execlineb -P
+grafana-server \
+    --homepath "/grafana" \
+    --config "/grafana/conf/grafana.ini" \
+    web

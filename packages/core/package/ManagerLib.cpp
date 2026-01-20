@@ -43,7 +43,7 @@
 #include "StringLib.h"
 
 /******************************************************************************
- * ORCHESTRATOR LIBRARY CLASS
+ * MANAGER LIBRARY CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -200,7 +200,7 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
 
     if(rsps.code != EndpointObject::OK)
     {
-        mlog(WARNING, "Failed to issue alarm %d: %s", event->code, rsps.response);
+        mlog(WARNING, "Failed to issue alert %d: %s", event->code, rsps.response);
         status = false;
     }
 

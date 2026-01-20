@@ -27,7 +27,6 @@ target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
@@ -48,7 +47,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.cpp
@@ -56,7 +54,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.cpp
@@ -64,7 +61,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/unittests/UT_Dictionary.cpp>
@@ -89,7 +85,6 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/core.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h
@@ -121,7 +116,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.h
@@ -130,7 +124,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.h
@@ -139,7 +132,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Table.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.h
     DESTINATION

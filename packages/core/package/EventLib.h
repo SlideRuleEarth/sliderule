@@ -117,7 +117,6 @@ class EventLib
             char        endpoint[MAX_TLM_STR];  // server-side API
             char        client[MAX_TLM_STR];    // Python Client, Web Client, etc
             char        account[MAX_TLM_STR];   // username
-            char        version[MAX_TLM_STR];   // sliderule version
         } telemetry_t;
 
         typedef struct {
