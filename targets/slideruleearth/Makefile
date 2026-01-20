@@ -148,10 +148,7 @@ run: ## run the server locally
 	AMS=http://127.0.0.1:9082 \
 	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	ASAN_OPTIONS="detect_leaks=1" \
-	LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" \
-	$(RUNNER) \
-	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
+	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
 
 build: ## build the code using the build environment docker container
 	docker run \
