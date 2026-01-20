@@ -140,9 +140,6 @@ config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
 
 run: ## run the server locally
-<<<<<<< HEAD
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua config.json
-=======
 	LOG_FORMAT="FMT_TEXT" \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
@@ -155,7 +152,6 @@ run: ## run the server locally
 	LSAN_OPTIONS="suppressions=$(ROOT)/targets/slideruleearth/asan_leaks.supp" \
 	$(RUNNER) \
 	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
->>>>>>> testrunner-4
 
 build: ## build the code using the build environment docker container
 	docker run \
