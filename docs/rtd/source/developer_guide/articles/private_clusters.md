@@ -1,12 +1,22 @@
 # Private Clusters
 
-2023-02-24
+2026-01-20
+
+:::{note}
+With release v5.0.2, SlideRule has transitioned the management of private clusters from the django-based ***SlideRule Provisioning System*** which was deployed in AWS ECS, to the pure Python-based ***SlideRule Provisioner*** which is deployed via AWS Lambda.
+:::
 
 ## Background
 
 With release v2.0.0, SlideRule supports private clusters - clusters that can only be accessed by authenticated users affiliated with the cluster.  Prior to v2.0.0, all of SlideRule's services were provided by a single cluster of nodes executing in AWS us-west-2, available publicly to anyone on the internet. This makes SlideRule's services easy to access, yet suffers when many users try to access SlideRule at the same time.  The SlideRule team can only allocate a certain level of funding towards a public cluster and cannot satisfy the processing needs of everyone at once.
 
-For users of SlideRule that have access to their own funding, private clusters provide a way to have access to all of SlideRules services without having to share the processing power behind those services with other users or organizations.  In order to manage private clusters and authenticate users, the SlideRule team developed a system called the SlideRule Provisioning System at [https://ps.slideruleearth.io](https://ps.slideruleearth.io).  The SlideRule Provisioning System provides the following functionality:
+For users of SlideRule that have their own funding, private clusters provide a way to have access to all of SlideRules services without having to share the processing power behind those services with other organizations.  In order to manage private clusters and authenticate users, the SlideRule team developed two Lambda-based systems: the ***SlideRule Authenticator*** and the ***SlideRule Provisioner***.
+
+#### SlideRule Authenticator
+
+The SlideRule Authenticator is a Lambda-based system that uses GitHub to authenticate users.
+
+The SlideRule Provisioning System provides the following functionality:
 
 * Deploys and destroys SlideRule clusters
 * Manages and authenticates users
