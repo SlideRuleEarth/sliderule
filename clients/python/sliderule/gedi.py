@@ -30,6 +30,7 @@
 import logging
 import numpy
 import geopandas
+import warnings
 import sliderule
 from sliderule import logger
 from sliderule.session import Session
@@ -163,6 +164,13 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_ar
     rqst_parm = parm.copy()
     if "asset" not in rqst_parm:
         rqst_parm["asset"] = asset
+
+    # Check for Raster Sampling
+    if "samples" in rqst_parm:
+        warnings.warn(
+            "Raster sampling using this API is deprecated and causes degraded performance; please perform raster sampling with new x-series APIs.",
+            DeprecationWarning,
+            stacklevel=2)
 
     # Build GEDI Request
     rqst = {

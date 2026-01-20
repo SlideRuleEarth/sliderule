@@ -9,13 +9,13 @@ Version description of the v5.0.2 release of SlideRule Earth.
 * The use of the ***SlideRule Provisioning System*** has been deprecated.  All accounts in the system must be replaced by GitHub accounts.  Authentication for private clusters is now handled by the ***SlideRule Authenticator*** at https://login.slideruleearth.io.
   - The Python client now supports only two authentication flows: (1) the use of a PAT key from GitHub, and (2) an interactive device-flow login to GitHub
   - Support for `.netrc` files has been removed
-  - The environment variable `PS_GITBUT_TOKEN` has been renamed to `SLIDERULE_GITHUB_TOKEN` to remove the "Provisioning System" prefix identifier.
+  - The environment variable `PS_GITHUB_TOKEN` has been renamed to `SLIDERULE_GITHUB_TOKEN` to remove the "Provisioning System" prefix identifier.
   - The `ps_username` and `ps_password` parameters in `sliderule.authenticate` have been removed.
   - The `update_available_servers` function can no longer be used to change the number of nodes in a running cluster; it can only be used to initialize the number of nodes in a cluster that is to be deployed and then status the number of nodes that are running.
 
 * The use of the ***SlideRule Manager*** has been deprecated.  All calls to `session.manager` should no longer be used as that functionality will cease in future releases.
 
-* The main python module `sliderule` no longer creates a default session on import but requires either `sliderule.init()` or `sliderule.create_session()`.  The creation of a default session was confusing when users called `sliderule.init()` and then without knowing, created a second session.  This caused odd behavior with logging.  Moving forward, users are encouraged to use `sliderule.create_session()` which returns a session object that can then unambigiously be used to communicate with a SlideRule cluster.
+* The main Python module `sliderule` no longer creates a default session on import but requires either `sliderule.init()` or `sliderule.create_session()`.  The creation of a default session was confusing when users called `sliderule.init()` which then created a second session.  This caused odd behavior with logging because at that point two loggers exist.  Moving forward, users are encouraged to use `sliderule.create_session()` which returns a session object that can then unambigiously be used to communicate with a SlideRule cluster..
 
 * Raster sampling support has been optimized for x-series APIs at the cost of legacy p-series API performance.  All users are strongly encouraged to switch to x-series APIs when performing raster sampling as the old p-series APIs will take much longer now.
 
@@ -68,7 +68,7 @@ Instead the request json must change to be this:
 
 ## Known Issues
 
-* The GitHub actions related to running the pytests and the selftest are currently no working.  This is due to them being transitioned to the provisioning system.
+* The GitHub actions related to running the pytests and the selftest are currently not working.  This is due to them being transitioned to the provisioning system.
 
 ## Issues Resolved
 

@@ -30,6 +30,7 @@
 import logging
 import numpy
 import geopandas
+import warnings
 import sliderule
 from sliderule import earthdata, logger
 from sliderule.session import Session, BASIC_TYPES, CODED_TYPE
@@ -864,6 +865,13 @@ def __build_request(parm, resources, default_asset='icesat2'):
     rqst_parm = parm.copy()
     if "asset" not in rqst_parm:
         rqst_parm["asset"] = default_asset
+
+    # Check for Raster Sampling
+    if "samples" in rqst_parm:
+        warnings.warn(
+            "Raster sampling using this API is deprecated and causes degraded performance; please perform raster sampling with new x-series APIs.",
+            DeprecationWarning,
+            stacklevel=2)
 
     # Build Request
     return {
