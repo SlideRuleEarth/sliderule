@@ -1,6 +1,9 @@
-arrow: apache-arrow-19.0.1-0-g07b05dad1a
-gdal: v3.12.0-0-gb5a9fab4df
-geos: 3.14.1-0-gc389f532d
-libgeotiff: 1.7.4-0-g96024f6
-PROJ: 9.7.1-0-ge37c8172
 rapidjson: v1.1.0-763-g24b5e7a8
+arrow: apache-arrow-19.0.1-0-g07b05dad1a
+PROJ: 9.7.1-0-ge37c8172
+geos: 3.14.1-0-gc389f532d
+hdf5: hdf5-1.14.6-0-g7bf3404409
+gdal: v3.12.1-0-g21882def44
+libgeotiff: 1.7.4-0-g96024f6
+PDAL: 2.9.3-0-g53d298a9d
+aws-sdk-cpp: 1.11.727-0-g499b3356354

@@ -207,7 +207,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};
         rasterDset->SetGeoTransform(geot);
 
-        OGRSpatialReference *srcSrs = srcLayer->GetSpatialRef();
+        const OGRSpatialReference *srcSrs = srcLayer->GetSpatialRef();
         CHECKPTR(srcSrs);
 
         char *wkt;

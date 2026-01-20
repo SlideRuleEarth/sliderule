@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: "Route53 A record for a cluster subdomain"
+
+Parameters:
+  Domain:
+    Type: String
+    Description: "The base domain of the cluster (e.g. slideruleearth.io)"
+  Subdomain:
+    Type: String
+    Description: "The subdomain of the cluster (e.g. sliderule)"
+  PublicIp:
+    Type: String
+    Description: "The public IPv4 address"
+
+Resources:
+  OrgARecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Sub "${Subdomain}.${Domain}"
+      Type: A
+      TTL: "300"
+      ResourceRecords:
+        - !Ref PublicIp

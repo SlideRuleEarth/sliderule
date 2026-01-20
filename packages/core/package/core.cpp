@@ -33,7 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "AlertMonitor.h"
 #include "AmsLib.h"
 #include "Asset.h"
 #include "AssetIndex.h"
@@ -56,7 +55,6 @@
 #include "LuaLibraryTime.h"
 #include "LuaObject.h"
 #include "LuaScript.h"
-#include "ManagerLib.h"
 #include "MathLib.h"
 #include "Monitor.h"
 #include "MsgQ.h"
@@ -64,7 +62,6 @@
 #include "Ordering.h"
 #include "OutputFields.h"
 #include "OutputLib.h"
-#include "ProvisioningSystemLib.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
 #include "RequestFields.h"
@@ -73,7 +70,6 @@
 #include "StringLib.h"
 #include "SystemConfig.h"
 #include "Table.h"
-#include "TelemetryMonitor.h"
 #include "TimeLib.h"
 #include "OsApi.h"
 #ifdef __unittesting__
@@ -123,8 +119,6 @@ static int core_open (lua_State *L)
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
         {"logmon",          LogMonitor::luaCreate},
-        {"tlmmon",          TelemetryMonitor::luaCreate},
-        {"alrmon",          AlertMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
@@ -146,10 +140,6 @@ static int core_open (lua_State *L)
         {"orchunlock",      OrchestratorLib::luaUnlock},
         {"orchhealth",      OrchestratorLib::luaHealth},
         {"orchnodes",       OrchestratorLib::luaGetNodes},
-        {"pslogin",         ProvisioningSystemLib::luaLogin},
-        {"psvalidate",      ProvisioningSystemLib::luaValidate},
-        {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
-        {"manager",         ManagerLib::luaRequest},
         {"ams",             AmsLib::luaRequest},
         {"parms",           RequestFields::luaCreate},
         {"send2user",       OutputLib::luaSend2User},
@@ -182,6 +172,10 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FMT_TEXT",                 LogMonitor::TEXT);
     LuaEngine::setAttrInt   (L, "FMT_CLOUD",                LogMonitor::CLOUD);
     LuaEngine::setAttrStr   (L, "EVENTQ",                   EVENTQ);
+    LuaEngine::setAttrStr   (L, "LOG_REC_TYPE",             EventLib::logRecType);
+    LuaEngine::setAttrStr   (L, "TRACE_REC_TYPE",           EventLib::traceRecType);
+    LuaEngine::setAttrStr   (L, "TLM_REC_TYPE",             EventLib::telemetryRecType);
+    LuaEngine::setAttrStr   (L, "ALERT_REC_TYPE",           EventLib::alertRecType);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",                  RecordObject::INTEGER);

@@ -100,25 +100,22 @@ class SystemConfig: public FieldDictionary
         FieldElement<float>             normalMemoryThreshold       {1.0};
         FieldElement<float>             streamMemoryThreshold       {0.75};
         FieldElement<int>               msgQDepth                   {10000};
-        FieldElement<bool>              authenticateToProvSys       {false};
-        FieldElement<bool>              isPublic                    {false};
         FieldElement<bool>              inCloud                     {false};
         FieldElement<string>            systemBucket                {"sliderule"};
-        FieldList<string>               postStartupScripts;
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};
 
         // ENVIRONMENT VARIABLES
-        FieldElement<string>            ipv4                        {"127.0.0.1"};
-        FieldElement<string>            environmentVersion          {"unknown"};
-        FieldElement<string>            orchestratorURL             {"http://127.0.0.1:8050"};
-        FieldElement<string>            organization                {"localhost"};
-        FieldElement<string>            cluster                     {"localhost"};
-        FieldElement<string>            provSysURL                  {"https://ps.localhost"};
-        FieldElement<string>            managerURL                  {"http://127.0.0.1:8030"};
-        FieldElement<string>            amsURL                      {"http://127.0.0.1:9082"};
-        FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};
+        FieldElement<string>            ipv4;
+        FieldElement<string>            environmentVersion;
+        FieldElement<string>            orchestratorURL;
+        FieldElement<string>            alertStream;
+        FieldElement<string>            telemetryStream;
+        FieldElement<string>            cluster;
+        FieldElement<string>            amsURL;
+        FieldElement<bool>              isPublic;
+        FieldElement<string>            containerRegistry;
 
     private:
 
@@ -129,6 +126,9 @@ class SystemConfig: public FieldDictionary
         SystemConfig ();
         virtual ~SystemConfig  (void) override;
         static void setIfProvided(FieldElement<string>& field, const char* env);
+        static void setIfProvidedBool(FieldElement<bool>& field, const char* env);
+        static void setIfProvidedFormat(FieldElement<event_format_t>& field, const char* env);
+        static void setIfProvidedLevel(FieldElement<event_level_t>& field, const char* env);
 };
 
 /******************************************************************************
@@ -138,10 +138,12 @@ class SystemConfig: public FieldDictionary
 string convertToJson(const SystemConfig::event_format_t& v);
 int convertToLua(lua_State* L, const SystemConfig::event_format_t& v);
 void convertFromLua(lua_State* L, int index, SystemConfig::event_format_t& v);
+void convertFromStr(const char* str, SystemConfig::event_format_t& v);
 
 string convertToJson(const event_level_t& v);
 int convertToLua(lua_State* L, const event_level_t& v);
 void convertFromLua(lua_State* L, int index, event_level_t& v);
+void convertFromStr(const char* str, event_level_t& v);
 
 inline uint32_t toEncoding(SystemConfig::event_format_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(event_level_t& v) { (void)v; return Field::INT32; }

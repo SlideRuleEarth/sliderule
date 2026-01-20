@@ -183,7 +183,7 @@ class TestParquet:
         target_max_datetime_100us = (target_max_datetime_us // 100) * 100
 
         # Convert back to numpy.datetime64
-        epoch = numpy.datetime64('1970-01-01T00:00:00Z', 'us')
+        epoch = numpy.datetime64('1970-01-01T00:00:00', 'us')
         min_index_value = epoch + numpy.timedelta64(min_index_value_100us, 'us')
         target_min_datetime = epoch + numpy.timedelta64(target_min_datetime_100us, 'us')
 

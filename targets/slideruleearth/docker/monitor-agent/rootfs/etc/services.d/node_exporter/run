@@ -1,0 +1,10 @@
+#!/command/with-contenv bash
+if [ "${DISABLE_NODE_EXPORTER}" == "true" ]; then
+    echo "Node Exporter service disabled"
+    exec s6-pause
+fi
+
+exec /usr/local/bin/node_exporter \
+    --path.procfs=/host/proc \
+    --path.sysfs=/host/sys \
+    --path.rootfs=/rootfs

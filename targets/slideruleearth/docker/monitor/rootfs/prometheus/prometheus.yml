@@ -42,16 +42,16 @@ scrape_configs:
     # System Metrics for Orchestrator
   - job_name: 'orchestrator_sys'
     static_configs:
-      - targets: ['10.0.1.5:9100']
+      - targets: ['10.0.128.5:9100']
 
     # Application Metrics for Orchestrator
   - job_name: 'orchestrator_app'
     static_configs:
-      - targets: ['10.0.1.5:8050']
-    metrics_path: "/discovery/prometheus"
+      - targets: ['10.0.128.5:8050']
+    metrics_path: "/discovery/prometheus/orchestrator"
 
-    # Application Metrics for Manager
-  - job_name: 'manager_app'
+    # Application Metrics for Analyzer
+  - job_name: 'analyzer_app'
     static_configs:
-      - targets: ['10.0.1.3:8030']
-    metrics_path: "/manager/status/prometheus"
+      - targets: ['10.0.128.5:8050']
+    metrics_path: "/discovery/prometheus/analyzer"

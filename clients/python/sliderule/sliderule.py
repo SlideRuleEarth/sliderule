@@ -52,20 +52,20 @@ except:
 
 DEFAULT_CRS = "EPSG:4326"
 logger = logging.getLogger(__name__)
-slideruleSession = Session()
+slideruleSession = None
 
 ###############################################################################
 # APIs
 ###############################################################################
 
 #
-#  Initialize
+#  init
 #
 def init (
-    url=Session.PUBLIC_URL,
+    url=Session.PUBLIC_DOMAIN,
     verbose=False,
     loglevel=logging.INFO,
-    organization=0,
+    organization=Session.PUBLIC_CLUSTER,
     desired_nodes=None,
     time_to_live=60,
     plugins=None,
@@ -84,7 +84,7 @@ def init (
         loglevel:       int
                         minimum severity of log message to output
         organization:   str
-                        SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
+                        Cluster name that the client should connect to
         desired_nodes:  int
                         requested number of processing nodes in the cluster
         time_to_live:   int
@@ -110,13 +110,15 @@ def init (
     # create new global session
     slideruleSession = Session(
         domain=url,
+        cluster=organization,
         verbose=verbose,
         loglevel=loglevel,
-        organization=organization,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
-        log_handler=log_handler,
         rethrow=rethrow)
+    # configure logging
+    if log_handler != None:
+        logger.addHandler(log_handler)
     # verify compatibility between client and server versions
     try:
         status = check_version(plugins=plugins)
@@ -127,6 +129,25 @@ def init (
             logger.error(f'Initialization check failed: {e}')
         status = False
     return status
+
+#
+#  create_session
+#
+def create_session(**kwargs):
+    '''
+    Creates a SlideRule Session and returns it to the user
+
+    Returns
+    -------
+    Session
+        SlideRule session object which handles communication with SlideRule servers
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> session = sliderule.create_session(organization="myorg")
+    '''
+    return Session(**kwargs)
 
 #
 #  source
@@ -191,7 +212,7 @@ def set_url (domain, session=None):
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
     session = checksession(session)
-    session.service_domain = domain
+    session.domain = domain
 
 #
 #  set_verbose
@@ -325,24 +346,17 @@ def scaleout(desired_nodes, time_to_live, session=None):
 #
 # authenticate
 #
-def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None, session=None):
+def authenticate (ps_organization, github_token=None, session=None):
     '''
     Authenticate to SlideRule Provisioning System
-    The username and password can be provided the following way in order of priority:
-    (1) The passed in arguments `github_token` or `ps_username` and `ps_password`;
-    (2) The O.S. environment variables `PS_GITHUB_TOKEN` or `PS_USERNAME` and `PS_PASSWORD`;
-    (3) The `ps.<url>` entry in the .netrc file in your home directory
+    (1) The passed in argument `github_token`;
+    (2) The O.S. environment variables `SLIDERULE_GITHUB_TOKEN`;
+    (3) The GitHub device flow;
 
     Parameters
     ----------
         ps_organization:    str
                             name of the SlideRule organization the user belongs to
-
-        ps_username:        str
-                            SlideRule provisioning system account name
-
-        ps_password:        str
-                            SlideRule provisioning system account password
 
         github_token:       str
                             GitHub access token (minimum scope/permissions require)
@@ -359,7 +373,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None, github_to
         True
     '''
     session = checksession(session)
-    return session.authenticate(ps_organization, ps_username, ps_password, github_token)
+    return session.authenticate(ps_organization, github_token)
 
 #
 # gps2utc
@@ -408,7 +422,7 @@ def get_version (session=None):
     session = checksession(session)
     rsps = session.source("version", {})
     if rsps != None:
-        rsps["client"] = {"version": version.full_version, "organization": session.service_org}
+        rsps["client"] = {"version": version.full_version, "organization": session.cluster}
     return rsps
 
 #
@@ -433,7 +447,7 @@ def check_version (plugins=None, session=None):
 
     # check response from server
     if info == None:
-        raise FatalError(f'error connecting to {session.service_org}.{session.service_domain}')
+        raise FatalError(f'error connecting to {session.cluster}.{session.domain}')
 
     # populate version info
     versions = {}
@@ -839,4 +853,8 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 #
 def checksession(session):
     global slideruleSession
-    return session if session != None else slideruleSession
+    if session != None:
+        return session # use user provided session
+    elif slideruleSession == None:
+        init() # creates global sliderule session
+    return slideruleSession # use global sliderule session

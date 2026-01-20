@@ -1,0 +1,447 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Kinesis Firehose with S3 delivery and Athena querying'
+
+Parameters:
+
+  Domain:
+    Type: String
+  RecorderUrl:
+    Type: String
+  JwtIssuer:
+    Type: String
+  ProjectBucket:
+    Type: String
+  AlertStream:
+    Type: String
+  TelemetryStream:
+    Type: String
+  CorsAllowOrigins:
+    Type: CommaDelimitedList
+  CertificateArn:
+    Type: String
+  LambdaZipFile:
+    Type: String
+
+Resources:
+
+  #
+  # IAM Roles
+  #
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: AthenaQueryPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Athena permissions
+              - Effect: Allow
+                Action:
+                  - 'athena:StartQueryExecution'
+                  - 'athena:GetQueryExecution'
+                  - 'athena:GetQueryResults'
+                  - 'athena:StopQueryExecution'
+                  - 'athena:GetWorkGroup'
+                Resource:
+                  - !Sub 'arn:aws:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkGroup}'
+              # Glue permissions for data catalog
+              - Effect: Allow
+                Action:
+                  - 'glue:GetDatabase'
+                  - 'glue:GetTable'
+                  - 'glue:GetPartitions'
+                Resource:
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/*'
+              # S3 permissions for reading data and writing query results
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/telemetry/*'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/alerts/*'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/errors/*'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/athena-results/*'
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/athena-results/*'
+              # Firehose permissions (optional, if you need to check stream status)
+              - Effect: Allow
+                Action:
+                  - 'firehose:DescribeDeliveryStream'
+                  - 'firehose:ListDeliveryStreams'
+                Resource: "*"
+
+  FirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: FirehosePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:AbortMultipartUpload'
+                  - 's3:GetBucketLocation'
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:PutObject'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                  - 'lambda:GetFunctionConfiguration'
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*'
+
+  #
+  # Gateway Lambda Function
+  #
+  GatewayLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-reporter'
+      Runtime: python3.13
+      Handler: main.lambda_gateway
+      Role: !GetAtt LambdaRole.Arn
+      Architectures:
+        - arm64
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          GLUE_DATABASE: !Ref GlueDatabase
+          ATHENA_WORKGROUP: !Ref AthenaWorkGroup
+          ATHENA_OUTPUT_LOCATION: !Sub 's3://${ProjectBucket}/athena-results/'
+          ALERT_TABLE: !Ref AlertTable
+          TELEMETRY_TABLE: !Ref TelemetryTable
+
+  #
+  # Kinesis Firehose Alert Stream
+  #
+  AlertWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/kinesisfirehose/${AWS::StackName}-alert-stream'
+      RetentionInDays: 7
+  AlertCloudWatchLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref AlertWatchLogGroup
+      LogStreamName: S3Delivery
+  AlertFirehoseDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    DependsOn:
+      - FirehoseRole
+    Properties:
+      DeliveryStreamName: !Ref AlertStream
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
+        RoleARN: !GetAtt FirehoseRole.Arn
+        Prefix: 'alerts/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/'
+        ErrorOutputPrefix: 'errors/alerts/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/!{firehose:error-output-type}/'
+        BufferingHints:
+          SizeInMBs: 64
+          IntervalInSeconds: 300
+        CompressionFormat: GZIP
+        DynamicPartitioningConfiguration:
+          Enabled: true
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+            - Type: MetadataExtraction
+              Parameters:
+                - ParameterName: MetadataExtractionQuery
+                  ParameterValue: '{year: .timestamp | strftime("%Y"), month: .timestamp | strftime("%m"), day: .timestamp | strftime("%d")}'
+                - ParameterName: JsonParsingEngine
+                  ParameterValue: JQ-1.6
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref AlertWatchLogGroup
+          LogStreamName: !Ref AlertCloudWatchLogStream
+
+  #
+  # Kinesis Firehose Telemetry Stream
+  #
+  TelemetryWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/kinesisfirehose/${AWS::StackName}-telemetry-stream'
+      RetentionInDays: 7
+  TelemetryCloudWatchLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref TelemetryWatchLogGroup
+      LogStreamName: S3Delivery
+  TelemetryFirehoseDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    DependsOn:
+      - FirehoseRole
+    Properties:
+      DeliveryStreamName: !Ref TelemetryStream
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub 'arn:aws:s3:::${ProjectBucket}'
+        RoleARN: !GetAtt FirehoseRole.Arn
+        Prefix: 'telemetry/year=!{partitionKeyFromQuery:year}/month=!{partitionKeyFromQuery:month}/day=!{partitionKeyFromQuery:day}/'
+        ErrorOutputPrefix: 'errors/telemetry/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/!{firehose:error-output-type}/'
+        BufferingHints:
+          SizeInMBs: 64
+          IntervalInSeconds: 300
+        CompressionFormat: GZIP
+        DynamicPartitioningConfiguration:
+          Enabled: true
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+            - Type: MetadataExtraction
+              Parameters:
+                - ParameterName: MetadataExtractionQuery
+                  ParameterValue: '{year: .timestamp | strftime("%Y"), month: .timestamp | strftime("%m"), day: .timestamp | strftime("%d")}'
+                - ParameterName: JsonParsingEngine
+                  ParameterValue: JQ-1.6
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref TelemetryWatchLogGroup
+          LogStreamName: !Ref TelemetryCloudWatchLogStream
+
+  #
+  # Glue Database and Tables for Athena
+  #
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub '${AWS::StackName}_database'
+        Description: Database for telemetry and alert data
+
+  AlertTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: alerts
+        Description: Alert messages from Kinesis Firehose
+        TableType: EXTERNAL_TABLE
+        PartitionKeys:
+          - Name: year
+            Type: string
+          - Name: month
+            Type: string
+          - Name: day
+            Type: string
+        StorageDescriptor:
+          Columns:
+            - Name: timestamp
+              Type: string
+            - Name: code
+              Type: int
+            - Name: cluster
+              Type: string
+            - Name: version
+              Type: string
+            - Name: message
+              Type: string
+          Location: !Sub 's3://${ProjectBucket}/alerts/'
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.openx.data.jsonserde.JsonSerDe
+          Compressed: true
+          StoredAsSubDirectories: false
+        Parameters:
+          classification: json
+          compressionType: gzip
+
+  TelemetryTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: telemetry
+        Description: Telemetry messages from Kinesis Firehose
+        TableType: EXTERNAL_TABLE
+        PartitionKeys:
+          - Name: year
+            Type: string
+          - Name: month
+            Type: string
+          - Name: day
+            Type: string
+        StorageDescriptor:
+          Columns:
+            # Define your telemetry schema here - adjust based on your actual data structure
+            - Name: timestamp
+              Type: string
+            - Name: source_ip
+              Type: string
+            - Name: aoi_x
+              Type: double
+            - Name: aoi_y
+              Type: double
+            - Name: client
+              Type: string
+            - Name: endpoint
+              Type: string
+            - Name: duration
+              Type: double
+            - Name: code
+              Type: int
+            - Name: account
+              Type: string
+            - Name: cluster
+              Type: string
+            - Name: version
+              Type: string
+          Location: !Sub 's3://${ProjectBucket}/telemetry/'
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.openx.data.jsonserde.JsonSerDe
+          Compressed: true
+          StoredAsSubDirectories: false
+        Parameters:
+          classification: json
+          compressionType: gzip
+
+  #
+  # Athena WorkGroup
+  #
+  AthenaWorkGroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-workgroup'
+      Description: WorkGroup for querying telemetry and alert data
+      State: ENABLED
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: true
+        PublishCloudWatchMetricsEnabled: true
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://${ProjectBucket}/athena-results/'
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3
+
+  #
+  # API Gateway (HTTP)
+  #
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: Recorder API for SlideRule
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref CorsAllowOrigins
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - recorder
+        Issuer: !Ref JwtIssuer
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+  ReportRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /report'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref RecorderUrl
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref CertificateArn
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Ref RecorderUrl
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false

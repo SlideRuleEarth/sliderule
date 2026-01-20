@@ -1,0 +1,14 @@
+name: SlideRule Test Report
+
+on:
+  schedule:
+    - cron: '0 22 * * 5' # Every Sunday at 10 pm
+
+jobs:
+  call-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query SlideRule Test Report
+        run: |
+          set -e  # stop workflow if curl exits non-zero
+          curl -f --silent --show-error https://example.com/api/check

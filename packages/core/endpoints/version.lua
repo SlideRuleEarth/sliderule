@@ -36,8 +36,7 @@ local rsps = {
         launch=launch,
         duration=duration,
         packages=packages,
-        cluster=sys.getcfg("cluster"),
-        organization=sys.getcfg("organization")
+        cluster=sys.getcfg("cluster")
     }
 }
 

@@ -92,24 +92,6 @@ class EndpointObject: public LuaObject
         typedef Dictionary<string*> HeaderDictionary;
 
         /*--------------------------------------------------------------------
-         * Authenticator Subclass
-         *--------------------------------------------------------------------*/
-
-         class Authenticator: public LuaObject
-         {
-             public:
-
-                 static const char* OBJECT_TYPE;
-                 static const char* LUA_META_NAME;
-                 static const struct luaL_Reg LUA_META_TABLE[];
-
-                 explicit Authenticator(lua_State* L);
-                 ~Authenticator(void) override;
-
-                 virtual bool isValid(const char* token) = 0;
-        };
-
-        /*--------------------------------------------------------------------
          * Request Subclass
          *--------------------------------------------------------------------*/
 
@@ -143,15 +125,13 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
                             EndpointObject      (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-                            ~EndpointObject     (void) override;
-        bool                authenticate        (Request* request) const;
+                            ~EndpointObject     (void) override = default;
 
         static verb_t       str2verb            (const char* str);
         static const char*  verb2str            (verb_t verb);
         static code_t       str2code            (const char* str);
         static const char*  code2str            (code_t code);
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
-        static int          luaAuth             (lua_State* L);
 
         virtual bool        handleRequest       (Request* request) = 0;
 
@@ -160,7 +140,6 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
          static FString     serverHead;
-         Authenticator*     authenticator;
  };
 
 #endif  /* __endpoint_object__ */

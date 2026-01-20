@@ -92,9 +92,7 @@ ArrowEndpoint::~ArrowEndpoint(void) = default;
 void* ArrowEndpoint::requestThread (void* parm)
 {
     int status_code = RTE_STATUS;
-    rqst_info_t* info = static_cast<rqst_info_t*>(parm);
-    EndpointObject::Request* request = info->request;
-    ArrowEndpoint* arrow_endpoint = dynamic_cast<ArrowEndpoint*>(info->endpoint);
+    EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
     const double start = TimeLib::latchtime();
 
     /* Get Request Script */
@@ -111,41 +109,28 @@ void* ArrowEndpoint::requestThread (void* parm)
     const FString arrow_rspq("%s-arrow", request->id); // well known, must match responseThread
     Publisher* rspq = new Publisher(arrow_rspq.c_str());
 
-    /* Check Authentication */
-    const bool authorized = arrow_endpoint->authenticate(request);
+    /* Create Engine */
+    LuaEngine* engine = new LuaEngine(script_path, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
-    /* Handle Request */
-    if(authorized)
+    /* Supply Global Variables to Script */
+    request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument_ptr);
+
+    /* Execute Engine
+        *  The call to execute the script blocks on completion of the script. The lua state context
+        *  is locked and cannot be accessed until the script completes */
+    const bool status = engine->executeEngine(IO_PEND);
+
+    /* Check Status
+        *  At this point the http header has already been sent, so an error header cannot be sent;
+        *  but we can log the error and report it as such in telemetry */
+    if(!status)
     {
-        /* Create Engine */
-        LuaEngine* engine = new LuaEngine(script_path, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
-
-        /* Supply Global Variables to Script */
-        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument_ptr);
-
-        /* Execute Engine
-         *  The call to execute the script blocks on completion of the script. The lua state context
-         *  is locked and cannot be accessed until the script completes */
-        const bool status = engine->executeEngine(IO_PEND);
-
-        /* Check Status
-         *  At this point the http header has already been sent, so an error header cannot be sent;
-         *  but we can log the error and report it as such in telemetry */
-        if(!status)
-        {
-            mlog(CRITICAL, "Failed to execute script %s", script_path);
-            status_code = RTE_FAILURE;
-        }
-
-        /* Clean Up */
-        delete engine;
+        mlog(CRITICAL, "Failed to execute script %s", script_path);
+        status_code = RTE_FAILURE;
     }
-    else
-    {
-        /* Respond with Unauthorized Error */
-        sendHeader(rspq, Unauthorized, "Unauthorized");
-        status_code = RTE_UNAUTHORIZED;
-    }
+
+    /* Clean Up */
+    delete engine;
 
     /* End Response */
     const int rc = rspq->postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
@@ -170,7 +155,6 @@ void* ArrowEndpoint::requestThread (void* parm)
     delete rspq;
     delete [] script_path;
     delete request; // deleted here only
-    delete info;
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
@@ -361,10 +345,7 @@ bool ArrowEndpoint::handleRequest (Request* request)
     const Thread rsps_pid(responseThread, response_info, false);
 
     /* Start Response Thread */
-    rqst_info_t* request_info = new rqst_info_t;
-    request_info->endpoint = this;
-    request_info->request = request;
-    const Thread rqst_pid(requestThread, request_info, false);
+    const Thread rqst_pid(requestThread, request, false);
 
     /* Return Response Type (only streaming supported) */
     return true;

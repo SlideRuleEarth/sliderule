@@ -22,7 +22,13 @@ scrape_configs:
           host: ip
           level: level
 
-    static_configs:
-      - labels:
-          job: sliderule
-          __path__: /var/lib/docker/containers/*/*.log
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '^/monitor-agent$'
+        action: drop
+      - replacement: 'sliderule'
+        target_label: 'job'

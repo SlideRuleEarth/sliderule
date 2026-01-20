@@ -136,7 +136,7 @@ SlideRule is normally run wuth a lua script passed to it at startup in order to 
 
 A server running at port 9081 can be started via:
 ```bash
-$ sliderule targets/slideruleearth/server.lua <config.json>
+$ sliderule targets/slideruleearth/server.lua
 ```
 
 A self-test that dynamically checks which packages are present and runs their associated unit tests can be started via:
