@@ -70,6 +70,7 @@ def init (
     time_to_live=60,
     plugins=None,
     log_handler=None,
+    github_token=None,
     rethrow=False ):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
@@ -93,6 +94,8 @@ def init (
                         names of the plugins that need to be available on the server
         log_handler:    logger
                         user provided logging handler
+        github_token:   str
+                        personal access token for GitHub authentication
         rethrow:        bool
                         client rethrows exceptions to be handled by calling code
 
@@ -115,6 +118,7 @@ def init (
         loglevel=loglevel,
         desired_nodes=desired_nodes,
         time_to_live=time_to_live,
+        github_token=github_token,
         rethrow=rethrow)
     # configure logging
     if log_handler != None:
@@ -342,38 +346,6 @@ def scaleout(desired_nodes, time_to_live, session=None):
     '''
     session = checksession(session)
     return session.scaleout(desired_nodes, time_to_live)
-
-#
-# authenticate
-#
-def authenticate (ps_organization, github_token=None, session=None):
-    '''
-    Authenticate to SlideRule Provisioning System
-    (1) The passed in argument `github_token`;
-    (2) The O.S. environment variables `SLIDERULE_GITHUB_TOKEN`;
-    (3) The GitHub device flow;
-
-    Parameters
-    ----------
-        ps_organization:    str
-                            name of the SlideRule organization the user belongs to
-
-        github_token:       str
-                            GitHub access token (minimum scope/permissions require)
-
-    Returns
-    -------
-    status
-        True of successful, False if unsuccessful
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.authenticate("myorg")
-        True
-    '''
-    session = checksession(session)
-    return session.authenticate(ps_organization, github_token)
 
 #
 # gps2utc

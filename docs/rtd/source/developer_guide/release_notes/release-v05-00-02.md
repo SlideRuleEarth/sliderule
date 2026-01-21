@@ -19,6 +19,8 @@ Version description of the v5.0.2 release of SlideRule Earth.
 
 * Raster sampling support has been optimized for x-series APIs at the cost of legacy p-series API performance.  All users are strongly encouraged to switch to x-series APIs when performing raster sampling as the old p-series APIs will take much longer now.
 
+* Removed the `sliderule.authenticate` function as authentication must now occur when a SlideRule session is created.
+
 * [v5.0.2](/web/rtd/developer_guide/release_notes/release-v05-00-00.html) - Polygons used for `earthdata.stac` requests no longer need to be nested lists, but are supplied in the same format as all other requests:
 ```Python
 poly = [
