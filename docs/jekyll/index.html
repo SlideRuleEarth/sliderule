@@ -37,20 +37,7 @@ feature_row:
 
 <h2 style="text-align: center;">Project News</h2>
 
-{% assign six_months_seconds = 15552000 %}
-{% assign now_seconds = 'now' | date: "%s" | plus: 0 %}
-{% assign six_months_ago_seconds = now_seconds | minus: six_months_seconds %}
-
-{% assign recent_posts = "" | split: "" %}
-
-{% for post in site.posts %}
-  {% assign post_seconds = post.date | date: "%s" | plus: 0 %}
-  {% if post_seconds >= six_months_ago_seconds %}
-    {% assign recent_posts = recent_posts | push: post %}
-  {% endif %}
-{% endfor %}
-
-{% assign recent_posts = recent_posts | reverse %}
+{% assign recent_posts = site.posts | slice: 0, 3 %}
 
 <ul class="latest-updates" style="list-style: none; text-align: center; padding: 0;">
 {% for post in recent_posts %}
