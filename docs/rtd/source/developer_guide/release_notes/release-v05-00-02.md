@@ -97,9 +97,25 @@ Instead the request json must change to be this:
 ## Benchmarks
 > clients/python/utils/benchmark.py
 ```
+atl06_aoi <766208 x 16> - 29.947413 secs
+atl06_ancillary <916 x 17> - 2.865666 secs
+atl03_ancillary <916 x 17> - 2.525880 secs
+atl06_parquet <1600 x 18> - 2.707429 secs
+atl03_parquet <23072 x 23> - 1.626420 secs
+atl06_sample_landsat <916 x 20> - 58.570350 secs
+atl06_sample_zonal_arcticdem <1695 x 27> - 4.856738 secs
+atl06_sample_nn_arcticdem <1695 x 20> - 4.646599 secs
+atl06_msample_nn_arcticdem <1695 x 20> - 4.546073 secs
+atl06_no_sample_arcticdem <1695 x 16> - 2.524935 secs
+atl03_rasterized_subset <51832 x 22> - 2.428944 secs
+atl03_polygon_subset <50615 x 22> - 2.160177 secs
 ```
 
 ## Baseline
 > clients/python/utils/baseline.py
 ```
+GEDI / 3DEP = 2653.7247077111642
+ICESat-2 / ArcticDEM = 1598.2301327720206
+ICESat-2 / ATL06p = 1809.893690173468
+ICESat-2 / PhoREAL = 3.245903730392456
 ```
