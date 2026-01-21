@@ -53,12 +53,6 @@ scaleout
 
 """"""""""""""""
 
-authenticate
-------------
-.. autofunction:: sliderule.authenticate
-
-""""""""""""""""
-
 gps2utc
 -------
 .. autofunction:: sliderule.gps2utc

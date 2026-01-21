@@ -342,7 +342,7 @@ def scaleout(desired_nodes, time_to_live, session=None):
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.scaleout(4, 300, False)
+        >>> sliderule.scaleout(4, 300)
     '''
     session = checksession(session)
     return session.scaleout(desired_nodes, time_to_live)
