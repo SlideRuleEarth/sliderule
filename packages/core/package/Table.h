@@ -366,6 +366,8 @@ bool Table<T,K>::remove(K key)
     /* Add to Open List */
     table[open_index].prev = (K)INVALID_KEY;
     table[open_index].next = openEntry;
+    /* Maintain open list back-link for the old head */
+    if(openEntry != (K)INVALID_KEY) table[openEntry].prev = open_index;
     openEntry = open_index;
 
     /* Update Statistics */
