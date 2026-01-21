@@ -1,99 +1,201 @@
 # Private Clusters
 
-2023-02-24
+2026-01-20
 
-## Background
+:::{note}
+With release v5.0.2, SlideRule has transitioned the management of private clusters from the django-based ***SlideRule Provisioning System*** which was deployed in AWS ECS, to the pure Python-based ***SlideRule Authenticator*** and ***SlideRule Provisioner*** which are deployed via AWS Lambda.  The main functions of the original system have been preserved, with a change in focus on clusters for individual users instead of organizations.
+:::
 
-With release v2.0.0, SlideRule supports private clusters - clusters that can only be accessed by authenticated users affiliated with the cluster.  Prior to v2.0.0, all of SlideRule's services were provided by a single cluster of nodes executing in AWS us-west-2, available publicly to anyone on the internet. This makes SlideRule's services easy to access, yet suffers when many users try to access SlideRule at the same time.  The SlideRule team can only allocate a certain level of funding towards a public cluster and cannot satisfy the processing needs of everyone at once.
+## Overview
 
-For users of SlideRule that have access to their own funding, private clusters provide a way to have access to all of SlideRules services without having to share the processing power behind those services with other users or organizations.  In order to manage private clusters and authenticate users, the SlideRule team developed a system called the SlideRule Provisioning System at [https://ps.slideruleearth.io](https://ps.slideruleearth.io).  The SlideRule Provisioning System provides the following functionality:
+Private clusters are dedicated SlideRule deployments that restrict access to authenticated users associated with a specific organization or project.  If you want to use a private cluster, please reach out to the SlideRule team via one of the methods described on our [Contact Us](https://slideruleearth.io/contact/) page.
 
-* Deploys and destroys SlideRule clusters
-* Manages and authenticates users
-* Generates temporary credentials needed to access a private SlideRule cluster
-* Maintains a custom budget for each private cluster
-* Tracks the AWS accrued cost of a private cluster and will both prevent a cluster from starting if insufficient funds are available and automatically shuts down a private cluster when funds have been exhausted
-* Implements automatic sleeping and waking functions for a cluster in order to save costs
+SlideRule services are typically delivered through a single, publicly accessible cluster running in AWS us-west-2. While this centralized model makes the platform easy to access, it introduces performance limitations during periods of high demand. Because the SlideRule team operates within fixed budget constraints, the public cluster cannot be scaled indefinitely to meet all concurrent processing needs.
 
+Private clusters address these limitations by providing organizations with exclusive access to SlideRule services and compute resources, eliminating contention with other users. This model ensures predictable performance, improved reliability, and greater control over resource utilization.
 
-## Getting Started with Private Clusters
+To support private cluster management and secure access, the SlideRule team developed two serverless components:
+* ***SlideRule Authenticator*** – handles user authentication and identity verification
+* ***SlideRule Provisioner*** – manages cluster lifecycle operations, including deployment and teardown
 
-### 1. Creating an Account
+### SlideRule Authenticator
 
-Create an account on the [SlideRule Provisioning System](https://ps.slideruleearth.io).  Both local and GitHub social accounts are supported.
+The _SlideRule Authenticator_ is an AWS Lambda–based authentication service that delegates user authentication to GitHub using OAuth 2.0. User login requests are redirected to GitHub’s authorization endpoint, where credentials are verified by GitHub. Upon successful authentication, GitHub returns an authorization grant that the service exchanges for an access token to establish the user’s identity.
 
-### 2. Joining a Private Cluster
+The _SlideRule Authenticator_ is available at https://login.slideruleearth.io and exposes the following API endpoints.
+* __/auth/github/login__: Initiates the OAuth 2.0 authorization code flow for browser-based clients.
+* __/auth/github/device__: Implements the OAuth 2.0 device authorization flow for CLI and Python clients.
+* __/auth/github/pat__: Supports authentication using GitHub personal access tokens for automated systems.
+* __/auth/refresh__: Exchanges a valid refresh token for a new JSON Web Token (JWT).
+* __/auth/github/pem__: Returns the public signing key in PEM format.
+* __/.well-known/jwks.json__: Publishes the public signing keys in JWKS format.
+* __/.well-known/openid-configuration__: Provides OpenID Connect discovery metadata.
 
-Log into the provisioning system.  If you are already affiliated with an organization that has a private cluster on slideruleearth.io, then request membership to that organization using the "Request Membership" button under the organization's dropdown view.  If you want to create your own organization, please reach out to the SlideRule science team via one of the methods described on our [Contact Us](https://slideruleearth.io/contact/) page.
+### SlideRule Provisioning System
 
-### 3. Authenticating to a Private Cluster
+The _SlideRule Provisioner_ is a serverless provisioning service implemented as a set of AWS Lambda functions. It uses AWS CloudFormation to create, manage, and delete SlideRule clusters. Access to the service requires authentication and verified membership in the SlideRuleEarth GitHub organization.
 
-For **local** accounts, there are three ways to provide your credentials to the Python client:
+The _SlideRule Provisioner_ is available at https://provisioner.slideruleearth.io and exposes the following API endpoints.
+* __/deploy__: Provisions a new SlideRule cluster using AWS CloudFormation and assigns it the  `<my_cluster>.slideruleearth.io` subdomain.
+* __/extend__: Extends the time-to-live (TTL) of an existing cluster.
+* __/destroy__: Decommissions and deletes an existing cluster and its associated resources.
+* __/status__: Returns the current status, software version, capacity, and scheduled auto-shutdown time of a cluster.
+* __/events__: Retrieves AWS CloudFormation event logs for the most recent cluster operation.
+* __/report__: Returns a summary table of all active deployed clusters.
+* __/test__: Executes an automated test suite against the current SlideRule codebase.
 
-Option 1. Set up a __.netrc__ file in your home directory with the following entry:
-```
-machine ps.slideruleearth.io login <your_username> password <your_password>
-```
+### User Access Levels
 
-Option 2. Set environment variables with your username and password:
-```bash
-export PS_USERNAME=<your_username>
-export PS_PASSWORD=<your_password>
-```
+Access to SlideRule services is governed by user privilege level. Each level determines which clusters can be accessed, applicable rate limits, and available API endpoints.
 
-Option 3. Provide your credentials directly to the Python client:
+1. **Anonymous Users** can access public clusters only (e.g., https://sliderule.slideruleearth.io).
+   They are subject to the strictest rate limits and restricted access to certain endpoints.
+
+2. **Authenticated GitHub Users** can access public clusters only, with partial endpoint restrictions.
+   They benefit from relaxed rate limits compared to anonymous users.
+
+3. **SlideRuleEarth Members** may deploy and access a limited set of private clusters.
+   They have no rate limits and full access to all endpoints.
+
+4. **SlideRuleEarth Owners** have unrestricted access to all clusters, including private deployments.
+   They have no rate limits and full access to all endpoints.
+
+### Typical Use Case
+
+Users who want access to private clusters must first have a GitHub account and be invited to be a member of the SlideRuleEarth GitHub organization.  Once membership is established, the user can deploy a private cluster directly from their Python script using the SlideRule Python client, or from the SlideRule Web Client.  Each private cluster has a time-to-live (TTL) that can be incrementally extended while still running.  The user then has authenticated access to the private cluster until the end of the time-to-live period is reached, at which point the cluster will automatically delete itself.
+
+## Using Private Clusters with the SlideRule Python Client
+
+### Prerequisites
+
+* SlideRule Python client v5.0.2 or above
+* GitHub membership to the SlideRuleEarth organization
+
+### Authenticate
+
+There are two ways to authenticate using the Python client: (1) a personal access token (PAT), and (2) the device flow.
+
+#### Personal Access Token
+
+Using the GitHub web or command line client, generate a personal access token (classic) with the following permissions: `public_repo, read:org, read:project, read:public_key, read:user, repo:status, repo_deployment, user:email`, and save this key in a secure way on your system.
+
+Inside your Python script, provide the PAT to the SlideRule Python client by one of the following methods:
+
+* Setting the SLIDERULE_GITHUB_TOKEN environment variable with the contents of the PAT
+
+* Creating a SlideRule session with the PAT key provided
 ```Python
-sliderule.authenticate("<your_organization>", ps_username="<your_username>", ps_password="<your_password>")
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>", github_token="<PAT>")
 ```
 
-For **GitHub** social accounts, there are two ways to provide your credentials to the Python client:
-
-Option 1. Set an environment variable with your access token:
-```bash
-export SLIDERULE_GITHUB_TOKEN=<your_github_access_token>
-```
-
-Option 2. Provide your credentials directly to the Python client:
+* Initializing the SlideRule Python client with the PAT key
 ```Python
-sliderule.authenticate("<your_organization>", github_token="<your_github_access_token>")
+import sliderule
+sliderule.init(github_token="<PAT>")
 ```
 
-### 4. Accessing a Private Cluster
+#### Device Flow
 
-To use a private cluster from your Python script, you must let the Python client know that you are accessing the private cluster instead of the public cluster. To accomplish that, you must supply the name of the organization to your initialization call:
+If a PAT key is not provided by one of the methods described above, and the SlideRule Python client is configured to access a private cluster, then the client code will automatically initiate the device flow authentication process.  The user will be interactively prompted to navigate to GitHub and enter a one-time verification code.  Once entered, the client will complete the authentication process.
 
+
+### Access
+
+Users configure the SlideRule Python client to communicate with their private cluster when the client is initialized.
+
+For session based configuration, the following code initializes the client to talk to `<my_cluster>`:
 ```Python
-sliderule.init("slideruleearth.io", organization="<your_organization>", ...)
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>")
 ```
 
-> Note that behind the scenes, the `sliderule.init` call makes a call to`sliderule.authenticate` to automatically authenticate you as a user of the cluster.  It will first look in the environment for your credentials, and then if not found there, will look for a .netrc file.  If you want to provide credentials directly to the `sliderule.authenticate` call, then that can be done after the `sliderule.init` call.
-
-### 5. Scaling and Provisioning a Private Cluster
-
-A private cluster is configured by the manager/owner of the cluster with a minimal number of nodes.  If the minimal number of nodes is insufficient for the processing the user wants to accomplish, the user can temporarily increase the number of nodes running for a user-defined amount of time, up to a maximum number of nodes set by the owner.  This is called scaling the cluster.  In most cases, the cluster is configured with the minimal number of nodes set to zero.  In this case, anyone wishing to use the cluster must first scale the cluster to at least one node before they are able to use it (we call this provisioning the cluster).
-
-Scaling / provisioning a cluster can be accomplished a few different ways depending on the needs of the user and whether or not the cluster is at zero nodes (fully shutdown) or not.
-* If you want to guarantee that the cluster is up and that a minimal number of nodes is running before you do any data processing in your script, you can specify the desired number of nodes and a time to live in the `sliderule.init` call.  For example:
+For functional configuration, the following code initializes the client to talk to `<my_cluster>`:
 ```Python
-sliderule.init("slideruleearth.io", organization="{your_organization}", desired_nodes=5, time_to_live=60) # run 5 nodes for 60 minutes
+import sliderule
+sliderule.init(organization="<my_cluster>")
 ```
-* If you want to make a non-blocking request to increase the number of nodes in the cluster, then use `sliderule.update_available_servers`.  This will allow you to keep using the cluster while more nodes are started.  (Of course, if the cluster is not up at all, then subsequent requests to the cluster will fail until it all comes up). For example:
+
+> Note that behind the scenes, the `sliderule.init` call and `sliderule.create_session` call makes a call to`session.authenticate` to automatically authenticate the caller as a user of the cluster.  It will first look in the environment for `SLIDERULE_GITHUB_TOKEN`, and then if not found, will initiate the device flow authentication process.
+
+### Deploy
+
+There are multiple ways to deploy a private cluster from Python with slightly different behaviors.
+
+#### Session-based Deployments
+
+**Method (1) Create Session**: Blocks until cluster is deployed
 ```Python
-sliderule.update_available_servers(desired_nodes=5, time_to_live=60) # kick off starting 5 nodes for 60 minutes
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>", desired_nodes=1, time_to_live=60) # run 1 node for 60 minutes
 ```
-* If you want to make a blocking request to increase the number of nodes in the cluster, then use `sliderule.scaleout`.  This is the call that `sliderule.init` makes underneath, which means that using the `init` family of functions with the `desired_nodes` argument set, will also block.
+
+**Method (2) Session Update Available Servers**: Asynchronous request to deploy cluster; returns number of nodes currently running
 ```Python
-sliderule.scaleout(desired_nodes=5, time_to_live=60) # request and wait for 5 nodes for 60 minutes
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>")
+session.update_available_servers(desired_nodes=1, time_to_live=60) # kick off starting 1 node for 60 minutes
+```
+
+**Method (3) Session Scaleout**: Blocks until cluster is deployed
+```Python
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>")
+session.scaleout(1, 60) # request and wait for 1 node, once started it will live for 60 minutes
+```
+
+#### Functional Deployments
+
+**Method (4) Init**: Blocks until cluster is deployed
+```Python
+import sliderule
+sliderule.init(organization="<my_cluster>", desired_nodes=1, time_to_live=60) # run 1 node for 60 minutes
+```
+
+**Method (5) Update Available Servers**: Asynchronous request to deploy cluster; returns number of nodes currently running
+```Python
+import sliderule
+sliderule.init(organization="<my_cluster>")
+sliderule.update_available_servers(desired_nodes=1, time_to_live=60) # kick off starting 1 node for 60 minutes
+```
+
+**Method (6) Scaleout**: Blocks until cluster is deployed
+```Python
+import sliderule
+sliderule.init(organization="<my_cluster>")
+sliderule.scaleout(1, 60) # request and wait for 1 node, once started it will live for 60 minutes
+```
+
+### Extend
+
+If a deployed cluster is still expected to be in use past its time-to-live period, the auto-shutdown time of the cluster can be extended via the following:
+```Python
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>")
+session.provisioner.extend(ttl=60) # extend life of cluster to 60 minutes from now
+```
+
+> Note the time provided to the call to extend the life of the cluster is not added onto the end of the previous time-to-live, but is instead used to replace the current time-to-live with the time calculated as `now + ttl`.
+
+### Destroy
+
+Users do not need to manually destroy clusters as each cluster will automatically destroy itself when its time-to-live has period has been reached.  But for cases where a user wishes to manually destroy a cluster, the following code will immediately destroy the cluster.
+```Python
+import sliderule
+session = sliderule.create_session(cluster="<my_cluster>")
+session.provisioner.destroy()
 ```
 
 ## Troubleshooting
 
-* **Version Incompatibilities**: Private clusters run a pinned version of the sliderule server code which is determined by the owner of the cluster.  If your client is on a different version than the server, please work with the owner of your cluster to resolve which client version you should be running.  Note that version incompatibilities will be reported by the client on initialization like so:
+* **Version Incompatibilities**: Private clusters run the latest version of the sliderule server code which may be more recent than the released version running on the public cluster.  If your client is on a different version than the private cluster server, please updated your client using the instructions provided in our [Installation Guide](/web/rtd/getting_started/Install.html).  Note that version incompatibilities will be reported by the client on initialization like so:
 ```
 RuntimeError: Client (version (4, 0, 2)) is incompatible with the server (version (3, 7, 0))
 ```
 
-* **Cluster Not Started**: Private clusters can be configured to completely shutdown when not in use.  When that happens, one of the scaling techniques above must be used to start the cluster.  When this happens, users will see a message like:
+* **Cluster Not Started**: Private clusters will completely shutdown (be destroyed) when their time-to-live period has been reached.  When that happens, one of the scaling techniques above must be used to restart the cluster.  When this happens, users will see a message like:
 ```
-Connection error to endpoint https://{your_organization}.slideruleearth.io/source/version ...retrying request
+Connection error to endpoint https://{cluster}.slideruleearth.io/source/version ...retrying request
 ```
+
+* **Quick Restarts**: The DNS entry for the cluster subdomain has a roughly five minute time-to-live and so quickly destroying a cluster and then redeploying it will possibly encounter a few minutes where the new cluster has been deployed but the DNS entries are still pointing to the old cluster.  Waiting for a few minutes will resolved the issue.

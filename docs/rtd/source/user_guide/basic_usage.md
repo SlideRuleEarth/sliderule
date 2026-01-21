@@ -46,14 +46,15 @@ If you wanted to use multiple modules from the SlideRule Python client, you coul
 from sliderule import sliderule, earthdata, icesat2
 ```
 
-### Optionally Configure the Client
+### Configure the Client
 
-You can begin using the SlideRule Python client right away without any configuration.  By default, the client is configured to use the public cluster and issue a minimal number of log messages, and if no further configuration is performed, all future processing requests will work with those settings.
+The client provides numerous routines for configuring its behavior.  Here is a list and short description of each of the available routines.  See the API Reference for a more detailed description.
 
-But the client provides numerous routines for configuring its behavior.  Here is a list and short description of each of the available routines.  See the API Reference for a more detailed description.
+sliderule.create_session
+:   Create a session associated with a SlideRule cluster and configure it with initial settings.
 
 sliderule.init
-:   Primary routine for configuring client; attempts to capture as parameters the typical settings that a user would want to change.
+:   Easy routine for configuring client; attempts to capture as parameters the typical settings that a user would want to change.  Internally, it calls `sliderule.create_session`.
 
 sliderule.set_url
 :   Configure the domain that the client points to for the server-side cluster; defaults to `slideruleearth.io` but can be changed to things like `localhost` for local development.  Typically, this should not be changed.
@@ -71,13 +72,10 @@ sliderule.set_processing_flags
 :   Certain streamed responses flag auxiliary fields in their response structure that indicate those fields are not necessary for core functionality; the client can be configured to skip those fields in order to speed up processing large responses.
 
 sliderule.update_available_servers
-:   Acquire the number of nodes in the cluster and make a request to change (e.g. request a capacity increase) the number of nodes in a cluster.
+:   Acquire the number of nodes in the cluster and make a request to deploy a cluster with the number of nodes provided.
 
 sliderule.scaleout
 :   Increase the number of nodes in a cluster and wait for the cluster to reach the requested capacity
-
-sliderule.authenticate
-:   Configure the organization that the client points to for processing requests.  This is paired with the `sliderule.set_url()` routine to create the full URL for processing requests.  For example, if the user calls `sliderule.set_url("slideruleearth.io")` and then `sliderule.authenticate("uw")` then the client will make all requests to `https://uw.slideruleearth.io`.  This routine also handles authenticating to the organization when the associated cluster is a private cluster.
 
 ### Define the Request Parameters
 
