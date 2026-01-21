@@ -127,14 +127,14 @@ There are multiple ways to deploy a private cluster from Python with slightly di
 **Method (1) Create Session**: Blocks until cluster is deployed
 ```Python
 import sliderule
-session = sliderule.create_session(cluster="<my_cluster>", desired_nodes=1, time_to_live=60) # run 1 node for 60 minutes
+session = sliderule.create_session(cluster="<my_cluster>", node_capacity=1, ttl=60) # run 1 node for 60 minutes
 ```
 
 **Method (2) Session Update Available Servers**: Asynchronous request to deploy cluster; returns number of nodes currently running
 ```Python
 import sliderule
 session = sliderule.create_session(cluster="<my_cluster>")
-session.update_available_servers(desired_nodes=1, time_to_live=60) # kick off starting 1 node for 60 minutes
+session.update_available_servers(node_capacity=1, ttl=60) # kick off starting 1 node for 60 minutes
 ```
 
 **Method (3) Session Scaleout**: Blocks until cluster is deployed
@@ -199,3 +199,8 @@ Connection error to endpoint https://{cluster}.slideruleearth.io/source/version 
 ```
 
 * **Quick Restarts**: The DNS entry for the cluster subdomain has a roughly five minute time-to-live and so quickly destroying a cluster and then redeploying it will possibly encounter a few minutes where the new cluster has been deployed but the DNS entries are still pointing to the old cluster.  Waiting for a few minutes will resolved the issue.
+
+* **Intermittent Authorization Errors**: Intermittently the AWS API Gateway for provisioner.slideruleearth.io fails to authorize a valid JWT and returns an error.  We are continuing to debug this effort, but in the meantime, a retry should suceed.  When this happens, users will see a message like:
+```
+401 Client Error: Unauthorized for url: https://provisioner.slideruleearth.io/
+```

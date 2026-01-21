@@ -130,8 +130,8 @@ class Session:
     def __init__ (self,
         domain          = PUBLIC_DOMAIN,
         cluster         = PUBLIC_CLUSTER,
-        desired_nodes   = None,
-        time_to_live    = 60, # minutes
+        node_capacity   = None,
+        ttl             = 60, # minutes
         verbose         = False,
         loglevel        = logging.INFO,
         trust_env       = False,
@@ -174,14 +174,14 @@ class Session:
             'arrowrec.eof': Session.__arrowrec
         }
 
-        # authenticate for non-public clusters
-        if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
-            self.authenticate(github_token=github_token)
-            self.scaleout(desired_nodes, time_to_live)
-
         # create wrappers for subclasses
         self.provisioner = self.__Provisioner(self)
         self.authenticator = self.__Authenticator(self)
+
+        # authenticate for non-public clusters
+        if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
+            self.authenticate(github_token=github_token)
+            self.scaleout(node_capacity, ttl)
 
     #
     #  source
@@ -344,14 +344,11 @@ class Session:
     #
     # update_available_servers
     #
-    def update_available_servers (self, desired_nodes=None, time_to_live=None):
+    def update_available_servers (self, node_capacity=None, ttl=None):
         '''
         makes a capacity request to the provisioning system (if requested) and
         returns the current capacity
         '''
-        # initialize local variables
-        requested_nodes = 0
-
         # get number of nodes currently registered
         try:
             rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
@@ -361,41 +358,41 @@ class Session:
             available_servers = 0
 
         # make provisioning request
-        if isinstance(desired_nodes, int):
-            rsps = self.provision("deploy", {
-                "cluster": self.cluster,
-                "is_public": False,
-                "node_capacity": desired_nodes,
-                "ttl": time_to_live
-            })
+        if isinstance(node_capacity, int):
+            rsps = self.provisioner.deploy(
+                is_public=False,
+                node_capacity=node_capacity,
+                ttl=ttl,
+                version="latest"
+            )
             logger.info(f'Provisioning request status: {rsps["status"]}')
 
         # return status
-        return available_servers, requested_nodes
+        return available_servers, node_capacity or 0
 
     #
     # scaleout
     #
-    def scaleout (self, desired_nodes, time_to_live):
+    def scaleout (self, node_capacity, ttl):
         '''
         makes a capacity request to the provisioning system and waits
         for the cluster to reach the requested capacity
         '''
         # check desired nodes
-        if desired_nodes is None:
+        if node_capacity is None:
             return # nothing needs to be done
-        if desired_nodes < 0:
-            raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
+        if node_capacity < 0:
+            raise FatalError("Number of desired nodes must be greater than zero ({})".format(node_capacity))
 
         # send initial request for desired cluster state
         start = time.time()
-        available_nodes,requested_nodes = self.update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
+        available_nodes,requested_nodes = self.update_available_servers(node_capacity=node_capacity, ttl=ttl)
         scale_up_needed = False
 
         # Wait for Cluster to Reach Desired State
         while available_nodes < requested_nodes:
             scale_up_needed = True
-            logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
+            logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, node_capacity, int(time.time() - start)))
             time.sleep(10.0)
             available_nodes,_ = self.update_available_servers()
             # Timeout Occurred

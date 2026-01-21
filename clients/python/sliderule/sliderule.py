@@ -116,8 +116,8 @@ def init (
         cluster=organization,
         verbose=verbose,
         loglevel=loglevel,
-        desired_nodes=desired_nodes,
-        time_to_live=time_to_live,
+        node_capacity=desired_nodes,
+        ttl=time_to_live,
         github_token=github_token,
         rethrow=rethrow)
     # configure logging
@@ -149,7 +149,7 @@ def create_session(**kwargs):
     Examples
     --------
         >>> import sliderule
-        >>> session = sliderule.create_session(organization="myorg")
+        >>> session = sliderule.create_session(cluster="my_cluster")
     '''
     return Session(**kwargs)
 
