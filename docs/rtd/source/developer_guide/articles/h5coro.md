@@ -108,7 +108,7 @@ Given that S3 has high-throughput and high-latency, the library strives to minim
 
 ## Where H5Coro Fits In
 
-![where h5coro fits in](../assets/where_h5coro_fits_in.png){: .align-center}
+![where h5coro fits in](../../assets/where_h5coro_fits_in.png)
 
 ## Performance Comparisons
 
@@ -116,7 +116,7 @@ The tests below were run using a local (US east coast, home computer) Python scr
 
 Some of the test runs were executed multiple times, while others were only executed once.  The two largest sources of variability were S3 performance and local file system caching.  Every attempt was made to limit variability in the data below, but the results should still only be considered a sampling of performance and not a predicted performance estimate.
 
-![h5 performance comparison](../assets/h5_perf.png){: .align-center}
+![h5 performance comparison](../assets/h5_perf.png)
 
 The performance improvement gained by switching from the HDF5 library to the H5Coro library for reading the original dataset out of S3 is anywhere from a factor of 77 to 132 depending on which configurations are compared against each other.
 
