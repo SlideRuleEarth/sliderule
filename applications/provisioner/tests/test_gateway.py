@@ -28,8 +28,8 @@ def test_invalid_cluster():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '["member"]',
-                        "aud": '["gsfc"]'
+                        "org_roles": '[member]',
+                        "aud": '[gsfc]'
                     }
                 }
             }
@@ -48,8 +48,8 @@ def test_invalid_node_capacity():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '["member"]',
-                        "aud": '["gsfc"]',
+                        "org_roles": '[member]',
+                        "aud": '[gsfc other]',
                         "max_nodes": "10"
                     }
                 }
@@ -69,8 +69,8 @@ def test_invalid_ttl():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '["member"]',
-                        "aud": '["gsfc"]',
+                        "org_roles": '[member]',
+                        "aud": '[gsfc other]',
                         "max_nodes": "10",
                         "max_ttl": "600"
                     }
@@ -91,8 +91,8 @@ def test_invalid_report():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '["member"]',
-                        "aud": '["*"]',
+                        "org_roles": '[member]',
+                        "aud": '[*]',
                         "max_nodes": "10",
                         "max_ttl": "600"
                     }
@@ -113,8 +113,8 @@ def test_invalid_path():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '["member", "owner"]',
-                        "aud": '["*"]',
+                        "org_roles": '[member owner]',
+                        "aud": '[*]',
                         "max_nodes": "10",
                         "max_ttl": "600"
                     }

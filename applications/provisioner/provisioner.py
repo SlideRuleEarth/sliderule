@@ -40,6 +40,18 @@ def get_instances_by_name(name):
         print("Unable to get <{name}> instances: {e}")
         return []
 
+#
+# Custom parsing code for API Gateway arrays
+#
+def parse_claim_array(claim_value):
+    if isinstance(claim_value, str):
+        if claim_value.startswith('['):
+            return claim_value.strip('[]').split() # Remove brackets and split by whitespace
+        else:
+            return [claim_value]
+    else:
+        return []
+
 # ###############################
 # Lambda: Deploy Cluster
 # ###############################
@@ -455,13 +467,10 @@ def lambda_gateway(event, context):
     # get JWT claims (validated by API Gateway)
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
     username = claims.get('sub', '<anonymous>')
-    org_roles = json.loads(claims.get('org_roles', "[]"))
+    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
     max_nodes = int(claims.get('max_nodes', "0"))
     max_ttl = int(claims.get('max_ttl', "0"))
-    try:
-        audiences = json.loads(claims.get('aud', "[]"))
-    except json.decoder.JSONDecodeError:
-        audiences = [claims.get('aud')]
+    audiences = parse_claim_array(claims.get('aud', "[]"))
     allowed_clusters = [audience for audience in audiences if audience not in SYSTEM_KEYWORDS]
 
     # get path and body of request

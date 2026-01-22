@@ -323,7 +323,26 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=Non
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
     session = checksession(session)
-    return session.update_available_servers(desired_nodes, time_to_live)
+    # get number of nodes currently registered
+    try:
+        rsps = session.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
+        available_servers = rsps["nodes"]
+    except Exception as e:
+        logger.debug(f'Failed to retrieve number of nodes registered: {e}')
+        available_servers = 0
+
+    # make provisioning request
+    if isinstance(desired_nodes, int):
+        rsps = session.provisioner.deploy(
+            is_public=False,
+            node_capacity=desired_nodes,
+            ttl=time_to_live,
+            version="latest"
+        )
+        logger.info(f'Provisioning request status: {rsps["status"]}')
+
+    # return status
+    return available_servers, desired_nodes or 0
 
 #
 # scaleout
