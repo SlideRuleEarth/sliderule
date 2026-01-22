@@ -77,7 +77,7 @@ There are two ways to authenticate using the Python client: (1) a personal acces
 
 #### Personal Access Token
 
-Using the GitHub web or command line client, generate a personal access token (classic) with the following permissions: `public_repo, read:org, read:project, read:public_key, read:user, repo:status, repo_deployment, user:email`, and save this key in a secure way on your system.
+Using the GitHub web or command line client, generate a personal access token (classic) with the following permissions: `public_repo, read:enterprise, read:org, read:public_key, read:user`, and save this key in a secure way on your system.
 
 Inside your Python script, provide the PAT to the SlideRule Python client by one of the following methods:
 
