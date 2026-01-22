@@ -111,10 +111,6 @@ def lambda_deploy(event, context):
         if cluster in SYSTEM_KEYWORDS:
             raise RuntimeError(f'Illegal cluster name <{cluster}>')
 
-        # check rules for valid deployment
-        if ttl >= 0 and ttl < MIN_TTL_FOR_AUTOSHUTDOWN:
-            raise RuntimeError(f'Invalid TTL of {ttl} minutes, must be at least {MIN_TTL_FOR_AUTOSHUTDOWN} minutes to guarantee scheduled deletion')
-
         # create stack
         state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
         print(f'Deploy initiated for {state["stack_name"]}')
@@ -153,10 +149,6 @@ def lambda_extend(event, context):
         # calculate new shutdown time
         new_shutdown_time = datetime.utcnow() + timedelta(minutes=ttl)
         state["cron_expression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
-
-        # check rules for valid extension
-        if ttl >= 0 and ttl < MIN_TTL_FOR_AUTOSHUTDOWN:
-            raise RuntimeError(f'Invalid TTL of {ttl} minutes, must be at least {MIN_TTL_FOR_AUTOSHUTDOWN} minutes to guarantee scheduled deletion')
 
         # extend rule
         events = boto3.client('events')
@@ -463,10 +455,14 @@ def lambda_gateway(event, context):
     # get JWT claims (validated by API Gateway)
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
     username = claims.get('sub', '<anonymous>')
-    org_roles = claims.get('org_roles', [])
-    allowed_clusters = [audience for audience in claims.get('aud', []) if audience not in SYSTEM_KEYWORDS]
-    max_nodes = claims.get('max_nodes', 0)
-    max_ttl = claims.get('max_ttl', 0)
+    org_roles = json.loads(claims.get('org_roles', "[]"))
+    max_nodes = int(claims.get('max_nodes', "0"))
+    max_ttl = int(claims.get('max_ttl', "0"))
+    try:
+        audiences = json.loads(claims.get('aud', "[]"))
+    except json.decoder.JSONDecodeError:
+        audiences = [claims.get('aud')]
+    allowed_clusters = [audience for audience in audiences if audience not in SYSTEM_KEYWORDS]
 
     # get path and body of request
     path = event.get('rawPath', '')
@@ -488,34 +484,31 @@ def lambda_gateway(event, context):
         }
 
     # check cluster
-    if '*' not in allowed_clusters:
-        cluster = body.get("cluster")
-        if (not cluster) or (cluster not in allowed_clusters):
-            print(f'Access denied to {username}, allowed clusters: {allowed_clusters}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
+    cluster = body.get("cluster")
+    if cluster and ((cluster not in allowed_clusters) and ('*' not in allowed_clusters)):
+        print(f'Access denied to {username}, allowed clusters: {allowed_clusters}')
+        return {
+            'statusCode': 403,
+            'body': json.dumps({'error': 'access denied'})
+        }
 
     # check node_capacity
-    if path == '/deploy':
-        node_capacity = body.get("node_capacity")
-        if (not node_capacity) or (int(node_capacity) > int(max_nodes)):
-            print(f'Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
+    node_capacity = body.get("node_capacity")
+    if node_capacity and (int(node_capacity) > max_nodes):
+        print(f'Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}')
+        return {
+            'statusCode': 403,
+            'body': json.dumps({'error': 'access denied'})
+        }
 
     # check ttl
-    if path == '/deploy' or path == '/extend':
-        ttl = body.get("ttl")
-        if (not ttl) or (int(ttl) > int(max_ttl)):
-            print(f'Access denied to {username}, ttl: {ttl}, max ttl: {max_ttl}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
+    ttl = body.get("ttl")
+    if ttl and ((int(ttl) > max_ttl) or (int(ttl) < MIN_TTL_FOR_AUTOSHUTDOWN)):
+        print(f'Access denied to {username}, invalid ttl: {ttl}')
+        return {
+            'statusCode': 403,
+            'body': json.dumps({'error': 'access denied'})
+        }
 
     # check report and test runner
     if path == '/report' or path == '/test':
