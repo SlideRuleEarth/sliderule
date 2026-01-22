@@ -5,7 +5,7 @@
 local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
-local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl06", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource (one per beam)
 
 dataframe.proxy("atl06x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)

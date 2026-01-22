@@ -1,8 +1,9 @@
 """Tests for atl06x"""
 
 import numpy as np
+import geopandas as gpd
 from pathlib import Path
-from sliderule import sliderule, icesat2
+from sliderule import sliderule, icesat2, earthdata
 
 TESTDIR = Path(__file__).parent
 GRANULE = "ATL06_20200303180710_10390603_007_01.h5"
@@ -172,3 +173,79 @@ class TestAtl06x:
             atol=1e-9,
             equal_nan=True,
         )
+
+    def test_stl_poly_granules(self, init):
+        poly = [
+            {"lon": -90.15177435697, "lat": 38.59406753389},
+            {"lon": -90.15177435697, "lat": 38.631128372239},
+            {"lon": -90.21794107665, "lat": 38.631128372239},
+            {"lon": -90.21794107665, "lat": 38.59406753389},
+            {"lon": -90.15177435697, "lat": 38.59406753389},
+        ]
+        granules = earthdata.search({"asset": "icesat2-atl06", "poly": poly})
+        assert init
+        assert len(granules) >= 48
+
+    def test_stl_poly_output_parquet(self, init, tmp_path):
+        poly = [
+            {"lon": -90.15177435697, "lat": 38.59406753389},
+            {"lon": -90.15177435697, "lat": 38.631128372239},
+            {"lon": -90.21794107665, "lat": 38.631128372239},
+            {"lon": -90.21794107665, "lat": 38.59406753389},
+            {"lon": -90.15177435697, "lat": 38.59406753389},
+        ]
+        output_path = tmp_path / "atl06x_stl.parquet"
+        parms = {
+            "poly": poly,
+            "t0": "2021-01-01",
+            "t1": "2021-08-31",
+            "output": {
+                "format": "parquet",
+                "as_geo": True,
+                "path": str(output_path),
+                "with_checksum": False,
+            },
+        }
+
+        output_file = sliderule.run("atl06x", parms)
+        assert init
+        assert output_file == str(output_path)
+        gdf = gpd.read_parquet(output_file)
+        assert "geometry" in gdf.columns
+        assert len(gdf) == 366
+        minx, miny, maxx, maxy = gdf.total_bounds.tolist()
+        assert minx >= -90.18908049319768
+        assert maxx <= -90.18347588914258
+        assert miny >= 38.594123857961385
+        assert maxy <= 38.63107307741707
+
+        # Validate a few stable fields from the first row.
+        row = gdf.iloc[0]
+        np.testing.assert_allclose(
+            [
+                row["region"],
+                row["gt"],
+                row["rgt"],
+                row["spot"],
+                row["cycle"],
+                row["segment_id"],
+            ],
+            [
+                2,
+                20,
+                721,
+                5,
+                12,
+                214147,
+            ],
+            rtol=0,
+            atol=0,
+        )
+        for col in ["segment_id", "h_li", "cycle", "rgt", "gt", "spot", "n_fit_photons"]:
+            assert col in gdf.columns
+        if len(gdf) > 0:
+            minx, miny, maxx, maxy = gdf.total_bounds.tolist()
+            assert minx >= -90.21794107665
+            assert maxx <= -90.15177435697
+            assert miny >= 38.59406753389
+            assert maxy <= 38.631128372239

@@ -1,4 +1,5 @@
 local runner = require("test_executive")
+local earthdata = require("earth_data_query")
 
 -- Requirements --
 
@@ -138,6 +139,48 @@ runner.unittest("ATL08 DataFrame - Ancillary Data", function()
         segment_landcover = 126,
         segment_snowcover = 2
     }, atl08df, idx, 0)
+
+end)
+
+-- Self Test --
+
+runner.unittest("ATL08 Earthdata Granules - Time Filtered", function()
+
+    local poly = {
+        { lon = -46.15177435697, lat = 75.59406753389 },
+        { lon = -46.15177435697, lat = 75.631128372239 },
+        { lon = -46.21794107665, lat = 75.631128372239 },
+        { lon = -46.21794107665, lat = 75.59406753389 },
+        { lon = -46.15177435697, lat = 75.59406753389 }
+    }
+
+    local max_resources = 200
+    local rc, granules = earthdata.search({
+        asset = "icesat2-atl08",
+        poly = poly,
+        t0 = "2021-01-01",
+        t1 = "2021-05-31",
+        max_resources = max_resources
+    })
+
+    runner.assert(rc == earthdata.SUCCESS, string.format("earthdata search failed: %d", rc))
+    runner.assert(type(granules) == "table", "earthdata search returned non-table granules")
+    runner.assert(#granules > 0, "earthdata search returned zero granules")
+    runner.assert(#granules <= max_resources, "earthdata search exceeded max_resources")
+
+    table.sort(granules)
+    local expected = {
+        "ATL08_20210107161057_02241005_007_01.h5",
+        "ATL08_20210205144704_06661005_007_01.h5",
+        "ATL08_20210314235557_12371003_007_01.h5",
+        "ATL08_20210408115050_02241105_007_01.h5",
+        "ATL08_20210412223157_02921103_007_01.h5",
+        "ATL08_20210507102653_06661105_007_01.h5"
+    }
+    runner.assert(#granules == #expected, string.format("unexpected granule count: %d", #granules))
+    for i = 1, #expected do
+        runner.assert(granules[i] == expected[i], string.format("granule[%d] mismatch: %s", i, granules[i] or "nil"))
+    end
 
 end)
 
