@@ -159,6 +159,8 @@ SystemConfig::SystemConfig(void):
     setIfProvidedLevel(logLevel, "LOG_LEVEL");
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
+    setIfProvided(projectBucket, "PROJECT_BUCKET");
+    setIfProvided(projectFolder, "PROJECT_FOLDER");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
     setIfProvided(alertStream, "ALERT_STREAM");
     setIfProvided(telemetryStream, "TELEMETRY_STREAM");
