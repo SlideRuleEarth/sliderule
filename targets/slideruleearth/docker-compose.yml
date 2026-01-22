@@ -18,9 +18,11 @@ services:
       - /data:/data
       - /plugins:/plugins
     environment:
-      - LOG_FORMAT="FMT_TEXT"
+      - LOG_FORMAT=FMT_TEXT
       - IPV4=127.0.0.1
       - ENVIRONMENT_VERSION=unknown
+      - PROJECT_BUCKET=sliderule
+      - PROJECT_FOLDER=cf
       - ORCHESTRATOR=http://127.0.0.1:8050
       - CLUSTER=local
       - AMS=http://127.0.0.1:9082

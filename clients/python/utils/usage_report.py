@@ -52,7 +52,7 @@ if args.organization == "None":
     args.organization = None
 
 # Initialize SlideRule Client
-session = Session(domain=args.domain, organization=args.organization, verbose=args.verbose)
+session = Session(domain=args.domain, cluster=args.organization, verbose=args.verbose)
 
 ##############################
 # Helper Functions

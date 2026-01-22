@@ -10,7 +10,7 @@ local bathy_mask_complete = false
 local water_ri_mask_complete = false
 local uncertainty_lut_complete = true -- logic below needs it to be seeded to true
 
-local bucket = sys.getcfg("sys_bucket")
+local bucket = sys.getcfg("project_bucket")
 
 while sys.alive() and ( (not bathy_mask_complete) or
                         (not water_ri_mask_complete) or
