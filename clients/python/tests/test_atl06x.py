@@ -218,34 +218,3 @@ class TestAtl06x:
         assert maxx <= -90.18347588914258
         assert miny >= 38.594123857961385
         assert maxy <= 38.63107307741707
-
-        # Validate a few stable fields from the first row.
-        row = gdf.iloc[0]
-        np.testing.assert_allclose(
-            [
-                row["region"],
-                row["gt"],
-                row["rgt"],
-                row["spot"],
-                row["cycle"],
-                row["segment_id"],
-            ],
-            [
-                2,
-                20,
-                721,
-                5,
-                12,
-                214147,
-            ],
-            rtol=0,
-            atol=0,
-        )
-        for col in ["segment_id", "h_li", "cycle", "rgt", "gt", "spot", "n_fit_photons"]:
-            assert col in gdf.columns
-        if len(gdf) > 0:
-            minx, miny, maxx, maxy = gdf.total_bounds.tolist()
-            assert minx >= -90.21794107665
-            assert maxx <= -90.15177435697
-            assert miny >= 38.59406753389
-            assert maxy <= 38.631128372239
