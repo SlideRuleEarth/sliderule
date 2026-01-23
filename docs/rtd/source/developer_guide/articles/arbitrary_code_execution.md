@@ -4,7 +4,7 @@
 
 ## Summary
 
-SlideRule now supports executing user provided Lua code on private clusters.  This allows researchers to take advantage of the parallelization and cluster computing capabilities of SlideRule for code they develop.
+SlideRule now supports executing user provided Lua code for organizational members.  This allows researchers to take advantage of the parallelization and cluster computing capabilities of SlideRule for code they develop.
 
 Using the SlideRule Python Client, the following is an example of how to execute user provided code that returns "Hello World" back to the user:
 ```Python
@@ -23,7 +23,7 @@ The ATL13 global database contains the reference ID, name, and geometry of each 
 
 The first option was the simplest but suffered from relying on CMR which is relatively slow and the possibility of having granules returned for other nearby bodies of water due to buffering on the along-track polygons CMR uses for their spatial queries.  The second option would result in the best performance, but required every ATL13 granule to be read in order to build the reverse lookup table.
 
-The second option was chosen, and the Arbitrary Code Execution functionality in SlideRule was used to build the lookup table.  
+The second option was chosen, and the Arbitrary Code Execution functionality in SlideRule was used to build the lookup table.
 
 :::{note}
 SlideRule still supports temporal/spatial queries of CMR for ATL13; it is only when a user wants to use the reference ID, name, or containing coordinate that the lookup table option is used.
@@ -86,7 +86,7 @@ If the user provided script needs to only be run against a single granule, then 
 
 For the ATL13 use case, the Python program used to manage the execution of the above script against all ATL13 granules can be found here: [clients/python/utils/atl13_utils.py](https://github.com/SlideRuleEarth/sliderule/blob/main/clients/python/utils/atl13_utils.py).
 
-This script queries CMR for a complete list of ATL13 granules and then creates a thread pool for workers that go through that list and issue `ace` API calls for each granule. The default concurrency is set to 8 in the script, but could easily be set to 100 for a private cluster of 10 nodes. 
+This script queries CMR for a complete list of ATL13 granules and then creates a thread pool for workers that go through that list and issue `ace` API calls for each granule. The default concurrency is set to 8 in the script, but could easily be set to 100 for a private cluster of 10 nodes.
 
 As can be seen in the script, the results of each API call are added to a master lookup table (a _dictionary_ of _sets_ in Python) to produce the final lookup table that uses a reference ID to return a list of granules containing data with that ID.
 
@@ -96,4 +96,4 @@ There are some constraints on how the Arbitrary Code Execution works:
 
 * The `ace` API only supports non-streaming GET requests. This means that the user provided lua scripts must contain a __return__ statement, and only what is returned is passed back to the user.  In contrast, most of the high-level APIs provided by SlideRule are streaming and continuously return results back to the user via the __rspq__ response queue.
 
-* The `ace` API requests are not proxied.  This means that the orchestrator does not partition out the request and utilize the locking mechanism to guarantee an evenly distributed and high utilization of the full cluster.  The requests are still load balanaced, so to some degree they will be spread out over the cluster; but it is on the user to appropriately feed large sets of request to the cluster in order to maintain a high utilization without exceeding the resources of any one node.
+* The `ace` API requests are not proxied.  This means that the orchestrator does not partition out the request and utilize the locking mechanism to guarantee an evenly distributed and high utilization of the full cluster.  The requests are still load balanaced, so to some degree they will be spread out over the cluster; but it is on the user to appropriately feed large sets of requests to the cluster in order to maintain a high utilization without exceeding the resources of any one node.

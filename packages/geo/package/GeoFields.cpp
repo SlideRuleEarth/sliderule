@@ -259,6 +259,81 @@ std::string GeoFields::sserror2str(uint32_t error)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * convertToJson - GeoFields::bbox_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const GeoFields::bbox_t& v)
+{
+    return FString("[%lf, %lf, %lf, %lf]", v.lon_min, v.lat_min, v.lon_max, v.lat_max).c_str();
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - GeoFields::bbox_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const GeoFields::bbox_t& v)
+{
+    lua_newtable(L);
+
+    // lon_min
+    lua_pushnumber(L, v.lon_min);
+    lua_rawseti(L, -2, 1);
+
+    // lat_min
+    lua_pushnumber(L, v.lat_min);
+    lua_rawseti(L, -2, 2);
+
+    // lon_max
+    lua_pushnumber(L, v.lon_max);
+    lua_rawseti(L, -2, 2);
+
+    // lat_max
+    lua_pushnumber(L, v.lat_max);
+    lua_rawseti(L, -2, 2);
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - GeoFields::bbox_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, GeoFields::bbox_t& v)
+{
+    if(lua_istable(L, index))
+    {
+        const int num_points = lua_rawlen(L, index);
+        if(num_points == 4)
+        {
+            // lon_min
+            lua_rawgeti(L, index, 1);
+            v.lon_min = LuaObject::getLuaFloat(L, -1);
+            lua_pop(L, 1);
+
+            // lat_min
+            lua_rawgeti(L, index, 2);
+            v.lat_min = LuaObject::getLuaFloat(L, -1);
+            lua_pop(L, 1);
+
+            // lon_max
+            lua_rawgeti(L, index, 3);
+            v.lon_max = LuaObject::getLuaFloat(L, -1);
+            lua_pop(L, 1);
+
+            // lat_max
+            lua_rawgeti(L, index, 4);
+            v.lat_max = LuaObject::getLuaFloat(L, -1);
+            lua_pop(L, 1);
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "bounding box must be supplied as a table of four points [lon_min, lat_min, lon_max, lat_max]");
+        }
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "bounding box must be supplied as a table [lon_min, lat_min, lon_max, lat_max]");
+    }
+}
+
+/*----------------------------------------------------------------------------
  * convertToJson - GeoFields::sampling_algo_t
  *----------------------------------------------------------------------------*/
 string convertToJson(const GeoFields::sampling_algo_t& v)
@@ -335,76 +410,71 @@ void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v)
 }
 
 /*----------------------------------------------------------------------------
- * convertToJson - GeoFields::bbox_t
+ * convertToJson - GeoFields::single_sample_option_t
  *----------------------------------------------------------------------------*/
-string convertToJson(const GeoFields::bbox_t& v)
+string convertToJson(const GeoFields::single_sample_option_t& v)
 {
-    return FString("[%lf, %lf, %lf, %lf]", v.lon_min, v.lat_min, v.lon_max, v.lat_max).c_str();
+    switch(v)
+    {
+        case GeoFields::SINGLE_SAMPLE_NA:       return "\"n/a\"";
+        case GeoFields::SINGLE_SAMPLE_FIRST:    return "\"first\"";
+        case GeoFields::SINGLE_SAMPLE_LAST:     return "\"last\"";
+        case GeoFields::SINGLE_SAMPLE_MIN:      return "\"min\"";
+        case GeoFields::SINGLE_SAMPLE_MAX:      return "\"max\"";
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %d", static_cast<int>(v));
+    }
 }
 
 /*----------------------------------------------------------------------------
- * convertToLua - GeoFields::bbox_t
+ * convertToLua - GeoFields::single_sample_option_t
  *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const GeoFields::bbox_t& v)
+int convertToLua(lua_State* L, const GeoFields::single_sample_option_t& v)
 {
-    lua_newtable(L);
-
-    // lon_min
-    lua_pushnumber(L, v.lon_min);
-    lua_rawseti(L, -2, 1);
-
-    // lat_min
-    lua_pushnumber(L, v.lat_min);
-    lua_rawseti(L, -2, 2);
-
-    // lon_max
-    lua_pushnumber(L, v.lon_max);
-    lua_rawseti(L, -2, 2);
-
-    // lat_max
-    lua_pushnumber(L, v.lat_max);
-    lua_rawseti(L, -2, 2);
+    switch(v)
+    {
+        case GeoFields::SINGLE_SAMPLE_NA:       lua_pushstring(L, "n/a");       break;
+        case GeoFields::SINGLE_SAMPLE_FIRST:    lua_pushstring(L, "first");     break;
+        case GeoFields::SINGLE_SAMPLE_LAST:     lua_pushstring(L, "last");      break;
+        case GeoFields::SINGLE_SAMPLE_MIN:      lua_pushstring(L, "min");       break;
+        case GeoFields::SINGLE_SAMPLE_MAX:      lua_pushstring(L, "max");       break;
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %d", static_cast<int>(v));
+    }
 
     return 1;
 }
 
 /*----------------------------------------------------------------------------
- * convertFromLua - GeoFields::bbox_t
+ * convertFromLua - GeoFields::single_sample_option_t
  *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, GeoFields::bbox_t& v)
+void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& v)
 {
-    if(lua_istable(L, index))
+    if(lua_isstring(L, index))
     {
-        const int num_points = lua_rawlen(L, index);
-        if(num_points == 4)
-        {
-            // lon_min
-            lua_rawgeti(L, index, 1);
-            v.lon_min = LuaObject::getLuaFloat(L, -1);
-            lua_pop(L, 1);
-
-            // lat_min
-            lua_rawgeti(L, index, 2);
-            v.lat_min = LuaObject::getLuaFloat(L, -1);
-            lua_pop(L, 1);
-
-            // lon_max
-            lua_rawgeti(L, index, 3);
-            v.lon_max = LuaObject::getLuaFloat(L, -1);
-            lua_pop(L, 1);
-
-            // lat_max
-            lua_rawgeti(L, index, 4);
-            v.lat_max = LuaObject::getLuaFloat(L, -1);
-            lua_pop(L, 1);
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "bounding box must be supplied as a table of four points [lon_min, lat_min, lon_max, lat_max]");
-        }
+        const char* str = LuaObject::getLuaString(L, index);
+        if      (StringLib::match(str, "n/a"))      v = GeoFields::SINGLE_SAMPLE_NA;
+        else if (StringLib::match(str, "first"))    v = GeoFields::SINGLE_SAMPLE_FIRST;
+        else if (StringLib::match(str, "last"))     v = GeoFields::SINGLE_SAMPLE_LAST;
+        else if (StringLib::match(str, "min"))      v = GeoFields::SINGLE_SAMPLE_MIN;
+        else if (StringLib::match(str, "max"))      v = GeoFields::SINGLE_SAMPLE_MAX;
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %s", str);
+    }
+    if(lua_isboolean(L, index))
+    {
+        const bool option = LuaObject::getLuaBoolean(L, index);
+        if(option) v = GeoFields::SINGLE_SAMPLE_FIRST;
+        else v = GeoFields::SINGLE_SAMPLE_NA;
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "bounding box must be supplied as a table [lon_min, lat_min, lon_max, lat_max]");
+        const long n = LuaObject::getLuaInteger(L, index);
+        switch(static_cast<GeoFields::single_sample_option_t>(n))
+        {
+            case GeoFields::SINGLE_SAMPLE_NA:       break; // valid value
+            case GeoFields::SINGLE_SAMPLE_FIRST:    break; // valid value
+            case GeoFields::SINGLE_SAMPLE_LAST:     break; // valid value
+            case GeoFields::SINGLE_SAMPLE_MIN:      break; // valid value
+            case GeoFields::SINGLE_SAMPLE_MAX:      break; // valid value
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %ld", n);
+        }
     }
 }

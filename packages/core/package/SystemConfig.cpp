@@ -139,6 +139,7 @@ SystemConfig::SystemConfig(void):
         {"stream_mem_thresh",           &streamMemoryThreshold},
         {"msgq_depth",                  &msgQDepth},
         {"in_cloud",                    &inCloud},
+        {"trusted_environment",         &trustedEnvironment},
         {"publish_timeout_ms",          &publishTimeoutMs},
         {"request_timeout_sec",         &requestTimeoutSec},
         {"ipv4",                        &ipv4},
@@ -156,6 +157,7 @@ SystemConfig::SystemConfig(void):
     // populate environment variables
     setIfProvidedFormat(logFormat, "LOG_FORMAT");
     setIfProvidedLevel(logLevel, "LOG_LEVEL");
+    setIfProvidedBool(trustedEnvironment, "TRUSTED_ENVIRONMENT");
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(projectBucket, "PROJECT_BUCKET");

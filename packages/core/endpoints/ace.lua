@@ -7,7 +7,7 @@
 --
 local json      = require("json")
 local user_code = arg[1]
-local org_roles = json.encode(_rqst.orgroles)
+local org_roles = json.decode(_rqst.orgroles)
 
 -- determine membership
 local is_member = false
@@ -19,7 +19,7 @@ for i = 1, n do
 end
 
 -- check if member
-if not is_member then
+if not is_member and not sys.getcfg("trusted_environment") then
     return "user must be a sliderule member to execute this endpoint", false
 end
 

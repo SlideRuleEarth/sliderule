@@ -107,39 +107,47 @@ class GeoFields: public FieldDictionary
             GAUSS_ALGO            = static_cast<int>(GRIORA_Gauss)
         } sampling_algo_t;
 
+        typedef enum {
+            SINGLE_SAMPLE_NA = 0,
+            SINGLE_SAMPLE_FIRST = 1,
+            SINGLE_SAMPLE_LAST = 2,
+            SINGLE_SAMPLE_MIN = 3,
+            SINGLE_SAMPLE_MAX = 4
+        } single_sample_option_t;
+
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
-        FieldElement<sampling_algo_t>   sampling_algo {NEARESTNEIGHBOUR_ALGO};
-        FieldElement<int>               sampling_radius {0};
-        FieldElement<string>            t0;
-        FieldElement<string>            t1;
-        FieldElement<string>            tc; // closest time
-        FieldElement<bool>              zonal_stats {false};
-        FieldElement<bool>              slope_aspect {false};
-        FieldElement<int>               slope_scale_length {0};
-        FieldElement<bool>              flags_file {false};
-        FieldElement<string>            url_substring;
-        FieldElement<bool>              use_poi_time {false};
-        FieldElement<string>            doy_range;
-        FieldElement<bool>              sort_by_index {false};
-        FieldElement<bool>              force_single_sample {false};
-        FieldElement<string>            proj_pipeline;
-        FieldElement<bbox_t>            aoi_bbox;
-        FieldElement<string>            catalog;
-        FieldList<string>               bands;
-        AssetField                      asset;
+        FieldElement<sampling_algo_t>           sampling_algo {NEARESTNEIGHBOUR_ALGO};
+        FieldElement<int>                       sampling_radius {0};
+        FieldElement<string>                    t0;
+        FieldElement<string>                    t1;
+        FieldElement<string>                    tc; // closest time
+        FieldElement<bool>                      zonal_stats {false};
+        FieldElement<bool>                      slope_aspect {false};
+        FieldElement<int>                       slope_scale_length {0};
+        FieldElement<bool>                      flags_file {false};
+        FieldElement<string>                    url_substring;
+        FieldElement<bool>                      use_poi_time {false};
+        FieldElement<string>                    doy_range;
+        FieldElement<bool>                      sort_by_index {false};
+        FieldElement<single_sample_option_t>    force_single_sample {SINGLE_SAMPLE_NA};
+        FieldElement<string>                    proj_pipeline;
+        FieldElement<bbox_t>                    aoi_bbox;
+        FieldElement<string>                    catalog;
+        FieldList<string>                       bands;
+        AssetField                              asset;
 
-        bool                            filter_time;
-        bool                            filter_doy_range;
-        bool                            doy_keep_inrange;
-        int                             doy_start;
-        int                             doy_end;
-        bool                            filter_closest_time;
-        TimeLib::gmt_time_t             closest_time;
-        TimeLib::gmt_time_t             start_time;
-        TimeLib::gmt_time_t             stop_time;
+        bool                                    filter_time;
+        bool                                    filter_doy_range;
+        bool                                    doy_keep_inrange;
+        int                                     doy_start;
+        int                                     doy_end;
+        bool                                    filter_closest_time;
+        TimeLib::gmt_time_t                     closest_time;
+        TimeLib::gmt_time_t                     start_time;
+        TimeLib::gmt_time_t                     stop_time;
 
         /*--------------------------------------------------------------------
         * Methods
@@ -158,15 +166,20 @@ class GeoFields: public FieldDictionary
  * FUNCTIONS
  ******************************************************************************/
 
-string convertToJson(const GeoFields::sampling_algo_t& v);
-int convertToLua(lua_State* L, const GeoFields::sampling_algo_t& v);
-void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v);
-
 string convertToJson(const GeoFields::bbox_t& v);
 int convertToLua(lua_State* L, const GeoFields::bbox_t& v);
 void convertFromLua(lua_State* L, int index, GeoFields::bbox_t& v);
 
-inline uint32_t toEncoding(GeoFields::sampling_algo_t& v) { (void)v; return Field::INT32; }
+string convertToJson(const GeoFields::sampling_algo_t& v);
+int convertToLua(lua_State* L, const GeoFields::sampling_algo_t& v);
+void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v);
+
+string convertToJson(const GeoFields::single_sample_option_t& v);
+int convertToLua(lua_State* L, const GeoFields::single_sample_option_t& v);
+void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& v);
+
 inline uint32_t toEncoding(GeoFields::bbox_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(GeoFields::sampling_algo_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(GeoFields::single_sample_option_t& v) { (void)v; return Field::INT32; };
 
 #endif  /* __geo_fields__ */

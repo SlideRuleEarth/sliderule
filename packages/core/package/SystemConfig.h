@@ -101,6 +101,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<float>             streamMemoryThreshold       {0.75};
         FieldElement<int>               msgQDepth                   {10000};
         FieldElement<bool>              inCloud                     {false};
+        FieldElement<bool>              trustedEnvironment          {false};
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};

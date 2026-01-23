@@ -19,6 +19,7 @@ services:
       - /plugins:/plugins
     environment:
       - LOG_FORMAT=FMT_TEXT
+      - TRUSTED_ENVIRONMENT=true
       - IPV4=127.0.0.1
       - ENVIRONMENT_VERSION=unknown
       - PROJECT_BUCKET=sliderule

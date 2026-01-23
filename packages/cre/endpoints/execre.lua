@@ -10,7 +10,7 @@ local image     = rqst["image"]
 local command   = rqst["command"]
 local input     = "parms.json" -- well known file name
 local output    = "results.json" -- well known file name
-local org_roles = json.encode(_rqst.orgroles)
+local org_roles = json.decode(_rqst.orgroles)
 
 -------------------------------------------------------
 -- check if member
@@ -22,7 +22,7 @@ for i = 1, n do
         is_member = true
     end
 end
-if not is_member then
+if not is_member and not sys.getcfg("trusted_environment") then
     return "user must be a sliderule member to execute this endpoint", false
 end
 

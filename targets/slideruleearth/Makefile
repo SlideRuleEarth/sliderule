@@ -140,7 +140,8 @@ config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
 
 run: ## run the server locally
-	LOG_FORMAT="FMT_TEXT" \
+	LOG_FORMAT=FMT_TEXT \
+	TRUSTED_ENVIRONMENT=true \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
@@ -167,28 +168,6 @@ build: ## build the code using the build environment docker container
 		--name buildenv \
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
 		$(BUILD_CMD)
-
-
-runit: ## build the code using the build environment docker container
-	docker run \
-		--network host \
-		-v /data:/data \
-        -v /etc/ssl/certs:/etc/ssl/certs \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-		-e LOG_FORMAT="FMT_TEXT" \
-		-e IPV4=$(MYIP) \
-		-e ENVIRONMENT_VERSION=$(ENVVER) \
-		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
-		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
-		-e ORCHESTRATOR=http://127.0.0.1:8050 \
-		-e CLUSTER=local \
-		-e AMS=http://127.0.0.1:9082 \
-		-e CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-		--rm \
-		-it \
-		--name sliderule \
-		--entrypoint /bin/bash \
-		$(CONTAINER_REGISTRY)/sliderule:unstable
 
 ########################
 # Docker Build Targets
@@ -756,6 +735,8 @@ MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arctic
 STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
 
 selftest: ## run the self test on the server code
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	TRUSTED_ENVIRONMENT=true \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
 pytest: ## run python client tests; needs special conda environment
