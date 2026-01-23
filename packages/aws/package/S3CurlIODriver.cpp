@@ -942,6 +942,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
         }
         else
         {
+            delete [] rsps_data;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to read %s/%s", bucket, key);
         }
     }

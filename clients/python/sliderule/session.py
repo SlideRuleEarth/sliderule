@@ -181,6 +181,9 @@ class Session:
         # authenticate for non-public clusters
         if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
             self.authenticate(github_token=github_token)
+
+        # auto-deploy when node capacity provided
+        if isinstance(node_capacity, int) and node_capacity > 0:
             self.scaleout(node_capacity, ttl)
 
     #
@@ -275,7 +278,7 @@ class Session:
 
             # Log Reason for Not Completing
             if not complete:
-                logger.error(f'{rsps}... {retry_status(remaining_attempts)}')
+                logger.debug(f'{rsps}... {retry_status(remaining_attempts)}')
 
         # Check Complete
         if not complete:
@@ -342,67 +345,61 @@ class Session:
             self.console.setLevel(loglevel)
 
     #
-    # update_available_servers
-    #
-    def update_available_servers (self, node_capacity=None, ttl=None):
-        '''
-        makes a capacity request to the provisioning system (if requested) and
-        returns the current capacity
-        '''
-        # get number of nodes currently registered
-        try:
-            rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
-            available_servers = rsps["nodes"]
-        except Exception as e:
-            logger.debug(f'Failed to retrieve number of nodes registered: {e}')
-            available_servers = 0
-
-        # make provisioning request
-        if isinstance(node_capacity, int):
-            rsps = self.provisioner.deploy(
-                is_public=False,
-                node_capacity=node_capacity,
-                ttl=ttl,
-                version="latest"
-            )
-            logger.info(f'Provisioning request status: {rsps["status"]}')
-
-        # return status
-        return available_servers, node_capacity or 0
-
-    #
     # scaleout
     #
     def scaleout (self, node_capacity, ttl):
         '''
-        makes a capacity request to the provisioning system and waits
-        for the cluster to reach the requested capacity
+        makes a deployment request to the SlideRule Provisioner and waits for the cluster to reach the requested capacity
         '''
-        # check desired nodes
-        if node_capacity is None:
-            return # nothing needs to be done
-        if node_capacity < 0:
-            raise FatalError("Number of desired nodes must be greater than zero ({})".format(node_capacity))
+        # Check Parameters
+        if not isinstance(node_capacity, int) or node_capacity <= 0:
+            raise FatalError(f"Node capacity must be greater than zero ({node_capacity})")
+        if not isinstance(ttl, int) or ttl <= 0:
+            raise FatalError(f"Time to live must be greater than zero ({ttl})")
 
-        # send initial request for desired cluster state
+        # Initial Conditions
+        available_nodes = 0
+        inerror = False
+        deployed = False
         start = time.time()
-        available_nodes,requested_nodes = self.update_available_servers(node_capacity=node_capacity, ttl=ttl)
-        scale_up_needed = False
 
         # Wait for Cluster to Reach Desired State
-        while available_nodes < requested_nodes:
-            scale_up_needed = True
-            logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, node_capacity, int(time.time() - start)))
-            time.sleep(10.0)
-            available_nodes,_ = self.update_available_servers()
-            # Timeout Occurred
-            if int(time.time() - start) > self.MAX_PS_CLUSTER_WAIT_SECS:
+        while True:
+
+            # Get Current Cluster Node Capacity
+            try:
+                rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0, rethrow=True)
+                available_nodes = rsps["nodes"]
+            except RuntimeError:
+                available_nodes = 0
+
+            # Check if Deployment Needed
+            if not deployed and available_nodes < node_capacity:
+                deployed = True
+
+                # Deployment Request
+                rsps = self.provisioner.deploy(
+                    is_public=False,
+                    node_capacity=node_capacity,
+                    ttl=ttl,
+                    version="latest"
+                )
+                logger.info(f'Requesting deployment of {self.cluster}: {rsps["status"]}')
+                inerror = rsps["status"] == "error"
+
+            # Check for Exit Conditions
+            if inerror: # error occurred
+                logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
+                break
+            elif int(time.time() - start) > self.MAX_PS_CLUSTER_WAIT_SECS: # Timeout
                 logger.error("Maximum time allowed waiting for cluster has been exceeded")
                 break
-
-        # Log Final Message if Cluster Needed State Change
-        if scale_up_needed:
-            logger.info("Cluster has reached capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
+            elif available_nodes >= node_capacity: # Node Capacity Reached
+                logger.info(f"Cluster has reached capacity of {available_nodes} nodes... {int(time.time() - start)} seconds")
+                break
+            else:
+                logger.info(f"Waiting while cluster scales to desired capacity (currently at {available_nodes} nodes, desired is {node_capacity} nodes)... {int(time.time() - start)} seconds")
+                time.sleep(10.0)
 
     #
     # authenticate
@@ -427,12 +424,14 @@ class Session:
                 rsps = self.__deviceflow(login_url)
 
             # set internal session data
-            if rsps['status'] == 'success':
+            if rsps.get('status') == 'success':
                 now = time.time()
                 self.ps_metadata = rsps['metadata']
                 self.ps_access_token = rsps['token']
                 self.ps_token_exp =  int(((self.ps_metadata['exp'] - now) / 2) + now)
                 login_status = True
+            else:
+                raise RuntimeError(f'{rsps}')
 
         except Exception as e:
             logger.error(f'Failure attempting to authenticate: {e}')

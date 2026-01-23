@@ -140,13 +140,15 @@ config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
 
 run: ## run the server locally
-	LOG_FORMAT="FMT_TEXT" \
+	LOG_FORMAT=FMT_TEXT \
+	TRUSTED_ENVIRONMENT=true \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
 	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
-	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
 
@@ -316,7 +318,6 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
-						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
@@ -734,6 +735,8 @@ MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arctic
 STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
 
 selftest: ## run the self test on the server code
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	TRUSTED_ENVIRONMENT=true \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
 pytest: ## run python client tests; needs special conda environment

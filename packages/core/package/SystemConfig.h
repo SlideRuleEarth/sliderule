@@ -101,7 +101,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<float>             streamMemoryThreshold       {0.75};
         FieldElement<int>               msgQDepth                   {10000};
         FieldElement<bool>              inCloud                     {false};
-        FieldElement<string>            systemBucket                {"sliderule"};
+        FieldElement<bool>              trustedEnvironment          {false};
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};
@@ -109,12 +109,13 @@ class SystemConfig: public FieldDictionary
         // ENVIRONMENT VARIABLES
         FieldElement<string>            ipv4;
         FieldElement<string>            environmentVersion;
+        FieldElement<string>            projectBucket;
+        FieldElement<string>            projectFolder;
         FieldElement<string>            orchestratorURL;
         FieldElement<string>            alertStream;
         FieldElement<string>            telemetryStream;
         FieldElement<string>            cluster;
         FieldElement<string>            amsURL;
-        FieldElement<bool>              isPublic;
         FieldElement<string>            containerRegistry;
 
     private:

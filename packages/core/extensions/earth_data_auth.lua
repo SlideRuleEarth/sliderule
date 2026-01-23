@@ -19,9 +19,9 @@ local parm = json.decode(arg[1] or "{}")
 
 local earthdata = parm["earthdata"]
 local identity = parm["identity"]
-local netrc_key = parm["netrc_key"] or "/config/netrc"
+local netrc_key = parm["netrc_key"] or string.format("/%s/netrc", sys.getcfg("project_folder"))
 
-local bucket = sys.getcfg("sys_bucket")
+local bucket = sys.getcfg("project_bucket")
 
 -- download netrc
 local netrc_present = false

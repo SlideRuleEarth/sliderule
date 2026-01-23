@@ -44,7 +44,7 @@ class TestSampler:
             "cnf": 0,
             "srt": 3,
             "fit": {"maxi": 3},
-            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "force_single_sample": True}}
+            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "force_single_sample": "first"}}
         }
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
@@ -69,7 +69,7 @@ class TestSampler:
             "cnf": 0,
             "srt": 3,
             "fit": {"maxi": 3},
-            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "force_single_sample": True, "with_flags": True, "zonal_stats": True, "slope_aspect": True}}
+            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "force_single_sample": "first", "with_flags": True, "zonal_stats": True, "slope_aspect": True}}
         }
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init

@@ -33,6 +33,9 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <cmath>
+#include <limits>
+
 #include "OsApi.h"
 #include "TimeLib.h"
 #include "RasterObject.h"
@@ -140,7 +143,7 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
         sampler->robj->getSamples(sampler->obj->points, sampler->samples);
 
         // put samples into dataframe columns
-        if(sampler->geoparms.force_single_sample)
+        if(sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_NA)
         {
             populateColumns(dataframe, sampler);
         }
@@ -410,8 +413,70 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
 
         if(slist->length() > 0)
         {
+            // select the sample
+            const RasterSample* sample = slist->get(0); // default/initialize to first
+            switch(sampler->geoparms.force_single_sample.value)
+            {
+                case GeoFields::SINGLE_SAMPLE_FIRST:
+                {
+                    for(int k = 0; k < slist->length(); k++)
+                    {
+                        if(std::isfinite(slist->get(k)->value))
+                        {
+                            sample = slist->get(k);
+                            break; // don't look for any more
+                        }
+                    }
+                    break;
+                }
+
+                case GeoFields::SINGLE_SAMPLE_LAST:
+                {
+                    for(int k = 0; k < slist->length(); k++)
+                    {
+                        if(std::isfinite(slist->get(k)->value))
+                        {
+                            sample = slist->get(k);
+                            // keep looking to get the last one
+                        }
+                    }
+                    break;
+                }
+
+                case GeoFields::SINGLE_SAMPLE_MIN:
+                {
+                    double min_val = std::numeric_limits<double>::max();
+                    for(int k = 0; k < slist->length(); k++)
+                    {
+                        const double val = slist->get(k)->value;
+                        if(std::isfinite(val) && (val <= min_val)) // equal comparison needed if initial value is NaN
+                        {
+                            min_val = val;
+                            sample = slist->get(k);
+                        }
+                    }
+                    break;
+                }
+
+                case GeoFields::SINGLE_SAMPLE_MAX:
+                {
+                    double max_val = std::numeric_limits<double>::lowest();
+                    for(int k = 0; k < slist->length(); k++)
+                    {
+                        const double val = slist->get(k)->value;
+                        if(std::isfinite(val) && (val >= max_val)) // equal comparison needed if initial value is NaN
+                        {
+                            max_val = val;
+                            sample = slist->get(k);
+                        }
+                    }
+                    break;
+                }
+
+                default: break; // see initial value
+            }
+
             // populate core sample fields
-            const RasterSample* sample = slist->get(0);
             value_column->append(sample->value);
             time_column->append(TimeLib::gps2systimeex(sample->time));
             fileid_column->append(sample->fileId);

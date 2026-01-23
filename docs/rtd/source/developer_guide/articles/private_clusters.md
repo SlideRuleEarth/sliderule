@@ -77,7 +77,7 @@ There are two ways to authenticate using the Python client: (1) a personal acces
 
 #### Personal Access Token
 
-Using the GitHub web or command line client, generate a personal access token (classic) with the following permissions: `public_repo, read:org, read:project, read:public_key, read:user, repo:status, repo_deployment, user:email`, and save this key in a secure way on your system.
+Using the GitHub web or command line client, generate a personal access token (classic) with the following permissions: `public_repo, read:enterprise, read:org, read:public_key, read:user`, and save this key in a secure way on your system.
 
 Inside your Python script, provide the PAT to the SlideRule Python client by one of the following methods:
 
@@ -200,7 +200,7 @@ Connection error to endpoint https://{cluster}.slideruleearth.io/source/version 
 
 * **Quick Restarts**: The DNS entry for the cluster subdomain has a roughly five minute time-to-live and so quickly destroying a cluster and then redeploying it will possibly encounter a few minutes where the new cluster has been deployed but the DNS entries are still pointing to the old cluster.  Waiting for a few minutes will resolved the issue.
 
-* **Intermittent Authorization Errors**: Intermittently the AWS API Gateway for provisioner.slideruleearth.io fails to authorize a valid JWT and returns an error.  We are continuing to debug this effort, but in the meantime, a retry should suceed.  When this happens, users will see a message like:
+* **Intermittent Authorization Errors**: Intermittently the AWS API Gateway for provisioner.slideruleearth.io fails to authorize a valid JWT and returns an error.  We are continuing to debug this effort, but in the meantime, a retry should succeed.  When this happens, users will see a message like:
 ```
 401 Client Error: Unauthorized for url: https://provisioner.slideruleearth.io/
 ```

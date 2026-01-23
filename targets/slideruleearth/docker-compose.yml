@@ -18,13 +18,15 @@ services:
       - /data:/data
       - /plugins:/plugins
     environment:
-      - LOG_FORMAT="FMT_TEXT"
+      - LOG_FORMAT=FMT_TEXT
+      - TRUSTED_ENVIRONMENT=true
       - IPV4=127.0.0.1
       - ENVIRONMENT_VERSION=unknown
+      - PROJECT_BUCKET=sliderule
+      - PROJECT_FOLDER=cf
       - ORCHESTRATOR=http://127.0.0.1:8050
       - CLUSTER=local
       - AMS=http://127.0.0.1:9082
-      - IS_PUBLIC=false
       - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
     labels:
       - autoheal=true

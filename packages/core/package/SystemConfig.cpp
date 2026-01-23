@@ -139,31 +139,34 @@ SystemConfig::SystemConfig(void):
         {"stream_mem_thresh",           &streamMemoryThreshold},
         {"msgq_depth",                  &msgQDepth},
         {"in_cloud",                    &inCloud},
-        {"sys_bucket",                  &systemBucket},
+        {"trusted_environment",         &trustedEnvironment},
         {"publish_timeout_ms",          &publishTimeoutMs},
         {"request_timeout_sec",         &requestTimeoutSec},
         {"ipv4",                        &ipv4},
         {"environment_version",         &environmentVersion},
+        {"project_bucket",              &projectBucket},
+        {"project_folder",              &projectFolder},
         {"orchestrator_url;",           &orchestratorURL},
         {"alert_stream",                &alertStream},
         {"telemetry_stream",            &telemetryStream},
         {"cluster",                     &cluster},
         {"ams_url",                     &amsURL},
-        {"is_public",                   &isPublic},
         {"container_registry",          &containerRegistry}
     })
 {
     // populate environment variables
     setIfProvidedFormat(logFormat, "LOG_FORMAT");
     setIfProvidedLevel(logLevel, "LOG_LEVEL");
+    setIfProvidedBool(trustedEnvironment, "TRUSTED_ENVIRONMENT");
     setIfProvided(ipv4, "IPV4");
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
+    setIfProvided(projectBucket, "PROJECT_BUCKET");
+    setIfProvided(projectFolder, "PROJECT_FOLDER");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
     setIfProvided(alertStream, "ALERT_STREAM");
     setIfProvided(telemetryStream, "TELEMETRY_STREAM");
     setIfProvided(cluster, "CLUSTER");
     setIfProvided(amsURL, "AMS");
-    setIfProvidedBool(isPublic, "IS_PUBLIC");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 

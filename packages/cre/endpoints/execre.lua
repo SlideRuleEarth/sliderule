@@ -10,12 +10,20 @@ local image     = rqst["image"]
 local command   = rqst["command"]
 local input     = "parms.json" -- well known file name
 local output    = "results.json" -- well known file name
+local org_roles = json.decode(_rqst.orgroles)
 
 -------------------------------------------------------
--- check if private cluster
+-- check if member
 -------------------------------------------------------
-if sys.getcfg("is_public") then
-    return
+local is_member = false
+local n = #org_roles
+for i = 1, n do
+    if org_roles[i] == "member" then
+        is_member = true
+    end
+end
+if not is_member and not sys.getcfg("trusted_environment") then
+    return "user must be a sliderule member to execute this endpoint", false
 end
 
 -------------------------------------------------------
@@ -23,7 +31,7 @@ end
 -------------------------------------------------------
 local crenv = runner.setup()
 if not crenv.host_sandbox_directory then
-    return json.dumps({message = "error initializing container runtime environment"})
+    return json.dumps({message = "error initializing container runtime environment"}), false
 end
 
 -------------------------------------------------------
@@ -61,4 +69,4 @@ end
 -- return
 -------------------------------------------------------
 runner.cleanup(crenv)
-return json.encode(response)
+return json.encode(response), true
