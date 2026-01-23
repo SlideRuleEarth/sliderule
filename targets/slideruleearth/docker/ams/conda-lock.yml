@@ -484,34 +484,32 @@ package:
   category: main
   optional: false
 - name: packaging
-  version: '25.0'
+  version: '26.0'
   manager: conda
   platform: linux-aarch64
   dependencies:
     python: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/packaging-25.0-pyh29332c3_1.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/packaging-26.0-pyhcf101f3_0.conda
   hash:
-    md5: 58335b26c38bf4a20f399384c33cbcf9
-    sha256: 289861ed0c13a15d7bbb408796af4de72c2fe67e2bcb0de98f4c3fce259d7991
+    md5: b76541e68fea4d511b1ac46a28dcd2c6
+    sha256: c1fc0f953048f743385d31c468b4a678b3ad20caffdeaa94bed85ba63049fd58
   category: main
   optional: false
 - name: pandas
-  version: 2.3.3
+  version: 3.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libgcc: '>=14'
-    libstdcxx: '>=14'
+    python: 3.14.*
     numpy: '>=1.23,<3'
-    python: '>=3.14,<3.15.0a0'
     python-dateutil: '>=2.8.2'
-    python-tzdata: '>=2022.7'
+    libstdcxx: '>=14'
+    libgcc: '>=14'
     python_abi: 3.14.*
-    pytz: '>=2020.1'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pandas-2.3.3-py314h91eeaa4_2.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pandas-3.0.0-py314h3df833d_0.conda
   hash:
-    md5: b2dd1c4c086280a3a9b2a12f0431bc7c
-    sha256: 990b6df647273e199cd06731b28b5f0819d8f58aefa89b8fba8b62cdcbf703d3
+    md5: fa3e687f3204af8e41f77d8f103fb762
+    sha256: 5da9afc23339e2aa55802804ddcb97fb3fd1ccc627bfd2065c9c4cd89578b275
   category: main
   optional: false
 - name: pip
@@ -625,18 +623,6 @@ package:
     sha256: ddd082621bf32a8b4db99e1f9621901e62aea2730520a80a1701ca5553d066d4
   category: main
   optional: false
-- name: python-tzdata
-  version: '2025.3'
-  manager: conda
-  platform: linux-aarch64
-  dependencies:
-    python: '>=3.10'
-  url: https://conda.anaconda.org/conda-forge/noarch/python-tzdata-2025.3-pyhd8ed1ab_0.conda
-  hash:
-    md5: 7ead57407430ba33f681738905278d03
-    sha256: 467134ef39f0af2dbb57d78cb3e4821f01003488d331a8dd7119334f4f47bfbd
-  category: main
-  optional: false
 - name: python_abi
   version: '3.14'
   manager: conda
@@ -646,18 +632,6 @@ package:
   hash:
     md5: 0539938c55b6b1a59b560e843ad864a4
     sha256: ad6d2e9ac39751cc0529dd1566a26751a0bf2542adb0c232533d32e176e21db5
-  category: main
-  optional: false
-- name: pytz
-  version: '2025.2'
-  manager: conda
-  platform: linux-aarch64
-  dependencies:
-    python: '>=3.9'
-  url: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
-  hash:
-    md5: bc8e3267d44011051f2eb14d22fb0960
-    sha256: 8d2a8bf110cc1fc3df6904091dead158ba3e614d8402a83e51ed3a8aa93cdeb0
   category: main
   optional: false
 - name: readline
