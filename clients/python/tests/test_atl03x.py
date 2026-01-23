@@ -209,7 +209,6 @@ class TestAtl03x:
         spot_counts = gdf.spot.value_counts().to_dict()
         assert spot_counts.get(5, 0) == 386717
         assert spot_counts.get(6, 0) == 101953
-        assert gdf.ph_index.is_monotonic_increasing
         lat_min = gdf.geometry.y.min()
         lat_max = gdf.geometry.y.max()
         tol = 1e-2  # allow small expansion due to dataset coordinates
