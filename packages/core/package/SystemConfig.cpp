@@ -150,7 +150,6 @@ SystemConfig::SystemConfig(void):
         {"telemetry_stream",            &telemetryStream},
         {"cluster",                     &cluster},
         {"ams_url",                     &amsURL},
-        {"is_public",                   &isPublic},
         {"container_registry",          &containerRegistry}
     })
 {
@@ -166,7 +165,6 @@ SystemConfig::SystemConfig(void):
     setIfProvided(telemetryStream, "TELEMETRY_STREAM");
     setIfProvided(cluster, "CLUSTER");
     setIfProvided(amsURL, "AMS");
-    setIfProvidedBool(isPublic, "IS_PUBLIC");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 

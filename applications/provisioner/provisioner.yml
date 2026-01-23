@@ -61,7 +61,6 @@ Resources:
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
           JWT_ISSUER: !Ref JwtIssuer
-          CERTIFICATE_ARN: !Ref CertificateArn
           ALERT_STREAM: !Ref AlertStream
           TELEMETRY_STREAM: !Ref TelemetryStream
 
@@ -177,7 +176,6 @@ Resources:
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
           JWT_ISSUER: !Ref JwtIssuer
-          CERTIFICATE_ARN: !Ref CertificateArn
           ALERT_STREAM: !Ref AlertStream
           TELEMETRY_STREAM: !Ref TelemetryStream
 

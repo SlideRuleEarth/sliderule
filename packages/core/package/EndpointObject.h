@@ -116,6 +116,7 @@ class EndpointObject: public LuaObject
                 const char* getHdrSourceIp  (void) const;
                 const char* getHdrClient    (void) const;
                 const char* getHdrAccount   (void) const;
+                const char* getHdrOrgRoles  (void) const;
                 const char* getHdrStreaming (void) const;
                 const char* getHdrApiKey    (void) const;
         };

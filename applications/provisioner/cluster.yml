@@ -37,8 +37,6 @@ Parameters:
     Type: String
   JwtIssuer:
     Type: String
-  CertificateArn:
-    Type: String
   AlertStream:
     Type: String
   TelemetryStream:
@@ -225,16 +223,17 @@ Resources:
                   - ec2:DescribeInstances
                   - ec2:TerminateInstances
                 Resource: "*"
-        - PolicyName: !Sub "${Cluster}-acm-access"
+        - PolicyName: !Sub "${Cluster}-firehose-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
-                  - acm:GetCertificate
-                  - acm:DescribeCertificate
+                  - firehose:PutRecord
+                  - firehose:PutRecordBatch
                 Resource:
-                  - !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/*
+                  - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${AlertStream}"
+                  - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${TelemetryStream}"
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -692,7 +691,6 @@ Resources:
                   - TELEMETRY_STREAM=${TelemetryStream}
                   - CLUSTER=${Cluster}
                   - AMS=http://127.0.0.1:9082
-                  - IS_PUBLIC=${IsPublic}
                   - CONTAINER_REGISTRY=${ContainerRegistry}
                 labels:
                   - autoheal=true

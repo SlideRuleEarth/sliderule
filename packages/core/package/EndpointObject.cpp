@@ -87,6 +87,7 @@ int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, cons
     LuaEngine::setAttrStr(L, "id", rqst_id);
     LuaEngine::setAttrStr(L, "rspq", rspq_name);
     LuaEngine::setAttrStr(L, "srcip", getHdrSourceIp());
+    LuaEngine::setAttrStr(L, "orgroles", getHdrOrgRoles());
     LuaEngine::setAttrStr(L, "arg", argument);
     lua_setglobal(L, "_rqst");
     return 1;
@@ -129,6 +130,19 @@ const char* EndpointObject::Request::getHdrAccount (void) const
         return hdr_str->c_str();
     }
     return "anonymous";
+}
+
+/*----------------------------------------------------------------------------
+ * getHdrOrgRoles
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::Request::getHdrOrgRoles (void) const
+{
+    string* hdr_str;
+    if(headers.find("x-sliderule-org-roles", &hdr_str))
+    {
+        return hdr_str->c_str();
+    }
+    return "[]";
 }
 
 /*----------------------------------------------------------------------------

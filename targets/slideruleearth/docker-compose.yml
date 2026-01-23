@@ -26,7 +26,6 @@ services:
       - ORCHESTRATOR=http://127.0.0.1:8050
       - CLUSTER=local
       - AMS=http://127.0.0.1:9082
-      - IS_PUBLIC=false
       - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
     labels:
       - autoheal=true

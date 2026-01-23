@@ -115,7 +115,6 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            telemetryStream;
         FieldElement<string>            cluster;
         FieldElement<string>            amsURL;
-        FieldElement<bool>              isPublic;
         FieldElement<string>            containerRegistry;
 
     private:

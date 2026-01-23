@@ -72,7 +72,6 @@ def lambda_deploy(event, context):
         container_registry = os.environ['CONTAINER_REGISTRY']
         lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
         jwt_issuer = os.environ['JWT_ISSUER']
-        certificate_arn = os.environ['CERTIFICATE_ARN']
         alert_stream = os.environ['ALERT_STREAM']
         telemetry_stream = os.environ['TELEMETRY_STREAM']
 
@@ -108,7 +107,6 @@ def lambda_deploy(event, context):
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
-            {"ParameterKey": "CertificateArn", "ParameterValue": certificate_arn},
             {"ParameterKey": "AlertStream", "ParameterValue": alert_stream},
             {"ParameterKey": "TelemetryStream", "ParameterValue": telemetry_stream},
         ]

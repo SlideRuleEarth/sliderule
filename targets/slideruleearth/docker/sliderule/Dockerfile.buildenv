@@ -115,11 +115,25 @@ RUN git clone https://github.com/HDFGroup/hdf5.git && \
     rm -Rf /build/hdf5 && \
     ldconfig
 
+# install AWS SDK dependency
+RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git && \
+    cd aws-sdk-cpp && \
+    echo aws-sdk-cpp: $(git --git-dir /aws-sdk-cpp/.git --work-tree /aws-sdk-cpp describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
+    mkdir -p /build/aws-sdk-cpp && \
+    cd /build/aws-sdk-cpp && \
+    cmake /aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="firehose" && \
+    make -j 8 && \
+    make install && \
+    rm -Rf /aws-sdk-cpp && \
+    rm -Rf /build/aws-sdk-cpp && \
+    ldconfig
+
 # install gdal dependency
 RUN git clone https://github.com/OSGeo/gdal.git && \
     cd gdal && \
-    VERSION=`curl -s https://api.github.com/repos/OSGeo/gdal/releases/latest | jq '.tag_name' | tr -d "\""` && \
-    git checkout $VERSION && \
+#    VERSION=`curl -s https://api.github.com/repos/OSGeo/gdal/releases/latest | jq '.tag_name' | tr -d "\""` && \
+#    git checkout $VERSION && \ # versions >= v3.11.5 crash our system when sampling worldcover
+    git checkout v3.11.0 && \
     echo gdal: $(git --git-dir /gdal/.git --work-tree /gdal describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/gdal && \
     cd /build/gdal && \
@@ -156,19 +170,6 @@ RUN git clone https://github.com/PDAL/PDAL.git && \
     make -j8 install && \
     rm -Rf /PDAL && \
     rm -Rf /build/PDAL && \
-    ldconfig
-
-# install AWS SDK
-RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git && \
-    cd aws-sdk-cpp && \
-    echo aws-sdk-cpp: $(git --git-dir /aws-sdk-cpp/.git --work-tree /aws-sdk-cpp describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
-    mkdir -p /build/aws-sdk-cpp && \
-    cd /build/aws-sdk-cpp && \
-    cmake /aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="firehose" && \
-    make -j 8 && \
-    make install && \
-    rm -Rf /aws-sdk-cpp && \
-    rm -Rf /build/aws-sdk-cpp && \
     ldconfig
 
 # configure any new shared libraries

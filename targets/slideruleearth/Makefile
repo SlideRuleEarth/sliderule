@@ -148,7 +148,6 @@ run: ## run the server locally
 	ORCHESTRATOR=http://127.0.0.1:8050 \
 	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
-	IS_PUBLIC=false \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
 
@@ -168,6 +167,28 @@ build: ## build the code using the build environment docker container
 		--name buildenv \
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
 		$(BUILD_CMD)
+
+
+runit: ## build the code using the build environment docker container
+	docker run \
+		--network host \
+		-v /data:/data \
+        -v /etc/ssl/certs:/etc/ssl/certs \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+		-e LOG_FORMAT="FMT_TEXT" \
+		-e IPV4=$(MYIP) \
+		-e ENVIRONMENT_VERSION=$(ENVVER) \
+		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
+		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
+		-e ORCHESTRATOR=http://127.0.0.1:8050 \
+		-e CLUSTER=local \
+		-e AMS=http://127.0.0.1:9082 \
+		-e CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+		--rm \
+		-it \
+		--name sliderule \
+		--entrypoint /bin/bash \
+		$(CONTAINER_REGISTRY)/sliderule:unstable
 
 ########################
 # Docker Build Targets
@@ -318,7 +339,6 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
-						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
