@@ -100,6 +100,11 @@ DESTROY_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`DestroyLambdaArn`].OutputValue' \
   --output text)
+SCHEDULER_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
+  --stack-name provisioner \
+  --region us-west-2 \
+  --query 'Stacks[0].Outputs[?OutputKey==`SchedulerLambdaArn`].OutputValue' \
+  --output text)
 
 ########################
 # Local Build Targets
@@ -313,10 +318,10 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
+						ParameterKey=SchedulerLambdaArn,ParameterValue=$(SCHEDULER_LAMBDA_ARN) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
-						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)

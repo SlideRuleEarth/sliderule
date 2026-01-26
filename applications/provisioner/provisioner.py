@@ -70,7 +70,6 @@ def lambda_deploy(event, context):
         project_folder = os.environ["PROJECT_FOLDER"]
         project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
         container_registry = os.environ['CONTAINER_REGISTRY']
-        lambda_zip_file = os.environ['LAMBDA_ZIP_FILE']
         jwt_issuer = os.environ['JWT_ISSUER']
         alert_stream = os.environ['ALERT_STREAM']
         telemetry_stream = os.environ['TELEMETRY_STREAM']
@@ -85,11 +84,12 @@ def lambda_deploy(event, context):
         version = event.get("version", "latest")
         region = event.get("region", "us-west-2")
 
-        # get arn for auto-shutdown
+        # get arns for auto-shutdown
         cf = boto3.client("cloudformation", region_name=region)
         resp = cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
+        scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "SchedulerLambdaArn")
 
         # build parameters for stack creation
         state["parms"] = [
@@ -104,8 +104,8 @@ def lambda_deploy(event, context):
             {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
             {"ParameterKey": "ProjectPublicBucket", "ParameterValue": project_public_bucket},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
+            {"ParameterKey": "SchedulerLambdaArn", "ParameterValue": scheduler_lambda_arn},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
-            {"ParameterKey": "ProvisionerLambdaZipFile", "ParameterValue": lambda_zip_file},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
             {"ParameterKey": "AlertStream", "ParameterValue": alert_stream},
             {"ParameterKey": "TelemetryStream", "ParameterValue": telemetry_stream},
@@ -409,28 +409,40 @@ def lambda_test(event, context):
     state = {"status": True}
 
     try:
-        # get require parameters
-        version = event["version"]
-        domain = event["domain"]
-        project_bucket = event["project_bucket"]
-        project_folder = event["project_folder"]
-        lambda_zip_file = event["lambda_zip_file"]
-        container_registry = event["container_registry"]
-        deploy_date = event["deploy_date"]
-        region = event["region"]
+        # get environment variables
+        stack_name = os.environ["STACK_NAME"]
+        domain = os.environ["DOMAIN"]
+        environment_version = os.environ['ENVIRONMENT_VERSION']
+        project_bucket = os.environ["PROJECT_BUCKET"]
+        project_folder = os.environ["PROJECT_FOLDER"]
+        container_registry = os.environ['CONTAINER_REGISTRY']
 
-        # get optional parameters
+        # get require parameters
+        deploy_date = event["deploy_date"]
+        branch = event["branch"]
+
+        # get optional request variables
+        region = event.get("region", "us-west-2")
         state["stack_name"] = event.get('stack_name', 'testrunner') # default to hardcoded stack name so only one can run at a time
+
+        # get arns for auto-shutdown
+        cf = boto3.client("cloudformation", region_name=region)
+        resp = cf.describe_stacks(StackName=stack_name)
+        outputs = resp["Stacks"][0].get("Outputs", [])
+        destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
+        scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "SchedulerLambdaArn")
 
         # build parameters for stack creation
         state["parms"] = [
-            {"ParameterKey": "Version", "ParameterValue": version},
             {"ParameterKey": "Domain", "ParameterValue": domain},
+            {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
             {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
             {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
-            {"ParameterKey": "LambdaZipFile", "ParameterValue": lambda_zip_file},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
-            {"ParameterKey": "DeployDate", "ParameterValue": deploy_date}
+            {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
+            {"ParameterKey": "SchedulerLambdaArn", "ParameterValue": scheduler_lambda_arn},
+            {"ParameterKey": "DeployDate", "ParameterValue": deploy_date},
+            {"ParameterKey": "Branch", "ParameterValue": branch}
         ]
 
         # read template

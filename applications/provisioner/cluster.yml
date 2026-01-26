@@ -27,14 +27,14 @@ Parameters:
     Type: String
   DestroyLambdaArn:
     Type: String
+  SchedulerLambdaArn:
+    Type: String
   ContainerRegistry:
     Type: String
   NodeCapacity:
     Type: Number
   TTL:
     Type: Number
-  ProvisionerLambdaZipFile:
-    Type: String
   JwtIssuer:
     Type: String
   AlertStream:
@@ -765,50 +765,12 @@ Resources:
   #
   # Auto-Shutdown
   #
-  SchedulerLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: SchedulerPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - events:PutRule
-                  - events:PutTargets
-                  - events:DescribeRule
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - lambda:AddPermission
-                Resource: '*'
-  SchedulerLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${Cluster}-scheduler'
-      Runtime: python3.13
-      Handler: scheduler.lambda_scheduler
-      Role: !GetAtt SchedulerLambdaRole.Arn
-      Timeout: 60
-      Code:
-        S3Bucket: !Ref ProjectBucket
-        S3Key: !Ref ProvisionerLambdaZipFile
   AutoShutdownCustomResource:
     Type: Custom::ScheduleStackDeletion
     DependsOn:
       - ClusterAutoScalingGroup
     Properties:
-      ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
+      ServiceToken: !Ref SchedulerLambdaArn
       StackName: !Ref AWS::StackName
       DeleteAfterMinutes: !Ref TTL
       DeletionLambdaArn: !Ref DestroyLambdaArn
