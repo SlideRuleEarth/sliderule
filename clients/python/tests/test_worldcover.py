@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-import sliderule
+from sliderule import sliderule
 from sliderule import raster
 import geopandas as gpd
 
@@ -44,3 +44,25 @@ class TestMosaic:
 
         values = gdf_reset['value']
         assert (values == expValue).all()
+
+    def test_atl03x_worldcover_transform_crash(self):
+        session = sliderule.create_session(domain="localhost", cluster=None, verbose=True)
+        parms = {
+            "poly": [
+                {"lon": -84.39178848239358, "lat": 33.61298427408177},
+                {"lon": -84.39178848239358, "lat": 33.66226086962223},
+                {"lon": -84.46289861950068, "lat": 33.66226086962223},
+                {"lon": -84.46289861950068, "lat": 33.61298427408177},
+                {"lon": -84.39178848239358, "lat": 33.61298427408177},
+            ],
+            "samples": {
+                "worldcover": {
+                    "asset": "esa-worldcover-10meter",
+                    "algorithm": "NearestNeighbour",
+                    "force_single_sample": False,
+                }
+            },
+        }
+        gdf = sliderule.run("atl03x", parms, session=session)
+        print(gdf)
+        assert gdf is not None

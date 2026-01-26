@@ -102,13 +102,19 @@ class GeoRaster: public RasterObject
 
         typedef struct Reader
         {
+            GeoRaster*                        owner;
+            RequestFields*                    rqstParms;
+            const char*                       samplerKey;
+            std::string                       crs;
             RasterObject*                     robj;
             range_t                           range;
             const std::vector<point_info_t>&  points;
             std::vector<sample_list_t*>       samples;
             uint32_t                          ssErrors;
+            RasterFileDictionary*             fileDict;
 
-            explicit Reader (RasterObject* _robj, const std::vector<point_info_t>& _points);
+            explicit Reader (GeoRaster* _owner, RequestFields* _rqstParms, const char* _samplerKey, const std::string& _crs,
+                             const std::vector<point_info_t>& _points);
                     ~Reader (void);
         } reader_t;
 

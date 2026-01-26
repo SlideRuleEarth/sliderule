@@ -136,12 +136,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
 
             for(uint32_t i = 0; i < numThreads; i++)
             {
-                /* Create a RasterObject for each reader thread.
-                 * These objects are local and will be deleted in the reader destructor.
-                 * The user's (this) RasterObject is not directly used for sampling; it is used to accumulate samples from all readers.
-                 */
-                RasterObject* _robj = RasterObject::cppCreate(this);
-                reader_t* reader = new reader_t(_robj, points);
+                reader_t* reader = new reader_t(this, rqstParms, samplerKey, getCRS(), points);
                 reader->range = ranges[i];
                 readersMut.lock();
                 {
@@ -159,7 +154,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
             }
 
             /* Copy samples lists (slist pointers only) from each reader. */
-            for(const reader_t* reader : readers)
+            for(reader_t* reader : readers)
             {
                 /* Acumulate errors from all reader threads */
                 ssErrors |= reader->ssErrors;
@@ -173,8 +168,8 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
                          */
                         RasterSample* sample = slist->get(i);
 
-                        /* Find the file name for the sample id in reader's dictionary */
-                        const char* name = reader->robj->fileDictGet(sample->fileId);
+                        /* Find the file name for the sample id in reader's dictionary copy */
+                        const char* name = reader->fileDict ? reader->fileDict->get(sample->fileId) : "";
 
                         /* Use user's RasterObject dictionary to store the file names. */
                         sample->fileId = fileDict.add(name, true);
@@ -299,8 +294,11 @@ void GeoRaster::onStopSampling(void)
 {
     readersMut.lock();
     {
-        for(const reader_t* reader : readers)
-            disableSampling(reader->robj);
+        for(reader_t* reader : readers)
+        {
+            RasterObject* robj = reader->robj;
+            if(robj) disableSampling(robj);
+        }
     }
     readersMut.unlock();
 }
@@ -312,11 +310,17 @@ void GeoRaster::onStopSampling(void)
 /*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::Reader::Reader(RasterObject* _robj, const std::vector<RasterObject::point_info_t>& _points) :
-    robj(_robj),
+GeoRaster::Reader::Reader(GeoRaster* _owner, RequestFields* _rqstParms, const char* _samplerKey, const std::string& _crs,
+                           const std::vector<RasterObject::point_info_t>& _points) :
+    owner(_owner),
+    rqstParms(_rqstParms),
+    samplerKey(_samplerKey),
+    crs(_crs),
+    robj(NULL),
     range({0, 0}),
     points(_points),
-    ssErrors(SS_NO_ERRORS)
+    ssErrors(SS_NO_ERRORS),
+    fileDict(NULL)
 {
 }
 
@@ -325,7 +329,7 @@ GeoRaster::Reader::Reader(RasterObject* _robj, const std::vector<RasterObject::p
  *----------------------------------------------------------------------------*/
 GeoRaster::Reader::~Reader(void)
 {
-    delete robj;  /* This is locally created RasterObject, not lua created */
+    delete fileDict;
 }
 
 /*----------------------------------------------------------------------------
@@ -334,7 +338,34 @@ GeoRaster::Reader::~Reader(void)
 void* GeoRaster::readerThread(void* parm)
 {
     reader_t* reader = static_cast<reader_t*>(parm);
-    reader->ssErrors = readSamples(reader->robj, reader->range, reader->points, reader->samples);
+
+    /* Create raster object, keep GDAL/PROJ resources local to this thread */
+    RasterObject* robj = RasterObject::cppCreate(reader->rqstParms, reader->samplerKey);
+    if(robj == NULL)
+    {
+        reader->ssErrors = SS_READ_ERROR;
+        return NULL;
+    }
+
+    robj->setCRS(reader->crs);
+
+    reader->owner->readersMut.lock();
+    {
+        reader->robj = robj;
+    }
+    reader->owner->readersMut.unlock();
+
+    reader->ssErrors = readSamples(robj, reader->range, reader->points, reader->samples);
+    reader->fileDict = new RasterFileDictionary(robj->fileDictCopy());
+
+    reader->owner->readersMut.lock();
+    {
+        reader->robj = NULL;
+    }
+    reader->owner->readersMut.unlock();
+
+    /* Delete raster object, free GDAL/PROJ resources before exiting thread */
+    delete robj;
 
     /* Exit Thread */
     return NULL;
