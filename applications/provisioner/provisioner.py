@@ -417,11 +417,9 @@ def lambda_test(event, context):
         project_folder = os.environ["PROJECT_FOLDER"]
         container_registry = os.environ['CONTAINER_REGISTRY']
 
-        # get require parameters
-        deploy_date = event["deploy_date"]
-        branch = event["branch"]
-
         # get optional request variables
+        deploy_date = event.get("deploy_date", datetime.now().strftime("%Y%m%d%H%M"))
+        branch = event.get("branch", "main")
         region = event.get("region", "us-west-2")
         state["stack_name"] = event.get('stack_name', 'testrunner') # default to hardcoded stack name so only one can run at a time
 
@@ -447,10 +445,6 @@ def lambda_test(event, context):
 
         # read template
         templateBody = open("testrunner.yml").read()
-
-        # copy test runner to S3 (where cloudformation can find it)
-        s3 = boto3.client("s3")
-        s3.upload_file(Filename="testrunner.sh", Bucket=project_bucket, Key=f'{project_folder}/testrunner.sh')
 
         # create stack
         cf = boto3.client("cloudformation", region_name=region)

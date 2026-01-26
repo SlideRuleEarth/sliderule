@@ -212,7 +212,6 @@ Resources:
               - Effect: Allow
                 Action: ["s3:PutObject"]
                 Resource:
-                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/manager/*"
                   - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
         - PolicyName: !Sub "${Cluster}-ec2-access"
           PolicyDocument:
