@@ -343,7 +343,7 @@ cluster-direct-destroy: ## directly destroys cluster via cloud formation
 
 BRANCH ?= main
 
-testrunner-deploy: ## invokes the provisioner lambda function and displays the response
+testrunner-create: ## invokes the provisioner lambda function and displays the response
 	aws cloudformation create-stack \
 		--stack-name 	testrunner \
 		--template-body file://$(ROOT)/applications/provisioner/testrunner.yml \
