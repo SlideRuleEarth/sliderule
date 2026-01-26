@@ -252,10 +252,10 @@ void GdalRaster::open(void)
          * close the raster and rethrow an exception.
          */
         mlog(e.level(), "Error opening raster: %s", e.what());
-        GDALClose((GDALDatasetH)dset);
-        dset = NULL;
         OGRCoordinateTransformation::DestroyCT(transf);
         transf = NULL;
+        GDALClose((GDALDatasetH)dset);
+        dset = NULL;
         bandMap.clear();
         elevationBand = NULL;
         flagsBand = NULL;

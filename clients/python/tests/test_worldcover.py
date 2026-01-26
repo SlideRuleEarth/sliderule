@@ -45,8 +45,7 @@ class TestMosaic:
         values = gdf_reset['value']
         assert (values == expValue).all()
 
-    def test_atl03x_worldcover_transform_crash(self):
-        session = sliderule.create_session(domain="localhost", cluster=None, verbose=True)
+    def test_atl03x_worldcover_transform(self, init):
         parms = {
             "poly": [
                 {"lon": -84.39178848239358, "lat": 33.61298427408177},
@@ -63,6 +62,7 @@ class TestMosaic:
                 }
             },
         }
-        gdf = sliderule.run("atl03x", parms, session=session)
-        print(gdf)
-        assert gdf is not None
+        gdf = sliderule.run("atl03x", parms)
+        values = gdf["worldcover.value"]
+        assert init
+        assert len(values) > 300000
