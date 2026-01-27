@@ -82,7 +82,6 @@ int Atl06DataFrame::luaCreate (lua_State* L)
 Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"extent_id",               &extent_id},
         {"time_ns",                 &time_ns},
         {"latitude",                &latitude},
         {"longitude",               &longitude},
@@ -246,7 +245,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
             throw RunTimeException(DEBUG, RTE_STATUS, "spot %d filtered out", df->spot.value);
         }
 
-        /* Track/Pair for extent_id generation */
+        /* Track/Pair for ground track */
         Icesat2Fields::track_t track;
         int pair;
         if     (df->beam[2] == '1') track = Icesat2Fields::RPT_1;
@@ -262,7 +261,6 @@ void* Atl06DataFrame::subsettingThread (void* parm)
         df->gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], track, pair);
 
         /* Loop Through Each Segment */
-        uint32_t extent_counter = 0;
         for(long segment = 0; df->active.load() && segment < aoi.count; segment++)
         {
             /* Check for Inclusion Mask */
@@ -275,8 +273,6 @@ void* Atl06DataFrame::subsettingThread (void* parm)
             df->addRow();
 
             /* Populate Columns */
-            const uint64_t extent_id = Icesat2Fields::generateExtentId(parms.granuleFields.rgt.value, parms.granuleFields.cycle.value, parms.granuleFields.region.value, track, pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
-            df->extent_id.append(extent_id);
             df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl06.delta_time[segment]));
             df->latitude.append(aoi.latitude[segment]);
             df->longitude.append(aoi.longitude[segment]);
@@ -303,8 +299,6 @@ void* Atl06DataFrame::subsettingThread (void* parm)
                 atl06.anc_data.addToGDF(df, segment);
             }
 
-            /* Bump Extent Counter */
-            extent_counter++;
         }
     }
     catch(const RunTimeException& e)
