@@ -212,6 +212,7 @@ Resources:
           systemctl enable docker
           systemctl start docker
           usermod -aG docker ec2-user
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
           #
           # Install Docker Compose V2
           #
@@ -246,10 +247,11 @@ Resources:
           wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
           bash Miniforge3-Linux-aarch64.sh -b
           #
-          # Clone SlideRule Repository
+          # Setup and Clone SlideRule Repository
           #
+          docker pull ${ContainerRegistry}/sliderule-buildenv:latest
           git clone https://github.com/SlideRuleEarth/sliderule.git
-          cd /sliderule/targets/slideruleearth
+          cd /sliderule
           git checkout ${Branch}
           #
           # Configure Logging
@@ -258,7 +260,7 @@ Resources:
           #
           # Build and Run Self Tests
           #
-          docker pull ${ContainerRegistry}/sliderule-buildenv:latest
+          cd /sliderule/targets/slideruleearth
           make build CONFIG=debug BUILD_CMD="sh -c \"cd /sliderule/targets/slideruleearth && make config-debug && make && make selftest\""
           #
           # Build Cluster

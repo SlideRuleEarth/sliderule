@@ -169,6 +169,16 @@ build: ## build the code using the build environment docker container
 		-e ROOT=$(ROOT) \
 		-e GITNAME="$(shell git config user.name)" \
 		-e GITEMAIL="$(shell git config user.email)" \
+		-e LOG_FORMAT=FMT_TEXT \
+		-e TRUSTED_ENVIRONMENT=true \
+		-e IPV4=$(MYIP) \
+		-e ENVIRONMENT_VERSION=$(ENVVER) \
+		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
+		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
+		-e ORCHESTRATOR=http://127.0.0.1:8050 \
+		-e CLUSTER=local \
+		-e AMS=http://127.0.0.1:9082 \
+		-e CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 		--rm \
 		--name buildenv \
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
