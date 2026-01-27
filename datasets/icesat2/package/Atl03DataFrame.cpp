@@ -134,9 +134,10 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf03(_hdf03),
     hdf08(_hdf08),
     hdf24(_hdf24),
-    useYapc006(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version == 0) && (parms->granuleFields.version.value == 6)),
-    useYapc007(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version == 0) && (parms->granuleFields.version.value >= 7)),
-    useGeoid(parms->datum == MathLib::EGM08)
+    usePodppd(parms->podppdMask.value != 0x00),
+    useYapc006(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)),
+    useYapc007(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
+    useGeoid(parms->datum.value == MathLib::EGM08)
 {
     assert(_parms);
     assert(_hdf03);
@@ -227,6 +228,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
     segment_id          (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_id").c_str(),       0, aoi.first_segment, aoi.num_segments),
     segment_dist_x      (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_dist_x").c_str(),   0, aoi.first_segment, aoi.num_segments),
     solar_elevation     (df->hdf03, FString("%s/%s", df->beam, "geolocation/solar_elevation").c_str(),  0, aoi.first_segment, aoi.num_segments),
+    podppd_flag         (df->usePodppd ? df->hdf03 : NULL, FString("%s/%s", df->beam, "geolocation/podppd_flag").c_str(), 0, aoi.first_segment, aoi.num_segments),
     dist_ph_along       (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_along").c_str(),        0, aoi.first_photon,  aoi.num_photons),
     dist_ph_across      (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_across").c_str(),       0, aoi.first_photon,  aoi.num_photons),
     h_ph                (df->hdf03, FString("%s/%s", df->beam, "heights/h_ph").c_str(),                 0, aoi.first_photon,  aoi.num_photons),
@@ -251,6 +253,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
     segment_id.join(df->readTimeoutMs, true);
     segment_dist_x.join(df->readTimeoutMs, true);
     solar_elevation.join(df->readTimeoutMs, true);
+    if(df->usePodppd) podppd_flag.join(df->readTimeoutMs, true);
     dist_ph_along.join(df->readTimeoutMs, true);
     dist_ph_across.join(df->readTimeoutMs, true);
     h_ph.join(df->readTimeoutMs, true);
@@ -641,6 +644,21 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             else if(!parms.qualityPh[quality_ph])
             {
                 continue;
+            }
+
+            /* Set and Check ATL03 POD/PPD Degradation */
+            if(df->usePodppd)
+            {
+                const uint8_t podppd_flag = atl03.podppd_flag[current_segment];
+                const uint8_t podppd_mask = 1 << podppd_flag;
+                if(podppd_flag > 7)
+                {
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid POD/PPD flag: %02x", podppd_flag);
+                }
+                else if((podppd_mask & parms.podppdMask.value) == 0x00)
+                {
+                    continue;
+                }
             }
 
             /* Set and Check ATL08 Classification */
