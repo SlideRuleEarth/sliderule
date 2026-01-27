@@ -100,6 +100,11 @@ DESTROY_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`DestroyLambdaArn`].OutputValue' \
   --output text)
+SCHEDULER_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
+  --stack-name provisioner \
+  --region us-west-2 \
+  --query 'Stacks[0].Outputs[?OutputKey==`SchedulerLambdaArn`].OutputValue' \
+  --output text)
 
 ########################
 # Local Build Targets
@@ -164,6 +169,16 @@ build: ## build the code using the build environment docker container
 		-e ROOT=$(ROOT) \
 		-e GITNAME="$(shell git config user.name)" \
 		-e GITEMAIL="$(shell git config user.email)" \
+		-e LOG_FORMAT=FMT_TEXT \
+		-e TRUSTED_ENVIRONMENT=true \
+		-e IPV4=$(MYIP) \
+		-e ENVIRONMENT_VERSION=$(ENVVER) \
+		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
+		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
+		-e ORCHESTRATOR=http://127.0.0.1:8050 \
+		-e CLUSTER=local \
+		-e AMS=http://127.0.0.1:9082 \
+		-e CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 		--rm \
 		--name buildenv \
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
@@ -313,10 +328,10 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
+						ParameterKey=SchedulerLambdaArn,ParameterValue=$(SCHEDULER_LAMBDA_ARN) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
-						ParameterKey=ProvisionerLambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
@@ -333,19 +348,27 @@ cluster-direct-destroy: ## directly destroys cluster via cloud formation
 # Test Runner Targets
 ########################
 #	- Requires the provisioner to be created
-#	- The provisioner provides a lambda that is used to deploy the testrunner stack
+#	- The provisioner provides lambdas that are used to destroy the testrunner stack
 #	- The testrunner automatically destroys itself after one hour
 
-TESTBOT_PARMS = '{\
-	"version": "$(VERSION)",\
-	"domain": "$(DOMAIN)",\
-	"project_bucket": "$(PROJECT_BUCKET)",\
-	"project_folder": "$(PROJECT_FOLDER)",\
-	"lambda_zip_file": "$(PROJECT_FOLDER)/provisioner.zip",\
-	"container_registry": "$(CONTAINER_REGISTRY)",\
-	"deploy_date": "$(TIMESTAMP)",\
-	"region": "$(AWS_REGION)"\
-}'
+BRANCH ?= main
+
+testrunner-create: ## invokes the provisioner lambda function and displays the response
+	aws cloudformation create-stack \
+		--stack-name 	testrunner \
+		--template-body file://$(ROOT)/applications/provisioner/testrunner.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
+						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
+						ParameterKey=SchedulerLambdaArn,ParameterValue=$(SCHEDULER_LAMBDA_ARN) \
+						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP) \
+						ParameterKey=Branch,ParameterValue=$(BRANCH)
+	aws cloudformation wait stack-create-complete --stack-name testrunner
 
 testrunner-describe: ## status the creation/deletion of the test runner
 	aws cloudformation describe-stack-events --stack-name testrunner
@@ -355,11 +378,6 @@ testrunner-delete: ## deletes the test runner and any lingering event bridge rul
 	aws cloudformation wait stack-delete-complete --stack-name testrunner
 	- aws events remove-targets --rule testrunner-auto-delete --ids 1
 	- aws events delete-rule --name testrunner-auto-delete
-
-testrunner-run: ## invokes the provisioner lambda function and displays the response
-	echo $(TESTBOT_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name provisioner-test --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
 
 ########################
 # Recorder Targets
@@ -486,7 +504,6 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/testrunner.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner functions
@@ -757,6 +774,14 @@ perfmsbtest: ## run mosaics serial and batch performance test comparing results
 
 perfssbtest: ## run strips serial and batch performance test comparing results
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
+
+LAMBDA_PARMS ?= # json encoded parameters
+LAMBDA_NAME ?= # function to invoke
+
+lambdatest:
+	echo $(LAMBDA_PARMS) > /tmp/payload.json
+	aws lambda invoke --function-name $(LAMBDA_NAME) --payload fileb:///tmp/payload.json /tmp/response.json
+	cat /tmp/response.json | jq
 
 ########################
 # Help Targets

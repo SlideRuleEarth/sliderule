@@ -59,7 +59,6 @@ Resources:
           PROJECT_FOLDER: !Ref ProjectFolder
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
-          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
           JWT_ISSUER: !Ref JwtIssuer
           ALERT_STREAM: !Ref AlertStream
           TELEMETRY_STREAM: !Ref TelemetryStream
@@ -148,6 +147,14 @@ Resources:
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          DOMAIN: !Ref Domain
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
+          CONTAINER_REGISTRY: !Ref ContainerRegistry
 
   ## Gateway Lambda Function
   GatewayLambda:
@@ -178,6 +185,21 @@ Resources:
           JWT_ISSUER: !Ref JwtIssuer
           ALERT_STREAM: !Ref AlertStream
           TELEMETRY_STREAM: !Ref TelemetryStream
+
+  #
+  # Scheduler Lambda Function
+  #
+  SchedulerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-scheduler'
+      Runtime: python3.13
+      Handler: scheduler.lambda_scheduler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 60
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
 
   ## IAM Role
   LambdaExecutionRole:
@@ -237,6 +259,20 @@ Resources:
                   - cloudformation:DescribeStackResources
                   - cloudformation:UpdateStack
                 Resource: "*"
+        - PolicyName: SchedulerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:DescribeRule
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                Resource: '*'
 
   ## API Gateway HTTP API
   HttpApi:
@@ -386,3 +422,9 @@ Outputs:
     Value: !GetAtt DestroyLambda.Arn
     Export:
       Name: sliderule-provisioner-destroy-arn
+
+  SchedulerLambdaArn:
+    Description: Lambda that schedules the auto-shutdown of a cluster
+    Value: !GetAtt SchedulerLambda.Arn
+    Export:
+      Name: sliderule-provisioner-scheduler-arn

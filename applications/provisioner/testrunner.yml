@@ -6,26 +6,37 @@ Parameters:
   #
   # Variables
   #
-  Version:
-    Type: String
   Domain:
+    Type: String
+  EnvironmentVersion:
     Type: String
   ProjectBucket:
     Type: String
   ProjectFolder:
     Type: String
-  LambdaZipFile:
-    Type: String
   ContainerRegistry:
+    Type: String
+  DestroyLambdaArn:
+    Type: String
+  SchedulerLambdaArn:
     Type: String
   DeployDate:
     Type: String
+  Branch:
+    Type: String
+
+  #
+  # Constants
+  #
   AvailabilityZone:
     Type: String
     Default: "us-west-2d"
   DeleteAfterMinutes:
     Type: Number
     Default: 60
+  DockerComposeVersion:
+    Type: String
+    Default: "v2.24.5"
 
 Resources:
 
@@ -68,7 +79,21 @@ Resources:
     Properties:
       SubnetId: !Ref RemoteSubnet
       RouteTableId: !Ref RemoteRouteTable
-
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref RemoteVPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref RemoteRouteTable
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "*"
+            Resource: "*"
   #
   # IAM Role
   #
@@ -122,46 +147,6 @@ Resources:
                   - ec2:DescribeInstances
                   - ec2:TerminateInstances
                 Resource: "*"
-  SchedulerLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: SchedulerPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - events:PutRule
-                  - events:PutTargets
-                  - events:DescribeRule
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - lambda:AddPermission
-                Resource: '*'
-  DeletionLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/PowerUserAccess  # broad permissions for deletion
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -191,7 +176,7 @@ Resources:
   TestRunnerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}"
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
       InstanceType: t4g.2xlarge
       AvailabilityZone: !Ref AvailabilityZone
       IamInstanceProfile: !Ref InstanceProfile
@@ -215,24 +200,34 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-
-          ###################
+          set -e
+          #
+          # System Dependencies
+          #
+          dnf update -y
+          dnf install -y git make rsync wget docker
+          #
+          # Configure Docker
+          #
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ec2-user
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+          #
+          # Install Docker Compose V2
+          #
+          curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+          #
           # ILB
-          ###################
+          #
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
-
-          ###################
-          # Manager
-          ###################
-          mkdir /data
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
-
-          ###################
+          #
           # AMS
-          ###################
+          #
           mkdir -p /data/ATL13
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.json /data/ATL13/atl13.json
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl13.db /data/ATL13/atl13.db
@@ -240,57 +235,58 @@ Resources:
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/atl24r2.db /data/ATL24/atl24r2.db
           mkdir -p /data/3DEP
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/3dep.db /data/3DEP/3dep.db
-
-          ###################
+          #
           # Plugins
-          ###################
+          #
           mkdir -p /plugins
           aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
-
-          ###################
-          # Docker
-          ###################
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/docker-compose-linux-aarch64 ./docker-compose
-          chmod +x docker-compose
-
-          ###################
-          # Test
-          ###################
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Version}/testrunner.sh /testrunner.sh
-          chmod +x /testrunner.sh
-          /testrunner.sh ${ContainerRegistry} ${Version}
-          aws s3 cp /testrunner.log s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Version}-${DeployDate}-testrunner.log
-
-  #
-  # Lambda Delete Function
-  #
-  DeletionLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-deleter'
-      Runtime: python3.13
-      Handler: main.lambda_deleter
-      Role: !GetAtt DeletionLambdaRole.Arn
-      Timeout: 60
-      Code:
-        S3Bucket: !Ref ProjectBucket
-        S3Key: !Ref LambdaZipFile
-
-  #
-  # Lambda Schedule Function
-  #
-  SchedulerLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-scheduler'
-      Runtime: python3.13
-      Handler: main.lambda_scheduler
-      Role: !GetAtt SchedulerLambdaRole.Arn
-      Timeout: 60
-      Code:
-        S3Bucket: !Ref ProjectBucket
-        S3Key: !Ref LambdaZipFile
+          #
+          # Install Mamba
+          #
+          cd /
+          wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
+          bash Miniforge3-Linux-aarch64.sh -b
+          #
+          # Setup and Clone SlideRule Repository
+          #
+          docker pull ${ContainerRegistry}/sliderule-buildenv:latest
+          git clone https://github.com/SlideRuleEarth/sliderule.git
+          cd /sliderule
+          git checkout ${Branch}
+          #
+          # Configure Logging
+          #
+          exec > /testrunner.log 2>&1
+          #
+          # Build and Run Self Tests
+          #
+          cd /sliderule/targets/slideruleearth
+          make build CONFIG=debug BUILD_CMD="sh -c \"cd /sliderule/targets/slideruleearth && make config-debug && make && make selftest\""
+          #
+          # Build Cluster
+          #
+          make cluster-docker
+          #
+          # SlideRule PyTests
+          #
+          cd /sliderule/targets/slideruleearth
+          docker compose up -d ilb ams sliderule
+          cd /sliderule/clients/python
+          /opt/miniforge3/bin/mamba env create -f environment.yml -y
+          /opt/miniforge3/envs/sliderule/bin/pip install .
+          /opt/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
+          cd /sliderule/targets/slideruleearth
+          docker compose down ilb ams sliderule
+          #
+          # AMS PyTests
+          #
+          cd /sliderule/applications/ams
+          /opt/miniforge3/bin/mamba env create -f environment.yml -y
+          /opt/miniforge3/envs/ams/bin/pytest
+          #
+          # Record of Run
+          #
+          aws s3 cp /testrunner.log s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Branch}-${DeployDate}-testrunner.log
 
   #
   # Custom Schedule Trigger
@@ -300,7 +296,7 @@ Resources:
     DependsOn:
       - TestRunnerInstance
     Properties:
-      ServiceToken: !GetAtt SchedulerLambdaFunction.Arn
+      ServiceToken: !Ref SchedulerLambdaArn
       StackName: !Ref AWS::StackName
       DeleteAfterMinutes: !Ref DeleteAfterMinutes
-      DeletionLambdaArn: !GetAtt DeletionLambdaFunction.Arn
+      DeletionLambdaArn: !Ref DestroyLambdaArn
