@@ -121,6 +121,7 @@ class Atl03DataFrame: public GeoDataFrame
                 H5Array<int32_t>    segment_id;
                 H5Array<double>     segment_dist_x;
                 H5Array<float>      solar_elevation;
+                H5Array<int8_t>     podppd_flag;  // degraded POD/PPD
                 H5Array<float>      dist_ph_along;
                 H5Array<float>      dist_ph_across;
                 H5Array<float>      h_ph;
@@ -226,6 +227,7 @@ class Atl03DataFrame: public GeoDataFrame
         H5Object*           hdf08;  // atl08 granule
         H5Object*           hdf24;  // atl24 granule
         okey_t              dfKey;
+        bool                usePodppd;
         bool                useYapc006;
         bool                useYapc007;
         bool                useGeoid;

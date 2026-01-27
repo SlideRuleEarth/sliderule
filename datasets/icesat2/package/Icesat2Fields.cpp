@@ -521,6 +521,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"ats",                 &minAlongTrackSpread},
         {"len",                 &extentLength},
         {"res",                 &extentStep},
+        {"podppd",              &podppdMask},
         {"fit",                 &fit},
         {"yapc",                &yapc},
         {"phoreal",             &phoreal},

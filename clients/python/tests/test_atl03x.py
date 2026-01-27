@@ -69,6 +69,29 @@ class TestAtl03x:
         assert len(gdf) == 429954
         assert 4 in np.unique(gdf.spot)
 
+    def test_podppd_degrade_good(self, init):
+        gdf_all = sliderule.run("atl03x", {"beams": "gt1l", "podppd": 0xFF}, AOI, RESOURCES)
+        gdf_good = sliderule.run("atl03x", {"beams": "gt1l"}, AOI, RESOURCES)
+        gdf_bad = sliderule.run("atl03x", {"beams": "gt1l", "podppd": 0xFE}, AOI, RESOURCES)
+        gdf_no_filter = sliderule.run("atl03x", {"beams": "gt1l", "podppd": 0x00}, AOI, RESOURCES)
+        assert init
+        assert len(gdf_all) > 0
+        assert len(gdf_good) == len(gdf_all)
+        assert len(gdf_bad) == 0
+        assert len(gdf_no_filter) == len(gdf_all)
+
+    def test_podppd_degrade_bad(self, init):
+        resource = "ATL03_20240420135502_05032302_006_01.h5"
+        gdf_all = sliderule.run("atl03x", {"beams": "gt1l", "cnf": 4, "podppd": 0xFF}, resources=[resource])
+        gdf_good = sliderule.run("atl03x", {"beams": "gt1l", "cnf": 4}, resources=[resource])
+        gdf_bad = sliderule.run("atl03x", {"beams": "gt1l", "cnf": 4, "podppd": 0xFE}, resources=[resource])
+        gdf_no_filter = sliderule.run("atl03x", {"beams": "gt1l", "cnf": 4, "podppd": 0x00}, resources=[resource])
+        assert init
+        assert len(gdf_all) > 0
+        assert len(gdf_good) == 0
+        assert len(gdf_bad) == len(gdf_all)
+        assert len(gdf_no_filter) == len(gdf_all)
+
     def test_fitter(self, init):
         parms = {
             "track": 1,

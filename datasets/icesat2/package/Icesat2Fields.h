@@ -539,6 +539,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<double>                                minAlongTrackSpread {20.0};                             // meters
         FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
         FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
+        FieldElement<uint8_t>                               podppdMask {0x01};                                      // 0: nominal, 1: pod_degrade, 2: ppd_degrade, 3: podppd_degrade, 4: cal_nominal, 5: cal_pod_degrade, 6: cal_ppd_degrade, 7: cal_podppd_degrade
         FitFields                                           fit;                                                    // settings used in the surface fitter algorithm
         YapcFields                                          yapc;                                                   // settings used in YAPC algorithm
         PhorealFields                                       phoreal;                                                // phoreal algorithm settings
