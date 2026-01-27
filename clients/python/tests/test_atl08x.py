@@ -1,4 +1,4 @@
-"""eests for atl08x"""
+"""Tests for atl08x"""
 
 import pytest
 import numpy as np
