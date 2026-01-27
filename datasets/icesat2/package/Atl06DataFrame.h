@@ -103,7 +103,6 @@ class Atl06DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<uint64_t>    extent_id;
         FieldColumn<time8_t>     time_ns   {Field::TIME_COLUMN};
         FieldColumn<double>      latitude  {Field::Y_COLUMN};
         FieldColumn<double>      longitude {Field::X_COLUMN};

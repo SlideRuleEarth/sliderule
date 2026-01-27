@@ -47,11 +47,10 @@ runner.unittest("ATL06 DataFrame", function()
 
     -- Expected shape for ATL06_20200303180710_10390603_007_01.h5 / gt1l
     runner.assert(atl06df:numrows() == 114336, string.format("incorrect number of rows: %d", atl06df:numrows()))
-    runner.assert(atl06df:numcols() == 20, string.format("incorrect number of columns: %d", atl06df:numcols()))
+    runner.assert(atl06df:numcols() == 19, string.format("incorrect number of columns: %d", atl06df:numcols()))
 
     if atl06df:numrows() >= 1 then
         check_columns(atl06df, {
-            "extent_id",
             "time_ns",
             "latitude",
             "longitude",
@@ -127,7 +126,7 @@ runner.unittest("ATL06 DataFrame - Ancillary Data", function()
     runner.assert(atl06df:inerror() == false, "dataframe encountered error")
 
     runner.assert(atl06df:numrows() == 114605, "incorrect rows returned for ATL06 ancillary dataframe")
-    runner.assert(atl06df:numcols() == 22, string.format("incorrect columns: %d", atl06df:numcols()))
+    runner.assert(atl06df:numcols() == 21, string.format("incorrect columns: %d", atl06df:numcols()))
 
     local idx = 1
     check_expected({

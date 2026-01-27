@@ -18,7 +18,7 @@ class TestAtl06x:
         gdf = sliderule.run("atl06x", parms, resources=[GRANULE])
         assert init
         assert len(gdf) == 114336
-        assert len(gdf.keys()) >= 20
+        assert len(gdf.keys()) >= 19
 
         row = gdf.iloc[15]  # First row with all valid fields
         time_ns = row.name.value  # datetime index → ns since epoch
@@ -88,7 +88,7 @@ class TestAtl06x:
         gdf = sliderule.run("atl06x", parms, resources=[GRANULE])
         assert init
         assert len(gdf) == 114605
-        assert len(gdf.keys()) >= 22
+        assert len(gdf.keys()) >= 21
 
         row = gdf.iloc[0]
         np.testing.assert_allclose(
@@ -121,12 +121,12 @@ class TestAtl06x:
         def normalize(gdf):
             # The two APIs return identical rows but with different layouts: atl06x comes back as a GeoDataFrame
             # with time as the index, while atl06s arrives as plain records that get flattened into a DataFrame,
-            # so row order can differ. Sorting on extent_id and preserving the original time index lets us compare
-            # the same extents deterministically regardless of stream ordering or column/index naming differences.
-            sorted_gdf = gdf.sort_values("extent_id")
-            time_ns = sorted_gdf.index.astype("int64")
-            df = sorted_gdf.reset_index(drop=True)
+            # so row order can differ. Sorting on segment_id and time_ns lets us compare deterministically
+            # regardless of stream ordering or column/index naming differences.
+            time_ns = gdf.index.astype("int64")
+            df = gdf.reset_index(drop=True)
             df["time_ns"] = time_ns
+            df = df.sort_values(["segment_id", "time_ns"]).reset_index(drop=True)
             df["longitude"] = df.geometry.x.to_numpy()
             df["latitude"] = df.geometry.y.to_numpy()
             return df
@@ -135,7 +135,6 @@ class TestAtl06x:
         df_s = normalize(gdf_s)
 
         int_fields = [
-            "extent_id",
             "segment_id",
             "atl06_quality_summary",
             "bsnow_conf",
