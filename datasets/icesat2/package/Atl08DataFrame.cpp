@@ -82,32 +82,27 @@ int Atl08DataFrame::luaCreate (lua_State* L)
 Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"extent_id",               &extent_id},
         {"time_ns",                 &time_ns},
-        {"delta_time",              &delta_time_col},
         {"latitude",                &latitude},
         {"longitude",               &longitude},
         {"segment_id_beg",          &segment_id_beg},
-        {"segment_id_end",          &segment_id_end},
-        {"night_flag",              &night_flag},
+        {"segment_landcover",       &segment_landcover},
+        {"segment_snowcover",       &segment_snowcover},
         {"n_seg_ph",                &n_seg_ph},
         {"solar_elevation",         &solar_elevation},
-        {"solar_azimuth",           &solar_azimuth},
-        {"terrain_flg",             &terrain_flg},
-        {"brightness_flag",         &brightness_flag},
-        {"cloud_flag_atm",          &cloud_flag_atm},
-        {"h_te_best_fit",           &h_te_best_fit},
-        {"h_te_interp",             &h_te_interp},
         {"terrain_slope",           &terrain_slope},
         {"n_te_photons",            &n_te_photons},
-        {"te_quality_score",        &te_quality_score},
         {"h_te_uncertainty",        &h_te_uncertainty},
+        {"h_te_median",             &h_te_median},
         {"h_canopy",                &h_canopy},
-        {"h_canopy_abs",            &h_canopy_abs},
         {"h_canopy_uncertainty",    &h_canopy_uncertainty},
         {"segment_cover",           &segment_cover},
         {"n_ca_photons",            &n_ca_photons},
-        {"can_quality_score",       &can_quality_score}
+        {"h_max_canopy",            &h_max_canopy},
+        {"h_min_canopy",            &h_min_canopy},
+        {"h_mean_canopy",           &h_mean_canopy},
+        {"canopy_openness",         &canopy_openness},
+        {"canopy_h_metrics",        &canopy_h_metrics}
     },
     {
         {"spot",                    &spot},
@@ -141,6 +136,16 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
 
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
+
+    /* Optional Quality Score Columns */
+    if(parms->phoreal.te_quality_filter_provided)
+    {
+        addColumn("te_quality_score", &te_quality_score, false);
+    }
+    if(parms->phoreal.can_quality_filter_provided)
+    {
+        addColumn("can_quality_score", &can_quality_score, false);
+    }
 
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();
@@ -186,54 +191,52 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest08
     /* Land Segment Datasets */
     delta_time              (df->hdf08, FString("%s/%s", df->beam, "land_segments/delta_time").c_str(),                            0, aoi.first_index, aoi.count),
     segment_id_beg          (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_id_beg").c_str(),                        0, aoi.first_index, aoi.count),
-    segment_id_end          (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_id_end").c_str(),                        0, aoi.first_index, aoi.count),
-    night_flag              (df->hdf08, FString("%s/%s", df->beam, "land_segments/night_flag").c_str(),                            0, aoi.first_index, aoi.count),
+    segment_landcover       (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_landcover").c_str(),                     0, aoi.first_index, aoi.count),
+    segment_snowcover       (df->hdf08, FString("%s/%s", df->beam, "land_segments/segment_snowcover").c_str(),                     0, aoi.first_index, aoi.count),
     n_seg_ph                (df->hdf08, FString("%s/%s", df->beam, "land_segments/n_seg_ph").c_str(),                              0, aoi.first_index, aoi.count),
     solar_elevation         (df->hdf08, FString("%s/%s", df->beam, "land_segments/solar_elevation").c_str(),                       0, aoi.first_index, aoi.count),
-    solar_azimuth           (df->hdf08, FString("%s/%s", df->beam, "land_segments/solar_azimuth").c_str(),                         0, aoi.first_index, aoi.count),
-    terrain_flg             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain_flg").c_str(),                           0, aoi.first_index, aoi.count),
-    brightness_flag         (df->hdf08, FString("%s/%s", df->beam, "land_segments/brightness_flag").c_str(),                       0, aoi.first_index, aoi.count),
-    cloud_flag_atm          (df->hdf08, FString("%s/%s", df->beam, "land_segments/cloud_flag_atm").c_str(),                        0, aoi.first_index, aoi.count),
     /* Terrain Datasets */
-    h_te_best_fit           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_best_fit").c_str(),                 0, aoi.first_index, aoi.count),
-    h_te_interp             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_interp").c_str(),                   0, aoi.first_index, aoi.count),
     terrain_slope           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/terrain_slope").c_str(),                 0, aoi.first_index, aoi.count),
     n_te_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/n_te_photons").c_str(),                  0, aoi.first_index, aoi.count),
     te_quality_score        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(),              0, aoi.first_index, aoi.count),
     h_te_uncertainty        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_uncertainty").c_str(),              0, aoi.first_index, aoi.count),
+    h_te_median             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_median").c_str(),                   0, aoi.first_index, aoi.count),
     /* Canopy Datasets */
-    h_canopy                (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy").c_str(),                       0, aoi.first_index, aoi.count),
-    h_canopy_abs            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_abs").c_str(),                   0, aoi.first_index, aoi.count),
+    h_canopy                (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_canopy_abs" : "land_segments/canopy/h_canopy").c_str(), 0, aoi.first_index, aoi.count),
     h_canopy_uncertainty    (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_uncertainty").c_str(),           0, aoi.first_index, aoi.count),
     segment_cover           (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/segment_cover").c_str(),                  0, aoi.first_index, aoi.count),
     n_ca_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/n_ca_photons").c_str(),                   0, aoi.first_index, aoi.count),
     can_quality_score       (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(),              0, aoi.first_index, aoi.count),
+    h_max_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_max_canopy_abs" : "land_segments/canopy/h_max_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    h_min_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_min_canopy_abs" : "land_segments/canopy/h_min_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    h_mean_canopy           (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_mean_canopy_abs" : "land_segments/canopy/h_mean_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    canopy_openness         (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/canopy_openness").c_str(),                0, aoi.first_index, aoi.count),
+    canopy_h_metrics        (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/canopy_h_metrics_abs" : "land_segments/canopy/canopy_h_metrics").c_str(), H5Coro::ALL_COLS, aoi.first_index, aoi.count),
     anc_data                (df->parms->atl08Fields, df->hdf08, FString("%s/%s", df->beam, "land_segments").c_str(),H5Coro::ALL_COLS, aoi.first_index, aoi.count)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
     delta_time.join(df->readTimeoutMs, true);
     segment_id_beg.join(df->readTimeoutMs, true);
-    segment_id_end.join(df->readTimeoutMs, true);
-    night_flag.join(df->readTimeoutMs, true);
+    segment_landcover.join(df->readTimeoutMs, true);
+    segment_snowcover.join(df->readTimeoutMs, true);
     n_seg_ph.join(df->readTimeoutMs, true);
     solar_elevation.join(df->readTimeoutMs, true);
-    solar_azimuth.join(df->readTimeoutMs, true);
-    terrain_flg.join(df->readTimeoutMs, true);
-    brightness_flag.join(df->readTimeoutMs, true);
-    cloud_flag_atm.join(df->readTimeoutMs, true);
-    h_te_best_fit.join(df->readTimeoutMs, true);
-    h_te_interp.join(df->readTimeoutMs, true);
     terrain_slope.join(df->readTimeoutMs, true);
     n_te_photons.join(df->readTimeoutMs, true);
     te_quality_score.join(df->readTimeoutMs, true);
     h_te_uncertainty.join(df->readTimeoutMs, true);
+    h_te_median.join(df->readTimeoutMs, true);
     h_canopy.join(df->readTimeoutMs, true);
-    h_canopy_abs.join(df->readTimeoutMs, true);
     h_canopy_uncertainty.join(df->readTimeoutMs, true);
     segment_cover.join(df->readTimeoutMs, true);
     n_ca_photons.join(df->readTimeoutMs, true);
     can_quality_score.join(df->readTimeoutMs, true);
+    h_max_canopy.join(df->readTimeoutMs, true);
+    h_min_canopy.join(df->readTimeoutMs, true);
+    h_mean_canopy.join(df->readTimeoutMs, true);
+    canopy_openness.join(df->readTimeoutMs, true);
+    canopy_h_metrics.join(df->readTimeoutMs, true);
 
     /* Join and Add Ancillary Columns */
     anc_data.joinToGDF(df, df->readTimeoutMs, true);
@@ -269,7 +272,7 @@ void* Atl08DataFrame::subsettingThread (void* parm)
             throw RunTimeException(DEBUG, RTE_STATUS, "spot %d filtered out", df->spot.value);
         }
 
-        /* Track/Pair for extent_id generation */
+        /* Track/Pair for ground track */
         Icesat2Fields::track_t track;
         int pair;
         if     (df->beam[2] == '1') track = Icesat2Fields::RPT_1;
@@ -285,7 +288,6 @@ void* Atl08DataFrame::subsettingThread (void* parm)
         df->gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl08.sc_orient[0], track, pair);
 
         /* Loop Through Each Segment */
-        uint32_t extent_counter = 0;
         for(long segment = 0; df->active.load() && segment < aoi.count; segment++)
         {
             /* Check for Inclusion Mask */
@@ -294,37 +296,64 @@ void* Atl08DataFrame::subsettingThread (void* parm)
                 continue;
             }
 
+            /* Apply Quality Filters */
+            if(parms.phoreal.te_quality_filter_provided)
+            {
+                if(atl08.te_quality_score[segment] < parms.phoreal.te_quality_filter.value)
+                {
+                    continue;
+                }
+            }
+            if(parms.phoreal.can_quality_filter_provided)
+            {
+                if(atl08.can_quality_score[segment] < parms.phoreal.can_quality_filter.value)
+                {
+                    continue;
+                }
+            }
+
             /* Add Row */
             df->addRow();
 
             /* Populate Columns */
-            const uint64_t extent_id = Icesat2Fields::generateExtentId(parms.granuleFields.rgt.value, parms.granuleFields.cycle.value, parms.granuleFields.region.value, track, pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
-            df->extent_id.append(extent_id);
             df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl08.delta_time[segment]));
-            df->delta_time_col.append(atl08.delta_time[segment]);
             df->latitude.append(static_cast<double>(aoi.latitude[segment]));
             df->longitude.append(static_cast<double>(aoi.longitude[segment]));
             df->segment_id_beg.append(atl08.segment_id_beg[segment]);
-            df->segment_id_end.append(atl08.segment_id_end[segment]);
-            df->night_flag.append(atl08.night_flag[segment]);
+            df->segment_landcover.append(atl08.segment_landcover[segment] != numeric_limits<uint8_t>::max() ? atl08.segment_landcover[segment] : 0);
+            df->segment_snowcover.append(atl08.segment_snowcover[segment] != numeric_limits<uint8_t>::max() ? atl08.segment_snowcover[segment] : 0);
             df->n_seg_ph.append(atl08.n_seg_ph[segment] != numeric_limits<int32_t>::max() ? atl08.n_seg_ph[segment] : 0);
             df->solar_elevation.append(atl08.solar_elevation[segment] != numeric_limits<float>::max() ? atl08.solar_elevation[segment] : numeric_limits<float>::quiet_NaN());
-            df->solar_azimuth.append(atl08.solar_azimuth[segment] != numeric_limits<float>::max() ? atl08.solar_azimuth[segment] : numeric_limits<float>::quiet_NaN());
-            df->terrain_flg.append(atl08.terrain_flg[segment]);
-            df->brightness_flag.append(atl08.brightness_flag[segment]);
-            df->cloud_flag_atm.append(atl08.cloud_flag_atm[segment]);
-            df->h_te_best_fit.append(atl08.h_te_best_fit[segment] != numeric_limits<float>::max() ? atl08.h_te_best_fit[segment] : numeric_limits<float>::quiet_NaN());
-            df->h_te_interp.append(atl08.h_te_interp[segment] != numeric_limits<float>::max() ? atl08.h_te_interp[segment] : numeric_limits<float>::quiet_NaN());
             df->terrain_slope.append(atl08.terrain_slope[segment] != numeric_limits<float>::max() ? atl08.terrain_slope[segment] : numeric_limits<float>::quiet_NaN());
             df->n_te_photons.append(atl08.n_te_photons[segment] != numeric_limits<int32_t>::max() ? atl08.n_te_photons[segment] : 0);
-            df->te_quality_score.append(atl08.te_quality_score[segment]);
             df->h_te_uncertainty.append(atl08.h_te_uncertainty[segment] != numeric_limits<float>::max() ? atl08.h_te_uncertainty[segment] : numeric_limits<float>::quiet_NaN());
+            df->h_te_median.append(atl08.h_te_median[segment] != numeric_limits<float>::max() ? atl08.h_te_median[segment] : numeric_limits<float>::quiet_NaN());
             df->h_canopy.append(atl08.h_canopy[segment] != numeric_limits<float>::max() ? atl08.h_canopy[segment] : numeric_limits<float>::quiet_NaN());
-            df->h_canopy_abs.append(atl08.h_canopy_abs[segment] != numeric_limits<float>::max() ? atl08.h_canopy_abs[segment] : numeric_limits<float>::quiet_NaN());
             df->h_canopy_uncertainty.append(atl08.h_canopy_uncertainty[segment] != numeric_limits<float>::max() ? atl08.h_canopy_uncertainty[segment] : numeric_limits<float>::quiet_NaN());
             df->segment_cover.append(atl08.segment_cover[segment] != numeric_limits<int16_t>::max() ? atl08.segment_cover[segment] : 0);
             df->n_ca_photons.append(atl08.n_ca_photons[segment] != numeric_limits<int32_t>::max() ? atl08.n_ca_photons[segment] : 0);
-            df->can_quality_score.append(atl08.can_quality_score[segment]);
+            df->h_max_canopy.append(atl08.h_max_canopy[segment] != numeric_limits<float>::max() ? atl08.h_max_canopy[segment] : numeric_limits<float>::quiet_NaN());
+            df->h_min_canopy.append(atl08.h_min_canopy[segment] != numeric_limits<float>::max() ? atl08.h_min_canopy[segment] : numeric_limits<float>::quiet_NaN());
+            df->h_mean_canopy.append(atl08.h_mean_canopy[segment] != numeric_limits<float>::max() ? atl08.h_mean_canopy[segment] : numeric_limits<float>::quiet_NaN());
+            df->canopy_openness.append(atl08.canopy_openness[segment] != numeric_limits<float>::max() ? atl08.canopy_openness[segment] : numeric_limits<float>::quiet_NaN());
+
+            FieldArray<float,NUM_CANOPY_METRICS> metrics;
+            const long metrics_offset = segment * NUM_CANOPY_METRICS;
+            for(int p = 0; p < NUM_CANOPY_METRICS; p++)
+            {
+                const float value = atl08.canopy_h_metrics.pointer[metrics_offset + p];
+                metrics[p] = (value != numeric_limits<float>::max()) ? value : numeric_limits<float>::quiet_NaN();
+            }
+            df->canopy_h_metrics.append(metrics);
+
+            if(parms.phoreal.te_quality_filter_provided)
+            {
+                df->te_quality_score.append(atl08.te_quality_score[segment]);
+            }
+            if(parms.phoreal.can_quality_filter_provided)
+            {
+                df->can_quality_score.append(atl08.can_quality_score[segment]);
+            }
 
             /* Ancillary Data */
             if(atl08.anc_data.length() > 0)
@@ -332,8 +361,6 @@ void* Atl08DataFrame::subsettingThread (void* parm)
                 atl08.anc_data.addToGDF(df, segment);
             }
 
-            /* Bump Extent Counter */
-            extent_counter++;
         }
     }
     catch(const RunTimeException& e)

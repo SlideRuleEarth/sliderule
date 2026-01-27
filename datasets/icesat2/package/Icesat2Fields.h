@@ -124,12 +124,16 @@ struct PhorealFields: public FieldDictionary
     FieldElement<bool>              use_abs_h {false};          // use absolute heights
     FieldElement<bool>              send_waveform {false};      // include the waveform in the results
     FieldElement<bool>              above_classifier {false};   // use the ABoVE classification algorithm
+    FieldElement<int8_t>            te_quality_filter {0};      // minimum allowed terrain quality score
+    FieldElement<int8_t>            can_quality_filter {0};     // minimum allowed canopy quality score
 
     PhorealFields(void);
     ~PhorealFields(void) override = default;
 
     virtual void fromLua (lua_State* L, int index) override;
 
+    bool te_quality_filter_provided;
+    bool can_quality_filter_provided;
     bool provided;
 };
 

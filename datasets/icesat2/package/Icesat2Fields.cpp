@@ -244,7 +244,11 @@ PhorealFields::PhorealFields():
                       {"geoloc",            &geoloc},
                       {"use_abs_h",         &use_abs_h},
                       {"send_waveform",     &send_waveform},
-                      {"above_classifier",  &above_classifier} }),
+                      {"above_classifier",  &above_classifier},
+                      {"te_quality_filter", &te_quality_filter},
+                      {"can_quality_filter",&can_quality_filter} }),
+    te_quality_filter_provided(false),
+    can_quality_filter_provided(false),
     provided(false)
 {
 }
@@ -256,6 +260,14 @@ void PhorealFields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
+        lua_getfield(L, index, "te_quality_filter");
+        te_quality_filter_provided = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, index, "can_quality_filter");
+        can_quality_filter_provided = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+
         FieldDictionary::fromLua(L, index);
 
         if(binsize.value <= 0.0)

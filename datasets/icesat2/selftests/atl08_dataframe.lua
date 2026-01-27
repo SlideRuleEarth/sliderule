@@ -49,31 +49,27 @@ runner.unittest("ATL08 DataFrame", function()
 
     if atl08df:numrows() >= 1 then
         check_columns(atl08df, {
-            "extent_id",
-            "delta_time",
+            "time_ns",
             "latitude",
             "longitude",
             "segment_id_beg",
-            "segment_id_end",
-            "night_flag",
+            "segment_landcover",
+            "segment_snowcover",
             "n_seg_ph",
             "solar_elevation",
-            "solar_azimuth",
-            "terrain_flg",
-            "brightness_flag",
-            "cloud_flag_atm",
-            "h_te_best_fit",
-            "h_te_interp",
             "terrain_slope",
             "n_te_photons",
-            "te_quality_score",
             "h_te_uncertainty",
+            "h_te_median",
             "h_canopy",
-            "h_canopy_abs",
             "h_canopy_uncertainty",
             "segment_cover",
             "n_ca_photons",
-            "can_quality_score"
+            "h_max_canopy",
+            "h_min_canopy",
+            "h_mean_canopy",
+            "canopy_openness",
+            "canopy_h_metrics"
         })
 
         -- fixed sample (first row) for known granule ATL08_20200307004141_10890603_007_01.h5
@@ -82,33 +78,100 @@ runner.unittest("ATL08 DataFrame", function()
             time_ns = 1583541719170012416,
             latitude = 60.644901275634766,
             longitude = -145.39999389648438,
-            delta_time = 6.877691917001235e7,
             segment_id_beg = 337095,
-            segment_id_end = 337099,
-            night_flag = 0,
+            segment_landcover = 126,
+            segment_snowcover = 2,
             n_seg_ph = 345,
             solar_elevation = 16.451,
-            solar_azimuth = 224.372,
-            terrain_flg = 1,
-            brightness_flag = 0,
-            cloud_flag_atm = 2,
-            h_te_best_fit = 266.6724548339844,
-            h_te_interp = 266.65447998046875,
             terrain_slope = -0.004300970584154129,
             n_te_photons = 68,
-            te_quality_score = 70,
             h_te_uncertainty = 3.91519,
+            h_te_median = 266.374,
             h_canopy = 14.0389404296875,
-            h_canopy_abs = 280.7113952636719,
             h_canopy_uncertainty = 4.948657512664795,
             segment_cover = 61,
             n_ca_photons = 124,
-            can_quality_score = 75
+            h_max_canopy = 14.923,
+            h_min_canopy = 0.527679,
+            h_mean_canopy = 4.07945,
+            canopy_openness = 3.68869
         }, atl08df, idx, 0.001)
+
+        local metrics = atl08df["canopy_h_metrics"][idx]
+        runner.assert(#metrics == 18, string.format("canopy_h_metrics length mismatch: %d", #metrics))
+        runner.assert(math.abs(metrics[1] - 0.89624) <= 0.001, string.format("canopy_h_metrics[1] => %f", metrics[1]))
+        runner.assert(math.abs(metrics[18] - 12.1895) <= 0.001, string.format("canopy_h_metrics[18] => %f", metrics[18]))
 
     end
 
     runner.assert(atl08df:meta("granule") == parms["resource"], "granule name mismatch")
+end)
+
+-- Self Test --
+
+runner.unittest("ATL08 DataFrame - Quality Filters", function()
+
+    local base_parms = icesat2.parms({
+        beams = "gt3r",
+        resource = "ATL08_20200307004141_10890603_007_01.h5"
+    })
+
+    local atl08h5 = h5.object(asset_name, base_parms["resource"])
+    local base_df = icesat2.atl08x("gt3r", base_parms, atl08h5, core.EVENTQ)
+
+    runner.assert(base_df:waiton(60000), "timed out creating dataframe", true)
+    runner.assert(base_df:inerror() == false, "dataframe encountered error")
+    runner.assert(base_df:numrows() == 10214, string.format("incorrect number of rows: %d", base_df:numrows()))
+    runner.assert(base_df:numcols() == 21, string.format("incorrect number of columns: %d", base_df:numcols()))
+
+    local te_parms = icesat2.parms({
+        beams = "gt3r",
+        resource = "ATL08_20200307004141_10890603_007_01.h5",
+        phoreal = { te_quality_filter = 70 }
+    })
+    local te_df = icesat2.atl08x("gt3r", te_parms, atl08h5, core.EVENTQ)
+    runner.assert(te_df:waiton(60000), "timed out creating dataframe", true)
+    runner.assert(te_df:inerror() == false, "dataframe encountered error")
+    runner.assert(te_df:numrows() == 9837, string.format("incorrect number of rows: %d", te_df:numrows()))
+    runner.assert(te_df:numcols() == 22, string.format("incorrect number of columns: %d", te_df:numcols()))
+    check_columns(te_df, {"te_quality_score"})
+
+    local can_parms = icesat2.parms({
+        beams = "gt3r",
+        resource = "ATL08_20200307004141_10890603_007_01.h5",
+        phoreal = { can_quality_filter = 75 }
+    })
+    local can_df = icesat2.atl08x("gt3r", can_parms, atl08h5, core.EVENTQ)
+    runner.assert(can_df:waiton(60000), "timed out creating dataframe", true)
+    runner.assert(can_df:inerror() == false, "dataframe encountered error")
+    runner.assert(can_df:numrows() == 6486, string.format("incorrect number of rows: %d", can_df:numrows()))
+    runner.assert(can_df:numcols() == 22, string.format("incorrect number of columns: %d", can_df:numcols()))
+    check_columns(can_df, {"can_quality_score"})
+
+    local both_parms = icesat2.parms({
+        beams = "gt3r",
+        resource = "ATL08_20200307004141_10890603_007_01.h5",
+        phoreal = { te_quality_filter = 70, can_quality_filter = 75 }
+    })
+    local both_df = icesat2.atl08x("gt3r", both_parms, atl08h5, core.EVENTQ)
+    runner.assert(both_df:waiton(60000), "timed out creating dataframe", true)
+    runner.assert(both_df:inerror() == false, "dataframe encountered error")
+    runner.assert(both_df:numrows() == 6412, string.format("incorrect number of rows: %d", both_df:numrows()))
+    runner.assert(both_df:numcols() == 23, string.format("incorrect number of columns: %d", both_df:numcols()))
+    check_columns(both_df, {"te_quality_score", "can_quality_score"})
+
+    local zero_parms = icesat2.parms({
+        beams = "gt3r",
+        resource = "ATL08_20200307004141_10890603_007_01.h5",
+        phoreal = { te_quality_filter = 0, can_quality_filter = 0 }
+    })
+    local zero_df = icesat2.atl08x("gt3r", zero_parms, atl08h5, core.EVENTQ)
+    runner.assert(zero_df:waiton(60000), "timed out creating dataframe", true)
+    runner.assert(zero_df:inerror() == false, "dataframe encountered error")
+    runner.assert(zero_df:numrows() == 10214, string.format("incorrect number of rows: %d", zero_df:numrows()))
+    runner.assert(zero_df:numcols() == 23, string.format("incorrect number of columns: %d", zero_df:numcols()))
+    check_columns(zero_df, {"te_quality_score", "can_quality_score"})
+
 end)
 
 -- Self Test --
@@ -118,7 +181,7 @@ runner.unittest("ATL08 DataFrame - Ancillary Data", function()
     local parms = icesat2.parms({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
-        atl08_fields = {"segment_landcover", "segment_snowcover"}
+        atl08_fields = {"beam_azimuth", "segment_watermask"}
     })
 
     local atl08h5 = h5.object(asset_name, parms["resource"])
@@ -130,15 +193,15 @@ runner.unittest("ATL08 DataFrame - Ancillary Data", function()
     runner.assert(atl08df:numrows() == 10214, "incorrect rows returned for ATL08 ancillary dataframe")
 
     check_columns(atl08df, {
-        "segment_landcover",
-        "segment_snowcover"
+        "beam_azimuth",
+        "segment_watermask"
     })
 
     local idx = 1
     check_expected({
-        segment_landcover = 126,
-        segment_snowcover = 2
-    }, atl08df, idx, 0)
+        beam_azimuth = -1.29266,
+        segment_watermask = 0
+    }, atl08df, idx, 0.001)
 
 end)
 

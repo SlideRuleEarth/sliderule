@@ -40,6 +40,7 @@
 #include "H5VarSet.h"
 #include "AreaOfInterest.h"
 #include "Icesat2Fields.h"
+#include "FieldArray.h"
 
 using AreaOfInterest08 = AreaOfInterestT<float>;
 
@@ -67,6 +68,12 @@ class Atl08DataFrame: public GeoDataFrame
     private:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static constexpr int NUM_CANOPY_METRICS = 18;
+
+        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
@@ -81,26 +88,25 @@ class Atl08DataFrame: public GeoDataFrame
                 H5Array<int8_t>     sc_orient;
                 H5Array<double>     delta_time;
                 H5Array<int32_t>    segment_id_beg;
-                H5Array<int32_t>    segment_id_end;
-                H5Array<uint8_t>    night_flag;
+                H5Array<uint8_t>    segment_landcover;
+                H5Array<uint8_t>    segment_snowcover;
                 H5Array<int32_t>    n_seg_ph;
                 H5Array<float>      solar_elevation;
-                H5Array<float>      solar_azimuth;
-                H5Array<uint8_t>    terrain_flg;
-                H5Array<uint8_t>    brightness_flag;
-                H5Array<int8_t>     cloud_flag_atm;
-                H5Array<float>      h_te_best_fit;
-                H5Array<float>      h_te_interp;
                 H5Array<float>      terrain_slope;
                 H5Array<int32_t>    n_te_photons;
                 H5Array<int8_t>     te_quality_score;
                 H5Array<float>      h_te_uncertainty;
+                H5Array<float>      h_te_median;
                 H5Array<float>      h_canopy;
-                H5Array<float>      h_canopy_abs;
                 H5Array<float>      h_canopy_uncertainty;
                 H5Array<int16_t>    segment_cover;
                 H5Array<int32_t>    n_ca_photons;
                 H5Array<int8_t>     can_quality_score;
+                H5Array<float>      h_max_canopy;
+                H5Array<float>      h_min_canopy;
+                H5Array<float>      h_mean_canopy;
+                H5Array<float>      canopy_openness;
+                H5Array<float>      canopy_h_metrics;
 
                 H5VarSet            anc_data;
         };
@@ -110,32 +116,29 @@ class Atl08DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<uint64_t>    extent_id;
         FieldColumn<time8_t>     time_ns            {Field::TIME_COLUMN};
-        FieldColumn<double>      delta_time_col;
         FieldColumn<double>      latitude           {Field::Y_COLUMN};
         FieldColumn<double>      longitude          {Field::X_COLUMN};
         FieldColumn<int32_t>     segment_id_beg;
-        FieldColumn<int32_t>     segment_id_end;
-        FieldColumn<uint8_t>     night_flag;
         FieldColumn<int32_t>     n_seg_ph;
         FieldColumn<float>       solar_elevation;
-        FieldColumn<float>       solar_azimuth;
-        FieldColumn<uint8_t>     terrain_flg;
-        FieldColumn<uint8_t>     brightness_flag;
-        FieldColumn<int8_t>      cloud_flag_atm;
-        FieldColumn<float>       h_te_best_fit      {Field::Z_COLUMN};
-        FieldColumn<float>       h_te_interp;
         FieldColumn<float>       terrain_slope;
         FieldColumn<int32_t>     n_te_photons;
         FieldColumn<int8_t>      te_quality_score;
         FieldColumn<float>       h_te_uncertainty;
         FieldColumn<float>       h_canopy;
-        FieldColumn<float>       h_canopy_abs;
         FieldColumn<float>       h_canopy_uncertainty;
         FieldColumn<int16_t>     segment_cover;
         FieldColumn<int32_t>     n_ca_photons;
         FieldColumn<int8_t>      can_quality_score;
+        FieldColumn<uint8_t>     segment_landcover;
+        FieldColumn<uint8_t>     segment_snowcover;
+        FieldColumn<float>       h_te_median        {Field::Z_COLUMN};
+        FieldColumn<float>       h_max_canopy;
+        FieldColumn<float>       h_min_canopy;
+        FieldColumn<float>       h_mean_canopy;
+        FieldColumn<float>       canopy_openness;
+        FieldColumn<FieldArray<float,NUM_CANOPY_METRICS>> canopy_h_metrics;
 
         /* DataFrame MetaData */
         FieldElement<uint8_t>    spot;
