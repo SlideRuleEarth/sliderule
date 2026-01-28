@@ -15,7 +15,7 @@ Version description of the v3.0.2 release of ICESat-2 SlideRule.
 
 - Each deployed cluster (both private and public) now include their own Grafana/Prometheus/Loki monitoring stack and static Read-The-Docs documentation website.  These services are behind an authentication client which uses the SlideRule Provisioning System as an identity provider.  To get access to these new services, users must have active accounts in the SlideRule Provisioning System and be members of the cluster they are attempting to access.
 
-- The field `delta_time` has been removed from all result records.  Result records that feed data frames have times that are now nanoseconds from the Unix epoch.  This change breaks backward comaptibility between the server and the client and requires the client to be upgraded. [#185](https://github.com/SlideRuleEarth/sliderule/issues/185)
+- The field `delta_time` has been removed from all result records.  Result records that feed data frames have times that are now nanoseconds from the Unix epoch.  This change breaks backward compatibility between the server and the client and requires the client to be upgraded. [#185](https://github.com/SlideRuleEarth/sliderule/issues/185)
 
 ## New Features
 

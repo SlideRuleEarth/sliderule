@@ -216,7 +216,7 @@ When a processing request is sent to the SlideRule service while another process
 
 In the records view, when a user selects a request record, a plot of that record is displayed with the control panel showing the plot controls (e.g. the color map, the column selections, the axis selections, etc).  For geospatial results, this will be a map plot; for along track results this will be a profile plot.
 
-#### SRWC-3.8: Automatic Porfile Plot Display
+#### SRWC-3.8: Automatic Profile Plot Display
 
 If a user makes a processing request that does not contain any geospatial data to be plotted on the map view, then the UI shall automatically transition to the records view and show the processing request record.
 

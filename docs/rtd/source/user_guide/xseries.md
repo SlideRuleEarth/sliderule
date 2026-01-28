@@ -1,7 +1,7 @@
 # X-Series APIs
 
 :::{note}
-This page documents the `x-series` APIs that are specifically geared for generating and processing DataFrames.  These APIs were made public in early 2025 starting with version 4.11.0, and have a common methodology for processing the data which makes interfacing to them consistent across multiple datasets.  Much of the funcionality described here is duplicated in older-style `p-series` and `s-series` APIs described elsewhere.  While the older-style APIs will continue to be supported, most of the new development effort is focused on these new DataFrame centric APIs.
+This page documents the `x-series` APIs that are specifically geared for generating and processing DataFrames.  These APIs were made public in early 2025 starting with version 4.11.0, and have a common methodology for processing the data which makes interfacing to them consistent across multiple datasets.  Much of the functionality described here is duplicated in older-style `p-series` and `s-series` APIs described elsewhere.  While the older-style APIs will continue to be supported, most of the new development effort is focused on these new DataFrame centric APIs.
 :::
 
 DataFrame APIs are accessed via the following ***sliderule*** function and always produce a __GeoDataFrame__:
@@ -131,7 +131,7 @@ Here are the additional columns added to the DataFrame:
 |value|the sampled value from the raster|(double)||
 |time|the best time provided by the raster dataset for when the sampled value was measured|Unix nanoseconds (double)||
 |file_id|a number used to identify the name of the file the sample value came from|||
-|flags|any flags that acompany the sampled data in the raster it was read from||Optionally populated: must enable `with_flags`|
+|flags|any flags that accompany the sampled data in the raster it was read from||Optionally populated: must enable `with_flags`|
 |count|number of pixels read to calculate sample value||Optional: must enable `zonal_stats`|
 |min|minimum pixel value of pixels that contributed to sample value||Optional: must enable `zonal_stats`|
 |max|maximum pixel value of pixels that contributed to sample value||Optional: must enable `zonal_stats`|

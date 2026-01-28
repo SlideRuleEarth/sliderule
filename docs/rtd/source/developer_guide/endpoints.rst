@@ -246,7 +246,7 @@ h5
 
     Reads a dataset from an HDF5 file and return the values of the dataset in a list.
 
-    See `h5.h5 </web/rtd/api_reference/h5.html#h5>`_ function for a convient method for accessing HDF5 datasets.
+    See `h5.h5 </web/rtd/api_reference/h5.html#h5>`_ function for a convenient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
 
@@ -330,7 +330,7 @@ h5p
 
     Reads a list of datasets from an HDF5 file and returns the values of the datasets in a dictionary of lists.
 
-    See `h5.h5p </web/rtd/api_reference/h5.html#h5p>`_ function for a convient method for accessing HDF5 datasets.
+    See `h5.h5p </web/rtd/api_reference/h5.html#h5p>`_ function for a convenient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
 

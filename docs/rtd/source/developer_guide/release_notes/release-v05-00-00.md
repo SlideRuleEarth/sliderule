@@ -15,7 +15,7 @@ Version description of the v5.0.6 release of SlideRule Earth.
 
 * **v5.0.3** - The use of the ***SlideRule Manager*** has been deprecated.  All calls to `session.manager` should no longer be used as that functionality will cease in future releases.
 
-* **v5.0.3** - The main Python module `sliderule` no longer creates a default session on import but requires either `sliderule.init()` or `sliderule.create_session()`.  The creation of a default session was confusing when users called `sliderule.init()` which then created a second session.  This caused odd behavior with logging because at that point two loggers exist.  Moving forward, users are encouraged to use `sliderule.create_session()` which returns a session object that can then unambigiously be used to communicate with a SlideRule cluster..
+* **v5.0.3** - The main Python module `sliderule` no longer creates a default session on import but requires either `sliderule.init()` or `sliderule.create_session()`.  The creation of a default session was confusing when users called `sliderule.init()` which then created a second session.  This caused odd behavior with logging because at that point two loggers exist.  Moving forward, users are encouraged to use `sliderule.create_session()` which returns a session object that can then unambiguously be used to communicate with a SlideRule cluster..
 
 * **v5.0.3** - Raster sampling support has been optimized for x-series APIs at the cost of legacy p-series API performance.  All users are strongly encouraged to switch to x-series APIs when performing raster sampling as the old p-series APIs will take much longer now.
 
