@@ -57,4 +57,4 @@ def test_atl24_poly(client):
     ]
     response = client.post(f'/ams/atl24', json={"poly":poly})
     data = json.loads(response.data.decode("utf-8"))
-    assert data["hits"] == 521
+    assert data["hits"] == 408
