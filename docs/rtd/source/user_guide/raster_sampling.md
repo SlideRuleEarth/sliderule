@@ -65,7 +65,7 @@ The standard columns added to a GeoDataFrame for each sampled raster dataset are
 - __"time"__: (for older s-series and p-series APIs) the best time provided by the raster dataset for when the sampled value was measured, returned as GPS seconds
 - __"time_ns"__: (for x-series APIs) the best time provided by the raster dataset for when the sampled value was measured, returned as Unix(ns) time
 - __"file_id"__: a number used to identify the name of the file the sample value came from; this is used in conjunction with the `file_directory` provided in the metadata of a GeoDataFrame
-- __"flags"__: any flags (if requested) that acompany the sampled data in the raster it was read from
+- __"flags"__: any flags (if requested) that accompany the sampled data in the raster it was read from
 
 The zonal statistic columns added to a GeoDataFrame for each sampled raster dataset are:
 
