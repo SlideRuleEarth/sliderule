@@ -1,13 +1,12 @@
 repos:
         # Fix common spelling mistakes
         - repo: https://github.com/codespell-project/codespell
-          rev: v2.2.1
+          rev: v2.2.6
           hooks:
                 - id: codespell
                   args: [
                     '--ignore-words-list', 'parm,parms',
-#                    '--ignore-regex', '\bhist\b',
                     '--'
                   ]
                   types_or: [python, rst, markdown]
-                  files: ^(clients|docs|packages|platforms|plugins|scripts|targets)/
+                  files: ^(applications|clients|datasets|docs|packages|platforms|targets)/
