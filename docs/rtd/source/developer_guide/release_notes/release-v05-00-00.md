@@ -52,7 +52,11 @@ Instead the request json must change to be this:
 }
 ```
 
-## Major Changes & New Functionality
+## Known Issues
+
+* **v5.0.0** - The GitHub actions related to running the pytests and the selftest are currently not working.  This is due to them being transitioned to the provisioning system.
+
+## New Functionality
 
 * **v5.0.3** - The django-based ***SlideRule Provisioning System*** running in AWS ECS has reached end-of-life and is now replaced by the pure Python-based ***SlideRule Provisioner*** running in AWS lambda.
 
@@ -75,10 +79,6 @@ Instead the request json must change to be this:
 * **v5.0.2** - `earthdata.py` is no longer a standalone implementation of an interface to CMR and TNM, but instead makes a request to the SlideRule cluster to execute the server-side implementations in `earth_data_query.lua`.  This consolidates the interface to these services in one place, and also provides a consistent interface between the web and Python clients.
 
 * **v5.0.2** - Added the `3dep1m` asset which accesses the same USGS 3DEP data product but uses the internal AMS service for STAC queries.  This is an attempt to alleviate issues with inconsistent availability and functionality in The National Map (TNM) service which made using 3DEP difficult.
-
-## Known Issues
-
-* **v5.0.0** - The GitHub actions related to running the pytests and the selftest are currently not working.  This is due to them being transitioned to the provisioning system.
 
 ## Issues Resolved
 
@@ -106,7 +106,7 @@ Instead the request json must change to be this:
 
 * **v5.0.2** - Rate limiting improved - error messages displayed in web client and python client; admin capabilities added for resetting rate limiting
 
-## Development Changes
+## Development Updates
 
 * **v5.0.3** - [069269b](https://github.com/SlideRuleEarth/sliderule/commit/069269b66b4ea04f50f541e56d0cbd45d26e6310) - Cloudformation owns public cluster dns
 
@@ -137,6 +137,7 @@ Instead the request json must change to be this:
 [https://github.com/SlideRuleEarth/sliderule/releases/tag/v5.0.6](https://github.com/SlideRuleEarth/sliderule/releases/tag/v5.0.6)
 
 ## Benchmarks
+
 > clients/python/utils/benchmark.py
 ```
 atl06_aoi <766208 x 16> - 29.947413 secs
