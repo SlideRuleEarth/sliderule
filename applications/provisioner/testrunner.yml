@@ -274,22 +274,22 @@ Resources:
           cd /sliderule/targets/slideruleearth
           docker compose up -d ilb ams sliderule
           cd /sliderule/clients/python
-          /opt/miniforge3/bin/mamba env create -f environment.yml -y
-          /opt/miniforge3/envs/sliderule/bin/pip install .
-          /opt/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
+          /root/miniforge3/bin/mamba env create -f environment.yml -y
+          /root/miniforge3/envs/sliderule/bin/pip install .
+          /root/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
           cd /sliderule/targets/slideruleearth
           docker compose down ilb ams sliderule
           #
           # Provisioner PyTests
           #
           cd /sliderule/applications/provisioner
-          /opt/miniforge3/envs/sliderule/bin/pytest
+          /root/miniforge3/envs/sliderule/bin/pytest
           #
           # AMS PyTests
           #
           cd /sliderule/applications/ams
-          /opt/miniforge3/bin/mamba env create -f environment.yml -y
-          /opt/miniforge3/envs/ams/bin/pytest
+          /root/miniforge3/bin/mamba env create -f environment.yml -y
+          /root/miniforge3/envs/ams/bin/pytest
           #
           # Record of Run
           #

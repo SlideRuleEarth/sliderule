@@ -8,6 +8,10 @@ on:
   release:
     types: [created]
 
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -28,6 +32,4 @@ jobs:
 
     - name: Build and publish
       working-directory: clients/nodejs
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: make publish
