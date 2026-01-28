@@ -1,10 +1,6 @@
 name: SlideRule Node.js Tests
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   schedule:
     - cron: '0 22 * * 5' # Every Sunday at 10 pm
 
@@ -28,19 +24,14 @@ jobs:
           npm ci
           npx playwright install --with-deps
 
-      - name: Install netrc for authentication
-        shell: bash -l {0}
-        run: |
-          echo "${{ secrets.NETRC }}" > $HOME/.netrc
-          chmod 600 $HOME/.netrc
-
       - name: Run tests
         shell: bash -l {0}
         working-directory: clients/nodejs/sliderule
         env:
           DOMAIN: 'slideruleearth.io'
-          ORGANIZATION: 'cicd'
+          ORGANIZATION: 'sliderule'
           ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
+          SLIDERULE_GITHUB_TOKEN: ${{ secrets.SESSION_PAT }}
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
           ./node_modules/.bin/jest ${ROOT}/tests --setupFiles ${ROOT}/tests/test.config.js

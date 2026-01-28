@@ -1,4 +1,4 @@
-name: Linting and formatting (pre-commit)
+name: Linting and formatting
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  pre-commit:
+  linter:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

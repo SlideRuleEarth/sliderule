@@ -33,7 +33,7 @@ Parameters:
     Default: "us-west-2d"
   DeleteAfterMinutes:
     Type: Number
-    Default: 60
+    Default: 80
   DockerComposeVersion:
     Type: String
     Default: "v2.24.5"
@@ -201,6 +201,8 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           set -e
+          export HOME=/root
+          export USER=root
           #
           # System Dependencies
           #
@@ -277,6 +279,11 @@ Resources:
           /opt/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
           cd /sliderule/targets/slideruleearth
           docker compose down ilb ams sliderule
+          #
+          # Provisioner PyTests
+          #
+          cd /sliderule/applications/provisioner
+          /opt/miniforge3/envs/sliderule/bin/pytest
           #
           # AMS PyTests
           #
