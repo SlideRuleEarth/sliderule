@@ -330,7 +330,7 @@ def lambda_events(event, context):
         state["stack_name"] = build_stack_name(cluster)
 
         # get events for stack
-        cf = boto3.client("cloudformation", region_name="us-west-2")
+        cf = boto3.client("cloudformation", region_name=region)
         description = cf.describe_stack_events(StackName=state["stack_name"])
         stack_events = description["StackEvents"]
         print(f'Events requested for {state["stack_name"]}')
@@ -369,7 +369,7 @@ def lambda_events(event, context):
 # Lambda: Report Running Clusters
 # ###############################
 
-def lambda_report(event, context):
+def lambda_report_clusters(event, context):
 
     # initialize response state
     state = {"status": True, "report": {}}
@@ -388,6 +388,43 @@ def lambda_report(event, context):
                 details = lambda_status({"cluster": cluster, "region": region}, None)
                 if details["status"]:
                     state["report"][cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+
+    except Exception as e:
+
+        # handle exceptions (return to user for debugging)
+        print(f'Exception in report: {e}')
+        state["exception"] = f'Failure in report'
+        state["status"] = False
+
+    # return response
+    return state
+
+# ###############################
+# Lambda: Report Test Runners
+# ###############################
+
+def lambda_report_tests(event, context):
+
+    # initialize response state
+    state = {"status": True, "report": {}}
+
+    try:
+        # get environment variables
+        project_bucket = os.environ["PROJECT_BUCKET"]
+        project_folder = os.environ["PROJECT_FOLDER"]
+
+        # get optional request variables
+        branch = event.get("branch", "main")
+        region = event.get("region", "us-west-2")
+
+        # get test summary
+        summary_file = f"{branch}-summary.json"
+        s3 = boto3.client("s3", region_name=region)
+        s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
+
+        # read test summary
+        with open(f"/tmp/{summary_file}", "r") as file:
+            state["report"] = file.read()
 
     except Exception as e:
 
@@ -524,7 +561,7 @@ def lambda_gateway(event, context):
         }
 
     # check report and test runner
-    if path == '/report' or path == '/test':
+    if path.startswith('/report') or path.startswith('/test'):
         if 'owner' not in org_roles:
             print(f'Access denied to {username}, organization roles: {org_roles}, path: {path}')
             return {
@@ -543,8 +580,10 @@ def lambda_gateway(event, context):
         return lambda_status(body, context)
     elif path == '/events':
         return lambda_events(body, context)
-    elif path == '/report':
-        return lambda_report(body, context)
+    elif path == '/report/clusters' or path == '/report':
+        return lambda_report_clusters(body, context)
+    elif path == '/report/tests':
+        return lambda_report_tests(body, context)
     elif path == '/test':
         return lambda_test(body, context)
     else:

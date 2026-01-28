@@ -114,22 +114,43 @@ Resources:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
 
-  ## Report Lambda Function
-  ReportLambda:
+  ## Report Clusters Lambda Function
+  ReportClustersLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-report'
+      FunctionName: !Sub '${AWS::StackName}-report-clusters'
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
       Runtime: python3.13
       MemorySize: 128 # MB
       Timeout: 300 # seconds
-      Handler: provisioner.lambda_report
+      Handler: provisioner.lambda_report_clusters
       Description: Get report of currently deployed clusters
       Code:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
+
+  ## Report Tests Lambda Function
+  ReportTestsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-report-tests'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 128 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_report_tests
+      Description: Get summary report of test runner
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
 
   ## Test Lambda Function
   TestLambda:
@@ -361,6 +382,22 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: 'POST /report'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ReportClustersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /report/clusters'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+  ReportTestsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /report/tests'
       AuthorizationType: JWT
       AuthorizerId: !Ref JwtAuthorizer
       Target: !Sub 'integrations/${LambdaIntegration}'
