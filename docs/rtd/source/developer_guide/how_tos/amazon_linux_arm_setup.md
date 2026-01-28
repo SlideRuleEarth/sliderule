@@ -92,13 +92,20 @@ Create the local file `~/.gitconfig` in the user's home directory with the follo
 	helper = !/usr/bin/gh auth git-credential
 ```
 
-### 7. Clone Projects
+### 7. Clone Repository
 
 ```bash
 mkdir meta
 cd meta
 git clone git@github.com:SlideRuleEarth/sliderule.git
-git clone git@github.com:SlideRuleEarth/sliderule-python.git
+```
+
+Install the pre-commit hooks
+```bash
+cd sliderule
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
 ```
 
 ### 8. Installing and Configuring Docker
@@ -119,99 +126,7 @@ chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 ### 9. Install Dependencies got Local Build
 
-```bash
-sudo dnf groupinstall "Development Tools"
-sudo dnf install \
-  cmake \
-  readline-devel \
-  lua-devel \
-  openssl-devel
-  libuuid-devel \
-  libtiff-devel \
-  sqlite-devel \
-  curl-devel \
-  python-devel \
-  meson \
-  llvm \
-  clang \
-  clang-tools-extra \
-  cppcheck
-```
-
-In an editor (e.g. vi), create a file in the `/etc/ld.so.conf.d/` directory called `local.conf` and in it put the one line below, and run `sudo ldconfig` afterwards. This allows any applications that are linked to libraries installed in `/usr/local/lib64` to be found.
-```bash
-/usr/local/lib64
-```
-
-Go through and install all of the dependencies for SlideRule/
-```bash
-# install rapidjson dependency
-git clone https://github.com/Tencent/rapidjson.git
-cd rapidjson
-mkdir build
-cd build
-cmake ..
-make -j8
-sudo make install
-sudo ldconfig
-
-# install arrow dependency
-git clone https://github.com/apache/arrow.git
-cd arrow
-mkdir build
-cd build
-cmake ../cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON
-make -j8
-sudo make install
-sudo ldconfig
-
-# install proj9 gdal/pdal dependency
-git clone https://github.com/OSGeo/PROJ.git
-cd PROJ
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j8
-sudo make install
-sudo ldconfig
-
-# install geotiff gdal/pdal dependency
-git clone https://github.com/OSGeo/libgeotiff.git
-cd libgeotiff
-mkdir build
-cd build
-cmake ../libgeotiff -DCMAKE_BUILD_TYPE=Release
-make -j8
-sudo make install
-sudo ldconfig
-
-# install geos gdal dependency
-git clone https://github.com/libgeos/geos.git
-cd geos
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j8
-sudo make install
-sudo ldconfig
-
-# install gdal dependency
-git clone https://github.com/OSGeo/gdal.git
-cd gdal
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j8
-sudo make install
-sudo ldconfig
-
-# install pistache dependency
-git clone https://github.com/pistacheio/pistache.git
-cd pistache
-meson setup build
-sudo meson install -C build
-sudo ldconfig
-```
+Navigate to `targets/slideruleearth/docker/sliderule/Dockerfile.buildenv` file and follow the same steps in that file to recreate the full development environment on your local machine.
 
 ### 10. Install and Configure Miniconda
 
@@ -239,6 +154,31 @@ sudo dnf install gh
 sudo dnf install awscli
 ```
 
+#### Single Sign On
+
+Run the following commands the first time to setup your machine:
+```bash
+aws configure sso --profile <profile> --use-device-code
+```
+
+Then to login:
+```
+mv ~/.hidden_aws ~/.aws || true
+unset AWS_PROFILE
+aws sso login --profile <profile> --use-device-code
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+eval $(aws configure export-credentials --profile <profile> --format env)
+export AWS_PROFILE=<profile>
+```
+
+And to logout (which is very useful for running as IAM role assigned to the instance):
+```
+mv ~/.aws ~/.hidden_aws || true
+unset AWS_PROFILE
+```
+
+#### 2-Factor Authentication
+
 Make sure to setup an initial .aws/credentials file so that it has the sliderule profile access key and secret access key.  The credentials file will look something like:
 ```
 [default]
@@ -259,16 +199,4 @@ aws --profile=sliderule sts get-session-token --serial-number arn:aws:iam::$acco
 To login to the AWS Elastic Container Registry, run:
 ```bash
 aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $account_number.dkr.ecr.$region.amazonaws.com
-```
-
-### 13. Install Terraform & Packer
-
-```bash
-wget https://releases.hashicorp.com/terraform/1.3.1/terraform_1.3.1_linux_arm64.zip
-unzip terraform_1.3.1_linux_arm64.zip
-sudo mv terraform /usr/local/bin/
-
-wget https://releases.hashicorp.com/packer/1.8.3/packer_1.8.3_linux_arm64.zip
-unzip packer_1.8.3_linux_arm64.zip
-sudo mv packer /usr/local/bin/
 ```
