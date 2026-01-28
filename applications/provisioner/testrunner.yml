@@ -138,6 +138,10 @@ Resources:
                   - arn:aws:s3:::esa-worldcover/*
                   - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
                   - arn:aws:s3:::dataforgood-fb-data/*
+              - Effect: Allow
+                Action: ["s3:PutObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/testrunner/*"
         - PolicyName: testrunner-ec2-access
           PolicyDocument:
             Version: "2012-10-17"
@@ -200,7 +204,6 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          set -e
           export HOME=/root
           export USER=root
           #
@@ -283,6 +286,7 @@ Resources:
           # Provisioner PyTests
           #
           cd /sliderule/applications/provisioner
+          /root/miniforge3/bin/mamba env create -f environment.yml -y
           /root/miniforge3/envs/sliderule/bin/pytest
           #
           # AMS PyTests

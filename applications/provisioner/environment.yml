@@ -1,0 +1,10 @@
+# conda env create -f environment.yml
+name: provisioner
+channels:
+  - conda-forge
+dependencies:
+  - requests
+  - croniter
+  - boto3
+  - pytest
+  - pip
