@@ -39,7 +39,6 @@ const pkg = require('./package.json')
 // System Credentials
 //
 let sysCredentials = {
-  refresh: null,
   access: null,
   expiration: 0,
 };
@@ -398,7 +397,7 @@ async function httpRequest(options, body, callbacks) {
 //
 exports.init = async (config) => {
   sysConfig = Object.assign(sysConfig, config);
-  await exports.authenticate(config.ps_password, config.ps_username);
+  await exports.authenticate(config.github_token);
 }
 
 //
@@ -432,35 +431,25 @@ exports.source = async (api, parm=null, stream=false, callbacks={}) => {
 //
 // Authenticate User
 //
-exports.authenticate = async (ps_username=null, ps_password=null) => {
+exports.authenticate = async (github_token=null) => {
 
-    // Build Provisioning System URL
-    let psHost = 'ps.' + sysConfig.domain;
+    // Build Login System URL
+    let loginHost = 'login.' + sysConfig.domain;
 
-    // Obtain Username and Password
-    ps_username = ps_username ?? process.env.PS_USERNAME;
-    ps_password = ps_password ?? process.env.PS_PASSWORD;
-    if (ps_username == null || ps_password == null) {
-      let myNetrc = netrc();
-      if (psHost in myNetrc) {
-        ps_username = myNetrc[psHost].login;
-        ps_password = myNetrc[psHost].password;
-      }
-    }
-
-    // Bail If Username and Password Not Found
-    if(!ps_username && !ps_password) {
-      console.error(`Unable to obtain username and/or password for ${psHost}`);
+    // Obtain Token
+    const pat = github_token ?? process.env.SLIDERULE_GITHUB_TOKEN;
+    if(!pat) {
+      console.error(`Failed to find token for ${loginHost}`);
       return Promise.resolve();
     }
 
     // Build Request Body
-    let body = JSON.stringify({username: ps_username, password: ps_password, org_name: sysConfig.organization});
+    let body = JSON.stringify({pat: pat});
 
-    // Setup Request Options
+    // Setup Request Parameter
     const options = {
-      host: psHost,
-      path: '/api/org_token/',
+      host: loginHost,
+      path: '/auth/github/pat',
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Content-Length': body.length},
     };
@@ -470,9 +459,9 @@ exports.authenticate = async (ps_username=null, ps_password=null) => {
       result => {
         let expiration = 0;
         try {
-          sysCredentials.access = result.access;
-          sysCredentials.refresh = result.refresh;
-          sysCredentials.expiration =  (Date.now() / 1000) + (result.access_lifetime / 2);
+          const now = Date.now();
+          sysCredentials.access = result.token;
+          sysCredentials.expiration =  ((result.metadata.exp - now) / 2) + now
           expiration = sysCredentials.expiration;
         }
         catch (e) {
