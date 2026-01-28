@@ -136,7 +136,7 @@ Instead the request json must change to be this:
 
 [https://github.com/SlideRuleEarth/sliderule/releases/tag/v5.0.6](https://github.com/SlideRuleEarth/sliderule/releases/tag/v5.0.6)
 
-## Benchmarks
+## Metrics
 
 > clients/python/utils/benchmark.py
 ```
@@ -154,7 +154,6 @@ atl03_rasterized_subset <51832 x 22> - 2.428944 secs
 atl03_polygon_subset <50615 x 22> - 2.160177 secs
 ```
 
-## Baseline
 > clients/python/utils/baseline.py
 ```
 GEDI / 3DEP = 2653.7247077111642
