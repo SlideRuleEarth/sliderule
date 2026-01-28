@@ -6,9 +6,9 @@ Version description of the v4.13.1 release of SlideRule Earth.
 
 ## New/Improved Functionality
 
-* **v4.13.0** - [#466](https://github.com/SlideRuleEarth/sliderule/issues/466) - source dataset information embedded into results
+* **v4.13.1** - [#466](https://github.com/SlideRuleEarth/sliderule/issues/466) - source dataset information embedded into results
 
-* **v4.13.0** - [#493](https://github.com/SlideRuleEarth/sliderule/issues/493) - GEDI results include orbit number
+* **v4.13.1** - [#493](https://github.com/SlideRuleEarth/sliderule/issues/493) - GEDI results include orbit number
 
 * **v4.13.0** - Usage statistics and trending now supported through a `manager` application which collects telemetry and stores it in a persistent DuckDB database that is maintained in our S3 bucket.
 
@@ -20,11 +20,11 @@ Version description of the v4.13.1 release of SlideRule Earth.
 
 ## Issues Resolved
 
-* **v4.13.0** - [#266](https://github.com/SlideRuleEarth/sliderule/issues/266) - GEDI rasters support vertical shifts
+* **v4.13.1** - [#266](https://github.com/SlideRuleEarth/sliderule/issues/266) - GEDI rasters support vertical shifts
 
-* **v4.13.0** - [#487](https://github.com/SlideRuleEarth/sliderule/issues/487) - `atl24x` queries CMR for ATL24 dataset
+* **v4.13.1** - [#487](https://github.com/SlideRuleEarth/sliderule/issues/487) - `atl24x` queries CMR for ATL24 dataset
 
-* **v4.13.0** - [#463](https://github.com/SlideRuleEarth/sliderule/issues/463) - YAPC version 3 fixed
+* **v4.13.1** - [#463](https://github.com/SlideRuleEarth/sliderule/issues/463) - YAPC version 3 fixed
 
 * **v4.13.0** - [8814ffc](https://github.com/SlideRuleEarth/sliderule/commit/8814ffc082ca5cd8368b74ce445cc02a8f3bb269) - CMR max resources reached returns error instead of silently truncating (matches client behavior)
 
@@ -42,17 +42,17 @@ Version description of the v4.13.1 release of SlideRule Earth.
 
 ## Development Changes
 
-* **v4.13.0** - [#222](https://github.com/SlideRuleEarth/sliderule/issues/222) - removed jamming dns for github actions; instead just wait for dns to be active
+* **v4.13.1** - [#222](https://github.com/SlideRuleEarth/sliderule/issues/222) - removed jamming dns for github actions; instead just wait for dns to be active
 
-* **v4.13.0** - [#486](https://github.com/SlideRuleEarth/sliderule/issues/486), [#212](https://github.com/SlideRuleEarth/sliderule/issues/212) - logs backups now rely on manager
+* **v4.13.1** - [#486](https://github.com/SlideRuleEarth/sliderule/issues/486), [#212](https://github.com/SlideRuleEarth/sliderule/issues/212) - logs backups now rely on manager
 
-* **v4.13.0** - [#140](https://github.com/SlideRuleEarth/sliderule/issues/140) - build version information includes OS info
+* **v4.13.1** - [#140](https://github.com/SlideRuleEarth/sliderule/issues/140) - build version information includes OS info
 
-* **v4.13.0** - [#492](https://github.com/SlideRuleEarth/sliderule/issues/140) - updating signature of override of dns lookup in python client to interface with dask without issues
+* **v4.13.1** - [#492](https://github.com/SlideRuleEarth/sliderule/issues/140) - updating signature of override of dns lookup in python client to interface with dask without issues
 
-* **v4.13.0** - [#418](https://github.com/SlideRuleEarth/sliderule/issues/418), [#56](https://github.com/SlideRuleEarth/sliderule/issues/56) - reworked runtime configuration management
+* **v4.13.1** - [#418](https://github.com/SlideRuleEarth/sliderule/issues/418), [#56](https://github.com/SlideRuleEarth/sliderule/issues/56) - reworked runtime configuration management
 
-* **v4.13.0** - [#480](https://github.com/SlideRuleEarth/sliderule/issues/480) - scrubbed header files for faster compile times
+* **v4.13.1** - [#480](https://github.com/SlideRuleEarth/sliderule/issues/480) - scrubbed header files for faster compile times
 
 * **v4.13.0** - Overhauled and cleaned up the Python client examples and utilities.  They should all work; and the examples should provide a good starting point for using different features of the client.
 

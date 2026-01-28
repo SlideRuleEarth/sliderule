@@ -1,4 +1,4 @@
-# Release v4.1.0
+# Release v4.1.x
 
 2023-12-07
 
@@ -32,7 +32,7 @@ Version description of the v4.1.0 release of ICESat-2 SlideRule.
 
 * [e5dce17](https://github.com/SlideRuleEarth/sliderule/commit/e5dce17c9d797cb4696e9a41dbf26915e6704e74) - standardized on C++17 for all plugins
 
-* Unit tests are only run in the self test when compiled as a Debug build 
+* Unit tests are only run in the self test when compiled as a Debug build
 
 * Consolidated build system so that only a single makefile is used to build the sliderule server for the AWS target
 

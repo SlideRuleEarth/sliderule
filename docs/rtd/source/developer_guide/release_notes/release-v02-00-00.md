@@ -1,4 +1,4 @@
-# Release v2.0.0
+# Release v2.0.x
 
 2023-01-11
 

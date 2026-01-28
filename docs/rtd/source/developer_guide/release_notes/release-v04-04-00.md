@@ -1,4 +1,4 @@
-# Release v4.4.0
+# Release v4.4.x
 
 2024-04-04
 
@@ -6,31 +6,31 @@ Version description of the v4.4.0 release of SlideRule Earth.
 
 ## New Features
 
-* Resources are queried from servers instead of client. If a processing request does not include a list of `resources` to process, the server processing the request will query CMR and populate the `resources` parameter.  In addition, any sampling requests that need a populated `catalog` parameter will also be queried on the server side and have that parameter populated.
+* **v4.4.0** - Resources are queried from servers instead of client. If a processing request does not include a list of `resources` to process, the server processing the request will query CMR and populate the `resources` parameter.  In addition, any sampling requests that need a populated `catalog` parameter will also be queried on the server side and have that parameter populated.
 
-* [389](https://github.com/SlideRuleEarth/sliderule/pull/389) and [383](https://github.com/SlideRuleEarth/sliderule/pull/383) - updates to demo plotting and added support for downloading results
+* **v4.4.0** - [389](https://github.com/SlideRuleEarth/sliderule/pull/389) and [383](https://github.com/SlideRuleEarth/sliderule/pull/383) - updates to demo plotting and added support for downloading results
 
-* Raster sampling support when the output is an Arrow generated format (Geo/Parquet, CSV, Feather).
+* **v4.4.0** - Raster sampling support when the output is an Arrow generated format (Geo/Parquet, CSV, Feather).
 
-* Added Feather output support
+* **v4.4.0** - Added Feather output support
 
-* [43d536b](https://github.com/SlideRuleEarth/sliderule/commit/43d536b690ac4fe8337634980092bbf164ece366) - Request parameters and record information added to metadata of generated Parquet files.
+* **v4.4.0** - [43d536b](https://github.com/SlideRuleEarth/sliderule/commit/43d536b690ac4fe8337634980092bbf164ece366) - Request parameters and record information added to metadata of generated Parquet files.
 
-* [763e553](https://github.com/SlideRuleEarth/sliderule/commit/763e5537d23483601535f622d9386f93456ba967) - max confidence in the signal_conf variable can be selected when filtering ATL03 photons based on confidence level
+* **v4.4.0** - [763e553](https://github.com/SlideRuleEarth/sliderule/commit/763e5537d23483601535f622d9386f93456ba967) - max confidence in the signal_conf variable can be selected when filtering ATL03 photons based on confidence level
 
-* [392](https://github.com/SlideRuleEarth/sliderule/pull/392) - GEBCO raster sampling support added
+* **v4.4.0** - [392](https://github.com/SlideRuleEarth/sliderule/pull/392) - GEBCO raster sampling support added
 
-* [9d71b6e](https://github.com/SlideRuleEarth/sliderule/commit/9d71b6ef8da004c18a2a40f18035ad3eb3d36b66) - Meta global canopy height raster support added
+* **v4.4.0** - [9d71b6e](https://github.com/SlideRuleEarth/sliderule/commit/9d71b6ef8da004c18a2a40f18035ad3eb3d36b66) - Meta global canopy height raster support added
 
 ## Issues Resolved
 
-* Logs returned to users are now consistently implemented as exception records through the `alert` function.
+* **v4.4.0** - Logs returned to users are now consistently implemented as exception records through the `alert` function.
 
 ## Development Updates
 
-* GDAL headers removed from exported package headers
+* **v4.4.0** - GDAL headers removed from exported package headers
 
-* GDAL log messages are defaulted off
+* **v4.4.0** - GDAL log messages are defaulted off
 
 ## Getting This Release
 
