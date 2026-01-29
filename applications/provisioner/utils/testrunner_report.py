@@ -34,6 +34,7 @@ import boto3
 
 # command line arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
+parser.add_argument('--testfile',   type=str,   default=None)
 parser.add_argument('--testdir',    type=str,   default="s3://sliderule/cf/testrunner")
 parser.add_argument('--branch',     type=str,   default="main")
 parser.add_argument('--output',     type=str,   default="/tmp/summary.json")
@@ -47,27 +48,32 @@ path = args.testdir.split("s3://")[-1]
 bucket = path.split("/")[0]
 subfolder = '/'.join(path.split("/")[1:])
 
-# get list of reports
-num_files = 0
-log_files = []
-is_truncated = True
-continuation_token = None
-while is_truncated:
-    # make request
-    if continuation_token:
-        response = s3_client.list_objects_v2(Bucket=bucket, Prefix=subfolder, ContinuationToken=continuation_token)
-    else:
-        response = s3_client.list_objects_v2(Bucket=bucket, Prefix=subfolder)
-    # parse contents
-    if 'Contents' in response:
-        for obj in response['Contents']:
-            num_files += 1
-            filename = obj['Key'].split("/")[-1]
-            if filename.startswith(f"{args.branch}-") and filename.endswith("-testrunner.log"):
-                log_files.append(filename)
-    # check if more data is available
-    is_truncated = response['IsTruncated']
-    continuation_token = response.get('NextContinuationToken')
+if args.testfile != None:
+    # hardcode log file
+    num_files = 1
+    log_files = [args.testfile]
+else:
+    # get list of reports
+    num_files = 0
+    log_files = []
+    is_truncated = True
+    continuation_token = None
+    while is_truncated:
+        # make request
+        if continuation_token:
+            response = s3_client.list_objects_v2(Bucket=bucket, Prefix=subfolder, ContinuationToken=continuation_token)
+        else:
+            response = s3_client.list_objects_v2(Bucket=bucket, Prefix=subfolder)
+        # parse contents
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                num_files += 1
+                filename = obj['Key'].split("/")[-1]
+                if filename.startswith(f"{args.branch}-") and filename.endswith("-testrunner.log"):
+                    log_files.append(filename)
+        # check if more data is available
+        is_truncated = response['IsTruncated']
+        continuation_token = response.get('NextContinuationToken')
 
 # find latest log file
 latest_log_file = None
