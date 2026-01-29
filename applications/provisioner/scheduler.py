@@ -1,4 +1,6 @@
 import boto3
+import botocore.exceptions
+import re
 import json
 import urllib3
 from datetime import datetime, timedelta, timezone
@@ -7,6 +9,8 @@ from datetime import datetime, timedelta, timezone
 # Globals
 # ###############################
 
+MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
+SYSTEM_KEYWORDS = ['login','provisioner','client']
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"
 
@@ -117,6 +121,21 @@ def get_next_trigger_time(rule_name):
 def build_rule_name(stack_name):
     return f'{stack_name}-auto-shutdown'
 
+#
+# Convention for deriving stack name from cluster
+#
+def build_stack_name(cluster):
+    # check keywords
+    if cluster in SYSTEM_KEYWORDS:
+        raise RuntimeError(f'Reserved string used for cluster name: <{cluster}>')
+    # check valid characters
+    if not re.match(r'^[A-Za-z0-9-_]+$', cluster):
+        raise RuntimeError(f'Illegal cluster name: <{cluster}>')
+    # check reasonable length
+    if len(cluster) > 40:
+        raise RuntimeError(f'Cluster name too long: <{len(cluster)}')
+    # return cluster stack name
+    return f'{cluster}-cluster'
 
 # ###############################
 # Lambda: Schedule Auto Shutdown
@@ -190,4 +209,57 @@ def lambda_scheduler(event, context):
         # acknowledge hook error back to cloudformation
         print(f'Error in custom scheduler: {e}')
         cfn_send(event, context, FAILED, {'Error': str(e)})
+
+# ###############################
+# Lambda: Destroy Cluster
+# ###############################
+
+def lambda_destroy(event, context):
+
+    # initialize response status
+    state = {"status": True}
+
+    try:
+        # get optional request variables
+        cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
+        state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
+        region = event.get("region", "us-west-2")
+
+        # delete eventbridge target and rule
+        events = boto3.client("events")
+        rule_name = f'{state["stack_name"]}-auto-shutdown'
+        print(f'Delete initiated for {rule_name}')
+        try:
+            events.remove_targets(Rule=rule_name, Ids=["1"])
+            state["EventBridge Target Removed"] = True
+        except Exception as e:
+            print(f'Unable to delete eventbridge rule: {e}')
+            state["EventBridge Target Removed"] = False
+        try:
+            events.delete_rule(Name=rule_name, Force=False)
+            state["EventBridge Rule Removed"] = True
+        except Exception as e:
+            print(f'Unable to delete eventbridge rule: {e}')
+            state["EventBridge Rule Removed"] = False
+
+        # delete stack
+        cf = boto3.client("cloudformation", region_name=region)
+        state["response"] = cf.delete_stack(StackName=state["stack_name"])
+        print(f'Delete initiated for {state["stack_name"]}')
+
+    except botocore.exceptions.ClientError as e:
+        print(f'Client error: {e}')
+        if e.response['Error']['Code'] == 'ValidationError':
+            state["exception"] = f'Not found'
+        else:
+            state["exception"] = f'Unexpected error'
+        state["status"] = False
+
+    except Exception as e:
+        print(f'Exception in destroy: {e}')
+        state["exception"] = f'Failure in destroy'
+        state["status"] = False
+
+    # return response
+    return state
 

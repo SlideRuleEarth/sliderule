@@ -7,21 +7,8 @@ from datetime import datetime, timedelta
 import scheduler
 
 # ###############################
-# Globals
-# ###############################
-
-MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
-SYSTEM_KEYWORDS = ['login','provisioner','client']
-
-# ###############################
 # Utilities
 # ###############################
-
-#
-# Convention for deriving stack name from cluster
-#
-def build_stack_name(cluster):
-    return f'{cluster}-cluster'
 
 #
 # Get tags for EC2 instances
@@ -117,17 +104,13 @@ def lambda_deploy(event, context):
         # the stack name naming convention is required by Makefile
         state["stack_name"] = build_stack_name(cluster)
 
-        # check keywords
-        if cluster in SYSTEM_KEYWORDS:
-            raise RuntimeError(f'Illegal cluster name <{cluster}>')
-
         # create stack
         state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
         print(f'Deploy initiated for {state["stack_name"]}')
 
     except RuntimeError as e:
         print(f'User error in deploy: {e}')
-        state["exception"] = f'{e}'
+        state["exception"] = f'User error in deploy'
         state["status"] = False
 
     except Exception as e:
@@ -170,69 +153,16 @@ def lambda_extend(event, context):
         )
 
     except botocore.exceptions.ClientError as e:
+        print(f'Client error: {e}')
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f'{e}')
             state["exception"] = f'Not found'
-            state["status"] = False
         else:
-            raise
+            state["exception"] = f'Unexpected error'
+        state["status"] = False
 
     except Exception as e:
         print(f'Exception in extend: {e}')
         state["exception"] = f'Failure in extend'
-        state["status"] = False
-
-    # return response
-    return state
-
-# ###############################
-# Lambda: Destroy Cluster
-# ###############################
-
-def lambda_destroy(event, context):
-
-    # initialize response status
-    state = {"status": True}
-
-    try:
-        # get optional request variables
-        cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
-        state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
-        region = event.get("region", "us-west-2")
-
-        # delete eventbridge target and rule
-        events = boto3.client("events")
-        rule_name = f'{state["stack_name"]}-auto-shutdown'
-        print(f'Delete initiated for {rule_name}')
-        try:
-            events.remove_targets(Rule=rule_name, Ids=["1"])
-            state["EventBridge Target Removed"] = True
-        except Exception as e:
-            print(f'Unable to delete eventbridge rule: {e}')
-            state["EventBridge Target Removed"] = False
-        try:
-            events.delete_rule(Name=rule_name, Force=False)
-            state["EventBridge Rule Removed"] = True
-        except Exception as e:
-            print(f'Unable to delete eventbridge rule: {e}')
-            state["EventBridge Rule Removed"] = False
-
-        # delete stack
-        cf = boto3.client("cloudformation", region_name=region)
-        state["response"] = cf.delete_stack(StackName=state["stack_name"])
-        print(f'Delete initiated for {state["stack_name"]}')
-
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == 'ValidationError':
-            print(f'{e}')
-            state["exception"] = f'Not found'
-            state["status"] = False
-        else:
-            raise
-
-    except Exception as e:
-        print(f'Exception in destroy: {e}')
-        state["exception"] = f'Failure in destroy'
         state["status"] = False
 
     # return response
@@ -295,12 +225,12 @@ def lambda_status(event, context):
                     state["node_capacity"] = tag["Value"]
 
     except botocore.exceptions.ClientError as e:
+        print(f'Client error: {e}')
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f'{e}')
             state["exception"] = f'Not found'
-            state["status"] = False
         else:
-            raise
+            state["exception"] = f'Unexpected error'
+        state["status"] = False
 
     except Exception as e:
         print(f'Exception in status: {e}')
@@ -350,12 +280,12 @@ def lambda_events(event, context):
         state["response"] = response
 
     except botocore.exceptions.ClientError as e:
+        print(f'Client error: {e}')
         if e.response['Error']['Code'] == 'ValidationError':
-            print(f'{e}')
             state["exception"] = f'Not found'
-            state["status"] = False
         else:
-            raise
+            state["exception"] = f'Unexpected error'
+        state["status"] = False
 
     except Exception as e:
         print(f'Exception in events: {e}')
