@@ -39,9 +39,6 @@ parser.add_argument('--branch',     type=str,   default="main")
 parser.add_argument('--output',     type=str,   default="/tmp/summary.json")
 args,_ = parser.parse_known_args()
 
-# initialize results
-results = {"branch": args.branch, "selftest": {}, "pytest": {}, "provisioner": {}, "ams": {}}
-
 # create S3 client
 s3_client = boto3.client("s3")
 
@@ -82,7 +79,8 @@ for log_file in log_files:
         latest_log_file = log_file
         latest_dt = dt
 
-# populate log results
+# initialize results
+results = {"branch": args.branch}
 results["latest"] = latest_log_file
 results["num_logs"] = len(log_files)
 results["total_files"] = num_files
@@ -92,98 +90,88 @@ results["date"] = latest_dt.astimezone().strftime("%Y-%m-%d %H:%M:%S")
 local_log_file = f"/tmp/{latest_log_file}"
 s3_client.download_file(Bucket=bucket, Key=f"{subfolder}/{latest_log_file}", Filename=local_log_file)
 
+# test parser class
+class TestParser:
+    def __init__(self, kind, key):
+        self.state = "not found"
+        self.lines = []
+        self.kind = kind
+        self.key = key
+    def scrape(self, line):
+        if self.state in ['not found']:
+            if line == self.key:
+                self.state = "searching"
+        elif self.state in ['searching', 'in progress']:
+            if self.kind == "selftest":
+                if self.state == "searching" and line == "*********************************":
+                    self.state = "in progress"
+                elif self.state == "in progress":
+                    if line == "*********************************":
+                        self.state = "complete"
+                    else:
+                        self.lines.append(line)
+            elif self.kind == "pytest":
+                if self.state == "searching" and line == "=========================== short test summary info ============================":
+                    self.state = "in progress"
+                elif self.state == "searching" and line.startswith("===========") and ("FAILURES" not in line):
+                    self.state = "complete"
+                    self.lines.append(line)
+                elif self.state == "in progress":
+                    if line.startswith("==========="):
+                        self.state = "complete"
+                    self.lines.append(line)
+    def parse(self):
+        result = {}
+        if self.kind == "selftest":
+            result["state"] = self.state
+            for line in self.lines:
+                if "number of tests" in line:
+                    result["tests"] = int(line.split(":")[1].strip())
+                elif "number of skipped tests" in line:
+                    result["skipped"] = int(line.split(":")[1].strip())
+                elif "number of asserts" in line:
+                    result["asserts"] = int(line.split(":")[1].strip())
+                elif "number of errors" in line:
+                    result["errors"] = int(line.split(":")[1].strip())
+        elif self.kind == "pytest":
+            result["state"] = self.state
+            if self.state != "complete":
+                return
+            result["errors"] = 0
+            result["summary"] = []
+            for line in self.lines:
+                if line.startswith("FAILED"):
+                    result["errors"] += 1
+                    result["summary"].append(line.split(" ")[1].strip())
+                elif line.startswith("=================="):
+                    toks = line.split(" ")
+                    for i in range(1, len(toks)):
+                        if "failed" in toks[i]:
+                            result["failed"] = int(toks[i-1].split(" ")[0].strip())
+                        if "skipped" in toks[i]:
+                            result["skipped"] = int(toks[i-1].split(" ")[0].strip())
+                        if "passed" in toks[i]:
+                            result["passed"] = int(toks[i-1].split(" ")[0].strip())
+        return result
+
 # open up latest log file and search for results
-selftest_state = "start"
-selftest_lines = []
-sliderule_pytest_state = "start"
-sliderule_pytest_lines = []
-provisioner_pytest_state = "start"
-provisioner_pytest_lines = []
-ams_pytest_state = "start"
-ams_pytest_lines = []
-pytest_state = "None"
+selftest = TestParser("selftest", "/sliderule/stage/sliderule/bin/sliderule /sliderule/targets/slideruleearth/test_runner.lua cloud")
+sliderule = TestParser("pytest", "rootdir: /sliderule/clients/python")
+provisioner = TestParser("pytest", "rootdir: /sliderule/applications/provisioner")
+ams = TestParser("pytest", "rootdir: /sliderule/applications/ams")
 with open(local_log_file, "r") as file:
     for line in file.readlines():
         line = line.strip()
+        selftest.scrape(line)
+        sliderule.scrape(line)
+        provisioner.scrape(line)
+        ams.scrape(line)
 
-        # selftest
-        if selftest_state == "start" and line == "*********************************":
-            selftest_state = "in progress"
-        elif selftest_state == "in progress":
-            if line == "*********************************":
-                selftest_found = "end"
-            else:
-                selftest_lines.append(line)
-
-        # pytest state
-        if line == "rootdir: /sliderule/clients/python":
-            pytest_state = "sliderule"
-        elif line == "rootdir: /sliderule/applications/provisioner":
-            pytest_state = "provisioner"
-        elif line == "rootdir: /sliderule/applications/ams":
-            pytest_state = "ams"
-
-        # sliderule - pytest
-        if pytest_state == "sliderule":
-            if sliderule_pytest_state == "start" and line == "=========================== short test summary info ============================":
-                sliderule_pytest_state = "in progress"
-            elif sliderule_pytest_state == "in progress":
-                if line.startswith("=================="):
-                    sliderule_pytest_state = "end"
-                sliderule_pytest_lines.append(line)
-
-        # provisioner - pytest
-        if pytest_state == "provisioner":
-            if provisioner_pytest_state == "start" and line == "=========================== short test summary info ============================":
-                provisioner_pytest_state = "in progress"
-            elif provisioner_pytest_state == "in progress":
-                if line.startswith("=================="):
-                    provisioner_pytest_state = "end"
-                provisioner_pytest_lines.append(line)
-
-        # ams - pytest
-        if pytest_state == "ams":
-            if ams_pytest_state == "start" and line == "=========================== short test summary info ============================":
-                ams_pytest_state = "in progress"
-            elif ams_pytest_state == "in progress":
-                if line.startswith("=================="):
-                    ams_pytest_state = "end"
-                ams_pytest_lines.append(line)
-
-# parse selftest output
-for line in selftest_lines:
-    if "number of tests" in line:
-        results["selftest"]["tests"] = int(line.split(":")[1].strip())
-    elif "number of skipped tests" in line:
-        results["selftest"]["skipped"] = int(line.split(":")[1].strip())
-    elif "number of asserts" in line:
-        results["selftest"]["asserts"] = int(line.split(":")[1].strip())
-    elif "number of errors" in line:
-        results["selftest"]["errors"] = int(line.split(":")[1].strip())
-
-# local helper function to parse pytest output
-def parse_pytest(result, lines):
-    print("LINES", lines)
-    result["errors"] = 0
-    result["summary"] = []
-    for line in lines:
-        if line.startswith("FAILED"):
-            result["errors"] += 1
-            result["summary"].append(line.split(" ")[1].strip())
-        elif line.startswith("=================="):
-            toks = line.split(" ")
-            for i in range(1, len(toks)):
-                if "failed" in toks[i]:
-                    result["failed"] = int(toks[i-1].split(" ")[0].strip())
-                if "skipped" in toks[i]:
-                    result["skipped"] = int(toks[i-1].split(" ")[0].strip())
-                if "passed" in toks[i]:
-                    result["passed"] = int(toks[i-1].split(" ")[0].strip())
-
-# parse pytest output
-parse_pytest(results["pytest"], sliderule_pytest_lines)
-parse_pytest(results["provisioner"], provisioner_pytest_lines)
-parse_pytest(results["ams"], ams_pytest_lines)
+# parse results
+results["selftest"] = selftest.parse()
+results["sliderule"] = sliderule.parse()
+results["provisioner"] = provisioner.parse()
+results["ams"] = ams.parse()
 
 # output results
 print(json.dumps(results, indent=2))
