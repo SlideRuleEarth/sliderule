@@ -260,7 +260,7 @@ CLUSTER_PARMS = '{\
 	"domain": "$(DOMAIN)",\
 	"cluster": "$(CLUSTER)",\
 	"node_capacity": $(NODE_CAPACITY),\
-	"ttl": $(TTL)
+	"ttl": $(TTL) \
 }'
 
 cluster-docker: ## build all cluster docker images
@@ -377,6 +377,12 @@ testrunner-delete: ## deletes the test runner and any lingering event bridge rul
 	aws cloudformation wait stack-delete-complete --stack-name testrunner
 	- aws events remove-targets --rule testrunner-auto-delete --ids 1
 	- aws events delete-rule --name testrunner-auto-delete
+
+testrunner-report: ## invokes the provisioner *report* lambda function and displays the response
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --report tests
+
+testrunner-run: ## invokes the provisioner *report* lambda function and displays the response
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --branch main --commands test
 
 ########################
 # Recorder Targets

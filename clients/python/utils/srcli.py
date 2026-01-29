@@ -38,6 +38,8 @@ parser.add_argument('--is_public',          type=bool,              default=Fals
 parser.add_argument('--node_capacity',      type=int,               default=None)
 parser.add_argument('--ttl',                type=int,               default=60) # 1 hour
 parser.add_argument('--version',            type=str,               default="unstable")
+parser.add_argument('--branch',             type=str,               default="main")
+parser.add_argument('--report',             type=str,               default="clusters")
 parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
 args,_ = parser.parse_known_args()
 
@@ -52,7 +54,8 @@ CommandRunner = {
     "destroy": session.provisioner.destroy,
     "status": session.provisioner.status,
     "events": session.provisioner.events,
-    "report": session.provisioner.report,
+    "report": lambda: session.provisioner.report(kind=args.report),
+    "test": lambda: session.provision("test", {"branch":args.branch}),
 
     # Cluster
     "version": lambda: session.source("version")

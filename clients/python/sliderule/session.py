@@ -555,8 +555,8 @@ class Session:
             return self.session.provision("status", {"cluster": self.session.cluster})
         def events (self):
             return self.session.provision("events", {"cluster": self.session.cluster})
-        def report (self):
-            return self.session.provision("report", {})
+        def report (self, kind="clusters"):
+            return self.session.provision(f"report/{kind}", {})
 
     #
     # __Authenticator
