@@ -298,7 +298,7 @@ Resources:
           # Record of Run
           #
           aws s3 cp /testrunner.log s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Branch}-${DeployDate}-testrunner.log
-          cd /sliderule/clients/python
+          cd /sliderule/applications/provisioner
           /root/miniforge3/envs/provisioner/bin/python utils/testrunner_report.py --branch ${Branch} --testdir s3://${ProjectBucket}/${ProjectFolder}/testrunner --output /tmp/${Branch}-summary.json
           aws s3 cp /tmp/${Branch}-summary.json s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Branch}-summary.json
 
