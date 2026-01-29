@@ -260,8 +260,7 @@ CLUSTER_PARMS = '{\
 	"domain": "$(DOMAIN)",\
 	"cluster": "$(CLUSTER)",\
 	"node_capacity": $(NODE_CAPACITY),\
-	"ttl": $(TTL),\
-	"region": "$(AWS_REGION)"\
+	"ttl": $(TTL)
 }'
 
 cluster-docker: ## build all cluster docker images
@@ -501,7 +500,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package requests croniter"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/manager.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"

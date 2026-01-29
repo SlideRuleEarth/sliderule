@@ -6,6 +6,18 @@ import urllib3
 from datetime import datetime, timedelta, timezone
 
 # ###############################
+# Cached Clients
+# ###############################
+
+ec2 = boto3.client("ec2")
+s3 = boto3.client("s3")
+cf = boto3.client("cloudformation")
+ev = boto3.client('events')
+la = boto3.client('lambda')
+
+http = urllib3.PoolManager()
+
+# ###############################
 # Globals
 # ###############################
 
@@ -13,8 +25,6 @@ MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 SYSTEM_KEYWORDS = ['login','provisioner','client']
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"
-
-http = urllib3.PoolManager()
 
 # ###############################
 # Utilities
@@ -58,13 +68,11 @@ def get_next_trigger_time(rule_name):
     Return next trigger for cron() expressions in an EventBridge rule.
     Example: cron(0 12 * * ? *) - daily at noon UTC
     """
-    client = boto3.client('events')
-
     try:
         from croniter import croniter
 
         # Get the rule details
-        response = client.describe_rule(Name=rule_name)
+        response = ev.describe_rule(Name=rule_name)
 
         # Check if rule is enabled
         state = response.get('State')
@@ -108,7 +116,7 @@ def get_next_trigger_time(rule_name):
     except ImportError:
         print("croniter library not installed. Install with: pip install croniter")
         return None
-    except client.exceptions.ResourceNotFoundException:
+    except ev.exceptions.ResourceNotFoundException:
         print(f"Rule {rule_name} not found")
         return None
     except Exception as e:
@@ -141,7 +149,7 @@ def build_stack_name(cluster):
 # Lambda: Schedule Auto Shutdown
 # ###############################
 
-def lambda_scheduler(event, context):
+def lambda_schedule(event, context):
     print(f'Event: {json.dumps(event)}')
 
     try:
@@ -158,16 +166,12 @@ def lambda_scheduler(event, context):
             deletion_lambda_arn = event['ResourceProperties']['DeletionLambdaArn']
             rule_name = build_rule_name(stack_name)
 
-            # get clients
-            events_client = boto3.client('events')
-            lambda_client = boto3.client('lambda')
-
             # calculate schedule time
             shutdown_time = datetime.utcnow() + timedelta(minutes=delete_after_minutes)
             cron_expression = f'cron({shutdown_time.minute} {shutdown_time.hour} {shutdown_time.day} {shutdown_time.month} ? {shutdown_time.year})'
 
             # create eventbridge rule
-            events_client.put_rule(
+            ev.put_rule(
                 Name=rule_name,
                 ScheduleExpression=cron_expression,
                 State='ENABLED',
@@ -176,18 +180,18 @@ def lambda_scheduler(event, context):
 
             # add lambda permission
             try:
-                lambda_client.add_permission(
+                la.add_permission(
                     FunctionName=deletion_lambda_arn,
                     StatementId=f'{rule_name}-permission',
                     Action='lambda:InvokeFunction',
                     Principal='events.amazonaws.com',
                     SourceArn=f'arn:aws:events:{context.invoked_function_arn.split(":")[3]}:{context.invoked_function_arn.split(":")[4]}:rule/{rule_name}'
                 )
-            except lambda_client.exceptions.ResourceConflictException:
+            except la.exceptions.ResourceConflictException:
                 print('Permission already exists')
 
             # add target
-            events_client.put_targets(
+            ev.put_targets(
                 Rule=rule_name,
                 Targets=[{
                     'Id': '1',
@@ -223,27 +227,24 @@ def lambda_destroy(event, context):
         # get optional request variables
         cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
         state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
-        region = event.get("region", "us-west-2")
 
         # delete eventbridge target and rule
-        events = boto3.client("events")
         rule_name = f'{state["stack_name"]}-auto-shutdown'
         print(f'Delete initiated for {rule_name}')
         try:
-            events.remove_targets(Rule=rule_name, Ids=["1"])
+            ev.remove_targets(Rule=rule_name, Ids=["1"])
             state["EventBridge Target Removed"] = True
         except Exception as e:
             print(f'Unable to delete eventbridge rule: {e}')
             state["EventBridge Target Removed"] = False
         try:
-            events.delete_rule(Name=rule_name, Force=False)
+            ev.delete_rule(Name=rule_name, Force=False)
             state["EventBridge Rule Removed"] = True
         except Exception as e:
             print(f'Unable to delete eventbridge rule: {e}')
             state["EventBridge Rule Removed"] = False
 
         # delete stack
-        cf = boto3.client("cloudformation", region_name=region)
         state["response"] = cf.delete_stack(StackName=state["stack_name"])
         print(f'Delete initiated for {state["stack_name"]}')
 

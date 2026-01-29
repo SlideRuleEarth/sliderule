@@ -4,7 +4,7 @@ import botocore.exceptions
 import json
 import base64
 from datetime import datetime, timedelta
-import scheduler
+import manager
 
 # ###############################
 # Utilities
@@ -14,9 +14,8 @@ import scheduler
 # Get tags for EC2 instances
 #
 def get_instances_by_name(name):
-    ec2 = boto3.client("ec2")
     try:
-        response = ec2.describe_instances(
+        response = manager.ec2.describe_instances(
             Filters=[
                 {"Name": "tag:Name", "Values": [name]},
                 {"Name": "instance-state-name", "Values": ["pending", "running", "stopped"]}
@@ -24,7 +23,7 @@ def get_instances_by_name(name):
         )
         return [instance for reservation in response["Reservations"] for instance in reservation["Instances"]]
     except Exception as e:
-        print("Unable to get <{name}> instances: {e}")
+        print(f"Unable to get <{name}> instances: {e}")
         return []
 
 #
@@ -40,10 +39,13 @@ def parse_claim_array(claim_value):
         return []
 
 # ###############################
-# Lambda: Deploy Cluster
+# Path Handlers
 # ###############################
 
-def lambda_deploy(event, context):
+#
+# Deploy
+#
+def deploy_handler(event, context):
 
     # initialize response state
     state = {"status": True}
@@ -69,11 +71,9 @@ def lambda_deploy(event, context):
 
         # get optional request variables
         version = event.get("version", "latest")
-        region = event.get("region", "us-west-2")
 
         # get arns for auto-shutdown
-        cf = boto3.client("cloudformation", region_name=region)
-        resp = cf.describe_stacks(StackName=stack_name)
+        resp = manager.cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
         scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "SchedulerLambdaArn")
@@ -102,10 +102,10 @@ def lambda_deploy(event, context):
         templateBody = open("cluster.yml").read()
 
         # the stack name naming convention is required by Makefile
-        state["stack_name"] = build_stack_name(cluster)
+        state["stack_name"] = manager.build_stack_name(cluster)
 
         # create stack
-        state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        state["response"] = manager.cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
         print(f'Deploy initiated for {state["stack_name"]}')
 
     except RuntimeError as e:
@@ -121,11 +121,10 @@ def lambda_deploy(event, context):
     # return response
     return state
 
-# ###############################
-# Lambda: Extend Cluster
-# ###############################
-
-def lambda_extend(event, context):
+#
+# Extend
+#
+def extend_handler(event, context):
 
     # initialize response state
     state = {"status": True}
@@ -137,15 +136,14 @@ def lambda_extend(event, context):
         ttl = event["ttl"]
 
         # get rule name
-        rule_name = f'{build_stack_name(cluster)}-auto-shutdown'
+        rule_name = f'{manager.build_stack_name(cluster)}-auto-shutdown'
 
         # calculate new shutdown time
         new_shutdown_time = datetime.utcnow() + timedelta(minutes=ttl)
         state["cron_expression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
 
         # extend rule
-        events = boto3.client('events')
-        state["response"] = events.put_rule(
+        state["response"] = manager.ev.put_rule(
             Name=rule_name,
             ScheduleExpression=state["cron_expression"],
             State='ENABLED',
@@ -168,11 +166,10 @@ def lambda_extend(event, context):
     # return response
     return state
 
-# ###############################
-# Lambda: Status Cluster
-# ###############################
-
-def lambda_status(event, context):
+#
+# Status
+#
+def status_handler(event, context):
 
     # initialize response state
     state = {"status": True}
@@ -181,16 +178,12 @@ def lambda_status(event, context):
         # get required request variables
         cluster = event["cluster"]
 
-        # get optional request variables
-        region = event.get("region", "us-west-2")
-
         # get stack name
-        state["stack_name"] = build_stack_name(cluster)
+        state["stack_name"] = manager.build_stack_name(cluster)
 
         # status stack
         print(f'Status requested for {state["stack_name"]}')
-        cf = boto3.client("cloudformation", region_name=region)
-        description = cf.describe_stacks(StackName=state["stack_name"])
+        description = manager.cf.describe_stacks(StackName=state["stack_name"])
         stack = description["Stacks"][0]
 
         # build cleaned response
@@ -205,8 +198,8 @@ def lambda_status(event, context):
         state["response"] = response
 
         # attempt to get auto-shutdown time
-        rule_name = scheduler.build_rule_name(state["stack_name"])
-        state["auto_shutdown"] = scheduler.get_next_trigger_time(rule_name)
+        rule_name = manager.build_rule_name(state["stack_name"])
+        state["auto_shutdown"] = manager.get_next_trigger_time(rule_name)
 
         # get number of nodes
         node_instances = get_instances_by_name(f'{cluster}-node')
@@ -240,11 +233,10 @@ def lambda_status(event, context):
     # return response
     return state
 
-# ###############################
-# Lambda: Dump Cluster Logs
-# ###############################
-
-def lambda_events(event, context):
+#
+# Events
+#
+def events_handler(event, context):
 
     # initialize response state
     state = {"status": True}
@@ -253,15 +245,11 @@ def lambda_events(event, context):
         # get required request variables
         cluster = event["cluster"]
 
-        # get optional request variables
-        region = event.get("region", "us-west-2")
-
         # get stack name
-        state["stack_name"] = build_stack_name(cluster)
+        state["stack_name"] = manager.build_stack_name(cluster)
 
         # get events for stack
-        cf = boto3.client("cloudformation", region_name=region)
-        description = cf.describe_stack_events(StackName=state["stack_name"])
+        description = manager.cf.describe_stack_events(StackName=state["stack_name"])
         stack_events = description["StackEvents"]
         print(f'Events requested for {state["stack_name"]}')
 
@@ -295,18 +283,17 @@ def lambda_events(event, context):
     # return response
     return state
 
-# ###############################
-# Lambda: Report Running Clusters
-# ###############################
-
-def lambda_report_clusters(event, context):
+#
+# Cluster Report
+#
+def report_clusters_handler(event, context):
 
     # initialize response state
     state = {"status": True, "report": {}}
 
     try:
-        # get optional request variables
-        region = event.get("region", "us-west-2")
+        # get environment variables
+        region = os.environ["AWS_REGION"]
 
         # get list of intelligent load balancers with their tags
         for instance in get_instances_by_name('*-ilb'):
@@ -315,7 +302,7 @@ def lambda_report_clusters(event, context):
             if name:
                 # get status of each cluster containing the intelligent load balancer
                 cluster = name.split("-ilb")[0]
-                details = lambda_status({"cluster": cluster, "region": region}, None)
+                details = status_handler({"cluster": cluster, "region": region}, None)
                 if details["status"]:
                     state["report"][cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
 
@@ -329,11 +316,10 @@ def lambda_report_clusters(event, context):
     # return response
     return state
 
-# ###############################
-# Lambda: Report Test Runners
-# ###############################
-
-def lambda_report_tests(event, context):
+#
+# Test Report
+#
+def report_tests_handler(event, context):
 
     # initialize response state
     state = {"status": True, "report": {}}
@@ -345,12 +331,10 @@ def lambda_report_tests(event, context):
 
         # get optional request variables
         branch = event.get("branch", "main")
-        region = event.get("region", "us-west-2")
 
         # get test summary
         summary_file = f"{branch}-summary.json"
-        s3 = boto3.client("s3", region_name=region)
-        s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
+        manager.s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
 
         # read test summary
         with open(f"/tmp/{summary_file}", "r") as file:
@@ -366,11 +350,10 @@ def lambda_report_tests(event, context):
     # return response
     return state
 
-# ###############################
-# Lambda: Test Runner
-# ###############################
-
-def lambda_test(event, context):
+#
+# Test Runner
+#
+def test_handler(event, context):
 
     # initialize response status
     state = {"status": True}
@@ -387,12 +370,10 @@ def lambda_test(event, context):
         # get optional request variables
         deploy_date = event.get("deploy_date", datetime.now().strftime("%Y%m%d%H%M"))
         branch = event.get("branch", "main")
-        region = event.get("region", "us-west-2")
         state["stack_name"] = event.get('stack_name', 'testrunner') # default to hardcoded stack name so only one can run at a time
 
         # get arns for auto-shutdown
-        cf = boto3.client("cloudformation", region_name=region)
-        resp = cf.describe_stacks(StackName=stack_name)
+        resp = manager.cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
         scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "SchedulerLambdaArn")
@@ -414,8 +395,7 @@ def lambda_test(event, context):
         templateBody = open("testrunner.yml").read()
 
         # create stack
-        cf = boto3.client("cloudformation", region_name=region)
-        state["response"] = cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        state["response"] = manager.cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
     except Exception as e:
 
@@ -436,89 +416,97 @@ def lambda_gateway(event, context):
     Route requests based on path
     """
     # get JWT claims (validated by API Gateway)
-    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-    username = claims.get('sub', '<anonymous>')
-    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-    max_nodes = int(claims.get('max_nodes', "0"))
-    max_ttl = int(claims.get('max_ttl', "0"))
-    audiences = parse_claim_array(claims.get('aud', "[]"))
-    allowed_clusters = [audience for audience in audiences if audience not in SYSTEM_KEYWORDS]
+    try:
+        claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+        username = claims.get('sub', '<anonymous>')
+        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+        max_nodes = int(claims.get('max_nodes', "0"))
+        max_ttl = int(claims.get('max_ttl', "0"))
+        audiences = parse_claim_array(claims.get('aud', "[]"))
+        allowed_clusters = [audience for audience in audiences if audience not in manager.SYSTEM_KEYWORDS]
 
-    # get path and body of request
-    path = event.get('rawPath', '')
-    body_raw = event.get("body")
-    if body_raw:
-        if event.get("isBase64Encoded"):
-            body_raw = base64.b64decode(body_raw).decode("utf-8")
-        body = json.loads(body_raw)
-    else:
-        body = {}
-    print(f'Received request: {path} {body}')
+        # get path and body of request
+        path = event.get('rawPath', '')
+        body_raw = event.get("body")
+        if body_raw:
+            if event.get("isBase64Encoded"):
+                body_raw = base64.b64decode(body_raw).decode("utf-8")
+            body = json.loads(body_raw)
+        else:
+            body = {}
+        print(f'Received request: {path} {body}')
 
-    # check organization membership
-    if 'member' not in org_roles:
-        print(f'Access denied to {username}, organization roles: {org_roles}')
-        return {
-            'statusCode': 403,
-            'body': json.dumps({'error': 'access denied'})
-        }
-
-    # check cluster
-    cluster = body.get("cluster")
-    if cluster and ((cluster not in allowed_clusters) and ('*' not in allowed_clusters)):
-        print(f'Access denied to {username}, allowed clusters: {allowed_clusters}')
-        return {
-            'statusCode': 403,
-            'body': json.dumps({'error': 'access denied'})
-        }
-
-    # check node_capacity
-    node_capacity = body.get("node_capacity")
-    if node_capacity and (int(node_capacity) > max_nodes):
-        print(f'Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}')
-        return {
-            'statusCode': 403,
-            'body': json.dumps({'error': 'access denied'})
-        }
-
-    # check ttl
-    ttl = body.get("ttl")
-    if ttl and ((int(ttl) > max_ttl) or (int(ttl) < MIN_TTL_FOR_AUTOSHUTDOWN)):
-        print(f'Access denied to {username}, invalid ttl: {ttl}')
-        return {
-            'statusCode': 403,
-            'body': json.dumps({'error': 'access denied'})
-        }
-
-    # check report and test runner
-    if path.startswith('/report') or path.startswith('/test'):
-        if 'owner' not in org_roles:
-            print(f'Access denied to {username}, organization roles: {org_roles}, path: {path}')
+        # check organization membership
+        if 'member' not in org_roles:
+            print(f'Access denied to {username}, organization roles: {org_roles}')
             return {
                 'statusCode': 403,
                 'body': json.dumps({'error': 'access denied'})
             }
 
-    # route request
-    if path == '/deploy':
-        return lambda_deploy(body, context)
-    elif path == '/extend':
-        return lambda_extend(body, context)
-    elif path == '/destroy':
-        return lambda_destroy(body, context)
-    elif path == '/status':
-        return lambda_status(body, context)
-    elif path == '/events':
-        return lambda_events(body, context)
-    elif path == '/report/clusters' or path == '/report':
-        return lambda_report_clusters(body, context)
-    elif path == '/report/tests':
-        return lambda_report_tests(body, context)
-    elif path == '/test':
-        return lambda_test(body, context)
-    else:
-        print(f'Path not found: {path}')
+        # check cluster
+        cluster = body.get("cluster")
+        if cluster and ((cluster not in allowed_clusters) and ('*' not in allowed_clusters)):
+            print(f'Access denied to {username}, allowed clusters: {allowed_clusters}')
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+        # check node_capacity
+        node_capacity = body.get("node_capacity")
+        if node_capacity and ((int(node_capacity) > max_nodes) or (int(node_capacity) < 1)):
+            print(f'Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}')
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+        # check ttl
+        ttl = body.get("ttl")
+        if ttl and ((int(ttl) > max_ttl) or (int(ttl) < manager.MIN_TTL_FOR_AUTOSHUTDOWN)):
+            print(f'Access denied to {username}, invalid ttl: {ttl}')
+            return {
+                'statusCode': 403,
+                'body': json.dumps({'error': 'access denied'})
+            }
+
+        # check report and test runner
+        if path.startswith('/report') or path.startswith('/test'):
+            if 'owner' not in org_roles:
+                print(f'Access denied to {username}, organization roles: {org_roles}, path: {path}')
+                return {
+                    'statusCode': 403,
+                    'body': json.dumps({'error': 'access denied'})
+                }
+
+        # route request
+        if path == '/deploy':
+            return deploy_handler(body, context)
+        elif path == '/extend':
+            return extend_handler(body, context)
+        elif path == '/destroy':
+            return manager.lambda_destroy(body, context)
+        elif path == '/status':
+            return status_handler(body, context)
+        elif path == '/events':
+            return events_handler(body, context)
+        elif path == '/report/clusters' or path == '/report':
+            return report_clusters_handler(body, context)
+        elif path == '/report/tests':
+            return report_tests_handler(body, context)
+        elif path == '/test':
+            return test_handler(body, context)
+        else:
+            print(f'Path not found: {path}')
+            return {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'not found'})
+            }
+
+    except Exception as e:
+        print(f'Exception in gateway: {e}')
         return {
-            'statusCode': 404,
-            'body': json.dumps({'error': 'not found'})
+            'statusCode': 500,
+            'body': json.dumps({'error': 'internal error'})
         }
