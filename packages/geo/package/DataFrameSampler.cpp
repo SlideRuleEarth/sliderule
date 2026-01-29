@@ -81,9 +81,12 @@ DataFrameSampler::DataFrameSampler(lua_State* L, RequestFields* _parms):
     FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
-    const char* key = parms->samplers.fields.first(NULL);
+    uint16_t band_index = 0;
+    FieldMap<GeoFields>::entry_t geo_fields;
+    const char* key = parms->samplers.fields.first(&geo_fields);
     while(key != NULL)
     {
+        // build samplers
         RasterObject* robj = RasterObject::cppCreate(parms, key);
         if(robj)
         {
@@ -95,6 +98,15 @@ DataFrameSampler::DataFrameSampler(lua_State* L, RequestFields* _parms):
         {
             mlog(CRITICAL, "Failed to create raster <%s>", key);
         }
+
+        // create band index
+        for(int i = 0; i < geo_fields.field->bands.length(); i++)
+        {
+            bandIndex.add(geo_fields.field->bands[i].c_str(), band_index);
+            band_index++;
+        }
+
+        // go to next raster to sample
         key = parms->samplers.fields.next(NULL);
     }
 }
@@ -229,8 +241,8 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     if(sampler->robj->hasFlags()) flags_column = new FieldColumn<FieldList<uint32_t>>(Field::NESTED_LIST);
 
     // create band column
-    FieldColumn<FieldList<string>>* band_column = NULL;
-    if(sampler->robj->hasBands()) band_column = new FieldColumn<FieldList<string>>(Field::NESTED_LIST);
+    FieldColumn<FieldList<uint16_t>>* band_column = NULL;
+    if(sampler->robj->hasBands()) band_column = new FieldColumn<FieldList<uint16_t>>(Field::NESTED_LIST);
 
     // create zonal stat columns
     FieldColumn<FieldList<uint32_t>>* count_column = NULL;
@@ -272,7 +284,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
         FieldList<time8_t> time_list;
         FieldList<uint64_t> fileid_list;
         FieldList<uint32_t> flags_list;
-        FieldList<string> band_list;
+        FieldList<uint16_t> band_list;
         for(int j = 0; j < slist->length(); j++)
         {
             const RasterSample* sample = slist->get(j);
@@ -280,7 +292,12 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
             time_list.append(TimeLib::gps2systimeex(sample->time));
             fileid_list.append(sample->fileId);
             if(flags_column) flags_list.append(sample->flags);
-            if(band_column) band_list.append(sample->bandName);
+            if(band_column)
+            {
+                uint16_t index = 0xFFFF;
+                sampler->obj->bandIndex.find(sample->bandName.c_str(), &index);
+                band_list.append(index);
+            }
         }
         value_column->append(value_list);
         time_column->append(time_list);
@@ -373,8 +390,8 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     if(sampler->robj->hasFlags()) flags_column = new FieldColumn<uint32_t>;
 
     // create band column
-    FieldColumn<string>* band_column = NULL;
-    if(sampler->robj->hasBands()) band_column = new FieldColumn<string>;
+    FieldColumn<uint16_t>* band_column = NULL;
+    if(sampler->robj->hasBands()) band_column = new FieldColumn<uint16_t>;
 
     // create zonal stat columns
     FieldColumn<uint32_t>* count_column = NULL;
@@ -481,7 +498,12 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
             time_column->append(TimeLib::gps2systimeex(sample->time));
             fileid_column->append(sample->fileId);
             if(flags_column) flags_column->append(sample->flags);
-            if(band_column) band_column->append(sample->bandName);
+            if(band_column)
+            {
+                uint16_t index = 0xFFFF;
+                sampler->obj->bandIndex.find(sample->bandName.c_str(), &index);
+                band_column->append(index);
+            }
 
             // populate zonal stats fields
             if(sampler->robj->hasZonalStats())
@@ -506,12 +528,11 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
         else
         {
             // populate core sample fields
-            const string empty("na");
             value_column->append(std::numeric_limits<double>::quiet_NaN());
             time_column->append(TimeLib::gps2systimeex(0));
             fileid_column->append(0);
             if(flags_column) flags_column->append(0);
-            if(band_column) band_column->append(empty);
+            if(band_column) band_column->append(0xFFFF);
 
             // populate zonal stats fields
             if(sampler->robj->hasZonalStats())

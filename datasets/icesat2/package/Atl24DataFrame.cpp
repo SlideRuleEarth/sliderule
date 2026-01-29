@@ -145,6 +145,9 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
+    /* Call Parent Class Initialization of GeoColumns */
+    populateDataframe();
+
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
