@@ -278,8 +278,8 @@ Outputs:
     Export:
       Name: sliderule-provisioner-destroy-arn
 
-  SchedulerLambdaArn:
+  ScheduleLambdaArn:
     Description: Lambda that schedules the auto-shutdown of a cluster
-    Value: !GetAtt SchedulerLambda.Arn
+    Value: !GetAtt ScheduleLambda.Arn
     Export:
       Name: sliderule-provisioner-scheduler-arn

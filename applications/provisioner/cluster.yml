@@ -27,7 +27,7 @@ Parameters:
     Type: String
   DestroyLambdaArn:
     Type: String
-  SchedulerLambdaArn:
+  ScheduleLambdaArn:
     Type: String
   ContainerRegistry:
     Type: String
@@ -769,7 +769,7 @@ Resources:
     DependsOn:
       - ClusterAutoScalingGroup
     Properties:
-      ServiceToken: !Ref SchedulerLambdaArn
+      ServiceToken: !Ref ScheduleLambdaArn
       StackName: !Ref AWS::StackName
       DeleteAfterMinutes: !Ref TTL
       DeletionLambdaArn: !Ref DestroyLambdaArn

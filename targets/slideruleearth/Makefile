@@ -100,10 +100,10 @@ DESTROY_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`DestroyLambdaArn`].OutputValue' \
   --output text)
-SCHEDULER_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
+SCHEDULE_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --stack-name provisioner \
   --region us-west-2 \
-  --query 'Stacks[0].Outputs[?OutputKey==`SchedulerLambdaArn`].OutputValue' \
+  --query 'Stacks[0].Outputs[?OutputKey==`ScheduleLambdaArn`].OutputValue' \
   --output text)
 
 ########################
@@ -327,7 +327,7 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
-						ParameterKey=SchedulerLambdaArn,ParameterValue=$(SCHEDULER_LAMBDA_ARN) \
+						ParameterKey=ScheduleLambdaArn,ParameterValue=$(SCHEDULE_LAMBDA_ARN) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
@@ -364,7 +364,7 @@ testrunner-create: ## invokes the provisioner lambda function and displays the r
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
-						ParameterKey=SchedulerLambdaArn,ParameterValue=$(SCHEDULER_LAMBDA_ARN) \
+						ParameterKey=ScheduleLambdaArn,ParameterValue=$(SCHEDULE_LAMBDA_ARN) \
 						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP) \
 						ParameterKey=Branch,ParameterValue=$(BRANCH)
 	aws cloudformation wait stack-create-complete --stack-name testrunner

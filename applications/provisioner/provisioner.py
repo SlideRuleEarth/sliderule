@@ -76,7 +76,7 @@ def deploy_handler(event, context):
         resp = manager.cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
-        scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "SchedulerLambdaArn")
+        schedule_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
 
         # build parameters for stack creation
         state["parms"] = [
@@ -91,7 +91,7 @@ def deploy_handler(event, context):
             {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
             {"ParameterKey": "ProjectPublicBucket", "ParameterValue": project_public_bucket},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
-            {"ParameterKey": "SchedulerLambdaArn", "ParameterValue": scheduler_lambda_arn},
+            {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
             {"ParameterKey": "AlertStream", "ParameterValue": alert_stream},
@@ -376,7 +376,7 @@ def test_handler(event, context):
         resp = manager.cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
-        scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "SchedulerLambdaArn")
+        scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
 
         # build parameters for stack creation
         state["parms"] = [
@@ -386,7 +386,7 @@ def test_handler(event, context):
             {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
-            {"ParameterKey": "SchedulerLambdaArn", "ParameterValue": scheduler_lambda_arn},
+            {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
             {"ParameterKey": "DeployDate", "ParameterValue": deploy_date},
             {"ParameterKey": "Branch", "ParameterValue": branch}
         ]

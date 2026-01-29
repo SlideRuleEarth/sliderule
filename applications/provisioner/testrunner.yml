@@ -18,7 +18,7 @@ Parameters:
     Type: String
   DestroyLambdaArn:
     Type: String
-  SchedulerLambdaArn:
+  ScheduleLambdaArn:
     Type: String
   DeployDate:
     Type: String
@@ -310,7 +310,7 @@ Resources:
     DependsOn:
       - TestRunnerInstance
     Properties:
-      ServiceToken: !Ref SchedulerLambdaArn
+      ServiceToken: !Ref ScheduleLambdaArn
       StackName: !Ref AWS::StackName
       DeleteAfterMinutes: !Ref DeleteAfterMinutes
       DeletionLambdaArn: !Ref DestroyLambdaArn
