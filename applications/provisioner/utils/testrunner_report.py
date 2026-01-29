@@ -99,6 +99,7 @@ s3_client.download_file(Bucket=bucket, Key=f"{subfolder}/{latest_log_file}", Fil
 # test parser class
 class TestParser:
     def __init__(self, kind, key):
+        self.status = False
         self.state = "not found"
         self.lines = []
         self.kind = kind
@@ -158,6 +159,7 @@ class TestParser:
                             result["skipped"] = int(toks[i-1].split(" ")[0].strip())
                         if "passed" in toks[i]:
                             result["passed"] = int(toks[i-1].split(" ")[0].strip())
+        self.status = result.get("errors") == 0
         return result
 
 # open up latest log file and search for results
@@ -178,6 +180,9 @@ results["selftest"] = selftest.parse()
 results["sliderule"] = sliderule.parse()
 results["provisioner"] = provisioner.parse()
 results["ams"] = ams.parse()
+
+# determine pass/fail
+results["status"] = selftest.status and sliderule.status and provisioner.status and ams.status
 
 # output results
 print(json.dumps(results, indent=2))

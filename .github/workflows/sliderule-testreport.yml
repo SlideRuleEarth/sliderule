@@ -2,13 +2,16 @@ name: SlideRule Test Report
 
 on:
   schedule:
-    - cron: '0 22 * * 5' # Every Sunday at 10 pm
+    - cron: '0 7 * * *' # every night at 2 a.m. EST
 
 jobs:
   call-api:
     runs-on: ubuntu-latest
     steps:
       - name: Query SlideRule Test Report
+        env:
+          SLIDERULE_GITHUB_TOKEN: ${{ secrets.SESSION_PAT }}
         run: |
           set -e  # stop workflow if curl exits non-zero
-          curl -f --silent --show-error https://example.com/api/check
+          JWT=$(curl -s https://login.slideruleearth.io/auth/github/pat -d "{\"pat\":\"$SLIDERULE_GITHUB_TOKEN\"}" | jq -r '.token')
+          curl -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/report/tests | jq -e '.report.status'

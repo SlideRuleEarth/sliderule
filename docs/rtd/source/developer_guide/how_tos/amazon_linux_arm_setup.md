@@ -124,9 +124,9 @@ curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-comp
 chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 ```
 
-### 9. Install Dependencies got Local Build
+### 9. Install Dependencies for Local Build
 
-Navigate to `targets/slideruleearth/docker/sliderule/Dockerfile.buildenv` file and follow the same steps in that file to recreate the full development environment on your local machine.
+Navigate to the `targets/slideruleearth/docker/sliderule/Dockerfile.buildenv` file and follow the same steps in that file to recreate the full development environment on your local machine.
 
 ### 10. Install and Configure Miniconda
 

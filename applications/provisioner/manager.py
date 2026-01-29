@@ -133,6 +133,9 @@ def build_rule_name(stack_name):
 # Convention for deriving stack name from cluster
 #
 def build_stack_name(cluster):
+    # check none
+    if cluster is None:
+        return None
     # check keywords
     if cluster in SYSTEM_KEYWORDS:
         raise RuntimeError(f'Reserved string used for cluster name: <{cluster}>')
