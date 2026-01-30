@@ -1,0 +1,9 @@
+# conda env create -f environment.yml
+name: athena_reporter
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - boto3
+  - geoip2

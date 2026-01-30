@@ -13,8 +13,8 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     epilog=(
         "Examples:\n"
-        "  python athena_usage_report.py --start \"2026-01-10\" --end \"2026-01-29\"\n"
-        "  python athena_usage_report.py --start \"2026-01-10\"\n"
+        "  python usage_report.py --start \"2026-01-10\" --end \"2026-01-29\"\n"
+        "  python usage_report.py --start \"2026-01-10\"\n"
     )
 )
 parser.add_argument('--start',             type=str,               default=None)  # ISO string
