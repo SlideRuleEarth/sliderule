@@ -63,8 +63,9 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* GDF;
         static const char* META;
         static const char* TERMINATE;
-        static const char* SOURCE_ID; // column
-        static const char* SOURCE_TABLE; // metadata
+        static const char* SOURCE_ID; // column header
+        static const char* SOURCE_TABLE; // metadata: source id lookup table
+        static const char* SOURCE_DATA; // metadata: source id metadata
 
         static const int MAX_NAME_SIZE = 128;
         static const uint32_t INVALID_INDEX = 0xFFFFFFFF;

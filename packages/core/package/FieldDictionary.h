@@ -76,8 +76,7 @@ class FieldDictionary: public Field
         FieldDictionary (std::initializer_list<init_entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE):
             Field(DICTIONARY, 0),
             fields(hash_table_size) {
-            for(const init_entry_t& elem: init_list)
-            {
+            for(const init_entry_t& elem: init_list) {
                 entry_t entry = {elem.field, false};
                 fields.add(elem.name, entry);
             }
@@ -98,16 +97,12 @@ class FieldDictionary: public Field
 
         bool remove (const char* name) {
             entry_t entry;
-            if(fields.find(name, &entry))
-            {
-                if(fields.remove(name))
-                {
-                    if(entry.free_on_delete)
-                    {
+            if(fields.find(name, &entry)) {
+                if(fields.remove(name)) {
+                    if(entry.free_on_delete) {
                         delete entry.field;
                     }
-                    else
-                    {
+                    else {
                         // frees memory earlier than destructor
                         entry.field->clear();
                     }
@@ -126,11 +121,25 @@ class FieldDictionary: public Field
             return *(fields[key].field);
         }
 
+        bool find (const char* key, Field** data) {
+            assert(data);
+            entry_t entry = {
+                .field = NULL,
+                .free_on_delete = false
+            };
+            if(fields.find(key, &entry)) {
+                *data = entry.field;
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+
         string toJson (void) const override {
             Dictionary<entry_t>::Iterator iter(fields);
             string str("{");
-            for(int i = 0; i < iter.length; i++)
-            {
+            for(int i = 0; i < iter.length; i++) {
                 const Dictionary<entry_t>::kv_t kv = iter[i];
                 str += "\"";
                 str += kv.key;
@@ -145,8 +154,7 @@ class FieldDictionary: public Field
         int toLua (lua_State* L) const override {
             Dictionary<entry_t>::Iterator iter(fields);
             lua_newtable(L);
-            for(int i = 0; i < iter.length; i++)
-            {
+            for(int i = 0; i < iter.length; i++) {
                 const Dictionary<entry_t>::kv_t kv = iter[i];
                 lua_pushstring(L, kv.key);
                 kv.value.field->toLua(L);
@@ -156,13 +164,11 @@ class FieldDictionary: public Field
         }
 
         int toLua (lua_State* L, const string& key) const override {
-            try
-            {
+            try {
                 const entry_t& entry = fields[key.c_str()];
                 entry.field->toLua(L);
             }
-            catch(const RunTimeException& e)
-            {
+            catch(const RunTimeException& e) {
                 (void)e;
                 lua_pushnil(L);
             }
@@ -173,18 +179,14 @@ class FieldDictionary: public Field
             if(lua_istable(L, index))
             {
                 Dictionary<entry_t>::Iterator iter(fields);
-                for(int i = 0; i < iter.length; i++)
-                {
+                for(int i = 0; i < iter.length; i++) {
                     Dictionary<entry_t>::kv_t kv = iter[i];
                     lua_getfield(L, index, kv.key);
-                    try
-                    {
+                    try {
                         kv.value.field->fromLua(L, -1);
                     }
-                    catch (const RunTimeException& e)
-                    {
-                        if(!lua_isnil(L, -1))
-                        {
+                    catch (const RunTimeException& e) {
+                        if(!lua_isnil(L, -1)) {
                             mlog(WARNING, "Field <%s> using default value: %s", kv.key, e.what());
                         }
                     }
@@ -196,10 +198,8 @@ class FieldDictionary: public Field
         void clear (void) override {
             entry_t entry;
             const char* key = fields.first(&entry);
-            while(key != NULL)
-            {
-                if(entry.free_on_delete)
-                {
+            while(key != NULL) {
+                if(entry.free_on_delete) {
                     delete entry.field;
                 }
                 key = fields.next(&entry);

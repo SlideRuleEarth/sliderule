@@ -1,0 +1,17 @@
+name: SlideRule Test Runner
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # every morning at 4 a.m. EST
+
+jobs:
+  call-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kickoff SlideRule Test Runner
+        env:
+          SLIDERULE_GITHUB_TOKEN: ${{ secrets.SESSION_PAT }}
+        run: |
+          set -e  # stop workflow if curl exits non-zero
+          JWT=$(curl -s https://login.slideruleearth.io/auth/github/pat -d "{\"pat\":\"$SLIDERULE_GITHUB_TOKEN\"}" | jq -r '.token')
+          curl -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/test | jq -e '.status'

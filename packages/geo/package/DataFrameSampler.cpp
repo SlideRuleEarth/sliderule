@@ -164,6 +164,12 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
             populateMultiColumns(dataframe, sampler);
         }
 
+        // add file id table metadata
+        if(!populateFileIds(dataframe, sampler))
+        {
+            mlog(CRITICAL, "Faled to populate file id table");
+        }
+
         // release since not needed anymore
         sampler->samples.clear();
     }
@@ -572,6 +578,49 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column);
     if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column);
     if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column);
+
+    // success
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * populateFileIds
+ *----------------------------------------------------------------------------*/
+bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t* sampler)
+{
+    FieldDictionary file_id_table;
+    const std::set<uint64_t>& file_ids = sampler->robj->fileDictGetSampleIds();
+    for(std::set<uint64_t>::const_iterator file_id_iter = file_ids.begin(); file_id_iter != file_ids.end(); file_id_iter++)
+    {
+        // pull out file_id and file_name from file id dictionary
+        const uint64_t file_id = *file_id_iter;
+        const char* file_name = sampler->robj->fileDictGet(file_id);
+
+        // build string(file_id) and field element(file_name)
+        const FString key("%lu", file_id);
+        FieldElement<string>* field = new FieldElement<string>(file_name);
+
+        // build dictionary <raster>[<file_id>] = <file_name>
+        if(!file_id_table.add(key.c_str(), field, true))
+        {
+            delete field;
+            mlog(ERROR, "Failed to add metadata field <%s> to <%s>", key.c_str(), sampler->rkey);
+            return false;
+        }
+    }
+
+    // build json file id table entry
+    const string value = file_id_table.toJson();
+    FieldElement<string>* field = new FieldElement<string>(value);
+
+    // add file id table metadata entry for raster
+    const FString key("%s.%s", GeoFields::PARMS, sampler->rkey);
+    if(!dataframe->addMetaData(key.c_str(), field, true))
+    {
+        delete field;
+        mlog(ERROR, "Failed to file id table for <%s> to dataframe metadata", key.c_str());
+        return false;
+    }
 
     // success
     return true;

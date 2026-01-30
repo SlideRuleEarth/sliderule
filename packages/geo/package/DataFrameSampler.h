@@ -105,6 +105,7 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
         bool        populatePoints          (GeoDataFrame* dataframe);
         static bool populateMultiColumns    (GeoDataFrame* dataframe, sampler_info_t* sampler);
         static bool populateColumns         (GeoDataFrame* dataframe, sampler_info_t* sampler);
+        static bool populateFileIds         (GeoDataFrame* dataframe, sampler_info_t* sampler);
 
         /*--------------------------------------------------------------------
          * Data

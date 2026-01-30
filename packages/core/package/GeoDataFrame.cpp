@@ -60,6 +60,7 @@ const char* GeoDataFrame::META = "meta";
 const char* GeoDataFrame::TERMINATE = "terminate";
 const char* GeoDataFrame::SOURCE_ID = "srcid";
 const char* GeoDataFrame::SOURCE_TABLE = "srctbl";
+const char* GeoDataFrame::SOURCE_DATA = "srcdata";
 
 const char* GeoDataFrame::LUA_META_NAME = "GeoDataFrame";
 const struct luaL_Reg GeoDataFrame::LUA_META_TABLE[] = {
@@ -183,6 +184,54 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* g
     {
         delete source_id_field;
         throw RunTimeException(ERROR, RTE_FAILURE, "failed to add <%s=%d> to <%s>", GeoDataFrame::SOURCE_ID, source_id, GeoDataFrame::SOURCE_TABLE);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * _addSourceMetaData - internal helper
+ *   GeoDataFrame
+ *    |- metadata {}
+ *        |- srcdata {}
+ *            |- "<srcid>": {}
+ *                |- "<key>": <value>
+ *----------------------------------------------------------------------------*/
+static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id)
+{
+    // get source dictionary from metadata
+    FieldDictionary* srcdata = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_DATA, Field::DICTIONARY, true));
+
+    // create new source dictionary if not found
+    if(!srcdata)
+    {
+        srcdata = new FieldDictionary();
+        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_DATA, srcdata, true))
+        {
+            delete srcdata;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s> to dataframe", GeoDataFrame::SOURCE_DATA);
+        }
+    }
+
+    // get dictionary from source data dictionary
+    const FString srcid("%d", source_id);
+    Field* srcid_field = NULL;
+    if(!srcdata->find(srcid.c_str(), &srcid_field))
+    {
+        srcid_field = new FieldDictionary();
+        if(!srcdata->add(srcid.c_str(), srcid_field, true))
+        {
+            delete srcid_field;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add srcid <%s> to srcdata", srcid.c_str());
+        }
+    }
+
+    // add metadata to srcid entry in srcdata
+    FieldDictionary* srcid_dict = dynamic_cast<FieldDictionary*>(srcid_field);
+    const string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
+    FieldElement<string>* value_field = new FieldElement<string>(value);
+    if(!srcid_dict->add(gdf_rec_data->name, value_field, true))
+    {
+        delete value_field;
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata field to <%s> in <%s>", srcid.c_str(), GeoDataFrame::SOURCE_DATA);
     }
 }
 
@@ -1227,6 +1276,11 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
        (gdf_rec_data->encoding & GeoDataFrame::META_SOURCE_ID))
     {
         _addSourceColumn(this, gdf_rec_data, source_id);
+    }
+    else if((gdf_rec_data->type == GeoDataFrame::META_REC) &&
+            !(gdf_rec_data->encoding & GeoDataFrame::META_COLUMN))
+    {
+        _addSourceMetaData(this, gdf_rec_data, source_id);
     }
     else if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
     {
