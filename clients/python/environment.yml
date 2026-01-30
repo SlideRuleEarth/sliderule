@@ -16,8 +16,6 @@ dependencies:
   - python<3.14   # cap Python because fiona and geospatial stack is not fully 3.14+ ready
   - python-pdal>=3.0.0
   - requests
-  - boto3
-  - geoip2
   - scikit-learn
   - scipy
   - setuptools_scm
