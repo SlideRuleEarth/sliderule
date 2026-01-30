@@ -95,9 +95,12 @@ Create the local file `~/.gitconfig` in the user's home directory with the follo
 ### 7. Clone Repository
 
 ```bash
-mkdir meta
-cd meta
 git clone git@github.com:SlideRuleEarth/sliderule.git
+```
+
+Install `pip` for pre-commit hooks
+```bash
+sudo dnf install git
 ```
 
 Install the pre-commit hooks
