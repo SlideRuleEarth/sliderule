@@ -62,6 +62,9 @@ _glue_table_sd_cache = {}
 # helper functions
 # -------------------------------------------
 
+# -------------------------------------------
+# parse iso timestamp
+# -------------------------------------------
 def parse_iso(value, end_of_day=False):
     if value is None:
         return None
@@ -88,10 +91,16 @@ def parse_iso(value, end_of_day=False):
         sys.exit(2)
 
 
+# -------------------------------------------
+# escape sql
+# -------------------------------------------
 def escape_sql(value):
     return value.replace("'", "''")
 
 
+# -------------------------------------------
+# day range
+# -------------------------------------------
 def day_range(start_dt, end_dt):
     if start_dt is None or end_dt is None:
         return []
@@ -105,6 +114,9 @@ def day_range(start_dt, end_dt):
     return days
 
 
+# -------------------------------------------
+# build partition filter
+# -------------------------------------------
 def build_partition_filter(days):
     if len(days) == 0:
         return '1=1'
@@ -112,10 +124,16 @@ def build_partition_filter(days):
     return '(' + ' OR '.join(parts) + ')'
 
 
+# -------------------------------------------
+# expected partitions
+# -------------------------------------------
 def expected_partitions(days):
     return [f"year={d.year:04d}/month={d.month:02d}/day={d.day:02d}" for d in days]
 
 
+# -------------------------------------------
+# build where clause
+# -------------------------------------------
 def build_where_clause(start_dt, end_dt, days):
     conditions = []
     conditions.append(build_partition_filter(days))
@@ -138,6 +156,9 @@ def build_where_clause(start_dt, end_dt, days):
     return ' AND '.join(conditions)
 
 
+# -------------------------------------------
+# start query
+# -------------------------------------------
 def start_query(query):
     if args.verbose:
         print(query)
@@ -150,6 +171,9 @@ def start_query(query):
     return response['QueryExecutionId']
 
 
+# -------------------------------------------
+# wait for query
+# -------------------------------------------
 def wait_for_query(query_execution_id):
     start_time = time.time()
     while True:
@@ -165,6 +189,9 @@ def wait_for_query(query_execution_id):
         time.sleep(QUERY_POLL_SECONDS)
 
 
+# -------------------------------------------
+# get query results
+# -------------------------------------------
 def get_query_results(query_execution_id):
     results = []
     paginator = athena.get_paginator('get_query_results')
@@ -184,12 +211,18 @@ def get_query_results(query_execution_id):
     return results
 
 
+# -------------------------------------------
+# execute query
+# -------------------------------------------
 def execute_query(query):
     query_execution_id = start_query(query)
     wait_for_query(query_execution_id)
     return get_query_results(query_execution_id)
 
 
+# -------------------------------------------
+# list s3 day partitions
+# -------------------------------------------
 def list_s3_day_partitions(bucket, label, start_dt, end_dt):
     found = set()
     start_month = start_dt.replace(day=1)
@@ -219,6 +252,9 @@ def list_s3_day_partitions(bucket, label, start_dt, end_dt):
     return found
 
 
+# -------------------------------------------
+# glue partitions
+# -------------------------------------------
 def glue_partitions(table_name):
     # Use Glue directly because Athena SHOW PARTITIONS/DDL can return stale or
     # inconsistent results depending on workgroup caching or permissions.
@@ -233,6 +269,9 @@ def glue_partitions(table_name):
     return partitions
 
 
+# -------------------------------------------
+# add partitions
+# -------------------------------------------
 def add_partitions(table, label, partitions):
     # Use Glue BatchCreatePartition instead of Athena DDL for reliability.
     table_name = table.split('.')[-1]
@@ -272,6 +311,9 @@ def add_partitions(table, label, partitions):
                 print(f'Glue partition error: {msg}')
 
 
+# -------------------------------------------
+# ensure partitions for range
+# -------------------------------------------
 def ensure_partitions_for_range(table, expected, label, start_dt, end_dt):
     if len(expected) == 0:
         return
@@ -317,6 +359,9 @@ def ensure_partitions_for_range(table, expected, label, start_dt, end_dt):
         sys.exit(2)
 
 
+# -------------------------------------------
+# value counts
+# -------------------------------------------
 def value_counts(table, field, where_clause):
     query = f"""
         SELECT {field} AS key, COUNT(*) AS count
@@ -337,6 +382,9 @@ def value_counts(table, field, where_clause):
     return counts
 
 
+# -------------------------------------------
+# sum counts
+# -------------------------------------------
 def sum_counts(counts, include_list=None):
     total = 0
     if include_list is not None:
@@ -349,10 +397,16 @@ def sum_counts(counts, include_list=None):
     return total
 
 
+# -------------------------------------------
+# sort counts
+# -------------------------------------------
 def sort_counts(counts):
     return sorted(counts.items(), key=lambda item: item[1], reverse=True)
 
 
+# -------------------------------------------
+# display sorted
+# -------------------------------------------
 def display_sorted(title, counts, top_n=0):
     print(f'\n===================\n{title}\n===================')
     sorted_counts = sort_counts(counts)
@@ -371,6 +425,9 @@ def display_sorted(title, counts, top_n=0):
         print(f'{key.ljust(max_key_len)}  {str(count[1]).rjust(max_val_len)}')
 
 
+# -------------------------------------------
+# display summary
+# -------------------------------------------
 def display_summary(time_stats, unique_ip_counts, source_location_counts, total_requests,
                     total_icesat2_granules, total_icesat2_proxied_requests,
                     total_gedi_granules, total_gedi_proxied_requests):
@@ -400,6 +457,9 @@ def display_summary(time_stats, unique_ip_counts, source_location_counts, total_
         print(f'{key.ljust(max_label_len)}  {str(summary[key]).rjust(max_value_len)}')
 
 
+# -------------------------------------------
+# get geo
+# -------------------------------------------
 def get_geo():
     global _geo_country, _geo_city
     if _geo_country is None or _geo_city is None:
@@ -409,6 +469,9 @@ def get_geo():
     return _geo_country, _geo_city
 
 
+# -------------------------------------------
+# locate it
+# -------------------------------------------
 def locateit(source_ip, debug_info):
     try:
         if source_ip == '0.0.0.0' or source_ip == '127.0.0.1':
@@ -422,6 +485,9 @@ def locateit(source_ip, debug_info):
         return 'unknown, unknown'
 
 
+# -------------------------------------------
+# build location counts
+# -------------------------------------------
 def build_location_counts(ip_counts):
     location_counts = {}
     for ip in ip_counts:
@@ -432,6 +498,9 @@ def build_location_counts(ip_counts):
     return location_counts
 
 
+# -------------------------------------------
+# get timespan
+# -------------------------------------------
 def get_timespan(table, where_clause):
     query = f"""
         SELECT MIN(timestamp) AS start_time, MAX(timestamp) AS end_time
@@ -450,6 +519,9 @@ def get_timespan(table, where_clause):
     return {'start': start_dt, 'end': end_dt, 'span': end_dt - start_dt}
 
 
+# -------------------------------------------
+# main
+# -------------------------------------------
 def main():
     if args.repair_partitions and not args.start and not args.end:
         if args.verbose:
