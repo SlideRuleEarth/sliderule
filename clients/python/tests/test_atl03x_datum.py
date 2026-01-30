@@ -50,8 +50,19 @@ def check_offset(gdf_itrf, gdf_egm08):
     # Pick the column name dynamically
     col = "mosaic.value" if "mosaic.value" in gdf_itrf else "strips.value"
 
-    v_itrf = np.asarray(gdf_itrf[col], dtype=float)
-    v_egm  = np.asarray(gdf_egm08[col], dtype=float)
+    # Helper function to extract scalar values from potentially list-wrapped data
+    def extract_values(series):
+        # Check if the first non-null element is a list/array
+        first_val = series.iloc[0] if len(series) > 0 else None
+        if isinstance(first_val, (list, np.ndarray)):
+            # Extract first element from each list
+            return np.array([v[0] if isinstance(v, (list, np.ndarray)) else v for v in series], dtype=float)
+        else:
+            # Already scalar values
+            return np.asarray(series, dtype=float)
+
+    v_itrf = extract_values(gdf_itrf[col])
+    v_egm  = extract_values(gdf_egm08[col])
     dv     = v_itrf - v_egm
 
     # Offsets should be ~43 meters higher for ITRF vs EGM08 for the area used
