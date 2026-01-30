@@ -368,7 +368,7 @@ def test_handler(event, context):
         container_registry = os.environ['CONTAINER_REGISTRY']
 
         # get optional request variables
-        deploy_date = event.get("deploy_date", datetime.now().strftime("%Y%m%d%H%M"))
+        deploy_date = event.get("deploy_date", datetime.now().strftime("%Y%m%d%H%M%S"))
         branch = event.get("branch", "main")
         state["stack_name"] = event.get('stack_name', 'testrunner') # default to hardcoded stack name so only one can run at a time
 

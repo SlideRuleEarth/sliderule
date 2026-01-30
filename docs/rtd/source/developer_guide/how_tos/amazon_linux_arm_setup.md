@@ -129,7 +129,9 @@ chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 ### 9. Install Dependencies for Local Build
 
-Navigate to the `targets/slideruleearth/docker/sliderule/Dockerfile.buildenv` file and follow the same steps in that file to recreate the full development environment on your local machine.
+I you want to build the software on your local machine for local development and debugging, then navigate to the `targets/slideruleearth/docker/sliderule/Dockerfile.buildenv` Docker file and use it as guide to create a development environment for your local build machine. This file is the Docker file that builds and executes the server software that runs in production and includes all the tools necessary to build and debug the code.
+
+If you want to simply build the Docker containers used by SlideRule, then there is no need to setup a local development environment as everything is built inside the containers.
 
 ### 10. Install and Configure Miniconda
 
