@@ -705,14 +705,14 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         for(GroupsFinder* gf : rgroupFinders)
         {
             /* Map thread-local file ids to global file ids once per unique id */
-            auto mapLocalToGlobal = [&](uint32_t localId) -> uint32_t
+            auto mapLocalToGlobal = [&](uint64_t localId) -> uint64_t
             {
                 auto it = gf->localToGlobalFileIds.find(localId);
                 if(it != gf->localToGlobalFileIds.end())
                     return it->second;
 
                 const std::string fileName = gf->threadFileDict.get(localId);
-                const uint32_t globalId = fileDict.add(fileName);
+                const uint64_t globalId = fileDict.add(fileName);
                 gf->localToGlobalFileIds[localId] = globalId;
                 return globalId;
             };
@@ -736,7 +736,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             /* Merge the rasterToPointsMap for each thread (append vectors) */
             for (const raster_points_map_t::value_type &pair : gf->rasterToPointsMap)
             {
-                const uint32_t globalId = mapLocalToGlobal(pair.first);
+                const uint64_t globalId = mapLocalToGlobal(pair.first);
                 std::vector<uint32_t>& dest = rasterToPointsMap[globalId];
                 dest.insert(dest.end(), pair.second.begin(), pair.second.end());
             }
@@ -783,7 +783,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
     try
     {
         /* Precompute distinct raster ids to reserve space up front */
-        std::unordered_set<uint32_t> uniqueIds;
+        std::unordered_set<uint64_t> uniqueIds;
         for(const point_groups_t& pg : pointsGroups)
         {
             const GroupOrdering::Iterator iter(*pg.groupList);
@@ -799,7 +799,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
         uniqueRasters.reserve(uniqueIds.size());
 
         /* Map to track the index of each unique raster in the uniqueRasters vector */
-        std::unordered_map<uint32_t, size_t> fileIndexMap;
+        std::unordered_map<uint64_t, size_t> fileIndexMap;
 
         /* Create vector of unique rasters. */
         mlog(DEBUG, "Finding unique rasters");
@@ -812,7 +812,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(raster_info_t& rinfo : rgroup->infovect)
                 {
                     /* Is this raster already in the list of unique rasters? */
-                    const uint32_t fileId = rinfo.fileId;
+                    const uint64_t fileId = rinfo.fileId;
                     auto it = fileIndexMap.find(fileId);
                     if(it != fileIndexMap.end())
                     {
