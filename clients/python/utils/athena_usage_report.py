@@ -3,12 +3,20 @@ import copy
 import time
 import argparse
 import boto3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # -------------------------------------------
 # command line arguments
 # -------------------------------------------
-parser = argparse.ArgumentParser(description="""Athena usage report""")
+parser = argparse.ArgumentParser(
+    description="""Athena usage report""",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog=(
+        "Examples:\n"
+        "  python athena_usage_report.py --start \"2026-01-10\" --end \"2026-01-29\"\n"
+        "  python athena_usage_report.py --start \"2026-01-10\"\n"
+    )
+)
 parser.add_argument('--start',             type=str,               default=None)  # ISO string
 parser.add_argument('--end',               type=str,               default=None)  # ISO string
 parser.add_argument('--top_n',             type=int,               default=0)
@@ -29,16 +37,35 @@ GEOLITE2_CITY_DB       = '/data/GeoLite2-City.mmdb'
 GEOLITE2_COUNTRY_DB    = '/data/GeoLite2-Country.mmdb'
 QUERY_WAIT_SECONDS     = 300
 QUERY_POLL_SECONDS     = 2
+#
+# Endpoint naming schema:
+#   p-series: proxied derived products
+#   s-series: subsetted standard data products
+#   v-series: quick views of standard data products
+#   x-series: subsetted dataframes of standard data products
+# Note: legacy reporting treats x-series as both granule-producing and proxied,
+# so x endpoints appear in both ICESAT2_ENDPOINTS and ICESAT2_PROXY_ENDPOINTS.
+#
+ICESAT2_ENDPOINTS       = ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl06x', 'atl08', 'atl08x', 'atl13s', 'atl13x', 'atl24x']
+ICESAT2_PROXY_ENDPOINTS = ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl13x', 'atl24x', 'atl06x', 'atl08x']
+GEDI_ENDPOINTS          = ['gedi01b', 'gedi02a', 'gedi04a']
+GEDI_PROXY_ENDPOINTS    = ['gedi01bp', 'gedi02ap', 'gedi04ap']
 
 athena = boto3.client('athena', region_name=AWS_REGION)
+glue = boto3.client('glue', region_name=AWS_REGION)
+s3 = boto3.client('s3', region_name=AWS_REGION)
 _geo_country = None
 _geo_city = None
+_glue_table_sd_cache = {}
 
 # -------------------------------------------
 # helper functions
 # -------------------------------------------
 
-def parse_iso(value):
+# -------------------------------------------
+# parse iso timestamp
+# -------------------------------------------
+def parse_iso(value, end_of_day=False):
     if value is None:
         return None
     v = value.strip()
@@ -49,38 +76,32 @@ def parse_iso(value):
             epoch = epoch / 1_000_000_000
         elif len(v) > 10:
             epoch = epoch / 1_000
-        return datetime.fromtimestamp(epoch)
+        return datetime.fromtimestamp(epoch, tz=timezone.utc)
     if v.endswith('Z'):
         v = v[:-1] + '+00:00'
     if len(v) == 10:
-        v = v + ' 00:00:00'
+        v = v + (' 23:59:59' if end_of_day else ' 00:00:00')
     try:
-        return datetime.fromisoformat(v)
+        dt = datetime.fromisoformat(v)
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
     except ValueError:
         print(f'Invalid ISO datetime: {value}')
         sys.exit(2)
 
 
+# -------------------------------------------
+# escape sql
+# -------------------------------------------
 def escape_sql(value):
     return value.replace("'", "''")
 
 
-def build_partition_filter(start_dt, end_dt):
-    if start_dt is None or end_dt is None:
-        return '1=1'
-    start_date = start_dt.date()
-    end_date = end_dt.date()
-    days = []
-    cur = start_date
-    while cur <= end_date:
-        days.append(cur)
-        cur += timedelta(days=1)
-    if len(days) == 0:
-        return '1=1'
-    parts = [f"(year = '{d.year:04d}' AND month = '{d.month:02d}' AND day = '{d.day:02d}')" for d in days]
-    return '(' + ' OR '.join(parts) + ')'
-
-def expected_partitions(start_dt, end_dt):
+# -------------------------------------------
+# day range
+# -------------------------------------------
+def day_range(start_dt, end_dt):
     if start_dt is None or end_dt is None:
         return []
     start_date = start_dt.date()
@@ -90,12 +111,32 @@ def expected_partitions(start_dt, end_dt):
     while cur <= end_date:
         days.append(cur)
         cur += timedelta(days=1)
+    return days
+
+
+# -------------------------------------------
+# build partition filter
+# -------------------------------------------
+def build_partition_filter(days):
+    if len(days) == 0:
+        return '1=1'
+    parts = [f"(year = '{d.year:04d}' AND month = '{d.month:02d}' AND day = '{d.day:02d}')" for d in days]
+    return '(' + ' OR '.join(parts) + ')'
+
+
+# -------------------------------------------
+# expected partitions
+# -------------------------------------------
+def expected_partitions(days):
     return [f"year={d.year:04d}/month={d.month:02d}/day={d.day:02d}" for d in days]
 
 
-def build_where_clause(start_dt, end_dt):
+# -------------------------------------------
+# build where clause
+# -------------------------------------------
+def build_where_clause(start_dt, end_dt, days):
     conditions = []
-    conditions.append(build_partition_filter(start_dt, end_dt))
+    conditions.append(build_partition_filter(days))
     if start_dt and end_dt:
         start_iso = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
         end_iso = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
@@ -115,6 +156,9 @@ def build_where_clause(start_dt, end_dt):
     return ' AND '.join(conditions)
 
 
+# -------------------------------------------
+# start query
+# -------------------------------------------
 def start_query(query):
     if args.verbose:
         print(query)
@@ -127,6 +171,9 @@ def start_query(query):
     return response['QueryExecutionId']
 
 
+# -------------------------------------------
+# wait for query
+# -------------------------------------------
 def wait_for_query(query_execution_id):
     start_time = time.time()
     while True:
@@ -142,6 +189,9 @@ def wait_for_query(query_execution_id):
         time.sleep(QUERY_POLL_SECONDS)
 
 
+# -------------------------------------------
+# get query results
+# -------------------------------------------
 def get_query_results(query_execution_id):
     results = []
     paginator = athena.get_paginator('get_query_results')
@@ -161,14 +211,19 @@ def get_query_results(query_execution_id):
     return results
 
 
+# -------------------------------------------
+# execute query
+# -------------------------------------------
 def execute_query(query):
     query_execution_id = start_query(query)
     wait_for_query(query_execution_id)
     return get_query_results(query_execution_id)
 
 
+# -------------------------------------------
+# list s3 day partitions
+# -------------------------------------------
 def list_s3_day_partitions(bucket, label, start_dt, end_dt):
-    s3 = boto3.client('s3', region_name=AWS_REGION)
     found = set()
     start_month = start_dt.replace(day=1)
     end_month = end_dt.replace(day=1)
@@ -197,10 +252,12 @@ def list_s3_day_partitions(bucket, label, start_dt, end_dt):
     return found
 
 
+# -------------------------------------------
+# glue partitions
+# -------------------------------------------
 def glue_partitions(table_name):
     # Use Glue directly because Athena SHOW PARTITIONS/DDL can return stale or
     # inconsistent results depending on workgroup caching or permissions.
-    glue = boto3.client('glue', region_name=AWS_REGION)
     partitions = []
     paginator = glue.get_paginator('get_partitions')
     for page in paginator.paginate(DatabaseName=GLUE_DATABASE, TableName=table_name):
@@ -212,12 +269,18 @@ def glue_partitions(table_name):
     return partitions
 
 
+# -------------------------------------------
+# add partitions
+# -------------------------------------------
 def add_partitions(table, label, partitions):
     # Use Glue BatchCreatePartition instead of Athena DDL for reliability.
-    glue = boto3.client('glue', region_name=AWS_REGION)
     table_name = table.split('.')[-1]
-    table_def = glue.get_table(DatabaseName=GLUE_DATABASE, Name=table_name)
-    base_sd = table_def['Table']['StorageDescriptor']
+    if table_name in _glue_table_sd_cache:
+        base_sd = _glue_table_sd_cache[table_name]
+    else:
+        table_def = glue.get_table(DatabaseName=GLUE_DATABASE, Name=table_name)
+        base_sd = table_def['Table']['StorageDescriptor']
+        _glue_table_sd_cache[table_name] = base_sd
     inputs = []
     for p in partitions:
         parts = p.split('/')
@@ -248,6 +311,9 @@ def add_partitions(table, label, partitions):
                 print(f'Glue partition error: {msg}')
 
 
+# -------------------------------------------
+# ensure partitions for range
+# -------------------------------------------
 def ensure_partitions_for_range(table, expected, label, start_dt, end_dt):
     if len(expected) == 0:
         return
@@ -284,15 +350,18 @@ def ensure_partitions_for_range(table, expected, label, start_dt, end_dt):
     else:
         print(f'Creating missing partitions for {label}')
     add_partitions(table, label, missing)
-    if args.verbose:
-        existing = set(glue_partitions(table_name))
-        still_missing = [p for p in expected if p not in existing]
-        if bucket:
-            still_missing = [p for p in still_missing if p in missing_s3]
-        if len(still_missing) > 0:
-            print(f'Still missing partitions for {label} after add: {", ".join(still_missing)}')
+    existing = set(glue_partitions(table_name))
+    still_missing = [p for p in expected if p not in existing]
+    if bucket:
+        still_missing = [p for p in still_missing if p in missing_s3]
+    if len(still_missing) > 0:
+        print(f'Still missing partitions for {label} after add: {", ".join(still_missing)}')
+        sys.exit(2)
 
 
+# -------------------------------------------
+# value counts
+# -------------------------------------------
 def value_counts(table, field, where_clause):
     query = f"""
         SELECT {field} AS key, COUNT(*) AS count
@@ -313,6 +382,9 @@ def value_counts(table, field, where_clause):
     return counts
 
 
+# -------------------------------------------
+# sum counts
+# -------------------------------------------
 def sum_counts(counts, include_list=None):
     total = 0
     if include_list is not None:
@@ -325,10 +397,16 @@ def sum_counts(counts, include_list=None):
     return total
 
 
+# -------------------------------------------
+# sort counts
+# -------------------------------------------
 def sort_counts(counts):
     return sorted(counts.items(), key=lambda item: item[1], reverse=True)
 
 
+# -------------------------------------------
+# display sorted
+# -------------------------------------------
 def display_sorted(title, counts, top_n=0):
     print(f'\n===================\n{title}\n===================')
     sorted_counts = sort_counts(counts)
@@ -347,110 +425,12 @@ def display_sorted(title, counts, top_n=0):
         print(f'{key.ljust(max_key_len)}  {str(count[1]).rjust(max_val_len)}')
 
 
-def get_geo():
-    global _geo_country, _geo_city
-    if _geo_country is None or _geo_city is None:
-        import geoip2.database
-        _geo_country = geoip2.database.Reader(GEOLITE2_COUNTRY_DB)
-        _geo_city = geoip2.database.Reader(GEOLITE2_CITY_DB)
-    return _geo_country, _geo_city
-
-
-def locateit(source_ip, debug_info):
-    try:
-        if source_ip == '0.0.0.0' or source_ip == '127.0.0.1':
-            return 'localhost, localhost'
-        geo_country, geo_city = get_geo()
-        country = geo_country.country(source_ip).country.name
-        city = geo_city.city(source_ip).city.name
-        return f'{country}, {city}'
-    except Exception as e:
-        print(f'Failed to get location information for <{debug_info}>: {e}')
-        return 'unknown, unknown'
-
-
-def build_location_counts(ip_counts):
-    location_counts = {}
-    for ip in ip_counts:
-        location = locateit(ip, ip)
-        if location not in location_counts:
-            location_counts[location] = 0
-        location_counts[location] += ip_counts[ip]
-    return location_counts
-
-
-def get_timespan(table, where_clause):
-    query = f"""
-        SELECT MIN(timestamp) AS start_time, MAX(timestamp) AS end_time
-        FROM {table}
-        WHERE {where_clause}
-    """
-    rows = execute_query(query)
-    if len(rows) == 0:
-        return {'start': None, 'end': None, 'span': None}
-    start_str = rows[0].get('start_time')
-    end_str = rows[0].get('end_time')
-    if start_str is None or end_str is None:
-        return {'start': None, 'end': None, 'span': None}
-    start_dt = parse_iso(start_str)
-    end_dt = parse_iso(end_str)
-    return {'start': start_dt, 'end': end_dt, 'span': end_dt - start_dt}
-
-
-def main():
-    if args.repair_partitions and not args.start and not args.end:
-        if args.verbose:
-            print('Generating all missing partitions for telemetry and alerts.')
-        print('Provide --start and --end to repair a specific range.')
-        return
-    if args.repair_partitions and args.start and args.end:
-        start_dt = parse_iso(args.start)
-        end_dt = parse_iso(args.end)
-        if start_dt > end_dt:
-            print('--start must be before --end')
-            sys.exit(2)
-        expected = expected_partitions(start_dt, end_dt)
-        telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
-        alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
-        ensure_partitions_for_range(telemetry_table, expected, 'telemetry', start_dt, end_dt)
-        ensure_partitions_for_range(alerts_table, expected, 'alerts', start_dt, end_dt)
-        return
-
-    if not args.start or not args.end:
-        print('Both --start and --end are required (ISO datetime strings).')
-        sys.exit(2)
-
-    start_dt = parse_iso(args.start)
-    end_dt = parse_iso(args.end)
-    if start_dt > end_dt:
-        print('--start must be before --end')
-        sys.exit(2)
-
-    telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
-    alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
-
-    expected = expected_partitions(start_dt, end_dt)
-    ensure_partitions_for_range(telemetry_table, expected, 'telemetry', start_dt, end_dt)
-    ensure_partitions_for_range(alerts_table, expected, 'alerts', start_dt, end_dt)
-
-    telemetry_where = build_where_clause(start_dt, end_dt)
-    alerts_where = build_where_clause(start_dt, end_dt)
-
-    time_stats = get_timespan(telemetry_table, telemetry_where)
-
-    unique_ip_counts = value_counts(telemetry_table, 'source_ip', telemetry_where)
-    source_location_counts = build_location_counts(unique_ip_counts)
-    client_counts = value_counts(telemetry_table, 'client', telemetry_where)
-    endpoint_counts = value_counts(telemetry_table, 'endpoint', telemetry_where)
-    telemetry_status_code_counts = value_counts(telemetry_table, 'code', telemetry_where)
-    alert_status_code_counts = value_counts(alerts_table, 'code', alerts_where)
-
-    total_requests = sum_counts(endpoint_counts)
-    total_icesat2_granules = sum_counts(endpoint_counts, ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl13x', 'atl24x'])
-    total_icesat2_proxied_requests = sum_counts(endpoint_counts, ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl13x', 'atl24x'])
-    total_gedi_granules = sum_counts(endpoint_counts, ['gedi01b', 'gedi02a', 'gedi04a'])
-    total_gedi_proxied_requests = sum_counts(endpoint_counts, ['gedi01bp', 'gedi02ap', 'gedi04ap'])
-
+# -------------------------------------------
+# display summary
+# -------------------------------------------
+def display_summary(time_stats, unique_ip_counts, source_location_counts, total_requests,
+                    total_icesat2_granules, total_icesat2_proxied_requests,
+                    total_gedi_granules, total_gedi_proxied_requests):
     summary = {}
     if time_stats['start'] is not None and time_stats['end'] is not None:
         summary['Start'] = time_stats["start"].strftime("%Y-%m-%d %H:%M:%S")
@@ -475,6 +455,139 @@ def main():
     max_value_len = max(len(str(v)) for v in summary.values())
     for key in summary:
         print(f'{key.ljust(max_label_len)}  {str(summary[key]).rjust(max_value_len)}')
+
+
+# -------------------------------------------
+# get geo
+# -------------------------------------------
+def get_geo():
+    global _geo_country, _geo_city
+    if _geo_country is None or _geo_city is None:
+        import geoip2.database
+        _geo_country = geoip2.database.Reader(GEOLITE2_COUNTRY_DB)
+        _geo_city = geoip2.database.Reader(GEOLITE2_CITY_DB)
+    return _geo_country, _geo_city
+
+
+# -------------------------------------------
+# locate it
+# -------------------------------------------
+def locateit(source_ip, debug_info):
+    try:
+        if source_ip == '0.0.0.0' or source_ip == '127.0.0.1':
+            return 'localhost, localhost'
+        geo_country, geo_city = get_geo()
+        country = geo_country.country(source_ip).country.name
+        city = geo_city.city(source_ip).city.name
+        return f'{country}, {city}'
+    except Exception as e:
+        print(f'Failed to get location information for <{debug_info}>: {e}')
+        return 'unknown, unknown'
+
+
+# -------------------------------------------
+# build location counts
+# -------------------------------------------
+def build_location_counts(ip_counts):
+    location_counts = {}
+    for ip in ip_counts:
+        location = locateit(ip, ip)
+        if location not in location_counts:
+            location_counts[location] = 0
+        location_counts[location] += ip_counts[ip]
+    return location_counts
+
+
+# -------------------------------------------
+# get timespan
+# -------------------------------------------
+def get_timespan(table, where_clause):
+    query = f"""
+        SELECT MIN(timestamp) AS start_time, MAX(timestamp) AS end_time
+        FROM {table}
+        WHERE {where_clause}
+    """
+    rows = execute_query(query)
+    if len(rows) == 0:
+        return {'start': None, 'end': None, 'span': None}
+    start_str = rows[0].get('start_time')
+    end_str = rows[0].get('end_time')
+    if start_str is None or end_str is None:
+        return {'start': None, 'end': None, 'span': None}
+    start_dt = parse_iso(start_str)
+    end_dt = parse_iso(end_str)
+    return {'start': start_dt, 'end': end_dt, 'span': end_dt - start_dt}
+
+
+# -------------------------------------------
+# main
+# -------------------------------------------
+def main():
+    if args.repair_partitions and not args.start and not args.end:
+        if args.verbose:
+            print('Generating all missing partitions for telemetry and alerts.')
+        print('Provide --start and --end to repair a specific range.')
+        return
+    if args.repair_partitions and args.start:
+        start_dt = parse_iso(args.start)
+        end_dt = parse_iso(args.end, end_of_day=True) if args.end else datetime.now(timezone.utc).replace(hour=23, minute=59, second=59, microsecond=0)
+        if start_dt > end_dt:
+            print('--start must be before --end')
+            sys.exit(2)
+        days = day_range(start_dt, end_dt)
+        expected = expected_partitions(days)
+        telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
+        alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
+        ensure_partitions_for_range(telemetry_table, expected, 'telemetry', start_dt, end_dt)
+        ensure_partitions_for_range(alerts_table, expected, 'alerts', start_dt, end_dt)
+        return
+
+    if not args.start:
+        print('--start is required (ISO datetime string or YYYY-MM-DD).')
+        sys.exit(2)
+
+    start_dt = parse_iso(args.start)
+    end_dt = parse_iso(args.end, end_of_day=True) if args.end else datetime.now(timezone.utc).replace(hour=23, minute=59, second=59, microsecond=0)
+    if start_dt > end_dt:
+        print('--start must be before --end')
+        sys.exit(2)
+
+    telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
+    alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
+
+    days = day_range(start_dt, end_dt)
+    expected = expected_partitions(days)
+    ensure_partitions_for_range(telemetry_table, expected, 'telemetry', start_dt, end_dt)
+    ensure_partitions_for_range(alerts_table, expected, 'alerts', start_dt, end_dt)
+
+    telemetry_where = build_where_clause(start_dt, end_dt, days)
+    alerts_where = build_where_clause(start_dt, end_dt, days)
+
+    time_stats = get_timespan(telemetry_table, telemetry_where)
+
+    unique_ip_counts = value_counts(telemetry_table, 'source_ip', telemetry_where)
+    source_location_counts = build_location_counts(unique_ip_counts)
+    client_counts = value_counts(telemetry_table, 'client', telemetry_where)
+    endpoint_counts = value_counts(telemetry_table, 'endpoint', telemetry_where)
+    telemetry_status_code_counts = value_counts(telemetry_table, 'code', telemetry_where)
+    alert_status_code_counts = value_counts(alerts_table, 'code', alerts_where)
+
+    total_requests = sum_counts(endpoint_counts)
+    total_icesat2_granules = sum_counts(endpoint_counts, ICESAT2_ENDPOINTS)
+    total_icesat2_proxied_requests = sum_counts(endpoint_counts, ICESAT2_PROXY_ENDPOINTS)
+    total_gedi_granules = sum_counts(endpoint_counts, GEDI_ENDPOINTS)
+    total_gedi_proxied_requests = sum_counts(endpoint_counts, GEDI_PROXY_ENDPOINTS)
+
+    display_summary(
+        time_stats,
+        unique_ip_counts,
+        source_location_counts,
+        total_requests,
+        total_icesat2_granules,
+        total_icesat2_proxied_requests,
+        total_gedi_granules,
+        total_gedi_proxied_requests
+    )
 
     display_sorted('Source Locations', source_location_counts, args.top_n)
     display_sorted('Clients', client_counts, args.top_n)
