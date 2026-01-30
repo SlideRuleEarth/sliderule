@@ -147,7 +147,7 @@ class TestParser:
             result["errors"] = 0
             result["summary"] = []
             for line in self.lines:
-                if line.startswith("FAILED"):
+                if line.startswith("FAILED") or line.startswith("ERROR"):
                     result["errors"] += 1
                     result["summary"].append(line.split(" ")[1].strip())
                 elif line.startswith("=================="):

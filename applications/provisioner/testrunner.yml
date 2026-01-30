@@ -206,6 +206,7 @@ Resources:
           #!/bin/bash
           export HOME=/root
           export USER=root
+          export AWS_REGION=${AWS::Region}
           #
           # System Dependencies
           #
@@ -217,7 +218,7 @@ Resources:
           systemctl enable docker
           systemctl start docker
           usermod -aG docker ec2-user
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
           #
           # Install Docker Compose V2
           #

@@ -114,7 +114,7 @@ pre-commit run --all-files
 ### 8. Installing and Configuring Docker
 
 ```bash
-sudo dnf install docker
+sudo dnf install docker curl
 sudo usermod -aG docker <username>
 newgrp docker
 ```
