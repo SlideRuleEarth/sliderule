@@ -37,8 +37,17 @@ GEOLITE2_CITY_DB       = '/data/GeoLite2-City.mmdb'
 GEOLITE2_COUNTRY_DB    = '/data/GeoLite2-Country.mmdb'
 QUERY_WAIT_SECONDS     = 300
 QUERY_POLL_SECONDS     = 2
-ICESAT2_ENDPOINTS       = ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl13x', 'atl24x']
-ICESAT2_PROXY_ENDPOINTS = ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl13x', 'atl24x']
+#
+# Endpoint naming schema:
+#   p-series: proxied derived products
+#   s-series: subsetted standard data products
+#   v-series: quick views of standard data products
+#   x-series: subsetted dataframes of standard data products
+# Note: legacy reporting treats x-series as both granule-producing and proxied,
+# so x endpoints appear in both ICESAT2_ENDPOINTS and ICESAT2_PROXY_ENDPOINTS.
+#
+ICESAT2_ENDPOINTS       = ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl06x', 'atl08', 'atl08x', 'atl13s', 'atl13x', 'atl24x']
+ICESAT2_PROXY_ENDPOINTS = ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl13x', 'atl24x', 'atl06x', 'atl08x']
 GEDI_ENDPOINTS          = ['gedi01b', 'gedi02a', 'gedi04a']
 GEDI_PROXY_ENDPOINTS    = ['gedi01bp', 'gedi02ap', 'gedi04ap']
 
