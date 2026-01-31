@@ -105,6 +105,21 @@ CODED_TYPE = {
     12: "STRING"
 }
 
+def _json_encoder(obj):
+    if isinstance(obj, (bytes, bytearray)):
+        return obj.decode('utf-8')
+    if isinstance(obj, numpy.integer):
+        return int(obj)
+    if isinstance(obj, numpy.floating):
+        return float(obj)
+    if isinstance(obj, numpy.ndarray):
+        return obj.tolist()
+    if isinstance(obj, numpy.bool_):
+        return bool(obj)
+    if isinstance(obj, numpy.void):
+        return None
+    return obj
+
 ###############################################################################
 # CLASSES
 ###############################################################################
@@ -214,7 +229,7 @@ class Session:
 
         # Construct Payload
         if isinstance(parm, dict):
-            payload = json.dumps(parm)
+            payload = json.dumps(parm, default=_json_encoder)
         else:
             payload = parm
 
