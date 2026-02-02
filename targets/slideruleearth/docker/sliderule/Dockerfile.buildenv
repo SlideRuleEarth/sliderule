@@ -148,8 +148,8 @@ RUN git clone https://github.com/OSGeo/libgeotiff.git && \
     VERSION=`curl -s https://api.github.com/repos/OSGeo/libgeotiff/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
     echo libgeotiff: $(git --git-dir /libgeotiff/.git --work-tree /libgeotiff describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
-    mkdir -p /build/geotiff && \
-    cd /build/geotiff && \
+    mkdir -p /build/libgeotiff && \
+    cd /build/libgeotiff && \
     cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release && \
     make -j8 && \
     make install && \
