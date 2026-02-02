@@ -248,3 +248,117 @@ class TestL4B:
         assert abs(gdf.describe()["canopy_openness"]["max"] - 41.835209) < 0.001
         df = gdf[gdf["gedi.value"] > -9999.0]
         assert abs(sum(df["gedi.value"]) - 42859.93671417236) < 1
+
+
+PARMS_GEDI_SAMPLING = {
+    "poly": [
+        {"lon": -106.47848198640965, "lat": 38.751708782062025},
+        {"lon": -106.4479055063402, "lat": 38.751708782062025},
+        {"lon": -106.4479055063402, "lat": 38.783110086231886},
+        {"lon": -106.47848198640965, "lat": 38.783110086231886},
+        {"lon": -106.47848198640965, "lat": 38.751708782062025},
+    ],
+    "t0": "2022-02-06T00:12:51",
+    "t1": "2022-12-12T16:43:37",
+    "degrade_filter": True,
+    "l2_quality_filter": True,
+}
+
+RESOURCES_GEDI_SAMPLING = [
+    "GEDI02_A_2022037001251_O17852_03_T09477_02_003_02_V002.h5",
+    "GEDI02_A_2022087042056_O18630_03_T05361_02_003_02_V002.h5",
+    "GEDI02_A_2022277182640_O21586_02_T02618_02_003_02_V002.h5",
+    "GEDI02_A_2022346151046_O22654_02_T11156_02_003_02_V002.h5",
+]
+
+
+class TestGediWithWorldcover:
+    @staticmethod
+    def _valid_sample_values(value):
+        if value is None:
+            return []
+
+        if isinstance(value, np.ndarray):
+            values = value.ravel().tolist()
+        elif isinstance(value, (list, tuple)):
+            values = list(value)
+        else:
+            values = [value]
+
+        cleaned = []
+        for entry in values:
+            if entry is None:
+                continue
+            try:
+                if np.isnan(entry):
+                    continue
+            except TypeError:
+                pass
+            cleaned.append(float(entry))
+        return cleaned
+
+    @staticmethod
+    def _samples_by_shot(gdf, sample_field):
+        df = gdf[["shot_number", sample_field]].copy()
+        df["samples"] = df[sample_field].apply(TestGediWithWorldcover._valid_sample_values)
+        return df.groupby("shot_number")["samples"].agg(lambda rows: [v for row in rows for v in row])
+
+    def test_gedi02a_worldcover_compare(self, init):
+        # Regression test for GitHub issue #569 (GEDI x-series WorldCover sampling/parity).
+        parms_02ap = PARMS_GEDI_SAMPLING.copy()
+        parms_02ax = PARMS_GEDI_SAMPLING.copy()
+        parms_02ap["samples"] = {"worldcover": {"asset": "esa-worldcover-10meter"}}
+        parms_02ax["samples"] = {"worldcover": {"asset": "esa-worldcover-10meter"}}
+
+        gdf_02ap = gedi.gedi02ap(parms_02ap, resources=RESOURCES_GEDI_SAMPLING, keep_id=True)
+        gdf_02ax = sliderule.run("gedi02ax", parms_02ax, resources=RESOURCES_GEDI_SAMPLING)
+
+        assert init
+        assert len(gdf_02ap) > 0
+        assert len(gdf_02ax) > 0
+        assert len(gdf_02ax) == len(gdf_02ap)
+        assert "worldcover.value" in gdf_02ap
+        assert "worldcover.value" in gdf_02ax
+
+        np.testing.assert_array_equal(
+            np.sort(gdf_02ap["shot_number"].to_numpy()),
+            np.sort(gdf_02ax["shot_number"].to_numpy()),
+        )
+
+        values_by_shot_02ap = self._samples_by_shot(gdf_02ap, "worldcover.value")
+        values_by_shot_02ax = self._samples_by_shot(gdf_02ax, "worldcover.value")
+
+        counts_by_shot_02ap = values_by_shot_02ap.apply(len)
+        counts_by_shot_02ax = values_by_shot_02ax.reindex(values_by_shot_02ap.index, fill_value=[]).apply(len)
+
+        non_empty_02ap = (counts_by_shot_02ap > 0).sum()
+        non_empty_02ax = (counts_by_shot_02ax > 0).sum()
+        total_samples_02ap = counts_by_shot_02ap.sum()
+        total_samples_02ax = counts_by_shot_02ax.sum()
+
+        assert non_empty_02ap > 0, "gedi02ap returned no worldcover samples"
+        assert non_empty_02ax > 0, "gedi02ax returned no worldcover samples"
+
+        # Baseline from this regression fixture: p-series returns 259 valid samples.
+        assert len(gdf_02ap) == 262
+        assert len(gdf_02ax) == 262
+        assert non_empty_02ap == 259
+        assert total_samples_02ap == 259
+
+        # x-series may return extra valid samples for some shots; do not pin exact extras.
+        # We only require no regressions relative to p-series (no missing samples).
+        assert non_empty_02ax >= 259
+        assert total_samples_02ax >= 259
+        assert (counts_by_shot_02ax[counts_by_shot_02ap > 0] > 0).all()
+        assert (counts_by_shot_02ax >= counts_by_shot_02ap).all()
+
+        # Compare values after count checks: every valid p-series value must also appear in x-series.
+        for shot_number, p_values in values_by_shot_02ap.items():
+            if len(p_values) == 0:
+                continue
+            x_values = values_by_shot_02ax.get(shot_number, [])
+            for value in set(p_values):
+                assert x_values.count(value) >= p_values.count(value), (
+                    f"worldcover.value mismatch for shot {shot_number}: "
+                    f"ap={p_values}, ax={x_values}"
+                )

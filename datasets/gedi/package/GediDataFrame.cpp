@@ -39,8 +39,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GediDataFrame::GEDI_CRS = "\"EPSG:4326\"";
-
 /******************************************************************************
  * GEDI DATAFRAME BASE
  ******************************************************************************/
@@ -58,7 +56,7 @@ const char* GediDataFrame::GEDI_CRS = "\"EPSG:4326\"";
         {"track",   &track},
         {"granule", &granule}
     },
-    GEDI_CRS),
+    getCRS()),
     beam(0, META_COLUMN),
     orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
     track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
@@ -112,3 +110,14 @@ okey_t GediDataFrame::getKey (void) const
 {
     return dfKey;
 }
+
+/*----------------------------------------------------------------------------
+ * getCRS
+ *----------------------------------------------------------------------------*/
+const char* GediDataFrame::getCRS (void)
+{
+    /* Load and cache the GEDI CRS once; returned value is compact PROJJSON. */
+    const static string crs = GeoDataFrame::loadCRSFile("GEDI_EPSG7912.projjson");
+    return crs.c_str();
+}
+
