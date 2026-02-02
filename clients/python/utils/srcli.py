@@ -27,6 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import json
 import argparse
 import sliderule
 
@@ -40,6 +41,7 @@ parser.add_argument('--ttl',                type=int,               default=60) 
 parser.add_argument('--version',            type=str,               default="unstable")
 parser.add_argument('--branch',             type=str,               default="main")
 parser.add_argument('--report',             type=str,               default="clusters")
+parser.add_argument('-j', '--asjson',       action='store_true',    default=False)
 parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
 args,_ = parser.parse_known_args()
 
@@ -48,7 +50,6 @@ session = sliderule.create_session(domain=args.domain, cluster=args.cluster)
 
 # Command Runner
 CommandRunner = {
-
     # Provisioner
     "deploy": lambda: session.provisioner.deploy(is_public=args.is_public, node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
     "destroy": session.provisioner.destroy,
@@ -56,12 +57,14 @@ CommandRunner = {
     "events": session.provisioner.events,
     "report": lambda: session.provisioner.report(kind=args.report),
     "test": lambda: session.provision("test", {"branch":args.branch}),
-
     # Cluster
     "version": lambda: session.source("version")
-
 }
 
 # Execute Commands
 for command in args.commands:
-    print(CommandRunner[command]())
+    result = CommandRunner[command]()
+    if args.asjson:
+        print(json.dumps(result, indent=2))
+    else:
+        print(result)
