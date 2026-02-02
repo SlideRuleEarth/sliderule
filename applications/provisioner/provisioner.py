@@ -338,7 +338,7 @@ def report_tests_handler(event, context):
 
         # read test summary
         with open(f"/tmp/{summary_file}", "r") as file:
-            state["report"] = file.read()
+            state["report"] = json.loads(file.read())
 
     except Exception as e:
 
