@@ -801,7 +801,7 @@ init-dev-env: ## one-time setup of development environment for running locally
 	mkdir -p /data/3DEP
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/3dep.db /data/3DEP/3dep.db
 	mkdir -p /etc/haproxy/pem
-	retry curl $(JWT_ISSUER)/auth/github/pem > /etc/haproxy/pem/pubkey.pem
+	curl $(JWT_ISSUER)/auth/github/pem > /etc/haproxy/pem/pubkey.pem
 	mkdir -p /etc/ssl/private
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(DOMAIN).pem /etc/ssl/private/$(DOMAIN).pem
 
