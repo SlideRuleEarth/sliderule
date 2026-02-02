@@ -47,8 +47,6 @@ class TestArrow:
             assert len(df) == 63
             assert len(df.keys()) == 14 # this is not a GDF, so there is one more column since lat and lon are not combined into geometry
             assert df["gt"].sum() == 2160
-        else:
-            assert df == None
 
     def test_atl03x(self, domain, organization):
         df = make_rqst("atl03x", domain, organization, {
@@ -62,5 +60,3 @@ class TestArrow:
             assert len(df) == 5814857
             assert len(df.keys()) == 17
             assert df["gt"].sum() == 58148570
-        else:
-            assert df == None

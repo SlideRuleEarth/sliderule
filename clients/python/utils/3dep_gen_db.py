@@ -10,9 +10,9 @@ from shapely.geometry import Polygon
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""3DEP""")
-parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/3depdb.parquet")
-parser.add_argument('--db_file',        type=str,   default="/data/3DEP/3depdb.db")
-parser.add_argument('--tmp_file',       type=str,   default="/tmp/3deptmp.parquet")
+parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/catalogv2.parquet")
+parser.add_argument('--db_file',        type=str,   default="/data/3DEP/3dep.db")
+parser.add_argument('--tmp_file',       type=str,   default="/tmp/3dep.parquet")
 args,_ = parser.parse_known_args()
 
 # -------------------------------------------
@@ -21,7 +21,7 @@ args,_ = parser.parse_known_args()
 print(f'Loading {args.parquet_file}... ', end='')
 sys.stdout.flush()
 start_time = time.perf_counter()
-parquet_df = gpd.read_parquet(args.parquet_file, columns=['id', 'proj:projjson', 'proj:transform', 'assets', 'collection', 'start_datetime', 'end_datetime', 'proj:code', 'proj:bbox', 'proj:shape', 'bbox', 'geometry', 'proj:geometry'])
+gdf = gpd.read_parquet(args.parquet_file, columns=['id', 'proj:projjson', 'proj:transform', 'assets', 'collection', 'start_datetime', 'end_datetime', 'proj:code', 'proj:bbox', 'proj:shape', 'bbox', 'geometry'])
 print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------
@@ -30,7 +30,7 @@ print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 print(f'Writing parquet file {args.tmp_file}... ', end='')
 sys.stdout.flush()
 start_time = time.perf_counter()
-parquet_df.to_parquet(args.tmp_file, index=True)
+gdf.to_parquet(args.tmp_file, index=True)
 print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------

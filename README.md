@@ -1,7 +1,6 @@
 # <img src="https://slideruleearth.io/web/assets/images/SlideRule-whiteBelly.png" alt="SlideRule Logo" style="float:left; margin: 0 15px 15px 0; width:50px;"> SlideRule
 [![DOI](https://zenodo.org/badge/261318746.svg)](https://zenodo.org/badge/latestdoi/261318746)
-[![Python Tests](https://github.com/SlideRuleEarth/sliderule/actions/workflows/sliderule-pytest.yml/badge.svg?event=workflow_run)](https://github.com/SlideRuleEarth/sliderule/actions/workflows/sliderule-pytest.yml)
-[![Self Tests](https://github.com/SlideRuleEarth/sliderule/actions/workflows/sliderule-luatest.yml/badge.svg)](https://github.com/SlideRuleEarth/sliderule/actions/workflows/sliderule-luatest.yml)
+[![Test Report](https://github.com/SlideRuleEarth/sliderule/actions/workflows/sliderule-testreport.yml/badge.svg?event=workflow_run)](https://github.com/SlideRuleEarth/sliderule/actions/workflows/sliderule-testreport.yml)
 
 #### A cloud-native framework for on-demand science data processing, hosted at [slideruleearth.io](https://slideruleearth.io).
 
