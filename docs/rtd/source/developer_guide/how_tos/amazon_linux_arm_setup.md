@@ -113,10 +113,17 @@ pre-commit run --all-files
 
 ### 8. Installing and Configuring Docker
 
+To install docker
 ```bash
 sudo dnf install docker curl
 sudo usermod -aG docker <username>
 newgrp docker
+```
+
+To start docker
+```bash
+sudo systemctl start docker
+sudo systemctl enable docker
 ```
 
 Then install Docker Compose plugin
