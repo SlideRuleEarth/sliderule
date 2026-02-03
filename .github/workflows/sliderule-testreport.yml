@@ -12,7 +12,7 @@ jobs:
         env:
           SLIDERULE_GITHUB_TOKEN: ${{ secrets.SESSION_PAT }}
         run: |
-          set -euo pipeline  # stop workflow if curl exits non-zero
+          set -euo pipefail  # stop workflow if curl exits non-zero
           JWT=$(curl -fsS https://login.slideruleearth.io/auth/github/pat -d "{\"pat\":\"$SLIDERULE_GITHUB_TOKEN\"}" | jq -r '.token')
           REPORT=$(curl -fsS -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/report/tests)
           REPORT_EPOCH=$(date -d "$(echo $REPORT | jq -r '.report.date')" +%s)
