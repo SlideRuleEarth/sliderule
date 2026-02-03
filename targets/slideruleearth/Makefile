@@ -132,8 +132,8 @@ RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += $(COMMON_CFG)
 
 all: ## build the server using the local configuration
-	make -j8 -C $(SLIDERULE_BUILD_DIR)
-	make -C $(SLIDERULE_BUILD_DIR) install
+	@set -o pipefail; make -j8 -C $(SLIDERULE_BUILD_DIR) 2>&1 | grep -v "parameter passing for argument of type.*when C..17 is enabled" || test $$? -eq 141
+	@set -o pipefail; make -C $(SLIDERULE_BUILD_DIR) install 2>&1 | grep -v "parameter passing for argument of type.*when C..17 is enabled" || test $$? -eq 141
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
