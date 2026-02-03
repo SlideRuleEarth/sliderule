@@ -25,6 +25,7 @@ target_compile_options (slideruleLib PUBLIC -Wall) # turn on "all" warnings
 target_compile_options (slideruleLib PUBLIC -Wextra) # turn on "extra" warnings
 target_compile_options (slideruleLib PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
 target_compile_options (slideruleLib PUBLIC -Wshadow) # turn on warning for inner scope var with same name as outer scope var
+target_compile_options (slideruleLib PUBLIC -Wno-psabi) # suppress ABI compatibility notes (e.g., C++17 parameter passing changes)
 target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-fstack-protector-all>")
 target_compile_definitions (slideruleLib PUBLIC "$<$<CONFIG:Debug>:__no_unload__>") # don't unload dynamic modules when in debug so symbols available to address sanitizer postmortem
 
