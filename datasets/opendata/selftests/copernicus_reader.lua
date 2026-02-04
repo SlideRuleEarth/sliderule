@@ -15,7 +15,7 @@ local height = 0.0
 
 print(string.format("\n-------------------------------------------------\nESA Copernicus 30meter sample POI\n-------------------------------------------------"))
 
-local expResults = {{2637.057758605255, 1386633618, "/vsis3/raster/COP30/COP30_hh.vrt"}}
+local expResults = {{2637.891093719017, 1386633618, "/vsis3/raster/COP30/COP30_hh.vrt"}}
 
 local demType = "esa-copernicus-30meter"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))

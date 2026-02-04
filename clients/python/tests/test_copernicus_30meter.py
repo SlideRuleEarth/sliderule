@@ -12,7 +12,7 @@ sigma = 1.0e-9
 vrtLon = -108.1
 vrtLat = 39.1
 
-vrtValue = 2637.057758605255
+vrtValue = 2637.891093719017
 vrtFile = "/vsis3/raster/COP30/COP30_hh.vrt"
 vrtFileTime = 1386633618
 

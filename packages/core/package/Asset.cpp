@@ -45,6 +45,8 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
+#include <string>
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -61,6 +63,47 @@ const struct luaL_Reg Asset::LUA_META_TABLE[] = {
 
 Mutex Asset::ioDriverMut;
 Dictionary<Asset::io_driver_t> Asset::ioDrivers;
+
+/*----------------------------------------------------------------------------
+ * deriveRegionFromS3Endpoint
+ *----------------------------------------------------------------------------*/
+static std::string deriveRegionFromS3Endpoint(const char* endpoint)
+{
+    if(!endpoint || endpoint[0] == '\0')
+    {
+        return "";
+    }
+
+    std::string host(endpoint);
+
+    const size_t scheme_pos = host.find("://");
+    if(scheme_pos != std::string::npos)
+    {
+        host = host.substr(scheme_pos + 3);
+    }
+
+    const size_t path_pos = host.find('/');
+    if(path_pos != std::string::npos)
+    {
+        host = host.substr(0, path_pos);
+    }
+
+    if(host == "s3.amazonaws.com")
+    {
+        return "us-east-1";
+    }
+
+    const std::string prefix = "s3.";
+    const std::string suffix = ".amazonaws.com";
+    if(host.rfind(prefix, 0) == 0 &&
+       host.size() > (prefix.size() + suffix.size()) &&
+       host.compare(host.size() - suffix.size(), suffix.size(), suffix) == 0)
+    {
+        return host.substr(prefix.size(), host.size() - prefix.size() - suffix.size());
+    }
+
+    return "";
+}
 
 /******************************************************************************
  * VOID IO DRIVER CLASS
@@ -314,12 +357,15 @@ Asset::Asset (lua_State* L, const attributes_t& _attributes, const io_driver_t& 
     driver(_driver),
     resources(ASSET_STARTING_RESOURCES_PER_INDEX)
 {
+    const std::string derived_region = deriveRegionFromS3Endpoint(_attributes.aws_s3_endpoint);
+    const char* region = derived_region.c_str();
+
     attributes.name     = StringLib::duplicate(_attributes.name);
     attributes.identity = StringLib::duplicate(_attributes.identity);
     attributes.driver   = StringLib::duplicate(_attributes.driver);
     attributes.path     = StringLib::duplicate(_attributes.path);
     attributes.index    = StringLib::duplicate(_attributes.index);
-    attributes.region   = StringLib::duplicate(_attributes.region);
+    attributes.region   = StringLib::duplicate(region);
     attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
     attributes.aws_s3_endpoint = StringLib::duplicate(_attributes.aws_s3_endpoint);
 }

@@ -86,7 +86,7 @@ class EsaCopernicus30meterRaster: public GeoRaster
         static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)
         {
             static_cast<void>(param);
-            return target.SetFromUserInput("EPSG:4326+3855");
+            return target.SetFromUserInput("EPSG:9055+3855");
         }
 };
 

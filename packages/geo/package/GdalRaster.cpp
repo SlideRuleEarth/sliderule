@@ -612,17 +612,10 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
 
         const char* path = _parms->asset.asset->getPath();
         const char* identity = _parms->asset.asset->getIdentity();
-        const char* region = _parms->asset.asset->getRegion();
         const char* aws_s3_endpoint = _parms->asset.asset->getAwsS3Endpoint();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
-        /* Set AWS_REGION for a specific path */
-        if(region && region[0] != '\0')
-        {
-            VSISetPathSpecificOption(path, "AWS_REGION", region);
-        }
-
-        /* Configure endpoint for non-AWS S3-compatible object stores */
+        /* Set endpoint for specific path */
         if(aws_s3_endpoint && aws_s3_endpoint[0] != '\0')
         {
             VSISetPathSpecificOption(path, "AWS_S3_ENDPOINT", aws_s3_endpoint);
