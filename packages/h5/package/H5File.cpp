@@ -78,7 +78,7 @@ int H5File::luaCreate(lua_State* L)
         /* Get Parameters */
         _asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _resource = getLuaString(L, 2);
-        H5Coro::Context* _context = new H5Coro::Context(_asset, _resource);
+        H5Coro::Context* _context = new H5Coro::Context(_asset, _resource, H5Coro::Context::OPTION_USE_NAME_INDEX);
 
         /* Return File Device Object */
         return createLuaObject(L, new H5File(L, _asset, _context));

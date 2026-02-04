@@ -136,7 +136,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     /* Read File */
     try
     {
-        H5Coro::Context context(asset, resource);
+        H5Coro::Context context(asset, resource, H5Coro::Context::OPTION_USE_NAME_INDEX);
         H5Coro::range_t slice[2] = COLUMN_SLICE(col, startrow, numrows);
         const H5Coro::info_t info = H5Coro::read(&context, dataName, datatype, slice, 2, false, trace_id);
         recData->datatype = (uint32_t)info.datatype;

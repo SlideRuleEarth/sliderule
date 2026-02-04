@@ -71,6 +71,12 @@ class H5Dataset
         } msg_type_t;
 
         typedef struct {
+            uint64_t        logical;
+            uint64_t        physical;
+            uint32_t        size;
+        } heap_t;
+
+        typedef struct {
             int             table_width;
             int             curr_num_rows;
             int             starting_blk_size;
@@ -87,6 +93,7 @@ class H5Dataset
             uint8_t         heap_off_size; // uint32_t Size of heap offsets (in bytes)
             uint8_t         heap_len_size; // size of heap ID lengths (in bytes)
             int             dlvl; // pass down to found message for dense
+            vector<heap_t>  block_address_table;
         } heap_info_t;
 
         typedef struct {
@@ -242,14 +249,14 @@ class H5Dataset
         void                readDataset           (info_t* info);
 
         uint64_t            readSuperblock        (void);
-        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr, bool linear_scan=false);
+        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info);
         int                 readDirectBlock       (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size);
         btree_node_t        readBTreeNodeV1       (int ndims, uint64_t* pos);
         int                 readSymbolTable       (uint64_t pos, uint64_t heap_data_addr, int dlvl);
-        int                 readNameIndex         (uint64_t pos, const heap_info_t* heap_info_ptr);
-        int                 readNameIndexNode     (uint64_t pos, const heap_info_t* heap_info_ptr, const index_info_t* index_info_ptr, uint16_t num_records, uint16_t curr_depth);
+        int                 readNameIndex         (uint64_t pos, const heap_info_t* heap_info);
+        int                 readNameIndexNode     (uint64_t pos, const heap_info_t* heap_info, const index_info_t* index_info_ptr, uint16_t num_records, uint16_t curr_depth);
 
         int                 readObjHdr            (uint64_t pos, int dlvl);
         int                 readMessages          (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);

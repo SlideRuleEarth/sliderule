@@ -265,7 +265,7 @@ string MathLib::b64encode(const void* data, const size_t &len)
 {
     string result((len + 2) / 3 * 4, '=');
     const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
-    char *str = &result[0];
+    char *str = result.data();
     size_t j = 0;
     size_t pad = len % 3;
     const size_t last = len - pad;
@@ -305,7 +305,7 @@ string MathLib::b64decode(const void* data, const size_t &len)
     const size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
     string result(last / 4 * 3 + pad1 + pad2, '\0');
-    unsigned char *str = reinterpret_cast<unsigned char*>(&result[0]);
+    unsigned char *str = reinterpret_cast<unsigned char*>(result.data());
 
     for (size_t i = 0; i < last; i += 4)
     {
@@ -573,6 +573,7 @@ mixing with 12*3 instructions on 3 integers than you can with 3 instructions
 on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 -------------------------------------------------------------------------------
 */
+// NOLINTBEGIN
 
 #ifdef __be__
 # define HASH_LITTLE_ENDIAN 0
@@ -714,7 +715,6 @@ uint32_t MathLib::hashlittle( const void *key, size_t length, uint32_t initval)
   u.ptr = key;
   if (HASH_LITTLE_ENDIAN && ((u.i & 0x3) == 0)) {
     const uint32_t *k = (const uint32_t *)key;         /* read 32-bit chunks */
-    const uint8_t  *k8;
 
     /*------ all but last block: aligned reads and affect 32 bits of (a,b,c) */
     while (length > 12)
@@ -757,8 +757,7 @@ uint32_t MathLib::hashlittle( const void *key, size_t length, uint32_t initval)
     }
 
 #else /* make valgrind happy */
-
-    k8 = (const uint8_t *)k;
+    const uint8_t  *k8 = (const uint8_t *)k;
     switch(length)
     {
     case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
@@ -898,7 +897,6 @@ void MathLib::hashlittle2(
   u.ptr = key;
   if (HASH_LITTLE_ENDIAN && ((u.i & 0x3) == 0)) {
     const uint32_t *k = (const uint32_t *)key;         /* read 32-bit chunks */
-    const uint8_t  *k8;
 
     /*------ all but last block: aligned reads and affect 32 bits of (a,b,c) */
     while (length > 12)
@@ -942,7 +940,7 @@ void MathLib::hashlittle2(
 
 #else /* make valgrind happy */
 
-    k8 = (const uint8_t *)k;
+    const uint8_t  *k8 = (const uint8_t *)k;
     switch(length)
     {
     case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
@@ -1073,7 +1071,6 @@ uint32_t MathLib::hashbig( const void *key, size_t length, uint32_t initval)
   u.ptr = key;
   if (HASH_BIG_ENDIAN && ((u.i & 0x3) == 0)) {
     const uint32_t *k = (const uint32_t *)key;         /* read 32-bit chunks */
-    const uint8_t  *k8;
 
     /*------ all but last block: aligned reads and affect 32 bits of (a,b,c) */
     while (length > 12)
@@ -1117,7 +1114,7 @@ uint32_t MathLib::hashbig( const void *key, size_t length, uint32_t initval)
 
 #else  /* make valgrind happy */
 
-    k8 = (const uint8_t *)k;
+    const uint8_t  *k8 = (const uint8_t *)k;
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
@@ -1183,3 +1180,5 @@ uint32_t MathLib::hashbig( const void *key, size_t length, uint32_t initval)
   final(a,b,c);
   return c;
 }
+
+// NOLINTEND

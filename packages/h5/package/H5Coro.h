@@ -164,6 +164,8 @@ namespace H5Coro
         static const uint64_t   IO_CACHE_L2_MASK        = 0x7FFFFFF; // lower inverse of buffer size
         static const long       IO_CACHE_L2_ENTRIES     = 17; // cache lines per dataset
 
+        static const uint32_t   OPTION_USE_NAME_INDEX   = 0x00000001;
+
         /************/
         /* Typedefs */
         /************/
@@ -189,12 +191,13 @@ namespace H5Coro
         long                l1_cache_replace;
         long                l2_cache_replace;
         long                bytes_read;
+        uint32_t            options;
 
         /***********/
         /* Methods */
         /***********/
 
-                        Context     (const Asset* asset, const char* resource);
+                        Context     (const Asset* asset, const char* resource, uint32_t option_flags=0);
                         ~Context    (void);
 
         void            ioRequest   (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);

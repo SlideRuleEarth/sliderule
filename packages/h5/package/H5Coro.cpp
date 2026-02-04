@@ -150,7 +150,7 @@ H5Coro::Future::rc_t H5Coro::Future::wait (int timeout)
  * Constructor
  *  - assumes that asset is in scope for the duration this object is in scope
  *----------------------------------------------------------------------------*/
-H5Coro::Context::Context (const Asset* asset, const char* resource):
+H5Coro::Context::Context (const Asset* asset, const char* resource, uint32_t option_flags):
     name                (NULL),
     ioDriver            (NULL),
     l1                  (IO_CACHE_L1_ENTRIES, hashL1),
@@ -158,7 +158,8 @@ H5Coro::Context::Context (const Asset* asset, const char* resource):
     cache_miss          (0),
     l1_cache_replace    (0),
     l2_cache_replace    (0),
-    bytes_read          (0)
+    bytes_read          (0),
+    options             (option_flags)
 {
     try
     {
