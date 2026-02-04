@@ -119,6 +119,7 @@ class Asset: public LuaObject
         const char*     getIndex        (void) const;
         const char*     getRegion       (void) const;
         const char*     getEndpoint     (void) const;
+        const char*     getAwsS3Endpoint(void) const;
 
     private:
 
@@ -141,6 +142,7 @@ class Asset: public LuaObject
             const char*                 index;
             const char*                 region;
             const char*                 endpoint;
+            const char*                 aws_s3_endpoint;
         } attributes_t;
 
         /*--------------------------------------------------------------------

@@ -102,7 +102,7 @@ Asset::IODriver::~IODriver (void) = default;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<region>], [<endpoint>])
+ * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<region>], [<endpoint>], [<aws_s3_endpoint>])
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
@@ -118,6 +118,7 @@ int Asset::luaCreate (lua_State* L)
         _attributes.index      = getLuaString(L, 5, true, NULL);
         _attributes.region     = getLuaString(L, 6, true, NULL);
         _attributes.endpoint   = getLuaString(L, 7, true, NULL);
+        _attributes.aws_s3_endpoint = getLuaString(L, 8, true, NULL);
 
         /* Get IO Driver */
         io_driver_t _driver = {.factory = NULL};
@@ -214,6 +215,7 @@ Asset::~Asset (void)
     delete [] attributes.index;
     delete [] attributes.region;
     delete [] attributes.endpoint;
+    delete [] attributes.aws_s3_endpoint;
 }
 
 /*----------------------------------------------------------------------------
@@ -297,6 +299,14 @@ const char* Asset::getEndpoint (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * getAwsS3Endpoint
+ *----------------------------------------------------------------------------*/
+const char* Asset::getAwsS3Endpoint (void) const
+{
+    return attributes.aws_s3_endpoint;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 Asset::Asset (lua_State* L, const attributes_t& _attributes, const io_driver_t& _driver):
@@ -311,6 +321,7 @@ Asset::Asset (lua_State* L, const attributes_t& _attributes, const io_driver_t& 
     attributes.index    = StringLib::duplicate(_attributes.index);
     attributes.region   = StringLib::duplicate(_attributes.region);
     attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
+    attributes.aws_s3_endpoint = StringLib::duplicate(_attributes.aws_s3_endpoint);
 }
 
 /*----------------------------------------------------------------------------

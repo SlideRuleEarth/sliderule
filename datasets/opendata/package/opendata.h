@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "EsaWorldCover10meterRaster.h"
+#include "EsaCopernicus30meterRaster.h"
 #include "MetaGlobalCanopy1meterRaster.h"
 
 /******************************************************************************

@@ -23,51 +23,39 @@ for i=1, 10 do
 end
 ]]
 
-print(string.format("\n-------------------------------------------------\nesa-worldcover 10meter Grand Mesa test\n-------------------------------------------------"))
-
-local demType = "esa-worldcover-10meter"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0 }))
-
-local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
-local failedRead = 0
-local samplesCnt = 0
-local errorChecking = true
-
-local starttime = time.latch();
-
--- for i=1,#arr do
-for i=1, 5 do
-    local  lon = arr[i][1]
-    local  lat = arr[i][2]
-    local  height = 0
-    local  tbl, err = dem:sample(lon, lat, height)
-    if err ~= 0 then
-        failedRead = failedRead + 1
-        print(string.format("======> FAILED to read", lon, lat))
-    else
-        local value, fname, time
-        for j, v in ipairs(tbl) do
-            value = v["value"]
-            fname = v["file"]
-            time  = v["time"]
-            print(string.format("(%02d) value %12.3f, time %.2f, fname: %s", j, value, time, fname))
-        end
-            print("\n")
-    end
-
-    samplesCnt = samplesCnt + 1
-
-    local modulovalue = 3000
-    if (i % modulovalue == 0) then
-        print(string.format("Sample: %d", samplesCnt))
-    end
-
+local lons = {}
+local lats = {}
+local heights = {}
+for i=1,#arr do
+    lons[i] = arr[i][1]
+    lats[i] = arr[i][2]
+    heights[i] = 0
 end
 
-local stoptime = time.latch();
-local dtime = stoptime - starttime
+local function run_test(demType, testName)
+    print(string.format("Running test: %s (%s)", testName, demType))
 
-print(string.format("\nSamples: %d, failedRead: %d", samplesCnt, failedRead))
-print(string.format("ExecTime: %f", dtime))
+    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0 }))
+    local starttime = time.latch()
+    local tbl, err = dem:batchsample(lons, lats, heights)
+    local stoptime = time.latch()
 
-os.exit()
+    local sampled = 0
+    if err == 0 and tbl ~= nil then
+        for i=1,#arr do
+            if tbl[i] ~= nil then
+                sampled = sampled + 1
+            end
+        end
+    end
+
+    print(string.format("Points sampled: %d/%d", sampled, #arr))
+    print(string.format("ExecTime: %f", stoptime - starttime))
+end
+
+run_test("esa-worldcover-10meter", "Grand Mesa WorldCover")
+run_test("esa-copernicus-30meter", "Grand Mesa Copernicus")
+
+-- Report Results --
+
+runner.report()

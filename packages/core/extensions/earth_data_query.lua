@@ -212,6 +212,13 @@ ASSETS = {
         index       = "/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt",
         region      = "us-east-1",
     },
+    ["esa-copernicus-30meter"] = {
+        -- Hosted at SDSC (San Diego Supercomputer Center) and exposed through an
+        -- S3-compatible API endpoint, but this dataset is not hosted on Amazon S3.
+        path            = "/vsis3/raster/COP30",
+        index           = "/vsis3/raster/COP30/COP30_hh.vrt",
+        aws_s3_endpoint = "opentopography.s3.sdsc.edu",
+    },
     ["bluetopo-bathy"] = {
         identity    = "iam-role",
         path        = "/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/",
@@ -467,7 +474,7 @@ local function load ()
     local assets = {}
     for k,v in pairs(ASSETS) do
         local asset = core.getbyname(k) -- see if asset already exists
-        assets[k] = asset or core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"]):global(k)
+        assets[k] = asset or core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"], v["aws_s3_endpoint"]):global(k)
     end
     return assets
 end

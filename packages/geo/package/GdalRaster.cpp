@@ -613,10 +613,21 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
         const char* path = _parms->asset.asset->getPath();
         const char* identity = _parms->asset.asset->getIdentity();
         const char* region = _parms->asset.asset->getRegion();
+        const char* aws_s3_endpoint = _parms->asset.asset->getAwsS3Endpoint();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Set AWS_REGION for a specific path */
-        VSISetPathSpecificOption(path, "AWS_REGION", region);
+        if(region && region[0] != '\0')
+        {
+            VSISetPathSpecificOption(path, "AWS_REGION", region);
+        }
+
+        /* Configure endpoint for non-AWS S3-compatible object stores */
+        if(aws_s3_endpoint && aws_s3_endpoint[0] != '\0')
+        {
+            VSISetPathSpecificOption(path, "AWS_S3_ENDPOINT", aws_s3_endpoint);
+            VSISetPathSpecificOption(path, "AWS_HTTPS", "YES");
+        }
 
         if(!credentials.expiration.value.empty())
         {
@@ -1191,7 +1202,7 @@ void GdalRaster::createTransform(void)
 
     const char* projref = dset->GetProjectionRef();
 
-    /* Use projref from raster if specified and not and empty string */
+    /* Use projref from raster if specified and not an empty string */
     if(projref && strlen(projref) > 0)
     {
         ogrerr = targetCRS.importFromWkt(projref);

@@ -17,6 +17,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/opendata.h
         ${CMAKE_CURRENT_LIST_DIR}/package/EsaWorldCover10meterRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/EsaCopernicus30meterRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MetaGlobalCanopy1meterRaster.h
     DESTINATION
         ${INCDIR}
