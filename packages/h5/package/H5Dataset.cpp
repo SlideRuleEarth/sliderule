@@ -1601,6 +1601,7 @@ int H5Dataset::readNameIndex (uint64_t pos, const heap_info_t* heap_info)
     if(!H5CORO_VERBOSE)
     {
         pos += 2;
+        (void)node_size;
     }
     else
     {
@@ -1627,6 +1628,7 @@ int H5Dataset::readNameIndex (uint64_t pos, const heap_info_t* heap_info)
     if(!H5CORO_VERBOSE)
     {
         pos += 4;
+        (void)total_num_records;
     }
     else
     {
@@ -1640,10 +1642,18 @@ int H5Dataset::readNameIndex (uint64_t pos, const heap_info_t* heap_info)
 
     /* Initialize B-Tree Processing */
     const int dataset_path_length = StringLib::size(datasetPath[heap_info->dlvl]);
-    #ifdef __SANITIZE_ADDRESS__
-    assert(dataset_path_length < STR_BUFF_SIZE);
+    #ifndef __has_feature
+    #define __has_feature(x) 0
+    #endif
+    #if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
+    if(H5CORO_ERROR_CHECKING)
+    {
+        if(dataset_path_length > STR_BUFF_SIZE)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "dataset path name <%s> too long: %d", datasetPath[heap_info->dlvl], dataset_path_length);
+        }
+    }
     char dataset_path_buffer[STR_BUFF_SIZE];
-    memset(dataset_path_buffer, 0, STR_BUFF_SIZE);
     StringLib::copy(dataset_path_buffer, datasetPath[heap_info->dlvl], dataset_path_length + 1);
     #else
     const char* dataset_path_buffer = datasetPath[heap_info->dlvl];

@@ -55,7 +55,7 @@
 #endif
 
 #ifndef H5CORO_VERBOSE
-#define H5CORO_VERBOSE true
+#define H5CORO_VERBOSE false
 #endif
 
 #ifndef H5CORO_EXTRA_DEBUG
