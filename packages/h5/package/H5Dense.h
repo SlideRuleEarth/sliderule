@@ -7,8 +7,26 @@
 class H5BTreeV2
 {
     public:
-        /* key return values for outside */
 
+        /* B-tree subID mapping for type support - represents record types */
+        typedef enum {
+            H5B2_TEST_ID = 0,
+            H5B2_FHEAP_HUGE_INDIR_ID = 1,
+            H5B2_FHEAP_HUGE_FILT_INDIR_ID = 2,
+            H5B2_FHEAP_HUGE_DIR_ID = 3,
+            H5B2_FHEAP_HUGE_FILT_DIR_ID = 4,
+            H5B2_GRP_DENSE_NAME_ID = 5,
+            H5B2_GRP_DENSE_CORDER_ID = 6,
+            H5B2_SOHM_INDEX_ID = 7,
+            H5B2_ATTR_DENSE_NAME_ID = 8,
+            H5B2_ATTR_DENSE_CORDER_ID = 9,
+            H5B2_CDSET_ID = 10,
+            H5B2_CDSET_FILT_ID = 11,
+            H5B2_TEST2_ID,
+            H5B2_NUM_BTREE_ID
+        } btree2_subid_t;
+
+        /* key return values for outside */
         uint64_t pos_out;
         uint64_t msg_size_out;
         int32_t  hdr_dlvl_out;
@@ -51,24 +69,6 @@ class H5BTreeV2
             uint32_t                merge_nrec = 0; // num records to merge node at
             uint8_t                 cum_max_nrec_size = 0; // size to store cumulative max. # of records for this node (in bytes)
         } btree2_node_info_t;
-
-        /* B-tree subID mapping for type support - represents record types */
-        typedef enum {
-            H5B2_TEST_ID = 0,
-            H5B2_FHEAP_HUGE_INDIR_ID = 1,
-            H5B2_FHEAP_HUGE_FILT_INDIR_ID = 2,
-            H5B2_FHEAP_HUGE_DIR_ID = 3,
-            H5B2_FHEAP_HUGE_FILT_DIR_ID = 4,
-            H5B2_GRP_DENSE_NAME_ID = 5,
-            H5B2_GRP_DENSE_CORDER_ID = 6,
-            H5B2_SOHM_INDEX_ID = 7,
-            H5B2_ATTR_DENSE_NAME_ID = 8,
-            H5B2_ATTR_DENSE_CORDER_ID = 9,
-            H5B2_CDSET_ID = 10,
-            H5B2_CDSET_FILT_ID = 11,
-            H5B2_TEST2_ID,
-            H5B2_NUM_BTREE_ID
-        } btree2_subid_t;
 
         /* Node position, for min/max determination */
         typedef enum {

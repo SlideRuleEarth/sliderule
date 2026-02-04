@@ -3,8 +3,8 @@ local runner = require("test_executive")
 -- Setup --
 
 local endpoint = core.endpoint()
-local server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
-local client = streaming.http("127.0.0.1", 9081)
+local server   = core.httpd(10081):attach(endpoint, "/source"):untilup()
+local client = streaming.http("127.0.0.1", 10081)
 
 -- Self Test --
 

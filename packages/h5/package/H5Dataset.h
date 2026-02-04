@@ -220,12 +220,13 @@ class H5Dataset
         void                readDataset           (info_t* info);
 
         uint64_t            readSuperblock        (void);
-        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr);
+        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr, bool linear_scan=false);
         int                 readDirectBlock       (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size);
         btree_node_t        readBTreeNodeV1       (int ndims, uint64_t* pos);
         int                 readSymbolTable       (uint64_t pos, uint64_t heap_data_addr, int dlvl);
+        int                 readNameIndex         (uint64_t pos, heap_info_t* heap_info_ptr, int dlvl);
 
         int                 readObjHdr            (uint64_t pos, int dlvl);
         int                 readMessages          (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);

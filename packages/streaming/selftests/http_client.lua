@@ -4,9 +4,9 @@ local json = require("json")
 -- Self Test --
 
 local endpoint = core.endpoint()
-local server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
+local server   = core.httpd(10081):attach(endpoint, "/source"):untilup()
 
-local client = streaming.http("127.0.0.1", 9081)
+local client = streaming.http("127.0.0.1", 10081)
 
 print('\n------------------\nTest01: Return\n------------------')
 
