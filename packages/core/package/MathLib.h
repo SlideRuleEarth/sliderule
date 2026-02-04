@@ -106,24 +106,22 @@ class MathLib
         static coord_t      point2coord         (point_t p, proj_t projection);
         static bool         inpoly              (point_t* poly, int len, point_t point);
 
-        static std::string  b64encode           (const void* data, const size_t &len);
-        static std::string  b64decode           (const void* data, const size_t &len);
+        static string       b64encode           (const void* data, const size_t &len);
+        static string       b64decode           (const void* data, const size_t &len);
         static const char*  proj2str            (proj_t projection);
 
         static void         quicksort           (double* array, long start, long end); // NOLINT(misc-no-recursion)
         static long         quicksortpartition  (double* array, long start, long end);
 
-    private:
+        static void         swapComplex         (complex_t *a, complex_t *b);
+        static void         bitReverse          (complex_t data[], unsigned long size);
+        static void         freqCorrelation     (complex_t data[], unsigned long size, int isign);
+        static double       getPolarMagnitude   (double ReX, double ImX);
+        static double       getPolarPhase       (double ReX, double ImX);
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static void     swapComplex         (complex_t *a, complex_t *b);
-        static void     bitReverse          (complex_t data[], unsigned long size);
-        static void     freqCorrelation     (complex_t data[], unsigned long size, int isign);
-        static double   getPolarMagnitude   (double ReX, double ImX);
-        static double   getPolarPhase       (double ReX, double ImX);
+        static uint32_t     hashlittle          (const void *key, size_t length, uint32_t initval);
+        static void         hashlittle2         (const void *key, size_t length, uint32_t *pc, uint32_t *pb);
+        static uint32_t     hashbig             (const void *key, size_t length, uint32_t initval);
 };
 
 #endif /* __math_lib__ */

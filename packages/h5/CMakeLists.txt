@@ -9,7 +9,6 @@ target_link_libraries (slideruleLib PUBLIC ${ZLIB_LIBRARIES})
 target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/h5.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/lookup3.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Coro.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.cpp
@@ -30,7 +29,6 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/h5.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/lookup3.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Array.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Coro.h

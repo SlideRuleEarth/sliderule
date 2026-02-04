@@ -33,15 +33,15 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
 #include "RecordObject.h"
 #include "TimeLib.h"
-#include "OsApi.h"
+#include "MathLib.h"
 #include "H5Dense.h"
 #include "H5Dataset.h"
 #include "H5Coro.h"
 
 #include <zlib.h>
-#include "lookup3.h"
 
 using H5Coro::EOR;
 using H5Coro::range_t;
@@ -279,6 +279,30 @@ uint64_t H5Dataset::readField (int64_t size, uint64_t* pos)
 }
 
 /*----------------------------------------------------------------------------
+ * readPackedField
+ *----------------------------------------------------------------------------*/
+uint64_t H5Dataset::readPackedField (int64_t size, uint64_t* pos)
+{
+    assert(pos);
+    assert(size > 0);
+
+    uint64_t value = 0;
+    for(int i = 0; i < size; i++)
+    {
+        #ifdef __be__
+        value <<= 8;
+        value |= (uint8_t)readField(1, &pos);
+        #else
+        uint64_t byte = (uint8_t)readField(1, pos);
+        byte <<= (i*8);
+        value |= byte;
+        #endif
+    }
+
+    return value;
+}
+
+    /*----------------------------------------------------------------------------
  * readDataset
  *----------------------------------------------------------------------------*/
 void H5Dataset::readDataset (info_t* info)
@@ -1508,7 +1532,7 @@ int H5Dataset::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
 /*----------------------------------------------------------------------------
  * readNameIndex
  *----------------------------------------------------------------------------*/
-int H5Dataset::readNameIndex (uint64_t pos, heap_info_t* heap_info_ptr, int dlvl)
+int H5Dataset::readNameIndex (uint64_t pos, const heap_info_t* heap_info_ptr)
 {
     const uint64_t starting_position = pos;
 
@@ -1540,7 +1564,7 @@ int H5Dataset::readNameIndex (uint64_t pos, heap_info_t* heap_info_ptr, int dlvl
 
     if(H5CORO_ERROR_CHECKING)
     {
-        if(type != H5BTreeV2::H5B2_GRP_DENSE_NAME_ID)
+        if(type != NAME_INDEX_BTREE)
         {
             throw RunTimeException(ERROR, RTE_FAILURE, "unsupported btree v2 node type: %d", (int)type);
         }
@@ -1561,7 +1585,7 @@ int H5Dataset::readNameIndex (uint64_t pos, heap_info_t* heap_info_ptr, int dlvl
         const uint8_t merge_percent = (uint8_t)readField(1, &pos);
 
         print2term("\n----------------\n");
-        print2term("Name Index (BTreeV2) [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("Name Index (BTreeV2) [%d]: 0x%lx\n", heap_info_ptr->dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
 
         print2term("Type:                                                            %d\n", (int)type);
@@ -1591,142 +1615,177 @@ int H5Dataset::readNameIndex (uint64_t pos, heap_info_t* heap_info_ptr, int dlvl
     }
 
     /* Initialize B-Tree Processing */
-    pos = root_node_address;
-    uint16_t num_records = num_records_in_root_node;
+    index_info_t index_info = {
     #ifdef __be__
-    uint32_t link_hash = hashbig(datasetPath[dlvl], StringLib::size(datasetPath[dlvl]), 0);
+        .link_hash = MathLib::hashbig(datasetPath[heap_info_ptr->dlvl], StringLib::size(datasetPath[heap_info_ptr->dlvl]), 0),
     #else
-    uint32_t link_hash = hashlittle(datasetPath[dlvl], StringLib::size(datasetPath[dlvl]), 0);
+        .link_hash = MathLib::hashlittle(datasetPath[heap_info_ptr->dlvl], StringLib::size(datasetPath[heap_info_ptr->dlvl]), 0),
     #endif
+        .depth = depth,
+        .type = type
+    };
 
     if(H5CORO_VERBOSE)
     {
-        print2term("Link Hash:                                                       0x%x\n", link_hash);
+        print2term("Link Hash:                                                       0x%x\n", index_info.link_hash);
         print2term("ID Offset Bytes:                                                 %d\n", heap_info_ptr->heap_off_size);
         print2term("ID Length Bytes:                                                 %d\n", heap_info_ptr->heap_len_size);
     }
 
-    /* Initialize Traversal of B-Tree */
-    uint16_t curr_depth = 0;
-    vector<uint16_t> node_selection(depth, 0);
-
     /* Traverse B-Tree */
-    while(curr_depth <= depth)
+    pos += readNameIndexNode(root_node_address, heap_info_ptr, &index_info, num_records_in_root_node, 1);
+
+    /* Return Bytes Read */
+    return pos - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readNameIndexNode
+ *----------------------------------------------------------------------------*/
+int H5Dataset::readNameIndexNode (uint64_t pos, const heap_info_t* heap_info_ptr, const index_info_t* index_info_ptr, uint16_t num_records, uint16_t curr_depth)
+{
+    const uint64_t starting_position = pos;
+
+    /* Check Signature, Version, and Type */
+    if(!H5CORO_ERROR_CHECKING)
     {
-        /* Check Signature, Version, and Type */
-        if(!H5CORO_ERROR_CHECKING)
+        pos += 6;
+    }
+    else
+    {
+        const uint32_t signature = (uint32_t)readField(4, &pos);
+        if(signature != H5_V2TREE_INTERNAL_SIGNATURE_LE && signature != H5_V2TREE_LEAF_SIGNATURE_LE)
         {
-            pos += 6;
-        }
-        else
-        {
-            const uint32_t signature = (uint32_t)readField(4, &pos);
-            if(signature != H5_V2TREE_INTERNAL_SIGNATURE_LE && signature != H5_V2TREE_LEAF_SIGNATURE_LE)
-            {
-                throw RunTimeException(ERROR, RTE_FAILURE, "invalid btree v2 node signature: 0x%llX", (unsigned long long)signature);
-            }
-
-            const uint8_t version = (uint8_t)readField(1, &pos);
-            if(version != 0)
-            {
-                throw RunTimeException(ERROR, RTE_FAILURE, "incorrect version of btree v2 node: %d", (int)version);
-            }
-
-            const uint8_t node_type = (uint8_t)readField(1, &pos);
-            if(node_type != type)
-            {
-                throw RunTimeException(ERROR, RTE_FAILURE, "incorrect type reference in btree v2 node: %d != %d", (int)node_type, (int)type);
-            }
+            throw RunTimeException(ERROR, RTE_FAILURE, "invalid btree v2 node signature: 0x%llX", (unsigned long long)signature);
         }
 
-        /* Read Records */
-        for(uint16_t curr_record = 0; curr_record < num_records; curr_record++)
+        const uint8_t version = (uint8_t)readField(1, &pos);
+        if(version != 0)
         {
-            uint32_t hash_of_name = (uint32_t)readField(4, &pos);
-            uint8_t hash_id_version = (uint8_t)readField(1, &pos);
-            if(H5CORO_ERROR_CHECKING)
-            {
-                if(hash_id_version != 0)
-                {
-                    throw RunTimeException(ERROR, RTE_FAILURE, "unsupported btree v2 hash id version: %d", (int)hash_id_version);
-                }
-            }
-            uint64_t id_offset = 0;
-            for(int i = 0; i < heap_info_ptr->heap_off_size; i++)
-            {
-                #ifdef __be__
-                id_offset <<= 8;
-                id_offset |= (uint8_t)readField(1, &pos);
-                #else
-                uint64_t val = (uint8_t)readField(1, &pos);
-                val <<= (i*8);
-                id_offset |= val;
-                #endif
-            }
-            uint64_t id_length = 0;
-            for(int i = 0; i < heap_info_ptr->heap_len_size; i++)
-            {
-                #ifdef __be__
-                id_length <<= 8;
-                id_length |= (uint8_t)readField(1, &pos);
-                #else
-                uint64_t val = (uint8_t)readField(1, &pos);
-                val <<= (i*8);
-                id_length |= val;
-                #endif
-            }
-
-            if(H5CORO_VERBOSE)
-            {
-                print2term("\n");
-                print2term("Current Record:                                                  %d of %d\n", curr_record + 1, num_records);
-                print2term("Hash of Name:                                                    0x%x\n", hash_of_name);
-                print2term("ID Offset:                                                       0x%lx\n", id_offset);
-                print2term("ID Length:                                                       0x%lx\n", id_length);
-            }
-
-            /* Check Hash Match */
-            if(hash_of_name == link_hash)
-            {
-                const uint64_t data_read = readMessage(LINK_MSG, id_length, heap_info_ptr->root_blk_addr + id_offset, heap_info_ptr->hdr_flags, dlvl);
-                if(H5CORO_VERBOSE)
-                {
-                    print2term("Matched - Data Read:                                             %lu\n", data_read);
-                }
-                if(H5CORO_ERROR_CHECKING)
-                {
-                    if(data_read > id_length)
-                    {
-                        throw RunTimeException(ERROR, RTE_FAILURE, "read more data than expected: %lu > %lu", data_read, id_length);
-                    }
-                }
-                break;
-            }
+            throw RunTimeException(ERROR, RTE_FAILURE, "incorrect version of btree v2 node: %d", (int)version);
         }
 
-        /* Follow Pointers */
-        if(curr_depth < depth) // internal node
+        const uint8_t node_type = (uint8_t)readField(1, &pos);
+        if(node_type != index_info_ptr->type)
         {
-
+            throw RunTimeException(ERROR, RTE_FAILURE, "incorrect type reference in btree v2 node: %d != %d", (int)node_type, (int)index_info_ptr->type);
         }
-
-        /* Finish Node */
-        if(!H5CORO_VERBOSE)
-        {
-            pos += 4;
-        }
-        else
-        {
-            const uint32_t checksum = (uint32_t)readField(4, &pos);
-            print2term("Checksum:                                                        %d\n", checksum);
-        }
-
-        /* Bump Depth */
-        curr_depth++;
     }
 
-    /* Return Position */
-    return pos;
+    /* Read Records */
+    for(uint16_t curr_record = 0; curr_record < num_records; curr_record++)
+    {
+        uint32_t hash_of_name = (uint32_t)readField(4, &pos);
+        uint8_t hash_id_version = (uint8_t)readField(1, &pos);
+        if(H5CORO_ERROR_CHECKING)
+        {
+            if(hash_id_version != 0)
+            {
+                throw RunTimeException(ERROR, RTE_FAILURE, "unsupported btree v2 hash id version: %d", (int)hash_id_version);
+            }
+        }
+
+        uint64_t id_offset = readPackedField(heap_info_ptr->heap_off_size, &pos);
+        uint64_t id_length = readPackedField(heap_info_ptr->heap_len_size, &pos);
+
+        if(H5CORO_VERBOSE)
+        {
+            print2term("\n");
+            print2term("Current Record:                                                  %d of %d\n", curr_record + 1, num_records);
+            print2term("Hash of Name:                                                    0x%x\n", hash_of_name);
+            print2term("ID Offset:                                                       0x%lx\n", id_offset);
+            print2term("ID Length:                                                       0x%lx\n", id_length);
+        }
+
+        /* Check Hash Match */
+        if(hash_of_name == index_info_ptr->link_hash)
+        {
+            const uint64_t data_read = readMessage(LINK_MSG, id_length, heap_info_ptr->root_blk_addr + id_offset, heap_info_ptr->hdr_flags, heap_info_ptr->dlvl);
+            if(H5CORO_VERBOSE)
+            {
+                print2term("Matched - Data Read:                                             %lu\n", data_read);
+            }
+            if(H5CORO_ERROR_CHECKING)
+            {
+                if(data_read > id_length)
+                {
+                    throw RunTimeException(ERROR, RTE_FAILURE, "read more data than expected: %lu > %lu", data_read, id_length);
+                }
+            }
+            break;
+        }
+    }
+
+    /* Follow Pointers */
+    if(curr_depth < index_info_ptr->depth) // internal node
+    {
+        /*
+         * Calculate Internal Node Field Sizes
+         *  The definition for the "Version 2 B-tree Internal Node" has a recursive
+         *  definition of the size in bytes of the "Number of Records in Child Node" field
+         *  as well as the "Total Number of Records in Child Node".  It is unclear how these sizes
+         *  are to be calculated given that the calculation of their size includes the use of their
+         *  size.  The assumption made below is that the maximum number of records in a child
+         *  node is equal to the number of records in the root node.  This assumption is likely to be
+         *  incorrect... but at this point no other approach is clear (TODO).  But given that most of
+         *  the datasets we run against will likely not have name indexes with more than 255 names per
+         *  node, this code will likely "work" because the size will typically just be 1 byte.
+         *  This will give a false sense of correctness to the code.
+         */
+        const int bytes_for_child_records = (highestBit(num_records) / 8) + 1;
+        int max_total_child_records = num_records;
+        for(uint16_t d = curr_depth; d < index_info_ptr->depth; d++)
+        {
+            max_total_child_records *= num_records;
+        }
+        const int bytes_for_total_child_records = (highestBit(max_total_child_records) / 8) + 1;
+
+        /*
+         * Recurse Into Each Child
+         *  There is one more child [0..N] than records [0..N-1].
+         */
+        for(uint16_t curr_child = 0; curr_child <= num_records; curr_child++)
+        {
+            const uint64_t child_address = readField(metaData.offsetsize, &pos);
+            const uint64_t child_records = readPackedField(bytes_for_child_records, &pos);
+            if(H5CORO_VERBOSE)
+            {
+                print2term("Child:                                                           %d of %d\n", curr_child, num_records);
+                print2term("Child Address:                                                   0x%lx\n", child_address);
+                print2term("Child Records:                                                   %ld\n", child_records);
+            }
+
+            if(curr_depth < (index_info_ptr->depth - 1))
+            {
+                if(!H5CORO_VERBOSE)
+                {
+                    pos += bytes_for_total_child_records;
+                }
+                else
+                {
+                    const uint64_t child_total_records = readPackedField(bytes_for_total_child_records, &pos);
+                    print2term("Total Child Records:                                             %ld\n", child_total_records);
+                }
+            }
+
+            /* Read Child Node */
+            readNameIndexNode(child_address, heap_info_ptr, index_info_ptr, child_records, curr_depth + 1);
+        }
+    }
+
+    /* Finish Node */
+    if(!H5CORO_VERBOSE)
+    {
+        pos += 4;
+    }
+    else
+    {
+        const uint32_t checksum = (uint32_t)readField(4, &pos);
+        print2term("Checksum:                                                        %d\n", checksum);
+    }
+
+    /* Return Bytes Read */
+    return pos - starting_position;
 }
 
 /*----------------------------------------------------------------------------
@@ -2296,7 +2355,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(!H5_INVALID(name_index) && !H5_INVALID(heap_address))
     {
         readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
-        readNameIndex(name_index, &heap_info_dense, dlvl);
+        readNameIndex(name_index, &heap_info_dense);
     }
 
     /* Return Bytes Read */
@@ -3141,7 +3200,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     heap_info_t heap_info_dense;
 
     /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
-    readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
+    readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense, false);
 
     /* Check if Attribute Located Non-Dense, Else Init Dense Search */
     if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
