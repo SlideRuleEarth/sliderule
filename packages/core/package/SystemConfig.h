@@ -111,6 +111,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            environmentVersion;
         FieldElement<string>            projectBucket;
         FieldElement<string>            projectFolder;
+        FieldElement<string>            projectRegion;
         FieldElement<string>            orchestratorURL;
         FieldElement<string>            alertStream;
         FieldElement<string>            telemetryStream;

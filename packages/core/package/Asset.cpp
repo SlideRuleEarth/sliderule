@@ -102,7 +102,7 @@ Asset::IODriver::~IODriver (void) = default;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<region>], [<endpoint>])
+ * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<endpoint>])
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
@@ -116,8 +116,7 @@ int Asset::luaCreate (lua_State* L)
         _attributes.driver     = getLuaString(L, 3, true, NIL_DRIVER);
         _attributes.path       = getLuaString(L, 4, true, NULL);
         _attributes.index      = getLuaString(L, 5, true, NULL);
-        _attributes.region     = getLuaString(L, 6, true, NULL);
-        _attributes.endpoint   = getLuaString(L, 7, true, NULL);
+        _attributes.endpoint   = getLuaString(L, 6, true, NULL);
 
         /* Get IO Driver */
         io_driver_t _driver = {.factory = NULL};
@@ -212,7 +211,6 @@ Asset::~Asset (void)
     delete [] attributes.driver;
     delete [] attributes.path;
     delete [] attributes.index;
-    delete [] attributes.region;
     delete [] attributes.endpoint;
 }
 
@@ -281,14 +279,6 @@ const char* Asset::getIndex (void) const
 }
 
 /*----------------------------------------------------------------------------
- * getRegion
- *----------------------------------------------------------------------------*/
-const char* Asset::getRegion (void) const
-{
-    return attributes.region;
-}
-
-/*----------------------------------------------------------------------------
  * getEndpoint
  *----------------------------------------------------------------------------*/
 const char* Asset::getEndpoint (void) const
@@ -309,12 +299,11 @@ Asset::Asset (lua_State* L, const attributes_t& _attributes, const io_driver_t& 
     attributes.driver   = StringLib::duplicate(_attributes.driver);
     attributes.path     = StringLib::duplicate(_attributes.path);
     attributes.index    = StringLib::duplicate(_attributes.index);
-    attributes.region   = StringLib::duplicate(_attributes.region);
     attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, identity, driver, path, index, region, endpoint, status
+ * luaInfo - :info() --> name, identity, driver, path, index, endpoint, status
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
@@ -332,7 +321,6 @@ int Asset::luaInfo (lua_State* L)
         attr->driver    ? (void)lua_pushlstring(L, attr->driver,    StringLib::size(attr->driver))      : lua_pushnil(L);
         attr->path      ? (void)lua_pushlstring(L, attr->path,      StringLib::size(attr->path))        : lua_pushnil(L);
         attr->index     ? (void)lua_pushlstring(L, attr->index,     StringLib::size(attr->index))       : lua_pushnil(L);
-        attr->region    ? (void)lua_pushlstring(L, attr->region,    StringLib::size(attr->region))      : lua_pushnil(L);
         attr->endpoint  ? (void)lua_pushlstring(L, attr->endpoint,  StringLib::size(attr->endpoint))    : lua_pushnil(L);
 
         /* Set Status */
@@ -344,7 +332,7 @@ int Asset::luaInfo (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 8);
+    return returnLuaStatus(L, status, 7);
 }
 
 /*----------------------------------------------------------------------------

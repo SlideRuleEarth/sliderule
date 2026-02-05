@@ -54,7 +54,7 @@ def init_app(app):
 #
 # ATL13
 #
-@atl13.route('/atl13', methods=['GET', 'POST'])
+@atl13.route('/ATL13', methods=['GET', 'POST'])
 def atl13_route():
     single_lake = True
     try:

@@ -59,7 +59,6 @@ class S3CurlIODriver: public Asset::IODriver
         static const long ATTEMPTS_PER_REQUEST = 3;
         static const long SSL_VERIFYPEER = 0;
         static const long SSL_VERIFYHOST = 0;
-        static const char* DEFAULT_REGION;
         static const char* DEFAULT_IDENTITY;
         static const char* CURL_FORMAT;
 
@@ -72,22 +71,22 @@ class S3CurlIODriver: public Asset::IODriver
 
         // fixed GET - memory preallocated
         static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,
-                                             const char* bucket, const char* key, const char* region,
+                                             const char* bucket, const char* key, const char* endpoint,
                                              const CredentialStore::Credential* credentials);
 
         // streaming GET - memory allocated and returned
         static int64_t      get             (uint8_t** data,
-                                             const char* bucket, const char* key, const char* region,
+                                             const char* bucket, const char* key, const char* endpoint,
                                              const CredentialStore::Credential* credentials);
 
         // file GET - data written directly to file
         static int64_t      get             (const char* filename,
-                                             const char* bucket, const char* key, const char* region,
+                                             const char* bucket, const char* key, const char* endpoint,
                                              const CredentialStore::Credential* credentials);
 
         // file PUT - data read directly from file
         static int64_t      put             (const char* filename,
-                                             const char* bucket, const char* key, const char* region,
+                                             const char* bucket, const char* key, const char* endpoint,
                                              const CredentialStore::Credential* credentials);
 
         static int          luaGet          (lua_State* L);

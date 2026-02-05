@@ -35,13 +35,13 @@
 
 #include "S3CurlIODriver.h"
 #include "CredentialStore.h"
+#include "SystemConfig.h"
 #include "OsApi.h"
 
 #include <curl/curl.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
-
 
 /******************************************************************************
  * LOCAL TYPEDEFS
@@ -184,10 +184,8 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const 
 /*----------------------------------------------------------------------------
  * buildWriteHeadersV2
  *----------------------------------------------------------------------------*/
-static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials, long content_length)
+static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const CredentialStore::Credential* credentials, long content_length)
 {
-    (void)region;
-
     /* Initial HTTP Header List */
     struct curl_slist* headers = NULL;
 
@@ -378,7 +376,6 @@ static CURL* initializeWriteRequest (const FString& url, headers_t headers, writ
  * STATIC DATA
  ******************************************************************************/
 
-const char* S3CurlIODriver::DEFAULT_REGION = "us-west-2";
 const char* S3CurlIODriver::DEFAULT_IDENTITY = "iam-role";
 const char* S3CurlIODriver::CURL_FORMAT = "s3";
 
@@ -399,13 +396,13 @@ Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resour
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
-    return get(data, size, pos, ioBucket, ioKey, asset->getRegion(), &latestCredentials);
+    return get(data, size, pos, ioBucket, ioKey, asset->getEndpoint(), &latestCredentials);
 }
 
 /*----------------------------------------------------------------------------
  * get - fixed
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
 {
     bool status = false;
 
@@ -414,7 +411,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     if(key_ptr[0] == '/') key_ptr++;
 
     /* Build URL */
-    const FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+    const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
 
     /* Check Size and Initialize Data */
     assert(size > 0);
@@ -518,7 +515,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
 /*----------------------------------------------------------------------------
  * get - streaming
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
 {
     /* Initialize Function Parameters */
     bool status = false;
@@ -536,7 +533,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     List<streaming_data_t> rsps_set;
 
     /* Build URL */
-    const FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+    const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
 
     /* Initialize cURL Request */
     CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteStreaming), &rsps_set);
@@ -630,7 +627,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
 /*----------------------------------------------------------------------------
  * get - file
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
 {
     bool status = false;
 
@@ -648,7 +645,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     if(data.fd)
     {
         /* Build URL */
-        const FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+        const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
 
         /* Initialize cURL Request */
         CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteFile), &data);
@@ -724,7 +721,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
 /*----------------------------------------------------------------------------
  * put - file
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
 {
     CURL* curl = NULL;
     file_data_t data = {NULL, 0};
@@ -755,10 +752,10 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
         if(key_ptr[0] == '/') key_ptr++;
 
         /* Build Headers */
-        headers = buildWriteHeadersV2(bucket, key_ptr, region, credentials, content_length);
+        headers = buildWriteHeadersV2(bucket, key_ptr, credentials, content_length);
 
         /* Build URL */
-        const FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
+        const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
 
         /* Initialize cURL Request */
         curl = initializeWriteRequest(url, headers, curlReadFile, &data);
@@ -822,19 +819,20 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
 }
 
 /*----------------------------------------------------------------------------
- * luaGet - s3get(<bucket>, <key>, [<region>], [<asset>]) -> contents
+ * luaGet - s3get(<bucket>, <key>, [<endpoint>], [<identity>]) -> contents
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaGet(lua_State* L)
 {
     bool status = false;
     int num_rets = 1;
+    const FString default_endpoint("s3.%s.amazonaws.com", SystemConfig::settings().projectRegion.value.c_str());
 
     try
     {
         /* Get Parameters */
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
-        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* endpoint    = LuaObject::getLuaString(L, 3, true, default_endpoint.c_str());
         const char* identity    = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
@@ -842,7 +840,7 @@ int S3CurlIODriver::luaGet(lua_State* L)
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
-        const int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(&rsps_data, bucket, key, endpoint, &credentials);
 
         /* Push Contents */
         if(rsps_data)
@@ -868,26 +866,27 @@ int S3CurlIODriver::luaGet(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaDownload - s3download(<bucket>, <key>, [<region>], [<asset>]) -> file
+ * luaDownload - s3download(<bucket>, <key>, [<filename>], [<endpoint>], [<identity>]) -> file
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaDownload(lua_State* L)
 {
     bool status = false;
+    const FString default_endpoint("s3.%s.amazonaws.com", SystemConfig::settings().projectRegion.value.c_str());
 
     try
     {
         /* Get Parameters */
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
-        const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* identity    = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_IDENTITY);
-        const char* filename    = LuaObject::getLuaString(L, 5, true, key);
+        const char* filename    = LuaObject::getLuaString(L, 3, true, key);
+        const char* endpoint    = LuaObject::getLuaString(L, 4, true, default_endpoint.c_str());
+        const char* identity    = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        const int64_t rsps_size = get(filename, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(filename, bucket, key, endpoint, &credentials);
 
         /* Push Contents */
         if(rsps_size > 0)   status = true;
@@ -904,12 +903,13 @@ int S3CurlIODriver::luaDownload(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaRead - s3read(<bucket>, <key>, <size>, <pos>, [<region>], [<asset>]) -> contents
+ * luaRead - s3read(<bucket>, <key>, <size>, <pos>, [<endpoint>], [<identity>]) -> contents
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaRead(lua_State* L)
 {
     bool status = false;
     int num_rets = 1;
+    const FString default_endpoint("s3.%s.amazonaws.com", SystemConfig::settings().projectRegion.value.c_str());
 
     try
     {
@@ -918,7 +918,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
         const char* key         = LuaObject::getLuaString(L, 2);
         const long size         = LuaObject::getLuaInteger(L, 3);
         const long pos          = LuaObject::getLuaInteger(L, 4);
-        const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* endpoint    = LuaObject::getLuaString(L, 5, true, default_endpoint.c_str());
         const char* identity    = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Check Parameters */
@@ -930,7 +930,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
 
         /* Make Request */
         uint8_t* rsps_data = new uint8_t [size];
-        const int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(rsps_data, size, pos, bucket, key, endpoint, &credentials);
 
         /* Push Contents */
         if(rsps_size > 0)
@@ -957,11 +957,12 @@ int S3CurlIODriver::luaRead(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaUpload - s3upload(<bucket>, <key>, <filename>, [<region>], [<asset>])
+ * luaUpload - s3upload(<bucket>, <key>, <filename>, [<endpoint>], [<identity>])
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaUpload(lua_State* L)
 {
     bool status = false;
+    const FString default_endpoint("s3.%s.amazonaws.com", SystemConfig::settings().projectRegion.value.c_str());
 
     try
     {
@@ -969,14 +970,14 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
         const char* filename    = LuaObject::getLuaString(L, 3);
-        const char* region      = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_REGION);
+        const char* endpoint    = LuaObject::getLuaString(L, 4, true, default_endpoint.c_str());
         const char* identity    = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        const int64_t upload_size = put(filename, bucket, key, region, &credentials);
+        const int64_t upload_size = put(filename, bucket, key, endpoint, &credentials);
 
         /* Push Contents */
         if(upload_size > 0)

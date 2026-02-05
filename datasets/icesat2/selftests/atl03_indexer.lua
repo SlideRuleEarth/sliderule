@@ -20,7 +20,7 @@ local filelist = { "ATL03_20181019065445_03150111_007_01.h5",
 
 -- get index filename
 local nsidc_s3 = core.getbyname("icesat2")
-local name, identity, driver, path, index_filename, region, endpoint, status = nsidc_s3:info()
+local name, identity, driver, path, index_filename, endpoint, status = nsidc_s3:info()
 runner.assert(status)
 
 -- setup index file writer

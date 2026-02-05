@@ -8,7 +8,7 @@ import duckdb
 # Initialization
 ####################
 
-usgs3dep = Blueprint('3dep', __name__, url_prefix='/ams')
+usgs3dep = Blueprint('usgs3dep', __name__, url_prefix='/ams')
 
 ####################
 # Module Functions
@@ -84,7 +84,7 @@ def build_time_query(clause, parms):
 #
 # 3DEP
 #
-@usgs3dep.route('/3dep', methods=['GET', 'POST'])
+@usgs3dep.route('/3DEP1M', methods=['GET', 'POST'])
 def usgs3dep_route():
     try:
         # execute query
@@ -131,7 +131,7 @@ def usgs3dep_route():
 #
 # Id
 #
-@usgs3dep.route('/3dep/id/<id>', methods=['GET', 'POST'])
+@usgs3dep.route('/3DEP1M/id/<id>', methods=['GET', 'POST'])
 def id_route(id):
     try:
         # execute query

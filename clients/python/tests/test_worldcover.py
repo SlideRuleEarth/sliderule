@@ -57,8 +57,7 @@ class TestMosaic:
             "samples": {
                 "worldcover": {
                     "asset": "esa-worldcover-10meter",
-                    "algorithm": "NearestNeighbour",
-                    "force_single_sample": False,
+                    "algorithm": "NearestNeighbour"
                 }
             },
         }

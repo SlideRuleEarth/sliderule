@@ -266,7 +266,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     }
 
     /* Download File */
-    const int64_t bytes_read = get(cache_filepath.c_str(), bucket, key, asset->getRegion(), &latestCredentials);
+    const int64_t bytes_read = get(cache_filepath.c_str(), bucket, key, asset->getEndpoint(), &latestCredentials);
     if(bytes_read <= 0)
     {
         mlog(CRITICAL, "Failed to download S3 object: %ld", (long int)bytes_read);

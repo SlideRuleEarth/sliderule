@@ -85,7 +85,7 @@ class OutputFields: public FieldDictionary
         FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record
         FieldElement<bool>      withValidation {false};     // whether to validate the arrow structure before outputing
         FieldElement<string>    assetName;
-        FieldElement<string>    region;
+        FieldElement<string>    endpoint;
         FieldList<string>       ancillaryFields;            // legacy functionality in support of ancillary fields for streamed results
         FieldList<string>       finalFields;                // which fields to include in the output
 

@@ -60,7 +60,7 @@ OutputFields::OutputFields (void):
         {"with_checksum",       &withChecksum},
         {"with_validation",     &withValidation},
         {"asset",               &assetName},
-        {"region",              &region},
+        {"endpoint",            &endpoint},
         #ifdef __aws__
         {"credentials",         &credentials},
         #endif
@@ -94,8 +94,8 @@ void OutputFields::fromLua (lua_State* L, int index)
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
         if(asset)
         {
-            // set region
-            region = asset->getRegion();
+            // set endpoint
+            endpoint = asset->getEndpoint();
 
             // set credentials
             #ifdef __aws__

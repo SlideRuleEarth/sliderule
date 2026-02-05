@@ -58,7 +58,7 @@ class Test3DEP_1meter:
 
 class Test3dep1m:
     def test_sample_ams(self, init):
-        geojson = earthdata.ams(short_name='3dep1m', polygon=region)
+        geojson = earthdata.ams(short_name='3DEP1M', polygon=region)
         gdf = raster.sample("3dep1m", [[-108.0,39.0]], {"catalog": json.dumps(geojson)})
         assert init
         assert len(gdf) >= 2

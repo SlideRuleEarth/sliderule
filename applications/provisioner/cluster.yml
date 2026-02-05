@@ -685,6 +685,7 @@ Resources:
                   - ENVIRONMENT_VERSION=${EnvironmentVersion}
                   - PROJECT_BUCKET=${ProjectBucket}
                   - PROJECT_FOLDER=${ProjectFolder}
+                  - PROJECT_REGION=${AWS::Region}
                   - ORCHESTRATOR=http://${IlbIP}:8050
                   - ALERT_STREAM=${AlertStream}
                   - TELEMETRY_STREAM=${TelemetryStream}
