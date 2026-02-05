@@ -61,6 +61,7 @@ ASSETS = {
         driver      = "s3atl13",
         path        = "nsidc-cumulus-prod-protected",
         endpoint    = "s3.us-west-2.amazonaws.com",
+        provider    = "NSIDC_CPRD",
         version     = "006",
         api         = "ams",
         formats     = {".h5"},
@@ -486,7 +487,7 @@ local function ams (parms, poly, _with_meta, _short_name)
     local with_meta     = _with_meta or parms["with_meta"] or dataset["with_meta"]
 
     -- build local parameters that combine top level parms with endpoint (e.g. atl13) specific parms
-    local ams_parms             = parms[endpoint] or {}
+    local ams_parms             = parms[endpoint] or (endpoint and parms[string.lower(endpoint)]) or {}
     ams_parms["t0"]             = ams_parms["t0"] or parms["t0"]
     ams_parms["t1"]             = ams_parms["t1"] or parms["t1"]
     ams_parms["poly"]           = poly or ams_parms["poly"] or parms["poly"]
