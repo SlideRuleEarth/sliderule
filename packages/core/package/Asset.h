@@ -117,9 +117,7 @@ class Asset: public LuaObject
         const char*     getDriver       (void) const;
         const char*     getPath         (void) const;
         const char*     getIndex        (void) const;
-        const char*     getRegion       (void) const;
         const char*     getEndpoint     (void) const;
-        const char*     getAwsS3Endpoint(void) const;
 
     private:
 
@@ -140,9 +138,7 @@ class Asset: public LuaObject
             const char*                 driver;
             const char*                 path;
             const char*                 index;
-            const char*                 region;
             const char*                 endpoint;
-            const char*                 aws_s3_endpoint;
         } attributes_t;
 
         /*--------------------------------------------------------------------

@@ -146,6 +146,7 @@ SystemConfig::SystemConfig(void):
         {"environment_version",         &environmentVersion},
         {"project_bucket",              &projectBucket},
         {"project_folder",              &projectFolder},
+        {"project_region",              &projectRegion},
         {"orchestrator_url;",           &orchestratorURL},
         {"alert_stream",                &alertStream},
         {"telemetry_stream",            &telemetryStream},
@@ -162,6 +163,7 @@ SystemConfig::SystemConfig(void):
     setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
     setIfProvided(projectBucket, "PROJECT_BUCKET");
     setIfProvided(projectFolder, "PROJECT_FOLDER");
+    setIfProvided(projectRegion, "PROJECT_REGION");
     setIfProvided(orchestratorURL, "ORCHESTRATOR");
     setIfProvided(alertStream, "ALERT_STREAM");
     setIfProvided(telemetryStream, "TELEMETRY_STREAM");

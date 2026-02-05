@@ -8,10 +8,10 @@ local rqst      = json.decode(arg[1])
 local channels  = 6 -- number of dataframes per resource
 
 -- determine default asset
-local default_asset = "atl24-s3"
+local default_asset = "icesat2-atl24"
 local rqst_resource = rqst["resource"]
 if rqst_resource and (string.sub(rqst_resource, 38, 40) == "001") then
-    default_asset = "icesat2-atl24"
+    default_asset = "icesat2-atl24v1"
 end
 
 -- create parameters

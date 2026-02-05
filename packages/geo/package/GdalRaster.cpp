@@ -36,6 +36,7 @@
 #include "RasterSample.h"
 #include "GdalRaster.h"
 #include "RasterObject.h"
+#include "SystemConfig.h"
 
 #ifdef __aws__
 #include "CredentialStore.h"
@@ -607,18 +608,20 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
     {
 #ifdef __aws__
 
-        /* Set AWS_REGION for sliderule buckets in us-west-2 */
-        VSISetPathSpecificOption("/vsis3/sliderule/", "AWS_REGION", "us-west-2");
+        /* Set AWS_REGION for sliderule bucket */
+        const FString project_path("/vsis3/%s/", SystemConfig::settings().projectBucket.value.c_str());
+        const char* project_region = SystemConfig::settings().projectRegion.value.c_str();
+        VSISetPathSpecificOption(project_path.c_str(), "AWS_REGION", project_region);
 
         const char* path = _parms->asset.asset->getPath();
         const char* identity = _parms->asset.asset->getIdentity();
-        const char* aws_s3_endpoint = _parms->asset.asset->getAwsS3Endpoint();
+        const char* endpoint = _parms->asset.asset->getEndpoint();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Set endpoint for specific path */
-        if(aws_s3_endpoint && aws_s3_endpoint[0] != '\0')
+        if((path == StringLib::find(path, "/vsis3/")) && (endpoint && endpoint[0] != '\0'))
         {
-            VSISetPathSpecificOption(path, "AWS_S3_ENDPOINT", aws_s3_endpoint);
+            VSISetPathSpecificOption(path, "AWS_S3_ENDPOINT", endpoint);
             VSISetPathSpecificOption(path, "AWS_HTTPS", "YES");
         }
 

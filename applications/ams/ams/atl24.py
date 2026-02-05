@@ -38,7 +38,7 @@ def init_app(app):
 #
 # ATL24
 #
-@atl24.route('/atl24', methods=['GET', 'POST'])
+@atl24.route('/ATL24', methods=['GET', 'POST'])
 def atl24_route():
     try:
         # execute query
@@ -72,7 +72,7 @@ def atl24_route():
 #
 # Granule
 #
-@atl24.route('/atl24/granule/<name>', methods=['GET', 'POST'])
+@atl24.route('/ATL24/granule/<name>', methods=['GET', 'POST'])
 def granule_route(name):
     try:
         # execute query

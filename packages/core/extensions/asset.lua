@@ -81,7 +81,7 @@ end
 --  Creates Asset for each asset listed in the asset directory file.
 --
 --  file: name of .csv file with the following header row
---      asset, identity, driver, path, index, region, endpoint, aws_s3_endpoint
+--      asset, identity, driver, path, index, endpoint
 --------------------------------------------------------------------------------------
 local function loaddir(file)
 
@@ -136,7 +136,7 @@ local function loaddir(file)
             assets[k] = asset
         else
             -- create asset
-            assets[k] = core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"], v["aws_s3_endpoint"]):global(k)
+            assets[k] = core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["endpoint"]):global(k)
             -- load index file
             _loadindex(assets[k], path_prefix..v["index"])
         end

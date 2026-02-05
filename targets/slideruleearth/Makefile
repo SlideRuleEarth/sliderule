@@ -151,6 +151,7 @@ run: ## run the server locally
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	PROJECT_REGION=$(AWS_REGION) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
 	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
@@ -175,6 +176,7 @@ build: ## build the code using the build environment docker container
 		-e ENVIRONMENT_VERSION=$(ENVVER) \
 		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
 		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
+		-e PROJECT_REGION=$(AWS_REGION) \
 		-e ORCHESTRATOR=http://127.0.0.1:8050 \
 		-e CLUSTER=local \
 		-e AMS=http://127.0.0.1:9082 \
@@ -758,6 +760,7 @@ STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arctic
 
 selftest: ## run the self test on the server code
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_REGION=$(AWS_REGION) \
 	TRUSTED_ENVIRONMENT=true \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 

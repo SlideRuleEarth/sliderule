@@ -24,6 +24,7 @@ services:
       - ENVIRONMENT_VERSION=unknown
       - PROJECT_BUCKET=sliderule
       - PROJECT_FOLDER=cf
+      - PROJECT_REGION=us-west-2
       - ORCHESTRATOR=http://127.0.0.1:8050
       - CLUSTER=local
       - AMS=http://127.0.0.1:9082

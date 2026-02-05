@@ -1,6 +1,8 @@
 local runner = require("test_executive")
 local asset = require("asset")
 
+local pp = require("prettyprint")
+
 -- Setup --
 
 local assets = asset.loaddir("../data/asset_directory.csv")
@@ -27,7 +29,7 @@ end
 
 print('\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do
-    local name, identity, driver, url, index_filename, region, endpoint, status = v:info()
+    local name, identity, driver, url, index_filename, endpoint, status = v:info()
     runner.compare(driver, expected[name]["driver"])
     runner.compare(url, expected[name]["url"])
     runner.assert(status)
@@ -35,7 +37,7 @@ end
 
 print('\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
 local a2 = core.getbyname("dataset1")
-local name, identity, driver, url, index_filename, region, endpoint, status = a2:info()
+local name, identity, driver, url, index_filename, endpoint, status = a2:info()
 runner.compare(name, "dataset1")
 runner.compare(driver, expected["dataset1"]["driver"])
 runner.compare(url, expected["dataset1"]["url"])
@@ -60,7 +62,7 @@ check_query(r5, e5)
 
 print('\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')
 local a6 = core.getbyname("dataset2")
-name, identity, driver, url, index_filename, region, endpoint, status = a6:info()
+name, identity, driver, url, index_filename, endpoint, status = a6:info()
 runner.compare(name, "dataset2")
 runner.compare(driver, expected["dataset2"]["driver"])
 runner.compare(url, expected["dataset2"]["url"])

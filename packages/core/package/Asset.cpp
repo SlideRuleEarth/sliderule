@@ -45,8 +45,6 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-#include <string>
-
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -63,47 +61,6 @@ const struct luaL_Reg Asset::LUA_META_TABLE[] = {
 
 Mutex Asset::ioDriverMut;
 Dictionary<Asset::io_driver_t> Asset::ioDrivers;
-
-/*----------------------------------------------------------------------------
- * deriveRegionFromS3Endpoint
- *----------------------------------------------------------------------------*/
-static std::string deriveRegionFromS3Endpoint(const char* endpoint)
-{
-    if(!endpoint || endpoint[0] == '\0')
-    {
-        return "";
-    }
-
-    std::string host(endpoint);
-
-    const size_t scheme_pos = host.find("://");
-    if(scheme_pos != std::string::npos)
-    {
-        host = host.substr(scheme_pos + 3);
-    }
-
-    const size_t path_pos = host.find('/');
-    if(path_pos != std::string::npos)
-    {
-        host = host.substr(0, path_pos);
-    }
-
-    if(host == "s3.amazonaws.com")
-    {
-        return "us-east-1";
-    }
-
-    const std::string prefix = "s3.";
-    const std::string suffix = ".amazonaws.com";
-    if(host.rfind(prefix, 0) == 0 &&
-       host.size() > (prefix.size() + suffix.size()) &&
-       host.compare(host.size() - suffix.size(), suffix.size(), suffix) == 0)
-    {
-        return host.substr(prefix.size(), host.size() - prefix.size() - suffix.size());
-    }
-
-    return "";
-}
 
 /******************************************************************************
  * VOID IO DRIVER CLASS
@@ -145,7 +102,7 @@ Asset::IODriver::~IODriver (void) = default;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<region>], [<endpoint>], [<aws_s3_endpoint>])
+ * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<endpoint>])
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
@@ -159,9 +116,7 @@ int Asset::luaCreate (lua_State* L)
         _attributes.driver     = getLuaString(L, 3, true, NIL_DRIVER);
         _attributes.path       = getLuaString(L, 4, true, NULL);
         _attributes.index      = getLuaString(L, 5, true, NULL);
-        _attributes.region     = getLuaString(L, 6, true, NULL);
-        _attributes.endpoint   = getLuaString(L, 7, true, NULL);
-        _attributes.aws_s3_endpoint = getLuaString(L, 8, true, NULL);
+        _attributes.endpoint   = getLuaString(L, 6, true, NULL);
 
         /* Get IO Driver */
         io_driver_t _driver = {.factory = NULL};
@@ -256,9 +211,7 @@ Asset::~Asset (void)
     delete [] attributes.driver;
     delete [] attributes.path;
     delete [] attributes.index;
-    delete [] attributes.region;
     delete [] attributes.endpoint;
-    delete [] attributes.aws_s3_endpoint;
 }
 
 /*----------------------------------------------------------------------------
@@ -326,27 +279,11 @@ const char* Asset::getIndex (void) const
 }
 
 /*----------------------------------------------------------------------------
- * getRegion
- *----------------------------------------------------------------------------*/
-const char* Asset::getRegion (void) const
-{
-    return attributes.region;
-}
-
-/*----------------------------------------------------------------------------
  * getEndpoint
  *----------------------------------------------------------------------------*/
 const char* Asset::getEndpoint (void) const
 {
     return attributes.endpoint;
-}
-
-/*----------------------------------------------------------------------------
- * getAwsS3Endpoint
- *----------------------------------------------------------------------------*/
-const char* Asset::getAwsS3Endpoint (void) const
-{
-    return attributes.aws_s3_endpoint;
 }
 
 /*----------------------------------------------------------------------------
@@ -357,21 +294,16 @@ Asset::Asset (lua_State* L, const attributes_t& _attributes, const io_driver_t& 
     driver(_driver),
     resources(ASSET_STARTING_RESOURCES_PER_INDEX)
 {
-    const std::string derived_region = deriveRegionFromS3Endpoint(_attributes.aws_s3_endpoint);
-    const char* region = derived_region.c_str();
-
     attributes.name     = StringLib::duplicate(_attributes.name);
     attributes.identity = StringLib::duplicate(_attributes.identity);
     attributes.driver   = StringLib::duplicate(_attributes.driver);
     attributes.path     = StringLib::duplicate(_attributes.path);
     attributes.index    = StringLib::duplicate(_attributes.index);
-    attributes.region   = StringLib::duplicate(region);
     attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
-    attributes.aws_s3_endpoint = StringLib::duplicate(_attributes.aws_s3_endpoint);
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, identity, driver, path, index, region, endpoint, status
+ * luaInfo - :info() --> name, identity, driver, path, index, endpoint, status
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
@@ -389,7 +321,6 @@ int Asset::luaInfo (lua_State* L)
         attr->driver    ? (void)lua_pushlstring(L, attr->driver,    StringLib::size(attr->driver))      : lua_pushnil(L);
         attr->path      ? (void)lua_pushlstring(L, attr->path,      StringLib::size(attr->path))        : lua_pushnil(L);
         attr->index     ? (void)lua_pushlstring(L, attr->index,     StringLib::size(attr->index))       : lua_pushnil(L);
-        attr->region    ? (void)lua_pushlstring(L, attr->region,    StringLib::size(attr->region))      : lua_pushnil(L);
         attr->endpoint  ? (void)lua_pushlstring(L, attr->endpoint,  StringLib::size(attr->endpoint))    : lua_pushnil(L);
 
         /* Set Status */
@@ -401,7 +332,7 @@ int Asset::luaInfo (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 8);
+    return returnLuaStatus(L, status, 7);
 }
 
 /*----------------------------------------------------------------------------

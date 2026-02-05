@@ -16,7 +16,7 @@ ASSETS = {
         identity    = "nsidc-cloud",
         driver      = "cumulus",
         path        = "nsidc-cumulus-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "007",
         api         = "cmr",
@@ -27,7 +27,7 @@ ASSETS = {
         identity    = "nsidc-cloud",
         driver      = "cumulus",
         path        = "nsidc-cumulus-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "007",
         api         = "cmr",
@@ -38,7 +38,7 @@ ASSETS = {
         identity    = "nsidc-cloud",
         driver      = "cumulus",
         path        = "nsidc-cumulus-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "007",
         api         = "cmr",
@@ -49,7 +49,7 @@ ASSETS = {
         identity    = "nsidc-cloud",
         driver      = "cumulus",
         path        = "nsidc-cumulus-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "006",
         api         = "cmr",
@@ -60,19 +60,28 @@ ASSETS = {
         identity    = "nsidc-cloud",
         driver      = "s3atl13",
         path        = "nsidc-cumulus-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
-        provider    = "NSIDC_CPRD",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         version     = "006",
         api         = "ams",
         formats     = {".h5"},
-        endpoint    = "atl13"
     },
     ["icesat2-atl24"] = {
         name        = "ATL24",
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "sliderule/data/ATL24r2",
+        endpoint    = "s3.us-west-2.amazonaws.com",
+        provider    = "NSIDC_CPRD",
+        version     = "002",
+        api         = "ams",
+        formats     = {".h5"},
+    },
+    ["icesat2-atl24v1"] = {
+        name        = "ATL24v1",
         identity    = "nsidc-cloud",
         driver      = "s3atl24",
         path        = "nsidc-cumulus-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "001",
         api         = "cmr",
@@ -83,7 +92,7 @@ ASSETS = {
         identity    = "ornl-cloud",
         driver      = "s3",
         path        = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         api         = "cmr",
         formats     = {".h5"}
@@ -93,7 +102,7 @@ ASSETS = {
         identity    = "ornl-cloud",
         driver      = "s3",
         path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass_V2_1/data/GEDI04_B_MW019MW223_02_002_02_R01000M_V2.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
     },
@@ -101,7 +110,7 @@ ASSETS = {
         name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
         identity    = "ornl-cloud",
         path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
     },
@@ -109,7 +118,7 @@ ASSETS = {
         name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
         identity    = "ornl-cloud",
         path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_mean_2019108_2022019_002_03.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
     },
@@ -117,7 +126,7 @@ ASSETS = {
         name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
         identity    = "ornl-cloud",
         path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
     },
@@ -125,7 +134,7 @@ ASSETS = {
         name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
         identity    = "ornl-cloud",
         path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_stddev_2019108_2022019_002_03.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
     },
@@ -133,7 +142,7 @@ ASSETS = {
         name        = "GEDI_L3_LandSurface_Metrics_V2_1952",
         identity    = "ornl-cloud",
         path        = "/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_counts_2019108_2022019_002_03.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "ORNL_CLOUD",
         formats     = {".tiff"}
     },
@@ -142,7 +151,7 @@ ASSETS = {
         identity    = "lpdaac-cloud",
         driver      = "s3gedi",
         path        = "lp-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "LPCLOUD",
         version     = "002",
         api         = "cmr",
@@ -153,7 +162,7 @@ ASSETS = {
         identity    = "lpdaac-cloud",
         driver      = "s3gedi",
         path        = "lp-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "LPCLOUD",
         version     = "002",
         api         = "cmr",
@@ -164,7 +173,7 @@ ASSETS = {
         identity    = "podaac-cloud",
         driver      = "s3",
         path        = "podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "POCLOUD",
         api         = "cmr",
         formats     = {".nc"},
@@ -175,7 +184,7 @@ ASSETS = {
         identity    = "podaac-cloud",
         driver      = "s3",
         path        = "podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "POCLOUD",
         api         = "cmr",
         formats     = {".nc"},
@@ -184,52 +193,49 @@ ASSETS = {
     ["usgs3dep-1meter-dem"] = {
         name        = "Digital Elevation Model (DEM) 1 meter",
         path        = "/vsis3/prd-tnm",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "USGS",
         api         = "tnm",
         formats     = {".tiff"}
     },
     ["3dep1m"] = {
-        name        = "3dep1m",
+        name        = "3DEP1M",
         path        = "/vsis3/prd-tnm",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         api         = "ams",
-        endpoint    = "3dep",
-        stac        = true
+        with_meta   = true
     },
     ["usgs3dep-10meter-dem"] = {
         path        = "/vsis3/prd-tnm",
         index       = "/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
     },
     ["esa-worldcover-10meter"] = {
         path        = "/vsis3/esa-worldcover/v200/2021/map",
         index       = "/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt",
-        aws_s3_endpoint = "s3.eu-central-1.amazonaws.com",
+        endpoint    = "s3.eu-central-1.amazonaws.com",
     },
     ["meta-globalcanopy-1meter"] = {
         path        = "/vsis3/dataforgood-fb-data/forests/v1/alsgedi_global_v6_float/",
         index       = "/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt",
-        aws_s3_endpoint = "s3.us-east-1.amazonaws.com",
+        endpoint    = "s3.us-east-1.amazonaws.com",
     },
     ["esa-copernicus-30meter"] = {
-        -- Hosted at SDSC (San Diego Supercomputer Center) and exposed through an
-        -- S3-compatible API endpoint, but this dataset is not hosted on Amazon S3.
-        path            = "/vsis3/raster/COP30",
-        index           = "/vsis3/raster/COP30/COP30_hh.vrt",
-        aws_s3_endpoint = "opentopography.s3.sdsc.edu",
+        path        = "/vsis3/raster/COP30",
+        index       = "/vsis3/raster/COP30/COP30_hh.vrt",
+        endpoint    = "opentopography.s3.sdsc.edu", -- Hosted at SDSC (San Diego Supercomputer Center) and exposed through an S3-compatible API endpoint
     },
     ["bluetopo-bathy"] = {
         identity    = "iam-role",
         path        = "/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/",
         index       = "_BlueTopo_Tile_Scheme",
-        aws_s3_endpoint = "s3.us-east-1.amazonaws.com",
+        endpoint    = "s3.us-east-1.amazonaws.com",
     },
     ["landsat-hls"] = {
         name        = "HLS",
         identity    = "lpdaac-cloud",
         path        = "/vsis3/lp-prod-protected",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "LPCLOUD",
         api         = "stac",
         formats     = {".tiff"},
@@ -239,12 +245,12 @@ ASSETS = {
     ["arcticdem-mosaic"] = {
         path        = "/vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1",
         index       = "/vsis3/sliderule/data/PGC/arcticdem_2m_v4_1_tiles.vrt",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["arcticdem-strips"] = {
         name        = "arcticdem-strips",
         path        = "/vsis3/pgc-opendata-dems/",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "PGC",
         api         = "stac",
         formats     = {".tiff"},
@@ -254,12 +260,12 @@ ASSETS = {
     ["rema-mosaic"] = {
         path        = "/vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m",
         index       = "/vsis3/sliderule/data/PGC/rema_2m_v2_0_tiles.vrt",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["rema-strips"] = {
         name        = "rema-strips",
         path        = "/vsis3/pgc-opendata-dems/",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
+        endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "PGC",
         api         = "stac",
         formats     = {".tiff"},
@@ -267,66 +273,55 @@ ASSETS = {
         url         = "https://stac.pgc.umn.edu/api/v1/search"
     },
     ["nisar-L2-geoff"] = {
-        identity   = "asf-cloud",
+        identity    = "asf-cloud",
         path        = "/vsis3/sds-n-cumulus-prod-nisar-sample-data",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["gedtm-30meter"] = {
-        identity   = "iam-role",
+        identity    = "iam-role",
         path        = "/vsis3/sliderule/data/GEDTM/legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["gedtm-std"] = {
-        identity   = "iam-role",
+        identity    = "iam-role",
         path        = "/vsis3/sliderule/data/GEDTM/gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["gedtm-dfm"] = {
-        identity   = "iam-role",
+        identity    = "iam-role",
         path        = "/vsis3/sliderule/data/GEDTM/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["atlas-s3"] = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "sliderule/data/ATLAS",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
-    },
-    ["atl24-s3"] = {
-        identity    = "iam-role",
-        driver      = "s3",
-        path        = "sliderule/data/ATL24r2",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com",
-        provider    = "NSIDC_CPRD",
-        version     = "002",
-        api         = "ams",
-        formats     = {".h5"},
-        endpoint    = "atl24"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["swot-s3"] = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "sliderule/data/SWOT",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["viirsj1-s3"] = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "sliderule/data/VIIRSJ1",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["merit-s3"] = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "sliderule/data/MERIT",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["gebco-s3"] = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "/vsis3/sliderule/data/GEBCO",
         index       = "index.geojson",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["atlas-local"] = {
         driver      = "file",
@@ -340,7 +335,7 @@ ASSETS = {
         identity    = "iam-role",
         driver      = "s3",
         path        = "sliderule-public",
-        aws_s3_endpoint = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com"
     },
 }
 
@@ -474,7 +469,7 @@ local function load ()
     local assets = {}
     for k,v in pairs(ASSETS) do
         local asset = core.getbyname(k) -- see if asset already exists
-        assets[k] = asset or core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"], v["aws_s3_endpoint"]):global(k)
+        assets[k] = asset or core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["endpoint"]):global(k)
     end
     return assets
 end
@@ -486,9 +481,9 @@ local function ams (parms, poly, _with_meta, _short_name)
 
     -- get dataset
     local dataset       = DATASETS[_short_name or parms["short_name"]] or ASSETS[parms["asset"]]
-    local endpoint      = dataset["endpoint"]
+    local endpoint      = dataset["name"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
-    local with_meta     = _with_meta or parms["with_meta"] or dataset["stac"]
+    local with_meta     = _with_meta or parms["with_meta"] or dataset["with_meta"]
 
     -- build local parameters that combine top level parms with endpoint (e.g. atl13) specific parms
     local ams_parms             = parms[endpoint] or {}
@@ -501,7 +496,7 @@ local function ams (parms, poly, _with_meta, _short_name)
     ams_parms["region"]         = ams_parms["region"] or parms["region"] -- backwards compatibility
 
     -- make request and process response
-    local status, response = core.ams("POST", dataset["endpoint"], json.encode(ams_parms))
+    local status, response = core.ams("POST", endpoint, json.encode(ams_parms))
     if status then
         local rc, data = pcall(json.decode, response)
         if rc then

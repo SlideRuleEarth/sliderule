@@ -29,7 +29,7 @@ dataframe.proxy("atl03x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     local atl24h5 = nil
     if parms:stage(icesat2.ATL24) then
         local atl24_filename = resource:gsub("ATL03", "ATL24"):gsub(".h5", "_002_01.h5")
-        atl24h5 = h5.object("atl24-s3", atl24_filename)
+        atl24h5 = h5.object("icesat2-atl24", atl24_filename)
     end
     -- atl03x
     local atl03h5 = h5.object(parms["asset"], resource)
