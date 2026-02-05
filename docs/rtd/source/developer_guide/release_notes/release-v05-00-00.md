@@ -6,6 +6,8 @@ Version description of the v5.0.6 release of SlideRule Earth.
 
 ## Breaking Changes
 
+* **v5.0.7** - The `atl24-s3` asset has been renamed to `icesat2-atl24` to reflect that it is now the default asset for ATL24.  This will also make the transition from local S3 storage to Earthdata Cloud seamless, as the name will not need to change when that happens.
+
 * **v5.0.3** - The use of the ***SlideRule Provisioning System*** has been deprecated.  All accounts in the system must be replaced by GitHub accounts.  Authentication for private clusters is now handled by the ***SlideRule Authenticator*** at https://login.slideruleearth.io.
   - The Python client now supports only two authentication flows: (1) the use of a PAT key from GitHub, and (2) an interactive device-flow login to GitHub
   - Support for `.netrc` files has been removed
@@ -58,6 +60,12 @@ Instead the request json must change to be this:
 
 ## New Functionality
 
+* **v5.0.7** - [#574](https://github.com/SlideRuleEarth/sliderule/pull/574) - Copernicus DEM 30m raster support added.
+
+* **v5.0.7** - H5Coro has been updated to support dynamically modified H5 files (which was needed to read older ATL02 granules).  This update uses the v2 BTree name index to access link messages in the fractal heap.  Currently, this support is only provided in the `h5p` and `h5` endpoints.  In the future, this will also be available to the rest of the endpoints.
+
+* **v5.0.7** - Added `/report/tests` API to *provisioner*; it returns the summary of the results of the last test runner run.
+
 * **v5.0.3** - The django-based ***SlideRule Provisioning System*** running in AWS ECS has reached end-of-life and is now replaced by the pure Python-based ***SlideRule Provisioner*** running in AWS lambda.
 
 * **v5.0.3** - The authentication services provided by the ***SlideRule Provisioning System*** have been replaced by the ***SlideRule Authenticator*** which in turn uses GitHub athentication services for account management.
@@ -81,6 +89,16 @@ Instead the request json must change to be this:
 * **v5.0.2** - Added the `3dep1m` asset which accesses the same USGS 3DEP data product but uses the internal AMS service for STAC queries.  This is an attempt to alleviate issues with inconsistent availability and functionality in The National Map (TNM) service which made using 3DEP difficult.
 
 ## Issues Resolved
+
+* **v5.0.7** - [#569](https://github.com/SlideRuleEarth/sliderule/issues/569) - fixed CRS for GEDI dataframe endpoints
+
+* **v5.0.7** - [2c4d5b9](https://github.com/SlideRuleEarth/sliderule/commit/2c4d5b9ffffb0cfc5233c99ec09b1c1d6b436dba) - dataframe sampler now supports the file id table
+
+* **v5.0.7** - [242d4b8](https://github.com/SlideRuleEarth/sliderule/commit/242d4b84fd200bedd14b97d71f9f103cc7264f0e) - dataframe sampler now supports rasters with bands
+
+* **v5.0.7** - [359f2ae](https://github.com/SlideRuleEarth/sliderule/commit/359f2ae36c1fad6a8289e50c57cd9f6ffa29ea10) - fixed authentication in node.js client
+
+* **v5.0.7** - [040f3fd](https://github.com/SlideRuleEarth/sliderule/commit/040f3fd6f890034f66e413617b36db641ba13fd4) - resolved node.js reported vulnerability
 
 * **v5.0.5** - [1fd0f03](https://github.com/SlideRuleEarth/sliderule/commit/1fd0f03306877e11fbc0f2c395b039d8fcfb6c5d) - fixed defaults for `atl06x` and `atl08x`
 
@@ -107,6 +125,10 @@ Instead the request json must change to be this:
 * **v5.0.2** - Rate limiting improved - error messages displayed in web client and python client; admin capabilities added for resetting rate limiting
 
 ## Development Updates
+
+* **v5.0.7** - Provisioner now only exposes three lambdas: `schedule`, `destroy`, and `gateway`.
+
+* **v5.0.7** - [1edc248](https://github.com/SlideRuleEarth/sliderule/commit/1edc248eebfdb930dddb5b979a89f09a2346c280) - node.js npm publishing action updated to support new login requirements
 
 * **v5.0.3** - [069269b](https://github.com/SlideRuleEarth/sliderule/commit/069269b66b4ea04f50f541e56d0cbd45d26e6310) - Cloudformation owns public cluster dns
 
