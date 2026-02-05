@@ -45,7 +45,6 @@ class TestApi:
         assert init
         assert len(rsps) == 0
 
-
     def test_missing_invalid(self, init):
         resource = "ATL03_20181014012500_02350113_006_02.h5"
         r1 = h5.h5p([
@@ -139,3 +138,27 @@ class TestApi:
         # start > end
         rsps = h5.h5p([{"dataset": dataset, "slice": [[10, 5]]}], ATL06_FILE1, "icesat2")
         assert dataset not in rsps
+
+    def test_atl02(self, init):
+        datasets = [
+            {'dataset': "atlas/pce2/background/pce_mframe_cnt"},
+            {'dataset': "atlas/pce3/altimetry/delta_time"},
+            {'dataset': "/atlas/pce1/altimetry/strong/n_mf_ph"},
+        ]
+        rsps = h5.h5p(datasets, "ATL02_20240930091206_02152507_007_01.h5", "icesat2")
+        assert init
+        for dataset in [row["dataset"] for row in datasets]:
+            assert dataset in rsps
+            assert len(rsps[dataset]) > 0
+            assert rsps[dataset][0] > 0
+
+    def test_atl08(self, init):
+        datasets = [
+            {'dataset': "gt2l/land_segments/dem_flag"},
+        ]
+        rsps = h5.h5p(datasets, "ATL08_20250911233934_13472812_007_01.h5", "icesat2")
+        assert init
+        for dataset in [row["dataset"] for row in datasets]:
+            assert dataset in rsps
+            assert len(rsps[dataset]) > 0
+            assert rsps[dataset][0] > 0

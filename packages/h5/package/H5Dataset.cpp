@@ -1642,22 +1642,7 @@ int H5Dataset::readNameIndex (uint64_t pos, const heap_info_t* heap_info)
 
     /* Initialize B-Tree Processing */
     const int dataset_path_length = StringLib::size(datasetPath[heap_info->dlvl]);
-    #ifndef __has_feature
-    #define __has_feature(x) 0
-    #endif
-    #if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
-    if(H5CORO_ERROR_CHECKING)
-    {
-        if(dataset_path_length > STR_BUFF_SIZE)
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "dataset path name <%s> too long: %d", datasetPath[heap_info->dlvl], dataset_path_length);
-        }
-    }
-    char dataset_path_buffer[STR_BUFF_SIZE];
-    StringLib::copy(dataset_path_buffer, datasetPath[heap_info->dlvl], dataset_path_length + 1);
-    #else
     const char* dataset_path_buffer = datasetPath[heap_info->dlvl];
-    #endif
     const index_info_t index_info = {
     #ifdef __be__
         .link_hash = MathLib::hashbig(dataset_path_buffer, dataset_path_length, 0),
@@ -1676,7 +1661,7 @@ int H5Dataset::readNameIndex (uint64_t pos, const heap_info_t* heap_info)
     }
 
     /* Traverse B-Tree */
-    pos += readNameIndexNode(root_node_address, heap_info, &index_info, num_records_in_root_node, 1);
+    pos += readNameIndexNode(root_node_address, heap_info, &index_info, num_records_in_root_node, 0);
 
     /* Return Bytes Read */
     return pos - starting_position;
@@ -2415,7 +2400,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             for(const heap_t& address: heap_info.block_address_table)
             {
-                print2term("Block Address Table:                                             %lx, %lx, %d\n", address.logical, address.physical, address.size);
+                print2term("Block Address Table:                                             0x%lx, 0x%lx, %d\n", address.logical, address.physical, address.size);
             }
         }
         if(ioContext->options & H5Coro::Context::OPTION_USE_NAME_INDEX)
