@@ -79,7 +79,30 @@ class NisarDataset: public GeoIndexedRaster
 
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;
 
-        static CPLErr overrideGeoTransform (double* gtf, const void* param);
+        /*-------------------------------------------------------------------------------
+        * NISAR HDF5 georeferencing overrides
+        *
+        * Unlike conventional raster formats, NISAR L2 products do not expose a complete
+        * affine GeoTransform or projection WKT on the GDAL subdatasets that SlideRule
+        * opens and samples. The raster grids are defined indirectly:
+        *  - pixel origin and spacing are stored in HDF5 xCoordinates/yCoordinates datasets
+        *  - the CRS (EPSG code) is stored as HDF5 metadata on the root file, not on the
+        *    subdataset itself
+        *
+        * SlideRule’s raster pipeline requires a valid GeoTransform and target CRS. For
+        * NISAR datasets, the standard GDAL calls (GetGeoTransform, GetProjectionRef) are
+        * insufficient and return empty results or errors.
+        *
+        * These callbacks reconstruct the missing spatial metadata directly from the HDF5
+        * source:
+        *  - overrideGeoTransform reads grid origin and spacing from xCoordinates/yCoordinates
+        *    and returns the GDAL affine GeoTransform, i.e. the mapping between pixel/line
+        *    indices and (x,y) coordinates in the raster CRS (and its inverse via
+        *    GDALInvGeoTransform). This is not a CRS-to-CRS projection.
+        *  - overrideTargetCRS reads the EPSG code from HDF5 metadata and applies it as the
+        *    raster’s target CRS.
+        *-------------------------------------------------------------------------------*/
+        static CPLErr overrideGeoTransform(double* gtf, const void* param);
         static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);
 
         /*--------------------------------------------------------------------
