@@ -1220,22 +1220,24 @@ void GdalRaster::createTransform(void)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set user projlib pipeline");
         mlog(DEBUG, "Set projlib  pipeline: %s", parms->proj_pipeline.value.c_str());
     }
-
-    /* Limit to area of interest if AOI was set */
-    const bbox_t* aoi = &aoi_bbox; // check override first
-    bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
-    if(!useaoi)
+    else
     {
-        aoi = &parms->aoi_bbox.value; // check parameters
-        useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
-    }
-    if(useaoi)
-    {
-        if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set AOI");
+        /* Limit to area of interest if AOI was set */
+        const bbox_t* aoi = &aoi_bbox; // check override first
+        bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+        if(!useaoi)
+        {
+            aoi = &parms->aoi_bbox.value; // check parameters
+            useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+        }
+        if(useaoi)
+        {
+            if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set AOI");
 
-        mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)",
-             aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
+            mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)",
+                aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
+        }
     }
 
     /* Force traditional axis order (lon, lat) */
