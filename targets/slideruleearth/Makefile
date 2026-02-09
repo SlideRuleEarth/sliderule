@@ -396,7 +396,7 @@ recorder-create:  ## creates the lambda recorder functions
 		--template-body file://$(ROOT)/applications/recorder/recorder.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+		--parameters	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
 	aws cloudformation wait stack-create-complete --stack-name recorder
@@ -405,6 +405,7 @@ recorder-describe: ## status the creation/deletion of the recorder functions
 	aws cloudformation describe-stack-events --stack-name recorder
 
 recorder-delete: ## deletes the lambda recorder functions
+	aws athena delete-work-group --work-group recorder-workgroup --recursive-delete-option
 	aws cloudformation delete-stack --stack-name recorder
 	aws cloudformation wait stack-delete-complete --stack-name recorder
 
