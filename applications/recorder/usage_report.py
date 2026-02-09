@@ -58,26 +58,26 @@ geo_city = geoip2.database.Reader(GEOLITE2_CITY_DB)
 def build_where_clause(start_dt, end_dt, days):
     conditions = []
     # build partition filter
-    if len(days) > 0:
-        parts = [f"(year = '{d.year:04d}' AND month = '{d.month:02d}' AND day = '{d.day:02d}')" for d in days]
-        conditions.append( '(' + ' OR '.join(parts) + ')' )
+    if len(days) > 31: # enumerate individual days when the number of days is less than a typical month
+        parts = [f"(year = '{dt.year:04d}' AND month = '{dt.month:02d}' AND day = '{dt.day:02d}')" for dt in days]
+    else: # enumerate months
+        parts = list({f"(year = '{dt.year:04d}' AND month = '{dt.month:02d}')" for dt in days})
+    conditions.append( '(' + ' OR '.join(parts) + ')' )
     # build timestamp expression
-    if start_dt and end_dt:
-        start_iso = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
-        end_iso = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
-        ts_expr = (
-            "CASE "
-            "WHEN regexp_like(timestamp, '^[0-9]+$') "
-            "THEN from_unixtime(CAST(timestamp AS bigint)) "
-            "ELSE from_iso8601_timestamp(timestamp) "
-            "END"
-        )
-        conditions.append(
-            f"{ts_expr} >= from_iso8601_timestamp('{start_iso}') AND "
-            f"{ts_expr} <= from_iso8601_timestamp('{end_iso}')"
-        )
-    if len(conditions) == 0:
-        return '1=1'
+    start_iso = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    end_iso = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    ts_expr = (
+        "CASE "
+        "WHEN regexp_like(timestamp, '^[0-9]+$') "
+        "THEN from_unixtime(CAST(timestamp AS bigint)) "
+        "ELSE from_iso8601_timestamp(timestamp) "
+        "END"
+    )
+    conditions.append(
+        f"{ts_expr} >= from_iso8601_timestamp('{start_iso}') AND "
+        f"{ts_expr} <= from_iso8601_timestamp('{end_iso}')"
+    )
+    # return where clause
     return ' AND '.join(conditions)
 
 # -------------------------------------------
