@@ -304,8 +304,8 @@ ensure_partitions_for_range(TELEMETRY_TABLE, expected, 'telemetry', start_dt, en
 ensure_partitions_for_range(ALERTS_TABLE, expected, 'alerts', start_dt, end_dt)
 
 # query for usage statistics
-telemetry_table                 = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
-alerts_table                    = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
+telemetry_table                 = f'"{GLUE_DATABASE}".{TELEMETRY_TABLE}'
+alerts_table                    = f'"{GLUE_DATABASE}".{ALERTS_TABLE}'
 telemetry_where                 = build_where_clause(start_dt, end_dt, days)
 alerts_where                    = build_where_clause(start_dt, end_dt, days)
 time_stats                      = get_timespan(telemetry_table, telemetry_where)
