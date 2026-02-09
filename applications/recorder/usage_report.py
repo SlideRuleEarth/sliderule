@@ -27,7 +27,7 @@ args,_ = parser.parse_known_args()
 # -------------------------------------------
 # globals
 # -------------------------------------------
-GLUE_DATABASE          = 'recorder_database'
+GLUE_DATABASE          = 'recorder-database'
 ATHENA_WORKGROUP       = 'recorder-workgroup'
 TELEMETRY_TABLE        = 'telemetry'
 ALERTS_TABLE           = 'alerts'

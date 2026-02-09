@@ -1,5 +1,5 @@
 # conda env create -f environment.yml
-name: athena_reporter
+name: recorder
 channels:
   - conda-forge
   - defaults

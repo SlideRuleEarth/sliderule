@@ -54,10 +54,6 @@ Instead the request json must change to be this:
 }
 ```
 
-## Known Issues
-
-* **v5.0.0** - The GitHub actions related to running the pytests and the selftest are currently not working.  This is due to them being transitioned to the provisioning system.
-
 ## New Functionality
 
 * **v5.0.7** - [#574](https://github.com/SlideRuleEarth/sliderule/pull/574) - Copernicus DEM 30m raster support added.

@@ -390,42 +390,21 @@ testrunner-run: ## invokes the provisioner *report* lambda function and displays
 # Recorder Targets
 ########################
 
-recorder-build: ## builds the recorder lambda package zipfile
-	-rm -Rf $(RECORDER_STAGE_DIR)
-	mkdir -p $(RECORDER_STAGE_DIR)
-	cp $(ROOT)/applications/recorder/requirements.txt $(RECORDER_STAGE_DIR)/
-	docker run -it --rm \
-		-v $(RECORDER_STAGE_DIR):/host \
-		--user $(shell id -u):$(shell id -g) \
-		--entrypoint /bin/bash \
-		public.ecr.aws/lambda/python:3.13 \
-		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/recorder/main.py $(RECORDER_STAGE_DIR)/package/
-	cd $(RECORDER_STAGE_DIR)/package/ && zip -r -q $(RECORDER_STAGE_DIR)/recorder.zip . -x "/*__pycache__/*"
-
-recorder-create: recorder-build  ## creates the lambda recorder functions
-	aws s3 cp $(RECORDER_STAGE_DIR)/recorder.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/recorder.zip
+recorder-create:  ## creates the lambda recorder functions
 	aws cloudformation create-stack \
 		--stack-name 	recorder \
 		--template-body file://$(ROOT)/applications/recorder/recorder.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=RecorderUrl,ParameterValue=$(RECORDER_URL) \
-						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
-						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
-						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
-						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/recorder.zip
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
 	aws cloudformation wait stack-create-complete --stack-name recorder
 
 recorder-describe: ## status the creation/deletion of the recorder functions
 	aws cloudformation describe-stack-events --stack-name recorder
 
 recorder-delete: ## deletes the lambda recorder functions
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/recorder.zip
 	aws cloudformation delete-stack --stack-name recorder
 	aws cloudformation wait stack-delete-complete --stack-name recorder
 
