@@ -18,7 +18,7 @@ local rspq = msg.subscribe("h5testq")
 
 -- Self Test 1 --
 
-runner.unittest("Small Array", function()
+runner.unittest("H5 2D Small Array", function()
     local var = {dataset="gt1r/heights/signal_conf_ph", col=3, startrow=580000, numrows=10}
     f:read({var}, "h5testq", false)
     local recdata = rspq:recvrecord(3000)
@@ -39,7 +39,7 @@ end)
 
 -- Self Test 2 --
 
-runner.unittest("Large Array", function()
+runner.unittest("H5 2D Large Array", function()
     local all_good = true
     local startrow = 0
     local numrows = 10000

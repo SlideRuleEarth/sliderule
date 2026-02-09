@@ -31,6 +31,7 @@ local function check_columns(df, cols)
 end
 
 -- Self Test --
+
 runner.unittest("ATL06 DataFrame", function()
 
     local parms = icesat2.parms({

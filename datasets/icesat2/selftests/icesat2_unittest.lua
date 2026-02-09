@@ -12,15 +12,14 @@ local atl06_dispatch = icesat2.ut_atl06()
 
 -- Self Test --
 
-print('\n------------------\nTest01\n------------------')
-runner.assert(atl06_dispatch:lsftest(), "Failed lsftest")
+runner.unittest("ATL06 Dispatch LSF Unit Test", function()
+    runner.assert(atl06_dispatch:lsftest(), "Failed lsftest")
+end)
 
-print('\n------------------\nTest02\n------------------')
-runner.assert(atl06_dispatch:sorttest(), "Failed sorttest")
-
--- Clean Up --
+runner.unittest("ATL06 Dispatch Sort Unit Test", function()
+    runner.assert(atl06_dispatch:sorttest(), "Failed sorttest")
+end)
 
 -- Report Results --
 
 runner.report()
-

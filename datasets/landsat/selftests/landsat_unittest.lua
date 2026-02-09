@@ -11,35 +11,36 @@ end
 
 runner.authenticate({'lpdaac-cloud'})
 
-local geojsonfile = dirpath.."../data/grand_mesa.geojson"
-local f = io.open(geojsonfile, "r")
-local contents = f:read("*all")
-f:close()
-
 -- Self Test --
 
-print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
-local demType = "landsat-hls"
-local t0str = "2022:01:05:00:00:00"
-local t1str = "2022:01:15:00:00:00"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, bands = {"NDVI"}, catalog = contents, sort_by_index = true }))
-runner.assert(dem ~= nil)
+runner.uittest("Landsat Unit Test", function()
 
-local ut = geo.ut_sample(dem)
-runner.assert(ut ~= nil)
--- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
--- It opens a test file with points.
-local pointsFile = dirpath.."../data/grand_mesa_poi.txt"
-local pointsInFile = 26183  -- number of points in file
-local maxPointCount = 10  -- number of points to sample, 1000 will trigger all threaded code
-status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
-runner.assert(status, "Failed sampling test")
+    local geojsonfile = dirpath.."../data/grand_mesa.geojson"
+    local f = io.open(geojsonfile, "r")
+    assert(f, "failed to open geojson file")
+    local contents = f:read("*all")
+    f:close()
 
--- Clean Up --
+    local demType = "landsat-hls"
+    local t0str = "2022:01:05:00:00:00"
+    local t1str = "2022:01:15:00:00:00"
+    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, bands = {"NDVI"}, catalog = contents, sort_by_index = true }))
+    runner.assert(dem ~= nil)
 
-ut:destroy()
+    local ut = geo.ut_sample(dem)
+    runner.assert(ut ~= nil)
+
+    -- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
+    -- It opens a test file with points.
+    local pointsFile = dirpath.."../data/grand_mesa_poi.txt"
+    local maxPointCount = 10  -- number of points to sample, 1000 will trigger all threaded code
+    local status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
+    runner.assert(status, "Failed sampling test")
+
+    ut:destroy()
+
+end)
 
 -- Report Results --
 
 runner.report()
-

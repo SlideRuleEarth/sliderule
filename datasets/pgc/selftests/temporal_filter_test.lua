@@ -1,4 +1,6 @@
 local runner = require("test_executive")
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
 
 -- Requirements --
 
@@ -7,10 +9,6 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
 end
 
 -- Setup --
--- runner.log(core.DEBUG)
-
-local _,td = runner.srcscript()
-package.path = td .. "../utils/?.lua;" .. package.path
 
 local readgeojson = require("readgeojson")
 local jsonfile = td .. "../data/arcticdem_strips.geojson"

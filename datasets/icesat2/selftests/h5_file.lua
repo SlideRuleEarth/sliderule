@@ -18,21 +18,25 @@ local rspq = msg.subscribe("h5testq")
 
 -- Self Test --
 
-f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")
+runner.unittest("H5 File", function()
 
-local recdata = rspq:recvrecord(3000)
-local rectable = recdata:tabulate()
+    f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")
 
-pp.display(rectable)
+    local recdata = rspq:recvrecord(3000)
+    local rectable = recdata:tabulate()
 
-runner.assert(rectable.data[1] == 0)
-runner.assert(rectable.data[2] == 0)
-runner.assert(rectable.data[3] == 128)
-runner.assert(rectable.data[4] == 36)
-runner.assert(rectable.data[5] == 15)
-runner.assert(rectable.data[6] == 221)
-runner.assert(rectable.data[7] == 209)
-runner.assert(rectable.data[8] == 65)
+    pp.display(rectable)
+
+    runner.assert(rectable.data[1] == 0)
+    runner.assert(rectable.data[2] == 0)
+    runner.assert(rectable.data[3] == 128)
+    runner.assert(rectable.data[4] == 36)
+    runner.assert(rectable.data[5] == 15)
+    runner.assert(rectable.data[6] == 221)
+    runner.assert(rectable.data[7] == 209)
+    runner.assert(rectable.data[8] == 65)
+
+end)
 
 -- Clean Up --
 
@@ -42,4 +46,3 @@ f:destroy()
 -- Report Results --
 
 runner.report()
-

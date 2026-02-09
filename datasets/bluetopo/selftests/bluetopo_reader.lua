@@ -10,36 +10,34 @@ end
 
 runner.authenticate({})
 
--- Correct values test for different POIs
+-- Self Test --
 
-local lons = {-81.02, -89.66, -94.72}
-local lats = { 31.86,  29.99,  29.35}
-local height = 0
+runner.unittest("BlueTopo Correct Values", function()
 
-local expElevation   = {-14.10, -4.28, -17.18}
-local expUncertainty = {  2.58,  0.34,   1.32}
-local expContributor = { 63846, 24955, 102286}
+    -- Correct values test for different POIs
+    local lons = {-81.02, -89.66, -94.72}
+    local lats = { 31.86,  29.99,  29.35}
+    local height = 0
 
-local elevation_tolerance = 50.0 -- BlueTopo is updated constantly; we just want to check that a valid elevation (within reason) can be sampled
+    local expElevation   = {-14.10, -4.28, -17.18}
+    local expUncertainty = {  2.58,  0.34,   1.32}
+    local expContributor = { 63846, 24955, 102286}
 
-print(string.format("\n--------------------------------\nTest: BlueTopo Correct Values\n--------------------------------"))
-local dem = geo.raster(geo.parms({ asset = "bluetopo-bathy", algorithm = "NearestNeighbour", bands = {"Elevation", "Uncertainty", "Contributor"}, sort_by_index = true }))
-runner.assert(dem ~= nil, "failed to create bluetopo-bathy raster", true)
+    local elevation_tolerance = 50.0 -- BlueTopo is updated constantly; we just want to check that a valid elevation (within reason) can be sampled
 
-for j, lon in ipairs(lons) do
-    local lat = lats[j]
-    local tbl, err = dem:sample(lon, lat, height)
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
+    local dem = geo.raster(geo.parms({ asset = "bluetopo-bathy", algorithm = "NearestNeighbour", bands = {"Elevation", "Uncertainty", "Contributor"}, sort_by_index = true }))
+    runner.assert(dem ~= nil, "failed to create bluetopo-bathy raster", true)
 
-    if err ~= 0 then
-        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err))
-    else
-        local el, fname
-        for k, v in ipairs(tbl) do
+    for j, lon in ipairs(lons) do
+        local lat = lats[j]
+        local tbl, err = dem:sample(lon, lat, height)
+        runner.assert(err == 0, string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err), true)
+        runner.assert(tbl ~= nil, "table of samples not returned", true)
+
+        for _, v in ipairs(tbl) do
             local band = v["band"]
             local value = v["value"]
-            fname = v["file"]
+            local fname = v["file"]
             print(string.format("(%6.2f, %6.2f)  Band: %11s %8.2f  %s", lon, lat, band, value, fname))
 
             if band == "Elevation" then
@@ -52,10 +50,9 @@ for j, lon in ipairs(lons) do
         end
         print("\n")
     end
-end
+
+end)
 
 -- Report Results --
 
 runner.report()
-
-
