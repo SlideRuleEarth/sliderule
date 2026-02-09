@@ -188,6 +188,7 @@ GeoFields::GeoFields (void):
         {"sort_by_index",       &sort_by_index},
         {"force_single_sample", &force_single_sample},
         {"proj_pipeline",       &proj_pipeline},
+        {"url",                 &url},
         {"aoi_bbox",            &aoi_bbox},
         {"catalog",             &catalog},
         {"bands",               &bands},

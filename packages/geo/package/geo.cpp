@@ -40,6 +40,7 @@
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
 #include "GeoUserRaster.h"
+#include "GeoUserDemRaster.h"
 #include "RegionMask.h"
 #include "GeoFields.h"
 #include "GeoLib.h"
@@ -58,6 +59,7 @@
  ******************************************************************************/
 
 #define LUA_GEO_LIBNAME  "geo"
+#define LUA_USER_DEM_RASTER_NAME "user-dem-raster"
 
 /******************************************************************************
  * GEO FUNCTIONS
@@ -342,6 +344,9 @@ void initgeo (void)
 
     /* Register Region Mask Rasterizer */
     RegionMask::registerRasterizer(GeoLib::burnGeoJson);
+
+    /* Register user URL DEM raster */
+    RasterObject::registerRaster(LUA_USER_DEM_RASTER_NAME, GeoUserDemRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEO_LIBNAME, geo_open, LIBID);
