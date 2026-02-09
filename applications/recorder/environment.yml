@@ -7,3 +7,4 @@ dependencies:
   - python
   - boto3
   - geoip2
+  - pandas

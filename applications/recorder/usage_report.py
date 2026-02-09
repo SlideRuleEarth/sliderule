@@ -3,7 +3,8 @@ import copy
 import time
 import argparse
 import boto3
-from datetime import datetime, timedelta, timezone
+import pandas as pd
+from datetime import datetime, timezone
 
 # -------------------------------------------
 # command line arguments
@@ -17,17 +18,16 @@ parser = argparse.ArgumentParser(
         "  python usage_report.py --start \"2026-01-10\"\n"
     )
 )
-parser.add_argument('--start',             type=str,               default=None)  # ISO string
-parser.add_argument('--end',               type=str,               default=None)  # ISO string
+parser.add_argument('--start',             type=str,               required=True, help='start is required as ISO datetime string YYYY-MM-DD HH:MM:SS)') #
+parser.add_argument('--end',               type=str,               default=f'{datetime.now()}') # optional ISO datetime string
 parser.add_argument('--top_n',             type=int,               default=0)
-parser.add_argument('--verbose',           action='store_true',    default=False)
 parser.add_argument('--repair_partitions', action='store_true',    default=False)
 args,_ = parser.parse_known_args()
 
 # -------------------------------------------
 # globals
 # -------------------------------------------
-GLUE_DATABASE          = 'recorder-database'
+GLUE_DATABASE          = 'recorder_database'
 ATHENA_WORKGROUP       = 'recorder-workgroup'
 TELEMETRY_TABLE        = 'telemetry'
 ALERTS_TABLE           = 'alerts'
@@ -99,44 +99,15 @@ def escape_sql(value):
 
 
 # -------------------------------------------
-# day range
-# -------------------------------------------
-def day_range(start_dt, end_dt):
-    if start_dt is None or end_dt is None:
-        return []
-    start_date = start_dt.date()
-    end_date = end_dt.date()
-    days = []
-    cur = start_date
-    while cur <= end_date:
-        days.append(cur)
-        cur += timedelta(days=1)
-    return days
-
-
-# -------------------------------------------
-# build partition filter
-# -------------------------------------------
-def build_partition_filter(days):
-    if len(days) == 0:
-        return '1=1'
-    parts = [f"(year = '{d.year:04d}' AND month = '{d.month:02d}' AND day = '{d.day:02d}')" for d in days]
-    return '(' + ' OR '.join(parts) + ')'
-
-
-# -------------------------------------------
-# expected partitions
-# -------------------------------------------
-def expected_partitions(days):
-    return [f"year={d.year:04d}/month={d.month:02d}/day={d.day:02d}" for d in days]
-
-
-# -------------------------------------------
 # build where clause
 # -------------------------------------------
 def build_where_clause(start_dt, end_dt, days):
     conditions = []
-    conditions.append(build_partition_filter(days))
+    # build partition filter
+    if len(days) > 0:
+        parts = [f"(year = '{d.year:04d}' AND month = '{d.month:02d}' AND day = '{d.day:02d}')" for d in days]
+        conditions.append( '(' + ' OR '.join(parts) + ')' )
+    # build timestamp expression
     if start_dt and end_dt:
         start_iso = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
         end_iso = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
@@ -160,8 +131,7 @@ def build_where_clause(start_dt, end_dt, days):
 # start query
 # -------------------------------------------
 def start_query(query):
-    if args.verbose:
-        print(query)
+    print(query)
     request = {
         'QueryString': query,
         'QueryExecutionContext': {'Database': GLUE_DATABASE, 'Catalog': 'AwsDataCatalog'},
@@ -225,11 +195,9 @@ def execute_query(query):
 # -------------------------------------------
 def list_s3_day_partitions(bucket, label, start_dt, end_dt):
     found = set()
-    start_month = start_dt.replace(day=1)
-    end_month = end_dt.replace(day=1)
-    cur = start_month
-    while cur <= end_month:
-        prefix = f"{label}/year={cur.year:04d}/month={cur.month:02d}/"
+    curr_dt = start_dt
+    while curr_dt <= end_dt:
+        prefix = f"{label}/year={curr_dt.year:04d}/month={curr_dt.month:02d}/"
         token = None
         while True:
             if token:
@@ -241,14 +209,14 @@ def list_s3_day_partitions(bucket, label, start_dt, end_dt):
                 if p.endswith('/') and p.startswith(prefix):
                     day_part = p[len(prefix):].strip('/')
                     if day_part.startswith('day='):
-                        found.add(f"year={cur.year:04d}/month={cur.month:02d}/{day_part}")
+                        found.add(f"year={curr_dt.year:04d}/month={curr_dt.month:02d}/{day_part}")
             token = response.get('NextContinuationToken')
             if not response.get('IsTruncated'):
                 break
-        if cur.month == 12:
-            cur = cur.replace(year=cur.year + 1, month=1)
+        if curr_dt.month == 12:
+            curr_dt = curr_dt.replace(year=curr_dt.year+1, month=1, day=1)
         else:
-            cur = cur.replace(month=cur.month + 1)
+            curr_dt = curr_dt.replace(month=curr_dt.month+1, day=1)
     return found
 
 
@@ -256,8 +224,6 @@ def list_s3_day_partitions(bucket, label, start_dt, end_dt):
 # glue partitions
 # -------------------------------------------
 def glue_partitions(table_name):
-    # Use Glue directly because Athena SHOW PARTITIONS/DDL can return stale or
-    # inconsistent results depending on workgroup caching or permissions.
     partitions = []
     paginator = glue.get_paginator('get_partitions')
     for page in paginator.paginate(DatabaseName=GLUE_DATABASE, TableName=table_name):
@@ -266,97 +232,39 @@ def glue_partitions(table_name):
             if len(values) >= 3:
                 year, month, day = values[0], values[1], values[2]
                 partitions.append(f'year={year}/month={month}/day={day}')
-    return partitions
-
-
-# -------------------------------------------
-# add partitions
-# -------------------------------------------
-def add_partitions(table, label, partitions):
-    # Use Glue BatchCreatePartition instead of Athena DDL for reliability.
-    table_name = table.split('.')[-1]
-    if table_name in _glue_table_sd_cache:
-        base_sd = _glue_table_sd_cache[table_name]
-    else:
-        table_def = glue.get_table(DatabaseName=GLUE_DATABASE, Name=table_name)
-        base_sd = table_def['Table']['StorageDescriptor']
-        _glue_table_sd_cache[table_name] = base_sd
-    inputs = []
-    for p in partitions:
-        parts = p.split('/')
-        kv = dict(item.split('=') for item in parts)
-        year = kv.get('year')
-        month = kv.get('month')
-        day = kv.get('day')
-        if not (year and month and day):
-            continue
-        location = f"s3://{PROJECT_BUCKET}/{label}/year={year}/month={month}/day={day}/"
-        sd = copy.deepcopy(base_sd)
-        sd['Location'] = location
-        inputs.append({'Values': [year, month, day], 'StorageDescriptor': sd})
-    if len(inputs) == 0:
-        return
-    for i in range(0, len(inputs), 100):
-        batch = inputs[i:i+100]
-        response = glue.batch_create_partition(
-            DatabaseName=GLUE_DATABASE,
-            TableName=table_name,
-            PartitionInputList=batch
-        )
-        for err in response.get('Errors', []):
-            code = err.get('ErrorDetail', {}).get('ErrorCode')
-            msg = err.get('ErrorDetail', {}).get('ErrorMessage')
-            values = err.get('PartitionValues', [])
-            if code != 'AlreadyExistsException' and args.verbose:
-                print(f'Glue partition error: {msg}')
-
+    return set(partitions)
 
 # -------------------------------------------
 # ensure partitions for range
 # -------------------------------------------
-def ensure_partitions_for_range(table, expected, label, start_dt, end_dt):
-    if len(expected) == 0:
-        return
-    table_name = table.split('.')[-1]
-    rows = glue_partitions(table_name)
-    existing = set()
-    for value in rows:
-        if value:
-            existing.add(value)
-    if args.verbose:
-        print(f'Existing partitions for {label}: {", ".join(sorted(existing))}')
-    missing = [p for p in expected if p not in existing]
-    if len(missing) == 0:
-        return
-    bucket = PROJECT_BUCKET
-    missing_s3 = missing
-    if bucket:
-        try:
-            s3_partitions = list_s3_day_partitions(bucket, label, start_dt, end_dt)
-        except Exception as e:
-            if args.verbose:
-                print(f'Failed to list s3://{bucket}/{label}/ partitions: {e}')
-            s3_partitions = set()
-        if len(s3_partitions) == 0:
-            if args.verbose:
-                print(f'No S3 objects found for {label} partitions; skipping repair.')
-            return
-        missing_s3 = [p for p in missing if p in s3_partitions]
-        missing = missing_s3
-        if len(missing) == 0:
-            return
-    if args.verbose:
-        print(f'Missing partitions for {label}: {", ".join(missing)}')
-    else:
-        print(f'Creating missing partitions for {label}')
-    add_partitions(table, label, missing)
-    existing = set(glue_partitions(table_name))
-    still_missing = [p for p in expected if p not in existing]
-    if bucket:
-        still_missing = [p for p in still_missing if p in missing_s3]
-    if len(still_missing) > 0:
-        print(f'Still missing partitions for {label} after add: {", ".join(still_missing)}')
-        sys.exit(2)
+def ensure_partitions_for_range(table_name, expected, label, start_dt, end_dt):
+
+    # build list of requested partitions that are missing from the glue table
+    existing_glue = glue_partitions(table_name)
+    existing_s3 = list_s3_day_partitions(PROJECT_BUCKET, label, start_dt, end_dt)
+    missing = [p for p in expected if ((p not in existing_glue) and (p in existing_s3))]
+    print(f'Existing glue partitions for {label}: {", ".join(sorted(existing_glue))}')
+    print(f'Existing s3 partitions for {label}: {", ".join(sorted(existing_s3))}')
+    print(f'Missing partitions for {label}: {", ".join(missing)}')
+
+    # add missing partitions to the glue table
+    table_def = glue.get_table(DatabaseName=GLUE_DATABASE, Name=table_name)
+    base_sd = table_def['Table']['StorageDescriptor']
+    inputs = []
+    for partition in missing:
+        kv = dict([item.split('=') for item in partition.split('/')])
+        location = f"s3://{PROJECT_BUCKET}/{label}/year={kv['year']}/month={kv['month']}/day={kv['day']}/"
+        sd = copy.deepcopy(base_sd)
+        sd['Location'] = location
+        inputs.append({'Values': [kv['year'], kv['month'], kv['day']], 'StorageDescriptor': sd})
+    for i in range(0, len(inputs), 100):
+        batch = inputs[i:i+100]
+        response = glue.batch_create_partition(DatabaseName=GLUE_DATABASE, TableName=table_name, PartitionInputList=batch)
+        for err in response.get('Errors', []):
+            code = err.get('ErrorDetail', {}).get('ErrorCode')
+            msg = err.get('ErrorDetail', {}).get('ErrorMessage')
+            if code != 'AlreadyExistsException':
+                print(f'Glue partition error: {msg}')
 
 
 # -------------------------------------------
@@ -523,45 +431,20 @@ def get_timespan(table, where_clause):
 # main
 # -------------------------------------------
 def main():
-    if args.repair_partitions and not args.start and not args.end:
-        if args.verbose:
-            print('Generating all missing partitions for telemetry and alerts.')
-        print('Provide --start and --end to repair a specific range.')
-        return
-    if args.repair_partitions and args.start:
-        start_dt = parse_iso(args.start)
-        end_dt = parse_iso(args.end, end_of_day=True) if args.end else datetime.now(timezone.utc).replace(hour=23, minute=59, second=59, microsecond=0)
-        if start_dt > end_dt:
-            print('--start must be before --end')
-            sys.exit(2)
-        days = day_range(start_dt, end_dt)
-        expected = expected_partitions(days)
-        telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
-        alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
-        ensure_partitions_for_range(telemetry_table, expected, 'telemetry', start_dt, end_dt)
-        ensure_partitions_for_range(alerts_table, expected, 'alerts', start_dt, end_dt)
-        return
 
-    if not args.start:
-        print('--start is required (ISO datetime string or YYYY-MM-DD).')
-        sys.exit(2)
+    start_dt = datetime.fromisoformat(args.start)
+    end_dt = datetime.fromisoformat(args.end)
+    days = pd.date_range(start_dt.date(), end_dt.date(), freq='D').date.tolist()
+    expected = [f"year={d.year:04d}/month={d.month:02d}/day={d.day:02d}" for d in days]
 
-    start_dt = parse_iso(args.start)
-    end_dt = parse_iso(args.end, end_of_day=True) if args.end else datetime.now(timezone.utc).replace(hour=23, minute=59, second=59, microsecond=0)
-    if start_dt > end_dt:
-        print('--start must be before --end')
-        sys.exit(2)
-
-    telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
-    alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
-
-    days = day_range(start_dt, end_dt)
-    expected = expected_partitions(days)
-    ensure_partitions_for_range(telemetry_table, expected, 'telemetry', start_dt, end_dt)
-    ensure_partitions_for_range(alerts_table, expected, 'alerts', start_dt, end_dt)
+    ensure_partitions_for_range(TELEMETRY_TABLE, expected, 'telemetry', start_dt, end_dt)
+    ensure_partitions_for_range(ALERTS_TABLE, expected, 'alerts', start_dt, end_dt)
 
     telemetry_where = build_where_clause(start_dt, end_dt, days)
     alerts_where = build_where_clause(start_dt, end_dt, days)
+
+    telemetry_table = f'{GLUE_DATABASE}.{TELEMETRY_TABLE}'
+    alerts_table = f'{GLUE_DATABASE}.{ALERTS_TABLE}'
 
     time_stats = get_timespan(telemetry_table, telemetry_where)
 
