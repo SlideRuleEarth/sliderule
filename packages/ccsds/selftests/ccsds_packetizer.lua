@@ -8,26 +8,29 @@ if not __ccsds__ then
     return
 end
 
--- CCSDS Packetizer Unit Test --
+-- Self Test --
 
-local cmdoutq = msg.subscribe("cmdoutq")
-local payinq = msg.publish("payinq")
+runner.unittest("CCSDS Packetizer Test", function()
 
-local packetizer = ccsds.packetizer("payinq", "cmdoutq", 0xBF, ccsds.CMD, 3)
+    local cmdoutq = msg.subscribe("cmdoutq")
+    local payinq = msg.publish("payinq")
 
-payinq:sendstring("HELLOWORLD\0")
-local val1 = cmdoutq:recvstring(3000)
-packet.printPacket(val1, 32)
+    local packetizer = ccsds.packetizer("payinq", "cmdoutq", 0xBF, ccsds.CMD, 3)
 
-cmd.exec("CCSDS::DEFINE_COMMAND match.cmd NULL 0xBF 3 19 2")
-cmd.exec("ADD_FIELD match.cmd CS UINT8 7 1 NA")
-cmd.exec("ADD_FIELD match.cmd msg STRING 8 11 NA")
-packet.sendCommand("/match.cmd msg=HELLOWORLD", msg.publish("cmdoutq"), "CS", true)
-local val2 = cmdoutq:recvstring(3000)
+    payinq:sendstring("HELLOWORLD\0")
+    local val1 = cmdoutq:recvstring(3000)
+    packet.printPacket(val1, 32)
 
-runner.assert(packet.comparePacket(val1, val2))
+    cmd.exec("CCSDS::DEFINE_COMMAND match.cmd NULL 0xBF 3 19 2")
+    cmd.exec("ADD_FIELD match.cmd CS UINT8 7 1 NA")
+    cmd.exec("ADD_FIELD match.cmd msg STRING 8 11 NA")
+    packet.sendCommand("/match.cmd msg=HELLOWORLD", msg.publish("cmdoutq"), "CS", true)
+    local val2 = cmdoutq:recvstring(3000)
+
+    runner.assert(packet.comparePacket(val1, val2))
+
+end)
 
 -- Report Results --
 
 runner.report()
-

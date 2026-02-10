@@ -8,12 +8,14 @@ end
 
 -- Self Test --
 
-local ut_ordering = core.ut_ordering()
-runner.assert(ut_ordering:addremove())
-runner.assert(ut_ordering:duplicates())
-runner.assert(ut_ordering:sort())
-runner.assert(ut_ordering:iterator())
-runner.assert(ut_ordering:assignment())
+runner.unittest("Ordering Unit Test", function()
+    local ut_ordering = core.ut_ordering()
+    runner.assert(ut_ordering:addremove())
+    runner.assert(ut_ordering:duplicates())
+    runner.assert(ut_ordering:sort())
+    runner.assert(ut_ordering:iterator())
+    runner.assert(ut_ordering:assignment())
+end)
 
 -- Report Results --
 

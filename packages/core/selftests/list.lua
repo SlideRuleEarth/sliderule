@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local console = require("console")
 
 -- Requirements --
 
@@ -9,10 +8,12 @@ end
 
 -- Self Test --
 
-local ut_list = core.ut_list()
-runner.assert(ut_list:addremove())
-runner.assert(ut_list:duplicates())
-runner.assert(ut_list:sort())
+runner.unittest("List Unit Test", function()
+    local ut_list = core.ut_list()
+    runner.assert(ut_list:addremove())
+    runner.assert(ut_list:duplicates())
+    runner.assert(ut_list:sort())
+end)
 
 -- Report Results --
 

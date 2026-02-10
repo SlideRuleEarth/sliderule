@@ -2,10 +2,13 @@ local runner = require("test_executive")
 local time = require("time")
 local srcfile, dirpath = runner.srcscript()
 
+-- Setup --
+
 -- Load GeoJSON file
 local geojsonfile = dirpath.."../data/grandmesa.geojson"
 local f = io.open(geojsonfile, "r")
 runner.assert(f ~= nil, "failed to open geojson file", true)
+if not f then return end
 local vectorfile = f:read("*a")
 f:close()
 
@@ -47,30 +50,34 @@ local function random_polygon(num_vertices, center_lat, center_lon, radius_deg)
     return poly
 end
 
--- Build polygon
-local poly = geojson_to_poly(vectorfile)
+-- Self Test --
 
--- One simplify call for now
-local buffer_distance = 0.002   -- ~220 meters
-local simplify_tolerance = 0.01 -- ~1.1 km
+runner.unittest("Simplify Polygon", function()
+    local buffer_distance = 0.002   -- ~220 meters
+    local simplify_tolerance = 0.01 -- ~1.1 km
+    local poly = geojson_to_poly(vectorfile)
+    local simplified = geo.simplify(poly, buffer_distance, simplify_tolerance)
+    runner.assert(simplified ~= nil, "simplify returned nil")
+    runner.assert(#simplified > 2, "simplified polygon too small")
+    print(string.format("original vertices: %d", #poly))
+    print(string.format("simplified vertices: %d (buffer=%.3f, simplify=%.3f)", #simplified, buffer_distance, simplify_tolerance))
+end)
 
-print("\n------------------\ngeo.simplify Test\n------------------")
-local simplified = geo.simplify(poly, buffer_distance, simplify_tolerance)
-runner.assert(simplified ~= nil, "simplify returned nil")
-runner.assert(#simplified > 2, "simplified polygon too small")
-print(string.format("original vertices: %d", #poly))
-print(string.format("simplified vertices: %d (buffer=%.3f, simplify=%.3f)", #simplified, buffer_distance, simplify_tolerance))
+runner.unittest("Random Polygon Stress", function()
+    local buffer_distance = 0.002   -- ~220 meters
+    local simplify_tolerance = 0.01 -- ~1.1 km
+    local stress_cases = {100, 1000, 10000}
+    for _, n in ipairs(stress_cases) do
+        local rp = random_polygon(n, 0.0, 0.0, 0.1)
+        local t0 = time.latch()
+        local rs = geo.simplify(rp, buffer_distance, simplify_tolerance)
+        local t1 = time.latch()
+        runner.assert(rs ~= nil, string.format("simplify returned nil for %d verts", n))
+        runner.assert(#rs > 2, string.format("simplified polygon too small for %d verts", n))
+        print(string.format("N=%5d : before=%5d, after=%5d, time=%.4fs", n, #rp, #rs, t1 - t0))
+    end
+end)
 
-print("\n------------------\nRandom Polygon Stress\n------------------")
-local stress_cases = {100, 1000, 10000}
-for _, n in ipairs(stress_cases) do
-    local rp = random_polygon(n, 0.0, 0.0, 0.1)
-    local t0 = time.latch()
-    local rs = geo.simplify(rp, buffer_distance, simplify_tolerance)
-    local t1 = time.latch()
-    runner.assert(rs ~= nil, string.format("simplify returned nil for %d verts", n))
-    runner.assert(#rs > 2, string.format("simplified polygon too small for %d verts", n))
-    print(string.format("N=%5d : before=%5d, after=%5d, time=%.4fs", n, #rp, #rs, t1 - t0))
-end
+-- Report Results --
 
 runner.report()

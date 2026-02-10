@@ -8,13 +8,15 @@ end
 
 -- Self Test --
 
-local ut = core.ut_field()
-runner.assert(ut:element())
-runner.assert(ut:array())
-runner.assert(ut:enumeration())
-runner.assert(ut:list())
-runner.assert(ut:column())
-runner.assert(ut:dictionary())
+runner.unittest("Field Unit Test", function()
+    local ut = core.ut_field()
+    runner.assert(ut:element())
+    runner.assert(ut:array())
+    runner.assert(ut:enumeration())
+    runner.assert(ut:list())
+    runner.assert(ut:column())
+    runner.assert(ut:dictionary())
+end)
 
 -- Report Results --
 

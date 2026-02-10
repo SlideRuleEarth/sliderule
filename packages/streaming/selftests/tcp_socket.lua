@@ -1,24 +1,25 @@
 local runner = require("test_executive")
-local console = require("console")
 
 -- Self Test --
 
-local server = streaming.tcp("127.0.0.1", 35505, streaming.SERVER)
-local client = streaming.tcp("127.0.0.1", 35505, streaming.CLIENT)
+runner.unittest("TCP Socket", function()
 
-sys.wait(2)
+    local server = streaming.tcp("127.0.0.1", 35505, streaming.SERVER)
+    local client = streaming.tcp("127.0.0.1", 35505, streaming.CLIENT)
 
-local expected_message = "Hello World"
-runner.assert(client:send(expected_message), "Failed to send message")
-local actual_message = server:receive()
+    sys.wait(2)
 
-print("Message: ", actual_message)
-runner.assert(expected_message == actual_message, "Failed to match messages")
+    local expected_message = "Hello World"
+    runner.assert(client:send(expected_message), "Failed to send message")
+    local actual_message = server:receive()
 
--- Clean Up --
+    print("Message: ", actual_message)
+    runner.assert(expected_message == actual_message, "Failed to match messages")
 
-server:close()
-client:close()
+    server:close()
+    client:close()
+
+end)
 
 -- Report Results --
 

@@ -10,12 +10,14 @@ end
 
 -- Dictionary Unit Test --
 
-local ut = core.ut_dictionary()
-runner.assert(ut:add_wordset("small", dirpath.."../data/alphabet_words.txt", 26))
-runner.assert(ut:add_wordset("large", dirpath.."../data/english_words.txt", 354983))
-runner.assert(ut:functional("small"))
-runner.assert(ut:functional("large"))
-runner.assert(ut:iterator("small"))
+runner.unittest("Dictionary Unit Test", function()
+    local ut = core.ut_dictionary()
+    runner.assert(ut:add_wordset("small", dirpath.."../data/alphabet_words.txt", 26))
+    runner.assert(ut:add_wordset("large", dirpath.."../data/english_words.txt", 354983))
+    runner.assert(ut:functional("small"))
+    runner.assert(ut:functional("large"))
+    runner.assert(ut:iterator("small"))
+end)
 
 -- Report Results --
 

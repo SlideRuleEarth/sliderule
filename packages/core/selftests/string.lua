@@ -8,9 +8,11 @@ end
 
 -- Self Test --
 
-local ut_string = core.ut_string()
-runner.assert(ut_string:replace())
-runner.assert(ut_string:find())
+runner.unittest("String Unit Test", function()
+    local ut_string = core.ut_string()
+    runner.assert(ut_string:replace())
+    runner.assert(ut_string:find())
+end)
 
 -- Report Results --
 
