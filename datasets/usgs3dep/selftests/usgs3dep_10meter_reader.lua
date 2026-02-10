@@ -10,18 +10,19 @@ end
 
 local  sigma = 1.0e-4
 
-local lons = { -108.1}
-local lats = {   39.1}
-local heights = { 0 }
+local demType = "usgs3dep-10meter-dem"
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 
 -- Self Test --
 
 runner.unittest("3DEP 10m DEM Sample (serial)", function()
 
+    local lons = { -108.1}
+    local lats = {   39.1}
+    local heights = { 0 }
+
     local expResults = {{2638.235986840923, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
 
-    local demType = "usgs3dep-10meter-dem"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
     local tbl, err = dem:sample(lons[1], lats[1], heights[1])
     runner.assert(err == 0)
     runner.assert(tbl ~= nil)

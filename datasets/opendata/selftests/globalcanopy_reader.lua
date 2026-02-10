@@ -8,7 +8,7 @@ end
 
 -- Self Test --
 
-runner.unittest("Meta (\u{221E}) global canopy height sample POI", function()
+runner.unittest("Global Canopy Height Sample POI", function()
 
     local  sigma = 1.0e-9
     local  lon =    -62.0

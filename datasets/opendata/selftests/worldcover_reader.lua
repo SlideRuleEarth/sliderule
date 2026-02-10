@@ -6,9 +6,14 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
+-- Setup --
+
+local demType = "esa-worldcover-10meter"
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
+
 -- Self Test --
 
-runner.unittest("ESA WorldCover 10meter sample POI", function()
+runner.unittest("ESA WorldCover 10m Sample POI", function()
     local  sigma = 1.0e-9
     local  lon =   -108.1
     local  lat =     39.1
@@ -16,8 +21,6 @@ runner.unittest("ESA WorldCover 10meter sample POI", function()
 
     local expResults = {{10.0, 1309046418, '/vsis3/' .. sys.getcfg("project_bucket") .. '/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt'}}
 
-    local demType = "esa-worldcover-10meter"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
     local starttime = time.latch();
     local tbl, err = dem:sample(lon, lat, height)
     local stoptime = time.latch();
@@ -45,7 +48,7 @@ end)
 
 -- Self Test --
 
-runner.unittest("ESA WorldCover 10meter subset AOI", function()
+runner.unittest("ESA WorldCover 10m Subset AOI", function()
 
     local starttime = time.latch();
     local tbl, err = dem:subset(-108.3412, 38.8236, -107.7292, 39.1956)
@@ -61,7 +64,7 @@ runner.unittest("ESA WorldCover 10meter subset AOI", function()
         print(string.format("(%02d) size: %d (%.2fMB)", i, size, mbytes))
         subsetCnt = subsetCnt + 1
 
-        runner.assert(size > 0)
+        runner.assert(size > 0, string.format("size is 0"))
     end
     runner.assert(subsetCnt == 1, string.format("Received unexpected number of subsets: %d", subsetCnt))
 

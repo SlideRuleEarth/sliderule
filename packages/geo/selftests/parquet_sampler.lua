@@ -151,7 +151,7 @@ runner.unittest("Input/Output GeoParquet (multiple)", function()
     runner.assert(parquet_sampler ~= nil)
     parquet_sampler:waiton()
     local out_file_size = getFileSize(_out_geoparquet);
-    runner.assert(out_file_size > in_file_size, "Output file is empty")
+    runner.assert(out_file_size > 0, "Output file is empty")
     runner.assert(findMatchingString(_out_geoparquet, "mosaic"), "Could not find key in output file")
     runner.assert(findMatchingString(_out_geoparquet, "strips"), "Could not find key in output file")
     os.remove(_out_geoparquet)

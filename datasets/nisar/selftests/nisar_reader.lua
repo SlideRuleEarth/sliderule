@@ -64,13 +64,12 @@ runner.unittest(string.format("NISAR (%d point%s)", numPoints, numPoints == 1 an
     runner.assert(dem ~= nil, "failed to create nisar-L2 dataset", true)
 
     local nanCount = 0
-    local failedSamples = 0
 
     local starttime = time.latch();
     local batchResults, err = dem:batchsample(lons, lats, heights)
 
-    runner.assert(err == 0, string.format("Point: (%.5f, %.5f) ======> FAILED to read, err# %d", lon, lat, err), true)
-    runner.assert(tbl ~= nil, "failed to create table of samples", true)
+    runner.assert(err == 0, string.format("failed to sample dem: %d", err), true)
+    runner.assert(batchResults ~= nil, "failed to create table of samples", true)
 
     local sampledCount = 0
     for i = 1, #batchResults do
