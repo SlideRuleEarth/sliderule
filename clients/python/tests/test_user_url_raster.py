@@ -1,4 +1,4 @@
-"""Tests for sliderule user URL DEM raster support."""
+"""Tests for sliderule user URL raster support."""
 
 import sliderule
 import pytest
@@ -32,7 +32,7 @@ class TestUserDemRaster:
     def test_samples(self, init):
         rqst = {
             "samples": {
-                "asset": "user-dem-raster",
+                "asset": "user-url-raster",
                 "url": vrtUrl
             },
             "coordinates": [[vrtLon, vrtLat]]
@@ -43,7 +43,7 @@ class TestUserDemRaster:
         assert rsps["samples"][0][0]["file"] == vrtFile
 
     def test_raster_sample_api(self, init):
-        gdf = raster.sample("user-dem-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl})
+        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl})
         assert init
         assert len(gdf) == 1
         assert abs(gdf["value"].iat[0] - vrtValueRaw) < sigma
@@ -51,7 +51,7 @@ class TestUserDemRaster:
 
     def test_with_proj_pipeline(self, init):
         gdf = raster.sample(
-            "user-dem-raster",
+            "user-url-raster",
             [[vrtLon, vrtLat]],
             parms={"url": vrtUrl, "proj_pipeline": pipeline}
         )
@@ -62,7 +62,7 @@ class TestUserDemRaster:
 
     def test_with_target_crs(self, init):
         gdf = raster.sample(
-            "user-dem-raster",
+            "user-url-raster",
             [[vrtLon, vrtLat]],
             parms={"url": vrtUrl, "target_crs": targetCRS}
         )
@@ -74,7 +74,7 @@ class TestUserDemRaster:
 
     def test_with_proj_pipeline_and_target_crs(self, init):
         gdf = raster.sample(
-            "user-dem-raster",
+            "user-url-raster",
             [[vrtLon, vrtLat]],
             parms={"url": vrtUrl, "proj_pipeline": pipeline, "target_crs": targetCRS}
         )
@@ -85,7 +85,7 @@ class TestUserDemRaster:
 
     @pytest.mark.xfail(strict=True, reason="Bad target CRS currently yields empty samples/error response")
     def test_with_bad_target_crs(self, init):
-        gdf = raster.sample("user-dem-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "target_crs": "EPSG:BADCRS"})
+        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "target_crs": "EPSG:BADCRS"})
 
         assert init
         assert rsps["errors"][0] != 0
@@ -94,7 +94,7 @@ class TestUserDemRaster:
 
     @pytest.mark.xfail(strict=True, reason="Bad proj pipeline currently yields empty samples/error response")
     def test_with_bad_proj_pipeline(self, init):
-        gdf = raster.sample("user-dem-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "proj_pipeline": "bad-pipeline"})
+        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "proj_pipeline": "bad-pipeline"})
 
         assert init
         assert rsps["errors"][0] != 0

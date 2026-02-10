@@ -44,15 +44,29 @@
 
 class GeoUserUrlRaster: public GeoRaster
 {
+    public:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+                          { return new GeoUserUrlRaster(L, rqst_parms, key); }
+
     protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-         GeoUserUrlRaster (lua_State* L, RequestFields* rqst_parms, const char* key,
-                           double gps, int elevationBandNum, int flagsBandNum);
+         GeoUserUrlRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
+            GeoRaster(L, rqst_parms, key,
+                    getRasterPath(rqst_parms, key),
+                    0.0,                 /* unknown raster timestamp */
+                    1,                   /* DEM elevation band */
+                    GdalRaster::NO_BAND) /* no flags band */ {}
 
+    private:
         static std::string normalizeRasterUrl(const std::string& url);
         static std::string getRasterPath(RequestFields* rqst_parms, const char* key);
 };

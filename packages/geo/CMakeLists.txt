@@ -61,7 +61,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoJsonRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserRaster.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserDemRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserUrlRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSampler.h

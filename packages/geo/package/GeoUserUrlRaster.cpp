@@ -37,21 +37,8 @@
 #include "GeoFields.h"
 
 /******************************************************************************
- * PROTECTED METHODS
+ * PRIVATE METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-GeoUserUrlRaster::GeoUserUrlRaster(lua_State* L, RequestFields* rqst_parms, const char* key,
-                                   double gps, int elevationBandNum, int flagsBandNum):
-    GeoRaster(L, rqst_parms, key,
-              getRasterPath(rqst_parms, key),
-              gps,
-              elevationBandNum,
-              flagsBandNum)
-{
-}
 
 /*----------------------------------------------------------------------------
  * normalizeRasterUrl
