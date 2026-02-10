@@ -9,6 +9,7 @@ earthdata.load()
 local results = {}
 local context = "global"
 local argsave = {}
+local metrics = {}
 
 --[[
 Function:   set_context
@@ -139,8 +140,16 @@ Function:   unittest
 ]]
 local function unittest (testname, testfunc, skip)
     if skip then return nil end
+    metrics[testname] = {}
+    local num_asserts = results[context]["asserts"]
+    local num_errors = results[context]["errors"]
     print("Starting test: " .. testname)
+    local start_time = time.latch()
     local status, result = pcall(testfunc)
+    metrics[testname]["duration"] = time.latch() - start_time
+    metrics[testname]["status"] = status
+    metrics[testname]["asserts"] = results[context]["asserts"] - num_asserts
+    metrics[testname]["errors"] = results[context]["errors"] - num_errors
     assert(status, testname)
     return result
 end
@@ -291,6 +300,13 @@ local function report ()
                 print("---------------------------------")
             end
         end
+        print("\n#################################")
+        print(string.format("%-30s %-10s %-10s %-10s", "Test", "Duration", "Asserts", "Errors"))
+        for k,v in pairs(metrics) do
+            local duration_str = string.format("%.6f", v["duration"])
+            print(string.format("%-30s %-10s %-10s %-10s", k, duration_str, tostring(v["asserts"]), tostring(v["errors"])))
+        end
+        print("#################################")
         print("\n*********************************")
         print("Total number of tests: " .. tostring(total_tests))
         print("Total number of skipped tests: " .. tostring(total_skipped))
