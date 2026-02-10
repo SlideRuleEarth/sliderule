@@ -618,6 +618,9 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
         const char* endpoint = _parms->asset.asset->getEndpoint();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
+        /* If path is null, there is nothing to set */
+        if(path == NULL) return;
+
         /* Set endpoint for specific path */
         if((path == StringLib::find(path, "/vsis3/")) && (endpoint && endpoint[0] != '\0'))
         {

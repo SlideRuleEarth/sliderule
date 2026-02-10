@@ -227,7 +227,6 @@ ASSETS = {
         endpoint    = "opentopography.s3.sdsc.edu", -- Hosted at SDSC (San Diego Supercomputer Center) and exposed through an S3-compatible API endpoint
     },
     ["user-dem-raster"] = {
-        path        = "/vsicurl/",
     },
     ["bluetopo-bathy"] = {
         identity    = "iam-role",
