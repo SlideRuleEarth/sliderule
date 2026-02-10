@@ -31,7 +31,7 @@ runner.unittest("3DEP Unit Test", function()
     local status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
     runner.assert(status, "Failed sampling test")
 
-end)
+end, {"long"})
 
 -- Report Results --
 

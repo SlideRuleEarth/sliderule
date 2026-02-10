@@ -79,7 +79,7 @@ runner.unittest("PGC No Filter", function()
         runner.assert(fname == expResults[i][3])
     end
     runner.assert(sampleCnt == #expResults)
-end)
+end, {"long"})
 
 -- Self Test --
 

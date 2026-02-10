@@ -1,11 +1,5 @@
 local runner = require("test_executive")
 
--- Requirements --
-
-if not __legacy__ then
-	return runner.skip()
-end
-
 -- Self Test --
 
 runner.unittest("Limit Dispatch", function()

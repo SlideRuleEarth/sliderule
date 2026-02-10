@@ -64,7 +64,7 @@ runner.unittest("RasterSampler::arcticdem-strips", function()
     runner.assert(ut ~= nil)
     local status = ut:test(lon, lat, lon_incr, lat_incr, pointCount)
     runner.assert(status, "Failed sampling test")
-end)
+end, {"long"})
 
 -- Report Results --
 

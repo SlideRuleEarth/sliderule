@@ -163,7 +163,7 @@ class TestParser:
         return result
 
 # open up latest log file and search for results
-selftest = TestParser("selftest", "/sliderule/stage/sliderule/bin/sliderule /sliderule/targets/slideruleearth/test_runner.lua cloud")
+selftest = TestParser("selftest", "/sliderule/stage/sliderule/bin/sliderule /sliderule/targets/slideruleearth/test_runner.lua")
 sliderule = TestParser("pytest", "rootdir: /sliderule/clients/python")
 provisioner = TestParser("pytest", "rootdir: /sliderule/applications/provisioner")
 ams = TestParser("pytest", "rootdir: /sliderule/applications/ams")

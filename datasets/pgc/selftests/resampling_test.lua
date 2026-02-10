@@ -37,7 +37,7 @@ runner.unittest("ArcticDEM Resampling Test", function()
             end
         end
     end
-end)
+end, {"long"})
 
 -- Report Results --
 

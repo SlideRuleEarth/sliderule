@@ -729,7 +729,7 @@ distclean: ## fully remove all non-version controlled files and directories
 # Test Targets
 ########################
 
-TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua cloud
+TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
 AMSTEST ?= # specific ams tests and additional pytest options can be supplied here

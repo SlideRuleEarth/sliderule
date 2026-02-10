@@ -39,7 +39,7 @@ runner.unittest("REMA DEM Mosaic Correct Values", function()
     runner.assert(sampleCnt == 1)
 end)
 
-runner.unittest("REMA DEM Mosaic Correct Values", function()
+runner.unittest("REMA DEM Strips Correct Values", function()
     local expResultsStrips = {
         {324.50000000, 0x0, "/vsis3/pgc-opendata-dems/rema/strips/s2s041/2m/s80w080/SETSM_s2s041_WV01_20241216_1020010108B4CB00_1020010108CCEC00_2m_seg1_dem.tif"},
         {328.64062500, 0x0, "/vsis3/pgc-opendata-dems/rema/strips/s2s041/2m/s80w081/SETSM_s2s041_WV01_20241214_10200101089DA900_1020010108DBDD00_2m_seg1_dem.tif"},
@@ -83,7 +83,7 @@ runner.unittest("REMA DEM Mosaic Correct Values", function()
         runner.assert(fname == expResultsStrips[k][3])
     end
     runner.assert(sampleCnt == #expResultsStrips)
-end)
+end, {"long"})
 
 -- Report Results --
 

@@ -78,7 +78,7 @@ runner.unittest("ArcticDEM Strips Attributes", function()
     runner.assert(rows == 512)
     runner.assert(cols == 512)
     runner.assert(cellsize == 0.0)
-end)
+end, {"long"})
 
 runner.unittest("ArcticDEM Mosaic Correct Values", function()
     test("arcticdem-mosaic", expResultsMosaic, expSamplesMosaic)
@@ -86,7 +86,7 @@ end)
 
 runner.unittest("ArcticDEM Strips Correct Values", function()
     test("arcticdem-strips", expResultsStrips, expSamplesStrips)
-end)
+end, {"long"})
 
 -- Report Results --
 

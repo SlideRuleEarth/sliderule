@@ -28,7 +28,7 @@ runner.unittest("ATL03 Ancillary", function()
     runner.assert(cnt == expected_cnt, string.format('failed to read sufficient number of container records, expected: %d, got: %d', expected_cnt, cnt))
     recq:destroy()
     f:destroy()
-end)
+end, {"long"})
 
 -- Report Results --
 

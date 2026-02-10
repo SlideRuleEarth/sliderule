@@ -6,6 +6,7 @@ local earthdata = require("earth_data_query")
 earthdata.load()
 
 -- Global Data
+local scope = nil
 local results = {}
 local context = "global"
 local argsave = {}
@@ -34,6 +35,19 @@ Function:   isglobal
 ]]
 local function isglobal ()
     return context == "global"
+end
+
+--[[
+Function:   setscope
+ Purpose:   constrains unittests to only provided scopes
+   Notes:   none
+]]
+local function setscope (tags)
+    scope = {}
+    for _,tag in ipairs(tags) do
+        print(string.format("Running test scope: %s", tag))
+        scope[tag] = true
+    end
 end
 
 --[[
@@ -138,18 +152,42 @@ Function:   unittest
  Purpose:   handle the execution of a unittest function
    Notes:   none
 ]]
-local function unittest (testname, testfunc, skip)
-    if skip then return nil end
+local function unittest (testname, testfunc, tags)
+    -- check tags
+    if scope then
+        if tags then
+            local scope_found = false
+            for tag in ipairs(tags) do
+                if scope[tag] then
+                    scope_found = true
+                    break
+                end
+            end
+            if not scope_found then
+                return nil
+            end
+        elseif not scope["nil"] then
+            return nil
+        end
+    end
+
+    -- initialize metrics
     metrics[testname] = {}
     local num_asserts = results[context]["asserts"]
     local num_errors = results[context]["errors"]
+
+    -- start test
     print("Starting test: " .. testname)
     local start_time = time.latch()
     local status, result = pcall(testfunc)
+
+    -- populate metrics
     metrics[testname]["duration"] = time.latch() - start_time
     metrics[testname]["status"] = status
     metrics[testname]["asserts"] = results[context]["asserts"] - num_asserts
     metrics[testname]["errors"] = results[context]["errors"] - num_errors
+
+    -- check status and return
     assert(status, testname)
     return result
 end
@@ -327,6 +365,7 @@ end
 
 local package = {
     isglobal = isglobal,
+    setscope = setscope,
     rootdir = rootdir,
     srcscript = srcscript,
     command = command,

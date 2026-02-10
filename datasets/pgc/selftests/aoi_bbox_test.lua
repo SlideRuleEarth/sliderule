@@ -48,19 +48,19 @@ local function test(demType, expResults, expSamples)
                 runner.assert(el > 100)  --All others
             end
         end
-        runner.assert(sampleCnt == expSamples)
+        runner.assert(sampleCnt == expSamples[j])
     end
 end
 
 -- Self Tests --
 
-runner.unittest("ArcticDEM Mosaic Correct Values (with AOI)", function()
+runner.unittest("ArcticDEM Mosaic Correct Values (AOI)", function()
     test("arcticdem-mosaic", expResultsMosaic, expSamplesMosaic)
 end)
 
-runner.unittest("ArcticDEM Strips Correct Values (with AOI)", function()
+runner.unittest("ArcticDEM Strips Correct Values (AOI)", function()
     test("arcticdem-strips", expResultsStrips, expSamplesStrips)
-end)
+end, {"long"})
 
 -- Report Results --
 

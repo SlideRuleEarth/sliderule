@@ -81,7 +81,7 @@ runner.unittest("PGC Url Filter: /vsis3", function()
         runner.assert(fname == expResults[i][3])
     end
     runner.assert(sampleCnt == #expResults)
-end)
+end, {"long"})
 
 -- Self Test --
 

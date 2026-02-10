@@ -52,13 +52,13 @@ end
 
 -- Self Test --
 
-runner.unittest("ArcticDEM Mosaic Correct Values", function()
+runner.unittest("ArcticDEM Mosaic Correct Values (batch)", function()
     test("arcticdem-mosaic", expResultsMosaic, expSamplesMosaic)
 end)
 
-runner.unittest("ArcticDEM Strips Correct Values", function()
+runner.unittest("ArcticDEM Strips Correct Values (batch)", function()
     test("arcticdem-strips", expResultsStrips, expSamplesStrips)
-end)
+end, {"long"})
 
 -- Report Results --
 

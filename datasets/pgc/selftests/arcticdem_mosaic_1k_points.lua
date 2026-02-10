@@ -10,7 +10,7 @@ end
 
 -- Self Test --
 
-runner.unittest("ArcticDEM mosaics sampling ", function()
+runner.unittest("ArcticDEM Mosaic Sampling", function()
 
     local generator = require("arctictdem_test_points_generator")
     local maxPoints = 1000  -- Do not change this value, the generated points are fixed and samples are deterministic

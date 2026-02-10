@@ -42,7 +42,7 @@ runner.unittest("Global Canopy Height Sample POI", function()
     end
     runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
 
-end)
+end, {"long"})
 
 -- Report Results --
 

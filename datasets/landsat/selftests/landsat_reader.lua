@@ -335,7 +335,7 @@ runner.unittest("Landsat Grand Mesa Test", function()
     local stoptime = time.latch();
     print(string.format("POI sample %d points time: %.2f", sampleCnt, stoptime - starttime))
     runner.assert(sampleCnt == maxSamples)
-end)
+end, {"long"})
 
 -- Report Results --
 

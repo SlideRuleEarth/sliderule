@@ -39,7 +39,7 @@ runner.unittest("Landsat Unit Test", function()
 
     ut:destroy()
 
-end)
+end, {"long"})
 
 -- Report Results --
 

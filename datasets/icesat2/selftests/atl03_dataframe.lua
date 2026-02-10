@@ -125,7 +125,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
         gt = 40
     }, atl03df, nil, 0)
 
-end)
+end, {"long"})
 
 -- Self Test --
 
@@ -177,7 +177,7 @@ runner.unittest("ATL06 Surface Fitter", function()
         gt = 10
     }, df, nil, 0)
 
-end)
+end, {"long"})
 
 -- Report Results --
 

@@ -44,7 +44,7 @@ runner.unittest("ATL06 Ancillary", function()
     algo_disp:destroy()
     reader:destroy()
 
-end)
+end, {"long"})
 
 -- Report Results --
 

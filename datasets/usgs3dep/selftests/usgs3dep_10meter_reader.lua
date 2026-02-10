@@ -67,7 +67,7 @@ runner.unittest("3DEP 10m DEM Sample (batch)", function()
     runner.assert(tbl ~= nil)
     runner.assert(#tbl == numPoints, string.format("Expected %d samples, got %d", numPoints, #tbl))
 
-end)
+end, {"long"})
 
 -- Report Results --
 

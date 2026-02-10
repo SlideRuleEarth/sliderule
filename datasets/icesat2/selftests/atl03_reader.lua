@@ -39,7 +39,7 @@ runner.unittest("ATL03 Reader Extent Record", function()
     end
     f2:destroy()
     recq:destroy()
-end)
+end, {"long"})
 
 runner.unittest("ATL03 Reader Extent Definition", function()
     local def = msg.definition("atl03rec")

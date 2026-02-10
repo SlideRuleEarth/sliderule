@@ -2,6 +2,11 @@ local runner = require("test_executive")
 local glb = require("global")
 local aws_utils = require("aws_utils")
 
+-- Configure Optional Tags
+local tags = {}
+for i=1,#arg do table.insert(tags, arg[i]) end
+runner.setscope(tags)
+
 -- Configure Running In Cloud --
 aws_utils.config_aws()
 

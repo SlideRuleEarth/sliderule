@@ -66,7 +66,7 @@ runner.unittest("H5 2D Large Array", function()
 
         startrow = startrow + numrows
     end
-end)
+end, {"long"})
 
 -- Clean Up --
 
