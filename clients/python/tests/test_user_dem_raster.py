@@ -1,6 +1,7 @@
 """Tests for sliderule user URL DEM raster support."""
 
 import sliderule
+import pytest
 from sliderule import raster
 
 sigma = 1.0e-9
@@ -12,6 +13,8 @@ vrtValueRaw         = 2653.0119772144   # The raw value from the raster
 vrtValueWithZOffset = 2637.891093719017 # The value with the Z offset applied via proj transform in the VRT
 vrtUrl = "https://opentopography.s3.sdsc.edu/raster/COP30/COP30_hh.vrt"
 vrtFile = "/vsicurl/" + vrtUrl
+
+targetCRS = "EPSG:9055+3855"
 
 pipeline = "+proj=pipeline \
             +step +proj=axisswap +order=2,1 \
@@ -39,28 +42,14 @@ class TestUserDemRaster:
         assert abs(rsps["samples"][0][0]["value"] - vrtValueRaw) < sigma
         assert rsps["samples"][0][0]["file"] == vrtFile
 
-    def test_sample_api_serial(self, init):
+    def test_raster_sample_api(self, init):
         gdf = raster.sample("user-dem-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl})
         assert init
         assert len(gdf) == 1
         assert abs(gdf["value"].iat[0] - vrtValueRaw) < sigma
         assert gdf["file"].iat[0] == vrtFile
 
-    def test_samples_with_proj_pipeline(self, init):
-        rqst = {
-            "samples": {
-                "asset": "user-dem-raster",
-                "url": vrtUrl,
-                "proj_pipeline": pipeline
-            },
-            "coordinates": [[vrtLon, vrtLat]]
-        }
-        rsps = sliderule.source("samples", rqst)
-        assert init
-        assert abs(rsps["samples"][0][0]["value"] - vrtValueWithZOffset) < sigma
-        assert rsps["samples"][0][0]["file"] == vrtFile
-
-    def test_sample_api_serial_with_proj_pipeline(self, init):
+    def test_with_proj_pipeline(self, init):
         gdf = raster.sample(
             "user-dem-raster",
             [[vrtLon, vrtLat]],
@@ -70,3 +59,44 @@ class TestUserDemRaster:
         assert len(gdf) == 1
         assert abs(gdf["value"].iat[0] - vrtValueWithZOffset) < sigma
         assert gdf["file"].iat[0] == vrtFile
+
+    def test_with_target_crs(self, init):
+        gdf = raster.sample(
+            "user-dem-raster",
+            [[vrtLon, vrtLat]],
+            parms={"url": vrtUrl, "target_crs": targetCRS}
+        )
+
+        assert init
+        assert len(gdf) == 1
+        assert abs(gdf["value"].iat[0] - vrtValueWithZOffset) < sigma
+        assert gdf["file"].iat[0] == vrtFile
+
+    def test_with_proj_pipeline_and_target_crs(self, init):
+        gdf = raster.sample(
+            "user-dem-raster",
+            [[vrtLon, vrtLat]],
+            parms={"url": vrtUrl, "proj_pipeline": pipeline, "target_crs": targetCRS}
+        )
+        assert init
+        assert len(gdf) == 1
+        assert abs(gdf["value"].iat[0] - vrtValueWithZOffset) < sigma
+        assert gdf["file"].iat[0] == vrtFile
+
+    @pytest.mark.xfail(strict=True, reason="Bad target CRS currently yields empty samples/error response")
+    def test_with_bad_target_crs(self, init):
+        gdf = raster.sample("user-dem-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "target_crs": "EPSG:BADCRS"})
+
+        assert init
+        assert rsps["errors"][0] != 0
+        assert len(rsps["samples"][0]) == 0
+        assert len(gdf) == 0
+
+    @pytest.mark.xfail(strict=True, reason="Bad proj pipeline currently yields empty samples/error response")
+    def test_with_bad_proj_pipeline(self, init):
+        gdf = raster.sample("user-dem-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "proj_pipeline": "bad-pipeline"})
+
+        assert init
+        assert rsps["errors"][0] != 0
+        assert len(rsps["samples"][0]) == 0
+        assert len(gdf) == 0

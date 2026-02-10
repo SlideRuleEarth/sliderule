@@ -1202,15 +1202,26 @@ void GdalRaster::createTransform(void)
     if(projref && strlen(projref) > 0)
     {
         ogrerr = targetCRS.importFromWkt(projref);
-        // mlog(DEBUG, "CRS from raster: %s", projref);
+        if(ogrerr != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse target CRS: %s", parms->target_crs.value.c_str());
     }
 
+    /* If caller specified overrideCRS callback, use it to get target CRS */
     if(overrideCRS)
     {
         ogrerr = overrideCRS(targetCRS, reinterpret_cast<const void*>(fileName.c_str()));
+        if(ogrerr != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to override target CRS: %s", fileName.c_str());
     }
 
-    CHECK_GDALERR(ogrerr);
+    /* If target CRS is specified in parameters, use it to override raster's CRS or callback override */
+    if(!parms->target_crs.value.empty())
+    {
+        targetCRS.Clear();
+        ogrerr = targetCRS.SetFromUserInput(parms->target_crs.value.c_str());
+        if(ogrerr != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse target CRS: %s", parms->target_crs.value.c_str());
+    }
 
     OGRCoordinateTransformationOptions options;
     if(!parms->proj_pipeline.value.empty())
@@ -1222,7 +1233,7 @@ void GdalRaster::createTransform(void)
     }
     else
     {
-        /* Limit to area of interest if AOI was set */
+        /* Limit to area of interest if AOI was set, help projlib to pick right transformation and best grid shift files if needed */
         const bbox_t* aoi = &aoi_bbox; // check override first
         bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
         if(!useaoi)
@@ -1235,8 +1246,7 @@ void GdalRaster::createTransform(void)
             if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set AOI");
 
-            mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)",
-                aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
+            mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)", aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
         }
     }
 

@@ -187,6 +187,7 @@ GeoFields::GeoFields (void):
         {"doy_range",           &doy_range},
         {"sort_by_index",       &sort_by_index},
         {"force_single_sample", &force_single_sample},
+        {"target_crs",          &target_crs},
         {"proj_pipeline",       &proj_pipeline},
         {"url",                 &url},
         {"aoi_bbox",            &aoi_bbox},

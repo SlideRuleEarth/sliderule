@@ -133,6 +133,7 @@ class GeoFields: public FieldDictionary
         FieldElement<string>                    doy_range;
         FieldElement<bool>                      sort_by_index {false};
         FieldElement<single_sample_option_t>    force_single_sample {SINGLE_SAMPLE_NA};
+        FieldElement<string>                    target_crs;
         FieldElement<string>                    proj_pipeline;
         FieldElement<string>                    url;
         FieldElement<bbox_t>                    aoi_bbox;
