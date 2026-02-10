@@ -97,7 +97,7 @@ runner.unittest("H5Coro Read Dataset Raw", function()
 
 end)
 
-runner.unittest("H5Coro Slice Column via 2D Slice (1D result)", function()
+runner.unittest("H5Coro 2D Slice (1D Result)", function()
 
     local f5 = h5.file(asset, h5_input_file)
     local rsps5 = msg.subscribe("h5slice1q")
@@ -150,7 +150,7 @@ runner.unittest("H5Coro Slice 2D Block", function()
 
 end)
 
-runner.unittest("H5Coro Slice All Via Slice Semantics (1D)", function()
+runner.unittest("H5Coro Slice Semantics (1D)", function()
 
     -- Use a slice that mirrors the default column read (col 0, all rows)
     local f7a = h5.file(asset, h5_input_file)
@@ -179,7 +179,7 @@ runner.unittest("H5Coro Slice All Via Slice Semantics (1D)", function()
 
 end)
 
-runner.unittest("H5Coro Slice All Via Slice Semantics (2D)", function()
+runner.unittest("H5Coro Slice Semantics (2D)", function()
 
     -- Full 2D slice: check size and a small known block
     local f8 = h5.file(asset, h5_input_file)
@@ -218,7 +218,7 @@ runner.unittest("H5Coro Slice All Via Slice Semantics (2D)", function()
 
 end)
 
-runner.unittest("H5Coro Slice From Row 2 to End (1D)", function()
+runner.unittest("H5Coro Slice[2:] (1D)", function()
 
     local f9 = h5.file(asset, h5_input_file)
     local rsps9_full = msg.subscribe("h5slice6q_full")
@@ -249,7 +249,7 @@ runner.unittest("H5Coro Slice From Row 2 to End (1D)", function()
 
 end)
 
-runner.unittest("H5Coro Slice From Row 2 to End (2D)", function()
+runner.unittest("H5Coro Slice[2:] (2D)", function()
 
     -- Take rows 2..end, all columns; check size and leading values
     local f10a = h5.file(asset, h5_input_file)
@@ -282,7 +282,7 @@ runner.unittest("H5Coro Slice From Row 2 to End (2D)", function()
 
 end)
 
-runner.unittest("H5Coro Slice Out of Bounds (Negative)", function()
+runner.unittest("H5Coro Slice Out of Bounds", function()
 
     local f10 = h5.file(asset, h5_input_file)
     local rsps10 = msg.subscribe("h5slice3q")
@@ -298,7 +298,7 @@ runner.unittest("H5Coro Slice Out of Bounds (Negative)", function()
 
 end)
 
-runner.unittest("H5Coro Slice Start Greater Than End (Negative)", function()
+runner.unittest("H5Coro Slice Out of Range", function()
 
     local f11n = h5.file(asset, h5_input_file)
     local rsps11n = msg.subscribe("h5slice4q")
@@ -314,7 +314,7 @@ runner.unittest("H5Coro Slice Start Greater Than End (Negative)", function()
 
 end)
 
-runner.unittest("H5Coro Slice With Extra Dimension (Truncates)", function()
+runner.unittest("H5Coro Slice Truncate Dimension", function()
 
     -- Providing a third dimension to a 2D dataset should ignore the extra dim and still return data
     local f12 = h5.file(asset, h5_input_file)

@@ -23,7 +23,7 @@ local path = '/vsis3/' .. sys.getcfg("project_bucket") .. '/data/GEDTM/'
 
 -- Self Test --
 
-runner.uittest("GEDTM 30 meter sample", function()
+runner.unittest("GEDTM 30 meter sample", function()
 
     local expResults = {{379.0,  1422230418.00, path .. 'legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif'}}
     local demType = "gedtm-30meter"
@@ -54,7 +54,7 @@ runner.uittest("GEDTM 30 meter sample", function()
 end)
 
 
-runner.uittest("GEDTM standard deviation sample", function()
+runner.unittest("GEDTM standard deviation sample", function()
 
     local expResults = {{74.0,  1423094418.00, path .. 'gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif'}}
     local demType = "gedtm-std"
@@ -85,7 +85,7 @@ runner.uittest("GEDTM standard deviation sample", function()
 end)
 
 
-runner.uittest("GEDTM distance from mean sample", function()
+runner.unittest("GEDTM distance from mean sample", function()
 
     local expResults = {{16.0,  1419552018.00, path .. 'dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif'}}
     local demType = "gedtm-dfm"

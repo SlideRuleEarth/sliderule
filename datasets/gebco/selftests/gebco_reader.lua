@@ -27,7 +27,7 @@ local depth_tolerance = 1;
 
 -- Self Tests --
 
-runner.uittest("GEBCO correct values default with no band specified", function()
+runner.unittest("GEBCO Correct Values", function() -- defaults with no band specified
     local dem = geo.raster(geo.parms({ asset = "gebco-s3", algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
     runner.assert(dem ~= nil, "failed to create dem", true)
     for j, lon in ipairs(lons) do
@@ -46,7 +46,7 @@ runner.uittest("GEBCO correct values default with no band specified", function()
     end
 end)
 
-runner.uittest("GEBCO correct values band=2024", function()
+runner.unittest("GEBCO Correct Values (band=2024)", function()
     local dem = geo.raster(geo.parms({ asset = "gebco-s3", bands = {"2024"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
     runner.assert(dem ~= nil, "failed to create dem", true)
     for j, lon in ipairs(lons) do
@@ -65,7 +65,7 @@ runner.uittest("GEBCO correct values band=2024", function()
     end
 end)
 
-runner.uittest("GEBCO correct values band=2023", function()
+runner.unittest("GEBCO Correct Values (band=2023)", function()
     local dem = geo.raster(geo.parms({ asset = "gebco-s3", bands = {"2023"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
     runner.assert(dem ~= nil, "failed to create dem", true)
     for j, lon in ipairs(lons) do

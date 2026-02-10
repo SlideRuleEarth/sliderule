@@ -301,10 +301,10 @@ local function report ()
             end
         end
         print("\n#################################")
-        print(string.format("%-30s %-10s %-10s %-10s", "Test", "Duration", "Asserts", "Errors"))
+        print(string.format("%-50s %-12s %-10s %-10s", "Test", "Duration", "Asserts", "Errors"))
         for k,v in pairs(metrics) do
             local duration_str = string.format("%.6f", v["duration"])
-            print(string.format("%-30s %-10s %-10s %-10s", k, duration_str, tostring(v["asserts"]), tostring(v["errors"])))
+            print(string.format("%-50s %-12s %-10s %-10s", k, duration_str, tostring(v["asserts"]), tostring(v["errors"])))
         end
         print("#################################")
         print("\n*********************************")

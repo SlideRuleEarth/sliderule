@@ -57,7 +57,7 @@ local function test(demType, expResults, expSamples)
                 end
             end
         end
-        runner.assert(sampleCnt == expSamples)
+        runner.assert(sampleCnt == expSamples[j])
     end
 end
 

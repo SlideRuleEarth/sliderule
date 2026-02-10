@@ -8,7 +8,7 @@ end
 
 -- Self Test --
 
-runner.uittest("ESA Copernicus 30meter sample POI", function()
+runner.unittest("ESA Copernicus 30meter sample POI", function()
 
     local sigma = 1.0e-9
     local lon = -108.1

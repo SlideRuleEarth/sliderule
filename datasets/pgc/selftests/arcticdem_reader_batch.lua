@@ -33,24 +33,20 @@ local function test(demType, expResults, expSamples)
     for j, pointSamples in ipairs(tbl) do
         local lon, lat = lons[j], lats[j]
         local sampleCnt = #pointSamples
-        print(string.format("Point: %d, (%.3f, %.3f) Sample Count: %d", j, lon, lat, sampleCnt))
-        if sampleCnt > 0 then
-            for k, sample in ipairs(pointSamples) do
-                local el = sample["value"]
-                local fname = sample["file"]
-                print(string.format("    Sample (%02d): %16.9fm   %s", k, el, fname))
-                if k == 1 then -- Check all mosaics but only first strip for each POI
-                    runner.assert(math.abs(el - expResults[j]) < sigma)
-                else
-                    if not (el ~= el) then  -- not NaN
-                        runner.assert(el > 100)  --All others should be > 100
-                    end
+        assert(sampleCnt > 0, string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read samples", j, lon, lat))
+        for k, sample in ipairs(pointSamples) do
+            local el = sample["value"]
+            local fname = sample["file"]
+            print(string.format("    Sample (%02d): %16.9fm   %s", k, el, fname))
+            if k == 1 then -- Check all mosaics but only first strip for each POI
+                runner.assert(math.abs(el - expResults[j]) < sigma)
+            else
+                if not (el ~= el) then  -- not NaN
+                    runner.assert(el > 100)  --All others should be > 100
                 end
             end
-        else
-            print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read samples", j, lon, lat))
         end
-        runner.assert(sampleCnt == expSamples)
+        runner.assert(sampleCnt == expSamples[j], string.format("incorrect number of samples: %d", sampleCnt))
     end
 end
 

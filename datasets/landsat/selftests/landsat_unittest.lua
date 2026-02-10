@@ -13,7 +13,7 @@ runner.authenticate({'lpdaac-cloud'})
 
 -- Self Test --
 
-runner.uittest("Landsat Unit Test", function()
+runner.unittest("Landsat Unit Test", function()
 
     local geojsonfile = dirpath.."../data/grand_mesa.geojson"
     local f = io.open(geojsonfile, "r")

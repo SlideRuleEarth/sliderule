@@ -49,7 +49,7 @@ local function test(demType, expResults, expSamples)
                 end
             end
         end
-        runner.assert(sampleCnt == expSamples)
+        runner.assert(sampleCnt == expSamples[j])
     end
 end
 
@@ -57,20 +57,22 @@ end
 
 runner.unittest("ArcticDEM Mosaic Attributes", function()
     local dem = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=0, catalog=contents, sort_by_index=true}))
+    local tbl, err = dem:sample(lons[1], lats[1], height) -- required in order to populate information for calls below
     local rows, cols = dem:dim()
     local lon_min, lat_min, lon_max, lat_max = dem:bbox()
     local cellsize = dem:cell()
-    runner.assert(rows == 3750100)
-    runner.assert(cols == 3700100)
-    runner.assert(lon_min == -4000100.0)
-    runner.assert(lat_min == -3400100.0)
-    runner.assert(lon_max ==  3400100.0)
-    runner.assert(lat_max ==  4100100.0)
-    runner.assert(cellsize == 2.0)
+    runner.assert(rows == 3750100, tostring(rows))
+    runner.assert(cols == 3700100, tostring(cols))
+    runner.assert(lon_min == -4000100.0, tostring(lon_min))
+    runner.assert(lat_min == -3400100.0, tostring(lat_min))
+    runner.assert(lon_max ==  3400100.0, tostring(lon_max))
+    runner.assert(lat_max ==  4100100.0, tostring(lat_max))
+    runner.assert(cellsize == 2.0, tostring(cellsize))
 end)
 
 runner.unittest("ArcticDEM Strips Attributes", function()
     local dem = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, catalog=contents, sort_by_index=true}))
+    local tbl, err = dem:sample(lons[1], lats[1], height) -- required in order to populate information for calls below
     local rows, cols = dem:dim()
     local cellsize = dem:cell()
     runner.assert(rows == 512)

@@ -13,7 +13,7 @@ runner.authenticate({'nsidc-cloud'})
 
 -- Self Test --
 
-runner.uittest("ATL03 Indexer", function()
+runner.unittest("ATL03 Indexer", function()
 
     local filelist = { "ATL03_20181019065445_03150111_007_01.h5",
                     "ATL03_20200304065203_10470605_007_01.h5" }

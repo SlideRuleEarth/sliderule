@@ -15,7 +15,7 @@ local numPoints = 1000  -- Set to 1 to use a specific fixed point
 
 -- Self Test --
 
-runner.uittest(string.format("NISAR (%d point%s)", numPoints, numPoints == 1 and "" or "s"), function()
+runner.unittest(string.format("NISAR (%d point%s)", numPoints, numPoints == 1 and "" or "s"), function()
 
     local geojsonfile = dirpath.."../data/nisar_fake.geojson"
     local f = io.open(geojsonfile, "r")

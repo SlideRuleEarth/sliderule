@@ -31,7 +31,7 @@ local  height = 0
 
 -- Self Test --
 
-runner.uittest("Landsat Test (NDVI)", function()
+runner.unittest("Landsat Test (NDVI)", function()
     local expResults = {{-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
                         { 0.533333333333, 1293837135.0, 'HLS.S30.T01UCS.2021004T230941.v2.0 {"algo": "NDVI"}'},
                         { 0.017137180230, 1294009336.0, 'HLS.S30.T01UCS.2021006T225929.v2.0 {"algo": "NDVI"}'},
@@ -61,7 +61,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat Test (NDVI, NDSI, NDWI)", function()
+runner.unittest("Landsat Test (NDVI, NDSI, NDWI)", function()
     local expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDSI"}'},
                         {-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
                         {-0.203145478375, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDWI"}'},
@@ -109,7 +109,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat URL/GROUP Filter", function()
+runner.unittest("Landsat URL/GROUP Filter", function()
     local expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDSI"}'},
                         {-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
                         {-0.203145478375, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDWI"}'}}
@@ -133,7 +133,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat Temporal Filter: closest_time", function()
+runner.unittest("Landsat Temporal Filter: closest_time", function()
     local tstr = "2021:2:4:23:3:0"
     local expectedGroup = "T01UCS.2021026T225819.v2.0"
     local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
@@ -153,7 +153,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat Temporal Filter Override: closest_time", function()
+runner.unittest("Landsat Temporal Filter Override: closest_time", function()
     local tstr          = "2021:2:4:23:3:0"
     local tstrOverride  = "2000:2:4:23:3:0"
     local expectedGroup = "T01UCS.2021001T225941.v2.0"
@@ -174,7 +174,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat Test (BO3 and quality flags)", function()
+runner.unittest("Landsat Test (BO3 and quality flags)", function()
     local expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021001T225941.v2.0/HLS.S30.T01UCS.2021001T225941.v2.0.B03.tif'},
                         {  117.0, 1293837135.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021004T230941.v2.0/HLS.S30.T01UCS.2021004T230941.v2.0.B03.tif'},
                         { 5517.0, 1294009336.0, 0x42, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021006T225929.v2.0/HLS.S30.T01UCS.2021006T225929.v2.0.B03.tif'},
@@ -205,7 +205,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat Sample Test (BO3 and Fmask raster)", function()
+runner.unittest("Landsat Sample Test (BO3 and Fmask raster)", function()
     local expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021001T225941.v2.0/HLS.S30.T01UCS.2021001T225941.v2.0.B03.tif'},
                         {  194.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021001T225941.v2.0/HLS.S30.T01UCS.2021001T225941.v2.0.Fmask.tif'},
                         {  117.0, 1293837135.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021004T230941.v2.0/HLS.S30.T01UCS.2021004T230941.v2.0.B03.tif'},
@@ -245,7 +245,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat POI Sample Many Rasters Test", function()
+runner.unittest("Landsat POI Sample Many Rasters Test", function()
     local dem = geo.raster(geo.parms({
         asset = demType,
         algorithm = "NearestNeighbour",
@@ -269,7 +269,7 @@ end)
 
 -- Self Test --
 
-runner.uittest("Landsat Grand Mesa Test", function()
+runner.unittest("Landsat Grand Mesa Test", function()
     -- Grand Mesa test has 26183 samples/ndvi Results
     -- Limit the number of samples for selftest.
     local maxSamples = 100

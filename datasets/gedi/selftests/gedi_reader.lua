@@ -20,7 +20,7 @@ local  height =   0.0
 
 -- Self Tests --
 
-runner.uittest("GEDI l3-elevation sample POI", function()
+runner.unittest("GEDI l3-elevation sample POI", function()
 
     local expResults = {{110.244743347168, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif'}}
     local demType = "gedil3-elevation"
@@ -51,7 +51,7 @@ runner.uittest("GEDI l3-elevation sample POI", function()
 end)
 
 
-runner.uittest("GEDI l3-elevation-stddev sample POI", function()
+runner.unittest("GEDI l3-elevation-stddev sample POI", function()
 
     local expResults = {{0.520213186741, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif'}}
     local demType = "gedil3-elevation-stddev"
@@ -82,7 +82,7 @@ runner.uittest("GEDI l3-elevation-stddev sample POI", function()
 end)
 
 
-runner.uittest("GEDI l3-cannopy sample POI", function()
+runner.unittest("GEDI l3-cannopy sample POI", function()
 
     local expResults = {{3.698355197906, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_mean_2019108_2022019_002_03.tif'}}
     local demType = "gedil3-canopy"
@@ -113,7 +113,7 @@ runner.uittest("GEDI l3-cannopy sample POI", function()
 end)
 
 
-runner.uittest("GEDI l3-cannopy-stddev sample POI", function()
+runner.unittest("GEDI l3-cannopy-stddev sample POI", function()
 
     local expResults = {{0.573970079422, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_stddev_2019108_2022019_002_03.tif'}}
     local demType = "gedil3-canopy-stddev"
@@ -144,7 +144,7 @@ runner.uittest("GEDI l3-cannopy-stddev sample POI", function()
 end)
 
 
-runner.uittest("GEDI l3-counts sample POI", function()
+runner.unittest("GEDI l3-counts sample POI", function()
 
     local expResults = {{152, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_counts_2019108_2022019_002_03.tif'}}
     local demType = "gedil3-counts"
@@ -175,7 +175,7 @@ runner.uittest("GEDI l3-counts sample POI", function()
 end)
 
 
-runner.uittest("GEDI l4b sample POI", function()
+runner.unittest("GEDI l4b sample POI", function()
 
     local expResults = {{ 0.000637468358, 1312070418, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass_V2_1/data/GEDI04_B_MW019MW223_02_002_02_R01000M_V2.tif'}}
     local demType = "gedil4b"

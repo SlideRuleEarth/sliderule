@@ -2,7 +2,7 @@ local runner = require("test_executive")
 
 -- Self Test --
 
-runner.unittst("Multicast Device Writer", function()
+runner.unittest("Multicast Device Writer", function()
 
     -- create writer
     local sockoutq = msg.publish("sockoutq")

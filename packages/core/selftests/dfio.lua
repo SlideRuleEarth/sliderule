@@ -84,7 +84,7 @@ end)
 
 -- Self Test --
 
-runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
+runner.unittest("DataFrame Multiple Senders", function() -- with merged receive
 
     local table1_in = {a = {101,102,103,104}, b = {111,112,113,114}, c = {121,122,123,124}}
     local meta1_in = {bob = 11, bill = 12, cynthia = 13}
@@ -126,7 +126,7 @@ end)
 
 -- Self Test --
 
-runner.unittest("DataFrame Multiple Senders With CRS", function()
+runner.unittest("DataFrame Multiple Senders (with CRS)", function()
 
     local table1_in = {a = {101,102,103,104}, b = {111,112,113,114}, c = {121,122,123,124}}
     local meta1_in  = {bob = 11, bill = 12, cynthia = 13}

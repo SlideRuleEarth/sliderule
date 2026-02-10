@@ -54,11 +54,11 @@ end
 
 -- Self Tests --
 
-runner.unittest("ArcticDEM Mosaic: Reading Correct Values with AOI box", function()
+runner.unittest("ArcticDEM Mosaic Correct Values (with AOI)", function()
     test("arcticdem-mosaic", expResultsMosaic, expSamplesMosaic)
 end)
 
-runner.unittest("ArcticDEM Strips: Reading Correct Values with AOI box", function()
+runner.unittest("ArcticDEM Strips Correct Values (with AOI)", function()
     test("arcticdem-strips", expResultsStrips, expSamplesStrips)
 end)
 
