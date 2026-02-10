@@ -81,7 +81,5 @@ std::string GeoUserUrlRaster::getRasterPath(RequestFields* rqst_parms, const cha
     if(parms->url.value.empty())
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, samples.url is empty");
 
-    const std::string path = normalizeRasterUrl(parms->url.value);
-    mlog(DEBUG, "Using user raster URL: %s", path.c_str());
-    return path;
+    return normalizeRasterUrl(parms->url.value);
 }
