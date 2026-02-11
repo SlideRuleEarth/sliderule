@@ -33,7 +33,8 @@ class TestUserDemRaster:
         rqst = {
             "samples": {
                 "asset": "user-url-raster",
-                "url": vrtUrl
+                "url": vrtUrl,
+                "elevation_bands": ["1"]
             },
             "coordinates": [[vrtLon, vrtLat]]
         }
@@ -43,7 +44,7 @@ class TestUserDemRaster:
         assert rsps["samples"][0][0]["file"] == vrtFile
 
     def test_raster_sample_api(self, init):
-        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl})
+        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "elevation_bands": ["1"]})
         assert init
         assert len(gdf) == 1
         assert abs(gdf["value"].iat[0] - vrtValueRaw) < sigma
@@ -53,7 +54,7 @@ class TestUserDemRaster:
         gdf = raster.sample(
             "user-url-raster",
             [[vrtLon, vrtLat]],
-            parms={"url": vrtUrl, "proj_pipeline": pipeline}
+            parms={"url": vrtUrl, "proj_pipeline": pipeline, "elevation_bands": ["1"]}
         )
         assert init
         assert len(gdf) == 1
@@ -64,7 +65,7 @@ class TestUserDemRaster:
         gdf = raster.sample(
             "user-url-raster",
             [[vrtLon, vrtLat]],
-            parms={"url": vrtUrl, "target_crs": targetCRS}
+            parms={"url": vrtUrl, "target_crs": targetCRS, "elevation_bands": ["1"]}
         )
 
         assert init
@@ -76,27 +77,52 @@ class TestUserDemRaster:
         gdf = raster.sample(
             "user-url-raster",
             [[vrtLon, vrtLat]],
-            parms={"url": vrtUrl, "proj_pipeline": pipeline, "target_crs": targetCRS}
+            parms={"url": vrtUrl, "proj_pipeline": pipeline, "target_crs": targetCRS, "elevation_bands": ["1"]}
         )
         assert init
         assert len(gdf) == 1
         assert abs(gdf["value"].iat[0] - vrtValueWithZOffset) < sigma
         assert gdf["file"].iat[0] == vrtFile
 
-    @pytest.mark.xfail(strict=True, reason="Bad target CRS currently yields empty samples/error response")
     def test_with_bad_target_crs(self, init):
-        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "target_crs": "EPSG:BADCRS"})
-
+        rqst = {
+            "samples": {
+                "asset": "user-url-raster",
+                "url": vrtUrl,
+                "target_crs": "EPSG:BADCRS",
+                "elevation_bands": ["1"]
+            },
+            "coordinates": [[vrtLon, vrtLat]]
+        }
+        rsps = sliderule.source("samples", rqst)
         assert init
         assert rsps["errors"][0] != 0
         assert len(rsps["samples"][0]) == 0
-        assert len(gdf) == 0
 
-    @pytest.mark.xfail(strict=True, reason="Bad proj pipeline currently yields empty samples/error response")
     def test_with_bad_proj_pipeline(self, init):
-        gdf = raster.sample("user-url-raster", [[vrtLon, vrtLat]], parms={"url": vrtUrl, "proj_pipeline": "bad-pipeline"})
-
+        rqst = {
+            "samples": {
+                "asset": "user-url-raster",
+                "url": vrtUrl,
+                "proj_pipeline": "bad-pipeline",
+                "elevation_bands": ["1"]
+            },
+            "coordinates": [[vrtLon, vrtLat]]
+        }
+        rsps = sliderule.source("samples", rqst)
         assert init
         assert rsps["errors"][0] != 0
         assert len(rsps["samples"][0]) == 0
-        assert len(gdf) == 0
+
+    def test_rejects_missing_band_selection(self, init):
+        rqst = {
+            "samples": {
+                "asset": "user-url-raster",
+                "url": vrtUrl
+            },
+            "coordinates": [[vrtLon, vrtLat]]
+        }
+        rsps = sliderule.source("samples", rqst)
+        assert init
+        assert rsps["errors"][0] != 0
+        assert len(rsps["samples"][0]) == 0

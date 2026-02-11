@@ -43,9 +43,9 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime,
-                     int elevationBandNum, int flagsBandNum, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
+                     uint32_t elevationBandsMask, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject(L, rqst_parms, key),
-    raster(this, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandNum, flagsBandNum, gtf_cb, crs_cb)
+    raster(this, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandsMask, gtf_cb, crs_cb)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -68,12 +68,13 @@ GeoRaster::~GeoRaster(void) = default;
 uint32_t GeoRaster::samplePoint(const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
     static_cast<void>(param);
+    uint32_t ssErrors = SS_NO_ERRORS;
 
     lockSampling();
     try
     {
         std::vector<int> bands;
-        getInnerBands(&raster, bands);
+        resolveBands(&raster, bands);
         for(const int bandNum : bands)
         {
             /* Must create OGRPoint for each bandNum, samplePOI projects it to raster CRS */
@@ -85,11 +86,12 @@ uint32_t GeoRaster::samplePoint(const point_info_t& pinfo, sample_list_t& slist,
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
     unlockSampling();
 
-    return raster.getSSerror();
+    return raster.getSSerror() | ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -193,6 +195,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
     unlockSampling();
@@ -207,6 +210,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
 {
     static_cast<void>(gps);
     static_cast<void>(param);
+    uint32_t ssErrors = SS_NO_ERRORS;
 
     lockSampling();
 
@@ -218,7 +222,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
         OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
 
         std::vector<int> bands;
-        getInnerBands(&raster, bands);
+        resolveBands(&raster, bands);
         for(const int bandNum : bands)
         {
             /* Get subset rasters, if none found, return */
@@ -236,8 +240,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
                                              samplerKey,
                                              subset->rasterName,
                                              raster.getGpsTime(),
-                                             raster.getElevationBandNum(),
-                                             raster.getFLagsBandNum(),
+                                             raster.getElevationBandsMask(),
                                              raster.getOverrideGeoTransform(),
                                              raster.getOverrideCRS());
                 slist.add(subset);
@@ -249,6 +252,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error subsetting raster: %s", e.what());
     }
 
@@ -257,7 +261,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
 
     unlockSampling();
 
-    return raster.getSSerror();
+    return raster.getSSerror() | ssErrors;
 }
 
 /*----------------------------------------------------------------------------

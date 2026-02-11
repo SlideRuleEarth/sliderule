@@ -51,13 +51,13 @@ class GediRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
         static RasterObject* createL3ElevationRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19), 1, GdalRaster::NO_BAND); }
+        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19), 0x00000001u); }
 
         static RasterObject* createL3DataRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19), GdalRaster::NO_BAND, 1); }
+        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19)); }
 
         static RasterObject* createL4DataRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2021, 8, 4), GdalRaster::NO_BAND, 1); }
+        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2021, 8, 4)); }
 
     protected:
 
@@ -66,12 +66,11 @@ class GediRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediRaster(lua_State* L, RequestFields* rqst_parms, const char* key, int64_t gpsTime, int elevationBandNum, int flagsBandNum) :
+        GediRaster(lua_State* L, RequestFields* rqst_parms, const char* key, int64_t gpsTime, uint32_t elevationBandsMask=0u) :
          GeoRaster(L, rqst_parms, key,
                  std::string(rqst_parms->geoFields(key)->asset.asset->getPath()),
                  gpsTime / 1000,
-                 elevationBandNum,
-                 flagsBandNum) {}
+                 elevationBandsMask) {}
 };
 
 #endif  /* __gedi_raster__ */

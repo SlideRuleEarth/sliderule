@@ -113,10 +113,11 @@ class GeoIndexedRaster: public RasterObject
         typedef struct UniqueRaster {
             const raster_info_t*         rinfo;
             std::vector<point_sample_t>  pointSamples;                       // vector of samples for each point in this raster
+            int                          flagsSampleIndex;                   // index into sampled bands for flags, -1 if unresolved
             bool                         useDenseLookup;                     // true if using dense vector lookup
             std::vector<point_sample_t*> pointIndexLookup;                   // direct lookup by point index
             std::unordered_map<int64_t, point_sample_t*> pointIndexMap;      // sparse lookup fallback
-            explicit UniqueRaster(const raster_info_t* _rinfo): rinfo(_rinfo), useDenseLookup(true) {}
+            explicit UniqueRaster(const raster_info_t* _rinfo): rinfo(_rinfo), flagsSampleIndex(-1), useDenseLookup(true) {}
         } unique_raster_t;
 
         typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;

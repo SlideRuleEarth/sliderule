@@ -171,6 +171,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
 
@@ -337,15 +338,15 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
 
             /*
              * This function assumes that there is only one raster with FLAGS_TAG in a group.
-             * The flags value must be in the first band.
-             * If these assumptions are not met the dataset must override this function.
+             * The flags value is read from the sampled band index resolved in batchReaderThread.
              */
             RasterSample* sample = NULL;
 
             /* bandSample can be empty if raster failed to open */
-            if(!ps.bandSample.empty())
+            const int flagsSampleIndex = ur->flagsSampleIndex;
+            if(flagsSampleIndex >= 0 && static_cast<size_t>(flagsSampleIndex) < ps.bandSample.size())
             {
-                sample = ps.bandSample[0];
+                sample = ps.bandSample[flagsSampleIndex];
             }
 
 
@@ -387,12 +388,13 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 
             try
             {
+                const int elevationBandNum = ur->rinfo->elevationBandNum;
+                const uint32_t elevationBandsMask = (elevationBandNum > 0 && elevationBandNum <= 32) ? (1u << (elevationBandNum - 1)) : 0u;
                 raster = new GdalRaster(breader->obj,
                                         breader->obj->fileDict.get(ur->rinfo->fileId),
                                         0,                     /* Sample collecting code will set it to group's gpsTime */
                                         ur->rinfo->fileId,
-                                        ur->rinfo->elevationBandNum,
-                                        ur->rinfo->flagsBandNum,
+                                        elevationBandsMask,
                                         breader->obj->gtfcb,
                                         breader->obj->crscb,
                                         &breader->obj->bbox);
@@ -403,7 +405,39 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                 raster->open();
 
                 std::vector<int> bands;
-                breader->obj->getInnerBands(raster, bands);
+                breader->obj->resolveBands(raster, bands);
+
+                /*
+                 * Resolve which sampled band index should be used as flags for this raster.
+                 * `bands` contains the actual GDAL band numbers that will be sampled.
+                 */
+                ur->flagsSampleIndex = -1;
+                if(strcmp(FLAGS_TAG, ur->rinfo->tag.c_str()) == 0)
+                {
+                    /* Dataset-provided band number for flags. */
+                    const int flagsBandNum = ur->rinfo->flagsBandNum;
+                    if(flagsBandNum != GdalRaster::NO_BAND)
+                    {
+                        /*
+                         * Find the requested flags band inside the sampled bands list and record
+                         * its sampled index so getBatchGroupFlags can read the correct sample.
+                         */
+                        for(size_t i = 0; i < bands.size(); i++)
+                        {
+                            if(bands[i] == flagsBandNum)
+                            {
+                                ur->flagsSampleIndex = static_cast<int>(i);
+                                break;
+                            }
+                        }
+                    }
+
+                    if(ur->flagsSampleIndex < 0)
+                    {
+                        /* Flags were requested but the requested band was not sampled/resolved. */
+                        mlog(WARNING, "Failed to resolve flags band %d for raster %s", flagsBandNum, breader->obj->fileDict.get(ur->rinfo->fileId));
+                    }
+                }
 
                 /* Sample all points for this raster */
                 for(point_sample_t& ps : ur->pointSamples)
@@ -439,6 +473,15 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
             }
             catch(const RunTimeException& e)
             {
+                /*
+                 * This catch is raster-scoped (open/band-resolution/sampling setup). If it fails,
+                 * the current unique raster cannot be trusted for this worker pass, so mark all
+                 * point samples attached to this raster with runtime error.
+                 */
+                for(point_sample_t& ps : ur->pointSamples)
+                {
+                    ps.ssErrors |= SS_RUNTIME_ERROR;
+                }
                 mlog(e.level(), "%s", e.what());
             }
 
@@ -759,6 +802,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error creating groups: %s", e.what());
     }
 
@@ -811,7 +855,12 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 rasters_group_t* rgroup = iter[i].value;
                 for(raster_info_t& rinfo : rgroup->infovect)
                 {
-                    /* Is this raster already in the list of unique rasters? */
+                    /*
+                     * Unique rasters are keyed only by fileId.
+                     * If the same file is used for multiple roles (for example VALUE_TAG and FLAGS_TAG),
+                     * they will share one unique raster entry. Datasets that need same-file multi-role
+                     * behavior must override the default batch grouping/sampling logic.
+                     */
                     const uint64_t fileId = rinfo.fileId;
                     auto it = fileIndexMap.find(fileId);
                     if(it != fileIndexMap.end())

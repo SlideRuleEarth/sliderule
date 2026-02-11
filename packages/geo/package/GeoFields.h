@@ -56,6 +56,7 @@
 #define SS_SUBRASTER_ERROR        (1 << 5)
 #define SS_INDEX_FILE_ERROR       (1 << 6)
 #define SS_RESOURCE_LIMIT_ERROR   (1 << 7)
+#define SS_RUNTIME_ERROR          (1 << 8)
 
 /******************************************************************************
  * CLASSES
@@ -139,6 +140,7 @@ class GeoFields: public FieldDictionary
         FieldElement<bbox_t>                    aoi_bbox;
         FieldElement<string>                    catalog;
         FieldList<string>                       bands;
+        FieldList<string>                       elevation_bands;
         AssetField                              asset;
 
         bool                                    filter_time;

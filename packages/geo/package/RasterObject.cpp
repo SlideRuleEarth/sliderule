@@ -279,22 +279,45 @@ void RasterObject::getBands(std::vector<std::string>& bands)
 }
 
 /*----------------------------------------------------------------------------
- * getInnerBands
+ * resolveBands
  *----------------------------------------------------------------------------*/
-void RasterObject::getInnerBands(std::vector<std::string>& bands)
+void RasterObject::resolveBands(std::vector<std::string>& bands)
 {
     return getBands(bands);
 }
 
 /*----------------------------------------------------------------------------
- * getInnerBands
+ * resolveBandsStrict
  *----------------------------------------------------------------------------*/
-void RasterObject::getInnerBands(void* rptr, std::vector<int>& bands)
+void RasterObject::resolveBandsStrict(std::vector<std::string>& bands)
+{
+    if(parms->bands.length() > 0)
+    {
+        getBands(bands);
+        return;
+    }
+
+    if(parms->elevation_bands.length() > 0)
+    {
+        for(long i = 0; i < parms->elevation_bands.length(); i++)
+        {
+            bands.push_back(parms->elevation_bands[i]);
+        }
+        return;
+    }
+
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "Raster requires samples.bands or samples.elevation_bands; no default band is assumed");
+}
+
+/*----------------------------------------------------------------------------
+ * resolveBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::resolveBands(void* rptr, std::vector<int>& bands)
 {
     GdalRaster* raster = static_cast<GdalRaster*>(rptr);
 
     std::vector<std::string> bandsNames;
-    getInnerBands(bandsNames);
+    resolveBands(bandsNames);
 
     if(bandsNames.empty())
     {
@@ -306,7 +329,12 @@ void RasterObject::getInnerBands(void* rptr, std::vector<int>& bands)
         for(const std::string& bname : bandsNames)
         {
             const int bandNum = raster->getBandNumber(bname);
-            if(bandNum > 0)
+            if(bandNum <= 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid band selection: \"%s\"", bname.c_str());
+            }
+
+            if(std::find(bands.begin(), bands.end(), bandNum) == bands.end())
             {
                 bands.push_back(bandNum);
             }
@@ -461,6 +489,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
     }
     catch (const RunTimeException &e)
     {
+        err |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Failed to read samples: %s", e.what());
     }
 
@@ -521,6 +550,7 @@ int RasterObject::luaSamples(lua_State *L)
     }
     catch (const RunTimeException &e)
     {
+        err |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Failed to read samples: %s", e.what());
     }
 

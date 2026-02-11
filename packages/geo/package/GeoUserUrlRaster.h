@@ -59,16 +59,12 @@ class GeoUserUrlRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-         GeoUserUrlRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
-            GeoRaster(L, rqst_parms, key,
-                    getRasterPath(rqst_parms, key),
-                    0.0,                 /* unknown raster timestamp */
-                    1,                   /* DEM elevation band */
-                    GdalRaster::NO_BAND) /* no flags band */ {}
+         GeoUserUrlRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
+         void resolveBands(std::vector<std::string>& bands) override
+                          { resolveBandsStrict(bands); }
 
     private:
-        static std::string normalizeRasterUrl(const std::string& url);
-        static std::string getRasterPath(RequestFields* rqst_parms, const char* key);
+        static std::string getNormalizedUrl(RequestFields* rqst_parms, const char* key);
 };
 
 #endif  /* __geouser_url_raster__ */

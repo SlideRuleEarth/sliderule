@@ -78,8 +78,7 @@ class EsaCopernicus30meterRaster: public GeoRaster
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getIndex(),
                   TimeLib::datetime2gps(2023, 12, 15, 0, 0, 0) / 1000, /* Copernicus DEM Release 2023_1 (Dec 2023) */
-                  1,                   /* elevationBandNum */
-                  GdalRaster::NO_BAND, /* maskBandNum      */
+                  1,                   /* elevationBandsMask */
                   NULL,                /* overrideGeoTransform */
                   overrideTargetCRS) {}
 

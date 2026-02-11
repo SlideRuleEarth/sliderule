@@ -110,7 +110,7 @@ class GdalRaster
 
                            GdalRaster     (const RasterObject* _robj, const std::string& _fileName,
                                            double _gpsTime, uint64_t _fileId,
-                                           int _elevationBandNum, int _flagsBandNum,
+                                           uint32_t _elevationBandsMask,
                                            overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
                                            bbox_t* aoi_bbox_override=NULL);
 
@@ -125,8 +125,7 @@ class GdalRaster
         const bbox_t&      getBbox        (void) const { return bbox; }
         double             getCellSize    (void) const { return cellSize; }
         uint32_t           getSSerror     (void) const { return ssError; }
-        int                getElevationBandNum (void) const { return elevationBandNum; }
-        int                getFLagsBandNum (void) const { return flagsBandNum; }
+        uint32_t           getElevationBandsMask (void) const { return elevationBandsMask; }
         overrideGeoTransform_t getOverrideGeoTransform(void) const { return overrideGeoTransform; }
         overrideCRS_t      getOverrideCRS (void) const { return overrideCRS; }
         double             getGpsTime     (void) const { return gpsTime; }
@@ -162,10 +161,7 @@ class GdalRaster
 
         std::string     fileName;
         GDALDataset    *dset;
-        int             elevationBandNum;
-        GDALRasterBand* elevationBand;
-        int             flagsBandNum;
-        GDALRasterBand* flagsBand;
+        uint32_t        elevationBandsMask;
         uint32_t        xsize;
         uint32_t        ysize;
         double          cellSize;
@@ -193,6 +189,9 @@ class GdalRaster
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
+        bool        isElevationBand      (int bandNum) const;
+        bool        isElevationBand      (const GDALRasterBand* band) const;
+        bool        isDiscreteBand       (int bandNum) const;
 
         void        readPixel            (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        resamplePixel        (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);

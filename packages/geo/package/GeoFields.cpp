@@ -193,6 +193,7 @@ GeoFields::GeoFields (void):
         {"aoi_bbox",            &aoi_bbox},
         {"catalog",             &catalog},
         {"bands",               &bands},
+        {"elevation_bands",     &elevation_bands},
         {"asset",               &asset}
     }),
     filter_time(false),
@@ -246,6 +247,10 @@ std::string GeoFields::sserror2str(uint32_t error)
     if(error & SS_RESOURCE_LIMIT_ERROR)
     {
         errorStr += "SS_RESOURCE_LIMIT_ERROR, ";
+    }
+    if(error & SS_RUNTIME_ERROR)
+    {
+        errorStr += "SS_RUNTIME_ERROR, ";
     }
 
     /* Remove the last ", " if it exists */
