@@ -28,7 +28,7 @@ pipeline = "+proj=pipeline \
             +step +proj=unitconvert +xy_in=rad +xy_out=deg \
             +step +proj=axisswap +order=2,1"
 
-class TestUserDemRaster:
+class TestUserUrlRaster:
     def test_samples(self, init):
         rqst = {
             "samples": {
