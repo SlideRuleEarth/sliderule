@@ -78,15 +78,15 @@ def submit_handler(event, context):
 
         # submit jobs
         job_ids = []
-        for args in args_list:
+        for i in range(len(args_list)):
             response = batch.submit_job(
                 jobName=name,
                 jobQueue=f"{stack_name}-job-queue",
                 jobDefinition=f"{stack_name}-default-job-definition",
                 parameters={
                     "script": f"s3://{project_public_bucket}/{s3_run_path}/script.lua",
-                    "args": args,
-                    "result": f"s3://{project_public_bucket}/{s3_run_path}/result.json"
+                    "args": args_list[i],
+                    "result": f"s3://{project_public_bucket}/{s3_run_path}/result_{i}.json"
                 }
             )
             job_ids.append(response["jobId"])

@@ -260,6 +260,13 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+        BlockDeviceMappings:
+          - DeviceName: "/dev/xvda"
+            Ebs:
+              VolumeSize: 100
+              VolumeType: gp3
+              DeleteOnTermination: true
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
@@ -279,13 +286,7 @@ Resources:
         MaxvCpus: 64
         DesiredvCpus: 0
         InstanceTypes:
-          - t4g.2xlarge
-          - m8g.2xlarge
           - m7g.2xlarge
-          - m6g.2xlarge
-          - r8g.2xlarge
-          - r7g.2xlarge
-          - r6g.2xlarge
         LaunchTemplate:
           LaunchTemplateId: !Ref BatchLaunchTemplate
           Version: !GetAtt BatchLaunchTemplate.LatestVersionNumber
@@ -306,9 +307,9 @@ Resources:
   # Job Queue
   BatchJobQueue:
     Type: AWS::Batch::JobQueue
-    JobQueueName: !Sub "${AWS::StackName}-job-queue"
-    State: ENABLED
     Properties:
+      JobQueueName: !Sub "${AWS::StackName}-job-queue"
+      State: ENABLED
       Priority: 1
       ComputeEnvironmentOrder:
         - Order: 1
@@ -336,7 +337,7 @@ Resources:
         Timeout:
           AttemptDurationSeconds: 600  # 10 minutes (600 seconds)
         ContainerProperties:
-          Image: !Sub "${ContainerRegistry}/sliderule:latest"
+          Image: !Sub "${ContainerRegistry}/sliderule:unstable"
           ResourceRequirements:
             - Type: VCPU
               Value: "8"
@@ -351,6 +352,8 @@ Resources:
           Environment:
             - Name: LOG_FORMAT
               Value: FMT_CLOUD
+            - Name: TRUSTED_ENVIRONMENT
+              Value: true
             - Name: IPV4
               Value: localhost
             - Name: ENVIRONMENT_VERSION

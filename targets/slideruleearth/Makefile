@@ -48,6 +48,7 @@ MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
+RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
@@ -81,6 +82,7 @@ VERSION ?= unstable
 
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
+RUNNER_URL ?= runner.$(DOMAIN)
 RECORDER_URL ?= recorder.$(DOMAIN)
 ALERT_STREAM ?= recorder-firehose-alerts
 TELEMETRY_STREAM ?= recorder-firehose-telemetry
@@ -156,7 +158,7 @@ run: ## run the server locally
 	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
+	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua s3://sliderule-public/run-def223e/script.lua granule.h5 s3://sliderule-public/run-def223e/result_1.json
 
 build: ## build the code using the build environment docker container
 	docker run \
@@ -481,12 +483,12 @@ provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	cp $(ROOT)/applications/provisioner/requirements.txt $(PROVISIONER_STAGE_DIR)/
-		docker run -it --rm \
+	docker run -it --rm \
 		-v $(PROVISIONER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
-		-c "pip install --target /host/package requests croniter"
+		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/manager.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
@@ -523,6 +525,54 @@ provisioner-delete: ## deletes the lambda provisioner functions
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
+
+########################
+# Runner Targets
+########################
+
+runner-build: ## create the runner lambda zipfile
+	-rm -Rf $(RUNNER_STAGE_DIR)
+	mkdir -p $(RUNNER_STAGE_DIR)
+	cp $(ROOT)/applications/runner/requirements.txt $(RUNNER_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(RUNNER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/applications/runner/runner.py $(RUNNER_STAGE_DIR)/package/
+	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/runner.zip . -x "/*__pycache__/*"
+
+runner-create: runner-build ## creates the lambda runner functions
+	aws s3 cp $(RUNNER_STAGE_DIR)/runner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
+	aws cloudformation create-stack \
+		--stack-name 	runner \
+		--template-body file://$(ROOT)/applications/runner/runner.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=RunnerUrl,ParameterValue=$(RUNNER_URL) \
+						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/runner.zip
+	aws cloudformation wait stack-create-complete --stack-name runner
+
+runner-describe: ## status the creation/deletion of the runner functions
+	aws cloudformation describe-stack-events --stack-name runner
+
+runner-delete: ## deletes the lambda runner functions
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
+	aws cloudformation delete-stack --stack-name runner
+	aws cloudformation wait stack-delete-complete --stack-name runner
 
 ########################
 # Certificate Targets
