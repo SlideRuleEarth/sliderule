@@ -389,7 +389,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
             try
             {
                 const int elevationBandNum = ur->rinfo->elevationBandNum;
-                const uint32_t elevationBandsMask = (elevationBandNum > 0 && elevationBandNum <= 32) ? (1u << (elevationBandNum - 1)) : 0u;
+                const uint32_t elevationBandsMask = (elevationBandNum > 0 && elevationBandNum <= 32) ? (1U << (elevationBandNum - 1)) : 0U;
                 raster = new GdalRaster(breader->obj,
                                         breader->obj->fileDict.get(ur->rinfo->fileId),
                                         0,                     /* Sample collecting code will set it to group's gpsTime */

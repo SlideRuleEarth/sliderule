@@ -130,7 +130,8 @@ class GeoRaster: public RasterObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        uint32_t samplePoint(const point_info_t& pinfo, sample_list_t& slist, void* param=NULL);
+        uint32_t samplePointBands(const point_info_t& pinfo, sample_list_t& slist,
+                                  const std::vector<int>& bands, bool oneBand);
 
         static void*    readerThread (void* parm);
         static uint32_t readSamples  (RasterObject* robj, const range_t& range,

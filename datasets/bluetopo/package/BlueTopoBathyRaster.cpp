@@ -68,6 +68,9 @@ BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestFields* rqst_parms
  *----------------------------------------------------------------------------*/
 BlueTopoBathyRaster::~BlueTopoBathyRaster(void) = default;
 
+/*----------------------------------------------------------------------------
+ * getIndexFile
+ *----------------------------------------------------------------------------*/
 void BlueTopoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
 {
     static_cast<void>(points);

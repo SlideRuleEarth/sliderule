@@ -166,9 +166,9 @@ void GdalRaster::open(void)
             * Resolve request elevation bands only when dataset did not predeclare
             * a fixed elevation bands mask at construction time.
             */
-            if(elevationBandsMask == 0u)
+            if(elevationBandsMask == 0U)
             {
-                uint32_t resolvedMask = 0u;
+                uint32_t resolvedMask = 0U;
                 for(long i = 0; i < parms->elevation_bands.length(); i++)
                 {
                     const std::string& bandSpec = parms->elevation_bands[i];
@@ -183,7 +183,7 @@ void GdalRaster::open(void)
                         throw RunTimeException(CRITICAL, RTE_FAILURE, "Elevation band %d is unsupported; only bands 1..32 are supported", bandNum);
                     }
 
-                    resolvedMask |= (1u << (bandNum - 1));
+                    resolvedMask |= (1U << (bandNum - 1));
                 }
 
                 elevationBandsMask = resolvedMask;
@@ -199,7 +199,7 @@ void GdalRaster::open(void)
          */
         if(elevationBandsMask != 0)
         {
-            const uint32_t validBands = (bandCount >= 32) ? 0xFFFFFFFFu : ((1u << bandCount) - 1u);
+            const uint32_t validBands = (bandCount >= 32) ? 0xFFFFFFFFU : ((1U << bandCount) - 1U);
             const uint32_t invalidBands = elevationBandsMask & ~validBands;
             if(invalidBands != 0)
             {
@@ -744,7 +744,7 @@ bool GdalRaster::isElevationBand(int bandNum) const
     if((bandNum <= 0) || (bandNum > 32))
         return false;
 
-    return (elevationBandsMask & (1u << (bandNum - 1))) != 0;
+    return (elevationBandsMask & (1U << (bandNum - 1))) != 0;
 }
 
 /*----------------------------------------------------------------------------
