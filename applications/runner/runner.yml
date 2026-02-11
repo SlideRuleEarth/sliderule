@@ -1,0 +1,544 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule Runner Lambda
+
+Parameters:
+
+  ##
+  ## Parameters
+  ##
+
+  EnvironmentVersion:
+    Type: String
+  Domain:
+    Type: String
+  RunnerUrl:
+    Type: String
+  JwtIssuer:
+    Type: String
+  ProjectBucket:
+    Type: String
+  ProjectFolder:
+    Type: String
+  ProjectPublicBucket:
+    Type: String
+  ContainerRegistry:
+    Type: String
+  CorsAllowOrigins:
+    Type: CommaDelimitedList
+  HostedZoneId:
+    Type: String
+  CertificateArn:
+    Type: String
+  AlertStream:
+    Type: String
+  TelemetryStream:
+    Type: String
+  LambdaZipFile:
+    Type: String
+
+  ##
+  ## Constants
+  ##
+
+  PublicCIDRBlock:
+    Type: String
+    Default: "0.0.0.0/0"
+  VpcCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+  InternetGatewayCIDRBlock:
+    Type: String
+    Default: "10.0.128.0/17"
+  JobRunnerCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/17"
+
+Resources:
+
+  ##
+  ## Job Runner Network
+  ##
+
+  # VPC
+  JobRunnerVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDRBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  # Public Subnet
+  InternetGatewaySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref JobRunnerVPC
+      CidrBlock: !Ref InternetGatewayCIDRBlock
+      MapPublicIpOnLaunch: true
+
+  # Public Route Table
+  InternetGatewayRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref JobRunnerVPC
+  InternetGatewayRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttach
+    Properties:
+      RouteTableId: !Ref InternetGatewayRouteTable
+      DestinationCidrBlock: !Ref PublicCIDRBlock
+      GatewayId: !Ref InternetGateway
+  InternetGatewayRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InternetGatewaySubnet
+      RouteTableId: !Ref InternetGatewayRouteTable
+
+  # Internet Gateway (used by NAT Gateway)
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  InternetGatewayAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref JobRunnerVPC
+
+  # Private Subnet
+  JobRunnerSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref JobRunnerVPC
+      CidrBlock: !Ref JobRunnerCIDRBlock
+      MapPublicIpOnLaunch: false
+
+  # Private Route Table
+  JobRunnerRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref JobRunnerVPC
+  JobRunnerRoute:
+    Type: AWS::EC2::Route
+    DependsOn: JobRunnerNatGateway
+    Properties:
+      RouteTableId: !Ref JobRunnerRouteTable
+      DestinationCidrBlock: !Ref PublicCIDRBlock
+      NatGatewayId: !Ref JobRunnerNatGateway
+  JobRunnerRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref JobRunnerSubnet
+      RouteTableId: !Ref JobRunnerRouteTable
+
+  # NAT
+  JobRunnerNatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  JobRunnerNatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref InternetGatewaySubnet
+      AllocationId: !GetAtt JobRunnerNatEIP.AllocationId
+
+  # S3 Endpoint
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref JobRunnerVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref JobRunnerRouteTable
+
+  # Security Group
+  JobRunnerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Sliderule Job Runner
+      VpcId: !Ref JobRunnerVPC
+      SecurityGroupEgress:
+        # ALL
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: !Ref PublicCIDRBlock
+
+  ##
+  ## Job Runner IAM Roles
+  ##
+
+  # Job Runner Role
+  JobRunnerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:ListBucket"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}"
+                  - arn:aws:s3:::pgc-opendata-dems
+                  - arn:aws:s3:::prd-tnm
+                  - arn:aws:s3:::esa-worldcover
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
+                  - arn:aws:s3:::dataforgood-fb-data
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+                  - arn:aws:s3:::pgc-opendata-dems/*
+                  - arn:aws:s3:::prd-tnm/*
+                  - arn:aws:s3:::esa-worldcover/*
+                  - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
+                  - arn:aws:s3:::dataforgood-fb-data/*
+              - Effect: Allow
+                Action: ["s3:PutObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+        - PolicyName: !Sub "${AWS::StackName}-ec2-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:TerminateInstances
+                Resource: "*"
+        - PolicyName: !Sub "${AWS::StackName}-firehose-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - firehose:PutRecord
+                  - firehose:PutRecordBatch
+                Resource:
+                  - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${AlertStream}"
+                  - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${TelemetryStream}"
+
+  # ECS Instance Profile
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref JobRunnerRole]
+
+  ##
+  ## Job Runner Batch
+  ##
+
+  # Batch Service Role
+  BatchServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: batch.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+
+  # Batch Launch Template
+  BatchLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            mkdir -p /plugins
+            aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
+            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+  # Compute Environment
+  BatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      Type: MANAGED
+      ServiceRole: !GetAtt BatchServiceRole.Arn
+      ComputeResources:
+        Type: SPOT
+        MinvCpus: 0
+        MaxvCpus: 64
+        DesiredvCpus: 0
+        InstanceTypes:
+          - t4g.2xlarge
+          - m8g.2xlarge
+          - m7g.2xlarge
+          - m6g.2xlarge
+          - r8g.2xlarge
+          - r7g.2xlarge
+          - r6g.2xlarge
+        LaunchTemplate:
+          LaunchTemplateId: !Ref BatchLaunchTemplate
+          Version: !GetAtt BatchLaunchTemplate.LatestVersionNumber
+        Subnets:
+          - !Ref JobRunnerSubnet
+        SecurityGroupIds:
+          - !Ref JobRunnerSG
+        InstanceRole: !Ref InstanceProfile
+        AllocationStrategy: SPOT_PRICE_CAPACITY_OPTIMIZED
+
+  # Log Group
+  BatchJobLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/batch/job
+      RetentionInDays: 7
+
+  # Job Queue
+  BatchJobQueue:
+    Type: AWS::Batch::JobQueue
+    JobQueueName: !Sub "${AWS::StackName}-job-queue"
+    State: ENABLED
+    Properties:
+      Priority: 1
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+
+  # Job Definition
+  BatchJobDefinition:
+      Type: AWS::Batch::JobDefinition
+      Properties:
+        JobDefinitionName: !Sub "${AWS::StackName}-default-job-definition"
+        Type: container
+        Parameters:
+          script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
+          args: "granule.h5" # example to be overridden
+          result: !Sub "s3://${ProjectPublicBucket}/runner/runid/result.json" # example to be overridden
+        RetryStrategy:
+          Attempts: 2  # 1 initial attempt + 1 retries = 2 total
+          EvaluateOnExit:
+            - Action: RETRY
+              OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
+            - Action: RETRY
+              OnExitCode: "1"  # Retry on exit code 1
+            - Action: EXIT
+              OnExitCode: "0"  # Don't retry on success
+        Timeout:
+          AttemptDurationSeconds: 600  # 10 minutes (600 seconds)
+        ContainerProperties:
+          Image: !Sub "${ContainerRegistry}/sliderule:latest"
+          ResourceRequirements:
+            - Type: VCPU
+              Value: "8"
+            - Type: MEMORY
+              Value: "32768"
+          JobRoleArn: !GetAtt JobRunnerRole.Arn
+          Command:
+            - "/usr/local/etc/sliderule/job_runner.lua"
+            - "Ref::script"
+            - "Ref::args"
+            - "Ref::result"
+          Environment:
+            - Name: LOG_FORMAT
+              Value: FMT_CLOUD
+            - Name: IPV4
+              Value: localhost
+            - Name: ENVIRONMENT_VERSION
+              Value: !Sub ${EnvironmentVersion}
+            - Name: PROJECT_BUCKET
+              Value: !Sub ${ProjectBucket}
+            - Name: PROJECT_FOLDER
+              Value: !Sub ${ProjectFolder}
+            - Name: PROJECT_REGION
+              Value: !Sub ${AWS::Region}
+            - Name: ALERT_STREAM
+              Value: !Sub ${AlertStream}
+            - Name: TELEMETRY_STREAM
+              Value: !Sub ${TelemetryStream}
+            - Name: CLUSTER
+              Value: localhost
+            - Name: CONTAINER_REGISTRY
+              Value: !Sub ${ContainerRegistry}
+          Volumes:
+            - Name: plugins
+              Host:
+                SourcePath: /plugins
+            - Name: data
+              Host:
+                SourcePath: /data
+            - Name: ssl-certs
+              Host:
+                SourcePath: /etc/ssl/certs
+            - Name: docker-socket
+              Host:
+                SourcePath: /var/run/docker.sock
+          MountPoints:
+            - SourceVolume: plugins
+              ContainerPath: /plugins
+              ReadOnly: true
+            - SourceVolume: data
+              ContainerPath: /data
+              ReadOnly: true
+            - SourceVolume: ssl-certs
+              ContainerPath: /etc/ssl/certs
+              ReadOnly: true
+            - SourceVolume: docker-socket
+              ContainerPath: /var/run/docker.sock
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /aws/batch/job
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref AWS::StackName
+
+  ##
+  ## Runner Lambda/Gateway
+  ##
+
+  # Gateway Lambda Function
+  GatewayLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-gateway'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 256 # MB
+      Timeout: 300 # seconds
+      Handler: runner.lambda_gateway
+      Description: Routes requests based on path
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+
+  # IAM Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/PowerUserAccess
+
+  # API Gateway HTTP API
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: Runner API for SlideRule
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: !Ref CorsAllowOrigins
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 300
+
+  # JWT Authorizer (Native API Gateway)
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - runner
+        Issuer: !Ref JwtIssuer
+
+  # API Gateway Integration with Lambda
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  # API Gateway Routes
+  ApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /{proxy+}'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # API Gateway Stage
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+  # API Gateway Custom Domain Name
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref RunnerUrl
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref CertificateArn
+
+  # API Mapping (connects custom domain to API)
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+
+  # Route53 Alias Record
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Ref RunnerUrl
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false
