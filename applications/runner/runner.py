@@ -13,8 +13,12 @@ from datetime import datetime, timezone
 s3 = boto3.client("s3")
 batch = boto3.client("batch")
 
-MAX_JOBS_TO_DESCRIBE = 100
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
+MAX_JOBS_TO_DESCRIBE = 100
+MAX_VCPUS = 8
+MIN_VCPUS = 1
+MAX_MEMORY = 32
+MIN_MEMORY = 8
 
 # ###############################
 # Utilities
@@ -56,6 +60,10 @@ def submit_handler(event, context):
         script = base64.b64decode(event["script"]).decode('utf-8')
         args_list = event["args_list"]
 
+        # get optional request variables
+        vcpus = event.get("vcpus")
+        memory = event.get("memory")
+
         # parameter validation
         if not isinstance(name, str):
             raise RuntimeError(f"Invalid name supplied of type {type(name)}")
@@ -63,6 +71,10 @@ def submit_handler(event, context):
             raise RuntimeError(f"Empty script provided")
         elif not isinstance(args_list, list):
             raise RuntimeError(f"Invalid array of arguments supplied of type {type(args_list)}")
+        elif (vcpus != None) and ((not isinstance(vcpus, int)) or (vcpus < MIN_VCPUS) or (vcpus > MAX_VCPUS)):
+            raise RuntimeError(f"Invalid vCPUs provided: {vcpus}")
+        elif (memory != None) and ((not isinstance(memory, int)) or (memory < MIN_MEMORY) or (memory > MAX_MEMORY)):
+            raise RuntimeError(f"Invalid memory provided: {memory}")
 
         # build unique identifier
         now = datetime.now(timezone.utc).isoformat()
@@ -76,6 +88,15 @@ def submit_handler(event, context):
         s3.put_object(Bucket=project_public_bucket, Key=f"{s3_run_path}/environment.txt", Body=environment_version)
         s3.put_object(Bucket=project_public_bucket, Key=f"{s3_run_path}/script.lua", Body=script)
 
+        # optionally build container overrides
+        container_overrides = None
+        if (vcpus != None) or (memory != None):
+            container_overrides = {"resourceRequirements": []}
+            if vcpus != None:
+                container_overrides["resourceRequirements"].append({"type": "VCPU", "value": str(vcpus)})
+            if memory != None:
+                container_overrides["resourceRequirements"].append({"type": "MEMORY", "value": str(memory)})
+
         # submit jobs
         job_ids = []
         for i in range(len(args_list)):
@@ -87,7 +108,8 @@ def submit_handler(event, context):
                     "script": f"s3://{project_public_bucket}/{s3_run_path}/script.lua",
                     "args": args_list[i],
                     "result": f"s3://{project_public_bucket}/{s3_run_path}/result_{i}.json"
-                }
+                },
+                containerOverrides=container_overrides
             )
             job_ids.append(response["jobId"])
             print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')
