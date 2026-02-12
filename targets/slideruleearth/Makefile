@@ -116,6 +116,7 @@ USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 BUILD_CONFIG ?= release
 BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(BUILD_CONFIG) && make"
+ARGS ?=
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -158,7 +159,7 @@ run: ## run the server locally
 	CLUSTER=local \
 	AMS=http://127.0.0.1:9082 \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua s3://sliderule-public/run-def223e/script.lua granule.h5 s3://sliderule-public/run-def223e/result_1.json
+	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
 
 build: ## build the code using the build environment docker container
 	docker run \
@@ -187,6 +188,18 @@ build: ## build the code using the build environment docker container
 		--name buildenv \
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
 		$(BUILD_CMD)
+
+job: ## run the self test on the server code
+	LOG_FORMAT=FMT_TEXT \
+	TRUSTED_ENVIRONMENT=true \
+	IPV4=$(MYIP) \
+	ENVIRONMENT_VERSION=$(ENVVER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	PROJECT_REGION=$(AWS_REGION) \
+	CLUSTER=local \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 
 ########################
 # Docker Build Targets

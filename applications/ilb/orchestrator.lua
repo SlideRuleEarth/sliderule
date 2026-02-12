@@ -143,7 +143,8 @@ StatData = {
 --
 MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
 ScrubInterval = 1 -- second(s)
-MaxTimeout = 600 -- second(s)
+DefaultTimeout = 600 -- second(s)
+MaxTimeout = 3600 -- second(s)
 
 --
 -- API: /discovery/register
@@ -260,7 +261,7 @@ local function api_selflock(applet)
     local request = json.decode(body)
     local service = request["service"]
     local address = request["address"]
-    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
+    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or DefaultTimeout
     local locksPerNode = request["locksPerNode"]
     local expiration = os.time() + timeout
 
@@ -356,7 +357,7 @@ local function api_lock(applet)
     local request = json.decode(body)
     local service = request["service"]
     local nodesNeeded = request["nodesNeeded"]
-    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
+    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or DefaultTimeout
     local locksPerNode = request["locksPerNode"] or 1
     local expiration = os.time() + timeout
 
