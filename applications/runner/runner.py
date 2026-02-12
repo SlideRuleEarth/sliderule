@@ -189,7 +189,7 @@ def report_jobs_handler(event, context):
 def report_queue_handler(event, context):
 
     # initialize response state
-    state = {"status": True, "report": []}
+    state = {"status": True, "report": {}, "jobs": []}
 
     try:
         # get environment variables
@@ -220,8 +220,9 @@ def report_queue_handler(event, context):
                 jobQueue=f"{stack_name}-job-queue",
                 jobStatus=job_status
             )
+            state["report"][job_status] = len(response["jobSummaryList"])
             for job in response["jobSummaryList"]:
-                state["report"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
+                state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
     except RuntimeError as e:
         print(f'User error in queue report: {e}')
