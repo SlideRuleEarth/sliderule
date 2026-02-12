@@ -176,6 +176,7 @@ class Session:
 
         # create wrappers for subclasses
         self.provisioner = self.__Provisioner(self)
+        self.runner = self.__Runner(self)
         self.authenticator = self.__Authenticator(self)
 
         # authenticate for non-public clusters
@@ -445,9 +446,9 @@ class Session:
     #
     #  gateway_request
     #
-    def gateway_request (self, api, subdomain="provisioner", data=None, headers=None):
+    def gateway_request (self, api, subdomain=None, data=None, headers=None):
         '''
-        handles making the HTTP request to the sliderule provisioner
+        handles making the HTTP request to a sliderule gateway service
         '''
         try:
             # Build Authorization Header
@@ -501,17 +502,17 @@ class Session:
         def __init__ (self, session):
             self.session = session
         def deploy (self, *, is_public, node_capacity, ttl, version):
-            return self.session.gateway_request("deploy", {"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+            return self.session.gateway_request("deploy", subdomain="provisioner", data={"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
         def extend (self, *, ttl):
-            return self.session.gateway_request("extend", {"cluster": self.session.cluster, "ttl": ttl})
+            return self.session.gateway_request("extend", subdomain="provisioner", data={"cluster": self.session.cluster, "ttl": ttl})
         def destroy (self):
-            return self.session.gateway_request("destroy", {"cluster": self.session.cluster})
+            return self.session.gateway_request("destroy", subdomain="provisioner", data={"cluster": self.session.cluster})
         def status (self):
-            return self.session.gateway_request("status", {"cluster": self.session.cluster})
+            return self.session.gateway_request("status", subdomain="provisioner", data={"cluster": self.session.cluster})
         def events (self):
-            return self.session.gateway_request("events", {"cluster": self.session.cluster})
+            return self.session.gateway_request("events", subdomain="provisioner", data={"cluster": self.session.cluster})
         def report (self, kind="clusters"):
-            return self.session.gateway_request(f"report/{kind}", {})
+            return self.session.gateway_request(f"report/{kind}", subdomain="provisioner", data={})
 
     #
     # __Runner
@@ -520,11 +521,11 @@ class Session:
         def __init__ (self, session):
             self.session = session
         def submit (self, *, name, script, args_list):
-            return self.session.gateway_request("submit", {"name": name, "script": base64.b64encode(script.encode()).decode(), "args_list": args_list})
-        def jobs (self, *, jobs_list):
-            return self.session.gateway_request("report/jobs", {"jobs_list": jobs_list})
+            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args_list": args_list})
+        def jobs (self, *, job_list):
+            return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
         def queue (self, *, job_state):
-            return self.session.gateway_request("report/queue", {"job_state": job_state})
+            return self.session.gateway_request("report/queue", subdomain="runner", data={"job_state": job_state})
 
     #
     # __Authenticator

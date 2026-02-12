@@ -301,7 +301,7 @@ Resources:
   BatchJobLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: /aws/batch/job
+      LogGroupName: !Sub "/aws/batch/${AWS::StackName}"
       RetentionInDays: 7
 
   # Job Queue
@@ -400,7 +400,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: /aws/batch/job
+              awslogs-group: !Ref BatchJobLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: !Ref AWS::StackName
 

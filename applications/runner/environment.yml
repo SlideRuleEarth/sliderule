@@ -1,0 +1,9 @@
+# conda env create -f environment.yml
+name: runner
+channels:
+  - conda-forge
+dependencies:
+  - boto3
+  - pytest
+  - pytest-env
+  - pip
