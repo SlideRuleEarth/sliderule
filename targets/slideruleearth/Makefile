@@ -583,6 +583,8 @@ runner-describe: ## status the creation/deletion of the runner functions
 	aws cloudformation describe-stack-events --stack-name runner
 
 runner-delete: ## deletes the lambda runner functions
+	aws batch update-job-queue --job-queue runner-job-queue --state DISABLED
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
 	aws cloudformation delete-stack --stack-name runner
 	aws cloudformation wait stack-delete-complete --stack-name runner

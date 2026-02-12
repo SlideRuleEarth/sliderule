@@ -526,6 +526,10 @@ class Session:
             return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
         def queue (self, *, job_state):
             return self.session.gateway_request("report/queue", subdomain="runner", data={"job_state": job_state})
+        def cancel (self, *, job_list):
+            return self.session.gateway_request("cancel", subdomain="runner", data={"job_list": job_list})
+        def cancel_all (self):
+            return self.session.gateway_request("cancel", subdomain="runner")
 
     #
     # __Authenticator

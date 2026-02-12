@@ -147,7 +147,6 @@ def report_jobs_handler(event, context):
     state = {"status": True, "report": {}}
 
     try:
-
         # get required request variables
         job_list = event["job_list"]
 
@@ -165,10 +164,10 @@ def report_jobs_handler(event, context):
             if job is not None:
                 state["report"][job_id] = {
                     "status": job["status"],
-                    "statusReason": job["status"] == "FAILED" and job.get("statusReason") or "n/a",
+                    "statusReason": job.get("statusReason", "n/a"),
                     "createdAt": job["createdAt"],
-                    "startedAt": job["startedAt"],
-                    "stoppedAt": job["stoppedAt"]
+                    "jobDefinition": job["startedAt"],
+                    "args": job["parameters"]['args']
                 }
 
     except RuntimeError as e:
@@ -193,7 +192,6 @@ def report_queue_handler(event, context):
     state = {"status": True, "report": []}
 
     try:
-
         # get environment variables
         stack_name = os.environ["STACK_NAME"]
 
@@ -238,6 +236,52 @@ def report_queue_handler(event, context):
     # return response
     return state
 
+#
+# Job Cancel
+#
+def cancel_handler(event, context):
+
+    # initialize response state
+    state = {"status": True, "jobs_deleted": []}
+
+    try:
+        # get environment variables
+        stack_name = os.environ["STACK_NAME"]
+
+        # get optional request variables
+        job_list = event.get("job_list")
+
+        # get jobs to delete
+        jobs_to_delete = job_list
+        if jobs_to_delete == None:
+            # find all jobs
+            for state in ["SUBMITTED", "PENDING", "RUNNABLE"]:
+                response = batch.list_jobs(
+                    jobQueue=f"{stack_name}-job-queue",
+                    jobStatus=state
+                )
+                for job in response["jobSummaryList"]:
+                    jobs_to_delete.append(job["jobId"])
+
+        # delete jobs
+        for job_id in jobs_to_delete:
+            batch.cancel_job(jobId=job_id, reason="Deletion")
+            state["jobs_deleted"].append(job_id)
+
+    except RuntimeError as e:
+        print(f'User error in job deletion: {e}')
+        state["exception"] = f'User error in job deletion'
+        state["status"] = False
+
+    except Exception as e:
+        print(f'Exception in job deletion: {e}')
+        state["exception"] = f'Failure in job deleition'
+        state["status"] = False
+
+    # return response
+    return state
+
+
 # ###############################
 # Lambda: Gateway Handler
 # ###############################
@@ -278,6 +322,8 @@ def lambda_gateway(event, context):
             return report_jobs_handler(body, context)
         elif path == '/report/queue':
             return report_queue_handler(body, context)
+        elif path == '/cancel':
+            return cancel_handler(body, context)
         else:
             print(f'Path not found: {path}')
             return {

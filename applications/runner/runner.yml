@@ -286,7 +286,9 @@ Resources:
         MaxvCpus: 64
         DesiredvCpus: 0
         InstanceTypes:
-          - m7g.2xlarge
+          - default_arm64
+        Ec2Configuration:
+          - ImageType: ECS_AL2_ARM64
         LaunchTemplate:
           LaunchTemplateId: !Ref BatchLaunchTemplate
           Version: !GetAtt BatchLaunchTemplate.LatestVersionNumber
@@ -340,9 +342,9 @@ Resources:
           Image: !Sub "${ContainerRegistry}/sliderule:unstable"
           ResourceRequirements:
             - Type: VCPU
-              Value: "8"
+              Value: "4"
             - Type: MEMORY
-              Value: "32768"
+              Value: "16384"
           JobRoleArn: !GetAtt JobRunnerRole.Arn
           Command:
             - "/usr/local/etc/sliderule/job_runner.lua"
