@@ -187,10 +187,13 @@ GeoFields::GeoFields (void):
         {"doy_range",           &doy_range},
         {"sort_by_index",       &sort_by_index},
         {"force_single_sample", &force_single_sample},
+        {"target_crs",          &target_crs},
         {"proj_pipeline",       &proj_pipeline},
+        {"url",                 &url},
         {"aoi_bbox",            &aoi_bbox},
         {"catalog",             &catalog},
         {"bands",               &bands},
+        {"elevation_bands",     &elevation_bands},
         {"asset",               &asset}
     }),
     filter_time(false),
@@ -244,6 +247,10 @@ std::string GeoFields::sserror2str(uint32_t error)
     if(error & SS_RESOURCE_LIMIT_ERROR)
     {
         errorStr += "SS_RESOURCE_LIMIT_ERROR, ";
+    }
+    if(error & SS_RUNTIME_ERROR)
+    {
+        errorStr += "SS_RUNTIME_ERROR, ";
     }
 
     /* Remove the last ", " if it exists */

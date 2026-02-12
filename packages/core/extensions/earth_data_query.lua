@@ -226,6 +226,8 @@ ASSETS = {
         index       = "/vsis3/raster/COP30/COP30_hh.vrt",
         endpoint    = "opentopography.s3.sdsc.edu", -- Hosted at SDSC (San Diego Supercomputer Center) and exposed through an S3-compatible API endpoint
     },
+    ["user-url-raster"] = {
+    },
     ["bluetopo-bathy"] = {
         identity    = "iam-role",
         path        = "/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/",

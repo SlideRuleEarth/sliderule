@@ -29,53 +29,43 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __usgs3dep_10meter_dem_raster__
-#define __usgs3dep_10meter_dem_raster__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
+#include "GeoUserUrlRaster.h"
+#include "GeoFields.h"
 
 /******************************************************************************
- * USGS3DEP 10METER DEM RASTER CLASS
+ * PRIVATE METHODS
  ******************************************************************************/
 
-class Usgs3dep10meterDemRaster: public GeoRaster
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GeoUserUrlRaster::GeoUserUrlRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+    GeoRaster(L, rqst_parms, key, getNormalizedUrl(rqst_parms, key))
 {
-    public:
+}
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------
+ * getNormalizedUrl
+ *----------------------------------------------------------------------------*/
+std::string GeoUserUrlRaster::getNormalizedUrl(RequestFields* rqst_parms, const char* key)
+{
+    if(rqst_parms == NULL)
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, request parameters are NULL");
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    const GeoFields* parms = rqst_parms->geoFields(key);
+    if(parms == NULL)
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, geo parameters are NULL");
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-                          { return new Usgs3dep10meterDemRaster(L, rqst_parms, key); }
+    if(parms->url.value.empty())
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, samples.url is empty");
 
+    const std::string& url = parms->url.value;
+    if((url.rfind("http://", 0) != 0) && (url.rfind("https://", 0) != 0))
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, samples.url must start with http:// or https://");
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        Usgs3dep10meterDemRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
-            GeoRaster(L, rqst_parms, key,
-                    std::string(rqst_parms->geoFields(key)->asset.asset->getIndex()),
-                    TimeLib::datetime2gps(2022, 12, 03, 18, 59, 03) / 1000,
-                    1,                   /* elevationBandsMask */
-                    NULL,                /* overrideGeoTransform */
-                    overrideTargetCRS) {}
-
-        ~Usgs3dep10meterDemRaster (void) = default;
-
-        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);
-
-};
-
-#endif  /* __usgs3dep_10meter_dem_raster__ */
+    return "/vsicurl/" + url;
+}

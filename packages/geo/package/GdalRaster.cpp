@@ -59,7 +59,7 @@
  *----------------------------------------------------------------------------*/
 GdalRaster::GdalRaster(const RasterObject* _robj, const std::string& _fileName,
                        double _gpsTime, uint64_t _fileId,
-                       int _elevationBandNum, int _flagsBandNum,
+                       uint32_t _elevationBandsMask,
                        overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
                        bbox_t* aoi_bbox_override):
    robj       (_robj),
@@ -71,10 +71,7 @@ GdalRaster::GdalRaster(const RasterObject* _robj, const std::string& _fileName,
    overrideCRS(crs_cb),
    fileName   (_fileName),
    dset       (NULL),
-   elevationBandNum(_elevationBandNum),
-   elevationBand(NULL),
-   flagsBandNum(_flagsBandNum),
-   flagsBand  (NULL),
+   elevationBandsMask(_elevationBandsMask),
    xsize      (0),
    ysize      (0),
    cellSize   (0),
@@ -142,6 +139,11 @@ void GdalRaster::open(void)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "No bands found in raster: %s:", fileName.c_str());
         }
 
+        if(bandCount > 32)
+        {
+            mlog(WARNING, "Raster has %d bands but elevation mask supports first 32 bands only: %s", bandCount, fileName.c_str());
+        }
+
         /* Populate the mapping of band names to band numbers*/
         for (int i = 1; i <= bandCount; ++i)
         {
@@ -158,18 +160,52 @@ void GdalRaster::open(void)
             }
         }
 
-        /* Get elevation band */
-        if(elevationBandNum > 0 && elevationBandNum <= bandCount)
+        if(parms && parms->elevation_bands.length() > 0)
         {
-            elevationBand = dset->GetRasterBand(elevationBandNum);
-            CHECKPTR(elevationBand);
+            /*
+            * Resolve request elevation bands only when dataset did not predeclare
+            * a fixed elevation bands mask at construction time.
+            */
+            if(elevationBandsMask == 0U)
+            {
+                uint32_t resolvedMask = 0U;
+                for(long i = 0; i < parms->elevation_bands.length(); i++)
+                {
+                    const std::string& bandSpec = parms->elevation_bands[i];
+                    const int bandNum = getBandNumber(bandSpec);
+                    if(bandNum <= 0)
+                    {
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid elevation band specification: \"%s\"", bandSpec.c_str());
+                    }
+
+                    if(bandNum > 32)
+                    {
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "Elevation band %d is unsupported; only bands 1..32 are supported", bandNum);
+                    }
+
+                    resolvedMask |= (1U << (bandNum - 1));
+                }
+
+                elevationBandsMask = resolvedMask;
+            }
+            else
+            {
+                mlog(WARNING, "Ignoring request elevation_bands for %s because fixed elevation mask is already set (0x%08X)", fileName.c_str(), elevationBandsMask);
+            }
         }
 
-        /* Get flags band */
-        if(flagsBandNum > 0 && flagsBandNum <= bandCount)
+        /*
+         * Validate requested elevation bands against bands that can exist in this raster.
+         */
+        if(elevationBandsMask != 0)
         {
-            flagsBand = dset->GetRasterBand(flagsBandNum);
-            CHECKPTR(flagsBand);
+            const uint32_t validBands = (bandCount >= 32) ? 0xFFFFFFFFU : ((1U << bandCount) - 1U);
+            const uint32_t invalidBands = elevationBandsMask & ~validBands;
+            if(invalidBands != 0)
+            {
+                mlog(WARNING, "Elevation mask 0x%08X contains out-of-range band bits (valid mask 0x%08X) for %s",
+                     elevationBandsMask, validBands, fileName.c_str());
+            }
         }
 
         /* Store information about raster */
@@ -258,8 +294,6 @@ void GdalRaster::open(void)
         GDALClose((GDALDatasetH)dset);
         dset = NULL;
         bandMap.clear();
-        elevationBand = NULL;
-        flagsBand = NULL;
         throw;
     }
 }
@@ -297,9 +331,9 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
             const double vertical_shift = z - poi->getZ();
             sample = new RasterSample(gpsTime, fileId, vertical_shift);
 
-            if(band == flagsBand)
+            if(isDiscreteBand(bandNum))
             {
-                /* Skip resampling and zonal stats for quality mask band (value is bitmask) */
+                /* Discrete bands are sampled as-is (no resampling/zonal/slope processing). */
                 readPixel(poi, band, sample);
             }
             else
@@ -325,6 +359,7 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
     {
         delete sample;
         sample = NULL;
+        ssError |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error sampling: %s", e.what());
     }
 
@@ -565,6 +600,40 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
  *----------------------------------------------------------------------------*/
 int GdalRaster::getBandNumber(const std::string& bandName)
 {
+    if(bandName.empty())
+    {
+        mlog(ERROR, "Band specification is empty");
+        return NO_BAND;
+    }
+
+    /* Numeric band selector (e.g. "1", "2", ...). */
+    char* endPtr = NULL;
+    errno = 0;
+    const long bandNum = std::strtol(bandName.c_str(), &endPtr, 10);
+    const bool bandNameIsNumeric = (endPtr != bandName.c_str()) && (*endPtr == '\0') && (errno == 0);
+
+    if(bandNameIsNumeric)
+    {
+        if(bandNum < 1)
+        {
+            mlog(ERROR, "Band number \"%s\" is invalid", bandName.c_str());
+            return NO_BAND;
+        }
+
+        if(dset)
+        {
+            const int bandCount = dset->GetRasterCount();
+            if(bandNum > bandCount)
+            {
+                mlog(ERROR, "Band number \"%s\" out of range 1..%d", bandName.c_str(), bandCount);
+                return NO_BAND;
+            }
+        }
+
+        return static_cast<int>(bandNum);
+    }
+
+    /* Named band selector. */
     auto it = bandMap.find(bandName);
     if(it == bandMap.end())
     {
@@ -618,6 +687,9 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
         const char* endpoint = _parms->asset.asset->getEndpoint();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
+        /* If path is null, there is nothing to set */
+        if(path == NULL) return;
+
         /* Set endpoint for specific path */
         if((path == StringLib::find(path, "/vsis3/")) && (endpoint && endpoint[0] != '\0'))
         {
@@ -663,6 +735,36 @@ OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, doub
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * isElevationBand
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::isElevationBand(int bandNum) const
+{
+    if((bandNum <= 0) || (bandNum > 32))
+        return false;
+
+    return (elevationBandsMask & (1U << (bandNum - 1))) != 0;
+}
+
+/*----------------------------------------------------------------------------
+ * isElevationBand
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::isElevationBand(const GDALRasterBand* band) const
+{
+    if(band == NULL)
+        return false;
+
+    return isElevationBand(band->GetBand());
+}
+
+/*----------------------------------------------------------------------------
+ * isDiscreteBand
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::isDiscreteBand(int bandNum) const
+{
+    return !isElevationBand(bandNum);
+}
 
 /*----------------------------------------------------------------------------
  * readPixel
@@ -799,7 +901,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSamp
 
         /* Done reading, release block lock */
         block->DropLock();
-        if(nodataCheck(sample, band) && band == elevationBand)
+        if(nodataCheck(sample, band) && isElevationBand(band))
         {
             sample->value += sample->verticalShift;
         }
@@ -871,7 +973,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, Raster
         if(validWindow)
         {
             readWithRetry(band, _x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
-            if(nodataCheck(sample, band) && band == elevationBand)
+            if(nodataCheck(sample, band) && isElevationBand(band))
             {
                 sample->value += sample->verticalShift;
             }
@@ -939,7 +1041,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
                 if(hasNodata && isNodata(value, nodata))
                     continue;
 
-                if(band == elevationBand)
+                if(isElevationBand(band))
                     value += sample->verticalShift;
 
                 const double dxp = _x - radiusInPixels;
@@ -1064,7 +1166,7 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
                       buf.data(), windowSize, windowSize, &args);
 
         /* Vertical shift if this band is the DEM */
-        if (band == elevationBand)
+        if (isElevationBand(band))
         {
             for (double& v : buf)
                 v += sample->verticalShift;
@@ -1202,15 +1304,26 @@ void GdalRaster::createTransform(void)
     if(projref && strlen(projref) > 0)
     {
         ogrerr = targetCRS.importFromWkt(projref);
-        // mlog(DEBUG, "CRS from raster: %s", projref);
+        if(ogrerr != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse target CRS: %s", parms->target_crs.value.c_str());
     }
 
+    /* If caller specified overrideCRS callback, use it to get target CRS */
     if(overrideCRS)
     {
         ogrerr = overrideCRS(targetCRS, reinterpret_cast<const void*>(fileName.c_str()));
+        if(ogrerr != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to override target CRS: %s", fileName.c_str());
     }
 
-    CHECK_GDALERR(ogrerr);
+    /* If target CRS is specified in parameters, use it to override raster's CRS or callback override */
+    if(!parms->target_crs.value.empty())
+    {
+        targetCRS.Clear();
+        ogrerr = targetCRS.SetFromUserInput(parms->target_crs.value.c_str());
+        if(ogrerr != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse target CRS: %s", parms->target_crs.value.c_str());
+    }
 
     OGRCoordinateTransformationOptions options;
     if(!parms->proj_pipeline.value.empty())
@@ -1220,22 +1333,23 @@ void GdalRaster::createTransform(void)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set user projlib pipeline");
         mlog(DEBUG, "Set projlib  pipeline: %s", parms->proj_pipeline.value.c_str());
     }
-
-    /* Limit to area of interest if AOI was set */
-    const bbox_t* aoi = &aoi_bbox; // check override first
-    bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
-    if(!useaoi)
+    else
     {
-        aoi = &parms->aoi_bbox.value; // check parameters
-        useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
-    }
-    if(useaoi)
-    {
-        if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set AOI");
+        /* Limit to area of interest if AOI was set, help projlib to pick right transformation and best grid shift files if needed */
+        const bbox_t* aoi = &aoi_bbox; // check override first
+        bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+        if(!useaoi)
+        {
+            aoi = &parms->aoi_bbox.value; // check parameters
+            useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+        }
+        if(useaoi)
+        {
+            if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set AOI");
 
-        mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)",
-             aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
+            mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)", aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
+        }
     }
 
     /* Force traditional axis order (lon, lat) */

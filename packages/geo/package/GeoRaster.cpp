@@ -43,9 +43,9 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime,
-                     int elevationBandNum, int flagsBandNum, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
+                     uint32_t elevationBandsMask, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject(L, rqst_parms, key),
-    raster(this, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandNum, flagsBandNum, gtf_cb, crs_cb)
+    raster(this, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandsMask, gtf_cb, crs_cb)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -63,33 +63,39 @@ GeoRaster::~GeoRaster(void) = default;
 
 
 /*----------------------------------------------------------------------------
- * samplePoint
+ * samplePointBands
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::samplePoint(const point_info_t& pinfo, sample_list_t& slist, void* param)
+uint32_t GeoRaster::samplePointBands(const point_info_t& pinfo, sample_list_t& slist,
+                                     const std::vector<int>& bands, bool oneBand)
 {
-    static_cast<void>(param);
+    uint32_t ssErrors = SS_NO_ERRORS;
 
-    lockSampling();
     try
     {
-        std::vector<int> bands;
-        getInnerBands(&raster, bands);
-        for(const int bandNum : bands)
+        if(oneBand)
         {
-            /* Must create OGRPoint for each bandNum, samplePOI projects it to raster CRS */
-            OGRPoint ogr_point(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
-
-            RasterSample* sample = raster.samplePOI(&ogr_point, bandNum);
+            OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
+            RasterSample* sample = raster.samplePOI(&ogrPoint, bands[0]);
             if(sample) slist.add(sample);
+        }
+        else
+        {
+            for(const int bandNum : bands)
+            {
+                /* Must create OGRPoint for each bandNum, samplePOI projects it to raster CRS */
+                OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
+                RasterSample* sample = raster.samplePOI(&ogrPoint, bandNum);
+                if(sample) slist.add(sample);
+            }
         }
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
-    unlockSampling();
 
-    return raster.getSSerror();
+    return raster.getSSerror() | ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -193,6 +199,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
     unlockSampling();
@@ -207,6 +214,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
 {
     static_cast<void>(gps);
     static_cast<void>(param);
+    uint32_t ssErrors = SS_NO_ERRORS;
 
     lockSampling();
 
@@ -218,7 +226,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
         OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
 
         std::vector<int> bands;
-        getInnerBands(&raster, bands);
+        resolveBands(&raster, bands);
         for(const int bandNum : bands)
         {
             /* Get subset rasters, if none found, return */
@@ -236,8 +244,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
                                              samplerKey,
                                              subset->rasterName,
                                              raster.getGpsTime(),
-                                             raster.getElevationBandNum(),
-                                             raster.getFLagsBandNum(),
+                                             raster.getElevationBandsMask(),
                                              raster.getOverrideGeoTransform(),
                                              raster.getOverrideCRS());
                 slist.add(subset);
@@ -249,6 +256,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     }
     catch (const RunTimeException &e)
     {
+        ssErrors |= SS_RUNTIME_ERROR;
         mlog(e.level(), "Error subsetting raster: %s", e.what());
     }
 
@@ -257,7 +265,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
 
     unlockSampling();
 
-    return raster.getSSerror();
+    return raster.getSSerror() | ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -379,10 +387,42 @@ uint32_t GeoRaster::readSamples(RasterObject* robj, const range_t& range,
                                 std::vector<sample_list_t*>& samples)
 {
     uint32_t ssErrors = SS_NO_ERRORS;
+    GeoRaster* grobj = dynamic_cast<GeoRaster*>(robj);
+    if(grobj == NULL)
+    {
+        mlog(CRITICAL, "Invalid raster object type in GeoRaster::readSamples");
+        return SS_RUNTIME_ERROR;
+    }
+
+    std::vector<int> bands;
+    try
+    {
+        /* Resolve requested bands once per reader range, not once per point. */
+        grobj->resolveBands(&grobj->raster, bands);
+    }
+    catch (const RunTimeException &e)
+    {
+        ssErrors |= SS_RUNTIME_ERROR;
+        mlog(e.level(), "Error getting samples: %s", e.what());
+
+        /* Keep output shape stable: one sample list per requested point in this range. */
+        for(uint32_t i = range.start; i < range.end; i++)
+        {
+            if(!grobj->sampling())
+            {
+                mlog(DEBUG, "Sampling stopped");
+                samples.clear();
+                break;
+            }
+            samples.push_back(new sample_list_t);
+        }
+        return ssErrors;
+    }
+
+    const bool oneBand = bands.size() == 1;
 
     for(uint32_t i = range.start; i < range.end; i++)
     {
-        GeoRaster* grobj = dynamic_cast<GeoRaster*>(robj);
         if(!grobj->sampling())
         {
             mlog(DEBUG, "Sampling stopped");
@@ -392,7 +432,7 @@ uint32_t GeoRaster::readSamples(RasterObject* robj, const range_t& range,
 
         sample_list_t* slist = new sample_list_t;
         const RasterObject::point_info_t& pinfo = points[i];
-        const uint32_t err = grobj->samplePoint(pinfo, *slist, NULL);
+        const uint32_t err = grobj->samplePointBands(pinfo, *slist, bands, oneBand);
 
         /* Acumulate errors from all getSamples calls */
         ssErrors |= err;

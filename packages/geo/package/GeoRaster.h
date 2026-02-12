@@ -63,8 +63,8 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                      GeoRaster  (lua_State* L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime,
-                                  int elevationBandNum=GdalRaster::NO_BAND, int flagsBandNum=GdalRaster::NO_BAND,
+                      GeoRaster  (lua_State* L, RequestFields* rqst_parms, const char* key, const std::string& _fileName,
+                                  double _gpsTime=0.0, uint32_t elevationBandsMask=0u,
                                   GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
 
                      ~GeoRaster  (void) override;
@@ -130,7 +130,8 @@ class GeoRaster: public RasterObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        uint32_t samplePoint(const point_info_t& pinfo, sample_list_t& slist, void* param=NULL);
+        uint32_t samplePointBands(const point_info_t& pinfo, sample_list_t& slist,
+                                  const std::vector<int>& bands, bool oneBand);
 
         static void*    readerThread (void* parm);
         static uint32_t readSamples  (RasterObject* robj, const range_t& range,

@@ -56,6 +56,7 @@
 #define SS_SUBRASTER_ERROR        (1 << 5)
 #define SS_INDEX_FILE_ERROR       (1 << 6)
 #define SS_RESOURCE_LIMIT_ERROR   (1 << 7)
+#define SS_RUNTIME_ERROR          (1 << 8)
 
 /******************************************************************************
  * CLASSES
@@ -133,10 +134,13 @@ class GeoFields: public FieldDictionary
         FieldElement<string>                    doy_range;
         FieldElement<bool>                      sort_by_index {false};
         FieldElement<single_sample_option_t>    force_single_sample {SINGLE_SAMPLE_NA};
+        FieldElement<string>                    target_crs;
         FieldElement<string>                    proj_pipeline;
+        FieldElement<string>                    url;
         FieldElement<bbox_t>                    aoi_bbox;
         FieldElement<string>                    catalog;
         FieldList<string>                       bands;
+        FieldList<string>                       elevation_bands;
         AssetField                              asset;
 
         bool                                    filter_time;

@@ -14,7 +14,14 @@ runner.unittest("GeoUser Raster", function()
     -- open raster
     local encodedRaster = base64.encode( rasterfile )
     local len = string.len(encodedRaster)
-    local params = {data = encodedRaster, length = len, date = 0, elevation = true}
+    local params = {
+        data = encodedRaster,
+        length = len,
+        date = 0,
+        samples = {
+            elevation_bands = {"1"}
+        }
+    }
     local robj = geo.userraster(params)
     runner.assert(robj ~= nil)
 

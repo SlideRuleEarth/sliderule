@@ -56,17 +56,15 @@ class GeoUserRaster: public GeoRaster
 
         static const char* RASTERDATA_KEY;
         static const char* RASTERLENGTH_KEY;
-        static const char* GPSTIME_KEY;
-        static const char* ELEVATION_KEY;
         static const char* SAMPLES_KEY;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int            luaCreate      (lua_State* L);
+        static int  luaCreate      (lua_State* L);
 
-                             ~GeoUserRaster  (void) override;
+                   ~GeoUserRaster  (void) override;
 
     protected:
 
@@ -74,9 +72,9 @@ class GeoUserRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key,
-                      const char* file, long filelength, double gps,
-                      int elevationBandNum, int flagsBandNum);
+        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* file, long filelength);
+        void resolveBands(std::vector<std::string>& bands) override
+                         { resolveBandsStrict(bands); }
 
     private:
 

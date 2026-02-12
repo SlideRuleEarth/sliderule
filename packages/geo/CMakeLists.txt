@@ -33,6 +33,7 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRasterBatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoJsonRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserUrlRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSubset.cpp
@@ -60,6 +61,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoJsonRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserUrlRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSample.h

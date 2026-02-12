@@ -42,8 +42,6 @@
 
 const char* GeoUserRaster::RASTERDATA_KEY    = "data";
 const char* GeoUserRaster::RASTERLENGTH_KEY  = "length";
-const char* GeoUserRaster::GPSTIME_KEY       = "date";
-const char* GeoUserRaster::ELEVATION_KEY     = "elevation";
 const char* GeoUserRaster::SAMPLES_KEY       = "samples";
 
 /******************************************************************************
@@ -60,6 +58,7 @@ const char* GeoUserRaster::SAMPLES_KEY       = "samples";
 int GeoUserRaster::luaCreate (lua_State* L)
 {
     const int index = 1;
+    const int stackTop = lua_gettop(L);
     RequestFields* rqst_parms = NULL;
     try
     {
@@ -73,18 +72,12 @@ int GeoUserRaster::luaCreate (lua_State* L)
         size_t rasterlength = (size_t)getLuaInteger(L, -1);
         lua_pop(L, 1);
 
-        /* Get raster gps time */
-        lua_getfield(L, index, GPSTIME_KEY);
-        const double gps = getLuaFloat(L, -1);
-        lua_pop(L, 1);
-
-        /* Get raster elevation flag */
-        lua_getfield(L, index, ELEVATION_KEY);
-        const bool iselevation = getLuaBoolean(L, -1);
-        lua_pop(L, 1);
-
         /* Get geo fields */
         lua_getfield(L, index, SAMPLES_KEY);
+        const int samplesIndex = lua_gettop(L);
+        if(!lua_istable(L, samplesIndex))
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Missing required samples table");
+
         rqst_parms = new RequestFields(L, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
@@ -92,9 +85,9 @@ int GeoUserRaster::luaCreate (lua_State* L)
             delete geo_fields;
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add default geo fields");
         }
-        geo_fields->fromLua(L, lua_gettop(L));
+        geo_fields->fromLua(L, samplesIndex);
         LuaObject::referenceLuaObject(rqst_parms); // GeoUserRaster expects a LuaObject created from a Lua script
-        lua_pop(L, 1);
+        lua_settop(L, stackTop);
 
         /* Convert raster from Base64 to Binary */
         const std::string tiff = MathLib::b64decode(raster, rasterlength);
@@ -105,12 +98,8 @@ int GeoUserRaster::luaCreate (lua_State* L)
         if(rasterlength > maxSize)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
 
-        /* If raster has elevation assume it is in the first band */
-        const int elevationBandNum = iselevation ? 1 : GdalRaster::NO_BAND;
-        const int flagsBandNum = GdalRaster::NO_BAND;
-
         /* Create GeoUserRaster */
-        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size(), gps, elevationBandNum, flagsBandNum));
+        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size()));
     }
     catch(const RunTimeException& e)
     {
@@ -136,10 +125,8 @@ GeoUserRaster::~GeoUserRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key,
-                             const char *file, long filelength, double gps,
-                             int elevationBandNum, int flagsBandNum) :
-    GeoRaster(L, rqst_parms, key, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, elevationBandNum, flagsBandNum),
+GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char *file, long filelength) :
+    GeoRaster(L, rqst_parms, key, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif")),
     data(NULL)
 {
     if(file == NULL)
