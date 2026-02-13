@@ -269,10 +269,17 @@ Resources:
               DeleteOnTermination: true
         UserData:
           Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+
+            --==BOUNDARY==
+            Content-Type: text/x-shellscript; charset="us-ascii"
+
             #!/bin/bash
             mkdir -p /plugins
             aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
-            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+
+            --==BOUNDARY==--
 
   # Compute Environment
   BatchComputeEnvironment:
