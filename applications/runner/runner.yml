@@ -183,7 +183,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
         - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
       Policies:
-        - PolicyName: !Sub "${AWS::StackName}-s3-access"
+        - PolicyName: !Sub "${AWS::StackName}-job-s3-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -328,14 +328,18 @@ Resources:
           args: "granule.h5" # example to be overridden
           result: !Sub "s3://${ProjectPublicBucket}/runner/runid/result.json" # example to be overridden
         RetryStrategy:
-          Attempts: 2  # 1 initial attempt + 1 retries = 2 total
+          Attempts: 3  # 1 initial attempt + 2 retries = 3 total
           EvaluateOnExit:
+            - Action: EXIT
+              OnExitCode: "0"  # Don't retry on success
+            - Action: EXIT
+              OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
+            - Action: EXIT
+              OnReason: "Job attempt duration exceeded timeout*" # Don't retry on job timeout
             - Action: RETRY
               OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
             - Action: RETRY
-              OnExitCode: "1"  # Retry on exit code 1
-            - Action: EXIT
-              OnExitCode: "0"  # Don't retry on success
+              OnExitCode: "1:255" # Retry on any other failure as a catch-all
         Timeout:
           AttemptDurationSeconds: 3600  # 60 minutes
         ContainerProperties:
@@ -384,9 +388,6 @@ Resources:
             - Name: ssl-certs
               Host:
                 SourcePath: /etc/ssl/certs
-            - Name: docker-socket
-              Host:
-                SourcePath: /var/run/docker.sock
           MountPoints:
             - SourceVolume: plugins
               ContainerPath: /plugins
@@ -397,8 +398,6 @@ Resources:
             - SourceVolume: ssl-certs
               ContainerPath: /etc/ssl/certs
               ReadOnly: true
-            - SourceVolume: docker-socket
-              ContainerPath: /var/run/docker.sock
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -445,7 +444,36 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/PowerUserAccess
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-gateway-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:ListBucket"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}"
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+              - Effect: Allow
+                Action: ["s3:PutObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+        - PolicyName: !Sub "${AWS::StackName}-gateway-batch-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - batch:SubmitJob
+                  - batch:DescribeJobs
+                  - batch:ListJobs
+                  - batch:CancelJob
+                Resource: "*"
 
   # API Gateway HTTP API
   HttpApi:
