@@ -31,25 +31,12 @@ if not sys.getcfg("trusted_environment") then
     sys.quit(1) -- failure
 end
 
-print("Executing job runner in trusted environment")
-
---------------------------------------------------
--- Get Script
---------------------------------------------------
-
-if script:find("s3://") == 1 then
-    script_file = string.format("/tmp/script-%s.lua", unique_string(7))
-    local script_bucket, script_file_path = script:match("^s3://([^/]+)/(.+)$")
-    local script_download_status = aws.s3download(script_bucket, script_file_path, script_file)
-    if not script_download_status then
-        print("Failed to download script from s3")
-        sys.quit(1) -- failure
-    end
-else
-    script_file = script
+io.write("Executing job: ")
+for _,a in ipairs(arg) do
+    io.write(a)
+    io.write(" ")
 end
-
-print(string.format("Running script: %s", script_file))
+io.write("\n")
 
 --------------------------------------------------
 -- System Configuration
@@ -61,6 +48,25 @@ aws_utils.config_leap_seconds() -- leap seconds
 aws_utils.config_earth_data() -- assets and credentials
 
 print("Cloud environment initialized")
+
+--------------------------------------------------
+-- Get Script
+--------------------------------------------------
+
+if script:find("s3://") == 1 then
+    script_file = string.format("/tmp/script-%s.lua", unique_string(7))
+    local script_bucket, script_file_path = script:match("^s3://([^/]+)/(.+)$")
+    print(string.format("Downloading bucket=%s, file=%s", script_bucket, script_file_path))
+    local script_download_status = aws.s3download(script_bucket, script_file_path, script_file)
+    if not script_download_status then
+        print("Failed to download script from s3")
+        sys.quit(1) -- failure
+    end
+else
+    script_file = script
+end
+
+print(string.format("Running script: %s", script_file))
 
 --------------------------------------------------
 -- Execute Script
@@ -93,8 +99,9 @@ print(string.format("Results written to: %s", result_file))
 -- Put Result
 --------------------------------------------------
 
-if result_file:find("s3://") == 1 then
+if result:find("s3://") == 1 then
     local result_bucket, result_file_path = result:match("^s3://([^/]+)/(.+)$")
+    print(string.format("Uploading bucket=%s, file=%s", result_bucket, result_file_path))
     local result_upload_status = aws.s3upload(result_bucket, result_file_path, result_file)
     if not result_upload_status then
         print("Failed to upload results to s3")
