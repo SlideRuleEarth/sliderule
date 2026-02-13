@@ -80,8 +80,8 @@ def submit_handler(event, context, username):
         script_hash = hashlib.sha256(script.encode('utf-8')).hexdigest()
         combined = now + name + script_hash
         final_hash = hashlib.sha256(combined.encode('utf-8')).hexdigest()[:10]
-        clean_username = "".join(ch if ch.isalnum() else "_" for ch in username.split(" ")[0][:10])
-        clean_name = "".join(ch if ch.isalnum() else "_" for ch in name.split(" ")[0][:10])
+        clean_username = "".join(ch if ch.isalnum() else "_" for ch in username.split(" ")[0][:16])
+        clean_name = "".join(ch if ch.isalnum() else "_" for ch in name.split(" ")[0][:16])
         run_id = f"run-{clean_username}-{clean_name}-{final_hash}"
         run_path = f"{stack_name}/{run_id}"
         run_url = f"s3://{project_public_bucket}/{run_path}"
