@@ -287,8 +287,6 @@ Resources:
         DesiredvCpus: 0
         InstanceTypes:
           - default_arm64
-        Ec2Configuration:
-          - ImageType: ECS_AL2_ARM64
         LaunchTemplate:
           LaunchTemplateId: !Ref BatchLaunchTemplate
           Version: !GetAtt BatchLaunchTemplate.LatestVersionNumber
@@ -334,12 +332,8 @@ Resources:
               OnExitCode: "0"  # Don't retry on success
             - Action: EXIT
               OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
-            - Action: EXIT
-              OnReason: "Job attempt duration exceeded timeout*" # Don't retry on job timeout
             - Action: RETRY
               OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
-            - Action: RETRY
-              OnExitCode: "1:255" # Retry on any other failure as a catch-all
         Timeout:
           AttemptDurationSeconds: 3600  # 60 minutes
         ContainerProperties:
