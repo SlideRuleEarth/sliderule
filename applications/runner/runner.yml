@@ -260,7 +260,7 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
-        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}'
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
             Ebs:
@@ -347,9 +347,9 @@ Resources:
           Image: !Sub "${ContainerRegistry}/sliderule:unstable"
           ResourceRequirements:
             - Type: VCPU
-              Value: "4"
+              Value: "1"
             - Type: MEMORY
-              Value: "16384"
+              Value: "4096"
           JobRoleArn: !GetAtt JobRunnerRole.Arn
           Command:
             - "/usr/local/etc/sliderule/job_runner.lua"
@@ -377,8 +377,6 @@ Resources:
               Value: !Sub ${TelemetryStream}
             - Name: CLUSTER
               Value: localhost
-            - Name: CONTAINER_REGISTRY
-              Value: !Sub ${ContainerRegistry}
           Volumes:
             - Name: plugins
               Host:
