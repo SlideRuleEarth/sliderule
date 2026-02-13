@@ -3,12 +3,15 @@ import boto3
 import json
 import base64
 import hashlib
+import traceback
 import botocore.exceptions
 from datetime import datetime, timezone
 
 # ###############################
 # Cached Clients
 # ###############################
+
+unittest = False
 
 s3 = boto3.client("s3")
 batch = boto3.client("batch")
@@ -36,6 +39,12 @@ def parse_claim_array(claim_value):
     else:
         return []
 
+#
+# Display extra information for unit tests
+#
+def trace_exception():
+    if unittest:
+        traceback.print_exc()
 
 # ###############################
 # Path Handlers
@@ -44,7 +53,7 @@ def parse_claim_array(claim_value):
 #
 # Submit Job
 #
-def submit_handler(event, context):
+def submit_handler(event, context, username):
 
     # initialize response state
     state = {"status": True}
@@ -81,17 +90,24 @@ def submit_handler(event, context):
         script_hash = hashlib.sha256(script.encode('utf-8')).hexdigest()
         combined = now + name + script_hash
         final_hash = hashlib.sha256(combined.encode('utf-8')).hexdigest()[:10]
-        run_id = f"run-{final_hash}"
+        clean_username = "".join(ch if ch.isalnum() else "_" for ch in username.split(" ")[0][:10])
+        clean_name = "".join(ch if ch.isalnum() else "_" for ch in name.split(" ")[0][:10])
+        run_id = f"run-{clean_username}-{clean_name}-{final_hash}"
         run_path = f"{stack_name}/{run_id}"
+        run_url = f"s3://{project_public_bucket}/{run_path}"
 
         # populate validated initial info
         state["name"] = name
-        state["run_id"] = run_id
-        state["run_path"] = run_path
+        state["run_url"] = run_url
 
         # load initial files to S3
-        s3.put_object(Bucket=project_public_bucket, Key=f"{run_path}/environment.txt", Body=environment_version)
         s3.put_object(Bucket=project_public_bucket, Key=f"{run_path}/script.lua", Body=script)
+        s3.put_object(Bucket=project_public_bucket, Key=f"{run_path}/receipt.json", Body=json.dumps({
+            "name": name,
+            "username": username,
+            "args": {str(i):args_list[i] for i in range(len(args_list))},
+            "environment": environment_version
+        }, indent=2))
 
         # optionally build container overrides
         container_overrides = {}
@@ -110,9 +126,9 @@ def submit_handler(event, context):
                 jobQueue=f"{stack_name}-job-queue",
                 jobDefinition=f"{stack_name}-default-job-definition",
                 parameters={
-                    "script": f"s3://{project_public_bucket}/{run_path}/script.lua",
+                    "script": f"{run_url}/script.lua",
                     "args": len(args_list[i].strip()) > 0 and args_list[i] or "nil",
-                    "result": f"s3://{project_public_bucket}/{run_path}/result_{i}.json"
+                    "result": f"{run_url}/result_{i}.json"
                 },
                 containerOverrides=container_overrides
             )
@@ -121,16 +137,19 @@ def submit_handler(event, context):
         state["job_ids"] = job_ids
 
     except botocore.exceptions.ClientError as e:
+        trace_exception()
         print(f'Failed to submit job: {e}')
         state["exception"] = f'Failed to submit job'
         state["status"] = False
 
     except RuntimeError as e:
+        trace_exception()
         print(f'User error in job submission: {e}')
         state["exception"] = f'User error in job submission'
         state["status"] = False
 
     except Exception as e:
+        trace_exception()
         print(f'Exception in job submission: {e}')
         state["exception"] = f'Failure in job submission'
         state["status"] = False
@@ -165,17 +184,19 @@ def report_jobs_handler(event, context):
                 state["report"][job_id] = {
                     "status": job["status"],
                     "statusReason": job.get("statusReason", "n/a"),
-                    "createdAt": job["createdAt"],
-                    "jobDefinition": job["startedAt"],
+                    "createdAt": datetime.fromtimestamp(job["createdAt"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    "jobDefinition": job["jobDefinition"],
                     "args": job["parameters"]['args']
                 }
 
     except RuntimeError as e:
+        trace_exception()
         print(f'User error in job report: {e}')
         state["exception"] = f'User error in job report'
         state["status"] = False
 
     except Exception as e:
+        trace_exception()
         print(f'Exception in job report: {e}')
         state["exception"] = f'Failure in job report'
         state["status"] = False
@@ -225,11 +246,13 @@ def report_queue_handler(event, context):
                 state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
     except RuntimeError as e:
+        trace_exception()
         print(f'User error in queue report: {e}')
         state["exception"] = f'User error in queue report'
         state["status"] = False
 
     except Exception as e:
+        trace_exception()
         print(f'Exception in queue report: {e}')
         state["exception"] = f'Failure in queue report'
         state["status"] = False
@@ -266,17 +289,19 @@ def cancel_handler(event, context):
 
         # delete jobs
         for job_id in jobs_to_delete:
-            batch.cancel_job(jobId=job_id, reason="Deletion")
+            batch.cancel_job(jobId=job_id, reason="Canceled by user")
             state["jobs_deleted"].append(job_id)
 
     except RuntimeError as e:
+        trace_exception()
         print(f'User error in job deletion: {e}')
         state["exception"] = f'User error in job deletion'
         state["status"] = False
 
     except Exception as e:
+        trace_exception()
         print(f'Exception in job deletion: {e}')
-        state["exception"] = f'Failure in job deleition'
+        state["exception"] = f'Failure in job deletion'
         state["status"] = False
 
     # return response
@@ -318,7 +343,7 @@ def lambda_gateway(event, context):
 
         # route request
         if path == '/submit':
-            return submit_handler(body, context)
+            return submit_handler(body, context, username)
         elif path == '/report/jobs':
             return report_jobs_handler(body, context)
         elif path == '/report/queue':
@@ -338,3 +363,48 @@ def lambda_gateway(event, context):
             'statusCode': 500,
             'body': json.dumps({'error': 'internal error'})
         }
+
+# ###############################
+# Unit Test
+# ###############################
+
+
+if __name__ == '__main__':
+
+    lua_script = """
+    print("Hello World")
+    return "Nice to meet you", true
+    """
+
+    os.environ["STACK_NAME"] = "runner"
+    os.environ["ENVIRONMENT_VERSION"] = "local"
+    os.environ["PROJECT_PUBLIC_BUCKET"] = "sliderule-public"
+
+    unittest = True
+
+    def submit():
+        return submit_handler(event={
+            "name": "hello_world",
+            "script": base64.b64encode(lua_script.encode()).decode(),
+            "args_list": [" "]
+        }, context=None, username="unittest")
+
+    def jobs(job_id):
+        return report_jobs_handler(event={
+            "job_list": [job_id]
+        }, context=None)
+
+    def inprogress():
+        return report_queue_handler(event={
+            "job_state": ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"]
+        }, context=None)
+
+    def finished():
+        return report_queue_handler(event={
+            "job_state": ["SUCCEEDED", "FAILED"]
+        }, context=None)
+
+    def cancel(job_id):
+        return cancel_handler(event={
+            "job_list": [job_id]
+        }, context=None)
