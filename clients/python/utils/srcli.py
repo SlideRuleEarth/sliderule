@@ -41,6 +41,7 @@ parser.add_argument('--ttl',                type=int,               default=60) 
 parser.add_argument('--version',            type=str,               default="unstable")
 parser.add_argument('--branch',             type=str,               default="main")
 parser.add_argument('--report',             type=str,               default="clusters")
+parser.add_argument('--args',               nargs='+', type=str,    default=None)
 parser.add_argument('-j', '--asjson',       action='store_true',    default=False)
 parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
 args,_ = parser.parse_known_args()
@@ -58,7 +59,12 @@ CommandRunner = {
     "report": lambda: session.provisioner.report(kind=args.report),
     "test": lambda: session.provision("test", {"branch":args.branch}),
     # Cluster
-    "version": lambda: session.source("version")
+    "version": lambda: session.source("version"),
+    # Runner
+    "jobs": lambda: session.runner.jobs(job_list=args.args),
+    "job_queue": lambda: session.runner.queue(job_state=args.args),
+    "job_cancel": lambda: session.runner.cancel_all(job_list=args.args),
+    "job_cancel_all": session.runner.cancel_all
 }
 
 # Execute Commands

@@ -176,6 +176,7 @@ class Session:
 
         # create wrappers for subclasses
         self.provisioner = self.__Provisioner(self)
+        self.runner = self.__Runner(self)
         self.authenticator = self.__Authenticator(self)
 
         # authenticate for non-public clusters
@@ -443,56 +444,11 @@ class Session:
         return self.ps_metadata
 
     #
-    #  manage
+    #  gateway_request
     #
-    def manage (self, api, content_json=True, as_post=False, headers=None):
+    def gateway_request (self, api, subdomain=None, data=None, headers=None):
         '''
-        handles making the HTTP request to the sliderule manager
-        '''
-        # default parameters
-        if headers == None:
-            headers = {}
-
-        # initialize local variables
-        rsps = ""
-
-        # Construct Request URL
-        if self.cluster:
-            url = 'https://%s.%s/manager/%s' % (self.cluster, self.domain, api)
-        else:
-            url = 'http://%s/manager/%s' % (self.domain, api)
-
-        try:
-            # Build Authorization Header
-            if self.cluster:
-                self.__buildauthheader(headers)
-
-            # Perform Request
-            if as_post:
-                data = self.session.post(url, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
-            else:
-                data = self.session.get(url, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
-            data.raise_for_status()
-
-            # Parse Response
-            stream_source = self.__StreamSource(data)
-            lines = [line for line in stream_source]
-            rsps = b''.join(lines)
-            if content_json:
-                rsps = json.loads(rsps)
-
-        except Exception as e:
-            logger.error(f'Failed to make request to {url}: {e}')
-
-        # Return Response
-        return rsps
-
-    #
-    #  provision
-    #
-    def provision (self, api, data=None, headers=None):
-        '''
-        handles making the HTTP request to the sliderule provisioner
+        handles making the HTTP request to a sliderule gateway service
         '''
         try:
             # Build Authorization Header
@@ -501,7 +457,7 @@ class Session:
             self.__buildauthheader(headers)
 
             # Perform Request
-            url = f'https://provisioner.{self.domain}/{api}'
+            url = f'https://{subdomain}.{self.domain}/{api}'
             data = self.session.post(url, data=json.dumps(data), headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
             data.raise_for_status()
 
@@ -546,17 +502,34 @@ class Session:
         def __init__ (self, session):
             self.session = session
         def deploy (self, *, is_public, node_capacity, ttl, version):
-            return self.session.provision("deploy", {"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+            return self.session.gateway_request("deploy", subdomain="provisioner", data={"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
         def extend (self, *, ttl):
-            return self.session.provision("extend", {"cluster": self.session.cluster, "ttl": ttl})
+            return self.session.gateway_request("extend", subdomain="provisioner", data={"cluster": self.session.cluster, "ttl": ttl})
         def destroy (self):
-            return self.session.provision("destroy", {"cluster": self.session.cluster})
+            return self.session.gateway_request("destroy", subdomain="provisioner", data={"cluster": self.session.cluster})
         def status (self):
-            return self.session.provision("status", {"cluster": self.session.cluster})
+            return self.session.gateway_request("status", subdomain="provisioner", data={"cluster": self.session.cluster})
         def events (self):
-            return self.session.provision("events", {"cluster": self.session.cluster})
+            return self.session.gateway_request("events", subdomain="provisioner", data={"cluster": self.session.cluster})
         def report (self, kind="clusters"):
-            return self.session.provision(f"report/{kind}", {})
+            return self.session.gateway_request(f"report/{kind}", subdomain="provisioner", data={})
+
+    #
+    # __Runner
+    #
+    class __Runner:
+        def __init__ (self, session):
+            self.session = session
+        def submit (self, *, name, script, args_list):
+            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args_list": args_list})
+        def jobs (self, *, job_list):
+            return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
+        def queue (self, *, job_state):
+            return self.session.gateway_request("report/queue", subdomain="runner", data={"job_state": job_state})
+        def cancel (self, *, job_list):
+            return self.session.gateway_request("cancel", subdomain="runner", data={"job_list": job_list})
+        def cancel_all (self):
+            return self.session.gateway_request("cancel", subdomain="runner")
 
     #
     # __Authenticator

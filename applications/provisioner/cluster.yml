@@ -177,14 +177,6 @@ Resources:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
         - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
       Policies:
-        - PolicyName: !Sub "${Cluster}-secrets-access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:slideruleearth.io/secrets-*
         - PolicyName: !Sub "${Cluster}-s3-access"
           PolicyDocument:
             Version: "2012-10-17"
@@ -192,8 +184,8 @@ Resources:
               - Effect: Allow
                 Action: ["s3:ListBucket"]
                 Resource:
-                  - arn:aws:s3:::sliderule
-                  - arn:aws:s3:::sliderule-public
+                  - !Sub "arn:aws:s3:::${ProjectBucket}"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}"
                   - arn:aws:s3:::pgc-opendata-dems
                   - arn:aws:s3:::prd-tnm
                   - arn:aws:s3:::esa-worldcover
@@ -202,8 +194,8 @@ Resources:
               - Effect: Allow
                 Action: ["s3:GetObject"]
                 Resource:
-                  - arn:aws:s3:::sliderule/*
-                  - arn:aws:s3:::sliderule-public/*
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
                   - arn:aws:s3:::pgc-opendata-dems/*
                   - arn:aws:s3:::prd-tnm/*
                   - arn:aws:s3:::esa-worldcover/*
@@ -307,7 +299,7 @@ Resources:
   ClusterNodeSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Sliderule app SG
+      GroupDescription: Sliderule Cluster Security Group
       VpcId: !Ref ClusterVPC
       SecurityGroupIngress:
         # SlideRule (from HAProxy)
@@ -534,11 +526,6 @@ Resources:
           # Log into ECR
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
 
-          # Setup environment
-          SECRET=$(aws secretsmanager get-secret-value --region us-west-2 --secret-id ${Domain}/secrets --query SecretString --output text)
-          export CLIENT_ID=$(echo $SECRET | jq -r .client_id)
-          export CLIENT_SECRET=$(echo $SECRET | jq -r .client_secret)
-
           # Create docker-compose.yml
           cat > docker-compose.yml << EOF
           version: "3.9"
@@ -670,6 +657,7 @@ Resources:
                 network_mode: host
                 restart: always
                 pull_policy: if_not_present
+                command: ["/usr/local/etc/sliderule/server.lua"]
                 ulimits:
                   nofile:
                     soft: 8192

@@ -8,6 +8,7 @@ services:
     pull_policy: if_not_present
     stdin_open: true # docker run -i
     tty: true # docker run -t
+    command: ["/usr/local/etc/sliderule/server.lua"]
     ulimits:
       nofile:
         soft: 8192

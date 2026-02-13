@@ -48,6 +48,7 @@ MONITOR_AGENT_STAGE_DIR = $(STAGE)/monitor-agent
 AMS_STAGE_DIR = $(STAGE)/ams
 CERTBOT_STAGE_DIR = $(STAGE)/certbot
 PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
+RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
@@ -81,6 +82,7 @@ VERSION ?= unstable
 
 AUTHENTICATOR_URL ?= login.$(DOMAIN)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
+RUNNER_URL ?= runner.$(DOMAIN)
 RECORDER_URL ?= recorder.$(DOMAIN)
 ALERT_STREAM ?= recorder-firehose-alerts
 TELEMETRY_STREAM ?= recorder-firehose-telemetry
@@ -114,6 +116,7 @@ USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 BUILD_CONFIG ?= release
 BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(BUILD_CONFIG) && make"
+ARGS ?=
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -185,6 +188,18 @@ build: ## build the code using the build environment docker container
 		--name buildenv \
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
 		$(BUILD_CMD)
+
+job: ## run the self test on the server code
+	LOG_FORMAT=FMT_TEXT \
+	TRUSTED_ENVIRONMENT=true \
+	IPV4=$(MYIP) \
+	ENVIRONMENT_VERSION=$(ENVVER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	PROJECT_REGION=$(AWS_REGION) \
+	CLUSTER=local \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 
 ########################
 # Docker Build Targets
@@ -481,12 +496,12 @@ provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	cp $(ROOT)/applications/provisioner/requirements.txt $(PROVISIONER_STAGE_DIR)/
-		docker run -it --rm \
+	docker run -it --rm \
 		-v $(PROVISIONER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
-		-c "pip install --target /host/package requests croniter"
+		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/manager.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
@@ -523,6 +538,62 @@ provisioner-delete: ## deletes the lambda provisioner functions
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation delete-stack --stack-name provisioner
 	aws cloudformation wait stack-delete-complete --stack-name provisioner
+
+########################
+# Runner Targets
+########################
+
+runner-build: ## create the runner lambda zipfile
+	-rm -Rf $(RUNNER_STAGE_DIR)
+	mkdir -p $(RUNNER_STAGE_DIR)
+	cp $(ROOT)/applications/runner/requirements.txt $(RUNNER_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(RUNNER_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/applications/runner/runner.py $(RUNNER_STAGE_DIR)/package/
+	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/runner.zip . -x "/*__pycache__/*"
+
+runner-create: runner-build ## creates the lambda runner functions
+	aws s3 cp $(RUNNER_STAGE_DIR)/runner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
+	aws cloudformation create-stack \
+		--stack-name 	runner \
+		--template-body file://$(ROOT)/applications/runner/runner.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=RunnerUrl,ParameterValue=$(RUNNER_URL) \
+						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
+						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/runner.zip
+	aws cloudformation wait stack-create-complete --stack-name runner
+
+runner-describe: ## status the creation/deletion of the runner functions
+	aws cloudformation describe-stack-events --stack-name runner
+
+runner-delete: ## deletes the lambda runner functions
+	- aws batch update-job-queue --job-queue runner-job-queue --state DISABLED
+	- python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
+	aws cloudformation delete-stack --stack-name runner
+	aws cloudformation wait stack-delete-complete --stack-name runner
+
+runner-jobs-inprogress: ## displays all inprogress jobs
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUBMITTED PENDING RUNNABLE STARTING RUNNING"
+
+runner-jobs-finished: ## displays all finished jobs
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"
 
 ########################
 # Certificate Targets

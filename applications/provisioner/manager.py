@@ -22,7 +22,7 @@ http = urllib3.PoolManager()
 # ###############################
 
 MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
-SYSTEM_KEYWORDS = ['login','provisioner','client']
+SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner']
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"
 

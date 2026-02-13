@@ -48,7 +48,7 @@ def get_name_filter(parms):
             rgt_filter = rgt and f"{rgt:04d}" or "____"
             cycle_filter = cycle and f"{cycle:02d}" or "__"
             region_filter = region and f"{region:02d}" or "__"
-            return f"\\_{rgt_filter}{cycle_filter}{region_filter}\\_"
+            return f"%$_{rgt_filter}{cycle_filter}{region_filter}$_%"
         else:
             return None
 
@@ -57,7 +57,7 @@ def get_name_filter(parms):
 #
 def build_name_filter(clause, name_filter):
     if name_filter != None:
-        return rf"{__check(clause)} granule LIKE '{name_filter}' ESCAPE '\\'"
+        return f"{__check(clause)} granule LIKE '{name_filter}' ESCAPE '$'"
     else:
         return ''
 
