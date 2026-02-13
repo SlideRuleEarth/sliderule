@@ -3,15 +3,12 @@ import boto3
 import json
 import base64
 import hashlib
-import traceback
 import botocore.exceptions
 from datetime import datetime, timezone
 
 # ###############################
 # Cached Clients
 # ###############################
-
-unittest = False
 
 s3 = boto3.client("s3")
 batch = boto3.client("batch")
@@ -38,13 +35,6 @@ def parse_claim_array(claim_value):
             return [claim_value]
     else:
         return []
-
-#
-# Display extra information for unit tests
-#
-def trace_exception():
-    if unittest:
-        traceback.print_exc()
 
 # ###############################
 # Path Handlers
@@ -137,19 +127,16 @@ def submit_handler(event, context, username):
         state["job_ids"] = job_ids
 
     except botocore.exceptions.ClientError as e:
-        trace_exception()
         print(f'Failed to submit job: {e}')
         state["exception"] = f'Failed to submit job'
         state["status"] = False
 
     except RuntimeError as e:
-        trace_exception()
         print(f'User error in job submission: {e}')
         state["exception"] = f'User error in job submission'
         state["status"] = False
 
     except Exception as e:
-        trace_exception()
         print(f'Exception in job submission: {e}')
         state["exception"] = f'Failure in job submission'
         state["status"] = False
@@ -190,13 +177,11 @@ def report_jobs_handler(event, context):
                 }
 
     except RuntimeError as e:
-        trace_exception()
         print(f'User error in job report: {e}')
         state["exception"] = f'User error in job report'
         state["status"] = False
 
     except Exception as e:
-        trace_exception()
         print(f'Exception in job report: {e}')
         state["exception"] = f'Failure in job report'
         state["status"] = False
@@ -246,13 +231,11 @@ def report_queue_handler(event, context):
                 state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
     except RuntimeError as e:
-        trace_exception()
         print(f'User error in queue report: {e}')
         state["exception"] = f'User error in queue report'
         state["status"] = False
 
     except Exception as e:
-        trace_exception()
         print(f'Exception in queue report: {e}')
         state["exception"] = f'Failure in queue report'
         state["status"] = False
@@ -293,13 +276,11 @@ def cancel_handler(event, context):
             state["jobs_deleted"].append(job_id)
 
     except RuntimeError as e:
-        trace_exception()
         print(f'User error in job deletion: {e}')
         state["exception"] = f'User error in job deletion'
         state["status"] = False
 
     except Exception as e:
-        trace_exception()
         print(f'Exception in job deletion: {e}')
         state["exception"] = f'Failure in job deletion'
         state["status"] = False
@@ -363,48 +344,3 @@ def lambda_gateway(event, context):
             'statusCode': 500,
             'body': json.dumps({'error': 'internal error'})
         }
-
-# ###############################
-# Unit Test
-# ###############################
-
-
-if __name__ == '__main__':
-
-    lua_script = """
-    print("Hello World")
-    return "Nice to meet you", true
-    """
-
-    os.environ["STACK_NAME"] = "runner"
-    os.environ["ENVIRONMENT_VERSION"] = "local"
-    os.environ["PROJECT_PUBLIC_BUCKET"] = "sliderule-public"
-
-    unittest = True
-
-    def submit():
-        return submit_handler(event={
-            "name": "hello_world",
-            "script": base64.b64encode(lua_script.encode()).decode(),
-            "args_list": [" "]
-        }, context=None, username="unittest")
-
-    def jobs(job_id):
-        return report_jobs_handler(event={
-            "job_list": [job_id]
-        }, context=None)
-
-    def inprogress():
-        return report_queue_handler(event={
-            "job_state": ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"]
-        }, context=None)
-
-    def finished():
-        return report_queue_handler(event={
-            "job_state": ["SUCCEEDED", "FAILED"]
-        }, context=None)
-
-    def cancel(job_id):
-        return cancel_handler(event={
-            "job_list": [job_id]
-        }, context=None)
