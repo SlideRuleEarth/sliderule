@@ -113,7 +113,9 @@ class GeoFields: public FieldDictionary
             SINGLE_SAMPLE_FIRST = 1,
             SINGLE_SAMPLE_LAST = 2,
             SINGLE_SAMPLE_MIN = 3,
-            SINGLE_SAMPLE_MAX = 4
+            SINGLE_SAMPLE_MAX = 4,
+            SINGLE_SAMPLE_MEAN = 5,
+            SINGLE_SAMPLE_MEDIAN = 6
         } single_sample_option_t;
 
         /*--------------------------------------------------------------------

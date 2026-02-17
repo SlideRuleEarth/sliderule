@@ -12,25 +12,32 @@ In order to sample a raster dataset, SlideRule must first ascertain which indivi
 
 ## Parameters
 
-To request raster sampling, the ``"samples"`` parameter must be populated as a dictionary in the request.  Each key in the dictionary is used to label the data returned for that raster in the returned DataFrame.
+To request raster sampling, the `samples` parameter must be populated as a dictionary in the request.  Each key in the dictionary is used to label the data returned for that raster in the returned DataFrame.
 
-* ``"samples"``: dictionary of rasters to sample
-    - ``"<key>"``: user supplied name used to identify results returned from sampling this raster
-        - ``"asset"``: name of the raster (as supplied in the Asset Directory) to be sampled
-        - ``"algorithm"``: algorithm to use to sample the raster; the available algorithms for sampling rasters are: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss
-        - ``"radius"``: the size of the kernel in meters when sampling a raster; the size of the region in meters for zonal statistics
-        - ``"zonal_stats"``: boolean whether to calculate and return zonal statistics for the region around the location being sampled
-        - ``"slope_aspect"``: boolean whether to calculate slope and aspect for the region around the location being sampled
-        - ``"slope_scale_length"``: the size of the region in meters to use when calculating the slope and aspect
-        - ``"with_flags"``: boolean whether to include auxiliary information about the sampled pixel in the form of a 32-bit flag
-        - ``"t0"``: start time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
-        - ``"t1"``: stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
-        - ``"substr"``: substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)
-        - ``"closest_time"``: time used to filter rasters to be sampled; only the raster that is closest in time to the provided time will be sampled - can be multiple rasters if they all share the same time (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
-        - ``"use_poi_time"``: overrides the "closest_time" setting (or provides one if not set) with the time associated with the point of interest being sampled
-        - ``"catalog"``: geojson formatted stac query response (obtained through the `sliderule.earthdata.stac` Python API)
-        - ``"bands"``: list of bands to read out of the raster, or a predefined algorithm that combines bands for a given dataset
-        - ``"key_space"``: 64-bit integer defining the upper 32-bits of the ``file_id``; this in general should never be set as the server will typically do the right thing assigning a key space;   but for users that are parallelizing requests on the client-side, this parameter can be usedful when constructing the resulting file dictionaries that come back with the raster samples
+* `samples`: dictionary of rasters to sample
+    - `<key>`: user supplied name used to identify results returned from sampling this raster
+        - `asset`: name of the raster (as supplied in the Asset Directory) to be sampled
+        - `algorithm`: algorithm to use to sample the raster; the available algorithms for sampling rasters are: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss
+        - `radius`: the size of the kernel in meters when sampling a raster; the size of the region in meters for zonal statistics
+        - `zonal_stats`: boolean whether to calculate and return zonal statistics for the region around the location being sampled
+        - `slope_aspect`: boolean whether to calculate slope and aspect for the region around the location being sampled
+        - `slope_scale_length`: the size of the region in meters to use when calculating the slope and aspect
+        - `with_flags`: boolean whether to include auxiliary information about the sampled pixel in the form of a 32-bit flag
+        - `t0`: start time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
+        - `t1`: stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
+        - `substr`: substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)
+        - `closest_time`: time used to filter rasters to be sampled; only the raster that is closest in time to the provided time will be sampled - can be multiple rasters if they all share the same time (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
+        - `use_poi_time`: overrides the "closest_time" setting (or provides one if not set) with the time associated with the point of interest being sampled
+        - `doy_range`: day of year range to seasonally filter data
+        - `target_crs`: override the CRS of the raster dataset being sampled
+        - `proj_pipeline`: override the PROJ pipeline used to transform the source dataset into the CRS of the target dataset CRS to sample that dataset
+        - `url`: user provided URL of a raster dataset to sample
+        - `aoi_bbox`: area of interest bounding box to help PROJ select the best transform
+        - `force_single_sample`: forces the sampling code to select (or generate) a single value for the returned sample values; this has the result of changing the column type of the returned dataframe from being a list to being a single double-precision element; the available options are: first, last, min, max, mean, median; note that when mean or median are selected, the only valid sampled data returned is `value`, all other sample columns should be ignored
+        - `catalog`: geojson formatted stac query response (obtained through the `sliderule.earthdata.stac` Python API)
+        - `bands`: list of bands to read out of the raster, or a predefined algorithm that combines bands for a given dataset
+        - `elevation_bands`: list of bands that should be treated as elevation bands which allows a 3D transform to be applied
+        - `key_space`: 64-bit integer defining the upper 32-bits of the ``file_id``; this in general should never be set as the server will typically do the right thing assigning a key space;   but for users that are parallelizing requests on the client-side, this parameter can be usedful when constructing the resulting file dictionaries that come back with the raster samples
 
 ```Python
     parms {

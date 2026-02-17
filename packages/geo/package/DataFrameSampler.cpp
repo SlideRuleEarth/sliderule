@@ -35,6 +35,7 @@
 
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 #include "OsApi.h"
 #include "TimeLib.h"
@@ -434,7 +435,9 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     {
         sample_list_t* slist = sampler->samples[i];
 
-        if(slist->length() > 0)
+        if( (slist->length() > 0) &&
+            (sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_MEAN) &&
+            (sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_MEDIAN) )
         {
             // select the sample
             const RasterSample* sample = slist->get(0); // default/initialize to first
@@ -533,8 +536,51 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
         }
         else
         {
-            // populate core sample fields
-            value_column->append(std::numeric_limits<double>::quiet_NaN());
+            // populate value
+            if((slist->length() > 0) && (sampler->geoparms.force_single_sample.value == GeoFields::SINGLE_SAMPLE_MEAN))
+            {
+                double mean_value = 0.0;
+                double mean_cnt = 0;
+                for(int k = 0; k < slist->length(); k++)
+                {
+                    const RasterSample* sample = slist->get(k);
+                    if(std::isfinite(sample->value))
+                    {
+                        mean_value += sample->value;
+                        mean_cnt += 1;
+                    }
+                }
+                if(mean_cnt > 0) value_column->append(mean_value / mean_cnt);
+                else value_column->append(std::numeric_limits<double>::quiet_NaN());
+            }
+            else if((slist->length() > 0) && (sampler->geoparms.force_single_sample.value == GeoFields::SINGLE_SAMPLE_MEDIAN))
+            {
+                vector<double> values;
+                for(int k = 0; k < slist->length(); k++)
+                {
+                    const RasterSample* sample = slist->get(k);
+                    if(std::isfinite(sample->value))
+                    {
+                        values.push_back(sample->value);
+                    }
+                }
+                if(!values.empty())
+                {
+                    const size_t n = values.size() / 2;
+                    std::nth_element(values.begin(), values.begin() + n, values.end());
+                    value_column->append(values[n]);
+                }
+                else
+                {
+                    value_column->append(std::numeric_limits<double>::quiet_NaN());
+                }
+            }
+            else
+            {
+                value_column->append(std::numeric_limits<double>::quiet_NaN());
+            }
+
+            // populate remaining core sample fields
             time_column->append(TimeLib::gps2systimeex(0));
             fileid_column->append(0);
             if(flags_column) flags_column->append(0);

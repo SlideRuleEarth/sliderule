@@ -198,7 +198,7 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest08
     /* Terrain Datasets */
     terrain_slope           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/terrain_slope").c_str(),                 0, aoi.first_index, aoi.count),
     n_te_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/n_te_photons").c_str(),                  0, aoi.first_index, aoi.count),
-    te_quality_score        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(),              0, aoi.first_index, aoi.count),
+    te_quality_score        (df->parms->phoreal.te_quality_filter_provided ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(), 0, aoi.first_index, aoi.count),
     h_te_uncertainty        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_uncertainty").c_str(),              0, aoi.first_index, aoi.count),
     h_te_median             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_median").c_str(),                   0, aoi.first_index, aoi.count),
     /* Canopy Datasets */
@@ -206,7 +206,7 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest08
     h_canopy_uncertainty    (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_uncertainty").c_str(),           0, aoi.first_index, aoi.count),
     segment_cover           (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/segment_cover").c_str(),                  0, aoi.first_index, aoi.count),
     n_ca_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/n_ca_photons").c_str(),                   0, aoi.first_index, aoi.count),
-    can_quality_score       (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(),              0, aoi.first_index, aoi.count),
+    can_quality_score       (df->parms->phoreal.can_quality_filter_provided ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(), 0, aoi.first_index, aoi.count),
     h_max_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_max_canopy_abs" : "land_segments/canopy/h_max_canopy").c_str(), 0, aoi.first_index, aoi.count),
     h_min_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_min_canopy_abs" : "land_segments/canopy/h_min_canopy").c_str(), 0, aoi.first_index, aoi.count),
     h_mean_canopy           (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_mean_canopy_abs" : "land_segments/canopy/h_mean_canopy").c_str(), 0, aoi.first_index, aoi.count),
@@ -224,14 +224,14 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest08
     solar_elevation.join(df->readTimeoutMs, true);
     terrain_slope.join(df->readTimeoutMs, true);
     n_te_photons.join(df->readTimeoutMs, true);
-    te_quality_score.join(df->readTimeoutMs, true);
+    if(df->parms->phoreal.te_quality_filter_provided) te_quality_score.join(df->readTimeoutMs, true);
     h_te_uncertainty.join(df->readTimeoutMs, true);
     h_te_median.join(df->readTimeoutMs, true);
     h_canopy.join(df->readTimeoutMs, true);
     h_canopy_uncertainty.join(df->readTimeoutMs, true);
     segment_cover.join(df->readTimeoutMs, true);
     n_ca_photons.join(df->readTimeoutMs, true);
-    can_quality_score.join(df->readTimeoutMs, true);
+    if(df->parms->phoreal.can_quality_filter_provided) can_quality_score.join(df->readTimeoutMs, true);
     h_max_canopy.join(df->readTimeoutMs, true);
     h_min_canopy.join(df->readTimeoutMs, true);
     h_mean_canopy.join(df->readTimeoutMs, true);

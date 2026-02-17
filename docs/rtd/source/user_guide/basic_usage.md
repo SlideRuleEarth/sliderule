@@ -166,3 +166,10 @@ A time range is typically used to limit the resources being processed to only in
 The SlideRule Python client provides helper functions to perform the conversion.  See `gps2utc </web/rtd/api_reference/sliderule.html#gps2utc>`_.
 
 For APIs that return GeoDataFrames, the columns that hold times are represented as a ``datatime`` with microsecond precision.  In most cases, the applicable time column will be used as the index of the GeoDataFrame.
+
+### Additional Functionality
+
+Additional general functions available to all endpoints are:
+* `datum`: vertical datum returned heights are in {1:ITRF2014, 2:EGM08}; this is only available for some x-series endpoints.
+* `output`: output parameter allows the responses for requests to be reformatted and written to custom locations , see [output](./arrow_output) for more details.
+* `samples`: raster sampling parameter allows requests to include values from additional raster datasets, see [raster sampling](./raster_sampling) for more details.

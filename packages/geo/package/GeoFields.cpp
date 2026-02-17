@@ -428,6 +428,8 @@ string convertToJson(const GeoFields::single_sample_option_t& v)
         case GeoFields::SINGLE_SAMPLE_LAST:     return "\"last\"";
         case GeoFields::SINGLE_SAMPLE_MIN:      return "\"min\"";
         case GeoFields::SINGLE_SAMPLE_MAX:      return "\"max\"";
+        case GeoFields::SINGLE_SAMPLE_MEAN:     return "\"mean\"";
+        case GeoFields::SINGLE_SAMPLE_MEDIAN:   return "\"median\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %d", static_cast<int>(v));
     }
 }
@@ -444,6 +446,8 @@ int convertToLua(lua_State* L, const GeoFields::single_sample_option_t& v)
         case GeoFields::SINGLE_SAMPLE_LAST:     lua_pushstring(L, "last");      break;
         case GeoFields::SINGLE_SAMPLE_MIN:      lua_pushstring(L, "min");       break;
         case GeoFields::SINGLE_SAMPLE_MAX:      lua_pushstring(L, "max");       break;
+        case GeoFields::SINGLE_SAMPLE_MEAN:     lua_pushstring(L, "mean");      break;
+        case GeoFields::SINGLE_SAMPLE_MEDIAN:   lua_pushstring(L, "median");    break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %d", static_cast<int>(v));
     }
 
@@ -463,6 +467,8 @@ void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& 
         else if (StringLib::match(str, "last"))     v = GeoFields::SINGLE_SAMPLE_LAST;
         else if (StringLib::match(str, "min"))      v = GeoFields::SINGLE_SAMPLE_MIN;
         else if (StringLib::match(str, "max"))      v = GeoFields::SINGLE_SAMPLE_MAX;
+        else if (StringLib::match(str, "mean"))     v = GeoFields::SINGLE_SAMPLE_MEAN;
+        else if (StringLib::match(str, "median"))   v = GeoFields::SINGLE_SAMPLE_MEDIAN;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %s", str);
     }
     if(lua_isboolean(L, index))
@@ -481,6 +487,8 @@ void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& 
             case GeoFields::SINGLE_SAMPLE_LAST:     break; // valid value
             case GeoFields::SINGLE_SAMPLE_MIN:      break; // valid value
             case GeoFields::SINGLE_SAMPLE_MAX:      break; // valid value
+            case GeoFields::SINGLE_SAMPLE_MEAN:     break; // valid value
+            case GeoFields::SINGLE_SAMPLE_MEDIAN:   break; // valid value
             default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %ld", n);
         }
     }

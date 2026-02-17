@@ -5,8 +5,8 @@ import pytest
 import numpy as np
 from pathlib import Path
 from datetime import datetime
-from sliderule import sliderule, icesat2
-import geopandas as gpd
+from sliderule import sliderule
+import numpy as np
 
 TESTDIR = Path(__file__).parent
 
@@ -100,3 +100,64 @@ class TestSampler:
         assert len(gdf.keys()) == 30
         assert gdf["cycle"].mean() == 2
         assert abs(mean_value - 307.9317036290323) < 0.0001, mean_value
+
+
+    def test_force_single_sample(self, init):
+        poly = [
+            {"lat": 59.86856921063384, "lon": -44.34985645709006},
+            {"lat": 59.85613150141896, "lon": -44.34985645709006},
+            {"lat": 59.85613150141896, "lon": -44.30692727565953},
+            {"lat": 59.86856921063384, "lon": -44.30692727565953},
+            {"lat": 59.86856921063384, "lon": -44.34985645709006},
+        ]
+        resource = "ATL03_20190105024336_01170205_006_02.h5"
+        assert init
+        # get expected values
+        parms = {
+            "asset": "icesat2",
+            "poly": poly,
+            "samples": {"strips": {"asset": "arcticdem-strips", "algorithm": "NearestNeighbour"}},
+        }
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        values = gdf["strips.value"].iloc[0]
+        values = values[~np.isnan(values)]
+        min_value = values.min()
+        max_value = values.max()
+        mean_value = values.mean()
+        median_value = np.median(values)
+        SIGMA = 0.0001
+        # test min
+        parms["samples"]["strips"]["force_single_sample"] = "min"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        assert abs(min_value - gdf["strips.value"].iloc[0]) < SIGMA, f"min = {min_value}, {gdf["strips.value"].iloc[0]}"
+        # test max
+        parms["samples"]["strips"]["force_single_sample"] = "max"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        assert abs(max_value - gdf["strips.value"].iloc[0]) < SIGMA, f"max = {max_value}, {gdf["strips.value"].iloc[0]}"
+        # test mean
+        parms["samples"]["strips"]["force_single_sample"] = "mean"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        assert abs(mean_value - gdf["strips.value"].iloc[0]) < SIGMA, f"mean = {mean_value}, {gdf["strips.value"].iloc[0]}"
+        # test median
+        parms["samples"]["strips"]["force_single_sample"] = "median"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        assert abs(median_value - gdf["strips.value"].iloc[0]) < SIGMA, f"median = {median_value}, {gdf["strips.value"].iloc[0]}"
+        # test first (check that it exists in list)
+        parms["samples"]["strips"]["force_single_sample"] = "first"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        found = False
+        for value in values:
+            if abs(value - gdf["strips.value"].iloc[0]) < SIGMA:
+                found = True
+                break
+        assert found, f"first = {gdf["strips.value"].iloc[0]}, not found"
+        # test last (check that it exists in list)
+        parms["samples"]["strips"]["force_single_sample"] = "last"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        found = False
+        for value in values:
+            if abs(value - gdf["strips.value"].iloc[0]) < SIGMA:
+                found = True
+                break
+        assert found, f"last = {gdf["strips.value"].iloc[0]}, not found"
+
