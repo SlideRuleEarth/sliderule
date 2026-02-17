@@ -2,7 +2,7 @@
 
 2025-01-27
 
-Version description of the v5.0.6 release of SlideRule Earth.
+Version description of the v5.0.7 release of SlideRule Earth.
 
 ## Breaking Changes
 
