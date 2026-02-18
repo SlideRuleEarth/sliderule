@@ -3,8 +3,8 @@ main:
     url: /rtd/
   - title: "Web Client"
     url: https://client.slideruleearth.io
-  - title: "Accounts"
-    url: https://ps.slideruleearth.io
+  - title: "GitHub"
+    url: https://github.com/SlideRuleEarth
   - title: "Contact Us"
     url: /contact/
   - title: "About"
