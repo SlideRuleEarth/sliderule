@@ -8,200 +8,39 @@ end
 
 -- Setup --
 
-runner.authenticate({'ornl-cloud', 'lpdaac-cloud'})
+runner.authenticate({})
 
--- tolerance
-local  sigma = 1.0e-9
+-- Helper Function --
 
--- Amazon forest
-local  lon =    -62.0
-local  lat =    -30.0
-local  height =   0.0
+local function check_expected(exp, df, index, t)
+    for key,value in pairs(exp) do
+        runner.assert(math.abs(df[key][index] - value) <= t, string.format("%s[%d] => %f", key, index, df[key][index]))
+    end
+end
 
 -- Self Tests --
 
-runner.unittest("GEDI l3-elevation sample POI", function()
+runner.unittest("CASALS 1B DataFrame", function()
 
-    local expResults = {{110.244743347168, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif'}}
-    local demType = "gedil3-elevation"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
-    local starttime = time.latch();
-    local tbl, err = dem:sample(lon, lat, height)
-    local stoptime = time.latch();
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
-    print(string.format("sample time: %f", stoptime - starttime))
+    local parms = casals.parms({
+        resource = "lidar/2024-11-12/casals_l1b_20241112T163941_001_02.h5"
+    })
 
-    local sampleCnt = 0
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        local time = v["time"]
-        print(string.format("(%02d) %17.12f  time: %.2f  %s", i, el, time, fname))
-        sampleCnt = sampleCnt + 1
+    local casals1bh5 = h5.object("casals1b", parms["resource"])
+    local casals1bdf = casals.casals1bx(parms, casals1bh5, nil, nil, core.EVENTQ)
 
-        if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
-        end
-        runner.assert(time == expResults[i][2])
-        runner.assert(fname == expResults[i][3])
-    end
-    runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
+    runner.assert(casals1bdf:waiton(30000), "timed out creating dataframe", true)
+    runner.assert(casals1bdf:inerror() == false, "dataframe encountered error")
 
-end)
+    runner.assert(casals1bdf:numrows() == 440832, string.format("incorrect number of rows: %d", casals1bdf:numrows()))
+    runner.assert(casals1bdf:numcols() == 4, string.format("incorrect number of columns: %d", casals1bdf:numcols()))
 
-
-runner.unittest("GEDI l3-elevation-stddev sample POI", function()
-
-    local expResults = {{0.520213186741, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif'}}
-    local demType = "gedil3-elevation-stddev"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
-    local starttime = time.latch();
-    local tbl, err = dem:sample(lon, lat, height)
-    local stoptime = time.latch();
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
-    print(string.format("sample time: %f", stoptime - starttime))
-
-    local sampleCnt = 0
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        local time = v["time"]
-        print(string.format("(%02d) %17.12f  time: %.2f  %s", i, el, time, fname))
-        sampleCnt = sampleCnt + 1
-
-        if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
-        end
-        runner.assert(time == expResults[i][2])
-        runner.assert(fname == expResults[i][3])
-    end
-    runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
-
-end)
-
-
-runner.unittest("GEDI l3-cannopy sample POI", function()
-
-    local expResults = {{3.698355197906, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_mean_2019108_2022019_002_03.tif'}}
-    local demType = "gedil3-canopy"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
-    local starttime = time.latch();
-    local tbl, err = dem:sample(lon, lat, height)
-    local stoptime = time.latch();
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
-    print(string.format("sample time: %f", stoptime - starttime))
-
-    local sampleCnt = 0
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        local time = v["time"]
-        print(string.format("(%02d) %17.12f  time: %.2f  %s", i, el, time, fname))
-        sampleCnt = sampleCnt + 1
-
-        if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
-        end
-        runner.assert(time == expResults[i][2])
-        runner.assert(fname == expResults[i][3])
-    end
-    runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
-
-end)
-
-
-runner.unittest("GEDI l3-cannopy-stddev sample POI", function()
-
-    local expResults = {{0.573970079422, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_rh100_stddev_2019108_2022019_002_03.tif'}}
-    local demType = "gedil3-canopy-stddev"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
-    local starttime = time.latch();
-    local tbl, err = dem:sample(lon, lat, height)
-    local stoptime = time.latch();
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
-    print(string.format("sample time: %f", stoptime - starttime))
-
-    local sampleCnt = 0
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        local time = v["time"]
-        print(string.format("(%02d) %17.12f  time: %.2f  %s", i, el, time, fname))
-        sampleCnt = sampleCnt + 1
-
-        if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
-        end
-        runner.assert(time == expResults[i][2])
-        runner.assert(fname == expResults[i][3])
-    end
-    runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
-
-end)
-
-
-runner.unittest("GEDI l3-counts sample POI", function()
-
-    local expResults = {{152, 1326585618, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data/GEDI03_counts_2019108_2022019_002_03.tif'}}
-    local demType = "gedil3-counts"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
-    local starttime = time.latch();
-    local tbl, err = dem:sample(lon, lat, height)
-    local stoptime = time.latch();
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
-    print(string.format("sample time: %f", stoptime - starttime))
-
-    local sampleCnt = 0
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        local time = v["time"]
-        print(string.format("(%02d) %17.12f  time: %.2f  %s", i, el, time, fname))
-        sampleCnt = sampleCnt + 1
-
-        if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
-        end
-        runner.assert(time == expResults[i][2])
-        runner.assert(fname == expResults[i][3])
-    end
-    runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
-
-end)
-
-
-runner.unittest("GEDI l4b sample POI", function()
-
-    local expResults = {{ 0.000637468358, 1312070418, '/vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass_V2_1/data/GEDI04_B_MW019MW223_02_002_02_R01000M_V2.tif'}}
-    local demType = "gedil4b"
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
-    local starttime = time.latch();
-    local tbl, err = dem:sample(lon, lat, height)
-    local stoptime = time.latch();
-    runner.assert(err == 0)
-    runner.assert(tbl ~= nil)
-    print(string.format("sample time: %f", stoptime - starttime))
-
-    local sampleCnt = 0
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        local time = v["time"]
-        print(string.format("(%02d) %17.12f  time: %.2f  %s", i, el, time, fname))
-        sampleCnt = sampleCnt + 1
-
-        if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
-        end
-        runner.assert(time == expResults[i][2])
-        runner.assert(fname == expResults[i][3])
-    end
-    runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
+    check_expected({
+        time_ns = 1731429581715359744,
+        latitude = 38.298965,
+        longitude = -75.539483,
+        refh = -79.631470
+    }, casals1bdf, 100, 0.00001)
 
 end)
 
