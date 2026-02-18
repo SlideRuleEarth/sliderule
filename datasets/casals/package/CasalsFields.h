@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, University of Washington
+ * Copyright (c) 2021, University of Washington
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,81 +29,93 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedi02a_dataframe__
-#define __gedi02a_dataframe__
+#ifndef __casals_parms__
+#define __casals_parms__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GediDataFrame.h"
+#include "OsApi.h"
+#include "LuaObject.h"
+#include "AssetField.h"
+#include "FieldEnumeration.h"
+#include "FieldElement.h"
+#include "RequestFields.h"
+#include "GeoDataFrame.h"
 
 /******************************************************************************
- * CLASS DEFINITION
+ * CLASS
  ******************************************************************************/
 
-class Gedi02aDataFrame: public GediDataFrame
+/******************/
+/* Granule Fields */
+/******************/
+struct CasalsGranuleFields: public FieldDictionary
+{
+
+    FieldElement<int>   year {-1};      // CASALS granule observation date - year
+    FieldElement<int>   month {-1};     // CASALS granule observation date - month
+    FieldElement<int>   day {-1};       // CASALS granule observation date - day
+    FieldElement<int>   version {-1};   // CASALS granule version
+
+    CasalsGranuleFields(void);
+    ~CasalsGranuleFields(void) override = default;
+
+    void parseResource (const char* resource);
+};
+
+/***************/
+/* Casals Fields */
+/***************/
+class CasalsFields: public RequestFields
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int64_t CASALS_SDP_EPOCH_GPS = 1198800018; // seconds to add to CASALS delta times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
-
-    private:
+        static int luaCreate (lua_State* L);
 
         /*--------------------------------------------------------------------
-         * Types
+         * Inline Methods
          *--------------------------------------------------------------------*/
 
-        /* Gedi02a Data Subclass */
-        class Gedi02aData
+        // returns nanoseconds since Unix epoch, no leap seconds
+        static time8_t deltatime2timestamp (double delta_time)
         {
-            public:
+            return TimeLib::gps2systimeex(delta_time + (double)CASALS_SDP_EPOCH_GPS);
+        }
 
-                Gedi02aData      (Gedi02aDataFrame* df, const AreaOfInterest<double>& aoi);
-                ~Gedi02aData     (void) = default;
+        // returns resource as a string
+        const char* getResource (void) const { return resource.value.c_str(); }
 
-                H5Array<uint64_t>   shot_number;
-                H5Array<double>     delta_time;
-                H5Array<float>      elev_lowestmode;
-                H5Array<float>      elev_highestreturn;
-                H5Array<float>      solar_elevation;
-                H5Array<float>      sensitivity;
-                H5Array<uint8_t>    degrade_flag;
-                H5Array<uint8_t>    quality_flag;
-                H5Array<uint8_t>    surface_flag;
-
-                H5VarSet            anc_data;
-        };
+        // CRS support
+        static const char* crsITRF2020() { static string crs = GeoDataFrame::loadCRSFile("CASALS_EPSG9989.projjson"); return crs.c_str(); }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        /* DataFrame Columns */
-        FieldColumn<uint64_t>   shot_number;
-        FieldColumn<time8_t>    time_ns   {Field::TIME_COLUMN};
-        FieldColumn<double>     latitude  {Field::Y_COLUMN};
-        FieldColumn<double>     longitude {Field::X_COLUMN};
-        FieldColumn<float>      elevation_lm {Field::Z_COLUMN};
-        FieldColumn<float>      elevation_hr;
-        FieldColumn<float>      solar_elevation;
-        FieldColumn<float>      sensitivity;
-        FieldColumn<uint8_t>    flags;
+        FieldList<string>       anc_fields; // list of fields to associate with an Casals subsetting request
+        CasalsGranuleFields     granule_fields;  // Casals granule attributes
+
+    private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Gedi02aDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name);
-                        ~Gedi02aDataFrame (void) override = default;
-        static void*    subsettingThread  (void* parm);
+        CasalsFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
+        virtual ~CasalsFields (void) override = default;
+        void fromLua (lua_State* L, int index) override;
 };
 
-#endif  /* __gedi02a_dataframe__ */
+#endif  /* __casals_parms__ */

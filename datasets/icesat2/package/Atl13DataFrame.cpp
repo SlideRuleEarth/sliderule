@@ -163,7 +163,7 @@ okey_t Atl13DataFrame::getKey(void) const
 /*----------------------------------------------------------------------------
  * Atl13Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest13& aoi):
+Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest<double>& aoi):
     sc_orient               (df->hdf13,                            "/orbit_info/sc_orient"),
     delta_time              (df->hdf13, FString("%s/%s", df->beam, "delta_time").c_str(),               0, aoi.first_index, aoi.count),
     ht_ortho                (df->hdf13, FString("%s/%s", df->beam, "ht_ortho").c_str(),                 0, aoi.first_index, aoi.count),
@@ -228,7 +228,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
         }
 
         /* Subset to Area of Interest */
-        const AreaOfInterest13 aoi(df->hdf13, df->beam, "segment_lat", "segment_lon", df->parms, df->readTimeoutMs, prefilter);
+        const AreaOfInterest<double> aoi(df->hdf13, df->beam, "segment_lat", "segment_lon", df->parms, df->readTimeoutMs, prefilter);
 
         /* Read ATL03 Datasets */
         const Atl13Data atl13(df, aoi);

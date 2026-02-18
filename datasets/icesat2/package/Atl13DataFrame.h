@@ -47,8 +47,6 @@
 #include "Icesat2Fields.h"
 #include "AreaOfInterest.h"
 
-using AreaOfInterest13 = AreaOfInterestT<double>;
-
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
@@ -101,7 +99,7 @@ class Atl13DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl13Data           (Atl13DataFrame* df, const AreaOfInterest13& aoi);
+                Atl13Data           (Atl13DataFrame* df, const AreaOfInterest<double>& aoi);
                 ~Atl13Data          (void) = default;
 
                 H5Array<int8_t>     sc_orient;

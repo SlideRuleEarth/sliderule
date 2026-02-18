@@ -36,10 +36,10 @@
 #include "AreaOfInterest.h"
 
 template<typename CoordT>
-AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name,
+AreaOfInterest<CoordT>::AreaOfInterest (H5Object* hdf, const char* group, const char* latitude_name, const char* longitude_name,
                                           const RequestFields* parms, int readTimeoutMs, const std::function<void(long&, long&)>& prefilter):
-    latitude        (hdf, FString("/%s/%s", beam, latitude_name).c_str()),
-    longitude       (hdf, FString("/%s/%s", beam, longitude_name).c_str()),
+    latitude        (hdf, FString("%s/%s", group, latitude_name).c_str()),
+    longitude       (hdf, FString("%s/%s", group, longitude_name).c_str()),
     inclusion_mask  {NULL},
     inclusion_ptr   {NULL}
 {
@@ -104,7 +104,7 @@ AreaOfInterestT<CoordT>::AreaOfInterestT (H5Object* hdf, const char* beam, const
  * AreaOfInterest::Destructor
  *----------------------------------------------------------------------------*/
 template<typename CoordT>
-AreaOfInterestT<CoordT>::~AreaOfInterestT (void)
+AreaOfInterest<CoordT>::~AreaOfInterest (void)
 {
     cleanup();
 }
@@ -113,7 +113,7 @@ AreaOfInterestT<CoordT>::~AreaOfInterestT (void)
  * AreaOfInterest::cleanup
  *----------------------------------------------------------------------------*/
 template<typename CoordT>
-void AreaOfInterestT<CoordT>::cleanup (void)
+void AreaOfInterest<CoordT>::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
@@ -123,7 +123,7 @@ void AreaOfInterestT<CoordT>::cleanup (void)
  * AreaOfInterest::polyregion
  *----------------------------------------------------------------------------*/
 template<typename CoordT>
-void AreaOfInterestT<CoordT>::polyregion (const RequestFields* parms)
+void AreaOfInterest<CoordT>::polyregion (const RequestFields* parms)
 {
     bool first_index_found = false;
     int index = first_index;
@@ -159,7 +159,7 @@ void AreaOfInterestT<CoordT>::polyregion (const RequestFields* parms)
  * AreaOfInterest::rasterregion
  *----------------------------------------------------------------------------*/
 template<typename CoordT>
-void AreaOfInterestT<CoordT>::rasterregion (const RequestFields* parms)
+void AreaOfInterest<CoordT>::rasterregion (const RequestFields* parms)
 {
     bool first_index_found = false;
 
@@ -206,5 +206,5 @@ void AreaOfInterestT<CoordT>::rasterregion (const RequestFields* parms)
     }
 }
 
-template class AreaOfInterestT<double>;
-template class AreaOfInterestT<float>;
+template class AreaOfInterest<double>;
+template class AreaOfInterest<float>;

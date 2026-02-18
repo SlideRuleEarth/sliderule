@@ -169,6 +169,7 @@ option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
 
 option (USE_BATHY_DATASET "Include the Bathy dataset" OFF)
 option (USE_BLUETOPO_DATASET "Include the BlueTopo dataset" ON)
+option (USE_CASALS_DATASET "Include the CASALS dataset" ON)
 option (USE_GEBCO_DATASET "Include the GEBCO dataset" ON)
 option (USE_GEDI_DATASET "Include the GEDI dataset" ON)
 option (USE_ICESAT2_DATASET "Include the ICESat2 dataset" ON)
@@ -360,6 +361,10 @@ endif()
 
 if(${USE_BLUETOPO_DATASET})
     add_subdirectory (datasets/bluetopo)
+endif()
+
+if(${USE_CASALS_DATASET})
+    add_subdirectory (datasets/casals)
 endif()
 
 if(${USE_GEBCO_DATASET})

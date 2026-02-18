@@ -83,6 +83,10 @@
 #include "bluetopo.h"
 #endif
 
+#ifdef __casals__
+#include "casals.h"
+#endif
+
 #ifdef __gebco__
 #include "gebco.h"
 #endif
@@ -407,6 +411,10 @@ int main (int argc, char* argv[])
         initbluetopo();
     #endif
 
+    #ifdef __casals__
+        initcasals();
+    #endif
+
     #ifdef __gebco__
         initgebco();
     #endif
@@ -490,6 +498,10 @@ int main (int argc, char* argv[])
 
     #ifdef __bluetopo__
         deinitbluetopo();
+    #endif
+
+    #ifdef __casals__
+        deinitcasals();
     #endif
 
     #ifdef __gebco__

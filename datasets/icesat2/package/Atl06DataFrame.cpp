@@ -170,7 +170,7 @@ okey_t Atl06DataFrame::getKey (void) const
 /*----------------------------------------------------------------------------
  * Atl06Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl06DataFrame::Atl06Data::Atl06Data (Atl06DataFrame* df, const AreaOfInterest06& aoi):
+Atl06DataFrame::Atl06Data::Atl06Data (Atl06DataFrame* df, const AreaOfInterest<double>& aoi):
     sc_orient               (df->hdf06, "/orbit_info/sc_orient"),
     delta_time              (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/delta_time").c_str(),                            0, aoi.first_index, aoi.count),
     h_li                    (df->hdf06, FString("%s/%s", df->beam, "land_ice_segments/h_li").c_str(),                                  0, aoi.first_index, aoi.count),
@@ -231,7 +231,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterest06 aoi(df->hdf06, df->beam, "land_ice_segments/latitude", "land_ice_segments/longitude", df->parms, df->readTimeoutMs);
+        const AreaOfInterest<double> aoi(df->hdf06, df->beam, "land_ice_segments/latitude", "land_ice_segments/longitude", df->parms, df->readTimeoutMs);
 
         /* Read ATL06 Datasets */
         const Atl06Data atl06(df, aoi);

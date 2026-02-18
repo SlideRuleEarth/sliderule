@@ -66,7 +66,7 @@ class Gedi04aDataFrame: public GediDataFrame
         {
             public:
 
-                Gedi04aData      (Gedi04aDataFrame* df, const AreaOfInterestGedi& aoi);
+                Gedi04aData      (Gedi04aDataFrame* df, const AreaOfInterest<double>& aoi);
                 ~Gedi04aData     (void) = default;
 
                 H5Array<uint64_t>   shot_number;

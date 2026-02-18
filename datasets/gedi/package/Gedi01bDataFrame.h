@@ -73,7 +73,7 @@ class Gedi01bDataFrame: public GediDataFrame
         {
             public:
 
-                Gedi01bData      (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi);
+                Gedi01bData      (Gedi01bDataFrame* df, const AreaOfInterest<double>& aoi);
                 ~Gedi01bData     (void) = default;
 
                 H5Array<uint64_t>   shot_number;

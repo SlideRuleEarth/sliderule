@@ -118,7 +118,7 @@ Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFiel
 /*----------------------------------------------------------------------------
  * Gedi01bData::Constructor
  *----------------------------------------------------------------------------*/
-Gedi01bDataFrame::Gedi01bData::Gedi01bData (Gedi01bDataFrame* df, const AreaOfInterestGedi& aoi):
+Gedi01bDataFrame::Gedi01bData::Gedi01bData (Gedi01bDataFrame* df, const AreaOfInterest<double>& aoi):
     shot_number     (df->hdf, FString("%s/shot_number",                   df->group).c_str(), 0, aoi.first_index, aoi.count),
     delta_time      (df->hdf, FString("%s/geolocation/delta_time",        df->group).c_str(), 0, aoi.first_index, aoi.count),
     elev_bin0       (df->hdf, FString("%s/geolocation/elevation_bin0",    df->group).c_str(), 0, aoi.first_index, aoi.count),
@@ -162,7 +162,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
     try
     {
         /* Subset to Area of Interest */
-        const AreaOfInterestGedi aoi(df->hdf, df->group, "geolocation/latitude_bin0", "geolocation/longitude_bin0", df->parms, df->readTimeoutMs);
+        const AreaOfInterest<double> aoi(df->hdf, df->group, "geolocation/latitude_bin0", "geolocation/longitude_bin0", df->parms, df->readTimeoutMs);
 
         /* Read GEDI Datasets */
         const Gedi01bData gedi01b(df, aoi);

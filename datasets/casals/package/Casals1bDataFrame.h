@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl24_dataframe__
-#define __atl24_dataframe__
+#ifndef __casals1b_dataframe__
+#define __casals1b_dataframe__
 
 /******************************************************************************
  * INCLUDES
@@ -45,14 +45,14 @@
 #include "H5Array.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "CasalsFields.h"
 #include "AreaOfInterest.h"
 
 /******************************************************************************
  * CLASS DEFINITION
  ******************************************************************************/
 
-class Atl24DataFrame: public GeoDataFrame
+class Casals1bDataFrame: public GeoDataFrame
 {
     public:
 
@@ -68,31 +68,13 @@ class Atl24DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<int8_t>         class_ph;
-        FieldColumn<double>         confidence;
         FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
-        FieldColumn<float>          ellipse_h;
-        FieldColumn<uint8_t>        invalid_kd;
-        FieldColumn<uint8_t>        invalid_wind_speed;
-        FieldColumn<double>         lat_ph {Field::Y_COLUMN};
-        FieldColumn<double>         lon_ph {Field::X_COLUMN};
-        FieldColumn<uint8_t>        low_confidence_flag;
-        FieldColumn<uint8_t>        night_flag;
-        FieldColumn<float>          ortho_h {Field::Z_COLUMN};
-        FieldColumn<uint8_t>        sensor_depth_exceeded;
-        FieldColumn<float>          sigma_thu;
-        FieldColumn<float>          sigma_tvu;
-        FieldColumn<float>          surface_h;
-        FieldColumn<double>         x_atc;
-        FieldColumn<float>          y_atc;
+        FieldColumn<double>         latitude {Field::Y_COLUMN};
+        FieldColumn<double>         longitude {Field::X_COLUMN};
+        FieldColumn<float>          refh {Field::Z_COLUMN};
 
         /* DataFrame MetaData */
-        FieldElement<uint8_t>       spot {0, Field::META_COLUMN};   // 1, 2, 3, 4, 5, 6
-        FieldElement<uint8_t>       cycle {0, Field::META_COLUMN};
-        FieldElement<uint8_t>       region {0, Field::META_COLUMN};
-        FieldElement<uint16_t>      rgt {0, Field::META_COLUMN};
-        FieldElement<uint8_t>       gt {0, Field::META_COLUMN};     // Icesat2Fields::gt_t
-        FieldElement<string>        granule;                        // name of the ATL24 granule
+        FieldElement<string>        granule;                        // name of the CASALS granule
 
         /*--------------------------------------------------------------------
          * Methods
@@ -106,33 +88,16 @@ class Atl24DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* Atl24 Data Subclass */
-        class Atl24Data
+        /* CASALS 1B Data Subclass */
+        class Casals1bData
         {
             public:
 
-                Atl24Data           (Atl24DataFrame* df, const AreaOfInterest<double>& aoi);
-                ~Atl24Data          (void) = default;
+                Casals1bData        (Casals1bDataFrame* df, const AreaOfInterest<double>& aoi);
+                ~Casals1bData       (void) = default;
 
-                bool                compact;
-
-                H5Array<int8_t>     sc_orient;
-
-                H5Array<int8_t>     class_ph;
-                H5Array<double>     confidence;
+                H5Array<float>      refh;
                 H5Array<double>     delta_time;
-                H5Array<float>      ellipse_h;
-                H5Array<uint8_t>    invalid_kd;
-                H5Array<uint8_t>    invalid_wind_speed;
-                H5Array<uint8_t>    low_confidence_flag;
-                H5Array<uint8_t>    night_flag;
-                H5Array<float>      ortho_h;
-                H5Array<uint8_t>    sensor_depth_exceeded;
-                H5Array<float>      sigma_thu;
-                H5Array<float>      sigma_tvu;
-                H5Array<float>      surface_h;
-                H5Array<double>     x_atc;
-                H5Array<float>      y_atc;
 
                 H5VarSet            anc_data;
         };
@@ -144,20 +109,19 @@ class Atl24DataFrame: public GeoDataFrame
         std::atomic<bool>   active;
         Thread*             readerPid;
         const int           readTimeoutMs;
-        const char*         beam;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
-        H5Object*           hdf24;  // atl24 granule
+        CasalsFields*       parms;
+        H5Object*           hdf1b;  // casals granule
         okey_t              dfKey;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl24DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name);
-                        ~Atl24DataFrame     (void) override;
+                        Casals1bDataFrame   (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name);
+                        ~Casals1bDataFrame  (void) override;
         okey_t          getKey              (void) const override;
         static void*    subsettingThread    (void* parm);
 };
 
-#endif  /* __atl24_dataframe__ */
+#endif  /* __casals1b_dataframe__ */

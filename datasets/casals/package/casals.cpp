@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, University of Washington
+ * Copyright (c) 2021, University of Washington
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,72 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedi_dataframe__
-#define __gedi_dataframe__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
-#include "GeoDataFrame.h"
-#include "H5Object.h"
-#include "H5Array.h"
-#include "H5Coro.h"
-#include "H5VarSet.h"
 #include "OsApi.h"
-#include "StringLib.h"
-#include "AreaOfInterest.h"
-#include "GediFields.h"
+#include "Casals1bDataFrame.h"
+#include "CasalsFields.h"
 
 /******************************************************************************
- * GEDI DATAFRAME BASE
+ * DEFINES
  ******************************************************************************/
 
-class GediDataFrame: public GeoDataFrame
+#define LUA_CASALS_LIBNAME  "casals"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * casals_open
+ *----------------------------------------------------------------------------*/
+int casals_open (lua_State *L)
 {
-    public:
+    static const struct luaL_Reg casals_functions[] = {
+        {"parms",       CasalsFields::luaCreate},
+        {"casals01bx",  Casals1bDataFrame::luaCreate},
+        {NULL,          NULL}
+    };
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    /* Set Library */
+    luaL_newlib(L, casals_functions);
 
-        GediDataFrame  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[],
-                        const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                        GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name);
+    return 1;
+}
 
-        ~GediDataFrame (void) override;
-        okey_t getKey  (void) const override;
+/******************************************************************************
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
 
-    protected:
+extern "C" {
+void initcasals (void)
+{
+    /* Extend Lua */
+    LuaEngine::extend(LUA_CASALS_LIBNAME, casals_open, LIBID);
 
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_CASALS_LIBNAME, LIBID);
+}
 
-        FieldElement<uint8_t>  beam;
-        FieldElement<uint32_t> orbit;
-        FieldElement<uint16_t> track;
-        FieldElement<string>   granule;
-
-        std::atomic<bool> active;
-        Thread*           readerPid;
-        int               readTimeoutMs;
-        Publisher*        outQ;
-        GediFields*       parms;
-        H5Object*         hdf;
-        okey_t            dfKey;
-        const char*       beamStr;
-        char              group[9];
-
-        private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static const char* getCRS (void);
-};
-
-#endif  /* __gedi_dataframe__ */
+void deinitcasals (void)
+{
+}
+}

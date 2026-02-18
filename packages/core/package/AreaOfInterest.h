@@ -46,7 +46,7 @@
  ******************************************************************************/
 
 template<typename CoordT>
-class AreaOfInterestT
+class AreaOfInterest
 {
     public:
 
@@ -54,9 +54,9 @@ class AreaOfInterestT
          * Methods
          *--------------------------------------------------------------------*/
 
-         AreaOfInterestT (H5Object* hdf, const char* beam, const char* latitude_name, const char* longitude_name, const RequestFields* parms,
+         AreaOfInterest (H5Object* hdf, const char* group, const char* latitude_name, const char* longitude_name, const RequestFields* parms,
                           int readTimeoutMs, const std::function<void(long&, long&)>& prefilter = std::function<void(long&, long&)>());
-         ~AreaOfInterestT(void);
+         ~AreaOfInterest(void);
 
         /*--------------------------------------------------------------------
          * Data
