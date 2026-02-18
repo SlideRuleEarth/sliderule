@@ -96,8 +96,8 @@ class Casals1bDataFrame: public GeoDataFrame
                 Casals1bData        (Casals1bDataFrame* df, const AreaOfInterest<double>& aoi);
                 ~Casals1bData       (void) = default;
 
-                H5Array<float>      refh;
                 H5Array<double>     delta_time;
+                H5Array<double>     refh;
 
                 H5VarSet            anc_data;
         };

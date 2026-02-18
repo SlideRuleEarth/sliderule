@@ -295,6 +295,12 @@ ASSETS = {
         path        = "/vsis3/sliderule/data/GEDTM/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif",
         endpoint    = "s3.us-west-2.amazonaws.com"
     },
+    ["casals1b"] = {
+        identity    = "iam-role",
+        driver      = "s3",
+        path        = "casals-data",
+        endpoint    = "s3.us-west-2.amazonaws.com"
+    },
     ["atlas-s3"] = {
         identity    = "iam-role",
         driver      = "s3",

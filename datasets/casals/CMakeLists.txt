@@ -1,4 +1,4 @@
-message (STATUS "Including gedi dataset")
+message (STATUS "Including casals dataset")
 
 target_compile_definitions (slideruleLib PUBLIC __casals__)
 

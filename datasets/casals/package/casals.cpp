@@ -54,7 +54,7 @@ int casals_open (lua_State *L)
 {
     static const struct luaL_Reg casals_functions[] = {
         {"parms",       CasalsFields::luaCreate},
-        {"casals01bx",  Casals1bDataFrame::luaCreate},
+        {"casals1bx",   Casals1bDataFrame::luaCreate},
         {NULL,          NULL}
     };
 

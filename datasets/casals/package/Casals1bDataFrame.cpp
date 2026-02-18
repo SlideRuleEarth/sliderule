@@ -67,10 +67,9 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<CasalsFields*>(getLuaObject(L, 2, CasalsFields::OBJECT_TYPE));
-        _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
-        const char* outq_name = getLuaString(L, 4, true, NULL);
+        _parms = dynamic_cast<CasalsFields*>(getLuaObject(L, 1, CasalsFields::OBJECT_TYPE));
+        _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
+        const char* outq_name = getLuaString(L, 3, true, NULL);
 
         /* Return Reader Object */
         return createLuaObject(L, new Casals1bDataFrame(L, _parms, _hdf1b, outq_name));
@@ -168,7 +167,6 @@ void* Casals1bDataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Casals1bDataFrame* df = static_cast<Casals1bDataFrame*>(parm);
-    const CasalsFields& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "casals_1b_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf1b->name, df->beam);
@@ -200,7 +198,7 @@ void* Casals1bDataFrame::subsettingThread (void* parm)
             df->time_ns.append(CasalsFields::deltatime2timestamp(casals1b.delta_time[current_element]));
             df->latitude.append(aoi.latitude[current_element]);
             df->longitude.append(aoi.longitude[current_element]);
-            df->refh.append(casals1b.refh[current_element]);
+            df->refh.append(static_cast<float>(casals1b.refh[current_element]));
 
             /* Add Ancillary Elements */
             if(casals1b.anc_data.length() > 0) casals1b.anc_data.addToGDF(df, current_element);
