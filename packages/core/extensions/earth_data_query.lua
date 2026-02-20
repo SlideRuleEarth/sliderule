@@ -296,10 +296,12 @@ ASSETS = {
         endpoint    = "s3.us-west-2.amazonaws.com"
     },
     ["casals1b"] = {
+        name        = "CASALS1B",
         identity    = "iam-role",
         driver      = "s3",
         path        = "casals-data",
-        endpoint    = "s3.us-west-2.amazonaws.com"
+        endpoint    = "s3.us-west-2.amazonaws.com",
+        api         = "ams"
     },
     ["atlas-s3"] = {
         identity    = "iam-role",
@@ -505,7 +507,7 @@ local function ams (parms, poly, _with_meta, _short_name)
     ams_parms["region"]         = ams_parms["region"] or parms["region"] -- backwards compatibility
 
     -- make request and process response
-    local status, response = core.ams("POST", endpoint, json.encode(ams_parms))
+    local response, status = core.ams("POST", endpoint, json.encode(ams_parms))
     if status then
         local rc, data = pcall(json.decode, response)
         if rc then

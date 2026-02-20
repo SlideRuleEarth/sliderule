@@ -10,8 +10,8 @@ from shapely.geometry import Polygon
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""3DEP""")
-parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/catalogv2.parquet")
-parser.add_argument('--db_file',        type=str,   default="/data/3DEP/3dep.db")
+parser.add_argument('--parquet_file',   type=str,   default="/data/catalogv2.parquet")
+parser.add_argument('--db_file',        type=str,   default="/data/3dep.db")
 parser.add_argument('--tmp_file',       type=str,   default="/tmp/3dep.parquet")
 args,_ = parser.parse_known_args()
 

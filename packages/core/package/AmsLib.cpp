@@ -115,14 +115,14 @@ int AmsLib::luaRequest(lua_State* L)
         }
 
         // return successful response
-        lua_pushboolean(L, true);
         lua_pushlstring(L, rsps.response, rsps.size);
+        lua_pushboolean(L, true);
     }
     catch(const RunTimeException& e)
     {
         // return failure response
-        lua_pushboolean(L, false);
         lua_pushstring(L, e.what());
+        lua_pushboolean(L, false);
     }
 
     // cleanup

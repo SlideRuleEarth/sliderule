@@ -50,4 +50,9 @@ def create_app(test_config=None):
     usgs3dep.init_app(app)
     app.register_blueprint(usgs3dep.usgs3dep)
 
+    # initialize CASALS 1B
+    from . import casals1b
+    casals1b.init_app(app)
+    app.register_blueprint(casals1b.casals1b)
+
     return app

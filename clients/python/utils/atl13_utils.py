@@ -11,10 +11,10 @@ from shapely.geometry import mapping, Point
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--atl13_shapefile',    type=str,               default="/data/ATL13/bodyfile/ATL13_Inland_Water_Body_Mask_v3_20191220.shp")
-parser.add_argument('--atl13_parquet',      type=str,               default="/data/ATL13/inland_water_body.parquet")
-parser.add_argument('--atl13_duckdb',       type=str,               default="/data/ATL13/atl13.db")
-parser.add_argument('--atl13_mappings',     type=str,               default="/data/ATL13/atl13.json")
+parser.add_argument('--atl13_shapefile',    type=str,               default="/data/bodyfile/ATL13_Inland_Water_Body_Mask_v3_20191220.shp")
+parser.add_argument('--atl13_parquet',      type=str,               default="/data/inland_water_body.parquet")
+parser.add_argument('--atl13_duckdb',       type=str,               default="/data/atl13.db")
+parser.add_argument('--atl13_mappings',     type=str,               default="/data/atl13.json")
 parser.add_argument('--convert_shapefile',  action='store_true',    default=False)
 parser.add_argument('--display_duckdb',     action='store_true',    default=False)
 parser.add_argument('--use_parquet',        action='store_true',    default=False)

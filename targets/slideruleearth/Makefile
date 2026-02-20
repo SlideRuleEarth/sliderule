@@ -847,13 +847,8 @@ lambdatest:
 ########################
 
 init-dev-env: ## one-time setup of development environment for running locally
-	mkdir -p /data/ATL13
-	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/atl13.json /data/ATL13/atl13.json
-	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/atl13.db /data/ATL13/atl13.db
-	mkdir -p /data/ATL24
-	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/atl24r2.db /data/ATL24/atl24r2.db
-	mkdir -p /data/3DEP
-	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/3dep.db /data/3DEP/3dep.db
+	mkdir -p /data
+	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/ /data/ --recursive
 	mkdir -p /etc/haproxy/pem
 	curl $(JWT_ISSUER)/auth/github/pem > /etc/haproxy/pem/pubkey.pem
 	mkdir -p /etc/ssl/private

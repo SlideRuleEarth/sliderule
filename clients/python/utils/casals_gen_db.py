@@ -16,10 +16,10 @@ from sliderule import sliderule
 parser = argparse.ArgumentParser(description="""3DEP""")
 parser.add_argument('--url',            type=str,               default="s3://casals-data/lidar/")
 parser.add_argument('--filename',       type=str,               default=None) # "lidar/2024-11-12/casals_l1b_20241112T163941_001_02.h5"
-parser.add_argument('--search_mask',    type=str,               default="/data/CASALS/casals1b.geojson")
+parser.add_argument('--search_mask',    type=str,               default="/data/casals1b.geojson")
 parser.add_argument('--tile_size',      type=int,               default=10000) # 10km
-parser.add_argument('--parquet_file',   type=str,               default="/data/CASALS/casals1b.parquet")
-parser.add_argument('--db_file',        type=str,               default="/data/CASALS/casals1b.db")
+parser.add_argument('--parquet_file',   type=str,               default="/data/casals1b.parquet")
+parser.add_argument('--db_file',        type=str,               default="/data/casals1b.db")
 parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   type=str,               default="sliderule")
 parser.add_argument('--desired_nodes',  type=int,               default=None)
