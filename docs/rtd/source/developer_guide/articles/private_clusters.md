@@ -188,7 +188,7 @@ session.provisioner.destroy()
 
 ## Troubleshooting
 
-* **Version Incompatibilities**: Private clusters run the latest version of the sliderule server code which may be more recent than the released version running on the public cluster.  If your client is on a different version than the private cluster server, please updated your client using the instructions provided in our [Installation Guide](/web/rtd/getting_started/Install.html).  Note that version incompatibilities will be reported by the client on initialization like so:
+* **Version Incompatibilities**: Private clusters run the latest version of the sliderule server code which may be more recent than the released version running on the public cluster.  If your client is on a different version than the private cluster server, please updated your client using the instructions provided in our [Installation Guide](/getting_started/Install.html).  Note that version incompatibilities will be reported by the client on initialization like so:
 ```
 RuntimeError: Client (version (4, 0, 2)) is incompatible with the server (version (3, 7, 0))
 ```

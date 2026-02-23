@@ -9,14 +9,14 @@ Version description of the v3.1.0 release of ICESat-2 SlideRule.
 - GEDI functionality officially supported
   * Subsetting for L1B, L2A, L4A datasets (L1 and L2 products limited to Grand Mesa, Colorado area of interest until LP DAAC migrates them to the cloud)
   * Raster Sampling for L3, L4B datasets
-  * User Guide: https://slideruleearth.io/web/rtd/user_guide/GEDI.html
-  * API Reference: https://slideruleearth.io/web/rtd/api_reference/gedi.html
+  * User Guide: https://slideruleearth.io/user_guide/GEDI.html
+  * API Reference: https://slideruleearth.io/api_reference/gedi.html
   * Example Notebooks: https://github.com/SlideRuleEarth/sliderule-python/tree/main/examples
 
 - PhoREAL functionality officially supported
-  * User Guilde: https://slideruleearth.io/web/rtd/user_guide/ICESat-2.html#photon-extent-parameters
-  * API Reference: https://slideruleearth.io/web/rtd/api_reference/icesat2.html#atl08p
-  * Example Notebooks: https://slideruleearth.io/web/rtd/getting_started/Examples.html (look for `PhoREAL Example`)
+  * User Guilde: https://slideruleearth.io/user_guide/ICESat-2.html#photon-extent-parameters
+  * API Reference: https://slideruleearth.io/api_reference/icesat2.html#atl08p
+  * Example Notebooks: https://slideruleearth.io/getting_started/Examples.html (look for `PhoREAL Example`)
 
 ## Development Updates
 

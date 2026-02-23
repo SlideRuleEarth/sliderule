@@ -88,7 +88,7 @@ P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40'
 def init (url=Session.PUBLIC_DOMAIN, verbose=False, max_resources=None, loglevel=logging.CRITICAL, organization=Session.PUBLIC_CLUSTER, desired_nodes=None, time_to_live=60, rethrow=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
-    This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
+    This function is a wrapper for the `sliderule.init(...) function </api_reference/sliderule.html#init>`_.
 
     Parameters
     ----------
@@ -115,14 +115,14 @@ def atl06 (parm, resource):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </user_guide/icesat2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
 
     Returns
     -------
     GeoDataFrame
-        geolocated elevations (see `Elevations </web/rtd/user_guide/icesat2.html#elevations>`_)
+        geolocated elevations (see `Elevations </user_guide/icesat2.html#elevations>`_)
     '''
     return atl06p(parm, resources=[resource])
 
@@ -145,7 +145,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </user_guide/icesat2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -160,7 +160,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     Returns
     -------
     GeoDataFrame
-        geolocated elevations (see `Elevations </web/rtd/user_guide/icesat2.html#elevations>`_)
+        geolocated elevations (see `Elevations </user_guide/icesat2.html#elevations>`_)
 
     Examples
     --------
@@ -205,7 +205,7 @@ def atl06s (parm, resource):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                    parameters used to configure ATL03 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         resource:   str
                     ATL06 HDF5 filename
 
@@ -234,7 +234,7 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                        parameters used to configure ATL03 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -270,7 +270,7 @@ def atl13s (parm, resource):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL13 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                    parameters used to configure ATL13 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         resource:   str
                     ATL13 HDF5 filename
 
@@ -293,7 +293,7 @@ def atl13sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL13 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                        parameters used to configure ATL13 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -329,14 +329,14 @@ def atl03s (parm, resource):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                    parameters used to configure ATL03 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         resource:   str
                     ATL03 HDF5 filename
 
     Returns
     -------
     GeoDataFrame
-        ATL03 extents (see `Photon Segments </web/rtd/user_guide/icesat2.html#segmented-photon-data>`_)
+        ATL03 extents (see `Photon Segments </user_guide/icesat2.html#segmented-photon-data>`_)
     '''
     return atl03sp(parm, resources=[resource])
 
@@ -358,7 +358,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                        parameters used to configure ATL03 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -371,7 +371,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     Returns
     -------
     GeoDataFrame
-        ATL03 segments (see `Photon Segments </web/rtd/user_guide/icesat2.html#photon-segments>`_)
+        ATL03 segments (see `Photon Segments </user_guide/icesat2.html#photon-segments>`_)
     '''
     rqst = __build_request(parm, resources)
 
@@ -391,14 +391,14 @@ def atl03v (parm, resource):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                    parameters used to configure ATL03 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         resource:   str
                     ATL03 HDF5 filename
 
     Returns
     -------
     GeoDataFrame
-        ATL03 extents (see `Photon Segments </web/rtd/user_guide/icesat2.html#segmented-photon-data>`_)
+        ATL03 extents (see `Photon Segments </user_guide/icesat2.html#segmented-photon-data>`_)
     '''
     return atl03vp(parm, resources=[resource])
 
@@ -420,7 +420,7 @@ def atl03vp(parm, callbacks={}, resources=None, keep_id=False):
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                        parameters used to configure ATL03 subsetting (see `Parameters </user_guide/icesat2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -431,7 +431,7 @@ def atl03vp(parm, callbacks={}, resources=None, keep_id=False):
     Returns
     -------
     GeoDataFrame
-        ATL03 segments (see `Photon Segments </web/rtd/user_guide/icesat2.html#photon-segments>`_)
+        ATL03 segments (see `Photon Segments </user_guide/icesat2.html#photon-segments>`_)
     '''
     # Build Request
     rqst = __build_request(parm, resources)
@@ -452,7 +452,7 @@ def atl08 (parm, resource):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </user_guide/icesat2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
 
@@ -482,7 +482,7 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/icesat2.html#parameters>`_)
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </user_guide/icesat2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list

@@ -5,7 +5,7 @@ Node.js client for SlideRule on-demand science data processing system
 
 ## Contributing
 
-Please read [CONTRIBUTING](https://slideruleearth.io/web/rtd/user_guide/Contributing.html) for details on our code of conduct, and the process for submitting pull requests to us.
+Please read [CONTRIBUTING](https://slideruleearth.io/user_guide/Contributing.html) for details on our code of conduct, and the process for submitting pull requests to us.
 
 ## Versioning
 

@@ -99,8 +99,8 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_logo = "../../jekyll/assets/images/SlideRule-blueBG.png"
-html_favicon = "../../jekyll/favicon.ico"
+html_logo = "assets/SlideRule_blueBG.svg"
+html_favicon = "assets/favicon.ico"
 html_static_path = ['_static']
 html_css_files = ['custom.css']
 repository_url = f"https://github.com/SlideRuleEarth/sliderule"

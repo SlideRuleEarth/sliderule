@@ -4,7 +4,7 @@
 
 #### A cloud-native framework for on-demand science data processing, hosted at [slideruleearth.io](https://slideruleearth.io).
 
- This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website. If you are a science data user interested in using SlideRule, you can get started right away with our [web client](https://client.slideruleearth.io) or check out our [website](https://slideruleearth.io) where you will find [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) for our Python client, and [contact information](https://slideruleearth.io/web/contact/) for reaching out to us.
+ This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website. If you are a science data user interested in using SlideRule, you can get started right away with our [web client](https://client.slideruleearth.io) or check out our [documentation](https://docs.slideruleearth.io) where you will find [installation instructions](https://slideruleearth.io/getting_started/Install.html) for our Python client.
 
 
 ## I. Prerequisites
@@ -111,7 +111,7 @@ Options include:
 
 ## III. Quick Start
 
-Here are some steps you can take to setup a basic development environment and get up and running.  More detailed instructions for setting up a full development environment can be found in our [How Tos](https://slideruleearth.io/web/rtd/developer_guide/how_tos/how_tos.html) section of our documentation.  The instructions provided here give an overview of the steps needed.
+Here are some steps you can take to setup a basic development environment and get up and running.  More detailed instructions for setting up a full development environment can be found in our [How Tos](https://slideruleearth.io/developer_guide/how_tos/how_tos.html) section of our documentation.  The instructions provided here give an overview of the steps needed.
 
 ### 1. Install the base packages needed to build SlideRule
 
@@ -151,7 +151,7 @@ This section details the directory structure of the SlideRule repository to help
 
 ### clients
 
-Contains the source code for the different clients that make interacting with SlideRule easier.  These clients often support additional functionality to aid science data investigations.  See https://slideruleearth.io/rtd/ for more details.
+Contains the source code for the different clients that make interacting with SlideRule easier.  These clients often support additional functionality to aid science data investigations.  See https://docs.slideruleearth.io/ for more details.
 
 ### datasets
 
@@ -159,7 +159,7 @@ Contains packages specific to an earth science dataset or mission.  Datasets are
 
 ### docs
 
-Contains the source files to build the documentation website hosted at https://slideruleearth.io.
+Contains the source files to build the documentation website hosted at https://docs.slideruleearth.io.
 
 ### platforms
 

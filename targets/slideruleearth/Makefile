@@ -52,9 +52,9 @@ RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
-WEBSITE_STAGE_DIR = $(STAGE)/website
-WEBSITE_EXPORT_DIR = $(WEBSITE_STAGE_DIR)/dist
-WEBSITE_ASSET_DIR = /data/web
+DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
+WEBSITE_EXPORT_DIR = $(DOCUMENTATION_STAGE_DIR)/dist
+DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
@@ -65,7 +65,7 @@ DOCKEROPTS ?= # --progress=plain --no-cache
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
 PROJECT_PUBLIC_BUCKET = sliderule-public
-PROJECT_WEBSITE_BUCKET = sliderule-website
+PROJECT_WEBSITE_BUCKET = slideruleearth-documentation-dot
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 CONTAINER_REGISTRY = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
@@ -84,6 +84,7 @@ AUTHENTICATOR_URL ?= login.$(DOMAIN)
 PROVISIONER_URL ?= provisioner.$(DOMAIN)
 RUNNER_URL ?= runner.$(DOMAIN)
 RECORDER_URL ?= recorder.$(DOMAIN)
+DOCUMENTATION_URL ?= docs.$(DOMAIN)
 ALERT_STREAM ?= recorder-firehose-alerts
 TELEMETRY_STREAM ?= recorder-firehose-telemetry
 JWT_ISSUER = https://$(AUTHENTICATOR_URL)
@@ -655,97 +656,55 @@ certbot-delete: ## deletes the lambda certbot function
 ########################
 
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
-	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" \
+	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_URL)'].Id" \
 	--output text)
 
-WEBSITE_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
-WEBSITE_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(WEBSITE_CONDA_ENV)
+DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
+DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
 
-CFFUNC_ID = $(shell aws cloudformation describe-stacks \
-	--stack-name cffunc \
-	--region us-east-1 \
-  	--query "Stacks[0].Outputs[?OutputKey=='FunctionARN'].OutputValue" \
-	--output text)
+documentation: ## generate the static documentation
+	rm -Rf $(DOCUMENTATION_STAGE_DIR)
+	mkdir -p $(DOCUMENTATION_STAGE_DIR)
+	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
+	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
+	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/assets
+	cd $(DOCUMENTATION_STAGE_DIR) && make -C rtd html
 
-CFFUNC_ETAG = $(shell aws cloudfront describe-function \
-	--region us-east-1 \
-	--name cffunc-uri-rewrite \
-	--query 'ETag' \
-	--output text)
+documentation-run: ## locally run the documentation
+	cd $(DOCUMENTATION_STAGE_DIR)/rtd/build/html && python -m http.server 8000
 
-website-render-notebooks: ## execute the notebooks used in the documentation
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(WEBSITE_ASSET_DIR)/boulder_watershed.ipynb --debug
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa.ipynb --debug
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(WEBSITE_ASSET_DIR)/phoreal.ipynb --debug
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(WEBSITE_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(WEBSITE_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(WEBSITE_ASSET_DIR)/atl13_access.ipynb --debug
-	$(WEBSITE_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(WEBSITE_ASSET_DIR)/atl24_access.ipynb --debug
-
-website-docker: ## make the website docker image; needs VERSION
-	rm -Rf $(WEBSITE_STAGE_DIR)
-	mkdir -p $(WEBSITE_STAGE_DIR)
-	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(WEBSITE_STAGE_DIR)
-	cp -R $(WEBSITE_SOURCE_DIR)/jekyll $(WEBSITE_STAGE_DIR)
-	rsync -a $(ROOT) $(WEBSITE_STAGE_DIR) --exclude build --exclude stage
-	cp $(WEBSITE_ASSET_DIR)/* $(WEBSITE_STAGE_DIR)/rtd/source/assets
-	cp docker/website/Dockerfile.$(ARCH) $(WEBSITE_STAGE_DIR)/Dockerfile
-	cp docker/website/nginx.conf $(WEBSITE_STAGE_DIR)
-	cp docker/website/docker-entrypoint.sh $(WEBSITE_STAGE_DIR)
-	cd $(WEBSITE_STAGE_DIR) && docker build -t $(CONTAINER_REGISTRY)/website:$(VERSION) .
-
-website-run: ## locally run the website; needs VERSION
-	docker run -it -p 4000:4000 --rm --name website $(CONTAINER_REGISTRY)/website:$(VERSION)
-
-website-export: ## export website to local host directory; needs VERSION
-	-rm -Rf $(WEBSITE_EXPORT_DIR)
-	mkdir -p $(WEBSITE_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/website:/host -v $(WEBSITE_EXPORT_DIR):/output --rm --name website $(CONTAINER_REGISTRY)/website:$(VERSION) /host/export_dist.sh
-
-website-live-update: website-export # Update the website docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(WEBSITE_EXPORT_DIR)/jekyll/_site s3://$(PROJECT_WEBSITE_BUCKET) --delete
+documentation-live-update: ## update the documentation in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(DOCUMENTATION_STAGE_DIR)/rtd/build/html s3://$(PROJECT_WEBSITE_BUCKET) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
-website-cffunc-create: ## create the uri rewrite function for cloudfront
+documentation-create: ## create documentation stack
 	aws cloudformation create-stack \
-		--stack-name 	cffunc \
-		--region		us-east-1 \
-		--template-body file://cloudfront/cffunc.yml
-	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name cffunc
-
-website-cffunc-describe: ## create the uri rewrite function for cloudfront
-	aws cloudformation describe-stack-events --region us-east-1 --stack-name cffunc
-
-website-cffunc-publish: ## publish the cloudfront function
-	aws cloudfront publish-function --region us-east-1 --name cffunc-uri-rewrite --if-match $(CFFUNC_ETAG)
-
-website-cffunc-delete: ## deletes the uri rewrite function for cloudfront
-	aws cloudformation delete-stack --region us-east-1 --stack-name cffunc
-	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name cffunc
-
-website-create: ## create website stack
-	aws cloudformation create-stack \
-		--stack-name 	website \
-		--template-body file://cloudfront/website.yml \
+		--stack-name 	documentation \
+		--template-body file://$(ROOT)/docs/cloudfront/documentation.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-east-1 \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=DocumentationUrl,ParameterValue=$(DOCUMENTATION_URL) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
-						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET) \
-						ParameterKey=CloudFrontFunctionARN,ParameterValue=$(CFFUNC_ID)
-	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name website
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET)
+	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name documentation
 
-website-describe: ## status the creation/deletion of the website
-	aws cloudformation describe-stack-events --region us-east-1 --stack-name website
+documentation-describe: ## status the creation/deletion of the documentation
+	aws cloudformation describe-stack-events --region us-east-1 --stack-name documentation
 
-website-delete: ## deletes the website stack
-	aws cloudformation delete-stack --region us-east-1 --stack-name website
-	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name website
+documentation-delete: ## deletes the documentation stack
+	aws cloudformation delete-stack --region us-east-1 --stack-name documentation
+	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name documentation
 
-website: ## build and update website
-	make website-render-notebooks
-	make website-docker
-	make website-live-update
+documentation-render-notebooks: ## execute the notebooks used in the documentation
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(DOCUMENTATION_ASSET_DIR)/boulder_watershed.ipynb --debug
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(DOCUMENTATION_ASSET_DIR)/grandmesa.ipynb --debug
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(DOCUMENTATION_ASSET_DIR)/phoreal.ipynb --debug
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(DOCUMENTATION_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(DOCUMENTATION_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(DOCUMENTATION_ASSET_DIR)/atl13_access.ipynb --debug
+	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(DOCUMENTATION_ASSET_DIR)/atl24_access.ipynb --debug
 
 ########################
 # Release Target
@@ -767,7 +726,7 @@ release: ## tag and release sliderule; needs RELEASE
 	git commit -m "Version $(RELEASE)"
 	git tag -a $(RELEASE) -m "Version $(RELEASE)"
 	git push --tags && git push
-	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
+	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://slideruleearth.io/developer_guide/release_notes/release_notes.html"
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
 	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
@@ -783,7 +742,6 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(CONTAINER_REGISTRY)/monitor:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/ams:$(VERSION)
-	- docker image rm $(CONTAINER_REGISTRY)/website:$(VERSION)
 	- docker system prune -f
 
 distclean: ## fully remove all non-version controlled files and directories

@@ -163,7 +163,7 @@ A time range is typically used to limit the resources being processed to only in
 * `t0`: start time for filtering source datasets (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
 * `t1`: stop time for filtering source datasets (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
 
-The SlideRule Python client provides helper functions to perform the conversion.  See `gps2utc </web/rtd/api_reference/sliderule.html#gps2utc>`_.
+The SlideRule Python client provides helper functions to perform the conversion.  See `gps2utc </api_reference/sliderule.html#gps2utc>`_.
 
 For APIs that return GeoDataFrames, the columns that hold times are represented as a ``datatime`` with microsecond precision.  In most cases, the applicable time column will be used as the index of the GeoDataFrame.
 

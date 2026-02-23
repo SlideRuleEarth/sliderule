@@ -1,0 +1,21 @@
+# conda env create -f environment.yml
+name: rtd
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - shapely
+  - numpy
+  - jupyterlab
+  - geopandas
+  - matplotlib
+  - pandoc
+  - pip
+  - pip:
+    - sphinx>=5.0
+    - docutils
+    - sphinx-markdown-tables
+    - sphinx_panels
+    - sphinx_rtd_theme
+    - myst-parser
+    - nbsphinx

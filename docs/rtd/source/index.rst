@@ -5,9 +5,8 @@ SlideRule |LatestRelease|
 **Process Earth science datasets in the cloud through API calls to SlideRule web services.**
 
 :GitHub: https://github.com/SlideRuleEarth/sliderule
-:Documentation: https://slideruleearth.io/web/
+:Documentation: https://docs.slideruleearth.io/
 :Web Client: https://client.slideruleearth.io/
-:Provisioning System: https://ps.slideruleearth.io/
 :PyPi: https://pypi.org/project/sliderule/
 :Conda: https://anaconda.org/conda-forge/sliderule
 :Node.js: https://www.npmjs.com/package/@sliderule/sliderule
@@ -73,7 +72,7 @@ Where To Begin
 Contacting Us
 -------------
 
-SlideRule is openly developed on GitHub at https://github.com/SlideRuleEarth.  We welcome all feedback and contributions!  For more details on the different ways to reach out to us, see our `Contact Us </web/contact/>`_ page.
+SlideRule is openly developed on GitHub at https://github.com/SlideRuleEarth.  We welcome all feedback and contributions!  To reach us directly, feel free to email us at support@mail.slideruleearth.io
 
 
 Project Information

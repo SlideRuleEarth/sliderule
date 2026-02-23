@@ -58,4 +58,4 @@ earthdata
 Next Steps
 ####################
 
-You can checkout the `examples <Examples.html>`_  provided in this guide, or move on to the `tutorials </web/rtd/tutorials/user.html>`_ section below.
+You can checkout the `examples <Examples.html>`_  provided in this guide, or move on to the `tutorials </tutorials/user.html>`_ section below.

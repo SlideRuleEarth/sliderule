@@ -167,7 +167,7 @@ def source (api, parm=None, stream=False, callbacks=None, path="/source", sessio
         parm:       dict
                     dictionary of request parameters
         stream:     bool
-                    whether the request is a **normal** service or a **stream** service (see `De-serialization </web/rtd/user_guide/SlideRule.html#de-serialization>`_ for more details)
+                    whether the request is a **normal** service or a **stream** service (see `De-serialization </user_guide/SlideRule.html#de-serialization>`_ for more details)
         callbacks:  dict
                     record type callbacks (advanced use)
         path:       str
