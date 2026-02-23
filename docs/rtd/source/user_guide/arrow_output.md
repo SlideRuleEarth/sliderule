@@ -17,7 +17,7 @@ To control writing the data to an Arrow supported format, the `output` parameter
     * `as_geo`: if the `parquet` format is specified, write the data compliant with the `GeoParquet` specification
     * `with_checksum`: include a checksum of the returned file in the response
     * `with_validation`: run the Apache Arrow validation routine on the resulting file before returning it to the user
-    * `region`: AWS region when the output path is an S3 bucket (e.g. "us-west-2")
+    * `endpoint`: AWS endpoint (i.e. region) when the output path is an S3 bucket (e.g. "s3.us-west-2.amazonaws.com")
     * `asset`: the name of the SlideRule asset from which to get credentials for the optionally supplied S3 bucket specified in the output path
     * `credentials`: the AWS credentials for the optionally supplied S3 bucket specified in the output path
       - `aws_access_key_id`: AWS access key id
