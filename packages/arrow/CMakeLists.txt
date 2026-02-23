@@ -34,6 +34,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowEndpoint.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSamplerImpl.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ArrowTypes.h
     DESTINATION
         ${INCDIR}
 )

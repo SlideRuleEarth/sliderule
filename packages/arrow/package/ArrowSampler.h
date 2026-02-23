@@ -51,6 +51,7 @@
 #include "RequestFields.h"
 #include "RasterObject.h"
 #include "OsApi.h"
+#include "ArrowTypes.h"
 
 #include <set>
 

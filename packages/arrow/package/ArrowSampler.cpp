@@ -34,9 +34,9 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "OutputLib.h"
 #include "ArrowSampler.h"
 #include "ArrowSamplerImpl.h"
-
 
 /******************************************************************************
  * STATIC DATA

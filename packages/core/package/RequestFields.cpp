@@ -54,7 +54,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"length",      luaGetLength},
     {"hasoutput",   luaHasOutput},
     {"witharrow",   luaHasArrowOutput},
-    {"withlas",      luaHasLasOutput},
+    {"withlas",     luaHasLasOutput},
     {"samplers",    luaGetSamplers},
     {"withsamplers",luaWithSamplers},
     {"setcatalog",  luaSetCatalog},

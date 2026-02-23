@@ -397,7 +397,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<point_info_t>& points)
     for(int64_t i = 0; i < binary_array->length(); i++)
     {
         const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        const OutputLib::wkbpoint_t point = convertWKBToPoint(wkb_data);
+        const wkbpoint_t point = convertWKBToPoint(wkb_data);
 
         points.emplace_back(point_info_t({{point.x, point.y, 0.0}, 0}));
     }
@@ -1013,11 +1013,11 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(std::shared
 /*----------------------------------------------------------------------------
 * convertWKBToPoint
 *----------------------------------------------------------------------------*/
-OutputLib::wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
+wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
 {
-    OutputLib::wkbpoint_t point;
+    wkbpoint_t point;
 
-    if(wkb_data.size() < sizeof(OutputLib::wkbpoint_t))
+    if(wkb_data.size() < sizeof(wkbpoint_t))
     {
         throw std::runtime_error("Invalid WKB data size.");
     }

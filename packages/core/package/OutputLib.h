@@ -89,13 +89,6 @@ struct OutputLib
         long        size;
     } output_file_remote_t;
 
-    typedef struct WKBPoint {
-        uint8_t                 byteOrder;
-        uint32_t                wkbType;
-        double                  x;
-        double                  y;
-    } ALIGN_PACKED wkbpoint_t;
-
     /******************************************************************************
      * METHODS
      ******************************************************************************/

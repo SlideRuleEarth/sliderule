@@ -52,6 +52,7 @@
 #include "ArrowDataFrame.h"
 #include "OutputFields.h"
 #include "OutputLib.h"
+#include "ArrowTypes.h"
 
 /******************************************************************************
  * FUNCTIONS
@@ -266,10 +267,10 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
-    (void)builder.ReserveData(num_rows * sizeof(OutputLib::wkbpoint_t));
+    (void)builder.ReserveData(num_rows * sizeof(wkbpoint_t));
     for(long i = 0; i < num_rows; i++)
     {
-        OutputLib::wkbpoint_t point = {
+        wkbpoint_t point = {
             #ifdef __be__
             .byteOrder = 0,
             #else
@@ -279,7 +280,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
             .x = (*x)[i],
             .y = (*y)[i]
         };
-        builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(OutputLib::wkbpoint_t));
+        builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(wkbpoint_t));
     }
 
     shared_ptr<arrow::Array> geo_column;

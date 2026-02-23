@@ -87,7 +87,7 @@ const RecordObject::fieldDef_t OutputLib::remoteRecDef[] = {
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void OutputLib::init(void)
+void OutputLib::init (void)
 {
     RECDEF(metaRecType, metaRecDef, sizeof(output_file_meta_t), NULL);
     RECDEF(dataRecType, dataRecDef, sizeof(output_file_data_t), NULL);
@@ -98,36 +98,21 @@ void OutputLib::init(void)
 /*----------------------------------------------------------------------------
  * send2User
  *----------------------------------------------------------------------------*/
-bool OutputLib::send2User (const char* fileName, const char* outputPath,
-                uint32_t traceId, const OutputFields* parms, Publisher* outQ)
+bool OutputLib::send2User (const char* fileName, const char* outputPath, uint32_t traceId, const OutputFields* parms, Publisher* outQ)
 {
     bool status = false;
 
     /* Send File to User */
-    const char* _path = outputPath;
-    const uint32_t send_trace_id = start_trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
-    const int _path_len = StringLib::size(_path);
-    if( (_path_len > 5) &&
-        (_path[0] == 's') &&
-        (_path[1] == '3') &&
-        (_path[2] == ':') &&
-        (_path[3] == '/') &&
-        (_path[4] == '/'))
+    const uint32_t send_trace_id = start_trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", outputPath);
+    if(StringLib::find(outputPath, "s3://") == outputPath)
     {
         /* Upload File to S3 */
-        status = send2S3(fileName, &_path[5], outputPath, parms, outQ);
+        status = send2S3(fileName, &outputPath[5], outputPath, parms, outQ);
     }
-    else if( (_path_len > 7) &&
-             (_path[0] == 'f') &&
-             (_path[1] == 'i') &&
-             (_path[2] == 'l') &&
-             (_path[3] == 'e') &&
-             (_path[4] == ':') &&
-             (_path[5] == '/') &&
-             (_path[6] == '/'))
+    else if(StringLib::find(outputPath, "file://") == outputPath)
     {
         /* Rename File - very fast if both files are on the same partition */
-        status = renameFile(fileName, &_path[7]);
+        status = renameFile(fileName, outputPath);
     }
     else
     {
@@ -145,8 +130,7 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2S3
  *----------------------------------------------------------------------------*/
-bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
-              const OutputFields* parms, Publisher* outQ)
+bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* outputPath, const OutputFields* parms, Publisher* outQ)
 {
     #ifdef __aws__
 
@@ -330,7 +314,7 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
 /*----------------------------------------------------------------------------
  * getUniqueFileName
  *----------------------------------------------------------------------------*/
-const char* OutputLib::getUniqueFileName(const char* id)
+const char* OutputLib::getUniqueFileName (const char* id)
 {
     char uuid_str[UUID_STR_LEN];
     uuid_t uuid;
@@ -349,7 +333,7 @@ const char* OutputLib::getUniqueFileName(const char* id)
 /*----------------------------------------------------------------------------
 * createMetadataFileName
 *----------------------------------------------------------------------------*/
-char* OutputLib::createMetadataFileName(const char* fileName)
+char* OutputLib::createMetadataFileName (const char* fileName)
 {
     std::string path(fileName);
     const size_t dotIndex = path.find_last_of('.');
@@ -364,7 +348,7 @@ char* OutputLib::createMetadataFileName(const char* fileName)
 /*----------------------------------------------------------------------------
  * removeFile
  *----------------------------------------------------------------------------*/
-void OutputLib::removeFile(const char* fileName)
+void OutputLib::removeFile (const char* fileName)
 {
     if(std::filesystem::exists(fileName))
     {
@@ -402,7 +386,7 @@ bool OutputLib::renameFile (const char* oldName, const char* newName)
 /*----------------------------------------------------------------------------
  * fileExists
  *----------------------------------------------------------------------------*/
-bool OutputLib::fileExists(const char* fileName)
+bool OutputLib::fileExists (const char* fileName)
 {
     return std::filesystem::exists(fileName);
 }

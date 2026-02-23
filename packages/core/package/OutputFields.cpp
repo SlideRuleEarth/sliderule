@@ -82,9 +82,9 @@ void OutputFields::fromLua (lua_State* L, int index)
     {
         format.value = OutputFields::GEOPARQUET;
     }
-    else if(format.value == OutputFields::GEOPARQUET && !asGeo)
+    else if(format.value == OutputFields::GEOPARQUET)
     {
-        asGeo = true;
+        asGeo = true; // always set to true if geoparquet (regardless of user input)
     }
 
     // handle asset
@@ -102,33 +102,17 @@ void OutputFields::fromLua (lua_State* L, int index)
             credentials = CredentialStore::get(asset->getIdentity());
             #endif
 
-            // set output path
+            // set prefix and suffix
             const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
-            const char* path_suffix = "bin";
-            if(format.value == GEOPARQUET)
-            {
-                path_suffix = ".geoparquet";
-            }
-            else if(format.value == PARQUET)
-            {
-                path_suffix = ".parquet";
-            }
-            else if(format == CSV)
-            {
-                path_suffix = ".csv";
-            }
-            else if(format == H5)
-            {
-                path_suffix = ".h5";
-            }
-            else if(format == LAS)
-            {
-                path_suffix = ".las";
-            }
-            else if(format == LAZ)
-            {
-                path_suffix = ".laz";
-            }
+            const char* path_suffix = ".bin";
+            if     (format.value == GEOPARQUET) path_suffix = ".geoparquet";
+            else if(format.value == PARQUET)    path_suffix = ".parquet";
+            else if(format.value == CSV)        path_suffix = ".csv";
+            else if(format.value == H5)         path_suffix = ".h5";
+            else if(format.value == LAS)        path_suffix = ".las";
+            else if(format.value == LAZ)        path_suffix = ".laz";
+
+            // set output path
             if(!path.value.empty() && (path.value[0] != '\0'))
             {
                 path = FString("%s%s/%s", path_prefix, asset->getPath(), path.value.c_str()).c_str();
