@@ -9,8 +9,6 @@ Parameters:
     Type: String
   HostedZoneId:
     Type: String
-  CertificateArn:
-    Type: String
   ProjectWebsiteBucket:
     Type: String
 
@@ -72,6 +70,15 @@ Resources:
             ContentSecurityPolicy: !Sub "frame-ancestors 'none'; default-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline'; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.${Domain}"
             Override: true
 
+  WebsiteCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DocumentationUrl
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DocumentationUrl
+          HostedZoneId: !Ref HostedZoneId
+
   WebsiteDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -100,7 +107,7 @@ Resources:
           MaxTTL: 86400
           ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
         ViewerCertificate:
-          AcmCertificateArn: !Ref CertificateArn
+          AcmCertificateArn: !Ref WebsiteCertificate
           SslSupportMethod: sni-only
           MinimumProtocolVersion: TLSv1.2_2021
 

@@ -662,7 +662,7 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
 DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
 DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
 
-documentation: ## generate the static documentation
+documentation: ## generate the static documentation (must be run with docs/environment.yml "rtd" conda environment)
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
@@ -686,7 +686,6 @@ documentation-create: ## create documentation stack
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=DocumentationUrl,ParameterValue=$(DOCUMENTATION_URL) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
-						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET)
 	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name documentation
 
