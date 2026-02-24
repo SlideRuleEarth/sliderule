@@ -1,9 +1,7 @@
-# Private Clusters
-
-2026-01-20
+# 2026-01-20: Private Clusters
 
 :::{note}
-With release v5.0.2, SlideRule has transitioned the management of private clusters from the django-based ***SlideRule Provisioning System*** which was deployed in AWS ECS, to the pure Python-based ***SlideRule Authenticator*** and ***SlideRule Provisioner*** which are deployed via AWS Lambda.  The main functions of the original system have been preserved, with a change in focus on clusters for individual users instead of organizations.
+With release v5.0.2, SlideRule has transitioned the management of private clusters from the django-based ***SlideRule Provisioning System*** which was deployed in AWS ECS, to the pure Python-based ***SlideRule Authenticator*** and ***SlideRule Provisioner*** which are deployed via AWS Lambda.  The main functions of the original system have been preserved, with a change in focus on clusters for individual users instead of organizations.  See release notes for full details: [https://docs.slideruleearth.io/developer_guide/release_notes/release-v05-00-00.html](https://docs.slideruleearth.io/developer_guide/release_notes/release-v05-00-00.html)
 :::
 
 ## Overview
@@ -30,6 +28,10 @@ The _SlideRule Authenticator_ is available at https://login.slideruleearth.io an
 * __/auth/github/pem__: Returns the public signing key in PEM format.
 * __/.well-known/jwks.json__: Publishes the public signing keys in JWKS format.
 * __/.well-known/openid-configuration__: Provides OpenID Connect discovery metadata.
+
+## OAuth 2.0 Authorization Code Flow
+
+![code flow](../../assets/authenticator_v5_code_flow.png)
 
 ### SlideRule Provisioning System
 

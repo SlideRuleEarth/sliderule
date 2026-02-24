@@ -1,9 +1,7 @@
-# GeoParquet
-
-2023-02-24
+# 2023-02-24: GeoParquet
 
 :::{warning}
-The functionality described in this article has been superseded by broad support for returning data via Apache Arrow based formats.
+SlideRule now supports returning results back to data users as GeoParquet files. The functionality described in this article has been improved with broad support for returning data via Apache Arrow based formats.
 :::
 
 ## Background

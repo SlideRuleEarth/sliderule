@@ -1,6 +1,8 @@
-# Arbitrary Code Execution
+# 2025-05-30: Arbitrary Code Execution
 
-2025-05-30
+:::{note}
+SlideRule now supports the execution of user supplied code (written as Lua scripts) on private clusters.
+:::
 
 ## Summary
 

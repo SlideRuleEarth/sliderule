@@ -1,6 +1,8 @@
-# H5Coro
+# 2021-04-23: H5Coro
 
-2021-04-23
+:::{note}
+The HDF5 Cloud-Optimized Read-Only Library is a new from-scratch implementation in C++ of the HDF5 specification that focuses on reading static time-series datasets from S3.  Its use on SlideRule removed critical performance barriers in accessing ICESat-2 datasets hosted in S3 and has enabled the project to cost effectively offer science processing services to the ICESat-2 science community.
+:::
 
 ## Executive Summary
 

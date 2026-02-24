@@ -1,6 +1,8 @@
-# ATL24 Processing Run
+# 2025-03-28: ATL24 Processing Run
 
-2025-03-28
+:::{note}
+SlideRule processed ICESat-2 cycles 1 through 25 to produce the first release of the Near-Shore Coastal Bathymetry Product (ATL24) for ICESat-2.
+:::
 
 ## Background
 
