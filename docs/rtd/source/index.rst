@@ -140,4 +140,5 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    :caption: Background
 
    background/ICESat-2.rst
+   background/GEDI.rst
    background/NASA-Earthdata.rst

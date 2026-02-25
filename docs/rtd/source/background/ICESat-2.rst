@@ -2,6 +2,14 @@
 ICESat-2
 ==========
 
+References
+##########
+
+- `ATBD for ATL03 Global Geolocated Photon Data <https://icesat-2.gsfc.nasa.gov/sites/default/files/page_files/ICESat2_ATL03_ATBD_r007.pdf>`_
+- `ATBD for ATL03g Received Photon Geolocation <https://icesat-2.gsfc.nasa.gov/sites/default/files/page_files/ICESat2_ATL03g_ATBD_r002.pdf>`_
+- `ATBD for ATL03a Atmospheric Delay Corrections <https://icesat-2.gsfc.nasa.gov/sites/default/files/page_files/I2_ATL03A_ATBD.pdf>`_
+- `User's Guide for ATL03 <https://nsidc.org/sites/default/files/documents/user-guide/atl03-v006-userguide.pdf>`_
+
 Mission
 ########
 
@@ -93,10 +101,3 @@ Potential errors in the average surface heights:
 5. **First-photon bias**: this bias is inherent to photon-counting detectors and depends on the signal return strength
 6. **Atmospheric forward scattering**: photons traveling through a cloudy atmosphere or a wind-blown snow event may be repeatedly scattered through small angles but still be reflected by the surface and be within the ATLAS field of view
 7. **Subsurface scattering**: photons may be scattered many times within ice or snow before returning to the detector
-
-More information about ATL03 can be found in the Algorithm Theoretical Basis Documents (ATBDs) provided by the ICESat-2 project:
-
-- `ATL03: Global Geolocated Photon Data <https://nsidc.org/sites/nsidc.org/files/technical-references/ICESat2_ATL03_ATBD_r003.pdf>`_
-- `ATL03g: Received Photon Geolocation <https://icesat-2.gsfc.nasa.gov/sites/default/files/page_files/ICESat2_ATL03g_ATBD_r002.pdf>`_
-- `ATL03a: Atmospheric Delay Corrections <https://icesat-2.gsfc.nasa.gov/sites/default/files/page_files/I2_ATL03A_ATBD.pdf>`_
-
