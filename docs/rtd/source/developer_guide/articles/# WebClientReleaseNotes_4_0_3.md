@@ -1,7 +1,7 @@
 # 2026-02-25: Web Client release v4.0.3
 
 :::{note}
-SlideRule Web Client v4.0.3 has been released
+SlideRule Web Client v4.0.3 has new Landing page
 :::
 
 ## Summary
