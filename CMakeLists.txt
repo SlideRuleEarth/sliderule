@@ -309,6 +309,10 @@ target_include_directories (slideruleLib PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/auto
 
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR})
 
+# Server Application
+
+add_subdirectory (applications/server)
+
 # Add Packages #
 
 add_subdirectory (packages/core)
