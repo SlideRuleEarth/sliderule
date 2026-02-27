@@ -103,7 +103,7 @@ Resources:
       # Note: FunctionName removed to let CloudFormation auto-generate for seemless stack updates
       Description: !Sub 'GitHub OAuth handler for SlideRule'
       Runtime: python3.13
-      Handler: github_oauth.lambda_handler
+      Handler: github_oauth.lambda_gateway
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 30
       MemorySize: 256

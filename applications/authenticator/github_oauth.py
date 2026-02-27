@@ -1243,7 +1243,7 @@ def handle_openid(event):
 # Lambda Function for Login
 # =============================================================================
 
-def lambda_handler(event, context):
+def lambda_gateway(event, context):
     """
     Main Lambda handler - routes requests based on path.
     """
