@@ -194,14 +194,6 @@ Resources:
       RouteKey: 'GET /auth/refresh'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
-  # Route: GET /auth/github/jwks (JWKS endpoint for JWT verification)
-  JwksRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'GET /auth/github/jwks'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
   # Route: GET /.well-known/jwks.json (Standard OIDC endpoint)
   WellKnownJwksRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -292,7 +284,3 @@ Outputs:
     Value: !GetAtt JWTSigningKey.Arn
     Export:
       Name: sliderule-github-oauth-jwt-signing-key-arn
-
-  JwksEndpoint:
-    Description: JWKS endpoint URL for JWT verification (standard OIDC format)
-    Value: !Sub '${HttpApi.ApiEndpoint}/auth/github/jwks'

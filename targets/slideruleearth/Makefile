@@ -668,6 +668,7 @@ documentation: ## generate the static documentation (must be run with docs/envir
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/assets
+	pip install $(PYTHON_CLIENT_DIR)
 	cd $(DOCUMENTATION_STAGE_DIR) && make -C rtd html
 
 documentation-run: ## locally run the documentation
