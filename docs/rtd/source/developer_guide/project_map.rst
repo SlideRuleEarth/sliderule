@@ -2,7 +2,7 @@
 Project Map
 ===========
 
-The ICESat-2 deployment of SlideRule has a lot of moving parts and it can be difficult for new users to know where to find the code and documentation they need.
+THe SlideRule Earth project has a lot of moving parts and it can be difficult for new users to know where to find the code and documentation they need.
 This document will provide a high level overview of the different components of SlideRule and their associated code repositories and documentation trees.
 
 Component Organization
@@ -22,6 +22,10 @@ Component Organization
 
     .
 
+:Web Client: The SlideRule Web Client is a single-page application distributed by AWS CloudFront that runs inside a user's browser.  Most of the functionality provided by the SlideRule Python Client is provided in the Web Client as a graphical interface.  Additionally, the Web Client provides visualization and client-side exploration of the data via an SQL interface and graphing components.
+
+    .
+
 :CMR: SlideRule leverages NASA's Common Metadata Repository (CMR) for querying which dataset resources (i.e. granules) need to be processed for a given processing request.  When analysis scripts call SlideRule's Python client functions and pass in time ranges and polygons that define geospatial regions, those functions typically will issue a request to CMR behind the scenes, passing through those parameters, to get a list of granules that match the criteria.
 
     .
@@ -30,27 +34,25 @@ Component Organization
 
     .
 
-:Earthdata Cloud: For ICESat-2, the three primary datasets used by SlideRule are in the HDF5 format and are hosted by the National Snow and Ice Data Center (NSIDC) in AWS's S3 in the us-west-2 region.  For those datasets, SlideRule takes care of Earthdata authentication and interfacing with S3, and makes it so that users do not need to worry about how the data is accessed.
+:Earthdata Cloud: For datasets used by SlideRule, authentication and access are taken care of automatically without the user needing to provide credentials.  Each dataset also has dedicated code on the SlideRule servers that handle resource querying and optimized data access.
 
 
 Links to Project Resources
 ------------------------------------
 
-    Example Jupyter Notebooks: `sliderule-python/examples <https://github.com/SlideRuleEarth/sliderule-python/tree/main/examples>`_
-
-    Juypter Notebook Widgets: `ipysliderule.py <https://github.com/SlideRuleEarth/sliderule/blob/main/sliderule/clients/python/sliderule/ipysliderule.py>`_
+    Web Client: `client.slideruleearth.io <https://client.slideruleearth.io>`_
 
     Python Client Installation Instructions: `Getting Started Guide <../getting_started/Install.html>`_
 
-    Python Client ICESat-2 API Reference: `ICESat-2 Reference Documentation <../api_reference/icesat2.html>`_
+    Python Client User's Guide: `SlideRule Reference Documentation <../api_reference/sliderule.html>`_
 
-    ICESat-2 Data Processing User's Guide: `User Documentation <../user_guide/icesat2.html>`_
+    Python Client Examples: `sliderule/clients/python/examples <https://github.com/SlideRuleEarth/sliderule/blob/main/sliderule/clients/python/examples>`_
 
-    Additional Information on CMR: `CMR Website <https://cmr.earthdata.nasa.gov>`_
+    Juypter Notebook Widgets: `ipysliderule.py <https://github.com/SlideRuleEarth/sliderule/blob/main/sliderule/clients/python/sliderule/ipysliderule.py>`_
 
     SlideRule Server Source Code: `SlideRule GitHub <https://github.com/SlideRuleEarth/sliderule>`_
 
-    SlideRule Core Python API Reference: `SlideRule Reference Documentation <../api_reference/sliderule.html>`_
+    SlideRule Web Client Source Code: `SlideRule Web Client GitHub <https://github.com/SlideRuleEarth/sliderule-web-client>`_
 
 
 Repository Organization
@@ -58,7 +60,7 @@ Repository Organization
 
 All of the software for SlideRule is open source under the BSD 3-clause license and developed in the open on GitHub. Users and future contributors are encouraged to browse the code, fork the repositories and submit pull requests, open issues, and post discussion topics.
 
-The SlideRule project consists of one main repository with a few supporting repositories.
+The SlideRule project consists of two main repositories.
 
   * The `sliderule <https://github.com/SlideRuleEarth/sliderule>`_ repository includes all source code for the deployment of sliderule
 
@@ -71,9 +73,5 @@ The SlideRule project consists of one main repository with a few supporting repo
     - `documentation <https://github.com/SlideRuleEarth/sliderule/tree/main/docs>`_: source for our static website and user documentation
 
     - `infrastructure <https://github.com/SlideRuleEarth/sliderule/tree/main/targets/slideruleearth>`_: infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud
-
-  * The `sliderule-python <https://github.com/SlideRuleEarth/sliderule-python>`_ repository includes example Jupyter notebooks for using SlideRule to perform common science data analysis workflows
-
-  * The `sliderule-prov-sys <https://github.com/SlideRuleEarth/sliderule-prov-sys>`_ repository containing the source code for the SlideRule Provisioning System; written in Python/Django
 
   * The `sliderule-web-client <https://github.com/SlideRuleEarth/sliderule-web-client>`_ repository containing the source code for the SlideRule Web Client; written in JavaScript
