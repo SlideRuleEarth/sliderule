@@ -393,7 +393,7 @@ Resources:
           ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
           # Log into ECR
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
 
           # Setup directories and download files
           mkdir -p /etc/haproxy/pem
@@ -524,7 +524,7 @@ Resources:
           ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
           # Log into ECR
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
 
           # Create docker-compose.yml
           cat > docker-compose.yml << EOF
@@ -631,7 +631,7 @@ Resources:
             ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
             # Log into ECR
-            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${ContainerRegistry}
+            aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
 
             # Setup environment
             export IPV4=$(hostname -I | awk '{print $1}')

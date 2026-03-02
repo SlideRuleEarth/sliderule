@@ -153,39 +153,39 @@ def get_user_info(claims):
 # Validate Request
 #
 def validate_request(path, body, info):
-        # check organization membership
-        if 'member' not in info["orgRoles"]:
-            print(f'Access denied to {info["userName"]}, organization roles: {info["orgRoles"]}')
-            return None
+    # check organization membership
+    if 'member' not in info["orgRoles"]:
+        print(f'Access denied to {info["userName"]}, organization roles: {info["orgRoles"]}')
+        return None
 
-        # check cluster
-        cluster = body.get("cluster")
-        if cluster and ((cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"])):
-            print(f'Access denied to {info["userName"]}, allowed clusters: {info["deployableClusters"]}')
-            return None
+    # check cluster
+    cluster = body.get("cluster")
+    if cluster and ((cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"])):
+        print(f'Access denied to {info["userName"]}, allowed clusters: {info["deployableClusters"]}')
+        return None
 
-        # check node_capacity
-        node_capacity = body.get("node_capacity")
-        if node_capacity and ((int(node_capacity) > info["maxNodes"]) or (int(node_capacity) < 1)):
-            print(f'Access denied to {info["userName"]}, node capacity: {node_capacity}, max nodes: {info["maxNodes"]}')
-            return None
+    # check node_capacity
+    node_capacity = body.get("node_capacity")
+    if node_capacity and ((int(node_capacity) > info["maxNodes"]) or (int(node_capacity) < 1)):
+        print(f'Access denied to {info["userName"]}, node capacity: {node_capacity}, max nodes: {info["maxNodes"]}')
+        return None
 
-        # check ttl
-        ttl = body.get("ttl")
-        if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < manager.MIN_TTL_FOR_AUTOSHUTDOWN)):
-            print(f'Access denied to {info["userName"]}, invalid ttl: {ttl}')
-            return None
+    # check ttl
+    ttl = body.get("ttl")
+    if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < manager.MIN_TTL_FOR_AUTOSHUTDOWN)):
+        print(f'Access denied to {info["userName"]}, invalid ttl: {ttl}')
+        return None
 
-        # build and return request info
-        return {
-            "owner": 'owner' in info["orgRoles"],
-            "cluster": cluster,
-            "node_capacity": node_capacity,
-            "ttl": ttl,
-            "is_public": body.get("is_public", False),
-            "version": body.get("version", "latest"),
-            'branch': body.get("branch", "main")
-        }
+    # build and return request info
+    return {
+        "owner": 'owner' in info["orgRoles"],
+        "cluster": cluster,
+        "node_capacity": node_capacity,
+        "ttl": ttl,
+        "is_public": body.get("is_public", False),
+        "version": body.get("version", "latest"),
+        'branch': body.get("branch", "main")
+    }
 
 # ###############################
 # Path Handlers
