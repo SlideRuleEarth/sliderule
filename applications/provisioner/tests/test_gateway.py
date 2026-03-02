@@ -50,7 +50,6 @@ def test_invalid_node_capacity():
                     "claims": {
                         "org_roles": '[member]',
                         "aud": '[gsfc other]',
-                        "max_nodes": "10"
                     }
                 }
             }
@@ -71,14 +70,12 @@ def test_invalid_ttl():
                     "claims": {
                         "org_roles": '[member]',
                         "aud": '[gsfc other]',
-                        "max_nodes": "10",
-                        "max_ttl": "600"
                     }
                 }
             }
         },
         "rawPath": "/",
-        "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"700"}'
+        "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"800"}'
     }, None)
     assert rsps['statusCode'] == 403
 
@@ -93,8 +90,6 @@ def test_invalid_report():
                     "claims": {
                         "org_roles": '[member]',
                         "aud": '[*]',
-                        "max_nodes": "10",
-                        "max_ttl": "600"
                     }
                 }
             }
@@ -102,7 +97,7 @@ def test_invalid_report():
         "rawPath": "/report",
         "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"600"}'
     }, None)
-    assert rsps['statusCode'] == 403
+    assert rsps['statusCode'] == 404 # api not exposed
 
 #
 # Test Path
@@ -113,10 +108,8 @@ def test_invalid_path():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '[member owner]',
+                        "org_roles": '[member]',
                         "aud": '[*]',
-                        "max_nodes": "10",
-                        "max_ttl": "600"
                     }
                 }
             }
@@ -124,4 +117,4 @@ def test_invalid_path():
         "rawPath": "/does_not_exist",
         "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"600"}'
     }, None)
-    assert rsps['statusCode'] == 404
+    assert rsps['statusCode'] == 404, f"{rsps}"

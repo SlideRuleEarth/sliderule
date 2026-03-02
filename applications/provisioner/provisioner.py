@@ -180,8 +180,6 @@ def get_max_ttl(org_roles):
 def get_user_info(claims):
     username = claims.get('sub', '<anonymous>')
     org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-    max_nodes = int(claims.get('max_nodes', "0"))
-    max_ttl = int(claims.get('max_ttl', "0"))
     audiences = parse_claim_array(claims.get('aud', "[]"))
     known_clusters = ['sliderule'] + [audience for audience in audiences if (audience != "*" and audience not in manager.SYSTEM_KEYWORDS)]
     deployable_clusters = [audience for audience in audiences if (audience not in manager.SYSTEM_KEYWORDS)]
@@ -192,8 +190,8 @@ def get_user_info(claims):
         'orgRoles': org_roles,
         'knownClusters': ','.join(known_clusters),
         'deployableClusters': ','.join(deployable_clusters),
-        'maxNodes': str(max_nodes),
-        'maxTTL': str(max_ttl)
+        'maxNodes': max_nodes,
+        'maxTTL': max_ttl
     }
 
 #
