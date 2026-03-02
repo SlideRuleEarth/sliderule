@@ -17,5 +17,5 @@ jobs:
           REPORT=$(curl -fsS -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/report/tests)
           REPORT_EPOCH=$(date -d "$(echo $REPORT | jq -r '.report.date')" +%s)
           TODAY_EPOCH=$(date -d "$(date +%F)" +%s)
-          jq -e '.report.status == true' <<< "$REPORT" > /dev/null # check success
+          jq -e '.status == true' <<< "$REPORT" > /dev/null # check success
           (( REPORT_EPOCH >= TODAY_EPOCH )) # check test ran today

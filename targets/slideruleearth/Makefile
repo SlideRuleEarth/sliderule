@@ -87,6 +87,7 @@ RECORDER_URL ?= recorder.$(DOMAIN)
 DOCUMENTATION_URL ?= docs.$(DOMAIN)
 ALERT_STREAM ?= recorder-firehose-alerts
 TELEMETRY_STREAM ?= recorder-firehose-telemetry
+SUPPORT_EMAIL ?= support@mail.slideruleearth.io
 JWT_ISSUER = https://$(AUTHENTICATOR_URL)
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
@@ -108,6 +109,10 @@ SCHEDULE_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`ScheduleLambdaArn`].OutputValue' \
   --output text)
+PROVISIONER_ALERT_EMAIL = $(shell aws secretsmanager get-secret-value \
+   --secret-id slideruleearth.io/secrets \
+   --query SecretString \
+   --output text | jq -r .provisioner_alert_email)
 
 ########################
 # Local Build Targets
@@ -529,6 +534,8 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
+						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
 	aws cloudformation wait stack-create-complete --stack-name provisioner
 
@@ -833,6 +840,7 @@ environment: ## echo the environment variables
 	@echo DEBUG_CFG: $(DEBUG_CFG)
 	@echo RELEASE_CFG: $(RELEASE_CFG)
 	@echo CERTIFICATE_ARN: $(CERTIFICATE_ARN)
+	@echo PROVISIONER_ALERT_EMAIL: $(PROVISIONER_ALERT_EMAIL)
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

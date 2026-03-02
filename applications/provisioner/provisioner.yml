@@ -29,6 +29,10 @@ Parameters:
     Type: String
   TelemetryStream:
     Type: String
+  SupportEmail:
+    Type: String
+  AlertEmail:
+    Type: String
   LambdaZipFile:
     Type: String
 
@@ -95,6 +99,8 @@ Resources:
           JWT_ISSUER: !Ref JwtIssuer
           ALERT_STREAM: !Ref AlertStream
           TELEMETRY_STREAM: !Ref TelemetryStream
+          SUPPORT_EMAIL: !Ref SupportEmail
+          ALERT_EMAIL: !Ref AlertEmail
 
   ## IAM Role
   LambdaExecutionRole:
@@ -168,6 +174,18 @@ Resources:
                 Action:
                   - lambda:AddPermission
                 Resource: '*'
+        - PolicyName: SESRestrictedSendPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
+                Condition:
+                  StringEquals:
+                    ses:Recipients: !Sub ${AlertEmail}
 
   ## API Gateway HTTP API
   HttpApi:

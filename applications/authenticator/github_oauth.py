@@ -405,7 +405,7 @@ def get_user_teams(authorization_str, org_roles):
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
 
-def get_allowed_clusters(username, teams, org_roles):
+def generate_audience_list(username, teams, org_roles):
     """
     Returns a list of cluster names the user can access and deploy.
     """
@@ -430,30 +430,6 @@ def get_allowed_clusters(username, teams, org_roles):
 
     # Return allowed clusters
     return allowed
-
-
-def get_max_nodes(org_roles):
-    """
-    Returns the maximum number of nodes a user can deploy
-    """
-    max_nodes = 0
-    if 'owner' in org_roles:
-        max_nodes = 500
-    elif 'member' in org_roles:
-        max_nodes = 10
-    return max_nodes
-
-
-def get_max_ttl(org_roles):
-    """
-    Returns the maximum time to live a user can deploy
-    """
-    max_ttl = 0
-    if 'owner' in org_roles:
-        max_ttl = 525600 # 1 year
-    elif 'member' in org_roles:
-        max_ttl = 720 # 12 hours
-    return max_ttl
 
 
 def create_auth_token(metadata):
@@ -559,9 +535,7 @@ def authenticate_user(authorization_str, event):
     # Get user metadata
     org_roles = get_organization_roles(authorization_str, username)
     teams = get_user_teams(authorization_str, org_roles)
-    allowed_clusters = get_allowed_clusters(username, teams, org_roles)
-    max_nodes = get_max_nodes(org_roles)
-    max_ttl = get_max_ttl(org_roles)
+    audience_list = generate_audience_list(username, teams, org_roles)
 
     # Token expiration based on JWT_EXPIRATION_HOURS config
     now = datetime.now(timezone.utc)
@@ -575,10 +549,8 @@ def authenticate_user(authorization_str, event):
     # Build metadata dictionary
     metadata = {
         'org_roles': org_roles,
-        'max_nodes': max_nodes,
-        'max_ttl': max_ttl,
         'sub': username,
-        'aud': JWT_AUDIENCES + allowed_clusters,
+        'aud': JWT_AUDIENCES + audience_list,
         'org': GITHUB_ORG,
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
@@ -667,10 +639,6 @@ def handle_callback(event):
         access_token = exchange_code_for_token(code, event)
         token, metadata = authenticate_user(f'Bearer {access_token}', event)
 
-        # Build known and deployable clusters (user interface hints)
-        known_clusters = ['sliderule'] + [audience for audience in metadata['aud'] if (audience != "*" and audience not in JWT_AUDIENCES)]
-        deployable_clusters = [audience for audience in metadata['aud'] if (audience not in JWT_AUDIENCES)]
-
         # Redirect to frontend with JWT in parameters
         return redirect_to_frontend(redirect_uri, parms={
             'username': metadata['sub'],
@@ -678,10 +646,6 @@ def handle_callback(event):
             'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
             'org': metadata['org'],
             'orgRoles': ','.join(metadata['org_roles']),
-            'knownClusters': ','.join(known_clusters),
-            'deployableClusters': ','.join(deployable_clusters),
-            'maxNodes': str(metadata['max_nodes']),
-            'maxTTL': str(metadata['max_ttl']),
             'tokenIssuedAt': str(metadata['iat']),
             'tokenExpiresAt': str(metadata['exp']),
             'tokenIssuer': metadata['iss'],
@@ -1374,18 +1338,12 @@ def handle_oauth21_token(event):
             raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
 
         # Build known and deployable clusters (user interface hints)
-        known_clusters = ['sliderule'] + [audience for audience in metadata['aud'] if (audience != "*" and audience not in JWT_AUDIENCES)]
-        deployable_clusters = [audience for audience in metadata['aud'] if (audience not in JWT_AUDIENCES)]
         info = {
             'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
             'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
             'org': metadata['org'],
             'orgRoles': ','.join(metadata['org_roles']),
-            'knownClusters': ','.join(known_clusters),
-            'deployableClusters': ','.join(deployable_clusters),
-            'maxNodes': str(metadata['max_nodes']),
-            'maxTTL': str(metadata['max_ttl']),
             'tokenIssuedAt': str(metadata['iat']),
             'tokenExpiresAt': str(metadata['exp']),
             'tokenIssuer': metadata['iss']
@@ -1409,21 +1367,14 @@ def handle_oauth21_token(event):
         })
 
 
-
-import json
-
-
-def handle_authorization_server_metadata(event: dict) -> dict:
+def handle_oauth21_server(event: dict) -> dict:
     """
     Serve OAuth 2.0 Authorization Server Metadata per RFC 8414.
     Endpoint: GET /.well-known/oauth-authorization-server
     """
     host = event.get('headers', {}).get('host', '')
     base_url = f"https://{host}"
-
     metadata = {
-
-
         "issuer": base_url, # Validates that the metadata document it  received came from the expected AS (prevents AS mix-up attacks).
         "authorization_endpoint": f"{base_url}/oauth/authorize", # Used by client as log in destination. Required for any AS that supports authorization_code grant.
         "token_endpoint": f"{base_url}/oauth/token", # Used by client for POSTs to exchange a code for a token, and later to refresh an expired token.
@@ -1431,16 +1382,11 @@ def handle_authorization_server_metadata(event: dict) -> dict:
         "scopes_supported": ["mcp:tools", "mcp:resources", "offline_access"],
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
-        "registration_endpoint": f"{base_url}/oauth/register", # Dynamic client registration (RFC 7591) - REQUIRED by MCP
-        "introspection_endpoint": f"{base_url}/oauth/introspect", # Lets resource servers verify opaque tokens (not needed if you issue self-contained JWTs that can be validated locally).
-        "revocation_endpoint": f"{base_url}/oauth/revoke", # Lets Claude Desktop explicitly invalidate tokens on logout.
+        "registration_endpoint": f"{base_url}/oauth/register", # Dynamic client registration (RFC 7591)
+        "revocation_endpoint": f"{base_url}/oauth/revoke", # invalidate tokens on logout
         "jwks_uri": f"{base_url}/.well-known/jwks.json", # fetching public key to verify JWT signatures
         "id_token_signing_alg_values_supported": ["RS256"], # The signing algorithms used when issuing JWTs.
-        "service_documentation": f"{base_url}/docs/oauth", # Optional human-readable metadata
-        "grant_types_supported": [
-            "authorization_code",
-            "refresh_token", # allows silent token renewal
-        ],
+        "grant_types_supported": ["authorization_code", "refresh_token"], # allows silent token renewal
     }
 
     return {
@@ -1492,8 +1438,9 @@ def lambda_gateway(event, context):
     # OpenID Configuration Discovery
     elif path == '/.well-known/openid-configuration':
         return handle_openid(event)
+    # OAuth 2.1 Service Metadata
     elif path == '/.well-known/oauth-authorization-server':
-        return handle_oauth_server(event)
+        return handle_oauth21_server(event)
     # Unknown path
     else:
         return {

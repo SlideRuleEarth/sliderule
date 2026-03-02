@@ -1,9 +1,8 @@
 import os
-import boto3
 import botocore.exceptions
 import json
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import manager
 
 # ###############################
@@ -38,6 +37,156 @@ def parse_claim_array(claim_value):
     else:
         return []
 
+#
+# Handle encoded body
+#
+def get_body(event):
+    body_raw = event.get("body")
+    if body_raw:
+        if event.get("isBase64Encoded"):
+            body_raw = base64.b64decode(body_raw).decode("utf-8")
+        return json.loads(body_raw)
+    else:
+        return {}
+
+#
+# API Gateway Response Format
+#
+def json_response(status_code, body):
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+        },
+        'body': json.dumps(body)
+    }
+
+#
+# Boto3 Error Handling
+#
+def exception_reponse(e):
+    print(f'Exception: {e}')
+    if isinstance(e, botocore.exceptions.ClientError) and (e.response['Error']['Code'] == 'ValidationError'):
+        return json_response(404, {'error': 'not found', 'error_description': 'failure in request'})
+    return json_response(500, {'error': 'internal error', 'error_description': 'failure in request'})
+
+#
+# Send Email Message
+#
+def send_email(title, message):
+    support_email = os.environ['SUPPORT_EMAIL']
+    alert_email = os.environ['ALERT_EMAIL']
+    response = manager.ses.send_email(
+        Source = support_email,
+        Destination = {
+            "ToAddresses": [alert_email]
+        },
+        Message = {
+            "Subject": {
+                "Data": f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})"
+            },
+            "Body": { "Text": {
+                "Data": message
+            }}
+        })
+    if response["HTTPStatusCode"] >= 200 and response["HTTPStatusCode"] < 300:
+        return True
+    else:
+        print(f"Error sending email from {support_email} to {alert_email}: {response}")
+        return False
+
+# ###############################
+# Business Logic
+# ###############################
+
+#
+# Max Nodes
+#
+def get_max_nodes(org_roles):
+    """
+    Returns the maximum number of nodes a user can deploy
+    """
+    max_nodes = 0
+    if 'owner' in org_roles:
+        max_nodes = 100
+    elif 'member' in org_roles:
+        max_nodes = 50
+    return max_nodes
+
+#
+# Max TTL
+#
+def get_max_ttl(org_roles):
+    """
+    Returns the maximum time to live a user can deploy
+    """
+    max_ttl = 0
+    if 'owner' in org_roles:
+        max_ttl = 525600 # 1 year
+    elif 'member' in org_roles:
+        max_ttl = 720 # 12 hours
+    return max_ttl
+
+#
+# Get User Info
+#
+def get_user_info(claims):
+    username = claims.get('sub', '<anonymous>')
+    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+    max_nodes = int(claims.get('max_nodes', "0"))
+    max_ttl = int(claims.get('max_ttl', "0"))
+    audiences = parse_claim_array(claims.get('aud', "[]"))
+    known_clusters = ['sliderule'] + [audience for audience in audiences if (audience != "*" and audience not in manager.SYSTEM_KEYWORDS)]
+    deployable_clusters = [audience for audience in audiences if (audience not in manager.SYSTEM_KEYWORDS)]
+    max_nodes = get_max_nodes(org_roles)
+    max_ttl = get_max_ttl(org_roles)
+    return {
+        'userName': username,
+        'orgRoles': org_roles,
+        'knownClusters': ','.join(known_clusters),
+        'deployableClusters': ','.join(deployable_clusters),
+        'maxNodes': str(max_nodes),
+        'maxTTL': str(max_ttl)
+    }
+
+#
+# Validate Request
+#
+def validate_request(path, body, info):
+        # check organization membership
+        if 'member' not in info["orgRoles"]:
+            print(f'Access denied to {info["userName"]}, organization roles: {info["orgRoles"]}')
+            return None
+
+        # check cluster
+        cluster = body.get("cluster")
+        if cluster and ((cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"])):
+            print(f'Access denied to {info["userName"]}, allowed clusters: {info["deployableClusters"]}')
+            return None
+
+        # check node_capacity
+        node_capacity = body.get("node_capacity")
+        if node_capacity and ((int(node_capacity) > info["maxNodes"]) or (int(node_capacity) < 1)):
+            print(f'Access denied to {info["userName"]}, node capacity: {node_capacity}, max nodes: {info["maxNodes"]}')
+            return None
+
+        # check ttl
+        ttl = body.get("ttl")
+        if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < manager.MIN_TTL_FOR_AUTOSHUTDOWN)):
+            print(f'Access denied to {info["userName"]}, invalid ttl: {ttl}')
+            return None
+
+        # build and return request info
+        return {
+            "owner": 'owner' in info["orgRoles"],
+            "cluster": cluster,
+            "node_capacity": node_capacity,
+            "ttl": ttl,
+            "is_public": body.get("is_public", False),
+            "version": body.get("version", "latest"),
+            'branch': body.get("branch", "main")
+        }
+
 # ###############################
 # Path Handlers
 # ###############################
@@ -45,12 +194,12 @@ def parse_claim_array(claim_value):
 #
 # Deploy
 #
-def deploy_handler(event, context):
-
-    # initialize response state
-    state = {"status": True}
+def deploy_handler(rqst):
 
     try:
+        # initialize response state
+        state = {}
+
         # get environment variables
         stack_name = os.environ["STACK_NAME"]
         environment_version = os.environ['ENVIRONMENT_VERSION']
@@ -63,15 +212,6 @@ def deploy_handler(event, context):
         alert_stream = os.environ['ALERT_STREAM']
         telemetry_stream = os.environ['TELEMETRY_STREAM']
 
-        # get required request variables
-        cluster = event["cluster"]
-        is_public = event["is_public"]
-        node_capacity = event["node_capacity"]
-        ttl = event["ttl"]
-
-        # get optional request variables
-        version = event.get("version", "latest")
-
         # get arns for auto-shutdown
         resp = manager.cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
@@ -80,11 +220,11 @@ def deploy_handler(event, context):
 
         # build parameters for stack creation
         state["parms"] = [
-            {"ParameterKey": "Version", "ParameterValue": version},
-            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(is_public)},
-            {"ParameterKey": "Cluster", "ParameterValue": cluster},
-            {"ParameterKey": "NodeCapacity", "ParameterValue": str(node_capacity)},
-            {"ParameterKey": "TTL", "ParameterValue": str(ttl)},
+            {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
+            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
+            {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
+            {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
             {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
             {"ParameterKey": "Domain", "ParameterValue": domain},
             {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
@@ -102,44 +242,38 @@ def deploy_handler(event, context):
         templateBody = open("cluster.yml").read()
 
         # the stack name naming convention is required by Makefile
-        state["stack_name"] = manager.build_stack_name(cluster)
+        stack_name = manager.build_stack_name(rqst["cluster"])
 
         # create stack
-        state["response"] = manager.cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
-        print(f'Deploy initiated for {state["stack_name"]}')
+        state["response"] = manager.cf.create_stack(StackName=stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
-    except RuntimeError as e:
-        print(f'User error in deploy: {e}')
-        state["exception"] = f'User error in deploy'
-        state["status"] = False
+        # status deployment
+        send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
+        print(f'Deploy initiated for {stack_name}')
+
+        # return success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in deploy: {e}')
-        state["exception"] = f'Failure in deploy'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Extend
 #
-def extend_handler(event, context):
-
-    # initialize response state
-    state = {"status": True}
+def extend_handler(rqst):
 
     try:
 
-        # get required request variables
-        cluster = event["cluster"]
-        ttl = event["ttl"]
+        # initialize response state
+        state = {}
 
         # get rule name
-        rule_name = f'{manager.build_stack_name(cluster)}-auto-shutdown'
+        rule_name = f'{manager.build_stack_name(rqst["cluster"])}-auto-shutdown'
 
         # calculate new shutdown time
-        new_shutdown_time = datetime.utcnow() + timedelta(minutes=ttl)
+        new_shutdown_time = datetime.now(timezone.utc) + timedelta(minutes=rqst["ttl"])
         state["cron_expression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
 
         # extend rule
@@ -150,40 +284,27 @@ def extend_handler(event, context):
             Description=f'Automatic shutdown for {rule_name} (updated)'
         )
 
-    except botocore.exceptions.ClientError as e:
-        print(f'Client error: {e}')
-        if e.response['Error']['Code'] == 'ValidationError':
-            state["exception"] = f'Not found'
-        else:
-            state["exception"] = f'Unexpected error'
-        state["status"] = False
+        # return success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in extend: {e}')
-        state["exception"] = f'Failure in extend'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
+
 
 #
 # Status
 #
-def status_handler(event, context):
-
-    # initialize response state
-    state = {"status": True}
+def status_handler(rqst):
 
     try:
-        # get required request variables
-        cluster = event["cluster"]
-
-        # get stack name
-        state["stack_name"] = manager.build_stack_name(cluster)
+        # initialize response state
+        state = {}
 
         # status stack
-        print(f'Status requested for {state["stack_name"]}')
-        description = manager.cf.describe_stacks(StackName=state["stack_name"])
+        stack_name = manager.build_stack_name(rqst["cluster"])
+        description = manager.cf.describe_stacks(StackName=stack_name)
         stack = description["Stacks"][0]
 
         # build cleaned response
@@ -198,15 +319,15 @@ def status_handler(event, context):
         state["response"] = response
 
         # attempt to get auto-shutdown time
-        rule_name = manager.build_rule_name(state["stack_name"])
+        rule_name = manager.build_rule_name(stack_name)
         state["auto_shutdown"] = manager.get_next_trigger_time(rule_name)
 
         # get number of nodes
-        node_instances = get_instances_by_name(f'{cluster}-node')
+        node_instances = get_instances_by_name(f'{rqst["cluster"]}-node')
         state["current_nodes"] = len(node_instances)
 
         # get version and node capacity
-        ilb_instance = get_instances_by_name(f'{cluster}-ilb')
+        ilb_instance = get_instances_by_name(f'{rqst["cluster"]}-ilb')
         if len(ilb_instance) == 1:
             tags = ilb_instance[0]["Tags"]
             for tag in tags:
@@ -217,41 +338,25 @@ def status_handler(event, context):
                 if tag["Key"] == "NodeCapacity":
                     state["node_capacity"] = tag["Value"]
 
-    except botocore.exceptions.ClientError as e:
-        print(f'Client error: {e}')
-        if e.response['Error']['Code'] == 'ValidationError':
-            state["exception"] = f'Not found'
-        else:
-            state["exception"] = f'Unexpected error'
-        state["status"] = False
+        # return success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in status: {e}')
-        state["exception"] = f'Failure in status'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Events
 #
-def events_handler(event, context):
-
-    # initialize response state
-    state = {"status": True}
+def events_handler(rqst):
 
     try:
-        # get required request variables
-        cluster = event["cluster"]
-
-        # get stack name
-        state["stack_name"] = manager.build_stack_name(cluster)
-
         # get events for stack
-        description = manager.cf.describe_stack_events(StackName=state["stack_name"])
+        stack_name = manager.build_stack_name(rqst["cluster"])
+        description = manager.cf.describe_stack_events(StackName=stack_name)
         stack_events = description["StackEvents"]
-        print(f'Events requested for {state["stack_name"]}')
+        print(f'Events requested for {stack_name}')
 
         # build cleaned response
         response = []
@@ -265,33 +370,25 @@ def events_handler(event, context):
                 elif not isinstance(v, (bytes, bytearray)):
                     stack_event[k] = v
             response.append(stack_event)
-        state["response"] = response
 
-    except botocore.exceptions.ClientError as e:
-        print(f'Client error: {e}')
-        if e.response['Error']['Code'] == 'ValidationError':
-            state["exception"] = f'Not found'
-        else:
-            state["exception"] = f'Unexpected error'
-        state["status"] = False
+        # return success
+        return json_response(200, response)
 
     except Exception as e:
-        print(f'Exception in events: {e}')
-        state["exception"] = f'Failure in events'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
+
 
 #
 # Cluster Report
 #
-def report_clusters_handler(event, context):
-
-    # initialize response state
-    state = {"status": True, "report": {}}
+def report_clusters_handler(rqst):
 
     try:
+        # initialize report
+        report = {}
+
         # get environment variables
         region = os.environ["AWS_REGION"]
 
@@ -304,61 +401,51 @@ def report_clusters_handler(event, context):
                 cluster = name.split("-ilb")[0]
                 details = status_handler({"cluster": cluster, "region": region}, None)
                 if details["status"]:
-                    state["report"][cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+                    report[cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+
+        # return success
+        return json_response(200, report)
 
     except Exception as e:
 
-        # handle exceptions (return to user for debugging)
-        print(f'Exception in report: {e}')
-        state["exception"] = f'Failure in report'
-        state["status"] = False
-
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Test Report
 #
-def report_tests_handler(event, context):
-
-    # initialize response state
-    state = {"status": True, "report": {}}
+def report_tests_handler(rqst):
 
     try:
         # get environment variables
         project_bucket = os.environ["PROJECT_BUCKET"]
         project_folder = os.environ["PROJECT_FOLDER"]
 
-        # get optional request variables
-        branch = event.get("branch", "main")
-
         # get test summary
-        summary_file = f"{branch}-summary.json"
+        summary_file = f"{rqst["branch"]}-summary.json"
         manager.s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
 
         # read test summary
         with open(f"/tmp/{summary_file}", "r") as file:
-            state["report"] = json.loads(file.read())
+            report = json.loads(file.read())
+
+        # return success
+        return json_response(200, report)
 
     except Exception as e:
 
-        # handle exceptions (return to user for debugging)
-        print(f'Exception in report: {e}')
-        state["exception"] = f'Failure in report'
-        state["status"] = False
-
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Test Runner
 #
-def test_handler(event, context):
-
-    # initialize response status
-    state = {"status": True}
+def test_handler(rqst):
 
     try:
+        # initialize response status
+        state = {}
+
         # get environment variables
         stack_name = os.environ["STACK_NAME"]
         domain = os.environ["DOMAIN"]
@@ -366,11 +453,6 @@ def test_handler(event, context):
         project_bucket = os.environ["PROJECT_BUCKET"]
         project_folder = os.environ["PROJECT_FOLDER"]
         container_registry = os.environ['CONTAINER_REGISTRY']
-
-        # get optional request variables
-        deploy_date = event.get("deploy_date", datetime.now().strftime("%Y%m%d%H%M%S"))
-        branch = event.get("branch", "main")
-        state["stack_name"] = event.get('stack_name', 'testrunner') # default to hardcoded stack name so only one can run at a time
 
         # get arns for auto-shutdown
         resp = manager.cf.describe_stacks(StackName=stack_name)
@@ -387,25 +469,23 @@ def test_handler(event, context):
             {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
-            {"ParameterKey": "DeployDate", "ParameterValue": deploy_date},
-            {"ParameterKey": "Branch", "ParameterValue": branch}
+            {"ParameterKey": "DeployDate", "ParameterValue": datetime.now().strftime("%Y%m%d%H%M%S")},
+            {"ParameterKey": "Branch", "ParameterValue": rqst["branch"]}
         ]
 
         # read template
         templateBody = open("testrunner.yml").read()
 
-        # create stack
-        state["response"] = manager.cf.create_stack(StackName=state["stack_name"], TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        # create stack (default to hardcoded stack name so only one can run at a time)
+        state["response"] = manager.cf.create_stack(StackName='testrunner', TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+
+        # success
+        return json_response(200, state)
 
     except Exception as e:
 
-        # handle exceptions (return to user for debugging)
-        print(f'Exception in test: {e}')
-        state["exception"] = f'Failure in test runner'
-        state["status"] = False
-
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 # ###############################
 # Lambda: Gateway Handler
@@ -415,98 +495,43 @@ def lambda_gateway(event, context):
     """
     Route requests based on path
     """
-    # get JWT claims (validated by API Gateway)
+
     try:
-        claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-        username = claims.get('sub', '<anonymous>')
-        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-        max_nodes = int(claims.get('max_nodes', "0"))
-        max_ttl = int(claims.get('max_ttl', "0"))
-        audiences = parse_claim_array(claims.get('aud', "[]"))
-        allowed_clusters = [audience for audience in audiences if audience not in manager.SYSTEM_KEYWORDS]
-
-        # get path and body of request
-        path = event.get('rawPath', '')
-        body_raw = event.get("body")
-        if body_raw:
-            if event.get("isBase64Encoded"):
-                body_raw = base64.b64decode(body_raw).decode("utf-8")
-            body = json.loads(body_raw)
-        else:
-            body = {}
-        print(f'Received request: {path} {body}')
-
-        # check organization membership
-        if 'member' not in org_roles:
-            print(f'Access denied to {username}, organization roles: {org_roles}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
-
-        # check cluster
-        cluster = body.get("cluster")
-        if cluster and ((cluster not in allowed_clusters) and ('*' not in allowed_clusters)):
-            print(f'Access denied to {username}, allowed clusters: {allowed_clusters}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
-
-        # check node_capacity
-        node_capacity = body.get("node_capacity")
-        if node_capacity and ((int(node_capacity) > max_nodes) or (int(node_capacity) < 1)):
-            print(f'Access denied to {username}, node capacity: {node_capacity}, max nodes: {max_nodes}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
-
-        # check ttl
-        ttl = body.get("ttl")
-        if ttl and ((int(ttl) > max_ttl) or (int(ttl) < manager.MIN_TTL_FOR_AUTOSHUTDOWN)):
-            print(f'Access denied to {username}, invalid ttl: {ttl}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
-
-        # check report and test runner
-        if path.startswith('/report') or path.startswith('/test'):
-            if 'owner' not in org_roles:
-                print(f'Access denied to {username}, organization roles: {org_roles}, path: {path}')
-                return {
-                    'statusCode': 403,
-                    'body': json.dumps({'error': 'access denied'})
-                }
+        # process request
+        claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
+        path = event.get('rawPath', '') # get path of request
+        body = get_body(event) # get body of request
+        info = get_user_info(claims) # pull out user information from claims
+        rqst = validate_request(path, body, info) # validate request against claims and return safe request parameters
+        print(f'Received request: {path} {body}') # diagnostic
 
         # route request
-        if path == '/deploy':
-            return deploy_handler(body, context)
+        if rqst == None: # check request
+            return json_response(403, {'error': 'access denied'})
+        elif path == '/info': # only uses info, but still validate rqst
+            return json_response(200, info)
+        elif path == '/deploy':
+            return deploy_handler(rqst)
         elif path == '/extend':
-            return extend_handler(body, context)
+            return extend_handler(rqst)
         elif path == '/destroy':
-            return manager.lambda_destroy(body, context)
+            return manager.lambda_destroy(rqst)
         elif path == '/status':
-            return status_handler(body, context)
+            return status_handler(rqst)
         elif path == '/events':
-            return events_handler(body, context)
-        elif path == '/report/clusters' or path == '/report':
-            return report_clusters_handler(body, context)
-        elif path == '/report/tests':
-            return report_tests_handler(body, context)
-        elif path == '/test':
-            return test_handler(body, context)
-        else:
-            print(f'Path not found: {path}')
-            return {
-                'statusCode': 404,
-                'body': json.dumps({'error': 'not found'})
-            }
+            return events_handler(rqst)
+        elif rqst["owner"]: # owner level APIs
+            if path == '/report/clusters' or path == '/report':
+                return report_clusters_handler(rqst)
+            elif path == '/report/tests':
+                return report_tests_handler(rqst)
+            elif path == '/test':
+                return test_handler(rqst)
+
+        # invalid path
+        return json_response(404, {'error': 'not found'})
 
     except Exception as e:
-        print(f'Exception in gateway: {e}')
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'internal error'})
-        }
+
+        # unhandled exception
+        return exception_reponse(e)

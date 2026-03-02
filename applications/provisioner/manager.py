@@ -14,6 +14,7 @@ s3 = boto3.client("s3")
 cf = boto3.client("cloudformation")
 ev = boto3.client('events')
 la = boto3.client('lambda')
+ses = boto3.client('ses')
 
 http = urllib3.PoolManager()
 
