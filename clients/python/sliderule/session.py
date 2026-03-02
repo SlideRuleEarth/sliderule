@@ -122,6 +122,7 @@ class Session:
 
     PUBLIC_DOMAIN = "slideruleearth.io"
     PUBLIC_CLUSTER = "sliderule"
+    PRIVATE_KEY = ".sliderule_key"
     MAX_PS_CLUSTER_WAIT_SECS = 600
 
     #
@@ -139,7 +140,8 @@ class Session:
         rqst_timeout    = (10, 120), # (connection, read) in seconds
         decode_aux      = True,
         rethrow         = False,
-        github_token    = None):
+        github_token    = None,
+        private_key     = PRIVATE_KEY):
         '''
         creates and configures a sliderule session
         '''
@@ -152,6 +154,7 @@ class Session:
         self.throw_exceptions = rethrow
         self.domain = domain
         self.cluster = cluster
+        self.private_key = private_key
 
         # initialize to empty
         self.ps_access_token = None
@@ -450,11 +453,15 @@ class Session:
         '''
         handles making the HTTP request to a sliderule gateway service
         '''
+        if headers == None:
+            headers = {}
+
         try:
             # Build Authorization Header
-            if headers == None:
-                headers = {}
             self.__buildauthheader(headers)
+
+            # (Optionally) Sign Request
+            self.__signrequest(headers, subdomain, api, json.dumps(data))
 
             # Perform Request
             url = f'https://{subdomain}.{self.domain}/{api}'
@@ -668,6 +675,30 @@ class Session:
                         logger.error(f'Failed to refresh token: {e}')
             # Build Authentication Header
             headers['Authorization'] = 'Bearer ' + self.ps_access_token
+
+    #
+    #  __signrequest
+    #
+    def __signrequest(self, headers, subdomain, api, body):
+        '''
+        cryptographically sign the request
+        '''
+        try:
+            from pathlib import Path
+            from datetime import datetime, timezone
+            from cryptography.hazmat.primitives.serialization import load_ssh_private_key
+            with open(os.path.join(Path.home(), self.session.private_key)) as file:
+                private_key = load_ssh_private_key(file.read(), password=None)
+            path = f'{subdomain}.{self.domain}/{api}'
+            path_b64 = base64.urlsafe_b64encode(path.encode()).decode()
+            timestamp = str(int(datetime.now(timezone.utc).timestamp()))
+            body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
+            canonical_string = f"{path_b64}:{timestamp}:{body_b64}"
+            signature = private_key.sign(canonical_string)
+            headers["X-SlideRule-Timestamp"] = str(timestamp)
+            headers["X-SlideRule-Signature"] = base64.b64encode(signature).decode("ascii")
+        except: # if anything fails, then no headers are provided
+            pass
 
     #
     #  __populate

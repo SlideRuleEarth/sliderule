@@ -6,7 +6,7 @@ import urllib3
 from datetime import datetime, timedelta, timezone
 
 # ###############################
-# Cached Clients
+# Cached Objects
 # ###############################
 
 ec2 = boto3.client("ec2")
@@ -15,6 +15,7 @@ cf = boto3.client("cloudformation")
 ev = boto3.client('events')
 la = boto3.client('lambda')
 ses = boto3.client('ses')
+sm = boto3.client('secretsmanager')
 
 http = urllib3.PoolManager()
 
@@ -22,7 +23,6 @@ http = urllib3.PoolManager()
 # Globals
 # ###############################
 
-MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner']
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"

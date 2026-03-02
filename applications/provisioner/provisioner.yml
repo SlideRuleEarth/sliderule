@@ -186,6 +186,14 @@ Resources:
                 Condition:
                   StringEquals:
                     ses:Recipients: !Sub ${AlertEmail}
+        - PolicyName: SecretAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/secrets-*
 
   ## API Gateway HTTP API
   HttpApi:

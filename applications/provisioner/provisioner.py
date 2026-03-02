@@ -3,7 +3,16 @@ import botocore.exceptions
 import json
 import base64
 from datetime import datetime, timedelta, timezone
+from cryptography.hazmat.primitives.serialization import load_ssh_public_key
 import manager
+
+# ###############################
+# Globals
+# ###############################
+
+MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
+
+_pubkey_cache = {}
 
 # ###############################
 # Utilities
@@ -99,6 +108,44 @@ def send_email(title, message):
 # Business Logic
 # ###############################
 
+def verify_signature(username, path, body, host, timestamp, signature):
+    """
+    Verifies request signature using public key
+    """
+    try:
+        # get public key
+        if username not in _pubkey_cache:
+            domain = os.environ["DOMAIN"]
+            secret_name = f"{domain}/pubkeys"
+            secret_string = manager.sm.get_secret_value(SecretId=secret_name)['SecretString']
+            _pubkey_cache = json.loads(secret_string)
+        public_key = load_ssh_public_key(_pubkey_cache[username])
+
+        # build canonical message
+        full_path = f'{host}/{path}'
+        full_path_b64 = base64.urlsafe_b64encode(full_path.encode()).decode()
+        body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
+        canonical_string = f"{full_path_b64}:{timestamp}:{body_b64}"
+
+        # verify message (raises exception if invalid)
+        public_key.verify(signature, canonical_string)
+
+        # check timestamp
+        allowed_range_seconds = 60
+        now = int(datetime.now(timezone.utc).timestamp())
+        time_of_signature = int(timestamp)
+        if (time_of_signature < (now - allowed_range_seconds)) or (time_of_signature > (now + allowed_range_seconds)):
+            raise RuntimeError(f"Invalid time of signature: {time_of_signature}")
+
+        # valid signature
+        return True
+
+    except Exception as e:
+
+        # invalid signature
+        print(f"Failed to verify request signature: {e}")
+        return False
+
 #
 # Max Nodes
 #
@@ -152,7 +199,21 @@ def get_user_info(claims):
 #
 # Validate Request
 #
-def validate_request(path, body, info):
+def validate_request(event, info):
+
+    # pull out required request parameters
+    path = event.get('rawPath', '')
+    body = get_body(event)
+    print(f'Received request: {path} {body}') # diagnostic
+
+    # check signature (for owners only)
+    if "owner" in info["orgRoles"]:
+        host = event["headers"]["host"]
+        timestamp = event["headers"]["X-SlideRule-Timestamp"]
+        signature = event["headers"]["X-SlideRule-Signature"]
+        if not verify_signature(info["userName"], path, body, host, timestamp, signature):
+            return None
+
     # check organization membership
     if 'member' not in info["orgRoles"]:
         print(f'Access denied to {info["userName"]}, organization roles: {info["orgRoles"]}')
@@ -172,12 +233,14 @@ def validate_request(path, body, info):
 
     # check ttl
     ttl = body.get("ttl")
-    if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < manager.MIN_TTL_FOR_AUTOSHUTDOWN)):
+    if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < MIN_TTL_FOR_AUTOSHUTDOWN)):
         print(f'Access denied to {info["userName"]}, invalid ttl: {ttl}')
         return None
 
     # build and return request info
     return {
+        "path": path,
+        "username": info["userName"],
         "owner": 'owner' in info["orgRoles"],
         "cluster": cluster,
         "node_capacity": node_capacity,
@@ -499,33 +562,30 @@ def lambda_gateway(event, context):
     try:
         # process request
         claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
-        path = event.get('rawPath', '') # get path of request
-        body = get_body(event) # get body of request
         info = get_user_info(claims) # pull out user information from claims
-        rqst = validate_request(path, body, info) # validate request against claims and return safe request parameters
-        print(f'Received request: {path} {body}') # diagnostic
+        rqst = validate_request(event, info) # validate request against claims and return safe request parameters
 
         # route request
         if rqst == None: # check request
             return json_response(403, {'error': 'access denied'})
-        elif path == '/info': # only uses info, but still validate rqst
+        elif rqst["path"] == '/info': # only uses info, but still validate rqst
             return json_response(200, info)
-        elif path == '/deploy':
+        elif rqst["path"] == '/deploy':
             return deploy_handler(rqst)
-        elif path == '/extend':
+        elif rqst["path"] == '/extend':
             return extend_handler(rqst)
-        elif path == '/destroy':
+        elif rqst["path"] == '/destroy':
             return manager.lambda_destroy(rqst)
-        elif path == '/status':
+        elif rqst["path"] == '/status':
             return status_handler(rqst)
-        elif path == '/events':
+        elif rqst["path"] == '/events':
             return events_handler(rqst)
         elif rqst["owner"]: # owner level APIs
-            if path == '/report/clusters' or path == '/report':
+            if rqst["path"] == '/report/clusters' or rqst["path"] == '/report':
                 return report_clusters_handler(rqst)
-            elif path == '/report/tests':
+            elif rqst["path"] == '/report/tests':
                 return report_tests_handler(rqst)
-            elif path == '/test':
+            elif rqst["path"] == '/test':
                 return test_handler(rqst)
 
         # invalid path

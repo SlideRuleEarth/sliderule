@@ -162,7 +162,7 @@ def create_signed_state(payload=''):
     - Optional redirect URI
     - HMAC signature to prevent tampering
 
-    Format: {nonce}:{timestamp}:{redirect_uri_b64}:{signature}
+    Format: {nonce}:{timestamp}:{payload}:{signature}
 
     Args:
         payload: Can be used for frontend redirect URI to include in state
@@ -174,7 +174,7 @@ def create_signed_state(payload=''):
     nonce = secrets.token_urlsafe(16)
     timestamp = str(int(datetime.now(timezone.utc).timestamp()))
 
-    # Create message to sign (nonce:timestamp:redirect_uri_b64)
+    # Create message to sign
     message = f"{nonce}:{timestamp}:{payload}"
 
     # Create HMAC signature

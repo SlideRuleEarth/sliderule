@@ -5,6 +5,7 @@ channels:
 dependencies:
   - requests
   - croniter
+  - cryptography
   - boto3
   - pytest
   - pip

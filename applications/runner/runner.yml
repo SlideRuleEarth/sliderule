@@ -534,8 +534,8 @@ Resources:
       StageName: '$default'
       AutoDeploy: true
       DefaultRouteSettings:
-        ThrottlingBurstLimit: 10
-        ThrottlingRateLimit: 5
+        ThrottlingBurstLimit: 1
+        ThrottlingRateLimit: 1
 
   # Lambda Permission for API Gateway
   LambdaApiGatewayPermission:
