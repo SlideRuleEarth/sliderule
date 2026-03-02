@@ -1,8 +1,12 @@
 """Tests for sliderule APIs."""
 
+import json
+import numpy as np
 import pytest
+import requests
 import sliderule
 from sliderule import icesat2
+from sliderule.session import Session
 from pathlib import Path
 import os
 
@@ -129,3 +133,31 @@ class TestRegion:
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         assert len(region["poly"]) == 5 # 5 coordinate pairs
         assert {'lon', 'lat'} <= region["poly"][0].keys()
+
+    def test_toregion_int_coords_json_serializable(self):
+        region = sliderule.toregion([
+            {"lon": -120, "lat": -25},
+            {"lon": -95, "lat": -25},
+            {"lon": -95, "lat": 0},
+            {"lon": -120, "lat": 0},
+            {"lon": -120, "lat": -25},
+        ])
+        json.dumps(region["poly"])
+
+    def test_toregion_numpy_int_coords_request_serializable(self, monkeypatch):
+        session = Session()
+
+        def fake_get(*args, **kwargs):
+            raise requests.ConnectionError("blocked")
+
+        monkeypatch.setattr(session.session, "get", fake_get)
+
+        poly = [
+            {"lon": np.int64(-120), "lat": np.int64(-25)},
+            {"lon": np.int64(-95), "lat": np.int64(-25)},
+            {"lon": np.int64(-95), "lat": np.int64(0)},
+            {"lon": np.int64(-120), "lat": np.int64(0)},
+            {"lon": np.int64(-120), "lat": np.int64(-25)},
+        ]
+        rsps = session.source("version", {"poly": poly}, stream=False)
+        assert rsps == "Connection error"
