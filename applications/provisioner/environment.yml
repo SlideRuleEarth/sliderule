@@ -8,4 +8,5 @@ dependencies:
   - cryptography
   - boto3
   - pytest
+  - pytest-env
   - pip

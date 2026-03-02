@@ -108,27 +108,37 @@ def send_email(title, message):
 # Business Logic
 # ###############################
 
-def verify_signature(username, path, body, host, timestamp, signature):
+def verify_signature(username, event):
     """
     Verifies request signature using public key
     """
+    global _pubkey_cache
     try:
+        # pull out signing parameters from request
+        path = event.get('rawPath', '')
+        body_raw = event.get("body")
+        host = event["headers"]["host"]
+        timestamp = event["headers"]["X-SlideRule-Timestamp"]
+        signature_b64 = event["headers"]["X-SlideRule-Signature"]
+        signature = base64.b64decode(signature_b64)
+
         # get public key
         if username not in _pubkey_cache:
             domain = os.environ["DOMAIN"]
             secret_name = f"{domain}/pubkeys"
             secret_string = manager.sm.get_secret_value(SecretId=secret_name)['SecretString']
             _pubkey_cache = json.loads(secret_string)
-        public_key = load_ssh_public_key(_pubkey_cache[username])
+        public_key = load_ssh_public_key(_pubkey_cache[username].encode("utf-8"))
 
         # build canonical message
-        full_path = f'{host}/{path}'
+        full_path = f'{host}{path}'
         full_path_b64 = base64.urlsafe_b64encode(full_path.encode()).decode()
-        body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
+        body_b64 = base64.urlsafe_b64encode(body_raw.encode()).decode()
         canonical_string = f"{full_path_b64}:{timestamp}:{body_b64}"
+        message_bytes = canonical_string.encode("utf-8")
 
         # verify message (raises exception if invalid)
-        public_key.verify(signature, canonical_string)
+        public_key.verify(signature, message_bytes)
 
         # check timestamp
         allowed_range_seconds = 60
@@ -150,9 +160,6 @@ def verify_signature(username, path, body, host, timestamp, signature):
 # Max Nodes
 #
 def get_max_nodes(org_roles):
-    """
-    Returns the maximum number of nodes a user can deploy
-    """
     max_nodes = 0
     if 'owner' in org_roles:
         max_nodes = 100
@@ -164,9 +171,6 @@ def get_max_nodes(org_roles):
 # Max TTL
 #
 def get_max_ttl(org_roles):
-    """
-    Returns the maximum time to live a user can deploy
-    """
     max_ttl = 0
     if 'owner' in org_roles:
         max_ttl = 525600 # 1 year
@@ -206,10 +210,7 @@ def validate_request(event, info):
 
     # check signature (for owners only)
     if "owner" in info["orgRoles"]:
-        host = event["headers"]["host"]
-        timestamp = event["headers"]["X-SlideRule-Timestamp"]
-        signature = event["headers"]["X-SlideRule-Signature"]
-        if not verify_signature(info["userName"], path, body, host, timestamp, signature):
+        if not verify_signature(info["userName"], event):
             return None
 
     # check organization membership
@@ -556,7 +557,6 @@ def lambda_gateway(event, context):
     """
     Route requests based on path
     """
-
     try:
         # process request
         claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
