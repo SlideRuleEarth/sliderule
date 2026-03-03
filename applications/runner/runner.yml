@@ -11,7 +11,7 @@ Parameters:
     Type: String
   Domain:
     Type: String
-  RunnerUrl:
+  RunnerHostname:
     Type: String
   JwtIssuer:
     Type: String
@@ -550,7 +550,7 @@ Resources:
   ApiCustomDomain:
     Type: AWS::ApiGatewayV2::DomainName
     Properties:
-      DomainName: !Ref RunnerUrl
+      DomainName: !Ref RunnerHostname
       DomainNameConfigurations:
         - EndpointType: REGIONAL
           CertificateArn: !Ref CertificateArn
@@ -569,7 +569,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Sub "${Domain}."
-      Name: !Ref RunnerUrl
+      Name: !Ref RunnerHostname
       Type: A
       AliasTarget:
         DNSName: !GetAtt ApiCustomDomain.RegionalDomainName

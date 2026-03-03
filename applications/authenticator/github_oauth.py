@@ -23,7 +23,7 @@ import requests
 ############################
 
 # Configuration from environment variables
-AUTHENTICATOR_URL = os.environ.get('AUTHENTICATOR_URL')
+AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
 CLIENT_SECRET_NAME = os.environ.get('CLIENT_SECRET_NAME')
@@ -641,7 +641,7 @@ def authenticate_user(authorization_str, event, scope):
         'org': GITHUB_ORG,
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
-        'iss': f"https://{AUTHENTICATOR_URL}"
+        'iss': f"https://{AUTHENTICATOR_HOSTNAME}"
     }
 
     # Create minimal signed JWT token (only server-essential fields)
@@ -814,7 +814,7 @@ def handle_login(event):
         # Build GitHub authorization URL
         github_parms = {
             'client_id': GITHUB_CLIENT_ID,
-            'redirect_uri': f"https://{AUTHENTICATOR_URL}/auth/github/callback",
+            'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
             'scope': 'read:org',
             'state': github_state
         }
@@ -1364,7 +1364,7 @@ def handle_openid(event):
     """
     try:
         # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
-        issuer = f"https://{AUTHENTICATOR_URL}"
+        issuer = f"https://{AUTHENTICATOR_HOSTNAME}"
 
         # build response body
         body = {
@@ -1392,7 +1392,7 @@ def handle_authorization_server(event: dict) -> dict:
     """
     Serve OAuth 2.0 Authorization Server Metadata per RFC 8414.
     """
-    base_url = f"https://{AUTHENTICATOR_URL}"
+    base_url = f"https://{AUTHENTICATOR_HOSTNAME}"
     metadata = {
         "issuer": base_url, # Validates that the metadata document it received came from the expected AS (prevents AS mix-up attacks).
         "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for any AS that supports authorization_code grant.

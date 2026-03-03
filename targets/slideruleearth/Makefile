@@ -80,15 +80,14 @@ PUBLIC_CLUSTER ?= sliderule
 CLUSTER ?= developers
 VERSION ?= unstable
 
-AUTHENTICATOR_URL ?= login.$(DOMAIN)
-PROVISIONER_URL ?= provisioner.$(DOMAIN)
-RUNNER_URL ?= runner.$(DOMAIN)
-RECORDER_URL ?= recorder.$(DOMAIN)
-DOCUMENTATION_URL ?= docs.$(DOMAIN)
+AUTHENTICATOR_HOSTNAME ?= login.$(DOMAIN)
+PROVISIONER_HOSTNAME ?= provisioner.$(DOMAIN)
+RUNNER_HOSTNAME ?= runner.$(DOMAIN)
+DOCUMENTATION_HOSTNAME ?= docs.$(DOMAIN)
 ALERT_STREAM ?= recorder-firehose-alerts
 TELEMETRY_STREAM ?= recorder-firehose-telemetry
 SUPPORT_EMAIL ?= support@mail.slideruleearth.io
-JWT_ISSUER = https://$(AUTHENTICATOR_URL)
+JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -460,7 +459,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=AuthenticatorUrl,ParameterValue=$(AUTHENTICATOR_URL) \
+						ParameterKey=AuthenticatorHostname,ParameterValue=$(AUTHENTICATOR_HOSTNAME) \
 						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
 						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
 						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
@@ -519,7 +518,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=ProvisionerUrl,ParameterValue=$(PROVISIONER_URL) \
+						ParameterKey=ProvisionerHostname,ParameterValue=$(PROVISIONER_HOSTNAME) \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
@@ -569,7 +568,7 @@ runner-create: runner-build ## creates the lambda runner functions
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=RunnerUrl,ParameterValue=$(RUNNER_URL) \
+						ParameterKey=RunnerHostname,ParameterValue=$(RUNNER_HOSTNAME) \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
@@ -659,7 +658,7 @@ certbot-delete: ## deletes the lambda certbot function
 ########################
 
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
-	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_URL)'].Id" \
+	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_HOSTNAME)'].Id" \
 	--output text)
 
 DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
@@ -688,7 +687,7 @@ documentation-create: ## create documentation stack
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-east-1 \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=DocumentationUrl,ParameterValue=$(DOCUMENTATION_URL) \
+						ParameterKey=DocumentationHostname,ParameterValue=$(DOCUMENTATION_HOSTNAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET)
 	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name documentation

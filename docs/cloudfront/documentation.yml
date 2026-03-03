@@ -5,7 +5,7 @@ Parameters:
 
   Domain:
     Type: String
-  DocumentationUrl:
+  DocumentationHostname:
     Type: String
   HostedZoneId:
     Type: String
@@ -31,7 +31,7 @@ Resources:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub "OAI for ${DocumentationUrl}"
+        Comment: !Sub "OAI for ${DocumentationHostname}"
 
   SecurityHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
@@ -73,10 +73,10 @@ Resources:
   WebsiteCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Ref DocumentationUrl
+      DomainName: !Ref DocumentationHostname
       ValidationMethod: DNS
       DomainValidationOptions:
-        - DomainName: !Ref DocumentationUrl
+        - DomainName: !Ref DocumentationHostname
           HostedZoneId: !Ref HostedZoneId
 
   WebsiteDistribution:
@@ -85,7 +85,7 @@ Resources:
       DistributionConfig:
         Enabled: true
         Aliases:
-          - !Ref DocumentationUrl
+          - !Ref DocumentationHostname
         DefaultRootObject: "index.html"
         PriceClass: PriceClass_200
         IPV6Enabled: true
@@ -115,7 +115,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Ref HostedZoneId
-      Name: !Ref DocumentationUrl
+      Name: !Ref DocumentationHostname
       Type: A
       AliasTarget:
         DNSName: !GetAtt WebsiteDistribution.DomainName
