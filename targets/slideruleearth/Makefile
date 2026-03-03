@@ -489,6 +489,21 @@ authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time
 		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
 		--description "GitHub OAuth Client Secret for SlideRule"
 
+test-authenticator-create: ## creates the test-authenticator
+	aws cloudformation create-stack \
+		--stack-name 	test-authenticator \
+		--template-body file://$(ROOT)/applications/authenticator/teststore.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION)
+	aws cloudformation wait stack-create-complete --stack-name test-authenticator
+
+test-authenticator-describe: ## status the creation/deletion of the test-authenticator
+	aws cloudformation describe-stack-events --stack-name test-authenticator
+
+test-authenticator-delete: ## deletes the test-authenticator
+	aws cloudformation delete-stack --stack-name test-authenticator
+	aws cloudformation wait stack-delete-complete --stack-name test-authenticator
+
 ########################
 # Provisioner Targets
 ########################
@@ -612,7 +627,7 @@ certificate-create: ## creates the certificate
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=CertificateDomains,ParameterValue=$(CERTIFICATE_DOMAINS) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID)
-	aws cloudformation wait stack-create-complete --stack-name certbot
+	aws cloudformation wait stack-create-complete --stack-name certificate
 
 certificate-describe: ## status the creation/deletion of the certificate
 	aws cloudformation describe-stack-events --stack-name certificate

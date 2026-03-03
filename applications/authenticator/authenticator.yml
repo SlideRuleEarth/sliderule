@@ -147,9 +147,9 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-    TimeToLiveSpecification:
-      AttributeName: ttl
-      Enabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   # API Gateway HTTP API
   HttpApi:

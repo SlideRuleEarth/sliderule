@@ -33,6 +33,12 @@ HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager 
 ALLOWED_REDIRECT_HOSTS = os.environ.get('ALLOWED_REDIRECT_HOSTS', '').split(' ') # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 
+# GitHub OAuth endpoints (from the environment only for testing)
+GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
+GITHUB_TOKEN_URL = os.environ.get('GITHUB_TOKEN_URL','https://github.com/login/oauth/access_token')
+GITHUB_DEVICE_CODE_URL = os.environ.get('GITHUB_DEVICE_CODE_URL','https://github.com/login/device/code')
+GITHUB_API_URL = os.environ.get('GITHUB_API_URL','https://api.github.com')
+
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
 
@@ -57,12 +63,6 @@ CODE_EXPIRATION_SECONDS = 120 # seconds
 
 # OAuth state expiration (seconds) - state tokens older than this are rejected
 STATE_EXPIRATION_SECONDS = 60 # seconds
-
-# GitHub OAuth endpoints
-GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
-GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
-GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code'
-GITHUB_API_URL = 'https://api.github.com'
 
 # Cache for secrets (Lambda container reuse)
 _secrets_cache = {}
@@ -195,7 +195,7 @@ def json_response(status_code, body, headers=None, with_cors=True, with_cache=Fa
     """Return a JSON API response with headers."""
     response = {
         'statusCode': status_code,
-        'headers': {}
+        'headers': {'Content-Type': 'application/json'}
     }
     # add body
     if body != None:
@@ -205,10 +205,6 @@ def json_response(status_code, body, headers=None, with_cors=True, with_cache=Fa
     # add base headers
     if headers != None:
         response['headers'] |= headers
-    else:
-        response['headers'] |= {
-            'Content-Type': 'application/json',
-        }
     # add cors
     if with_cors:
         response['headers'] |= {
@@ -221,12 +217,8 @@ def json_response(status_code, body, headers=None, with_cors=True, with_cache=Fa
         response['headers'] |= {
             "Cache-Control": "public, max-age=3600"
         }
-
-def parse_form_body(event):
-    body = event.get('body') or ''
-    if event.get('isBase64Encoded'):
-        body = base64.b64decode(body).decode('utf-8')
-    return dict(urllib.parse.parse_qsl(body, keep_blank_values=True))
+    # return full response
+    return response
 
 
 # =============================================================================
@@ -693,7 +685,7 @@ def handle_register(event: dict) -> dict:
     """
     Dynamic Client Registration endpoint per RFC 7591.
     """
-    parms               = parse_form_body(event)
+    parms               = event.get('queryStringParameters') or {}
     redirect_uris       = parms.get('redirect_uris', [])
     client_name         = parms.get('client_name', 'Unknown Client')
     grant_types         = parms.get('grant_types', ['authorization_code']) # defaults to ["authorization_code"] per RFC 7591
@@ -880,11 +872,13 @@ def handle_callback(event):
     Security: Validates HMAC-signed state parameter to prevent CSRF attacks.
     """
     try:
-        query_params = event.get('queryStringParameters') or {}
-        code = query_params.get('code')
-        github_state = query_params.get('state')
-        error = query_params.get('error')
-        error_description = query_params.get('error_description')
+        parms               = event.get('queryStringParameters') or {}
+        code                = parms.get('code')
+        github_state        = parms.get('state')
+        error               = parms.get('error')
+        error_description   = parms.get('error_description')
+
+        # extract and verify state information
         payload_b64 = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
         payload = base64.urlsafe_b64decode(payload_b64.encode()).decode()
         client_id, redirect_uri, client_state = payload.split(":")
@@ -937,7 +931,7 @@ def handle_callback(event):
 
 def handle_token(event):
     try:
-        parms           = parse_form_body(event)
+        parms           = event.get('queryStringParameters') or {}
         grant_type      = parms.get('grant_type')
         code            = parms.get('code')
         redirect_uri    = parms.get('redirect_uri')
@@ -1162,19 +1156,21 @@ def handle_device_poll(event):
     - 400 with error if authorization failed or expired
     """
     try:
-        # Parse request body
+        # Get request body
         body = event.get('body', '{}')
         if event.get('isBase64Encoded', False):
             body = base64.b64decode(body).decode('utf-8')
 
+        # Parse request body
         try:
-            params = json.loads(body) if body else {}
+            # Try JSON-encoded format
+            parms = json.loads(body) if body else {}
         except json.JSONDecodeError:
             # Try URL-encoded format
-            params = dict(urllib.parse.parse_qsl(body))
+            parms = dict(urllib.parse.parse_qsl(body))
 
-        device_code = params.get('device_code')
-
+        # Retrieve device code
+        device_code = parms.get('device_code')
         if not device_code:
             return json_response(400, {
                 'error': 'missing_device_code',
@@ -1182,9 +1178,7 @@ def handle_device_poll(event):
             })
 
         # Poll GitHub for access token
-        client_secret = get_github_client_secret()
-
-        response = requests.post(
+        data = requests.post(
             GITHUB_TOKEN_URL,
             headers={
                 'Accept': 'application/json',
@@ -1192,16 +1186,14 @@ def handle_device_poll(event):
             },
             data={
                 'client_id': GITHUB_CLIENT_ID,
-                'client_secret': client_secret,
+                'client_secret': get_github_client_secret(),
                 'device_code': device_code,
                 'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'
             },
             timeout=HTTP_TIMEOUT_SECONDS
-        )
+        ).json()
 
-        data = response.json()
-
-        # Check for errors
+        # Handle errors (not all are fatal)
         if 'error' in data:
             error = data.get('error')
 
@@ -1229,7 +1221,7 @@ def handle_device_poll(event):
                 'error_description': data.get('error_description', 'Authorization failed')
             })
 
-        # Success! We have an access token
+        # Success; we have an access token
         access_token = data.get('access_token')
         if not access_token:
             return json_response(500, {
@@ -1482,7 +1474,6 @@ def lambda_gateway(event, context):
     """
     path = event.get('rawPath', '')
     method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
-
     print(f"Received request: {method} {path}")
 
     # Web Client Authorization Code flow
@@ -1494,20 +1485,24 @@ def lambda_gateway(event, context):
         return handle_callback(event)
     elif path == '/auth/github/token':
         return handle_token(event)
+
     # Device Flow for CLI/Python clients
     elif path == '/auth/github/device':
         return handle_device_code_request(event)
     elif path == '/auth/github/device/poll':
         return handle_device_poll(event)
+
     # PAT Key login
     elif path == '/auth/github/pat':
         return handle_pat_login(event)
+
     # Refresh token
     elif path == '/auth/refresh':
         return handle_refresh(event)
     # Public key endpoint for JWT verification (PEM)
     elif path == '/auth/pem':
         return handle_pem(event)
+
     # Public key endpoint for JWT verification (JWKS)
     elif path == '/.well-known/jwks.json':
         return handle_jwks(event)
@@ -1517,6 +1512,7 @@ def lambda_gateway(event, context):
     # OAuth 2.1 Service Metadata
     elif path == '/.well-known/oauth-authorization-server':
         return handle_authorization_server(event)
+
     # Unknown path
     else:
         return json_response(404, {

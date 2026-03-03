@@ -1,0 +1,14 @@
+# conda env create -f environment.yml
+name: authenticator
+channels:
+  - conda-forge
+dependencies:
+  - requests
+  - pyasn1
+  - pyasn1-modules
+  - boto3
+  - fastapi
+  - uvicorn
+  - pytest
+  - pytest-env
+  - pip
