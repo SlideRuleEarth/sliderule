@@ -23,7 +23,7 @@ http = urllib3.PoolManager()
 # Globals
 # ###############################
 
-SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner']
+SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp']
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"
 
@@ -131,23 +131,26 @@ def build_rule_name(stack_name):
     return f'{stack_name}-auto-shutdown'
 
 #
+# Checks on cluster name
+#
+def valid_cluster_name(cluster):
+    if (cluster in SYSTEM_KEYWORDS) or \
+       (not re.match(r'^[A-Za-z0-9-_]+$', cluster)) or \
+       (len(cluster) > 40):
+        return False
+    else:
+        return True
+
+#
 # Convention for deriving stack name from cluster
 #
 def build_stack_name(cluster):
-    # check for correct type
     if not isinstance(cluster, str):
         return None
-    # check keywords
-    if cluster in SYSTEM_KEYWORDS:
-        raise RuntimeError(f'Reserved string used for cluster name: <{cluster}>')
-    # check valid characters
-    if not re.match(r'^[A-Za-z0-9-_]+$', cluster):
-        raise RuntimeError(f'Illegal cluster name: <{cluster}>')
-    # check reasonable length
-    if len(cluster) > 40:
-        raise RuntimeError(f'Cluster name too long: <{len(cluster)}')
-    # return cluster stack name
-    return f'{cluster}-cluster'
+    elif valid_cluster_name(cluster):
+        return f'{cluster}-cluster'
+    else:
+        raise RuntimeError(f"Invalid cluster name: {cluster}")
 
 # ###############################
 # Lambda: Schedule Auto Shutdown

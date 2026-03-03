@@ -185,8 +185,8 @@ def get_user_info(claims):
     username = claims.get('sub', '<anonymous>')
     org_roles = parse_claim_array(claims.get('org_roles', "[]"))
     audiences = parse_claim_array(claims.get('aud', "[]"))
-    known_clusters = ['sliderule'] + [audience for audience in audiences if (audience != "*" and audience not in manager.SYSTEM_KEYWORDS)]
-    deployable_clusters = [audience for audience in audiences if (audience not in manager.SYSTEM_KEYWORDS)]
+    deployable_clusters = {audience for audience in audiences if manager.valid_cluster_name(audience)}
+    known_clusters = deployable_clusters - {'*'} | {'sliderule'}
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
     return {
@@ -209,7 +209,7 @@ def validate_request(event, info):
     print(f'Received request: {path} {body}') # diagnostic
 
     # check signature (for owners only)
-    if "owner" in info["orgRoles"]:
+    if ("owner" in info["orgRoles"]) or ('*' in info["deployableClusters"]):
         if not verify_signature(info["userName"], event):
             return None
 
