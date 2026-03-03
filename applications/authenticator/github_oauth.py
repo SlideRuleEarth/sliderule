@@ -23,6 +23,7 @@ import requests
 ############################
 
 # Configuration from environment variables
+DOMAIN = os.environ.get('DOMAIN')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
@@ -43,16 +44,19 @@ ALLOWED_CHALLENGE_METHODS   = {"S256"}
 ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "cluster"}
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
-HTTP_TIMEOUT_SECONDS = 15
+HTTP_TIMEOUT_SECONDS = 15 # seconds
 
 # Token time to live (hours) - token invalid after this much time past issuance
 JWT_EXPIRATION_HOURS = 12 # hours
 
-# OAuth state expiration (seconds) - state tokens older than this are rejected
-STATE_EXPIRATION_SECONDS = 600 # 10 minutes
-
 # Session time to live (hours) - database entries automatically deleted after this time
-SESSION_TTL_HOURS = 24 # hours
+SESSION_EXPIRATION_HOURS = 12 # hours
+
+# Session Code time to live (seconds) - codes returned to user must be exchanged in this amount of time
+CODE_EXPIRATION_SECONDS = 120 # seconds
+
+# OAuth state expiration (seconds) - state tokens older than this are rejected
+STATE_EXPIRATION_SECONDS = 60 # seconds
 
 # GitHub OAuth endpoints
 GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
@@ -148,12 +152,16 @@ def session_store(key, value):
         Item = {
             "id": key,
             "value": value,
-            "ttl": int(datetime.now().timestamp()) + (SESSION_TTL_HOURS * 60 * 60) # seconds
+            "ttl": int(datetime.now().timestamp()) + (SESSION_EXPIRATION_HOURS * 60 * 60) # seconds
         },
-        ConditionExpression="attribute_not_exists(id)")
+        ConditionExpression = "attribute_not_exists(id)"
+    )
+    if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+        raise RuntimeError(f"Failed to store {key}: {response}")
     return response
 
-def session_load(key):
+
+def session_load(key, with_delete=False):
     """
     Loads a value at key from the DynamoDB table
     """
@@ -161,8 +169,23 @@ def session_load(key):
     if _dynamodb_client is None:
         _dynamodb_client = boto3.resource('dynamodb')
     table = _dynamodb_client.Table(SESSION_TABLE)
-    response = table.get_item(Key={"id": key}).get("Item")
-    return response
+    # retrieve data at 'key'
+    load_response = table.get_item(Key = {
+        "id": key
+    })
+    # delete 'key' if requested
+    if with_delete:
+        delete_response = table.delete_item(
+            Key = {"id": key},
+            ConditionExpression = "attribute_exists(id)"
+        )
+        if delete_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            raise RuntimeError(f"Failed to delete {key}: {delete_response}")
+    # check and return loaded data
+    if load_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+        raise RuntimeError(f"Failed to load {key}: {load_response}")
+    return load_response.get("Item")
+
 
 # =============================================================================
 # API Gateway Helper Functions
@@ -518,7 +541,7 @@ def generate_audience_list(username, teams, org_roles, scope):
 
     # Provide MCP services
     if ('mcp:tools' in scope) or ('mcp:resources' in scope): # any authenticated user has access to MCP services
-        allowed.append('https://')
+        allowed.append(f'https://mcp.{DOMAIN}')
 
     # Return allowed clusters
     return allowed
@@ -612,7 +635,7 @@ def refresh_auth_token(token, event):
         raise Exception(f"Token refresh failed: {e}")
 
 
-def authenticate_user(authorization_str, event, scope):
+def authenticate_user(authorization_str, scope):
     """
     Build the authentication token and metadata for the user
     """
@@ -758,7 +781,7 @@ def handle_register(event: dict) -> dict:
 
     # 201 Created — not 200.  RFC 7591 is explicit about this.
     return json_response(201, client_record, headers={
-        "Cache-Control": "no-store"    # never cache registration responses
+        "Cache-Control": "no-store" # never cache registration responses
     })
 
 
@@ -776,34 +799,49 @@ def handle_login(event):
         client_state            = parms.get("state")
         scope                   = parms.get("scope")
         code_challenge          = parms.get("code_challenge")
-        code_challenge_method   = parms.get("code_challenge")
+        code_challenge_method   = parms.get("code_challenge_method")
         resource                = parms.get("resource") # ignored
-
-        # check response type
-        if response_type != "code":
-            raise RuntimeError(f"Invalid response type: {response_type}")
-
-        # check code challenge method
-        if code_challenge_method != "S256":
-            raise RuntimeError(f"Invalid code challenge method: {code_challenge_method}")
 
         # get session
         session = session_load(client_id)
 
         # check session
         if not session:
-            raise RuntimeError(f"Unable to locate client id: {client_id}")
-        elif
-        # save off the code challenge
-        session = secrets.token_urlsafe(32)
-        _tmp_database[session] = {
-            "challenge": code_challenge,
-            "redirect_uri": redirect_uri
-        }
+            raise RuntimeError(f"Unable to locate session: {client_id}")
 
-        ##################
+        # check session expiration
+        now = int(datetime.now().timestamp())
+        issued_at = int(session["client_id_issued_at"])
+        if (now < issued_at) or ((now - issued_at) > (SESSION_EXPIRATION_HOURS * 60 * 60)):
+            raise RuntimeError(f"Session expired: {issued_at}")
+
+        # check redirect uri
+        if redirect_uri not in session["redirect_uris"]:
+            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+
+        # check response type
+        if response_type not in session["response_types"]:
+            raise RuntimeError(f"Invalid response type: {response_type}")
+
+        # check code challenge method
+        if code_challenge_method != session["code_challenge_method"]:
+            raise RuntimeError(f"Invalid code challenge method: {code_challenge_method}")
+
+        # check scope
+        for s in scope.split():
+            if s not in session["scope"]:
+                raise RuntimeError(f"Invalid scope: {scope}")
+
+        # store the code challenge associated with session
+        session_store(f"{client_id}-challenge", {
+            "code_challenge": code_challenge,
+            "redirect_uri": redirect_uri,
+            "scope": scope.split()
+        })
+
+        # -----------------
         # Relay to GitHub
-        ##################
+        # -----------------
 
         # Create HMAC-signed state for CSRF protection
         # the state includes the redirect_uri securely encoded
@@ -851,6 +889,17 @@ def handle_callback(event):
         payload = base64.urlsafe_b64decode(payload_b64.encode()).decode()
         client_id, redirect_uri, client_state = payload.split(":")
 
+        # get session challenge (and delete so it cannot be reused)
+        session_challenge = session_load(f"{client_id}-challenge", with_delete=True)
+
+        # check session
+        if not session_challenge:
+            raise RuntimeError(f"Unable to locate session challenge: {client_id}")
+
+        # check redirect_uri (should match because we are the ones that stored it both places)
+        if redirect_uri != session_challenge["redirect_uri"]:
+            raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
+
         # check OAuth errors from GitHub
         if error:
             return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
@@ -860,14 +909,24 @@ def handle_callback(event):
             return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
 
         # Authenticate user (gets token and metadata)
-        access_token = exchange_code_for_token(code, event)
-        token, metadata = authenticate_user(f'Bearer {access_token}', event, scope)
-        _tmp_database[session]["token"] = token
-        _tmp_database[session]["metadata"] = metadata
+        access_token = exchange_code_for_token(code)
+        token, metadata = authenticate_user(f'Bearer {access_token}', session_challenge["scope"])
+
+        # Generate unique code
+        code = uuid.uuid4()
+
+        # store token and metadata associated with session
+        session_store(f"{client_id}-{code}", {
+            "token": token,
+            "metadata": metadata,
+            "code_challenge": session_challenge["code_challenge"],
+            "redirect_uri": redirect_uri,
+            "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
+        })
 
         # Redirect to frontend with JWT in parameters
         return redirect_to_frontend(redirect_uri, parms={
-            'code': session,
+            'code': code,
             'state': client_state
         })
 
@@ -885,25 +944,38 @@ def handle_token(event):
         client_id       = parms.get('client_id')
         code_verifier   = parms.get('code_verifier')
 
-        # get session information
-        metadata = _tmp_database[code]["metadata"]
-        token = _tmp_database[code]["token"]
-        challenge = _tmp_database[code]["challenge"]
-        del _tmp_database[code] # clear
+        # get sessions
+        session = session_load(client_id)
+        session_code = session_load(f"{client_id}-{code}", with_delete=True)
 
-        # verify grant type
-        if grant_type != "authorization_code":
+        # check session
+        if not session:
+            raise RuntimeError(f"Unable to locate session: {client_id}")
+
+        # check session code
+        if not session_code:
+            raise RuntimeError(f"Unable to locate session code: {client_id}")
+
+        # check code expiration
+        now = int(datetime.now().timestamp())
+        expiration = int(session_code["expiration"])
+        if (now < expiration) or ((now - expiration) > CODE_EXPIRATION_SECONDS):
+            raise RuntimeError(f"Code has expired: {expiration}")
+
+        # check grant type
+        if grant_type not in session["grant_types"]:
             raise RuntimeError(f"Invalid grant type: {grant_type}")
 
-        # verify challenge
-        if not verify_code_challenge(code_verifier, challenge):
-            raise RuntimeError("Failed to verify code challenge")
-
         # verify redirect uri
-        if _tmp_database[code]["redirect_uri"] != redirect_uri:
+        if session_code["redirect_uri"] != redirect_uri:
             raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
 
+        # verify challenge
+        if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
+            raise RuntimeError("Failed to verify code challenge")
+
         # Build known and deployable clusters (user interface hints)
+        metadata = session_code["metadata"]
         info = {
             'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
@@ -917,10 +989,10 @@ def handle_token(event):
 
         # Redirect to frontend with JWT in parameters
         return json_response(200, {
-            "access_token": token,
+            "access_token": session_code["token"],
             "token_type": "Bearer",
             "expires_in": JWT_EXPIRATION_HOURS * 60,
-            "refresh_token": token, # revisit
+            "refresh_token": session_code["token"], # revisit
             "scope": "mcp:tools mcp:resources",
             "info": info
         })
@@ -933,22 +1005,13 @@ def handle_token(event):
         })
 
 
-def exchange_code_for_token(code, event):
+def exchange_code_for_token(code):
     """
     Exchange authorization code for access token.
     Using the host header field from the request as an added level of verification:
     we check the host is allowed, and GitHub checks that it matches the original request.
     The host header in this case does not get used for anything other than being checked.
     """
-    headers = event.get('headers', {})
-    host = headers.get('host', '')
-
-    if not is_allowed_host(host):
-        raise RuntimeError(F"Invalid host: {host}")
-
-    callback_url = f"https://{host}/auth/github/callback"
-    client_secret = get_github_client_secret()
-
     response = requests.post(
         GITHUB_TOKEN_URL,
         headers={
@@ -957,9 +1020,9 @@ def exchange_code_for_token(code, event):
         },
         data={
             'client_id': GITHUB_CLIENT_ID,
-            'client_secret': client_secret,
+            'client_secret': get_github_client_secret(),
             'code': code,
-            'redirect_uri': callback_url
+            'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback"
         },
         timeout=HTTP_TIMEOUT_SECONDS
     )
@@ -1176,7 +1239,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata
-        token, metadata = authenticate_user(f'Bearer {access_token}', event)
+        token, metadata = authenticate_user(f'Bearer {access_token}', ['cluster'])
 
         # Response with a successful authentication
         return json_response(200, {"status": "success", "token": token, "metadata": metadata})
@@ -1237,7 +1300,7 @@ def handle_pat_login(event):
             })
 
         # Token is valid! Authenticate user to get your own session token/metadata
-        token, metadata = authenticate_user(f'token {pat}', event)
+        token, metadata = authenticate_user(f'token {pat}', ['cluster'])
         return json_response(200, {
             'status': 'success',
             'token': token,
@@ -1398,14 +1461,14 @@ def handle_authorization_server(event: dict) -> dict:
         "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for any AS that supports authorization_code grant.
         "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token, and later to refresh an expired token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
-        "scopes_supported": ["mcp:tools", "mcp:resources", "offline_access"],
+        "scopes_supported": list(ALLOWED_SCOPES),
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
         "registration_endpoint": f"{base_url}/auth/github/register", # Dynamic client registration (RFC 7591)
 #        "revocation_endpoint": f"{base_url}/auth/revoke", # invalidate tokens on logout
         "jwks_uri": f"{base_url}/.well-known/jwks.json", # fetching public key to verify JWT signatures
         "id_token_signing_alg_values_supported": ["RS256"], # The signing algorithms used when issuing JWTs.
-        "grant_types_supported": ["authorization_code", "refresh_token"], # allows silent token renewal
+        "grant_types_supported": list(ALLOWED_GRANT_TYPES), # allows silent token renewal
     }
     return json_response(200, metadata, with_cache=True)
 

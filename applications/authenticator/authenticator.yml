@@ -125,6 +125,7 @@ Resources:
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
+          DOMAIN: !Ref Domain
           AUTHENTICATOR_HOSTNAME: !Ref AuthenticatorHostname
           GITHUB_CLIENT_ID: !Ref GitHubClientId
           GITHUB_ORG: !Ref GitHubOrg
