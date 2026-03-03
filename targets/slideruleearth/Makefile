@@ -490,10 +490,6 @@ authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time
 		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
 		--description "GitHub OAuth Client Secret for SlideRule"
 
-authenticator-public-key: ## get the public pem key for JWT verification
-	mkdir -p /etc/haproxy/pem
-	curl $(JWT_ISSUER)/auth/github/pem > /etc/haproxy/pem/pubkey.pem
-
 ########################
 # Provisioner Targets
 ########################
@@ -815,7 +811,7 @@ init-dev-env: ## one-time setup of development environment for running locally
 	mkdir -p /data
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/ /data/ --recursive
 	mkdir -p /etc/haproxy/pem
-	curl $(JWT_ISSUER)/auth/github/pem > /etc/haproxy/pem/pubkey.pem
+	curl $(JWT_ISSUER)/auth/pem > /etc/haproxy/pem/pubkey.pem
 	mkdir -p /etc/ssl/private
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(DOMAIN).pem /etc/ssl/private/$(DOMAIN).pem
 

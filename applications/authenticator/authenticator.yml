@@ -95,6 +95,19 @@ Resources:
                   - kms:DescribeKey
                 Resource:
                   - !GetAtt JWTSigningKey.Arn
+        - PolicyName: DynamoDBAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt OauthStore.Arn
 
   # Lambda Function
   GitHubOAuthLambda:
@@ -112,12 +125,30 @@ Resources:
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
+          AUTHENTICATOR_URL: !Ref AuthenticatorUrl
           GITHUB_CLIENT_ID: !Ref GitHubClientId
           GITHUB_ORG: !Ref GitHubOrg
           CLIENT_SECRET_NAME: !Ref ClientSecretName
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
           ALLOWED_REDIRECT_HOSTS: !Ref AllowedRedirectHosts
+          SESSION_TABLE: !Sub '${AWS::StackName}-store'
+
+  # DynamoDB Table
+  OauthStore:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-store'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+    TimeToLiveSpecification:
+      AttributeName: ttl
+      Enabled: true
 
   # API Gateway HTTP API
   HttpApi:
@@ -202,12 +233,12 @@ Resources:
       RouteKey: 'GET /.well-known/jwks.json'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
-  # Route: GET /auth/github/pem (PEM endpoint for JWT verification)
+  # Route: GET /auth/pem (PEM endpoint for JWT verification)
   WellKnownPemRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: 'GET /auth/github/pem'
+      RouteKey: 'GET /auth/pem'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
   # Route: GET /.well-known/openid-configuration (Standard OIDC endpoint)

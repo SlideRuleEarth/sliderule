@@ -397,7 +397,7 @@ Resources:
 
           # Setup directories and download files
           mkdir -p /etc/haproxy/pem
-          retry curl ${JwtIssuer}/auth/github/pem > /etc/haproxy/pem/pubkey.pem
+          retry curl ${JwtIssuer}/auth/pem > /etc/haproxy/pem/pubkey.pem
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
 

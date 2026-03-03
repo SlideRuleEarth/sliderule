@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import json
 import os
+import uuid
 import secrets
 import urllib.parse
 from datetime import datetime, timedelta, timezone
@@ -22,25 +23,36 @@ import requests
 ############################
 
 # Configuration from environment variables
+AUTHENTICATOR_URL = os.environ.get('AUTHENTICATOR_URL')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
 CLIENT_SECRET_NAME = os.environ.get('CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
 ALLOWED_REDIRECT_HOSTS = os.environ.get('ALLOWED_REDIRECT_HOSTS', '').split(' ') # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
-JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '12'))
+SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
 
-# KMS client for JWT signing (initialized lazily)
-_kms_client = None
+# Registration configuration
+ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
+ALLOWED_RESPONSE_TYPES      = {"code"}
+ALLOWED_AUTH_METHODS        = {"none"}
+ALLOWED_CHALLENGE_METHODS   = {"S256"}
+ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "cluster"}
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15
 
+# Token time to live (hours) - token invalid after this much time past issuance
+JWT_EXPIRATION_HOURS = 12 # hours
+
 # OAuth state expiration (seconds) - state tokens older than this are rejected
-STATE_EXPIRATION_SECONDS = 600  # 10 minutes
+STATE_EXPIRATION_SECONDS = 600 # 10 minutes
+
+# Session time to live (hours) - database entries automatically deleted after this time
+SESSION_TTL_HOURS = 24 # hours
 
 # GitHub OAuth endpoints
 GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
@@ -48,19 +60,20 @@ GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code'
 GITHUB_API_URL = 'https://api.github.com'
 
-# JWT base audiences
-JWT_AUDIENCES = ['provisioner', 'runner']
-
 # Cache for secrets (Lambda container reuse)
 _secrets_cache = {}
 
-_tmp_database = {}
+# AWS KMS client for JWT signing (initialized lazily for lambda container reuse)
+_kms_client = None
+
+# AWS DynamoDB client (initialized lazily for lambda container reuse)
+_dynamodb_client = None
 
 # =============================================================================
 # AWS Helper Functions
 # =============================================================================
 
-def _get_secret(secret_arn):
+def get_secret(secret_arn):
     """Retrieve a secret from AWS Secrets Manager."""
     client = boto3.client('secretsmanager')
     response = client.get_secret_value(SecretId=secret_arn)
@@ -72,7 +85,7 @@ def get_github_client_secret():
     if 'client_secret' not in _secrets_cache:
         if not CLIENT_SECRET_NAME:
             raise ValueError("CLIENT_SECRET_NAME environment variable not set")
-        _secrets_cache['client_secret'] = _get_secret(CLIENT_SECRET_NAME)
+        _secrets_cache['client_secret'] = get_secret(CLIENT_SECRET_NAME)
     return _secrets_cache['client_secret']
 
 
@@ -85,7 +98,7 @@ def get_hmac_signing_key():
     if 'hmac_signing_key' not in _secrets_cache:
         if not HMAC_SIGNING_KEY_ARN:
             raise ValueError("HMAC_SIGNING_KEY_ARN environment variable not set")
-        _secrets_cache['hmac_signing_key'] = _get_secret(HMAC_SIGNING_KEY_ARN)
+        _secrets_cache['hmac_signing_key'] = get_secret(HMAC_SIGNING_KEY_ARN)
     return _secrets_cache['hmac_signing_key']
 
 
@@ -123,33 +136,78 @@ def sign_with_kms(message_bytes):
     return response['Signature']
 
 
+def session_store(key, value):
+    """
+    Stores a key/value pair into the DynamoDB table
+    """
+    global _dynamodb_client
+    if _dynamodb_client is None:
+        _dynamodb_client = boto3.resource('dynamodb')
+    table = _dynamodb_client.Table(SESSION_TABLE)
+    response = table.put_item(
+        Item = {
+            "id": key,
+            "value": value,
+            "ttl": int(datetime.now().timestamp()) + (SESSION_TTL_HOURS * 60 * 60) # seconds
+        },
+        ConditionExpression="attribute_not_exists(id)")
+    return response
+
+def session_load(key):
+    """
+    Loads a value at key from the DynamoDB table
+    """
+    global _dynamodb_client
+    if _dynamodb_client is None:
+        _dynamodb_client = boto3.resource('dynamodb')
+    table = _dynamodb_client.Table(SESSION_TABLE)
+    response = table.get_item(Key={"id": key}).get("Item")
+    return response
+
 # =============================================================================
 # API Gateway Helper Functions
 # =============================================================================
 
-def json_response(status_code, body):
-    """Return a JSON API response with CORS headers."""
-    return {
+def json_response(status_code, body, headers=None, with_cors=True, with_cache=False):
+    """Return a JSON API response with headers."""
+    response = {
         'statusCode': status_code,
-        'headers': {
+        'headers': {}
+    }
+    # add body
+    if body != None:
+        response |= {
+            'body': json.dumps(body)
+        }
+    # add base headers
+    if headers != None:
+        response['headers'] |= headers
+    else:
+        response['headers'] |= {
             'Content-Type': 'application/json',
+        }
+    # add cors
+    if with_cors:
+        response['headers'] |= {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type'
-        },
-        'body': json.dumps(body)
-    }
+        }
+    # add cache
+    if with_cache:
+        response['headers'] |= {
+            "Cache-Control": "public, max-age=3600"
+        }
 
 def parse_form_body(event):
     body = event.get('body') or ''
     if event.get('isBase64Encoded'):
-        import base64
         body = base64.b64decode(body).decode('utf-8')
     return dict(urllib.parse.parse_qsl(body, keep_blank_values=True))
 
 
 # =============================================================================
-# HMAC State Helper Functions
+# HMAC and Public Key Helper Functions
 # =============================================================================
 
 def create_signed_state(payload=''):
@@ -262,6 +320,42 @@ def verify_with_kms(message_bytes, signature):
     except Exception as e:
         print(f"KMS verification error: {e}")
         return False
+
+
+def verify_code_challenge(code_verifier, code_challenge):
+    """
+    PCKE verification of code challenge
+    """
+    digest = hashlib.sha256(code_verifier.encode('ascii')).digest()
+    expected_challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode()
+    return hmac.compare_digest(expected_challenge, code_challenge)
+
+
+def parse_rsa_public_key_spki(der_bytes):
+    """
+    Parse DER-encoded RSA SubjectPublicKeyInfo returned by KMS.get_public_key()
+    to extract PEM, RSA modulus n, and exponent e
+    """
+    # import dependencies needed for just this function
+    from pyasn1.codec.der import decoder
+    from pyasn1_modules.rfc2459 import SubjectPublicKeyInfo
+    from pyasn1_modules.rfc2437 import RSAPublicKey
+    # parse top-level SubjectPublicKeyInfo
+    spki, _ = decoder.decode(der_bytes, asn1Spec=SubjectPublicKeyInfo())
+    # extract the inner RSAPublicKey DER
+    rsa_der = spki['subjectPublicKey'].asOctets()
+    # parse actual RSA key
+    rsa_key, _ = decoder.decode(rsa_der, asn1Spec=RSAPublicKey())
+    n = int(rsa_key['modulus'])
+    e = int(rsa_key['publicExponent'])
+    # convert SPKI to PEM
+    pem = (
+        "-----BEGIN PUBLIC KEY-----\n" +
+        base64.encodebytes(der_bytes).decode().replace("\n", "") +
+        "\n-----END PUBLIC KEY-----\n"
+    )
+    # return
+    return {"pem": pem, "n": n, "e": e}
 
 
 # =============================================================================
@@ -405,28 +499,26 @@ def get_user_teams(authorization_str, org_roles):
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
 
-def generate_audience_list(username, teams, org_roles):
+def generate_audience_list(username, teams, org_roles, scope):
     """
-    Returns a list of cluster names the user can access and deploy.
+    Returns a list of services user has access to.
     """
-    # Initialize allowed clusters
+    # Initialize allowed services
     allowed = []
 
-    # Early check if member
-    if 'member' not in org_roles:
-        return allowed
+    # Provide cluster services
+    if ('cluster' in scope) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
+        allowed.append(['provisioner']) # all members have access to the provisioner
+        if username: # all members can deploy to their personal cluster
+            allowed.append(f"{username}")
+        if teams: # all members can deploy to their team clusters
+            allowed.extend(teams)
+        if 'owner' in org_roles: # owners can deploy anything
+            allowed.extend(['*'])
 
-    # All members can deploy to their personal cluster
-    if username:
-        allowed.append(f"{username}")
-
-    # All members can deploy to their team clusters
-    if teams:
-        allowed.extend(teams)
-
-    # Owners can deploy anything
-    if 'owner' in org_roles:
-        allowed.extend(['*'])
+    # Provide MCP services
+    if ('mcp:tools' in scope) or ('mcp:resources' in scope): # any authenticated user has access to MCP services
+        allowed.append('https://')
 
     # Return allowed clusters
     return allowed
@@ -520,7 +612,7 @@ def refresh_auth_token(token, event):
         raise Exception(f"Token refresh failed: {e}")
 
 
-def authenticate_user(authorization_str, event):
+def authenticate_user(authorization_str, event, scope):
     """
     Build the authentication token and metadata for the user
     """
@@ -535,26 +627,21 @@ def authenticate_user(authorization_str, event):
     # Get user metadata
     org_roles = get_organization_roles(authorization_str, username)
     teams = get_user_teams(authorization_str, org_roles)
-    audience_list = generate_audience_list(username, teams, org_roles)
+    audience_list = generate_audience_list(username, teams, org_roles, scope)
 
     # Token expiration based on JWT_EXPIRATION_HOURS config
     now = datetime.now(timezone.utc)
     expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
 
-    # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
-    headers = event.get('headers', {})
-    api_host = headers.get('host', '')
-    issuer = f"https://{api_host}"
-
     # Build metadata dictionary
     metadata = {
         'org_roles': org_roles,
         'sub': username,
-        'aud': JWT_AUDIENCES + audience_list,
+        'aud': audience_list,
         'org': GITHUB_ORG,
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
-        'iss': issuer
+        'iss': f"https://{AUTHENTICATOR_URL}"
     }
 
     # Create minimal signed JWT token (only server-essential fields)
@@ -564,54 +651,188 @@ def authenticate_user(authorization_str, event):
     return auth_token, metadata
 
 
+def is_allowed_host(host):
+    """
+    All redirects must be explicitly allowed
+    """
+    for allowed_host in ALLOWED_REDIRECT_HOSTS:
+        if host == allowed_host or host.endswith('.' + allowed_host):
+            return True
+    print(f"Rejected redirect to unauthorized host: {host}")
+    return False
+
+
 # =============================================================================
-# GitHub Oauth Web Login Flow
+# GitHub Oauth 2.1 Login Flow
 # =============================================================================
+
+def handle_register(event: dict) -> dict:
+    """
+    Dynamic Client Registration endpoint per RFC 7591.
+    """
+    parms               = parse_form_body(event)
+    redirect_uris       = parms.get('redirect_uris', [])
+    client_name         = parms.get('client_name', 'Unknown Client')
+    grant_types         = parms.get('grant_types', ['authorization_code']) # defaults to ["authorization_code"] per RFC 7591
+    response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
+    auth_method         = parms.get('token_endpoint_auth_method', 'none')
+    challenge_method    = parms.get('code_challenge_method', 'S256') # not an official RFC 7591 field but MCP clients send it
+    scope               = parms.get('scope') # optional per the standard, but required by our implementation
+
+    # check redirect_uris
+    if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
+        return json_response(400, {
+            'error': 'invalid_redirect_uris',
+            'error_description': 'redirect_uris must be a non-empty array'
+        })
+
+    # check each redirect uri
+    for uri in redirect_uris:
+        if not isinstance(uri, str) or not uri.startswith(('https://', 'http://localhost')):
+            return json_response(400, {
+                'error': 'invalid_redirect_uri',
+                'error_description': f'redirect_uri "{uri}" must be https or http://localhost'
+            })
+
+    # check client_name
+    if not isinstance(client_name, str) or len(client_name) > 200:
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': 'client_name must be a string under 200 chars'
+        })
+
+    # check grant_types
+    if not isinstance(grant_types, list) or len(set(grant_types) - ALLOWED_GRANT_TYPES) > 0:
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': f'invalid grant types: {grant_types}'
+        })
+
+    # check response_types
+    if not isinstance(response_types, list) or len(set(response_types) - ALLOWED_RESPONSE_TYPES) > 0:
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': f'invalid response types: {response_types}'
+        })
+
+    # check token_endpoint_auth_method
+    if auth_method not in ALLOWED_AUTH_METHODS:
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': f'Unsupported token_endpoint_auth_method: {auth_method}'
+        })
+
+    # check code_challenge_method
+    if challenge_method not in ALLOWED_CHALLENGE_METHODS:
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': f'Unsupported code_challenge_method: {challenge_method}, only S256 is supported'
+        })
+
+    # check scope
+    if not isinstance(scope, str):
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': 'scope must be a space-separated string'
+        })
+
+    # generate client credentials
+    client_id = str(uuid.uuid4()) # stable, unique, and unguessable
+    now = int(datetime.now().timestamp()) # time of issuance
+
+    # create client record
+    client_record = {
+        'client_id':                    client_id,
+        'client_id_issued_at':          now,
+        'client_name':                  client_name,
+        'redirect_uris':                redirect_uris,
+        'grant_types':                  grant_types,
+        'response_types':               response_types,
+        'token_endpoint_auth_method':   auth_method,
+        'code_challenge_method':        challenge_method,
+        'scope':                        scope.split()
+    }
+
+    # store client record
+    session_store(client_id, client_record)
+
+    # 201 Created — not 200.  RFC 7591 is explicit about this.
+    return json_response(201, client_record, headers={
+        "Cache-Control": "no-store"    # never cache registration responses
+    })
+
 
 def handle_login(event):
     """
-    Initiate GitHub OAuth flow.
-    Redirects user to GitHub authorization page.
-
-    Creates an HMAC-signed state parameter that includes:
-    - Random nonce for uniqueness
-    - Timestamp for expiration
-    - Optional redirect URI
-    - Cryptographic signature for CSRF protection
+    Handle login via OAuth2.1.
+    We present as a Authorization Server though we relay to GitHub
     """
-    # Get query parameters
-    query_params = event.get('queryStringParameters') or {}
-    redirect_uri = query_params.get('redirect_uri')
+    try:
+        # Get query parameters
+        parms                   = event.get('queryStringParameters') or {}
+        response_type           = parms.get("response_type")
+        client_id               = parms.get("client_id")
+        redirect_uri            = parms.get("redirect_uri")
+        client_state            = parms.get("state")
+        scope                   = parms.get("scope")
+        code_challenge          = parms.get("code_challenge")
+        code_challenge_method   = parms.get("code_challenge")
+        resource                = parms.get("resource") # ignored
 
-    # Build the callback URL (this Lambda's callback endpoint)
-    headers = event.get('headers', {})
-    host = headers.get('host', '')
-    protocol = 'https'
-    callback_url = f"{protocol}://{host}/auth/github/callback"
+        # check response type
+        if response_type != "code":
+            raise RuntimeError(f"Invalid response type: {response_type}")
 
-    # Create HMAC-signed state for CSRF protection
-    # The state includes the redirect_uri securely encoded
-    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-    state = create_signed_state(redirect_uri_b64)
+        # check code challenge method
+        if code_challenge_method != "S256":
+            raise RuntimeError(f"Invalid code challenge method: {code_challenge_method}")
 
-    # Build GitHub authorization URL
-    params = {
-        'client_id': GITHUB_CLIENT_ID,
-        'redirect_uri': callback_url,
-        'scope': 'read:org',
-        'state': state
-    }
-    auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(params)}"
+        # get session
+        session = session_load(client_id)
 
-    # Return response
-    return {
-        'statusCode': 302,
-        'headers': {
+        # check session
+        if not session:
+            raise RuntimeError(f"Unable to locate client id: {client_id}")
+        elif
+        # save off the code challenge
+        session = secrets.token_urlsafe(32)
+        _tmp_database[session] = {
+            "challenge": code_challenge,
+            "redirect_uri": redirect_uri
+        }
+
+        ##################
+        # Relay to GitHub
+        ##################
+
+        # Create HMAC-signed state for CSRF protection
+        # the state includes the redirect_uri securely encoded
+        # and the original state provided by the client
+        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+        github_state = create_signed_state(f"{client_id}:{redirect_uri_b64}:{client_state}")
+
+        # Build GitHub authorization URL
+        github_parms = {
+            'client_id': GITHUB_CLIENT_ID,
+            'redirect_uri': f"https://{AUTHENTICATOR_URL}/auth/github/callback",
+            'scope': 'read:org',
+            'state': github_state
+        }
+        auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+
+        # Return response
+        return json_response(302, None, headers={
             'Location': auth_url,
             'Cache-Control': 'no-cache, no-store, must-revalidate'
-        },
-        'body': ''
-    }
+        })
+
+    except Exception as e:
+        print(f"Error in PAT login: {e}")
+        return json_response(500, {
+            'status': 'error',
+            'error': 'internal_error',
+            'error_description': 'Error processing PAT login'
+        })
 
 
 def handle_callback(event):
@@ -623,33 +844,31 @@ def handle_callback(event):
     try:
         query_params = event.get('queryStringParameters') or {}
         code = query_params.get('code')
-        state = query_params.get('state')
+        github_state = query_params.get('state')
         error = query_params.get('error')
         error_description = query_params.get('error_description')
-        redirect_uri_b64 = verify_signed_state(state) # verify state parameter FIRST (CSRF protection)
-        redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
+        payload_b64 = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
+        payload = base64.urlsafe_b64decode(payload_b64.encode()).decode()
+        client_id, redirect_uri, client_state = payload.split(":")
 
-        # Handle OAuth errors from GitHub
+        # check OAuth errors from GitHub
         if error:
             return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
+
+        # check code was returned by GitHub
         if not code:
             return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
 
         # Authenticate user (gets token and metadata)
         access_token = exchange_code_for_token(code, event)
-        token, metadata = authenticate_user(f'Bearer {access_token}', event)
+        token, metadata = authenticate_user(f'Bearer {access_token}', event, scope)
+        _tmp_database[session]["token"] = token
+        _tmp_database[session]["metadata"] = metadata
 
         # Redirect to frontend with JWT in parameters
         return redirect_to_frontend(redirect_uri, parms={
-            'username': metadata['sub'],
-            'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
-            'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
-            'org': metadata['org'],
-            'orgRoles': ','.join(metadata['org_roles']),
-            'tokenIssuedAt': str(metadata['iat']),
-            'tokenExpiresAt': str(metadata['exp']),
-            'tokenIssuer': metadata['iss'],
-            'token': token
+            'code': session,
+            'state': client_state
         })
 
     except Exception as e:
@@ -657,8 +876,70 @@ def handle_callback(event):
         return redirect_to_frontend(redirect_uri, parms={'error': f"Error during OAuth callback"})
 
 
+def handle_token(event):
+    try:
+        parms           = parse_form_body(event)
+        grant_type      = parms.get('grant_type')
+        code            = parms.get('code')
+        redirect_uri    = parms.get('redirect_uri')
+        client_id       = parms.get('client_id')
+        code_verifier   = parms.get('code_verifier')
+
+        # get session information
+        metadata = _tmp_database[code]["metadata"]
+        token = _tmp_database[code]["token"]
+        challenge = _tmp_database[code]["challenge"]
+        del _tmp_database[code] # clear
+
+        # verify grant type
+        if grant_type != "authorization_code":
+            raise RuntimeError(f"Invalid grant type: {grant_type}")
+
+        # verify challenge
+        if not verify_code_challenge(code_verifier, challenge):
+            raise RuntimeError("Failed to verify code challenge")
+
+        # verify redirect uri
+        if _tmp_database[code]["redirect_uri"] != redirect_uri:
+            raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
+
+        # Build known and deployable clusters (user interface hints)
+        info = {
+            'username': metadata['sub'],
+            'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
+            'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
+            'org': metadata['org'],
+            'orgRoles': ','.join(metadata['org_roles']),
+            'tokenIssuedAt': str(metadata['iat']),
+            'tokenExpiresAt': str(metadata['exp']),
+            'tokenIssuer': metadata['iss']
+        }
+
+        # Redirect to frontend with JWT in parameters
+        return json_response(200, {
+            "access_token": token,
+            "token_type": "Bearer",
+            "expires_in": JWT_EXPIRATION_HOURS * 60,
+            "refresh_token": token, # revisit
+            "scope": "mcp:tools mcp:resources",
+            "info": info
+        })
+
+    except Exception as e:
+        print(f"Exception in OAuth token: {e}")
+        return json_response(500, {
+            'error': 'token_error',
+            'error_description': 'error in token'
+        })
+
+
 def exchange_code_for_token(code, event):
-    """Exchange authorization code for access token."""
+    """
+    Exchange authorization code for access token.
+    Using the host header field from the request as an added level of verification:
+    we check the host is allowed, and GitHub checks that it matches the original request.
+    The host header in this case does not get used for anything other than being checked.
+    """
     headers = event.get('headers', {})
     host = headers.get('host', '')
 
@@ -698,63 +979,34 @@ def exchange_code_for_token(code, event):
     return access_token
 
 
-def is_allowed_host(host):
-    for allowed_host in ALLOWED_REDIRECT_HOSTS:
-        if host == allowed_host or host.endswith('.' + allowed_host):
-            return True
-    print(f"Rejected redirect to unauthorized host: {host}")
-    return False
-
-
-def is_valid_redirect_uri(uri):
+def redirect_to_frontend(redirect_uri, parms=None):
     """
     Validate that a redirect URI points to an allowed domain with a safe scheme.
-    Prevents open redirect attacks where an attacker could redirect
-    the JWT token to a malicious site.
+    Prevents open redirect attacks where an attacker could redirect the JWT token
+    to a malicious site. Respond with fully built redirection url to frontend.
 
     Security checks:
     - Scheme must be https (or http only for localhost/127.0.0.1)
     - Host must be in ALLOWED_REDIRECT_HOSTS
     """
-    if not uri:
-        return False
+    # Validate uri host and scheme
+    parsed = urllib.parse.urlparse(redirect_uri)
+    host = parsed.hostname
+    scheme = parsed.scheme.lower() if parsed.scheme else ''
+    if not host or not scheme:
+        raise RuntimeError("Rejected redirect with missing host or scheme")
 
-    try:
-        parsed = urllib.parse.urlparse(uri)
-        host = parsed.hostname
-        scheme = parsed.scheme.lower() if parsed.scheme else ''
+    # Validate scheme: only https allowed, except http for localhost
+    if scheme not in ('https', 'http'):
+        raise RuntimeError(f"Rejected redirect with invalid scheme: {scheme}")
 
-        if not host or not scheme:
-            print("Rejected redirect with missing host or scheme")
-            return False
+    # http is only allowed for localhost development
+    if (scheme == 'http') and (host not in ('localhost', '127.0.0.1')):
+       raise RuntimeError(f"Rejected http redirect to non-localhost host: {host}")
 
-        is_localhost = host in ('localhost', '127.0.0.1')
-
-        # Validate scheme: only https allowed, except http for localhost
-        if scheme not in ('https', 'http'):
-            print(f"Rejected redirect with invalid scheme: {scheme}")
-            return False
-
-        # http is only allowed for localhost development
-        if scheme == 'http' and not is_localhost:
-            print(f"Rejected http redirect to non-localhost host: {host}")
-            return False
-
-        # Check against allowed hosts
-        return is_allowed_host(host)
-
-    except Exception as e:
-        print(f"Error validating redirect URI: {e}")
-        return False
-
-
-def redirect_to_frontend(redirect_uri, parms=None):
-    """
-    Validate redirection and respond with fully build redirection url to frontend.
-    """
-    # Validate redirect URI to prevent open redirect attacks
-    if not is_valid_redirect_uri(redirect_uri):
-        raise RuntimeError('Invalid request')
+    # Check against allowed hosts
+    if not is_allowed_host(host):
+        raise RuntimeError(f"Invalid host: {host}")
 
     # Build full redirect url
     redirect_url = f"{redirect_uri}?{urllib.parse.urlencode(parms)}"
@@ -986,7 +1238,11 @@ def handle_pat_login(event):
 
         # Token is valid! Authenticate user to get your own session token/metadata
         token, metadata = authenticate_user(f'token {pat}', event)
-        return json_response(200, {'status': 'success', 'token': token, 'metadata': metadata})
+        return json_response(200, {
+            'status': 'success',
+            'token': token,
+            'metadata': metadata
+        })
 
     except Exception as e:
         print(f"Error in PAT login: {e}")
@@ -1011,7 +1267,10 @@ def handle_refresh(event):
 
         # Refresh the token
         token, expiration = refresh_auth_token(old_token, event)
-        return json_response(200, {'token': token, 'exp': expiration})
+        return json_response(200, {
+            'token': token,
+            'exp': expiration
+        })
 
     except Exception as e:
         print(f"Token refresh failed: {e}")
@@ -1024,37 +1283,9 @@ def handle_refresh(event):
 # Public Key / JWKS endpoints (for JWT verification)
 # =============================================================================
 
-# Local Utility Function
-#   Parse DER-encoded RSA SubjectPublicKeyInfo returned by KMS.get_public_key()
-#   to extract PEM, RSA modulus n, and exponent e
-def parse_rsa_public_key_spki(der_bytes):
-    # import dependencies needed for just this function
-    from pyasn1.codec.der import decoder
-    from pyasn1_modules.rfc2459 import SubjectPublicKeyInfo
-    from pyasn1_modules.rfc2437 import RSAPublicKey
-    # parse top-level SubjectPublicKeyInfo
-    spki, _ = decoder.decode(der_bytes, asn1Spec=SubjectPublicKeyInfo())
-    # extract the inner RSAPublicKey DER
-    rsa_der = spki['subjectPublicKey'].asOctets()
-    # parse actual RSA key
-    rsa_key, _ = decoder.decode(rsa_der, asn1Spec=RSAPublicKey())
-    n = int(rsa_key['modulus'])
-    e = int(rsa_key['publicExponent'])
-    # convert SPKI to PEM
-    pem = (
-        "-----BEGIN PUBLIC KEY-----\n" +
-        base64.encodebytes(der_bytes).decode().replace("\n", "") +
-        "\n-----END PUBLIC KEY-----\n"
-    )
-    # return
-    return {"pem": pem, "n": n, "e": e}
-
-
 def handle_pem(event):
     """
     Return the public key in PEM format (needed by HAProxy).
-
-    GET /auth/github/pem
     """
     try:
 
@@ -1069,15 +1300,7 @@ def handle_pem(event):
         parsed = parse_rsa_public_key_spki(der)
 
         # return response
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                # Recommended for browser-based OIDC discovery
-                "Cache-Control": "public, max-age=3600"
-            },
-            "body": parsed["pem"]
-        }
+        return json_response(200, parsed["pem"], with_cache=True)
 
     except Exception as e:
         print(f"Error generating PEM: {e}")
@@ -1121,15 +1344,7 @@ def handle_jwks(event):
         }
 
         # return response
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                # Recommended for browser-based OIDC discovery
-                "Cache-Control": "public, max-age=3600"
-            },
-            "body": json.dumps({"keys": [jwk]})
-        }
+        return json_response(200, {"keys": [jwk]}, with_cache=True)
 
     except Exception as e:
         print(f"Error generating JWKS: {e}")
@@ -1149,9 +1364,7 @@ def handle_openid(event):
     """
     try:
         # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
-        headers = event.get('headers', {})
-        api_host = headers.get('host', '')
-        issuer = f"https://{api_host}"
+        issuer = f"https://{AUTHENTICATOR_URL}"
 
         # build response body
         body = {
@@ -1165,15 +1378,7 @@ def handle_openid(event):
         }
 
         # return response
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                # Recommended for browser-based OIDC discovery
-                "Cache-Control": "public, max-age=3600"
-            },
-            "body": json.dumps(body)
-        }
+        return json_response(200, body, with_cache=True)
 
     except Exception as e:
         print(f"Error in openid discovery: {e}")
@@ -1183,222 +1388,26 @@ def handle_openid(event):
         })
 
 
-# =============================================================================
-# OAuth 2.1 Authorization Flow (with PKCE)
-# =============================================================================
-
-def verify_code_challenge(code_verifier, code_challenge):
-    digest = hashlib.sha256(code_verifier.encode('ascii')).digest()
-    expected_challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode()
-    return hmac.compare_digest(expected_challenge, code_challenge)
-
-def handle_oauth21_authorize(event):
-    """
-    Handle login via OAuth2.1.
-    We present as a Authorization Server though we relay to GitHub
-    """
-
-    try:
-        # Get query parameters
-        parms                   = event.get('queryStringParameters') or {}
-        response_type           = parms.get("response_type")
-        client_id               = parms.get("client_id", "") # ignored
-        redirect_uri            = parms.get("redirect_uri")
-        client_state            = parms.get("state")
-        scope                   = parms.get("scope") # ignored
-        code_challenge          = parms.get("code_challenge")
-        code_challenge_method   = parms.get("code_challenge")
-        resource                = parms.get("resource") # ignored
-
-        # check response type
-        if response_type != "code":
-            raise RuntimeError(f"Invalid response type: {response_type}")
-
-        # check code challenge method
-        if code_challenge_method != "S256":
-            raise RuntimeError(f"Invalid code challenge method: {code_challenge_method}")
-
-        # save off the code challenge
-        session = secrets.token_urlsafe(32)
-        _tmp_database[session] = {
-            "challenge": code_challenge,
-            "redirect_uri": redirect_uri
-        }
-
-        ##################
-        # Relay to GitHub
-        ##################
-
-        # Build the callback URL (this Lambda's callback endpoint)
-        headers = event.get('headers', {})
-        host = headers.get('host', '')
-        protocol = 'https'
-        callback_url = f"{protocol}://{host}/authorize/callback"
-
-        # Create HMAC-signed state for CSRF protection
-        # the state includes the redirect_uri securely encoded
-        # and the original state provided by the client
-        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-        github_state = create_signed_state(f"{session}:{redirect_uri_b64}:{client_state}")
-
-        # Build GitHub authorization URL
-        github_parms = {
-            'client_id': GITHUB_CLIENT_ID,
-            'redirect_uri': callback_url,
-            'scope': 'read:org',
-            'state': github_state
-        }
-        auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
-
-        # Return response
-        return {
-            'statusCode': 302,
-            'headers': {
-                'Location': auth_url,
-                'Cache-Control': 'no-cache, no-store, must-revalidate'
-            },
-            'body': ''
-        }
-
-    except Exception as e:
-        print(f"Error in PAT login: {e}")
-        return json_response(500, {
-            'status': 'error',
-            'error': 'internal_error',
-            'error_description': 'Error processing PAT login'
-        })
-
-
-def handle_oauth21_callback(event):
-    """
-    Handle GitHub OAuth callback.
-    Exchange code for token, build metadata, redirect to frontend.
-    Security: Validates HMAC-signed state parameter to prevent CSRF attacks.
-    """
-    try:
-        query_params = event.get('queryStringParameters') or {}
-        code = query_params.get('code')
-        github_state = query_params.get('state')
-        error = query_params.get('error')
-        error_description = query_params.get('error_description')
-        payload_b64 = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
-        payload = base64.urlsafe_b64decode(payload_b64.encode()).decode()
-        session, redirect_uri, client_state = payload.split(":")
-
-        # Handle OAuth errors from GitHub
-        if error:
-            return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
-        if not code:
-            return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
-
-        # Authenticate user (gets token and metadata)
-        access_token = exchange_code_for_token(code, event)
-        token, metadata = authenticate_user(f'Bearer {access_token}', event)
-        _tmp_database[session]["token"] = token
-        _tmp_database[session]["metadata"] = metadata
-
-        # Redirect to frontend with JWT in parameters
-        return redirect_to_frontend(redirect_uri, parms={
-            'code': session,
-            'state': client_state
-        })
-
-    except Exception as e:
-        print(f"Exception in OAuth callback: {e}")
-        return redirect_to_frontend(redirect_uri, parms={'error': f"Error during OAuth callback"})
-
-
-def handle_oauth21_token(event):
-    """
-    """
-    try:
-        parms           = parse_form_body(event)
-        grant_type      = parms.get('grant_type')
-        code            = parms.get('code')
-        redirect_uri    = parms.get('redirect_uri')
-        client_id       = parms.get('client_id') # ignored
-        code_verifier   = parms.get('code_verifier')
-
-        # get session information
-        metadata = _tmp_database[code]["metadata"]
-        token = _tmp_database[code]["token"]
-        challenge = _tmp_database[code]["challenge"]
-        del _tmp_database[code] # clear
-
-        # verify grant type
-        if grant_type != "authorization_code":
-            raise RuntimeError(f"Invalid grant type: {grant_type}")
-
-        # verify challenge
-        if not verify_code_challenge(code_verifier, challenge):
-            raise RuntimeError("Failed to verify code challenge")
-
-        # verify redirect uri
-        if _tmp_database[code]["redirect_uri"] != redirect_uri:
-            raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
-
-        # Build known and deployable clusters (user interface hints)
-        info = {
-            'username': metadata['sub'],
-            'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
-            'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
-            'org': metadata['org'],
-            'orgRoles': ','.join(metadata['org_roles']),
-            'tokenIssuedAt': str(metadata['iat']),
-            'tokenExpiresAt': str(metadata['exp']),
-            'tokenIssuer': metadata['iss']
-        }
-
-        # Redirect to frontend with JWT in parameters
-        return json_response(200, {
-            "access_token": token,
-            "token_type": "Bearer",
-            "expires_in": JWT_EXPIRATION_HOURS * 60,
-            "refresh_token": token, # revisit
-            "scope": "mcp:tools mcp:resources",
-            "info": info
-        })
-
-    except Exception as e:
-        print(f"Exception in OAuth token: {e}")
-        return json_response(500, {
-            'error': 'token_error',
-            'error_description': 'error in token'
-        })
-
-
-def handle_oauth21_server(event: dict) -> dict:
+def handle_authorization_server(event: dict) -> dict:
     """
     Serve OAuth 2.0 Authorization Server Metadata per RFC 8414.
-    Endpoint: GET /.well-known/oauth-authorization-server
     """
-    host = event.get('headers', {}).get('host', '')
-    base_url = f"https://{host}"
+    base_url = f"https://{AUTHENTICATOR_URL}"
     metadata = {
-        "issuer": base_url, # Validates that the metadata document it  received came from the expected AS (prevents AS mix-up attacks).
-        "authorization_endpoint": f"{base_url}/oauth/authorize", # Used by client as log in destination. Required for any AS that supports authorization_code grant.
-        "token_endpoint": f"{base_url}/oauth/token", # Used by client for POSTs to exchange a code for a token, and later to refresh an expired token.
+        "issuer": base_url, # Validates that the metadata document it received came from the expected AS (prevents AS mix-up attacks).
+        "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for any AS that supports authorization_code grant.
+        "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token, and later to refresh an expired token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
         "scopes_supported": ["mcp:tools", "mcp:resources", "offline_access"],
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
-        "registration_endpoint": f"{base_url}/oauth/register", # Dynamic client registration (RFC 7591)
-        "revocation_endpoint": f"{base_url}/oauth/revoke", # invalidate tokens on logout
+        "registration_endpoint": f"{base_url}/auth/github/register", # Dynamic client registration (RFC 7591)
+#        "revocation_endpoint": f"{base_url}/auth/revoke", # invalidate tokens on logout
         "jwks_uri": f"{base_url}/.well-known/jwks.json", # fetching public key to verify JWT signatures
         "id_token_signing_alg_values_supported": ["RS256"], # The signing algorithms used when issuing JWTs.
         "grant_types_supported": ["authorization_code", "refresh_token"], # allows silent token renewal
     }
-
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            # This document changes rarely — caching for 1 hour is reasonable.
-            # Don't cache indefinitely in case you rotate keys or add endpoints.
-            "Cache-Control": "public, max-age=3600",
-        },
-        "body": json.dumps(metadata, indent=2),
-    }
+    return json_response(200, metadata, with_cache=True)
 
 # =============================================================================
 # Lambda Function for Login
@@ -1413,11 +1422,15 @@ def lambda_gateway(event, context):
 
     print(f"Received request: {method} {path}")
 
-    # Web client Authorization Code flow
-    if path == '/auth/github/login':
+    # Web Client Authorization Code flow
+    if path == '/auth/github/register':
+        return handle_register(event)
+    elif path == '/auth/github/login':
         return handle_login(event)
     elif path == '/auth/github/callback':
         return handle_callback(event)
+    elif path == '/auth/github/token':
+        return handle_token(event)
     # Device Flow for CLI/Python clients
     elif path == '/auth/github/device':
         return handle_device_code_request(event)
@@ -1430,7 +1443,7 @@ def lambda_gateway(event, context):
     elif path == '/auth/refresh':
         return handle_refresh(event)
     # Public key endpoint for JWT verification (PEM)
-    elif path == '/auth/github/pem':
+    elif path == '/auth/pem':
         return handle_pem(event)
     # Public key endpoint for JWT verification (JWKS)
     elif path == '/.well-known/jwks.json':
@@ -1440,10 +1453,9 @@ def lambda_gateway(event, context):
         return handle_openid(event)
     # OAuth 2.1 Service Metadata
     elif path == '/.well-known/oauth-authorization-server':
-        return handle_oauth21_server(event)
+        return handle_authorization_server(event)
     # Unknown path
     else:
-        return {
-            'statusCode': 404,
-            'body': json.dumps({'error': 'Not found'})
-        }
+        return json_response(404, {
+            'error': 'Not found'
+        })
