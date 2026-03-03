@@ -112,6 +112,11 @@ PROVISIONER_ALERT_EMAIL = $(shell aws secretsmanager get-secret-value \
    --secret-id slideruleearth.io/secrets \
    --query SecretString \
    --output text | jq -r .provisioner_alert_email)
+JWT_SIGNING_KEY_ARN = $(shell aws cloudformation describe-stacks \
+  --stack-name authenticator \
+  --region us-west-2 \
+  --query 'Stacks[0].Outputs[?OutputKey==`JWTSigningKeyArn`].OutputValue' \
+  --output text)
 
 ########################
 # Local Build Targets
@@ -434,8 +439,8 @@ recorder-delete: ## deletes the lambda recorder functions
 ########################
 
 GITHUB_ORG ?= SlideRuleEarth
-GITHUB_OAUTH_APP_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
-CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
+GITHUB_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
+GITHUB_CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
 ALLOWED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
 
 authenticator-build: ## builds the authenticator lambda package zipfile
@@ -461,8 +466,8 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=AuthenticatorHostname,ParameterValue=$(AUTHENTICATOR_HOSTNAME) \
 						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
-						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_OAUTH_APP_CLIENT_ID) \
-						ParameterKey=ClientSecretName,ParameterValue=$(CLIENT_SECRET_NAME) \
+						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_CLIENT_ID) \
+						ParameterKey=GitHubClientSecretName,ParameterValue=$(GITHUB_CLIENT_SECRET_NAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
@@ -485,9 +490,12 @@ authenticator-delete: ## deletes the lambda authenticator functions
 authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
 	@read -s -p "Enter GitHub OAuth Client Secret: " GITHUB_OAUTH_APP_CLIENT_SECRET; echo ""; \
 	aws secretsmanager create-secret \
-		--name $(CLIENT_SECRET_NAME) \
+		--name $(GITHUB_CLIENT_SECRET_NAME) \
 		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
 		--description "GitHub OAuth Client Secret for SlideRule"
+
+test-authenticator-env: ## display needed parameters for running tests
+	@echo JWT_SIGNING_KEY_ARN: $(JWT_SIGNING_KEY_ARN)
 
 test-authenticator-create: ## creates the test-authenticator
 	aws cloudformation create-stack \
@@ -849,8 +857,6 @@ environment: ## echo the environment variables
 	@echo RUNNER: $(RUNNER)
 	@echo DEBUG_CFG: $(DEBUG_CFG)
 	@echo RELEASE_CFG: $(RELEASE_CFG)
-	@echo CERTIFICATE_ARN: $(CERTIFICATE_ARN)
-	@echo PROVISIONER_ALERT_EMAIL: $(PROVISIONER_ALERT_EMAIL)
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

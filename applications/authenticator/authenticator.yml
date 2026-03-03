@@ -10,7 +10,7 @@ Parameters:
     Type: String
   GitHubClientId:
     Type: String
-  ClientSecretName:
+  GitHubClientSecretName:
     Type: String
   HostedZoneId:
     Type: String
@@ -81,7 +81,7 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource:
                   # Reference existing GitHub client secret (created manually)
-                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ClientSecretName}*'
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${GitHubClientSecretName}*'
                   # HMAC key for OAuth state signing
                   - !Ref HMACSigningKeySecret
         - PolicyName: KMSSigningAccess
@@ -127,9 +127,9 @@ Resources:
         Variables:
           DOMAIN: !Ref Domain
           AUTHENTICATOR_HOSTNAME: !Ref AuthenticatorHostname
-          GITHUB_CLIENT_ID: !Ref GitHubClientId
           GITHUB_ORG: !Ref GitHubOrg
-          CLIENT_SECRET_NAME: !Ref ClientSecretName
+          GITHUB_CLIENT_ID: !Ref GitHubClientId
+          GITHUB_CLIENT_SECRET_NAME: !Ref GitHubClientSecretName
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
           ALLOWED_REDIRECT_HOSTS: !Ref AllowedRedirectHosts

@@ -1,31 +1,7 @@
 from github_oauth import lambda_gateway
+from github_stub import *
 from datetime import datetime
 import json
-
-# #######################
-# Helper Functions
-# #######################
-
-def build_query_request(path, query=None):
-    return {
-        "rawPath": path,
-        "queryStringParameters": (query != None) and query or {}
-    }
-
-def build_body_request(path, body=None):
-    return {
-        "rawPath": path,
-        "body": (body != None) and json.dumps(body) or ''
-    }
-
-def check_dictionary(superset, subset):
-    status = True
-    for x,y in subset.items():
-        if superset[x].strip() != y.strip():
-            print(f"Mismatch in {x}: {y} != {superset[x]}")
-            status = False
-            break
-    return status
 
 # #######################
 # Globals

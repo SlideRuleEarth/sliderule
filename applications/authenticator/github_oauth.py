@@ -27,7 +27,7 @@ DOMAIN = os.environ.get('DOMAIN')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
-CLIENT_SECRET_NAME = os.environ.get('CLIENT_SECRET_NAME')
+GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
 ALLOWED_REDIRECT_HOSTS = os.environ.get('ALLOWED_REDIRECT_HOSTS', '').split(' ') # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
@@ -87,9 +87,9 @@ def get_secret(secret_arn):
 def get_github_client_secret():
     """Retrieve GitHub client secret from AWS Secrets Manager."""
     if 'client_secret' not in _secrets_cache:
-        if not CLIENT_SECRET_NAME:
-            raise ValueError("CLIENT_SECRET_NAME environment variable not set")
-        _secrets_cache['client_secret'] = get_secret(CLIENT_SECRET_NAME)
+        if not GITHUB_CLIENT_SECRET_NAME:
+            raise ValueError("GITHUB_CLIENT_SECRET_NAME environment variable not set")
+        _secrets_cache['client_secret'] = get_secret(GITHUB_CLIENT_SECRET_NAME)
     return _secrets_cache['client_secret']
 
 
@@ -184,7 +184,7 @@ def session_load(key, with_delete=False):
     # check and return loaded data
     if load_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
         raise RuntimeError(f"Failed to load {key}: {load_response}")
-    return load_response.get("Item")
+    return load_response.get("Item", {}).get("value")
 
 
 # =============================================================================
@@ -796,7 +796,7 @@ def handle_login(event):
 
         # get session
         session = session_load(client_id)
-
+        print("SESSION", session)
         # check session
         if not session:
             raise RuntimeError(f"Unable to locate session: {client_id}")
@@ -825,7 +825,7 @@ def handle_login(event):
                 raise RuntimeError(f"Invalid scope: {scope}")
 
         # store the code challenge associated with session
-        session_store(f"{client_id}-challenge", {
+        session_store(f"{client_id}/challenge", {
             "code_challenge": code_challenge,
             "redirect_uri": redirect_uri,
             "scope": scope.split()
@@ -857,11 +857,11 @@ def handle_login(event):
         })
 
     except Exception as e:
-        print(f"Error in PAT login: {e}")
+        print(f"Error in login: {e}")
         return json_response(500, {
             'status': 'error',
             'error': 'internal_error',
-            'error_description': 'Error processing PAT login'
+            'error_description': 'Error processing login'
         })
 
 
@@ -884,7 +884,7 @@ def handle_callback(event):
         client_id, redirect_uri, client_state = payload.split(":")
 
         # get session challenge (and delete so it cannot be reused)
-        session_challenge = session_load(f"{client_id}-challenge", with_delete=True)
+        session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
 
         # check session
         if not session_challenge:
@@ -910,7 +910,7 @@ def handle_callback(event):
         code = uuid.uuid4()
 
         # store token and metadata associated with session
-        session_store(f"{client_id}-{code}", {
+        session_store(f"{client_id}/{code}", {
             "token": token,
             "metadata": metadata,
             "code_challenge": session_challenge["code_challenge"],
@@ -940,7 +940,7 @@ def handle_token(event):
 
         # get sessions
         session = session_load(client_id)
-        session_code = session_load(f"{client_id}-{code}", with_delete=True)
+        session_code = session_load(f"{client_id}/{code}", with_delete=True)
 
         # check session
         if not session:
