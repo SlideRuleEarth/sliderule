@@ -26,24 +26,30 @@ code_challenge = generate_code_challenge(code_verifier)
 
 state = "of-the-union"
 
-login_rqst = build_query_request('/auth/github/login', {
-    "response_type":            "code",
-    "client_id":                register_rsps["client_id"],
-    "redirect_uri":             redirect_uri,
-    "state":                    state,
-    "scope":                    "mcp:tools",
-    "code_challenge":           code_challenge,
-    "code_challenge_method":    'S256'
-})
+def login():
 
-login_rsps = lambda_gateway(login_rqst, None)
+    global register_rsps, redirect_uri, state, code_challenge
 
-callback_parms = dict(parse_qsl(urlparse(login_rsps['headers']['Location']).query))
+    login_rqst = build_query_request('/auth/github/login', {
+        "response_type":            "code",
+        "client_id":                register_rsps["client_id"],
+        "redirect_uri":             redirect_uri,
+        "state":                    state,
+        "scope":                    "mcp:tools",
+        "code_challenge":           code_challenge,
+        "code_challenge_method":    'S256'
+    })
 
-parms = {
-    "code": "super-secret-code",
-    "state": callback_parms['state']
-}
+    login_rsps = lambda_gateway(login_rqst, None)
+
+    login_parms = dict(parse_qsl(urlparse(login_rsps['headers']['Location']).query))
+
+    parms = {
+        "code": "super-secret-code",
+        "state": login_parms['state']
+    }
+
+    return parms
 
 # #######################
 # Test Functions
@@ -53,7 +59,7 @@ parms = {
 # Test Nominal
 #
 def test_nominal():
-    rqst = build_query_request('/auth/github/callback', parms)
+    rqst = build_query_request('/auth/github/callback', login())
     rsps = lambda_gateway(rqst, None)
     redirect_parms = dict(parse_qsl(urlparse(rsps['headers']['Location']).query))
     assert rsps['statusCode'] == 302
@@ -73,7 +79,7 @@ def test_nominal():
 # Test Invalid State
 #
 def test_invalid_state():
-    rqst = build_query_request('/auth/github/callback', parms | {"state": "bogus"})
+    rqst = build_query_request('/auth/github/callback', login() | {"state": "bogus"})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 500
 
@@ -84,7 +90,8 @@ def test_invalid_session():
     client_id = "bogus"
     redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
     github_state = create_signed_state(f"{client_id}:{redirect_uri_b64}:{state}")
-    rqst = build_query_request('/auth/github/callback', parms | {"state": github_state})
+    session = login()
+    rqst = build_query_request('/auth/github/callback', session | {"state": github_state})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 500
 
@@ -95,7 +102,8 @@ def test_invalid_redirect():
     bad_redirect = "bogus"
     redirect_uri_b64 = base64.urlsafe_b64encode(bad_redirect.encode()).decode()
     github_state = create_signed_state(f"{register_rsps["client_id"]}:{redirect_uri_b64}:{state}")
-    rqst = build_query_request('/auth/github/callback', parms | {"state": github_state})
+    session = login()
+    rqst = build_query_request('/auth/github/callback', session | {"state": github_state})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 500
 
@@ -103,7 +111,8 @@ def test_invalid_redirect():
 # Test GitHub Error
 #
 def test_github_error():
-    rqst = build_query_request('/auth/github/callback', parms | {"error": "it happens sometimes"})
+    session = login()
+    rqst = build_query_request('/auth/github/callback', session | {"error": "it happens sometimes"})
     rsps = lambda_gateway(rqst, None)
     redirect_parms = dict(parse_qsl(urlparse(rsps['headers']['Location']).query))
     assert rsps['statusCode'] == 302
@@ -115,7 +124,8 @@ def test_github_error():
 # Test Missing Code
 #
 def test_missing_code():
-    rqst = build_query_request('/auth/github/callback', {"state": callback_parms['state']})
+    session = login()
+    rqst = build_query_request('/auth/github/callback', {"state": session['state']})
     rsps = lambda_gateway(rqst, None)
     redirect_parms = dict(parse_qsl(urlparse(rsps['headers']['Location']).query))
     assert rsps['statusCode'] == 302

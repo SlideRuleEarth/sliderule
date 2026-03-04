@@ -154,7 +154,6 @@ def session_store(key, value):
             "value": value,
             "ttl": int(datetime.now().timestamp()) + (SESSION_EXPIRATION_HOURS * 60 * 60) # seconds
         },
-        ConditionExpression = "attribute_not_exists(id)"
     )
     if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
         raise RuntimeError(f"Failed to store {key}: {response}")
@@ -462,14 +461,13 @@ def get_user_teams(authorization_str, org_roles):
 
     # Use /user/teams which lists teams for the authenticated user
     # This works for all users, unlike /orgs/{org}/teams which requires admin
-    url = f"{GITHUB_API_URL}/user/teams"
     page = 1
     per_page = 100
 
     while True:
         # Make request to GitHub
         response = requests.get(
-            url,
+            f"{GITHUB_API_URL}/user/teams",
             headers={
                 'Authorization': authorization_str,
                 'Accept': 'application/vnd.github.v3+json'
@@ -940,8 +938,8 @@ def handle_token(event):
         # check code expiration
         now = int(datetime.now().timestamp())
         expiration = int(session_code["expiration"])
-        if (now < expiration) or ((now - expiration) > CODE_EXPIRATION_SECONDS):
-            raise RuntimeError(f"Code has expired: {expiration}")
+        if ((now + CODE_EXPIRATION_SECONDS) < expiration) or ((now - expiration) > CODE_EXPIRATION_SECONDS):
+            raise RuntimeError(f"Code has expired: {expiration} {now}")
 
         # check grant type
         if grant_type not in session["grant_types"]:
@@ -1263,7 +1261,7 @@ def handle_pat_login(event):
 
         # Verify token by calling GitHub API
         user_resp = requests.get(
-            'https://api.github.com/user',
+            f'{GITHUB_API_URL}/user',
             headers={
                 'Authorization': f'token {pat}',
                 'Accept': 'application/json'

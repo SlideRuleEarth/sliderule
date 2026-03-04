@@ -52,7 +52,7 @@ def test_nominal():
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type'
     })
-    assert 'https://localhost:9083/login/oauth/authorize?client_id=myid' in rsps['headers']['Location']
+    assert 'http://localhost:9083/login/oauth/authorize?client_id=myid' in rsps['headers']['Location']
 
 #
 # Test Invalid Session

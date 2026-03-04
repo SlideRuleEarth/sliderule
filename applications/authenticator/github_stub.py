@@ -62,9 +62,45 @@ def check_dictionary(superset, subset):
 # Test Endpoints
 # #######################
 
-@app.post("/test")
-async def handle_test(request: Request):
-    body = await request.json()
+@app.post("/login/oauth/access_token")
+async def handle_access_token(request: Request):
+    form = await request.form()
+    data = dict(form)
     return {
-        "received": body
+        "received": data,
+        "access_token": "stubbed-token"
     }
+
+@app.get("/api/user")
+async def handle_api_user(request: Request):
+    form = await request.form()
+    data = dict(form)
+    return {
+        "received": data,
+        "login": "my-user-name"
+    }
+
+@app.get("/api/orgs/myorg/memberships/my-user-name")
+async def handle_api_memberships(request: Request):
+    form = await request.form()
+    data = dict(form)
+    return {
+        "received": data,
+        "state": "active",
+        "role": "admin"
+    }
+
+@app.get("/api/user/teams")
+async def handle_api_teams(page: int = 1, per_page: int = 30):
+    print("TEAMS", page, per_page)
+    if page <= 1:
+        return [{
+            "page": page,
+            "per_page": per_page,
+            "organization": {
+                'login': 'myorg',
+                'slug': 'myteam'
+            }
+        }]
+    else:
+        return {}
