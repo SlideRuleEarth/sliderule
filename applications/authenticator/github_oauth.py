@@ -47,7 +47,7 @@ ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
 ALLOWED_CHALLENGE_METHODS   = {"S256"}
-ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "cluster"}
+ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "sliderule:access", "sliderule:trusted"}
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15 # seconds
@@ -519,24 +519,27 @@ def generate_audience_list(username, teams, org_roles, scope):
     Returns a list of services user has access to.
     """
     # Initialize allowed services
-    allowed = []
+    audiences = []
+
+    # Get resources from scopes
+    resources = {s.split(":")[0] for s in scope}
 
     # Provide cluster services
-    if ('cluster' in scope) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
-        allowed.append(['provisioner']) # all members have access to the provisioner
-        if username: # all members can deploy to their personal cluster
-            allowed.append(f"{username}")
-        if teams: # all members can deploy to their team clusters
-            allowed.extend(teams)
-        if 'owner' in org_roles: # owners can deploy anything
-            allowed.extend(['*'])
+    if ('sliderule' in resources) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
+        audiences.append(['provisioner']) # all members have access to the provisioner
+        if username: # all members can access services at subdomains tied to their username
+            audiences.append(f"{username}")
+        if teams: # all members can access services at subdomains tied to teams they belong to
+            audiences.extend(teams)
+        if 'owner' in org_roles: # owners can access all services
+            audiences.extend(['*'])
 
     # Provide MCP services
-    if ('mcp:tools' in scope) or ('mcp:resources' in scope): # any authenticated user has access to MCP services
-        allowed.append(f'https://mcp.{DOMAIN}')
+    if 'mcp' in resources: # any authenticated user has access to MCP services
+        audiences.append(f'https://mcp.{DOMAIN}')
 
-    # Return allowed clusters
-    return allowed
+    # Return list of audiences
+    return audiences
 
 
 def create_auth_token(metadata):
@@ -796,7 +799,7 @@ def handle_login(event):
 
         # get session
         session = session_load(client_id)
-        print("SESSION", session)
+
         # check session
         if not session:
             raise RuntimeError(f"Unable to locate session: {client_id}")
@@ -873,7 +876,7 @@ def handle_callback(event):
     """
     try:
         parms               = event.get('queryStringParameters') or {}
-        code                = parms.get('code')
+        github_code         = parms.get('code')
         github_state        = parms.get('state')
         error               = parms.get('error')
         error_description   = parms.get('error_description')
@@ -899,20 +902,16 @@ def handle_callback(event):
             return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
 
         # check code was returned by GitHub
-        if not code:
+        if not github_code:
             return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
 
-        # Authenticate user (gets token and metadata)
-        access_token = exchange_code_for_token(code)
-        token, metadata = authenticate_user(f'Bearer {access_token}', session_challenge["scope"])
-
-        # Generate unique code
-        code = uuid.uuid4()
+        # generate unique code to return back to client
+        client_code = uuid.uuid4()
 
         # store token and metadata associated with session
-        session_store(f"{client_id}/{code}", {
-            "token": token,
-            "metadata": metadata,
+        session_store(f"{client_id}/{client_code}", {
+            "github_code": github_code,
+            "scope": session_challenge["scope"],
             "code_challenge": session_challenge["code_challenge"],
             "redirect_uri": redirect_uri,
             "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
@@ -920,7 +919,7 @@ def handle_callback(event):
 
         # Redirect to frontend with JWT in parameters
         return redirect_to_frontend(redirect_uri, parms={
-            'code': code,
+            'code': client_code,
             'state': client_state
         })
 
@@ -968,8 +967,11 @@ def handle_token(event):
         if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
             raise RuntimeError("Failed to verify code challenge")
 
+        # Authenticate user (gets token and metadata)
+        access_token = exchange_code_for_token(session_code["github_code"])
+        token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
+
         # Build known and deployable clusters (user interface hints)
-        metadata = session_code["metadata"]
         info = {
             'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
@@ -983,11 +985,11 @@ def handle_token(event):
 
         # Redirect to frontend with JWT in parameters
         return json_response(200, {
-            "access_token": session_code["token"],
+            "access_token": token,
             "token_type": "Bearer",
             "expires_in": JWT_EXPIRATION_HOURS * 60,
-            "refresh_token": session_code["token"], # revisit
-            "scope": "mcp:tools mcp:resources",
+            "refresh_token": token, # TODO: revisit
+            "scope": " ".join(session["scope"]),
             "info": info
         })
 
