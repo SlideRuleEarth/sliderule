@@ -18,6 +18,7 @@ register_rqst = build_query_request('/auth/github/register', {
     "challenge_method": 'S256',
     "scope": 'mcp:tools mcp:resources'
 })
+
 register_rsps = json.loads(lambda_gateway(register_rqst, None)["body"])
 
 code_verifier = generate_code_verifier()

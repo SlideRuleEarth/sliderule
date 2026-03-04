@@ -566,7 +566,7 @@ def lambda_gateway(event, context):
         # route request
         if rqst == None: # check request
             return json_response(403, {'error': 'access denied'})
-        elif rqst["path"] == '/info': # only uses info, but still validate rqst
+        elif rqst["path"] == '/info': # only uses info, but still requires validated rqst
             return json_response(200, info)
         elif rqst["path"] == '/deploy':
             return deploy_handler(rqst)

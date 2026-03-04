@@ -274,42 +274,35 @@ def verify_signed_state(state):
     Returns:
         Tuple of (is_valid: bool, redirect_uri: str | None, error: str | None)
     """
-    try:
-        # parse state into components
-        parts = state.split(':')
-        if len(parts) == 4:
-            raise RuntimeError("Invalid state format")
-        nonce = parts[0]
-        timestamp_str = parts[1]
-        payload = parts[2]
-        provided_signature = parts[3]
+    # Parse state into components
+    parts = state.split(':')
+    if len(parts) < 4:
+        raise RuntimeError("Invalid state format")
+    nonce = parts[0]
+    timestamp_str = parts[1]
+    payload = ":".join(parts[2:-1])
+    provided_signature = parts[-1]
 
-        # Verify HMAC signature
-        signing_key = get_hmac_signing_key()
-        message = f"{nonce}:{timestamp_str}:{payload}"
-        expected_signature = hmac.new(
-            signing_key.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).hexdigest()
+    # Verify HMAC signature
+    signing_key = get_hmac_signing_key()
+    message = f"{nonce}:{timestamp_str}:{payload}"
+    expected_signature = hmac.new(
+        signing_key.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()
 
-        if not hmac.compare_digest(provided_signature, expected_signature):
-            raise RuntimeError("Invalid state signature")
+    if not hmac.compare_digest(provided_signature, expected_signature):
+        raise RuntimeError(f"Invalid state signature")
 
-        # Check timestamp expiration
-        timestamp = int(timestamp_str)
-        now = int(datetime.now(timezone.utc).timestamp())
-        if now - timestamp > STATE_EXPIRATION_SECONDS:
-            raise RuntimeError("State has expired")
+    # Check timestamp expiration
+    timestamp = int(timestamp_str)
+    now = int(datetime.now(timezone.utc).timestamp())
+    if now - timestamp > STATE_EXPIRATION_SECONDS:
+        raise RuntimeError("State has expired")
 
-        # Success
-        return payload
-
-    except Exception as e:
-
-        # Failure
-        print(f"Error verifying state: {e}")
-        return None
+    # Success
+    return payload
 
 
 def verify_with_kms(message_bytes, signature):
@@ -394,7 +387,7 @@ def get_github_user(authorization_str):
     return response.json()
 
 
-def get_organization_roles(authorization_str, username):
+def get_organization_roles(authorization_str, username, scope):
     """
     Builds a list of roles for the user
     Raises:
@@ -437,9 +430,12 @@ def get_organization_roles(authorization_str, username):
         print(f"Unexpected response checking org membership: {response.status_code} {response.text}")
         raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
 
+    # Get requested permissions from scope
+    requesting_trusted = 'sliderule:trusted' in scope
+
     # Build organization roles
     roles = []
-    if is_org_owner:
+    if is_org_owner and requesting_trusted:
         roles = ['owner', 'member']
     elif is_org_member:
         roles = ['member']
@@ -643,7 +639,7 @@ def authenticate_user(authorization_str, scope):
         raise RuntimeError('Could not get GitHub username')
 
     # Get user metadata
-    org_roles = get_organization_roles(authorization_str, username)
+    org_roles = get_organization_roles(authorization_str, username, scope)
     teams = get_user_teams(authorization_str, org_roles)
     audience_list = generate_audience_list(username, teams, org_roles, scope)
 
@@ -667,17 +663,6 @@ def authenticate_user(authorization_str, scope):
 
     # Return artifacts
     return auth_token, metadata
-
-
-def is_allowed_host(host):
-    """
-    All redirects must be explicitly allowed
-    """
-    for allowed_host in ALLOWED_REDIRECT_HOSTS:
-        if host == allowed_host or host.endswith('.' + allowed_host):
-            return True
-    print(f"Rejected redirect to unauthorized host: {host}")
-    return False
 
 
 # =============================================================================
@@ -882,9 +867,9 @@ def handle_callback(event):
         error_description   = parms.get('error_description')
 
         # extract and verify state information
-        payload_b64 = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
-        payload = base64.urlsafe_b64decode(payload_b64.encode()).decode()
-        client_id, redirect_uri, client_state = payload.split(":")
+        payload = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
+        client_id, redirect_uri_b64, client_state = payload.split(":")
+        redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
 
         # get session challenge (and delete so it cannot be reused)
         session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
@@ -925,7 +910,10 @@ def handle_callback(event):
 
     except Exception as e:
         print(f"Exception in OAuth callback: {e}")
-        return redirect_to_frontend(redirect_uri, parms={'error': f"Error during OAuth callback"})
+        return json_response(500, {
+            'error': 'internal_error',
+            'error_description': 'error during OAuth callback'
+        })
 
 
 def handle_token(event):
@@ -1064,24 +1052,19 @@ def redirect_to_frontend(redirect_uri, parms=None):
        raise RuntimeError(f"Rejected http redirect to non-localhost host: {host}")
 
     # Check against allowed hosts
-    if not is_allowed_host(host):
-        raise RuntimeError(f"Invalid host: {host}")
-
-    # Build full redirect url
-    redirect_url = f"{redirect_uri}?{urllib.parse.urlencode(parms)}"
-
-    # Initialize headers
-    headers = {
-        'Location': redirect_url,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-    }
+    is_allowed = False
+    for allowed_host in ALLOWED_REDIRECT_HOSTS:
+        if host == allowed_host or host.endswith('.' + allowed_host):
+            is_allowed = True
+            break
+    if not is_allowed:
+        raise RuntimeError(f"Rejected redirect to unauthorized host: {host}")
 
     # Return response
-    return {
-        'statusCode': 302,
-        'headers': headers,
-        'body': ''
-    }
+    return json_response(302, None, headers={
+        'Location': f"{redirect_uri}?{urllib.parse.urlencode(parms)}",
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    })
 
 
 # =============================================================================
