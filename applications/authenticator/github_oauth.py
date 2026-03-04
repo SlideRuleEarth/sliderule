@@ -973,9 +973,9 @@ def handle_token(event):
         return json_response(200, {
             "access_token": token,
             "token_type": "Bearer",
-            "expires_in": JWT_EXPIRATION_HOURS * 60,
+            "expires_in": JWT_EXPIRATION_HOURS * 60 * 60,
             "refresh_token": token, # TODO: revisit
-            "scope": " ".join(session["scope"]),
+            "scope": " ".join(session_code["scope"]),
             "info": info
         })
 
