@@ -3,6 +3,7 @@
 --
 local json      = require("json")
 local runner    = require("container_runtime")
+local global    = require("global")
 local rqst      = json.decode(arg[1])
 local timeout   = rqst["rqst_timeout"] or 600000
 local parms     = rqst["parms"]
@@ -14,16 +15,10 @@ local output    = "results.json" -- well known file name
 -------------------------------------------------------
 -- verify permissions
 -------------------------------------------------------
-if not sys.getcfg("trusted_environment") then
-    -- check if member
-    local global = require("global")
-    if not global.membership(_rqst.orgroles) then
-        return "user must be a sliderule member to execute this endpoint", false
-    end
-    -- check request signature
-    if not _rqst.signed then
-        return "user must used a signed request for this endpoint", false
-    end
+if not global.membership(_rqst.orgroles) then -- check if member
+    return "user must be a sliderule member to execute this endpoint", false
+elseif not _rqst.signed then -- check request signature
+    return "user must used a signed request for this endpoint", false
 end
 
 -------------------------------------------------------

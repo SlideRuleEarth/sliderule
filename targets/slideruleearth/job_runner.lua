@@ -26,11 +26,6 @@ end
 -- Validation
 --------------------------------------------------
 
-if not sys.getcfg("trusted_environment") then
-    print("Can only execute in a trusted environment")
-    sys.quit(1) -- failure
-end
-
 io.write("Executing job: ")
 for _,a in ipairs(arg) do
     io.write(a)

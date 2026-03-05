@@ -36,58 +36,125 @@
 #include <aws/core/Aws.h>
 #include <aws/secretsmanager/SecretsManagerClient.h>
 #include <aws/secretsmanager/model/GetSecretValueRequest.h>
+#include <rapidjson/document.h>
 
 #include "SecretManager.h"
 #include "OsApi.h"
 #include "EventLib.h"
 #include "LuaObject.h"
+#include "StringLib.h"
+#include "SystemConfig.h"
+
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* SecretManager::PUBKEYS_SECRET = "pubkeys";
+Mutex SecretManager::secretCacheMutex;
+Dictionary<string> SecretManager::secretCache;
 
 /******************************************************************************
  * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * get
+ * get - "{domain}/<secret_name>"[<key>] --> value
  *----------------------------------------------------------------------------*/
-const char* SecretManager::get(const char* secret_name)
+const char* SecretManager::get(const char* secret_name, const char* key)
 {
-    string value;
+    // check cache for secret
+    FString cached_secret("%s/%s/%s", SystemConfig::settings().domain.value.c_str(), secret_name, key);
+    secretCacheMutex.lock();
+    {
+        string value;
+        if(secretCache.find(cached_secret.c_str(), &value))
+        {
+            secretCacheMutex.unlock();
+            return value.c_str();
+        }
+    }
+    secretCacheMutex.unlock();
 
+    // fetch secret from AWS secrets manager
+    FString aws_secret("%s/%s", SystemConfig::settings().domain.value.c_str(), secret_name);
     Aws::SecretsManager::SecretsManagerClient client;
     Aws::SecretsManager::Model::GetSecretValueRequest request;
-    request.SetSecretId(secret_name);
-
+printf("(1)\n");
+    request.SetSecretId(aws_secret.c_str());
     auto outcome = client.GetSecretValue(request);
+printf("(2)\n");
     if(outcome.IsSuccess())
     {
+printf("(3)\n");
+        // process non-empty secret value
         const auto& result = outcome.GetResult();
         if(!result.GetSecretString().empty())
         {
-            return result.GetSecretString().c_str();
+printf("(4)\n");
+            try
+            {
+                const char* secret_str = result.GetSecretString().c_str();
+printf("(5): %s\n", secret_str);
+                // parse contents as json
+                rapidjson::Document json;
+                json.Parse(secret_str);
+                string value = json[key][0].GetString();
+//TODO: crashing before here!
+
+printf("(6)\n");
+                if(!value.empty())
+                {
+printf("(7)\n");
+                    // cache value
+                    secretCacheMutex.lock();
+                    {
+printf("(8)\n");
+                        if(!secretCache.add(cached_secret.c_str(), value))
+                        {
+                            mlog(ERROR, "Failed to cache secret: %s", cached_secret.c_str());
+                        }
+printf("(9)\n");
+                    }
+                    secretCacheMutex.unlock();
+
+printf("(10)\n");
+                    // return secret value
+                    return value.c_str();
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed to retrieve <%s> from <%s>", key, aws_secret.c_str());
+                }
+            }
+            catch(const std::exception& e)
+            {
+                mlog(CRITICAL, "Failed to parse secret: %s", e.what());
+            }
         }
         else
         {
-            mlog(CRITICAL, "Secret <%s> is empty", secret_name);
+            mlog(CRITICAL, "Secret <%s> is empty", aws_secret.c_str());
         }
     }
     else
     {
         const auto& error = outcome.GetError();
-        mlog(CRITICAL, "Failed to retrieve secret <%s>: %s - %s", secret_name, error.GetExceptionName().c_str(), error.GetMessage().c_str());
+        mlog(CRITICAL, "Failed to retrieve secret <%s>: %s - %s", aws_secret.c_str(), error.GetExceptionName().c_str(), error.GetMessage().c_str());
     }
 
     return NULL;
 }
 
 /*----------------------------------------------------------------------------
- * luaGet - secret(<name>) --> value
+ * luaGet - secret(<name>, <key>) --> value
  *----------------------------------------------------------------------------*/
 int SecretManager::luaGet(lua_State* L)
 {
     try
     {
-        const char* secret_name = LuaObject::getLuaString(L, 1);
-        const char* secret_value = get(secret_name);
+        const char* secret_name     = LuaObject::getLuaString(L, 1);
+        const char* key             = LuaObject::getLuaString(L, 2);
+        const char* secret_value    = get(secret_name, key);
         if(secret_value)    lua_pushstring(L, secret_value);
         else                lua_pushnil(L);
     }

@@ -360,8 +360,6 @@ Resources:
           Environment:
             - Name: LOG_FORMAT
               Value: FMT_CLOUD
-            - Name: TRUSTED_ENVIRONMENT
-              Value: true
             - Name: IPV4
               Value: localhost
             - Name: ENVIRONMENT_VERSION

@@ -168,13 +168,14 @@ const char* EndpointObject::Request::getHdrStreaming (void) const
 bool EndpointObject::Request::verifyHdrSignature (const char* account) const
 {
     int status = false;
-
+mlog(CRITICAL, "VERIFYING SIGNATURE: %s", account);
 #ifdef __aws__
     /* check signature */
     string* signature_str;
     if(!headers.find("x-sliderule-signature", &signature_str))
     {
         // no need to log message here as it is nominal for requests not to be signed
+    mlog(CRITICAL, "DIDNT FIND SIGNATURE: %s", account);
         return false;
     }
 
@@ -200,7 +201,7 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     }
 
     /* get public key */
-    const char* public_key = SecretManager::get(account);
+    const char* public_key = SecretManager::get(SecretManager::PUBKEYS_SECRET, account);
     if(!public_key)
     {
         mlog(CRITICAL, "Failed to retrieve public key for %s", account);

@@ -41,10 +41,6 @@
 #include "OsApi.h"
 #include "StringLib.h"
 
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
-
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/

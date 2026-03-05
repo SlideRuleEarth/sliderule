@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - boto3
+  - cryptography
   - duckdb
   - geojson
   - geopandas

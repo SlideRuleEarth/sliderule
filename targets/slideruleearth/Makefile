@@ -159,7 +159,6 @@ config-release: prep ## configure server to run a release version locally
 
 run: ## run the server locally
 	LOG_FORMAT=FMT_TEXT \
-	TRUSTED_ENVIRONMENT=true \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
@@ -167,7 +166,7 @@ run: ## run the server locally
 	PROJECT_REGION=$(AWS_REGION) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
 	CLUSTER=local \
-	DOMAIN=localhost \
+	DOMAIN=$(DOMAIN) \
 	AMS=http://127.0.0.1:9082 \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
@@ -185,7 +184,6 @@ build: ## build the code using the build environment docker container
 		-e GITNAME="$(shell git config user.name)" \
 		-e GITEMAIL="$(shell git config user.email)" \
 		-e LOG_FORMAT=FMT_TEXT \
-		-e TRUSTED_ENVIRONMENT=true \
 		-e IPV4=$(MYIP) \
 		-e ENVIRONMENT_VERSION=$(ENVVER) \
 		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
@@ -203,7 +201,6 @@ build: ## build the code using the build environment docker container
 
 job: ## run the self test on the server code
 	LOG_FORMAT=FMT_TEXT \
-	TRUSTED_ENVIRONMENT=true \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
@@ -798,7 +795,6 @@ STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arctic
 selftest: ## run the self test on the server code
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_REGION=$(AWS_REGION) \
-	TRUSTED_ENVIRONMENT=true \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
 pytest: ## run python client tests; needs special conda environment

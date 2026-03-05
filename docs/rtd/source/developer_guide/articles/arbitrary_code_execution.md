@@ -10,7 +10,7 @@ SlideRule now supports executing user provided Lua code for SlideRuleEarth membe
 
 Using the SlideRule Python Client, the following is an example of how to execute user provided code that returns "Hello World" back to the user:
 ```Python
-sliderule.source("ace", 'return "Hello World"'. sign=True)
+sliderule.source("ace", 'return "Hello World"', sign=True)
 ```
 
 ## Example Use Case - ATL13 Lake ID Mapping

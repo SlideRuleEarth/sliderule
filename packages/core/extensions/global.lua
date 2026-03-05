@@ -30,14 +30,16 @@ local function split(str, delimiter)
 end
 
 
-local function membership(roles)
-    -- determine membership
-    local org_roles = json.decode(roles)
+local function membership(roles) -- determine membership
     local is_member = false
-    local n = #org_roles
-    for i = 1, n do
-        if org_roles[i] == "member" then
-            is_member = true
+    local status, org_roles = pcall(json.decode, roles)
+    if status then
+        local n = #org_roles
+        for i = 1, n do
+            if org_roles[i] == "member" then
+                is_member = true
+                break
+            end
         end
     end
     return is_member

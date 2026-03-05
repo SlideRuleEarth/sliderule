@@ -33,6 +33,8 @@
 #define __secret_manager__
 
 #include "LuaEngine.h"
+#include "OsApi.h"
+#include "Dictionary.h"
 
 /******************************************************************************
  * CLASS
@@ -42,8 +44,15 @@ class SecretManager
 {
     public:
 
-        static const char* get(const char* secret_name);
+        static const char* PUBKEYS_SECRET;
+
+        static const char* get(const char* secret_name, const char* key);
         static int luaGet(lua_State* L);
+
+    private:
+
+        static Mutex secretCacheMutex;
+        static Dictionary<string> secretCache;
 };
 
 #endif  /* __secret_manager__ */
