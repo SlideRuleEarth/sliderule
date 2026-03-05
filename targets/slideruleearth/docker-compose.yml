@@ -52,6 +52,7 @@ services:
       - /etc/haproxy/pem/:/etc/haproxy/pem/
     environment:
       - IS_PUBLIC=true
+      - DOMAIN=localhost
       - JWT_ISSUER=https://login.slideruleearth.io
       - CLUSTER=local
     labels:

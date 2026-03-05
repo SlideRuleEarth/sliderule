@@ -1,6 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: SlideRule Certbot Lambda
 Parameters:
+  Domain:
+    Type: String
   ProjectBucket:
     Type: String
   ProjectFolder:
@@ -110,7 +112,7 @@ Resources:
       Environment:
         Variables:
           EMAILS: "jp.swinski@nasa.gov"
-          DOMAINS: "*.slideruleearth.io"
+          DOMAINS: !Sub "*.${Domain}"
           DNS_PLUGIN: "dns-route53"
           S3_BUCKET: !Ref ProjectBucket
           S3_PREFIX: !Ref ProjectFolder

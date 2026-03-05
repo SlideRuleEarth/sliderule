@@ -1217,7 +1217,11 @@ def handle_device_poll(event):
         token, metadata = authenticate_user(f'Bearer {access_token}', ['cluster'])
 
         # Response with a successful authentication
-        return json_response(200, {"status": "success", "token": token, "metadata": metadata})
+        return json_response(200, {
+            "status": "success",
+            "token": token,
+            "metadata": metadata
+        })
 
     except Exception as e:
         print(f"Error in device poll: {e}")

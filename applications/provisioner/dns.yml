@@ -5,10 +5,10 @@ Description: "Route53 A record for a cluster subdomain"
 Parameters:
   Domain:
     Type: String
-    Description: "The base domain of the cluster (e.g. slideruleearth.io)"
+    Description: "The base domain of the cluster"
   Subdomain:
     Type: String
-    Description: "The subdomain of the cluster (e.g. sliderule)"
+    Description: "The subdomain of the cluster"
   PublicIp:
     Type: String
     Description: "The public IPv4 address"

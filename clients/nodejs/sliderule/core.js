@@ -28,7 +28,6 @@
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 const https = require('https');
-const netrc = require('netrc');
 const pkg = require('./package.json')
 
 //------------------------------------

@@ -666,7 +666,8 @@ certbot-create: certbot-build ## creates the lambda certbot function
 		--template-body file://$(ROOT)/applications/certbot/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
 	aws cloudformation wait stack-create-complete --stack-name certbot

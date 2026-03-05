@@ -80,6 +80,26 @@ def test_invalid_ttl():
     assert rsps['statusCode'] == 403
 
 #
+# Test Unpermitted Admin Request
+#
+def test_admin_request():
+    rsps = lambda_gateway({
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "org_roles": '[member]',
+                        "aud": '[*]'
+                    }
+                }
+            }
+        },
+        "rawPath": "/report",
+        "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"600"}'
+    }, None)
+    assert rsps['statusCode'] == 403 # ["*"] requires signed request
+
+#
 # Test Report
 #
 def test_invalid_report():
@@ -88,14 +108,13 @@ def test_invalid_report():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '[member]',
-                        "aud": '[*]',
+                        "org_roles": '[member]'
                     }
                 }
             }
         },
         "rawPath": "/report",
-        "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"600"}'
+        "body": '{"node_capacity":"10","ttl":"600"}'
     }, None)
     assert rsps['statusCode'] == 404 # api not exposed
 
@@ -108,13 +127,12 @@ def test_invalid_path():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '[member]',
-                        "aud": '[*]',
+                        "org_roles": '[member]'
                     }
                 }
             }
         },
         "rawPath": "/does_not_exist",
-        "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"600"}'
+        "body": '{"node_capacity":"10","ttl":"600"}'
     }, None)
     assert rsps['statusCode'] == 404, f"{rsps}"
