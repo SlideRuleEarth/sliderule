@@ -40,6 +40,7 @@
 #include "SecretManager.h"
 #include "OsApi.h"
 #include "EventLib.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * METHODS

@@ -21,7 +21,7 @@ if parms["key_space"] == core.INVALID_KEY then
         end
     end
     -- apply polygon if supplied
-    if resources_set_by_ams and parms:length("poly") > 0 then
+    if resources_set_by_ams and ((parms:length("poly") > 0) or (parms:length("t0") > 0) or (parms:length("t1") > 0)) then
         local rc_cmr, cmr_response = earthdata.cmr(rqst["parms"], nil, false, "ATL13")
         if rc_cmr == RC_SUCCESS and type(cmr_response) == 'table' then
             -- pull out all resources from cmr query

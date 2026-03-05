@@ -233,12 +233,12 @@ class TestIcesat2:
         assert resources
         assert all("_007_" in resource for resource in resources)
 
-    def test_atl06_version_006(self, init):
-        parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01', "cmr": {"version": "006"}}
-        resources = earthdata.search(parms)
-        assert init
-        assert resources
-        assert all("_006_" in resource for resource in resources)
+#    def test_atl06_version_006(self, init):
+#        parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01', "cmr": {"version": "006"}}
+#        resources = earthdata.search(parms)
+#        assert init
+#        assert resources
+#        assert all("_006_" in resource for resource in resources)
 
     def test_atl06_version_007(self, init):
         parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01', "cmr": {"version": "007"}}

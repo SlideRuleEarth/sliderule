@@ -73,6 +73,7 @@ def atl13_route():
                 SELECT *
                 FROM atl13_mask
                 WHERE ATL13refID == {refid}
+                {icesat2.build_name_filter("AND", name_filter)}
                 {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif name != None:
@@ -80,6 +81,7 @@ def atl13_route():
                 SELECT *
                 FROM atl13_mask
                 WHERE Lake_name == '{name}'
+                {icesat2.build_name_filter("AND", name_filter)}
                 {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
         elif coord != None:
@@ -87,29 +89,17 @@ def atl13_route():
                 SELECT *
                 FROM atl13_mask
                 WHERE ST_Contains(geometry, ST_Point({coord['lon']}, {coord['lat']}))
+                {icesat2.build_name_filter("AND", name_filter)}
                 {icesat2.build_polygon_query("AND", poly)};
             """).df().iloc[0]
-        elif name_filter != None and poly != None:
+        elif name_filter != None or poly != None:
             single_lake = False
+            state = {'WHERE': False}
             data = mask.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                {icesat2.build_name_filter("WHERE", name_filter)}
-                {icesat2.build_polygon_query("AND", poly)};
-            """).df()
-        elif name_filter != None:
-            single_lake = False
-            data = mask.execute(f"""
-                SELECT *
-                FROM atl13_mask
-                {icesat2.build_name_filter("AND", name_filter)};
-            """).df()
-        elif poly != None:
-            single_lake = False
-            data = mask.execute(f"""
-                SELECT *
-                FROM atl13_mask
-                {icesat2.build_polygon_query("WHERE", poly)};
+                {icesat2.build_name_filter(state, name_filter)}
+                {icesat2.build_polygon_query(state, poly)};
             """).df()
         else:
             raise RuntimeError("must supply at least one query parameter (refid, name, coord, poly, name_filter)")

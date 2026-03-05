@@ -194,7 +194,7 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
         int64_t now = OsApi::time(OsApi::SYS_CLK) / 1000000; // seconds
         if((timestamp < (now - allowed_range_seconds)) || (timestamp > (now + allowed_range_seconds)))
         {
-            mlog(CRITICAL, "Signed request expired: %ld <> %ld", timestamp, now);
+            mlog(CRITICAL, "Signed request expired: %lld <> %ld", timestamp, now);
             return false;
         }
     }
@@ -233,7 +233,7 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     const char* full_path_b64 = StringLib::b64encode(full_path.c_str(), &full_path_len);
     int body_len = length;
     const char* body_b64 = StringLib::b64encode(body, &body_len);
-    FString message("%s:%s:%s", full_path_b64, timestamp_str, body_b64);
+    FString message("%s:%s:%s", full_path_b64, timestamp_str->c_str(), body_b64);
     const uint8_t* message_bytes = reinterpret_cast<const uint8_t*>(message.c_str());
 
     /* verify signature */
