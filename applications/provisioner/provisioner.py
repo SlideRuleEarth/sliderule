@@ -578,13 +578,12 @@ def lambda_gateway(event, context):
             return status_handler(rqst)
         elif rqst["path"] == '/events':
             return events_handler(rqst)
-        elif rqst["owner"]: # owner level APIs
-            if rqst["path"] == '/report/clusters' or rqst["path"] == '/report':
-                return report_clusters_handler(rqst)
-            elif rqst["path"] == '/report/tests':
-                return report_tests_handler(rqst)
-            elif rqst["path"] == '/test':
-                return test_handler(rqst)
+        elif rqst["path"] == '/report/clusters' or rqst["path"] == '/report':
+            return report_clusters_handler(rqst)
+        elif rqst["path"] == '/report/tests':
+            return report_tests_handler(rqst)
+        elif rqst["path"] == '/test':
+            return test_handler(rqst)
 
         # invalid path
         return json_response(404, {'error': 'not found'})

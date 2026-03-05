@@ -100,25 +100,6 @@ def test_admin_request():
     assert rsps['statusCode'] == 403 # ["*"] requires signed request
 
 #
-# Test Report
-#
-def test_invalid_report():
-    rsps = lambda_gateway({
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "org_roles": '[member]'
-                    }
-                }
-            }
-        },
-        "rawPath": "/report",
-        "body": '{"node_capacity":"10","ttl":"600"}'
-    }, None)
-    assert rsps['statusCode'] == 404 # api not exposed
-
-#
 # Test Path
 #
 def test_invalid_path():

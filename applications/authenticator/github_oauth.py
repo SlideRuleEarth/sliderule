@@ -47,7 +47,7 @@ ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
 ALLOWED_CHALLENGE_METHODS   = {"S256"}
-ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "sliderule:access", "sliderule:trusted"}
+ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "sliderule:access", "sliderule:admin"}
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15 # seconds
@@ -430,7 +430,7 @@ def get_organization_roles(authorization_str, username, scope):
         raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
 
     # Get requested permissions from scope
-    requesting_trusted = 'sliderule:trusted' in scope
+    requesting_trusted = 'sliderule:admin' in scope
 
     # Build organization roles
     roles = []
@@ -521,8 +521,6 @@ def generate_audience_list(username, teams, org_roles, scope):
     # Provide cluster services
     if ('sliderule' in resources) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
         audiences.append(['provisioner']) # all members have access to the provisioner
-        if username: # all members can access services at subdomains tied to their username
-            audiences.append(f"{username}")
         if teams: # all members can access services at subdomains tied to teams they belong to
             audiences.extend(teams)
         if 'owner' in org_roles: # owners can access all services
@@ -957,7 +955,7 @@ def handle_token(event):
         access_token = exchange_code_for_token(session_code["github_code"])
         token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
 
-        # Build known and deployable clusters (user interface hints)
+        # Build user interface hints
         info = {
             'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
@@ -1214,7 +1212,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata
-        token, metadata = authenticate_user(f'Bearer {access_token}', ['cluster'])
+        token, metadata = authenticate_user(f'Bearer {access_token}', ['sliderule:access', 'sliderule:admin'])
 
         # Response with a successful authentication
         return json_response(200, {
@@ -1279,7 +1277,7 @@ def handle_pat_login(event):
             })
 
         # Token is valid! Authenticate user to get your own session token/metadata
-        token, metadata = authenticate_user(f'token {pat}', ['cluster'])
+        token, metadata = authenticate_user(f'token {pat}', ['sliderule:access'])
         return json_response(200, {
             'status': 'success',
             'token': token,
