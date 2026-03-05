@@ -225,6 +225,14 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${AlertStream}"
                   - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${TelemetryStream}"
+        - PolicyName: !Sub "${Cluster}-pubkey-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/pubkeys-*
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -675,6 +683,7 @@ Resources:
                   - ALERT_STREAM=${AlertStream}
                   - TELEMETRY_STREAM=${TelemetryStream}
                   - CLUSTER=${Cluster}
+                  - DOMAIN=${Domain}
                   - AMS=http://127.0.0.1:9082
                   - CONTAINER_REGISTRY=${ContainerRegistry}
                 labels:

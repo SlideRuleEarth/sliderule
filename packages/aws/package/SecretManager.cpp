@@ -30,81 +30,70 @@
  */
 
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
 #include <aws/core/Aws.h>
+#include <aws/secretsmanager/SecretsManagerClient.h>
+#include <aws/secretsmanager/model/GetSecretValueRequest.h>
 
-#include "OsApi.h"
-#include "CredentialStore.h"
-#include "FirehoseMonitor.h"
-#include "S3CacheIODriver.h"
-#include "S3CurlIODriver.h"
 #include "SecretManager.h"
+#include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_AWS_LIBNAME         "aws"
-
-/******************************************************************************
- * GLOBALS
- ******************************************************************************/
-
- Aws::SDKOptions options;
-
-/******************************************************************************
- * LOCAL FUNCTIONS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * aws_open
+ * get
  *----------------------------------------------------------------------------*/
-int aws_open (lua_State *L)
+const char* SecretManager::get(const char* secret_name)
 {
-    static const struct luaL_Reg aws_functions[] = {
-        {"csget",       CredentialStore::luaGet},
-        {"csput",       CredentialStore::luaPut},
-        {"s3get",       S3CurlIODriver::luaGet},
-        {"s3download",  S3CurlIODriver::luaDownload},
-        {"s3read",      S3CurlIODriver::luaRead},
-        {"s3upload",    S3CurlIODriver::luaUpload},
-        {"s3cache",     S3CacheIODriver::luaCreateCache},
-        {"firehose",    FirehoseMonitor::luaCreate},
-        {"secret",      SecretManager::luaGet},
-        {NULL,          NULL}
-    };
+    string value;
 
-    /* Set Library */
-    luaL_newlib(L, aws_functions);
+    Aws::SecretsManager::SecretsManagerClient client;
+    Aws::SecretsManager::Model::GetSecretValueRequest request;
+    request.SetSecretId(secret_name);
+
+    auto outcome = client.GetSecretValue(request);
+    if(outcome.IsSuccess())
+    {
+        const auto& result = outcome.GetResult();
+        if(!result.GetSecretString().empty())
+        {
+            return result.GetSecretString().c_str();
+        }
+        else
+        {
+            mlog(CRITICAL, "Secret <%s> is empty", secret_name);
+        }
+    }
+    else
+    {
+        const auto& error = outcome.GetError();
+        mlog(CRITICAL, "Failed to retrieve secret <%s>: %s - %s", secret_name, error.GetExceptionName().c_str(), error.GetMessage().c_str());
+    }
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGet - secret(<name>) --> value
+ *----------------------------------------------------------------------------*/
+int SecretManager::luaGet(lua_State* L)
+{
+    try
+    {
+        const char* secret_name = LuaObject::getLuaString(L, 1);
+        const char* secret_value = get(secret_name);
+        if(secret_value)    lua_pushstring(L, secret_value);
+        else                lua_pushnil(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting secret: %s", e.what());
+    }
 
     return 1;
-}
-
-/******************************************************************************
- * EXPORTED FUNCTIONS
- ******************************************************************************/
-
-extern "C" {
-void initaws (void)
-{
-    /* Initialize AWS SDK */
-    Aws::InitAPI(options);
-
-    /* Register I/O Drivers */
-    Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
-    Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
-
-    /* Extend Lua */
-    LuaEngine::extend(LUA_AWS_LIBNAME, aws_open, LIBID);
-
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_AWS_LIBNAME, LIBID);
-}
-
-void deinitaws (void)
-{
-    Aws::ShutdownAPI(options);
-}
 }

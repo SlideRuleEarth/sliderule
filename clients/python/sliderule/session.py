@@ -193,7 +193,7 @@ class Session:
     #
     #  source
     #
-    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2, rethrow=False):
+    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2, rethrow=False, sign=False):
         '''
         handles making the HTTP request to the sliderule cluster nodes
         '''
@@ -221,6 +221,10 @@ class Session:
             payload = json.dumps(parm)
         else:
             payload = parm
+
+        # (Optionally) Sign Request
+        if sign:
+            self.__signrequest(headers, url.split("://")[-1], payload)
 
         # status helper function
         def retry_status(attempt):
@@ -424,7 +428,7 @@ class Session:
                 # directly login using a PAT key
                 rsps = self.__patlogin(login_url, github_user_token)
             else:
-                # attempt device flow login
+                # attempt device flow login (required for admin privileges)
                 rsps = self.__deviceflow(login_url)
 
             # set internal session data
@@ -460,12 +464,12 @@ class Session:
             # Build Authorization Header
             self.__buildauthheader(headers)
 
-            # (Optionally) Sign Request
-            self.__signrequest(headers, subdomain, api, json.dumps(data))
-
             # Perform Request
-            url = f'https://{subdomain}.{self.domain}/{api}'
-            data = self.session.post(url, data=json.dumps(data), headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            path = f'{subdomain}.{self.domain}/{api}'
+            url = f'https://{path}'
+            body = json.dumps(data)
+            self.__signrequest(headers, path, body) # (optionally) sign request
+            data = self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
             data.raise_for_status()
 
             # Parse Response
@@ -679,7 +683,7 @@ class Session:
     #
     #  __signrequest
     #
-    def __signrequest(self, headers, subdomain, api, body):
+    def __signrequest(self, headers, path, body):
         '''
         cryptographically sign the request
         '''
@@ -689,7 +693,6 @@ class Session:
             from cryptography.hazmat.primitives.serialization import load_ssh_private_key
             with open(os.path.join(Path.home(), self.session.private_key), "rb") as file:
                 private_key = load_ssh_private_key(file.read(), password=None)
-            path = f'{subdomain}.{self.domain}/{api}'
             path_b64 = base64.urlsafe_b64encode(path.encode()).decode()
             timestamp = str(int(datetime.now(timezone.utc).timestamp()))
             body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
@@ -697,8 +700,8 @@ class Session:
             message_bytes = canonical_string.encode("utf-8")
             signature = private_key.sign(message_bytes)
             signature_b64 = base64.b64encode(signature).decode("ascii")
-            headers["X-SlideRule-Timestamp"] = str(timestamp)
-            headers["X-SlideRule-Signature"] = signature_b64
+            headers["x-sliderule-timestamp"] = str(timestamp)
+            headers["x-sliderule-signature"] = signature_b64
         except: # if anything fails, then no headers are provided
             pass
 

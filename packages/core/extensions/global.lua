@@ -1,3 +1,4 @@
+local json = require("json")
 
 local function eval (attribute, package)
     local p = package or "core"
@@ -28,10 +29,25 @@ local function split(str, delimiter)
     return result
 end
 
+
+local function membership(roles)
+    -- determine membership
+    local org_roles = json.decode(roles)
+    local is_member = false
+    local n = #org_roles
+    for i = 1, n do
+        if org_roles[i] == "member" then
+            is_member = true
+        end
+    end
+    return is_member
+end
+
 local package = {
     eval = eval,
     check = check,
-    split = split
+    split = split,
+    membership = membership
 }
 
 return package

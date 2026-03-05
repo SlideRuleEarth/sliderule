@@ -89,9 +89,13 @@ int GeoUserRaster::luaCreate (lua_State* L)
         LuaObject::referenceLuaObject(rqst_parms); // GeoUserRaster expects a LuaObject created from a Lua script
         lua_settop(L, stackTop);
 
-        /* Convert raster from Base64 to Binary */
-        const std::string tiff = MathLib::b64decode(raster, rasterlength);
-        rasterlength = tiff.length();
+        /* Convert raster from Base64 to Binary
+         * (use of dynamically allocated memory here is clumsy) */
+        int len = rasterlength;
+        const unsigned char* tiff_b64 = StringLib::b64decode(raster, &len);
+        rasterlength = len;
+        const string tiff = reinterpret_cast<const char*>(tiff_b64);
+        delete [] tiff_b64;
 
         /* Check maximum size */
         const uint32_t maxSize = 64*1024*1024;
@@ -99,7 +103,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
 
         /* Create GeoUserRaster */
-        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size()));
+        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), rasterlength));
     }
     catch(const RunTimeException& e)
     {

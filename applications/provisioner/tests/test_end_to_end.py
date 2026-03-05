@@ -8,7 +8,7 @@ import os
 #
 # Test Key Signing
 #
-def test_key_signin(username):
+def test_key_signing(username):
     with open(os.path.join(Path.home(), ".sliderule_key"), "rb") as file:
         private_key = load_ssh_private_key(file.read(), password=None)
     path = f'slideruleearth.io/info'
@@ -33,8 +33,8 @@ def test_key_signin(username):
         },
         "headers": {
             "host": "slideruleearth.io",
-            "X-SlideRule-Timestamp": str(timestamp),
-            "X-SlideRule-Signature": signature_b64
+            "x-sliderule-timestamp": str(timestamp),
+            "x-sliderule-signature": signature_b64
         },
         "rawPath": "/info",
         "body": ""

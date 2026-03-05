@@ -156,7 +156,7 @@ def create_session(**kwargs):
 #
 #  source
 #
-def source (api, parm=None, stream=False, callbacks=None, path="/source", session=None, rethrow=False):
+def source (api, parm=None, stream=False, callbacks=None, path="/source", session=None, rethrow=False, sign=False):
     '''
     Perform API call to SlideRule service
 
@@ -174,6 +174,8 @@ def source (api, parm=None, stream=False, callbacks=None, path="/source", sessio
                     path to api being requested
         rethrow:    bool
                     client rethrows exceptions to be handled by calling code
+        sign:       bool
+                    sign the request using a public/private key pair
 
     Returns
     -------
@@ -194,7 +196,7 @@ def source (api, parm=None, stream=False, callbacks=None, path="/source", sessio
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
     session = checksession(session)
-    return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path, rethrow=rethrow)
+    return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path, rethrow=rethrow, sign=sign)
 
 #
 #  set_url

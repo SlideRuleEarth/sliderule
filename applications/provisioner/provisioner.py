@@ -118,8 +118,8 @@ def verify_signature(username, event):
         path = event.get('rawPath', '')
         body_raw = event.get("body")
         host = event["headers"]["host"]
-        timestamp = event["headers"]["X-SlideRule-Timestamp"]
-        signature_b64 = event["headers"]["X-SlideRule-Signature"]
+        timestamp = event["headers"]["x-sliderule-timestamp"]
+        signature_b64 = event["headers"]["x-sliderule-signature"]
         signature = base64.b64decode(signature_b64)
 
         # get public key

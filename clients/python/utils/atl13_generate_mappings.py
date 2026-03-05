@@ -80,7 +80,7 @@ def worker (granule):
     if args.dryrun:
         return (granule, None)
     else:
-        return (granule, sliderule.source("ace", remote_procedure(granule)))
+        return (granule, sliderule.source("ace", remote_procedure(granule), sign=True))
 
 # -------------------------------------------
 # query CMR for ATL13 granules

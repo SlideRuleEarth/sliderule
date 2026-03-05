@@ -6,11 +6,11 @@ SlideRule now supports the execution of user supplied code (written as Lua scrip
 
 ## Summary
 
-SlideRule now supports executing user provided Lua code for organizational members.  This allows researchers to take advantage of the parallelization and cluster computing capabilities of SlideRule for code they develop.
+SlideRule now supports executing user provided Lua code for SlideRuleEarth members who are able to make a signed request.  This allows researchers to take advantage of the parallelization and cluster computing capabilities of SlideRule for code they develop.
 
 Using the SlideRule Python Client, the following is an example of how to execute user provided code that returns "Hello World" back to the user:
 ```Python
-sliderule.source("ace", 'return "Hello World"')
+sliderule.source("ace", 'return "Hello World"'. sign=True)
 ```
 
 ## Example Use Case - ATL13 Lake ID Mapping
@@ -99,3 +99,5 @@ There are some constraints on how the Arbitrary Code Execution works:
 * The `ace` API only supports non-streaming GET requests. This means that the user provided lua scripts must contain a __return__ statement, and only what is returned is passed back to the user.  In contrast, most of the high-level APIs provided by SlideRule are streaming and continuously return results back to the user via the __rspq__ response queue.
 
 * The `ace` API requests are not proxied.  This means that the orchestrator does not partition out the request and utilize the locking mechanism to guarantee an evenly distributed and high utilization of the full cluster.  The requests are still load balanaced, so to some degree they will be spread out over the cluster; but it is on the user to appropriately feed large sets of requests to the cluster in order to maintain a high utilization without exceeding the resources of any one node.
+
+* The `ace` API requires a request signature.  Please coordinate with the SlideRuleEarth development team to setup your public key used to verify the request signature.

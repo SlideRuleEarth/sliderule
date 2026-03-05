@@ -121,7 +121,7 @@ RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git && \
     echo aws-sdk-cpp: $(git --git-dir /aws-sdk-cpp/.git --work-tree /aws-sdk-cpp describe --abbrev --dirty --always --tags --long) >> /libdep.lock && \
     mkdir -p /build/aws-sdk-cpp && \
     cd /build/aws-sdk-cpp && \
-    cmake /aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="firehose" && \
+    cmake /aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="firehose;secretsmanager" && \
     make -j 8 && \
     make install && \
     rm -Rf /aws-sdk-cpp && \

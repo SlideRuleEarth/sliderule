@@ -10,20 +10,20 @@ local image     = rqst["image"]
 local command   = rqst["command"]
 local input     = "parms.json" -- well known file name
 local output    = "results.json" -- well known file name
-local org_roles = json.decode(_rqst.orgroles)
 
 -------------------------------------------------------
--- check if member
+-- verify permissions
 -------------------------------------------------------
-local is_member = false
-local n = #org_roles
-for i = 1, n do
-    if org_roles[i] == "member" then
-        is_member = true
+if not sys.getcfg("trusted_environment") then
+    -- check if member
+    local global = require("global")
+    if not global.membership(_rqst.orgroles) then
+        return "user must be a sliderule member to execute this endpoint", false
     end
-end
-if not is_member and not sys.getcfg("trusted_environment") then
-    return "user must be a sliderule member to execute this endpoint", false
+    -- check request signature
+    if not _rqst.signed then
+        return "user must used a signed request for this endpoint", false
+    end
 end
 
 -------------------------------------------------------

@@ -105,6 +105,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};
+        FieldElement<int>               signedRequestTimeWindow     {60}; // seconds
 
         // ENVIRONMENT VARIABLES
         FieldElement<string>            ipv4;
@@ -116,6 +117,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            alertStream;
         FieldElement<string>            telemetryStream;
         FieldElement<string>            cluster;
+        FieldElement<string>            domain;
         FieldElement<string>            amsURL;
         FieldElement<string>            containerRegistry;
 

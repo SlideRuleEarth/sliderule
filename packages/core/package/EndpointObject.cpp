@@ -35,8 +35,11 @@
 
 #include "EndpointObject.h"
 #include "EventLib.h"
+#include "monocypher.h"
 #include "OsApi.h"
+#include "SecretManager.h"
 #include "StringLib.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -88,6 +91,7 @@ int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, cons
     LuaEngine::setAttrStr(L, "rspq", rspq_name);
     LuaEngine::setAttrStr(L, "srcip", getHdrSourceIp());
     LuaEngine::setAttrStr(L, "orgroles", getHdrOrgRoles());
+    LuaEngine::setAttrBool(L, "signed", verifyHdrSignature(getHdrAccount()));
     LuaEngine::setAttrStr(L, "arg", argument);
     lua_setglobal(L, "_rqst");
     return 1;
@@ -159,16 +163,92 @@ const char* EndpointObject::Request::getHdrStreaming (void) const
 }
 
 /*----------------------------------------------------------------------------
- * getHdrApiKey
+ * verifyHdrSignature
  *----------------------------------------------------------------------------*/
-const char* EndpointObject::Request::getHdrApiKey (void) const
+bool EndpointObject::Request::verifyHdrSignature (const char* account) const
 {
-    string* hdr_str;
-    if(headers.find("x-sliderule-api-key", &hdr_str))
+    int status = false;
+
+#ifdef __aws__
+    /* check signature */
+    string* signature_str;
+    if(!headers.find("x-sliderule-signature", &signature_str))
     {
-        return hdr_str->c_str();
+        // no need to log message here as it is nominal for requests not to be signed
+        return false;
     }
-    return NULL; // special default case
+
+    /* get timestamp */
+    string* timestamp_str;
+    if(!headers.find("x-sliderule-timestamp", &timestamp_str))
+    {
+        mlog(CRITICAL, "Signed request did not inlude timestamp");
+        return false;
+    }
+
+    /* verify timestamp */
+    long long timestamp;
+    if(StringLib::str2llong(timestamp_str->c_str(), &timestamp))
+    {
+        int64_t allowed_range_seconds = SystemConfig::settings().signedRequestTimeWindow.value;
+        int64_t now = OsApi::time(OsApi::SYS_CLK) / 1000000; // seconds
+        if((timestamp < (now - allowed_range_seconds)) || (timestamp > (now + allowed_range_seconds)))
+        {
+            mlog(CRITICAL, "Signed request expired: %ld <> %ld", timestamp, now);
+            return false;
+        }
+    }
+
+    /* get public key */
+    const char* public_key = SecretManager::get(account);
+    if(!public_key)
+    {
+        mlog(CRITICAL, "Failed to retrieve public key for %s", account);
+        return false;
+    }
+
+    /* get (convert to) raw 32-byte Ed25519 public key */
+    int public_key_b64_len = 0;
+    unsigned char* public_key_raw = NULL;
+    const char* public_key_b64_ptr = StringLib::find(public_key, ' ', true);
+    const char* public_key_b64_end_ptr = StringLib::find(public_key, ' ', false);
+    if(public_key_b64_ptr && public_key_b64_end_ptr && (public_key_b64_end_ptr > public_key_b64_ptr))
+    {
+        public_key_b64_len = public_key_b64_end_ptr - public_key_b64_ptr;
+        public_key_raw = StringLib::b64decode(reinterpret_cast<const void*>(public_key_b64_ptr), &public_key_b64_len);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid public key format");
+        return false;
+    }
+
+    /* get (convert to) raw 64-byte Ed25519 signature */
+    int signature_len = signature_str->size();
+    const unsigned char* signature = StringLib::b64decode(reinterpret_cast<const void*>(signature_str->c_str()), &signature_len);
+
+    /* build canonical message */
+    FString full_path("%s/%s", SystemConfig::settings().domain.value.c_str(), path);
+    int full_path_len = full_path.length();
+    const char* full_path_b64 = StringLib::b64encode(full_path.c_str(), &full_path_len);
+    int body_len = length;
+    const char* body_b64 = StringLib::b64encode(body, &body_len);
+    FString message("%s:%s:%s", full_path_b64, timestamp_str, body_b64);
+    const uint8_t* message_bytes = reinterpret_cast<const uint8_t*>(message.c_str());
+
+    /* verify signature */
+    int result = crypto_eddsa_check(signature, public_key_raw, message_bytes, message.length());
+    if(result == 0) status = true; // 0 = valid, -1 = invalid
+    else mlog(CRITICAL, "Signed request failed signature verification");
+
+    /* clean up allocated memory */
+    delete [] public_key_raw;
+    delete [] signature;
+    delete [] full_path_b64;
+    delete [] body_b64;
+#endif
+
+    return status;
 }
 
 /******************************************************************************

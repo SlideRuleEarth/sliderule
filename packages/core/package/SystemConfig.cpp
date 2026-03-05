@@ -151,6 +151,7 @@ SystemConfig::SystemConfig(void):
         {"alert_stream",                &alertStream},
         {"telemetry_stream",            &telemetryStream},
         {"cluster",                     &cluster},
+        {"domain",                      &domain},
         {"ams_url",                     &amsURL},
         {"container_registry",          &containerRegistry}
     })
@@ -168,6 +169,7 @@ SystemConfig::SystemConfig(void):
     setIfProvided(alertStream, "ALERT_STREAM");
     setIfProvided(telemetryStream, "TELEMETRY_STREAM");
     setIfProvided(cluster, "CLUSTER");
+    setIfProvided(domain, "DOMAIN");
     setIfProvided(amsURL, "AMS");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
