@@ -493,12 +493,7 @@ string ContainerRunner::authenticateToDocker (void)
 
         // build authentication header
         const FString auth_json("{\"username\":\"AWS\",\"password\":\"%s\",\"serveraddress\":\"742127912612.dkr.ecr.us-west-2.amazonaws.com\"}", password.c_str());
-        int length = auth_json.length();
-        const char* auth_b64 = StringLib::b64encode(auth_json.c_str(), &length);
-
-        // return authentication string
-        auth = auth_b64;
-        delete [] auth_b64;
+        auth = StringLib::b64encode(auth_json.c_str(), auth_json.length());
     }
 
     return auth;

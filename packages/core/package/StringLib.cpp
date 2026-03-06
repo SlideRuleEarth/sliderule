@@ -627,93 +627,67 @@ char* StringLib::checkNullStr (const char* str)
 /*----------------------------------------------------------------------------
  * b64encode
  *
- * Code based on https://stackoverflow.com/questions/180947/base64-decode-snippet-in-c/13935718
+ * Code sourced from https://stackoverflow.com/questions/180947/base64-decode-snippet-in-c/13935718
  * Author: polfosol
  * License: assumed to be CC BY-SA 3.0
  *----------------------------------------------------------------------------*/
-char* StringLib::b64encode(const void* data, int* size)
+string StringLib::b64encode(const void* data, size_t len)
 {
-    assert(size);
-
-    const int len = *size;
-    const int encoded_len = (len + 2) / 3 * 4;
-    char* str = new char [encoded_len + 1];
-    str[encoded_len] = '\0';
-    str[encoded_len - 1] = '=';
-    str[encoded_len - 2] = '=';
-
-    unsigned char* p = reinterpret_cast<unsigned char*>(const_cast<void*>(data));
+    string result((len + 2) / 3 * 4, '=');
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
+    char *str = result.data();
     size_t j = 0;
     size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
     {
-        const int n = int(p[i]) << 16 | int(p[i + 1]) << 8 | p[i + 2];
+        const int n = static_cast<int>(p[i]) << 16 | static_cast<int>(p[i + 1]) << 8 | p[i + 2];
         str[j++] = B64CHARS[n >> 18];
         str[j++] = B64CHARS[n >> 12 & 0x3F];
         str[j++] = B64CHARS[n >> 6 & 0x3F];
         str[j++] = B64CHARS[n & 0x3F];
     }
-
     if (pad)  /// Set padding
     {
-        const int n = --pad ? int(p[last]) << 8 | p[last + 1] : p[last];
+        const int n = (--pad ? static_cast<int>(p[last]) << 8 | p[last + 1] : p[last]);
         str[j++] = B64CHARS[pad ? n >> 10 & 0x3F : n >> 2];
         str[j++] = B64CHARS[pad ? n >> 4 & 0x03F : n << 4 & 0x3F];
         str[j++] = pad ? B64CHARS[n << 2 & 0x3F] : '=';
     }
-
-    *size = encoded_len + 1;
-    return str;
+    return result;
 }
 
 /*----------------------------------------------------------------------------
- * b64encode
- *
- * Code based on https://stackoverflow.com/questions/180947/base64-decode-snippet-in-c/13935718
- * Author: polfosol
- * License: assumed to be CC BY-SA 3.0
+ * b64decode
  *----------------------------------------------------------------------------*/
-unsigned char* StringLib::b64decode(const void* data, int* size)
+vector<uint8_t> StringLib::b64decode(const string& data)
 {
-    assert(size);
+    if (data.empty()) return {};
 
-    const int len = *size;
-    if (len == 0) return reinterpret_cast<unsigned char*>(const_cast<char*>(""));
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(data.data());
+    size_t len = data.size();
 
-    const unsigned char* p = reinterpret_cast<const unsigned char*>(data);
+    size_t full_chunks = len / 4;
+    vector<uint8_t> result(full_chunks * 3, 0);
+
     size_t j = 0;
-    const size_t pad1 = len % 4 || p[len - 1] == '=';
-    const size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
-    const size_t last = (len - pad1) / 4 << 2;
-
-    const int decoded_len = last / 4 * 3 + pad1 + pad2;
-    unsigned char* str = new unsigned char [decoded_len];
-    str[decoded_len - 1] = '\0';
-    str[decoded_len - 2] = '\0';
-
-    for (size_t i = 0; i < last; i += 4)
+    for (size_t i = 0; i < full_chunks * 4; i += 4)
     {
-        const int n = B64INDEX[p[i]] << 18 | B64INDEX[p[i + 1]] << 12 | B64INDEX[p[i + 2]] << 6 | B64INDEX[p[i + 3]];
-        str[j++] = n >> 16;
-        str[j++] = n >> 8 & 0xFF;
-        str[j++] = n & 0xFF;
+        uint32_t n = B64INDEX[p[i]] << 18 | B64INDEX[p[i+1]] << 12 | B64INDEX[p[i+2]] << 6 | B64INDEX[p[i+3]];
+        result[j++] = n >> 16;
+        result[j++] = (n >> 8) & 0xFF;
+        result[j++] = n & 0xFF;
     }
 
-    if (pad1)
-    {
-        int n = B64INDEX[p[last]] << 18 | B64INDEX[p[last + 1]] << 12;
-        str[j++] = n >> 16;
-        if (pad2)
-        {
-            n |= B64INDEX[p[last + 2]] << 6;
-            str[j++] = n >> 8 & 0xFF;
-        }
-    }
+    // Handle padding
+    size_t pad = 0;
+    if (len >= 2 && data[len-1] == '=') pad++;
+    if (len >= 2 && data[len-2] == '=') pad++;
 
-    *size = decoded_len;
-    return str;
+    if (pad > 0) result.resize(result.size() - pad);
+
+    return result;
 }
 
 /*----------------------------------------------------------------------------

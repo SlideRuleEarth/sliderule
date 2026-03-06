@@ -193,13 +193,16 @@ class Session:
     #
     #  source
     #
-    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2, rethrow=False, sign=False):
+    def source (self, api, parm=None, stream=False, callbacks=None, path="/source", retries=2, rethrow=False, sign=False, headers=None):
         '''
         handles making the HTTP request to the sliderule cluster nodes
         '''
+        if not headers:
+            headers = {}
+
         # initialize local variables
         rsps = {}
-        headers = {'x-sliderule-client': f'python-{version.full_version}'}
+        headers = headers | {'x-sliderule-client': f'python-{version.full_version}'}
 
         # initialize parameters
         if callbacks == None:

@@ -40,3 +40,35 @@ def test_key_signing(username):
         "body": ""
     }, None)
     assert rsps['statusCode'] == 200
+
+#
+# Test Key Signing from SlideRule Cluent
+#
+def test_sliderule_key_signing(username):
+    import sliderule
+    session = sliderule.create_session(domain="slideruleearth.io", cluster=None)
+    session.authenticate()
+    headers = {}
+    session._Session__signrequest(headers, "slideruleearth.io/info", "")
+    rsps = lambda_gateway({
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "org_roles": "[member owner]",
+                        "aud": "[*]",
+                        "sub": username
+                    }
+                }
+            }
+        },
+        "headers": {
+            "host": "slideruleearth.io",
+            "x-sliderule-timestamp": headers["x-sliderule-timestamp"],
+            "x-sliderule-signature": headers["x-sliderule-signature"]
+        },
+        "rawPath": "/info",
+        "body": ""
+    }, None)
+    assert rsps['statusCode'] == 200
+

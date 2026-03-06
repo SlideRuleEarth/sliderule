@@ -27,7 +27,6 @@ target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/monocypher.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
@@ -86,7 +85,6 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/core.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/monocypher.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h

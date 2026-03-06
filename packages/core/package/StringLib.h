@@ -92,8 +92,8 @@ class StringLib
         static bool             str2ullong      (const char* str, unsigned long long* val, int base=0);
         static bool             str2double      (const char* str, double* val);
         static char*            checkNullStr    (const char* str);
-        static char*            b64encode       (const void* data, int* size);
-        static unsigned char*   b64decode       (const void* data, int* size);
+        static string           b64encode       (const void* data, size_t len);
+        static vector<uint8_t>  b64decode       (const string& data);
         static char*            b16encode       (const void* data, int size, bool lower_case, char* dst=NULL);
         static int              printify        (char* buffer, int size);
         static int              replace         (char* str, char oldchar, char newchar);

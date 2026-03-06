@@ -46,7 +46,7 @@ class SecretManager
 
         static const char* PUBKEYS_SECRET;
 
-        static const char* get(const char* secret_name, const char* key);
+        static string get(const char* secret_name, const char* key);
         static int luaGet(lua_State* L);
 
     private:

@@ -11,6 +11,14 @@ def pytest_addoption(parser):
     parser.addoption("--organization", action="store", default="sliderule")
     parser.addoption("--desired_nodes", action="store", default=None)
     parser.addoption("--performance", action="store_true", default=False)
+    parser.addoption("--username", action="store", default=None)
+
+@pytest.fixture(scope='session')
+def username(request):
+    value = request.config.option.username
+    if value is None:
+        pytest.skip()
+    return value
 
 @pytest.fixture(scope='session')
 def domain(request):

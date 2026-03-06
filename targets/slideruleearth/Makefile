@@ -166,7 +166,7 @@ run: ## run the server locally
 	PROJECT_REGION=$(AWS_REGION) \
 	ORCHESTRATOR=http://127.0.0.1:8050 \
 	CLUSTER=local \
-	DOMAIN=$(DOMAIN) \
+	DOMAIN=localhost \
 	AMS=http://127.0.0.1:9082 \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua

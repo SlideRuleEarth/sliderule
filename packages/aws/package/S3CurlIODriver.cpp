@@ -170,11 +170,9 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const 
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
         HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
-        int encoded_hash_size = static_cast<int>(hash_size);
-        const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
-        const FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash);
+        const string encodedHash = StringLib::b64encode(hash, hash_size);
+        const FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash.c_str());
         headers = curl_slist_append(headers, authorizationHeader.c_str());
-        delete [] encodedHash;
     }
 
     /* Return */
@@ -217,11 +215,9 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
         HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
-        int encoded_hash_size = static_cast<int>(hash_size);
-        const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
-        const FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash);
+        const string encodedHash = StringLib::b64encode(hash, hash_size);
+        const FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash.c_str());
         headers = curl_slist_append(headers, authorizationHeader.c_str());
-        delete [] encodedHash;
     }
 
     /* Return */

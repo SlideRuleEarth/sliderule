@@ -3,10 +3,11 @@ name: provisioner
 channels:
   - conda-forge
 dependencies:
-  - requests
+  - boto3
   - croniter
   - cryptography
-  - boto3
   - pytest
   - pytest-env
+  - requests
+  - sliderule
   - pip
