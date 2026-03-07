@@ -26,7 +26,6 @@ import requests
 DOMAIN = os.environ.get('DOMAIN')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
-GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
 GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
@@ -84,13 +83,13 @@ def get_secret(secret_arn):
     return response['SecretString']
 
 
-def get_github_client_secret():
+def get_github_client(key):
     """Retrieve GitHub client secret from AWS Secrets Manager."""
-    if 'client_secret' not in _secrets_cache:
+    if 'github_client' not in _secrets_cache:
         if not GITHUB_CLIENT_SECRET_NAME:
             raise ValueError("GITHUB_CLIENT_SECRET_NAME environment variable not set")
-        _secrets_cache['client_secret'] = get_secret(GITHUB_CLIENT_SECRET_NAME)
-    return _secrets_cache['client_secret']
+        _secrets_cache['github_client'] = json.loads(get_secret(GITHUB_CLIENT_SECRET_NAME))
+    return _secrets_cache['github_client'][key]
 
 
 def get_hmac_signing_key():
@@ -520,11 +519,11 @@ def generate_audience_list(username, teams, org_roles, scope):
 
     # Provide cluster services
     if ('sliderule' in resources) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
-        audiences.append(['provisioner']) # all members have access to the provisioner
+        audiences.append('provisioner') # all members have access to the provisioner
         if teams: # all members can access services at subdomains tied to teams they belong to
             audiences.extend(teams)
         if 'owner' in org_roles: # owners can access all services
-            audiences.extend(['*'])
+            audiences.append('*')
 
     # Provide MCP services
     if 'mcp' in resources: # any authenticated user has access to MCP services
@@ -669,7 +668,16 @@ def handle_register(event: dict) -> dict:
     """
     Dynamic Client Registration endpoint per RFC 7591.
     """
-    parms               = event.get('queryStringParameters') or {}
+    # get request parameters
+    parms = event.get('queryStringParameters')
+    if not parms:
+        parms = event.get('body', '{}')
+        if event.get("isBase64Encoded"):
+            parms = base64.b64decode(parms).decode("utf-8")
+        else:
+            parms = json.loads(parms)
+
+    # pull out the individual parameters
     redirect_uris       = parms.get('redirect_uris', [])
     client_name         = parms.get('client_name', 'Unknown Client')
     grant_types         = parms.get('grant_types', ['authorization_code']) # defaults to ["authorization_code"] per RFC 7591
@@ -827,7 +835,7 @@ def handle_login(event):
 
         # Build GitHub authorization URL
         github_parms = {
-            'client_id': GITHUB_CLIENT_ID,
+            'client_id': get_github_client("id"),
             'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
             'scope': 'read:org',
             'state': github_state
@@ -914,7 +922,12 @@ def handle_callback(event):
 
 def handle_token(event):
     try:
-        parms           = event.get('queryStringParameters') or {}
+        # get request parameters
+        parms = event.get('queryStringParameters')
+        if not parms:
+            parms = urllib.parse.parse_qs(event.get('body', ''))
+
+        # pull out individual parameters
         grant_type      = parms.get('grant_type')
         code            = parms.get('code')
         redirect_uri    = parms.get('redirect_uri')
@@ -999,8 +1012,8 @@ def exchange_code_for_token(code):
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         data={
-            'client_id': GITHUB_CLIENT_ID,
-            'client_secret': get_github_client_secret(),
+            'client_id': get_github_client("id"),
+            'client_secret': get_github_client("secret"),
             'code': code,
             'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback"
         },
@@ -1083,7 +1096,7 @@ def handle_device_code_request(event):
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             data={
-                'client_id': GITHUB_CLIENT_ID,
+                'client_id': get_github_client("id"),
                 'scope': 'read:org'
             },
             timeout=HTTP_TIMEOUT_SECONDS
@@ -1166,8 +1179,8 @@ def handle_device_poll(event):
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             data={
-                'client_id': GITHUB_CLIENT_ID,
-                'client_secret': get_github_client_secret(),
+                'client_id': get_github_client("id"),
+                'client_secret': get_github_client("secret"),
                 'device_code': device_code,
                 'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'
             },

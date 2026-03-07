@@ -8,8 +8,6 @@ Parameters:
     Type: String
   GitHubOrg:
     Type: String
-  GitHubClientId:
-    Type: String
   GitHubClientSecretName:
     Type: String
   HostedZoneId:
@@ -31,7 +29,7 @@ Resources:
   HMACSigningKeySecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub 'sliderule/github-oauth-hmac-key'
+      Name: !Sub '${Domain}/github-oauth-hmac-key'
       Description: HMAC signing key for OAuth state parameter (CSRF protection)
       GenerateSecretString:
         PasswordLength: 64
@@ -128,7 +126,6 @@ Resources:
           DOMAIN: !Ref Domain
           AUTHENTICATOR_HOSTNAME: !Ref AuthenticatorHostname
           GITHUB_ORG: !Ref GitHubOrg
-          GITHUB_CLIENT_ID: !Ref GitHubClientId
           GITHUB_CLIENT_SECRET_NAME: !Ref GitHubClientSecretName
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
@@ -178,76 +175,20 @@ Resources:
       IntegrationUri: !GetAtt GitHubOAuthLambda.Arn
       PayloadFormatVersion: '2.0'
 
-  # Route: GET /auth/github/login
-  LoginRoute:
+  ## API Gateway POST Routes
+  ApiPostRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: 'GET /auth/github/login'
+      RouteKey: 'POST /{proxy+}'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
-  # Route: GET /auth/github/callback
-  CallbackRoute:
+  ## API Gateway GET Routes
+  ApiGetRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: 'GET /auth/github/callback'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: POST /auth/github/device (Device Flow - request device code)
-  DeviceCodeRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'POST /auth/github/device'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: POST /auth/github/device/poll (Device Flow - poll for token)
-  DevicePollRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'POST /auth/github/device/poll'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: POST /auth/github/pat (user supplied PAT key)
-  PatKeyRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'POST /auth/github/pat'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: POST /auth/refresh (get refresh token)
-  JwksRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'GET /auth/refresh'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: GET /.well-known/jwks.json (Standard OIDC endpoint)
-  WellKnownJwksRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'GET /.well-known/jwks.json'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: GET /auth/pem (PEM endpoint for JWT verification)
-  WellKnownPemRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'GET /auth/pem'
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
-  # Route: GET /.well-known/openid-configuration (Standard OIDC endpoint)
-  WellKnownOpenidRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'GET /.well-known/openid-configuration'
+      RouteKey: 'GET /{proxy+}'
       Target: !Sub 'integrations/${LambdaIntegration}'
 
   # API Gateway Stage (auto-deploy)
@@ -302,17 +243,11 @@ Outputs:
   ApiGatewayUrl:
     Description: API Gateway endpoint URL
     Value: !GetAtt HttpApi.ApiEndpoint
-    Export:
-      Name: sliderule-github-oauth-api-url
 
   LambdaFunctionArn:
     Description: Lambda function ARN
     Value: !GetAtt GitHubOAuthLambda.Arn
-    Export:
-      Name: sliderule-github-oauth-lambda-arn
 
   JWTSigningKeyArn:
     Description: KMS Key ARN for JWT signing (RS256) - use GetPublicKey to retrieve the public key for verification
     Value: !GetAtt JWTSigningKey.Arn
-    Export:
-      Name: sliderule-github-oauth-jwt-signing-key-arn

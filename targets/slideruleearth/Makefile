@@ -62,6 +62,20 @@ NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
 
+
+MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
+ARCH ?= $(shell arch)
+TIMESTAMP ?= $(shell date +%Y%m%d%H%M%S)
+
+DOMAIN ?= slideruleearth.io
+BASE_DOMAIN ?= $(basename $(DOMAIN))
+PUBLIC_CLUSTER ?= sliderule
+CLUSTER ?= developers
+VERSION ?= unstable
+SUPPORT_EMAIL ?= support@mail.slideruleearth.io
+CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://client.testsliderule.org"
+
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
 PROJECT_PUBLIC_BUCKET = sliderule-public
@@ -70,50 +84,45 @@ AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 CONTAINER_REGISTRY = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
-MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
-ARCH ?= $(shell arch)
-TIMESTAMP ?= $(shell date +%Y%m%d%H%M%S)
+AUTHENTICATOR_STACKNAME = authenticator-$(BASE_DOMAIN)
+PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
+CERTIFICATE_STACKNAME = certificate-$(BASE_DOMAIN)
+RECORDER_STACKNAME = recorder # not scoped to domain
+TESTRUNNER_STACKNAME = testrunner # not scoped to domain
 
-DOMAIN ?= slideruleearth.io
-PUBLIC_CLUSTER ?= sliderule
-CLUSTER ?= developers
-VERSION ?= unstable
-
-AUTHENTICATOR_HOSTNAME ?= login.$(DOMAIN)
-PROVISIONER_HOSTNAME ?= provisioner.$(DOMAIN)
-RUNNER_HOSTNAME ?= runner.$(DOMAIN)
-DOCUMENTATION_HOSTNAME ?= docs.$(DOMAIN)
-ALERT_STREAM ?= recorder-firehose-alerts
-TELEMETRY_STREAM ?= recorder-firehose-telemetry
-SUPPORT_EMAIL ?= support@mail.slideruleearth.io
+AUTHENTICATOR_HOSTNAME = login.$(DOMAIN)
+PROVISIONER_HOSTNAME = provisioner.$(DOMAIN)
+RUNNER_HOSTNAME = runner.$(DOMAIN)
+DOCUMENTATION_HOSTNAME = docs.$(DOMAIN)
+ALERT_STREAM = recorder-firehose-alerts
+TELEMETRY_STREAM = recorder-firehose-telemetry
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
-CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://testsliderule.org"
+
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
   --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
   --output text | sed 's|/hostedzone/||')
 CERTIFICATE_ARN = $(shell aws cloudformation describe-stacks \
-  --stack-name certificate \
+  --stack-name $(CERTIFICATE_STACKNAME) \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`CertificateArn`].OutputValue' \
   --output text)
 DESTROY_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
-  --stack-name provisioner \
+  --stack-name $(PROVISIONER_STACKNAME) \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`DestroyLambdaArn`].OutputValue' \
   --output text)
 SCHEDULE_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
-  --stack-name provisioner \
+  --stack-name $(PROVISIONER_STACKNAME) \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`ScheduleLambdaArn`].OutputValue' \
   --output text)
 PROVISIONER_ALERT_EMAIL = $(shell aws secretsmanager get-secret-value \
-   --secret-id slideruleearth.io/secrets \
+   --secret-id $(DOMAIN)/secrets \
    --query SecretString \
    --output text | jq -r .provisioner_alert_email)
 JWT_SIGNING_KEY_ARN = $(shell aws cloudformation describe-stacks \
-  --stack-name authenticator \
+  --stack-name $(AUTHENTICATOR_STACKNAME) \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`JWTSigningKeyArn`].OutputValue' \
   --output text)
@@ -199,7 +208,7 @@ build: ## build the code using the build environment docker container
 		$(CONTAINER_REGISTRY)/sliderule-buildenv:latest \
 		$(BUILD_CMD)
 
-job: ## run the self test on the server code
+job: ## execute the job runner locally
 	LOG_FORMAT=FMT_TEXT \
 	IPV4=$(MYIP) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
@@ -380,7 +389,7 @@ BRANCH ?= main
 
 testrunner-create: ## invokes the provisioner lambda function and displays the response
 	aws cloudformation create-stack \
-		--stack-name 	testrunner \
+		--stack-name 	$(TESTRUNNER_STACKNAME) \
 		--template-body file://$(ROOT)/applications/provisioner/testrunner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
@@ -393,16 +402,16 @@ testrunner-create: ## invokes the provisioner lambda function and displays the r
 						ParameterKey=ScheduleLambdaArn,ParameterValue=$(SCHEDULE_LAMBDA_ARN) \
 						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP) \
 						ParameterKey=Branch,ParameterValue=$(BRANCH)
-	aws cloudformation wait stack-create-complete --stack-name testrunner
+	aws cloudformation wait stack-create-complete --stack-name $(TESTRUNNER_STACKNAME)
 
 testrunner-describe: ## status the creation/deletion of the test runner
-	aws cloudformation describe-stack-events --stack-name testrunner
+	aws cloudformation describe-stack-events --stack-name $(TESTRUNNER_STACKNAME)
 
 testrunner-delete: ## deletes the test runner and any lingering event bridge rules (debug only)
-	aws cloudformation delete-stack --stack-name testrunner
-	aws cloudformation wait stack-delete-complete --stack-name testrunner
-	- aws events remove-targets --rule testrunner-auto-delete --ids 1
-	- aws events delete-rule --name testrunner-auto-delete
+	aws cloudformation delete-stack --stack-name $(TESTRUNNER_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(TESTRUNNER_STACKNAME)
+	- aws events remove-targets --rule $(TESTRUNNER_STACKNAME)-auto-delete --ids 1
+	- aws events delete-rule --name $(TESTRUNNER_STACKNAME)-auto-delete
 
 testrunner-report: ## invokes the provisioner *report* lambda function and displays the response
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --report tests --asjson
@@ -416,31 +425,31 @@ testrunner-run: ## invokes the provisioner *report* lambda function and displays
 
 recorder-create:  ## creates the lambda recorder functions
 	aws cloudformation create-stack \
-		--stack-name 	recorder \
+		--stack-name 	$(RECORDER_STACKNAME) \
 		--template-body file://$(ROOT)/applications/recorder/recorder.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
-	aws cloudformation wait stack-create-complete --stack-name recorder
+	aws cloudformation wait stack-create-complete --stack-name $(RECORDER_STACKNAME)
 
 recorder-describe: ## status the creation/deletion of the recorder functions
-	aws cloudformation describe-stack-events --stack-name recorder
+	aws cloudformation describe-stack-events --stack-name $(RECORDER_STACKNAME)
 
 recorder-delete: ## deletes the lambda recorder functions
-	aws athena delete-work-group --work-group recorder-workgroup --recursive-delete-option
-	aws cloudformation delete-stack --stack-name recorder
-	aws cloudformation wait stack-delete-complete --stack-name recorder
+	aws athena delete-work-group --work-group $(RECORDER_STACKNAME)-workgroup --recursive-delete-option
+	aws cloudformation delete-stack --stack-name $(RECORDER_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(RECORDER_STACKNAME)
 
 ########################
 # Authenticator Targets
 ########################
 
 GITHUB_ORG ?= SlideRuleEarth
-GITHUB_CLIENT_ID ?= Ov23liTqpZCtvFofQEFE
-GITHUB_CLIENT_SECRET_NAME ?= sliderule/github-oauth-client-secret
+GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
 ALLOWED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
+AUTHENTICATOR_ZIPFILE = $(AUTHENTICATOR_STACKNAME).zip
 
 authenticator-build: ## builds the authenticator lambda package zipfile
 	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
@@ -453,45 +462,37 @@ authenticator-build: ## builds the authenticator lambda package zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
-	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip . -x "/*__pycache__/*"
+	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) . -x "/*__pycache__/*"
 
 authenticator-create: authenticator-build  ## creates the lambda authenticator functions
-	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/authenticator.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
+	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
 	aws cloudformation create-stack \
-		--stack-name 	authenticator \
+		--stack-name 	$(AUTHENTICATOR_STACKNAME) \
 		--template-body file://$(ROOT)/applications/authenticator/authenticator.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=AuthenticatorHostname,ParameterValue=$(AUTHENTICATOR_HOSTNAME) \
 						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
-						ParameterKey=GitHubClientId,ParameterValue=$(GITHUB_CLIENT_ID) \
 						ParameterKey=GitHubClientSecretName,ParameterValue=$(GITHUB_CLIENT_SECRET_NAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/authenticator.zip
-	aws cloudformation wait stack-create-complete --stack-name authenticator
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
+	aws cloudformation wait stack-create-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
 authenticator-describe: ## status the creation/deletion of the authenticator functions
-	aws cloudformation describe-stack-events --stack-name authenticator
+	aws cloudformation describe-stack-events --stack-name $(AUTHENTICATOR_STACKNAME)
 
 authenticator-output: ## get the outputs from the creation of the authenticator stack
-	aws cloudformation describe-stacks --stack-name authenticator --output text
+	aws cloudformation describe-stacks --stack-name $(AUTHENTICATOR_STACKNAME) --output text
 
 authenticator-delete: ## deletes the lambda authenticator functions
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/authenticator.zip
-	aws cloudformation delete-stack --stack-name authenticator
-	aws cloudformation wait stack-delete-complete --stack-name authenticator
-
-authenticator-init: ## put GitHub client secret in AWS secrets manager (one-time setup)
-	@read -s -p "Enter GitHub OAuth Client Secret: " GITHUB_OAUTH_APP_CLIENT_SECRET; echo ""; \
-	aws secretsmanager create-secret \
-		--name $(GITHUB_CLIENT_SECRET_NAME) \
-		--secret-string "$$GITHUB_OAUTH_APP_CLIENT_SECRET" \
-		--description "GitHub OAuth Client Secret for SlideRule"
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
+	aws cloudformation delete-stack --stack-name $(AUTHENTICATOR_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
 test-authenticator-env: ## display needed parameters for running tests
 	@echo JWT_SIGNING_KEY_ARN: $(JWT_SIGNING_KEY_ARN)
@@ -515,6 +516,8 @@ test-authenticator-delete: ## deletes the test-authenticator
 # Provisioner Targets
 ########################
 
+PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME)).zip
+
 provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
@@ -529,12 +532,12 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/manager.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
-	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/provisioner.zip . -x "/*__pycache__/*"
+	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner functions
-	aws s3 cp $(PROVISIONER_STAGE_DIR)/provisioner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
+	aws s3 cp $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
 	aws cloudformation create-stack \
-		--stack-name 	provisioner \
+		--stack-name 	$(PROVISIONER_STACKNAME) \
 		--template-body file://$(ROOT)/applications/provisioner/provisioner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
@@ -553,16 +556,16 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/provisioner.zip
-	aws cloudformation wait stack-create-complete --stack-name provisioner
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
+	aws cloudformation wait stack-create-complete --stack-name $(PROVISIONER_STACKNAME)
 
 provisioner-describe: ## status the creation/deletion of the provisioner functions
-	aws cloudformation describe-stack-events --stack-name provisioner
+	aws cloudformation describe-stack-events --stack-name $(PROVISIONER_STACKNAME)
 
 provisioner-delete: ## deletes the lambda provisioner functions
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/provisioner.zip
-	aws cloudformation delete-stack --stack-name provisioner
-	aws cloudformation wait stack-delete-complete --stack-name provisioner
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
+	aws cloudformation delete-stack --stack-name $(PROVISIONER_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(PROVISIONER_STACKNAME)
 
 ########################
 # Runner Targets
@@ -628,20 +631,20 @@ CERTIFICATE_DOMAINS ?= '*.$(DOMAIN)'
 
 certificate-create: ## creates the certificate
 	aws cloudformation create-stack \
-		--stack-name 	certificate \
+		--stack-name 	$(CERTIFICATE_STACKNAME) \
 		--template-body file://$(ROOT)/applications/authenticator/certificate.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=CertificateDomains,ParameterValue=$(CERTIFICATE_DOMAINS) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID)
-	aws cloudformation wait stack-create-complete --stack-name certificate
+	aws cloudformation wait stack-create-complete --stack-name $(CERTIFICATE_STACKNAME)
 
 certificate-describe: ## status the creation/deletion of the certificate
-	aws cloudformation describe-stack-events --stack-name certificate
+	aws cloudformation describe-stack-events --stack-name $(CERTIFICATE_STACKNAME)
 
 certificate-delete: ## deletes the certificate
-	aws cloudformation delete-stack --stack-name certificate
-	aws cloudformation wait stack-delete-complete --stack-name certificate
+	aws cloudformation delete-stack --stack-name $(CERTIFICATE_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(CERTIFICATE_STACKNAME)
 
 certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
@@ -856,6 +859,7 @@ environment: ## echo the environment variables
 	@echo RUNNER: $(RUNNER)
 	@echo DEBUG_CFG: $(DEBUG_CFG)
 	@echo RELEASE_CFG: $(RELEASE_CFG)
+	@echo BASE_DOMAIN: $(BASE_DOMAIN)
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
