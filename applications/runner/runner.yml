@@ -33,6 +33,10 @@ Parameters:
     Type: String
   TelemetryStream:
     Type: String
+  SupportEmail:
+    Type: String
+  AlertEmail:
+    Type: String
   LambdaZipFile:
     Type: String
 
@@ -428,6 +432,8 @@ Resources:
           STACK_NAME: !Ref AWS::StackName
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          SUPPORT_EMAIL: !Ref SupportEmail
+          ALERT_EMAIL: !Ref AlertEmail
 
   # IAM Role
   LambdaExecutionRole:

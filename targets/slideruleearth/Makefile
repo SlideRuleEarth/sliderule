@@ -118,10 +118,10 @@ SCHEDULE_LAMBDA_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`ScheduleLambdaArn`].OutputValue' \
   --output text)
-PROVISIONER_ALERT_EMAIL = $(shell aws secretsmanager get-secret-value \
+ALERT_EMAIL = $(shell aws secretsmanager get-secret-value \
    --secret-id $(DOMAIN)/secrets \
    --query SecretString \
-   --output text | jq -r .provisioner_alert_email)
+   --output text | jq -r .alert_email)
 JWT_SIGNING_KEY_ARN = $(shell aws cloudformation describe-stacks \
   --stack-name $(AUTHENTICATOR_STACKNAME) \
   --region us-west-2 \
@@ -592,6 +592,8 @@ runner-create: runner-build ## creates the lambda runner functions
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
+						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(RUNNER_STACKNAME)
 

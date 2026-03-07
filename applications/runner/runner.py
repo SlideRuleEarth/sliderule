@@ -81,7 +81,7 @@ def send_email(title, message):
                 "Data": message
             }}
         })
-    if response["HTTPStatusCode"] >= 200 and response["HTTPStatusCode"] < 300:
+    if response["ResponseMetadata"]["HTTPStatusCode"] >= 200 and response["ResponseMetadata"]["HTTPStatusCode"] < 300:
         return True
     else:
         print(f"Error sending email from {support_email} to {alert_email}: {response}")

@@ -96,7 +96,7 @@ def send_email(title, message):
                 "Data": message
             }}
         })
-    if response["HTTPStatusCode"] >= 200 and response["HTTPStatusCode"] < 300:
+    if response["ResponseMetadata"]["HTTPStatusCode"] >= 200 and response["ResponseMetadata"]["HTTPStatusCode"] < 300:
         return True
     else:
         print(f"Error sending email from {support_email} to {alert_email}: {response}")
@@ -466,7 +466,7 @@ def report_clusters_handler(rqst):
             if name:
                 # get status of each cluster containing the intelligent load balancer
                 cluster = name.split("-ilb")[0]
-                details = status_handler({"cluster": cluster, "region": region}, None)
+                details = status_handler({"cluster": cluster, "region": region})
                 if details["status"]:
                     report[cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
 
