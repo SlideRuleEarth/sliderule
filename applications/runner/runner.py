@@ -23,6 +23,8 @@ ses = boto3.client('ses')
 s3 = boto3.client("s3")
 sm = boto3.client('secretsmanager')
 
+_pubkey_cache = {}
+
 # ###############################
 # Utilities
 # ###############################
@@ -38,18 +40,6 @@ def parse_claim_array(claim_value):
             return [claim_value]
     else:
         return []
-
-#
-# Handle encoded body
-#
-def get_body(event):
-    body_raw = event.get("body")
-    if body_raw:
-        if event.get("isBase64Encoded"):
-            body_raw = base64.b64decode(body_raw).decode("utf-8")
-        return json.loads(body_raw)
-    else:
-        return {}
 
 #
 # API Gateway Response Format
@@ -100,7 +90,7 @@ def send_email(title, message):
 #
 # Verify Signature (on Request)
 #
-def verify_signature(username, event):
+def verify_signature(path, body, username, event):
     """
     Verifies request signature using public key
     """
@@ -125,7 +115,7 @@ def verify_signature(username, event):
         # build canonical message
         full_path = f'{host}{path}'
         full_path_b64 = base64.urlsafe_b64encode(full_path.encode()).decode()
-        body_b64 = base64.urlsafe_b64encode(body_raw.encode()).decode()
+        body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
         canonical_string = f"{full_path_b64}:{timestamp}:{body_b64}"
         message_bytes = canonical_string.encode("utf-8")
 
@@ -148,35 +138,6 @@ def verify_signature(username, event):
         print(f"Failed to verify request signature: {e}")
         return False
 
-#
-# Validate Request
-#
-def validate_request(event, claims):
-
-    # get user rinfo
-    username = claims.get('sub', '<anonymous>')
-    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-
-    # pull out required request parameters
-    path = event.get('rawPath', '')
-    body = get_body(event)
-    print(f'Received request: {path} {body}') # diagnostic
-
-    # check signature (for all requests)
-    if not verify_signature(username, event):
-        return None
-
-    # check organization membership
-    if 'member' not in org_roles:
-        print(f'Access denied to {username}, organization roles: {org_roles}')
-        return None
-
-    # build and return request info
-    return {
-        "path": path,
-        "username": username
-    }
-
 # ###############################
 # Path Handlers
 # ###############################
@@ -184,7 +145,7 @@ def validate_request(event, claims):
 #
 # Submit Job
 #
-def submit_handler(event, username):
+def submit_handler(body, username):
 
     # initialize response state
     state = {}
@@ -196,13 +157,13 @@ def submit_handler(event, username):
         project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
 
         # get required request variables
-        name = event["name"]
-        script = base64.b64decode(event["script"]).decode('utf-8')
-        args_list = event["args_list"]
+        name = body["name"]
+        script = base64.b64decode(body["script"]).decode('utf-8')
+        args_list = body["args_list"]
 
         # get optional request variables
-        vcpus = event.get("vcpus")
-        memory = event.get("memory")
+        vcpus = body.get("vcpus")
+        memory = body.get("memory")
 
         # parameter validation
         if not isinstance(name, str):
@@ -282,14 +243,14 @@ def submit_handler(event, username):
 #
 # Job Report
 #
-def report_jobs_handler(event):
+def report_jobs_handler(body):
 
     # initialize response state
     state = {}
 
     try:
         # get required request variables
-        job_list = event["job_list"]
+        job_list = body["job_list"]
 
         # parameter validation
         if not isinstance(job_list, list):
@@ -322,7 +283,7 @@ def report_jobs_handler(event):
 #
 # Job Queue Report
 #
-def report_queue_handler(event):
+def report_queue_handler(body):
 
     # initialize response state
     state = {"report": {}, "jobs": []}
@@ -332,7 +293,7 @@ def report_queue_handler(event):
         stack_name = os.environ["STACK_NAME"]
 
         # get required request variables
-        job_state = event["job_state"]
+        job_state = body["job_state"]
 
         # get job states list
         job_states = None
@@ -371,7 +332,7 @@ def report_queue_handler(event):
 #
 # Job Cancel
 #
-def cancel_handler(event):
+def cancel_handler(body):
 
     # initialize response state
     state = []
@@ -381,7 +342,7 @@ def cancel_handler(event):
         stack_name = os.environ["STACK_NAME"]
 
         # get optional request variables
-        job_list = event.get("job_list")
+        job_list = body.get("job_list")
 
         # get jobs to delete
         jobs_to_delete = job_list
@@ -419,19 +380,35 @@ def lambda_gateway(event, context):
     try:
         # process request
         claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
-        rqst = validate_request(event, claims) # validate request against claims and return safe request parameters
+        username = claims.get('sub', '<anonymous>')
+        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+        path = event.get('rawPath', '')
+        body_raw = event.get("body")
+        if body_raw:
+            if event.get("isBase64Encoded"):
+                body_raw = base64.b64decode(body_raw).decode("utf-8")
+            body = json.loads(body_raw)
+        else:
+            body = {}
+        print(f'Received request: {path} {body}')
+
+        # check signature (for all requests)
+        if not verify_signature(path, body_raw, username, event):
+            return json_response(403, {'error': 'access denied', 'error_description': 'invalid signature'})
+
+        # check organization membership
+        if 'member' not in org_roles:
+            return json_response(403, {'error': 'access denied', 'error_description': 'not a member'})
 
         # route request
-        if rqst == None: # check request
-            return json_response(403, {'error': 'access denied'})
-        elif rqst["path"] == '/submit': # submits batch runner job
-            return submit_handler(event, rqst["username"])
-        elif rqst["path"] == '/report/jobs': # returns status report on batch runner jobs
-            return report_jobs_handler(event)
-        elif rqst["path"] == '/report/queue': # returns report on all the jobs submitted
-            return report_queue_handler(event)
-        elif rqst["path"] == '/cancel': # cancel a submitted job
-            return cancel_handler(event)
+        if path == '/submit': # submits batch runner job
+            return submit_handler(body, username)
+        elif path == '/report/jobs': # returns status report on batch runner jobs
+            return report_jobs_handler(body)
+        elif path == '/report/queue': # returns report on all the jobs submitted
+            return report_queue_handler(body)
+        elif path == '/cancel': # cancel a submitted job
+            return cancel_handler(body)
 
         # invalid path
         return json_response(404, {'error': 'not found'})

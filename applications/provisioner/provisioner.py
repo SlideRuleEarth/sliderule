@@ -106,15 +106,13 @@ def send_email(title, message):
 # Business Logic
 # ###############################
 
-def verify_signature(username, event):
+def verify_signature(path, body, username, event):
     """
     Verifies request signature using public key
     """
     global _pubkey_cache
     try:
         # pull out signing parameters from request
-        path = event.get('rawPath', '')
-        body_raw = event.get("body")
         host = event["headers"]["host"]
         timestamp = event["headers"]["x-sliderule-timestamp"]
         signature_b64 = event["headers"]["x-sliderule-signature"]
@@ -131,7 +129,7 @@ def verify_signature(username, event):
         # build canonical message
         full_path = f'{host}{path}'
         full_path_b64 = base64.urlsafe_b64encode(full_path.encode()).decode()
-        body_b64 = base64.urlsafe_b64encode(body_raw.encode()).decode()
+        body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
         canonical_string = f"{full_path_b64}:{timestamp}:{body_b64}"
         message_bytes = canonical_string.encode("utf-8")
 
@@ -188,7 +186,7 @@ def get_user_info(claims):
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
     return {
-        'userName': username,
+        'username': username,
         'orgRoles': org_roles,
         'knownClusters': ','.join(known_clusters),
         'deployableClusters': ','.join(deployable_clusters),
@@ -205,42 +203,48 @@ def validate_request(event, info):
     MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 
     # pull out required request parameters
-    path = event.get('rawPath', '')
-    body = get_body(event)
+    path = event.get("rawPath", '')
+    body_raw = event.get("body", '')
+    if event.get("isBase64Encoded"):
+        body_raw = base64.b64decode(body_raw).decode("utf-8")
+    if body_raw:
+        body = json.loads(body_raw)
+    else:
+        body = {}
     print(f'Received request: {path} {body}') # diagnostic
 
     # check signature (for owners only)
     if ("owner" in info["orgRoles"]) or ('*' in info["deployableClusters"]):
-        if not verify_signature(info["userName"], event):
+        if not verify_signature(path, body_raw, info["username"], event):
             return None
 
     # check organization membership
     if 'member' not in info["orgRoles"]:
-        print(f'Access denied to {info["userName"]}, organization roles: {info["orgRoles"]}')
+        print(f'Access denied to {info["username"]}, organization roles: {info["orgRoles"]}')
         return None
 
     # check cluster
     cluster = body.get("cluster")
     if cluster and ((cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"])):
-        print(f'Access denied to {info["userName"]}, allowed clusters: {info["deployableClusters"]}')
+        print(f'Access denied to {info["username"]}, allowed clusters: {info["deployableClusters"]}')
         return None
 
     # check node_capacity
     node_capacity = body.get("node_capacity")
     if node_capacity and ((int(node_capacity) > info["maxNodes"]) or (int(node_capacity) < 1)):
-        print(f'Access denied to {info["userName"]}, node capacity: {node_capacity}, max nodes: {info["maxNodes"]}')
+        print(f'Access denied to {info["username"]}, node capacity: {node_capacity}, max nodes: {info["maxNodes"]}')
         return None
 
     # check ttl
     ttl = body.get("ttl")
     if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < MIN_TTL_FOR_AUTOSHUTDOWN)):
-        print(f'Access denied to {info["userName"]}, invalid ttl: {ttl}')
+        print(f'Access denied to {info["username"]}, invalid ttl: {ttl}')
         return None
 
     # build and return request info
     return {
         "path": path,
-        "username": info["userName"],
+        "username": info["username"],
         "owner": 'owner' in info["orgRoles"],
         "cluster": cluster,
         "node_capacity": node_capacity,

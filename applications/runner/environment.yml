@@ -7,4 +7,5 @@ dependencies:
   - cryptography
   - pytest
   - pytest-env
+  - sliderule
   - pip
