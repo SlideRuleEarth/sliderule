@@ -519,7 +519,7 @@ def generate_audience_list(username, teams, org_roles, scope):
 
     # Provide cluster services
     if ('sliderule' in resources) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
-        audiences.append('provisioner') # all members have access to the provisioner
+        audiences.extend(['provisioner', 'runner']) # all members have access to the provisioner and runner
         if teams: # all members can access services at subdomains tied to teams they belong to
             audiences.extend(teams)
         if 'owner' in org_roles: # owners can access all services

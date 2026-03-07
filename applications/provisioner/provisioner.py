@@ -1,7 +1,7 @@
 import os
-import botocore.exceptions
 import json
 import base64
+import botocore.exceptions
 from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives.serialization import load_ssh_public_key
 import manager
@@ -9,8 +9,6 @@ import manager
 # ###############################
 # Globals
 # ###############################
-
-MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 
 _pubkey_cache = {}
 
@@ -92,7 +90,7 @@ def send_email(title, message):
         },
         Message = {
             "Subject": {
-                "Data": f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})"
+                "Data": title
             },
             "Body": { "Text": {
                 "Data": message
@@ -202,6 +200,9 @@ def get_user_info(claims):
 # Validate Request
 #
 def validate_request(event, info):
+
+    # configuration
+    MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 
     # pull out required request parameters
     path = event.get('rawPath', '')
@@ -313,7 +314,7 @@ def deploy_handler(rqst):
         send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
         print(f'Deploy initiated for {stack_name}')
 
-        # return success
+        # return successa
         return json_response(200, state)
 
     except Exception as e:
@@ -568,21 +569,21 @@ def lambda_gateway(event, context):
             return json_response(403, {'error': 'access denied'})
         elif rqst["path"] == '/info': # only uses info, but still requires validated rqst
             return json_response(200, info)
-        elif rqst["path"] == '/deploy':
+        elif rqst["path"] == '/deploy': # deploys a cluster
             return deploy_handler(rqst)
-        elif rqst["path"] == '/extend':
+        elif rqst["path"] == '/extend': # extends the TTL of a cluster
             return extend_handler(rqst)
-        elif rqst["path"] == '/destroy':
+        elif rqst["path"] == '/destroy': # destroys a cluster
             return manager.lambda_destroy(rqst)
-        elif rqst["path"] == '/status':
+        elif rqst["path"] == '/status': # returns deployment status of a cluster
             return status_handler(rqst)
-        elif rqst["path"] == '/events':
+        elif rqst["path"] == '/events': # returns cloudformation stack events for a cluster deployment
             return events_handler(rqst)
-        elif rqst["path"] == '/report/clusters' or rqst["path"] == '/report':
+        elif rqst["path"] == '/report/clusters' or rqst["path"] == '/report': # returns report of clusters that have been deployed
             return report_clusters_handler(rqst)
-        elif rqst["path"] == '/report/tests':
+        elif rqst["path"] == '/report/tests': # returns report on status of last test runner deployment
             return report_tests_handler(rqst)
-        elif rqst["path"] == '/test':
+        elif rqst["path"] == '/test': # deploys test runner
             return test_handler(rqst)
 
         # invalid path

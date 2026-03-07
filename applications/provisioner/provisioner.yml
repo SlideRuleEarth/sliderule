@@ -3,6 +3,10 @@ Description: SlideRule Provisioner Lambda
 
 Parameters:
 
+  ##
+  ## Parameters
+  ##
+
   EnvironmentVersion:
     Type: String
   Domain:
@@ -36,11 +40,30 @@ Parameters:
   LambdaZipFile:
     Type: String
 
+  ##
+  ## Constants
+  ##
+
+  PublicCIDRBlock:
+    Type: String
+    Default: "0.0.0.0/0"
+  VpcCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+  InternetGatewayCIDRBlock:
+    Type: String
+    Default: "10.0.128.0/17"
+  JobRunnerCIDRBlock:
+    Type: String
+    Default: "10.0.0.0/17"
+
 Resources:
 
-  #
+  ##
+  ## Manager
+  ##
+
   # Schedule Lambda Function
-  #
   ScheduleLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -53,7 +76,7 @@ Resources:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
 
-  ## Destroy Lambda Function
+  # Destroy Lambda Function
   DestroyLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -70,7 +93,11 @@ Resources:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
 
-  ## Gateway Lambda Function
+  ##
+  ## Provisioner
+  ##
+
+  # Gateway Lambda Function
   GatewayLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -117,7 +144,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/PowerUserAccess
       Policies:
-        - PolicyName: AllowCFStackManagement
+        - PolicyName: !Sub "${AWS::StackName}-allow-cf-stack-management"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -160,7 +187,7 @@ Resources:
                   - cloudformation:DescribeStackResources
                   - cloudformation:UpdateStack
                 Resource: "*"
-        - PolicyName: SchedulerPolicy
+        - PolicyName: !Sub "${AWS::StackName}-scheduler-policy"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -174,7 +201,7 @@ Resources:
                 Action:
                   - lambda:AddPermission
                 Resource: '*'
-        - PolicyName: SESRestrictedSendPolicy
+        - PolicyName: !Sub "${AWS::StackName}-ses-restricted-send-policy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -186,7 +213,7 @@ Resources:
                 Condition:
                   StringEquals:
                     ses:Recipients: !Sub ${AlertEmail}
-        - PolicyName: SecretAccess
+        - PolicyName: !Sub "${AWS::StackName}-secret-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -194,8 +221,19 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
+        - PolicyName: !Sub "${AWS::StackName}-gateway-batch-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - batch:SubmitJob
+                  - batch:DescribeJobs
+                  - batch:ListJobs
+                  - batch:CancelJob
+                Resource: "*"
 
-  ## API Gateway HTTP API
+  # API Gateway HTTP API
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -227,7 +265,7 @@ Resources:
           - provisioner
         Issuer: !Ref JwtIssuer
 
-  ## API Gateway Integration with Lambda
+  # API Gateway Integration with Lambda
   LambdaIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -236,7 +274,7 @@ Resources:
       IntegrationUri: !GetAtt GatewayLambda.Arn
       PayloadFormatVersion: '2.0'
 
-  ## API Gateway Routes
+  # API Gateway Routes
   ApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -246,7 +284,7 @@ Resources:
       AuthorizerId: !Ref JwtAuthorizer
       Target: !Sub 'integrations/${LambdaIntegration}'
 
-  ## API Gateway Stage
+  # API Gateway Stage
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -284,7 +322,7 @@ Resources:
       ApiId: !Ref HttpApi
       Stage: $default
 
-  ## Route53 Alias Record
+  # Route53 Alias Record
   ApiDnsRecord:
     Type: AWS::Route53::RecordSet
     Properties:

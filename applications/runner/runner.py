@@ -1,17 +1,15 @@
 import os
-import boto3
 import json
 import base64
+import boto3
 import hashlib
 import botocore.exceptions
 from datetime import datetime, timezone
+from cryptography.hazmat.primitives.serialization import load_ssh_public_key
 
 # ###############################
-# Cached Clients
+# Globals
 # ###############################
-
-s3 = boto3.client("s3")
-batch = boto3.client("batch")
 
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
 MAX_JOBS_TO_DESCRIBE = 100
@@ -19,6 +17,11 @@ MAX_VCPUS = 8
 MIN_VCPUS = 1
 MAX_MEMORY = 32
 MIN_MEMORY = 8
+
+batch = boto3.client("batch")
+ses = boto3.client('ses')
+s3 = boto3.client("s3")
+sm = boto3.client('secretsmanager')
 
 # ###############################
 # Utilities
@@ -36,6 +39,144 @@ def parse_claim_array(claim_value):
     else:
         return []
 
+#
+# Handle encoded body
+#
+def get_body(event):
+    body_raw = event.get("body")
+    if body_raw:
+        if event.get("isBase64Encoded"):
+            body_raw = base64.b64decode(body_raw).decode("utf-8")
+        return json.loads(body_raw)
+    else:
+        return {}
+
+#
+# API Gateway Response Format
+#
+def json_response(status_code, body):
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+        },
+        'body': json.dumps(body)
+    }
+
+#
+# Boto3 Error Handling
+#
+def exception_reponse(e):
+    print(f'Exception: {e}')
+    if isinstance(e, botocore.exceptions.ClientError) and (e.response['Error']['Code'] == 'ValidationError'):
+        return json_response(404, {'error': 'not found', 'error_description': 'failure in request'})
+    return json_response(500, {'error': 'internal error', 'error_description': 'failure in request'})
+
+#
+# Send Email Message
+#
+def send_email(title, message):
+    support_email = os.environ['SUPPORT_EMAIL']
+    alert_email = os.environ['ALERT_EMAIL']
+    response = ses.send_email(
+        Source = support_email,
+        Destination = {
+            "ToAddresses": [alert_email]
+        },
+        Message = {
+            "Subject": {
+                "Data": title
+            },
+            "Body": { "Text": {
+                "Data": message
+            }}
+        })
+    if response["HTTPStatusCode"] >= 200 and response["HTTPStatusCode"] < 300:
+        return True
+    else:
+        print(f"Error sending email from {support_email} to {alert_email}: {response}")
+        return False
+
+#
+# Verify Signature (on Request)
+#
+def verify_signature(username, event):
+    """
+    Verifies request signature using public key
+    """
+    global _pubkey_cache
+    try:
+        # pull out signing parameters from request
+        path = event.get('rawPath', '')
+        body_raw = event.get("body")
+        host = event["headers"]["host"]
+        timestamp = event["headers"]["x-sliderule-timestamp"]
+        signature_b64 = event["headers"]["x-sliderule-signature"]
+        signature = base64.b64decode(signature_b64)
+
+        # get public key
+        if username not in _pubkey_cache:
+            domain = os.environ["DOMAIN"]
+            secret_name = f"{domain}/pubkeys"
+            secret_string = sm.get_secret_value(SecretId=secret_name)['SecretString']
+            _pubkey_cache = json.loads(secret_string)
+        public_key = load_ssh_public_key(_pubkey_cache[username].encode("utf-8"))
+
+        # build canonical message
+        full_path = f'{host}{path}'
+        full_path_b64 = base64.urlsafe_b64encode(full_path.encode()).decode()
+        body_b64 = base64.urlsafe_b64encode(body_raw.encode()).decode()
+        canonical_string = f"{full_path_b64}:{timestamp}:{body_b64}"
+        message_bytes = canonical_string.encode("utf-8")
+
+        # verify message (raises exception if invalid)
+        public_key.verify(signature, message_bytes)
+
+        # check timestamp
+        allowed_range_seconds = 60
+        now = int(datetime.now(timezone.utc).timestamp())
+        time_of_signature = int(timestamp)
+        if (time_of_signature < (now - allowed_range_seconds)) or (time_of_signature > (now + allowed_range_seconds)):
+            raise RuntimeError(f"Invalid time of signature: {time_of_signature}")
+
+        # valid signature
+        return True
+
+    except Exception as e:
+
+        # invalid signature
+        print(f"Failed to verify request signature: {e}")
+        return False
+
+#
+# Validate Request
+#
+def validate_request(event, claims):
+
+    # get user rinfo
+    username = claims.get('sub', '<anonymous>')
+    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+
+    # pull out required request parameters
+    path = event.get('rawPath', '')
+    body = get_body(event)
+    print(f'Received request: {path} {body}') # diagnostic
+
+    # check signature (for all requests)
+    if not verify_signature(username, event):
+        return None
+
+    # check organization membership
+    if 'member' not in org_roles:
+        print(f'Access denied to {username}, organization roles: {org_roles}')
+        return None
+
+    # build and return request info
+    return {
+        "path": path,
+        "username": username
+    }
+
 # ###############################
 # Path Handlers
 # ###############################
@@ -43,10 +184,10 @@ def parse_claim_array(claim_value):
 #
 # Submit Job
 #
-def submit_handler(event, context, username):
+def submit_handler(event, username):
 
     # initialize response state
-    state = {"status": True}
+    state = {}
 
     try:
         # get environment variables
@@ -126,31 +267,25 @@ def submit_handler(event, context, username):
             print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')
         state["job_ids"] = job_ids
 
-    except botocore.exceptions.ClientError as e:
-        print(f'Failed to submit job: {e}')
-        state["exception"] = f'Failed to submit job'
-        state["status"] = False
+        # status deployment
+        send_email(f"SlideRule Job Submission (@{username} {name})", json.dumps(state, indent=2))
+        print(f'Jobs submitted on {stack_name}: {len(job_ids)}')
 
-    except RuntimeError as e:
-        print(f'User error in job submission: {e}')
-        state["exception"] = f'User error in job submission'
-        state["status"] = False
+        # success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in job submission: {e}')
-        state["exception"] = f'Failure in job submission'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Job Report
 #
-def report_jobs_handler(event, context):
+def report_jobs_handler(event):
 
     # initialize response state
-    state = {"status": True, "report": {}}
+    state = {}
 
     try:
         # get required request variables
@@ -168,7 +303,7 @@ def report_jobs_handler(event, context):
         for job_id in job_list:
             job = jobs_by_id.get(job_id)
             if job is not None:
-                state["report"][job_id] = {
+                state[job_id] = {
                     "status": job["status"],
                     "statusReason": job.get("statusReason", "n/a"),
                     "createdAt": datetime.fromtimestamp(job["createdAt"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
@@ -176,26 +311,21 @@ def report_jobs_handler(event, context):
                     "args": job["parameters"]['args']
                 }
 
-    except RuntimeError as e:
-        print(f'User error in job report: {e}')
-        state["exception"] = f'User error in job report'
-        state["status"] = False
+        # success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in job report: {e}')
-        state["exception"] = f'Failure in job report'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Job Queue Report
 #
-def report_queue_handler(event, context):
+def report_queue_handler(event):
 
     # initialize response state
-    state = {"status": True, "report": {}, "jobs": []}
+    state = {"report": {}, "jobs": []}
 
     try:
         # get environment variables
@@ -230,26 +360,21 @@ def report_queue_handler(event, context):
             for job in response["jobSummaryList"]:
                 state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
-    except RuntimeError as e:
-        print(f'User error in queue report: {e}')
-        state["exception"] = f'User error in queue report'
-        state["status"] = False
+        # success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in queue report: {e}')
-        state["exception"] = f'Failure in queue report'
-        state["status"] = False
 
-    # return response
-    return state
+        # failure
+        return exception_reponse(e)
 
 #
 # Job Cancel
 #
-def cancel_handler(event, context):
+def cancel_handler(event):
 
     # initialize response state
-    state = {"status": True, "jobs_deleted": []}
+    state = []
 
     try:
         # get environment variables
@@ -273,21 +398,15 @@ def cancel_handler(event, context):
         # delete jobs
         for job_id in jobs_to_delete:
             batch.cancel_job(jobId=job_id, reason="Canceled by user")
-            state["jobs_deleted"].append(job_id)
+            state.append(job_id)
 
-    except RuntimeError as e:
-        print(f'User error in job deletion: {e}')
-        state["exception"] = f'User error in job deletion'
-        state["status"] = False
+        # success
+        return json_response(200, state)
 
     except Exception as e:
-        print(f'Exception in job deletion: {e}')
-        state["exception"] = f'Failure in job deletion'
-        state["status"] = False
 
-    # return response
-    return state
-
+        # failure
+        return exception_reponse(e)
 
 # ###############################
 # Lambda: Gateway Handler
@@ -297,50 +416,27 @@ def lambda_gateway(event, context):
     """
     Route requests based on path
     """
-    # get JWT claims (validated by API Gateway)
     try:
-        claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-        username = claims.get('sub', '<anonymous>')
-        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-
-        # get path and body of request
-        path = event.get('rawPath', '')
-        body_raw = event.get("body")
-        if body_raw:
-            if event.get("isBase64Encoded"):
-                body_raw = base64.b64decode(body_raw).decode("utf-8")
-            body = json.loads(body_raw)
-        else:
-            body = {}
-        print(f'Received request: {path} {body}')
-
-        # check organization membership
-        if 'member' not in org_roles:
-            print(f'Access denied to {username}, organization roles: {org_roles}')
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'error': 'access denied'})
-            }
+        # process request
+        claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
+        rqst = validate_request(event, claims) # validate request against claims and return safe request parameters
 
         # route request
-        if path == '/submit':
-            return submit_handler(body, context, username)
-        elif path == '/report/jobs':
-            return report_jobs_handler(body, context)
-        elif path == '/report/queue':
-            return report_queue_handler(body, context)
-        elif path == '/cancel':
-            return cancel_handler(body, context)
-        else:
-            print(f'Path not found: {path}')
-            return {
-                'statusCode': 404,
-                'body': json.dumps({'error': 'not found'})
-            }
+        if rqst == None: # check request
+            return json_response(403, {'error': 'access denied'})
+        elif rqst["path"] == '/submit': # submits batch runner job
+            return submit_handler(event, rqst["username"])
+        elif rqst["path"] == '/report/jobs': # returns status report on batch runner jobs
+            return report_jobs_handler(event)
+        elif rqst["path"] == '/report/queue': # returns report on all the jobs submitted
+            return report_queue_handler(event)
+        elif rqst["path"] == '/cancel': # cancel a submitted job
+            return cancel_handler(event)
+
+        # invalid path
+        return json_response(404, {'error': 'not found'})
 
     except Exception as e:
-        print(f'Exception in gateway: {e}')
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'internal error'})
-        }
+
+        # unhandled exception
+        return exception_reponse(e)

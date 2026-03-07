@@ -86,6 +86,7 @@ CONTAINER_REGISTRY = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
 AUTHENTICATOR_STACKNAME = authenticator-$(BASE_DOMAIN)
 PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
+RUNNER_STACKNAME = runner-$(BASE_DOMAIN)
 CERTBOT_STACKNAME = certbot-$(BASE_DOMAIN)
 RECORDER_STACKNAME = recorder # not scoped to domain
 TESTRUNNER_STACKNAME = testrunner # not scoped to domain
@@ -556,6 +557,8 @@ provisioner-delete: ## deletes the lambda provisioner functions
 # Runner Targets
 ########################
 
+RUNNER_ZIPFILE = $(RUNNER_STACKNAME).zip
+
 runner-build: ## create the runner lambda zipfile
 	-rm -Rf $(RUNNER_STAGE_DIR)
 	mkdir -p $(RUNNER_STAGE_DIR)
@@ -567,12 +570,12 @@ runner-build: ## create the runner lambda zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/runner/runner.py $(RUNNER_STAGE_DIR)/package/
-	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/runner.zip . -x "/*__pycache__/*"
+	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) . -x "/*__pycache__/*"
 
 runner-create: runner-build ## creates the lambda runner functions
-	aws s3 cp $(RUNNER_STAGE_DIR)/runner.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
+	aws s3 cp $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation create-stack \
-		--stack-name 	runner \
+		--stack-name 	$(RUNNER_STACKNAME) \
 		--template-body file://$(ROOT)/applications/runner/runner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
@@ -589,18 +592,18 @@ runner-create: runner-build ## creates the lambda runner functions
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/runner.zip
-	aws cloudformation wait stack-create-complete --stack-name runner
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
+	aws cloudformation wait stack-create-complete --stack-name $(RUNNER_STACKNAME)
 
 runner-describe: ## status the creation/deletion of the runner functions
-	aws cloudformation describe-stack-events --stack-name runner
+	aws cloudformation describe-stack-events --stack-name $(RUNNER_STACKNAME)
 
 runner-delete: ## deletes the lambda runner functions
-	- aws batch update-job-queue --job-queue runner-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-job-queue --state DISABLED
 	- python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/runner.zip
-	aws cloudformation delete-stack --stack-name runner
-	aws cloudformation wait stack-delete-complete --stack-name runner
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
+	aws cloudformation delete-stack --stack-name $(RUNNER_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(RUNNER_STACKNAME)
 
 runner-jobs-inprogress: ## displays all inprogress jobs
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUBMITTED PENDING RUNNABLE STARTING RUNNING"
