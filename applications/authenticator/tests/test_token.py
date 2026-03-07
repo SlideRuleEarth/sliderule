@@ -1,7 +1,7 @@
 #
 # In order to run the tests in this file, some additional external steps need to be taken:
 #   1. The following "stub" server must be run: `uvicorn github_stub:app --port 9083 --reload`
-#   2. The JWT_SIGNING_KEY_ARN needs to be retrieved: `make test-authenticator-env`
+#   2. The JWT_SIGNING_KEY_ARN needs to be retrieved: `make test-authenticator-env DOMAIN=testsliderule.org`
 #   3. Run the pytest with the jwt key arn passed in: `JWT_SIGNING_KEY_ARN=<arn> pytest`
 #
 
