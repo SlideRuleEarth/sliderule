@@ -629,7 +629,7 @@ certbot-build: ## create the certbot lambda zipfile
 certbot-create: certbot-build ## creates the lambda certbot function
 	aws s3 cp $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
 	aws cloudformation create-stack \
-		--stack-name 	$(CCERTBOT_STACKNAME) \
+		--stack-name 	$(CERTBOT_STACKNAME) \
 		--template-body file://$(ROOT)/applications/certbot/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
@@ -638,15 +638,15 @@ certbot-create: certbot-build ## creates the lambda certbot function
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
-	aws cloudformation wait stack-create-complete --stack-name $(CCERTBOT_STACKNAME)
+	aws cloudformation wait stack-create-complete --stack-name $(CERTBOT_STACKNAME)
 
 certbot-describe: ## status the creation/deletion of the certbot function
-	aws cloudformation describe-stack-events --stack-name $(CCERTBOT_STACKNAME)
+	aws cloudformation describe-stack-events --stack-name $(CERTBOT_STACKNAME)
 
 certbot-delete: ## deletes the lambda certbot function
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
-	aws cloudformation delete-stack --stack-name $(CCERTBOT_STACKNAME)
-	aws cloudformation wait stack-delete-complete --stack-name $(CCERTBOT_STACKNAME)
+	aws cloudformation delete-stack --stack-name $(CERTBOT_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(CERTBOT_STACKNAME)
 
 ########################
 # Website Targets
