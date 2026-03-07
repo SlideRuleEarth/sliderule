@@ -86,7 +86,7 @@ CONTAINER_REGISTRY = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
 
 AUTHENTICATOR_STACKNAME = authenticator-$(BASE_DOMAIN)
 PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
-CERTIFICATE_STACKNAME = certificate-$(BASE_DOMAIN)
+CERTBOT_STACKNAME = certbot-$(BASE_DOMAIN)
 RECORDER_STACKNAME = recorder # not scoped to domain
 TESTRUNNER_STACKNAME = testrunner # not scoped to domain
 
@@ -103,7 +103,7 @@ HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --query "HostedZones[?Name=='$(DOMAIN).'].Id" \
   --output text | sed 's|/hostedzone/||')
 CERTIFICATE_ARN = $(shell aws cloudformation describe-stacks \
-  --stack-name $(CERTIFICATE_STACKNAME) \
+  --stack-name $(CERTBOT_STACKNAME) \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`CertificateArn`].OutputValue' \
   --output text)
@@ -494,29 +494,14 @@ authenticator-delete: ## deletes the lambda authenticator functions
 	aws cloudformation delete-stack --stack-name $(AUTHENTICATOR_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
-test-authenticator-env: ## display needed parameters for running tests
+authenticator-test-env: ## display needed parameters for running tests
 	@echo JWT_SIGNING_KEY_ARN: $(JWT_SIGNING_KEY_ARN)
-
-test-authenticator-create: ## creates the test-authenticator
-	aws cloudformation create-stack \
-		--stack-name 	test-authenticator \
-		--template-body file://$(ROOT)/applications/authenticator/teststore.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION)
-	aws cloudformation wait stack-create-complete --stack-name test-authenticator
-
-test-authenticator-describe: ## status the creation/deletion of the test-authenticator
-	aws cloudformation describe-stack-events --stack-name test-authenticator
-
-test-authenticator-delete: ## deletes the test-authenticator
-	aws cloudformation delete-stack --stack-name test-authenticator
-	aws cloudformation wait stack-delete-complete --stack-name test-authenticator
 
 ########################
 # Provisioner Targets
 ########################
 
-PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME)).zip
+PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME).zip
 
 provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
@@ -624,27 +609,10 @@ runner-jobs-finished: ## displays all finished jobs
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"
 
 ########################
-# Certificate Targets
+# Certbot Targets
 ########################
 
-CERTIFICATE_DOMAINS ?= '*.$(DOMAIN)'
-
-certificate-create: ## creates the certificate
-	aws cloudformation create-stack \
-		--stack-name 	$(CERTIFICATE_STACKNAME) \
-		--template-body file://$(ROOT)/applications/authenticator/certificate.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters 	ParameterKey=CertificateDomains,ParameterValue=$(CERTIFICATE_DOMAINS) \
-						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID)
-	aws cloudformation wait stack-create-complete --stack-name $(CERTIFICATE_STACKNAME)
-
-certificate-describe: ## status the creation/deletion of the certificate
-	aws cloudformation describe-stack-events --stack-name $(CERTIFICATE_STACKNAME)
-
-certificate-delete: ## deletes the certificate
-	aws cloudformation delete-stack --stack-name $(CERTIFICATE_STACKNAME)
-	aws cloudformation wait stack-delete-complete --stack-name $(CERTIFICATE_STACKNAME)
+CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
 
 certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
@@ -656,28 +624,29 @@ certbot-build: ## create the certbot lambda zipfile
 		public.ecr.aws/lambda/python:3.11 \
 		-c "pip install --target /host/package certbot certbot-dns-route53"
 	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
-	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/certbot.zip . -x "/*__pycache__/*"
-
-certbot-describe: ## status the creation/deletion of the certbot function
-	aws cloudformation describe-stack-events --stack-name certbot
+	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) . -x "/*__pycache__/*"
 
 certbot-create: certbot-build ## creates the lambda certbot function
-	aws s3 cp $(CERTBOT_STAGE_DIR)/certbot.zip s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
+	aws s3 cp $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
 	aws cloudformation create-stack \
-		--stack-name 	certbot \
+		--stack-name 	$(CCERTBOT_STACKNAME) \
 		--template-body file://$(ROOT)/applications/certbot/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/certbot.zip
-	aws cloudformation wait stack-create-complete --stack-name certbot
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
+	aws cloudformation wait stack-create-complete --stack-name $(CCERTBOT_STACKNAME)
+
+certbot-describe: ## status the creation/deletion of the certbot function
+	aws cloudformation describe-stack-events --stack-name $(CCERTBOT_STACKNAME)
 
 certbot-delete: ## deletes the lambda certbot function
-	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/certbot.zip
-	aws cloudformation delete-stack --stack-name certbot
-	aws cloudformation wait stack-delete-complete --stack-name certbot
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
+	aws cloudformation delete-stack --stack-name $(CCERTBOT_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(CCERTBOT_STACKNAME)
 
 ########################
 # Website Targets

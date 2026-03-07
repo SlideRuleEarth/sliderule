@@ -7,6 +7,8 @@ Parameters:
     Type: String
   ProjectFolder:
     Type: String
+  HostedZoneId:
+    Type: String
   LambdaZipFile:
     Type: String
 
@@ -142,3 +144,21 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt CertbotScheduleRule.Arn
+
+  # AWS managed certificate for API gateways
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub "*.${Domain}"
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub "*.${Domain}"
+          HostedZoneId: !Ref HostedZoneId
+
+Outputs:
+
+  CertificateArn:
+    Description: ARN of the ACM Certificate
+    Value: !Ref Certificate
+    Export:
+      Name: !Sub '${AWS::StackName}-CertificateArn'

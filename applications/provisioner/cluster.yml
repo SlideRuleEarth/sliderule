@@ -70,6 +70,12 @@ Parameters:
     Type: String
     Default: "v2.24.5"
 
+Conditions:
+
+  HasAutoShutdown: !And
+    - !Not [!Equals [!Ref ScheduleLambdaArn, ""]]
+    - !Not [!Equals [!Ref DestroyLambdaArn, ""]]
+
 Resources:
 
   #
@@ -761,6 +767,7 @@ Resources:
   #
   AutoShutdownCustomResource:
     Type: Custom::ScheduleStackDeletion
+    Condition: HasAutoShutdown
     DependsOn:
       - ClusterAutoScalingGroup
     Properties:
