@@ -923,9 +923,9 @@ def handle_callback(event):
 def handle_token(event):
     try:
         # get request parameters
-        parms = event.get('queryStringParameters')
+        parms = dict(urllib.parse.parse_qsl(event.get('body', '')))
         if not parms:
-            parms = urllib.parse.parse_qs(event.get('body', ''))
+            parms = event.get('queryStringParameters')
 
         # pull out individual parameters
         grant_type      = parms.get('grant_type')
@@ -1263,11 +1263,11 @@ def handle_pat_login(event):
             body = base64.b64decode(body).decode('utf-8')
 
         try:
-            params = json.loads(body) if body else {}
+            parms = json.loads(body) if body else {}
         except json.JSONDecodeError:
-            params = dict(urllib.parse.parse_qsl(body))
+            parms = dict(urllib.parse.parse_qsl(body))
 
-        pat = params.get('pat')
+        pat = parms.get('pat')
         if not pat:
             return json_response(400, {
                 'error': 'missing_pat',

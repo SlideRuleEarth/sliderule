@@ -111,8 +111,8 @@ Resources:
   GitHubOAuthLambda:
     Type: AWS::Lambda::Function
     Properties:
-      # Note: FunctionName removed to let CloudFormation auto-generate for seemless stack updates
-      Description: !Sub 'GitHub OAuth handler for SlideRule'
+      FunctionName: !Sub '${AWS::StackName}-gateway'
+      Description: !Sub 'Login handler for SlideRule'
       Runtime: python3.13
       Handler: github_oauth.lambda_gateway
       Role: !GetAtt LambdaExecutionRole.Arn

@@ -526,6 +526,8 @@ class Session:
             return self.session.gateway_request("events", subdomain="provisioner", data={"cluster": self.session.cluster})
         def report (self, kind="clusters"):
             return self.session.gateway_request(f"report/{kind}", subdomain="provisioner", data={})
+        def info (self):
+            return self.session.gateway_request(f"info", subdomain="provisioner", data={})
 
     #
     # __Runner

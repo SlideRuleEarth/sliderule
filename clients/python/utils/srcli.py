@@ -58,6 +58,7 @@ CommandRunner = {
     "events": session.provisioner.events,
     "report": lambda: session.provisioner.report(kind=args.report),
     "test": lambda: session.provision("test", {"branch":args.branch}),
+    "info": session.provisioner.info,
     # Cluster
     "version": lambda: session.source("version"),
     # Runner

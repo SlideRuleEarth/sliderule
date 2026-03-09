@@ -400,8 +400,8 @@ void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v)
     }
     else
     {
-        const long n = LuaObject::getLuaInteger(L, index);
-        switch(static_cast<GeoFields::sampling_algo_t>(n))
+        v = static_cast<GeoFields::sampling_algo_t>(LuaObject::getLuaInteger(L, index));
+        switch(v)
         {
             case GeoFields::NEARESTNEIGHBOUR_ALGO: break; // valid value
             case GeoFields::BILINEAR_ALGO:         break; // valid value
@@ -411,7 +411,7 @@ void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v)
             case GeoFields::AVERAGE_ALGO:          break; // valid value
             case GeoFields::MODE_ALGO:             break; // valid value
             case GeoFields::GAUSS_ALGO:            break; // valid value
-            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %ld", n);
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %d", v);
         }
     }
 }
@@ -471,7 +471,7 @@ void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& 
         else if (StringLib::match(str, "median"))   v = GeoFields::SINGLE_SAMPLE_MEDIAN;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %s", str);
     }
-    if(lua_isboolean(L, index))
+    else if(lua_isboolean(L, index))
     {
         const bool option = LuaObject::getLuaBoolean(L, index);
         if(option) v = GeoFields::SINGLE_SAMPLE_FIRST;
@@ -479,8 +479,8 @@ void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& 
     }
     else
     {
-        const long n = LuaObject::getLuaInteger(L, index);
-        switch(static_cast<GeoFields::single_sample_option_t>(n))
+        v = static_cast<GeoFields::single_sample_option_t>(LuaObject::getLuaInteger(L, index));
+        switch(v)
         {
             case GeoFields::SINGLE_SAMPLE_NA:       break; // valid value
             case GeoFields::SINGLE_SAMPLE_FIRST:    break; // valid value
@@ -489,7 +489,7 @@ void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& 
             case GeoFields::SINGLE_SAMPLE_MAX:      break; // valid value
             case GeoFields::SINGLE_SAMPLE_MEAN:     break; // valid value
             case GeoFields::SINGLE_SAMPLE_MEDIAN:   break; // valid value
-            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %ld", n);
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown single sample option: %d", v);
         }
     }
 }
