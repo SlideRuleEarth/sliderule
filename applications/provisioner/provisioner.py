@@ -579,7 +579,7 @@ def lambda_gateway(event, context):
         elif rqst["path"] == '/extend': # extends the TTL of a cluster
             return extend_handler(rqst)
         elif rqst["path"] == '/destroy': # destroys a cluster
-            return manager.lambda_destroy(rqst)
+            return manager.lambda_destroy(rqst, None)
         elif rqst["path"] == '/status': # returns deployment status of a cluster
             return status_handler(rqst)
         elif rqst["path"] == '/events': # returns cloudformation stack events for a cluster deployment
