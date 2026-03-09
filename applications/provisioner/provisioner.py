@@ -467,8 +467,9 @@ def report_clusters_handler(rqst):
                 # get status of each cluster containing the intelligent load balancer
                 cluster = name.split("-ilb")[0]
                 details = status_handler({"cluster": cluster, "region": region})
-                if details["status"]:
-                    report[cluster] = { k: details.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+                if details["statusCode"] == 200:
+                    status = json.loads(details["body"])
+                    report[cluster] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
 
         # return success
         return json_response(200, report)

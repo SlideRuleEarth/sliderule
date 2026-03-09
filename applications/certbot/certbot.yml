@@ -36,7 +36,7 @@ Resources:
     Properties:
       Roles:
         - !Ref LambdaExecutionRole
-      PolicyName: "sliderule-certbot-logs-policy"
+      PolicyName: !Sub '${AWS::StackName}-logs-policy'
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -53,7 +53,7 @@ Resources:
     Properties:
       Roles:
         - !Ref LambdaExecutionRole
-      PolicyName: "sliderule-certbot-s3-policy"
+      PolicyName: !Sub '${AWS::StackName}-s3-policy'
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -79,7 +79,7 @@ Resources:
     Properties:
       Roles:
         - !Ref LambdaExecutionRole
-      PolicyName: "sliderule-certbot-route53-policy"
+      PolicyName: !Sub '${AWS::StackName}-route53-policy'
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -99,7 +99,7 @@ Resources:
   CertbotLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: Certbot_Runner
+      FunctionName: !Sub '${AWS::StackName}-runner'
       Role: !GetAtt LambdaExecutionRole.Arn
       Architectures:
         - arm64
