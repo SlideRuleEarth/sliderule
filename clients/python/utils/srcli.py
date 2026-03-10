@@ -35,7 +35,7 @@ import sliderule
 parser = argparse.ArgumentParser(description="""SlideRule Command Line Interface""")
 parser.add_argument('--domain',             type=str,               default="slideruleearth.io")
 parser.add_argument('--cluster',            type=str,               default="developers")
-parser.add_argument('--is_public',          type=bool,              default=False)
+parser.add_argument('--is_public',          type=str,               default="false")
 parser.add_argument('--node_capacity',      type=int,               default=None)
 parser.add_argument('--ttl',                type=int,               default=60) # 1 hour
 parser.add_argument('--version',            type=str,               default="unstable")
@@ -52,7 +52,7 @@ session = sliderule.create_session(domain=args.domain, cluster=args.cluster)
 # Command Runner
 CommandRunner = {
     # Provisioner
-    "deploy": lambda: session.provisioner.deploy(is_public=args.is_public, node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
+    "deploy": lambda: session.provisioner.deploy(is_public=(args.is_public == "true"), node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
     "destroy": session.provisioner.destroy,
     "status": session.provisioner.status,
     "events": session.provisioner.events,

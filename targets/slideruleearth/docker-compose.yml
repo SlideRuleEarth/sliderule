@@ -54,7 +54,7 @@ services:
       - IS_PUBLIC=true
       - DOMAIN=localhost
       - JWT_ISSUER=https://login.slideruleearth.io
-      - CLUSTER=local
+      - CLUSTER=developers
     labels:
       - autoheal=true
     healthcheck:

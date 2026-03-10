@@ -290,14 +290,6 @@ PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= false
 NODE_CAPACITY ?= 1
 TTL ?= 60
-CLUSTER_PARMS = '{\
-	"version": "$(VERSION)",\
-	"is_public": $(IS_PUBLIC),\
-	"domain": "$(DOMAIN)",\
-	"cluster": "$(CLUSTER)",\
-	"node_capacity": $(NODE_CAPACITY),\
-	"ttl": $(TTL) \
-}'
 
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker

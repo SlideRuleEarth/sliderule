@@ -922,8 +922,13 @@ def handle_callback(event):
 
 def handle_token(event):
     try:
+        # Get request body
+        body = event.get('body', '{}')
+        if event.get('isBase64Encoded', False):
+            body = base64.b64decode(body).decode('utf-8')
+
         # get request parameters
-        parms = dict(urllib.parse.parse_qsl(event.get('body', '')))
+        parms = dict(urllib.parse.parse_qsl(body))
         if not parms:
             parms = event.get('queryStringParameters')
 
@@ -1352,8 +1357,15 @@ def handle_pem(event):
         der = response["PublicKey"]
         parsed = parse_rsa_public_key_spki(der)
 
-        # return response
-        return json_response(200, parsed["pem"], with_cache=True)
+        # return response (must be manually returned because pem is NOT json)
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                "Cache-Control": "public, max-age=3600"
+            },
+            "body": parsed["pem"]
+        }
 
     except Exception as e:
         print(f"Error generating PEM: {e}")
