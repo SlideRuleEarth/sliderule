@@ -89,7 +89,7 @@ def test_invalid_challenge_method():
 #
 # Test Invalid Scope
 #
-def test_invalid_challenge_method():
+def test_invalid_scope():
     rqst = build_query_request('/auth/github/login', parms | {"scope": "doctors"})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 500

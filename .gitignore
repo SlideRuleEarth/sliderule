@@ -1,6 +1,7 @@
 .vscode/
 .DS_Store
-
+.coverage
+.coverage.*
 .github/copilot-instructions.md
 
 

@@ -791,10 +791,12 @@ authenticator-test: ## run authenticator tests
 	coverage report -m'
 
 provisioner-test: ## run provisioner tests
-	cd $(ROOT)/applications/provisioner && \
+	conda run -n provisioner --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/provisioner && \
     DOMAIN=$(DOMAIN) \
     SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
-	conda run -n provisioner --no-capture-output pytest $(PYTEST)
+	coverage run -m pytest $(PYTEST) && \
+	coverage report -m'
 
 nodejs-jest: ## run node.js client self tests
 	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(CLUSTER) TEST=$(JEST)
