@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - boto3
+  - coverage
   - croniter
   - cryptography
   - pytest

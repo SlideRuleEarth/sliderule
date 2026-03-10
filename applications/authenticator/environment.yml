@@ -11,4 +11,5 @@ dependencies:
   - uvicorn
   - pytest
   - pytest-env
+  - coverage
   - pip

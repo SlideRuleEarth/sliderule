@@ -1,4 +1,4 @@
-from manager import *
+from provisioner import *
 import pytest
 
 #

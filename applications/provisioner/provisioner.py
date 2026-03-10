@@ -1,27 +1,75 @@
 import os
+import re
 import json
 import base64
+import boto3
+import urllib3
 import botocore.exceptions
 from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives.serialization import load_ssh_public_key
-import manager
+
+# ###############################
+# Cached Objects
+# ###############################
+
+ec2 = boto3.client("ec2")
+s3 = boto3.client("s3")
+cf = boto3.client("cloudformation")
+ev = boto3.client('events')
+la = boto3.client('lambda')
+ses = boto3.client('ses')
+sm = boto3.client('secretsmanager')
+
+_http = urllib3.PoolManager()
+
+_pubkey_cache = {}
 
 # ###############################
 # Globals
 # ###############################
 
-_pubkey_cache = {}
+SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp']
+SUCCESS = "SUCCESS"
+FAILED = "FAILED"
 
 # ###############################
 # Utilities
 # ###############################
 
 #
+# Convention for deriving rule name from stack name
+#
+def build_rule_name(stack_name):
+    return f'{stack_name}-auto-shutdown'
+
+#
+# Checks on cluster name
+#
+def valid_cluster_name(cluster):
+    if (cluster in SYSTEM_KEYWORDS) or \
+       (not re.match(r'^[A-Za-z0-9-_]+$', cluster)) or \
+       (len(cluster) > 40):
+        return False
+    else:
+        return True
+
+#
+# Convention for deriving stack name from cluster
+#
+def build_stack_name(cluster):
+    if not isinstance(cluster, str):
+        return None
+    elif valid_cluster_name(cluster):
+        return f'{cluster}-cluster'
+    else:
+        raise RuntimeError(f"Invalid cluster name: {cluster}")
+
+#
 # Get tags for EC2 instances
 #
 def get_instances_by_name(name):
     try:
-        response = manager.ec2.describe_instances(
+        response = ec2.describe_instances(
             Filters=[
                 {"Name": "tag:Name", "Values": [name]},
                 {"Name": "instance-state-name", "Values": ["pending", "running", "stopped"]}
@@ -83,7 +131,7 @@ def exception_reponse(e):
 def send_email(title, message):
     support_email = os.environ['SUPPORT_EMAIL']
     alert_email = os.environ['ALERT_EMAIL']
-    response = manager.ses.send_email(
+    response = ses.send_email(
         Source = support_email,
         Destination = {
             "ToAddresses": [alert_email]
@@ -122,7 +170,7 @@ def verify_signature(path, body, username, event):
         if username not in _pubkey_cache:
             domain = os.environ["DOMAIN"]
             secret_name = f"{domain}/pubkeys"
-            secret_string = manager.sm.get_secret_value(SecretId=secret_name)['SecretString']
+            secret_string = sm.get_secret_value(SecretId=secret_name)['SecretString']
             _pubkey_cache = json.loads(secret_string)
         public_key = load_ssh_public_key(_pubkey_cache[username].encode("utf-8"))
 
@@ -181,7 +229,7 @@ def get_user_info(claims):
     username = claims.get('sub', '<anonymous>')
     org_roles = parse_claim_array(claims.get('org_roles', "[]"))
     audiences = parse_claim_array(claims.get('aud', "[]"))
-    deployable_clusters = {audience for audience in audiences if manager.valid_cluster_name(audience)}
+    deployable_clusters = {audience for audience in audiences if valid_cluster_name(audience)}
     known_clusters = deployable_clusters - {'*'} | {'sliderule'}
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
@@ -255,6 +303,171 @@ def validate_request(event, info):
     }
 
 # ###############################
+# Lambda: Schedule Auto Shutdown
+# ###############################
+
+#
+# Cloud Formation Response
+#
+def cfn_send(event, context, responseStatus, responseData, physicalResourceId=None, noEcho=False, reason=None):
+    responseUrl = event['ResponseURL']
+
+    responseBody = {
+        'Status' : responseStatus,
+        'Reason' : reason or "See the details in CloudWatch Log Stream: {}".format(context.log_stream_name),
+        'PhysicalResourceId' : physicalResourceId or context.log_stream_name,
+        'StackId' : event['StackId'],
+        'RequestId' : event['RequestId'],
+        'LogicalResourceId' : event['LogicalResourceId'],
+        'NoEcho' : noEcho,
+        'Data' : responseData
+    }
+
+    json_responseBody = json.dumps(responseBody)
+
+    headers = {
+        'content-type' : '',
+        'content-length' : str(len(json_responseBody))
+    }
+
+    try:
+        response = _http.request('PUT', responseUrl, headers=headers, body=json_responseBody)
+        print("Status code:", response.status)
+    except Exception as e:
+        print("send(..) failed executing http.request(..):", e)
+
+#
+# Get the next time of the event bridge rule
+#
+def get_next_trigger_time(rule_name):
+    """
+    Return next trigger for cron() expressions in an EventBridge rule.
+    Example: cron(0 12 * * ? *) - daily at noon UTC
+    """
+    try:
+        from croniter import croniter
+
+        # Get the rule details
+        response = ev.describe_rule(Name=rule_name)
+
+        # Check if rule is enabled
+        state = response.get('State')
+        if state != 'ENABLED':
+            print(f"Rule {rule_name} is {state}")
+            return None
+
+        # Get the schedule expression
+        schedule_expression = response.get('ScheduleExpression')
+        if not schedule_expression:
+            print(f"Rule {rule_name} is not a scheduled rule (it's event-based)")
+            return None
+
+        # Check schedule expression format
+        if not schedule_expression.startswith('cron('):
+            print(f"Unknown schedule expression format: {schedule_expression}")
+            return None
+
+        # Calculate next trigger
+        # EventBridge format: cron(Minutes Hours Day-of-month Month Day-of-week Year)
+        cron_expr = schedule_expression.replace('cron(', '').replace(')', '')
+
+        # Convert EventBridge cron to standard cron format
+        # EventBridge: Minutes Hours Day Month DayOfWeek Year
+        # Standard:    Minutes Hours Day Month DayOfWeek
+        parts = cron_expr.split()
+        if len(parts) != 6:
+            print(f"Invalid cron expression format: {cron_expr}")
+            return None
+
+        # Remove the Year field and convert ? to *
+        standard_cron = ' '.join(parts[:5]).replace('?', '*')
+
+        # Calculate next occurrence
+        now = datetime.now(timezone.utc)
+        cron = croniter(standard_cron, now)
+
+        # Return next time
+        return cron.get_next(datetime).isoformat()
+
+    except ImportError:
+        print("croniter library not installed. Install with: pip install croniter")
+        return None
+    except ev.exceptions.ResourceNotFoundException:
+        print(f"Rule {rule_name} not found")
+        return None
+    except Exception as e:
+        print(f"Error getting rule details: {e}")
+        return None
+
+#
+# Schedule
+#
+def lambda_schedule(event, context):
+    print(f'Schedule Event: {json.dumps(event)}')
+
+    try:
+        # don't schedule deletion if stack is already being deleted
+        if event['RequestType'] == 'Delete':
+            print('Stack is being deleted, skipping scheduler')
+            cfn_send(event, context, SUCCESS, {})
+            return
+
+        # handle creation and update events
+        if event['RequestType'] in ['Create', 'Update']:
+            stack_name = event['ResourceProperties']['StackName']
+            delete_after_minutes = int(event['ResourceProperties']['DeleteAfterMinutes'])
+            deletion_lambda_arn = event['ResourceProperties']['DeletionLambdaArn']
+            rule_name = build_rule_name(stack_name)
+
+            # calculate schedule time
+            shutdown_time = datetime.utcnow() + timedelta(minutes=delete_after_minutes)
+            cron_expression = f'cron({shutdown_time.minute} {shutdown_time.hour} {shutdown_time.day} {shutdown_time.month} ? {shutdown_time.year})'
+
+            # create eventbridge rule
+            ev.put_rule(
+                Name=rule_name,
+                ScheduleExpression=cron_expression,
+                State='ENABLED',
+                Description=f'Automatically shutdown stack {stack_name}'
+            )
+
+            # add lambda permission
+            try:
+                la.add_permission(
+                    FunctionName=deletion_lambda_arn,
+                    StatementId=f'{rule_name}-permission',
+                    Action='lambda:InvokeFunction',
+                    Principal='events.amazonaws.com',
+                    SourceArn=f'arn:aws:events:{context.invoked_function_arn.split(":")[3]}:{context.invoked_function_arn.split(":")[4]}:rule/{rule_name}'
+                )
+            except la.exceptions.ResourceConflictException:
+                print('Permission already exists')
+
+            # add target
+            ev.put_targets(
+                Rule=rule_name,
+                Targets=[{
+                    'Id': '1',
+                    'Arn': deletion_lambda_arn,
+                    'Input': json.dumps({'stack_name': stack_name})
+                }]
+            )
+
+            # acknowledge hook complete back to cloudformation
+            print(f'Scheduled stack deletion at {shutdown_time} UTC')
+            response_data = {
+                'ScheduledTime': shutdown_time.isoformat(),
+                'RuleName': rule_name
+            }
+            cfn_send(event, context, SUCCESS, response_data)
+
+    except Exception as e:
+
+        # acknowledge hook error back to cloudformation
+        print(f'Error in custom scheduler: {e}')
+        cfn_send(event, context, FAILED, {'Error': str(e)})
+
+# ###############################
 # Path Handlers
 # ###############################
 
@@ -263,101 +476,124 @@ def validate_request(event, info):
 #
 def deploy_handler(rqst):
 
-    try:
-        # initialize response state
-        state = {}
+    # initialize response state
+    state = {}
 
-        # get environment variables
-        stack_name = os.environ["STACK_NAME"]
-        environment_version = os.environ['ENVIRONMENT_VERSION']
-        domain = os.environ["DOMAIN"]
-        project_bucket = os.environ["PROJECT_BUCKET"]
-        project_folder = os.environ["PROJECT_FOLDER"]
-        project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
-        container_registry = os.environ['CONTAINER_REGISTRY']
-        jwt_issuer = os.environ['JWT_ISSUER']
-        alert_stream = os.environ['ALERT_STREAM']
-        telemetry_stream = os.environ['TELEMETRY_STREAM']
+    # get environment variables
+    stack_name = os.environ["STACK_NAME"]
+    environment_version = os.environ['ENVIRONMENT_VERSION']
+    domain = os.environ["DOMAIN"]
+    project_bucket = os.environ["PROJECT_BUCKET"]
+    project_folder = os.environ["PROJECT_FOLDER"]
+    project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
+    container_registry = os.environ['CONTAINER_REGISTRY']
+    jwt_issuer = os.environ['JWT_ISSUER']
+    alert_stream = os.environ['ALERT_STREAM']
+    telemetry_stream = os.environ['TELEMETRY_STREAM']
 
-        # get arns for auto-shutdown
-        resp = manager.cf.describe_stacks(StackName=stack_name)
-        outputs = resp["Stacks"][0].get("Outputs", [])
-        destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
-        schedule_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
+    # get arns for auto-shutdown
+    resp = cf.describe_stacks(StackName=stack_name)
+    outputs = resp["Stacks"][0].get("Outputs", [])
+    destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
+    schedule_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
 
-        # build parameters for stack creation
-        state["parms"] = [
-            {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
-            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
-            {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
-            {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
-            {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
-            {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
-            {"ParameterKey": "Domain", "ParameterValue": domain},
-            {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
-            {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
-            {"ParameterKey": "ProjectPublicBucket", "ParameterValue": project_public_bucket},
-            {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
-            {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
-            {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
-            {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
-            {"ParameterKey": "AlertStream", "ParameterValue": alert_stream},
-            {"ParameterKey": "TelemetryStream", "ParameterValue": telemetry_stream},
-        ]
+    # build parameters for stack creation
+    state["parms"] = [
+        {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
+        {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
+        {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
+        {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+        {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
+        {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
+        {"ParameterKey": "Domain", "ParameterValue": domain},
+        {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
+        {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
+        {"ParameterKey": "ProjectPublicBucket", "ParameterValue": project_public_bucket},
+        {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
+        {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
+        {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
+        {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
+        {"ParameterKey": "AlertStream", "ParameterValue": alert_stream},
+        {"ParameterKey": "TelemetryStream", "ParameterValue": telemetry_stream},
+    ]
 
-        # read template
-        templateBody = open("cluster.yml").read()
+    # read template
+    templateBody = open("cluster.yml").read()
 
-        # the stack name naming convention is required by Makefile
-        stack_name = manager.build_stack_name(rqst["cluster"])
+    # the stack name naming convention is required by Makefile
+    stack_name = build_stack_name(rqst["cluster"])
 
-        # create stack
-        state["response"] = manager.cf.create_stack(StackName=stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+    # create stack
+    state["response"] = cf.create_stack(StackName=stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
-        # status deployment
-        send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
-        print(f'Deploy initiated for {stack_name}')
+    # status deployment
+    send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
+    print(f'Deploy initiated for {stack_name}')
 
-        # return successa
-        return json_response(200, state)
+    # return successa
+    return json_response(200, state)
 
-    except Exception as e:
-
-        # failure
-        return exception_reponse(e)
 
 #
 # Extend
 #
 def extend_handler(rqst):
 
+    # initialize response state
+    state = {}
+
+    # get rule name
+    rule_name = f'{build_stack_name(rqst["cluster"])}-auto-shutdown'
+
+    # calculate new shutdown time
+    new_shutdown_time = datetime.now(timezone.utc) + timedelta(minutes=rqst["ttl"])
+    state["cron_expression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
+
+    # extend rule
+    state["response"] = ev.put_rule(
+        Name=rule_name,
+        ScheduleExpression=state["cron_expression"],
+        State='ENABLED',
+        Description=f'Automatic shutdown for {rule_name} (updated)'
+    )
+
+    # return success
+    return json_response(200, state)
+
+#
+# Destroy
+#
+def lambda_destroy(event, context):
+
+    # initialize response status
+    state = {}
+
+    # get optional request variables
+    cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
+    state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
+
+    # delete eventbridge target and rule
+    rule_name = f'{state["stack_name"]}-auto-shutdown'
+    print(f'Delete initiated for {rule_name}')
     try:
-
-        # initialize response state
-        state = {}
-
-        # get rule name
-        rule_name = f'{manager.build_stack_name(rqst["cluster"])}-auto-shutdown'
-
-        # calculate new shutdown time
-        new_shutdown_time = datetime.now(timezone.utc) + timedelta(minutes=rqst["ttl"])
-        state["cron_expression"] = f'cron({new_shutdown_time.minute} {new_shutdown_time.hour} {new_shutdown_time.day} {new_shutdown_time.month} ? {new_shutdown_time.year})'
-
-        # extend rule
-        state["response"] = manager.ev.put_rule(
-            Name=rule_name,
-            ScheduleExpression=state["cron_expression"],
-            State='ENABLED',
-            Description=f'Automatic shutdown for {rule_name} (updated)'
-        )
-
-        # return success
-        return json_response(200, state)
-
+        ev.remove_targets(Rule=rule_name, Ids=["1"])
+        state["EventBridge Target Removed"] = True
     except Exception as e:
+        print(f'Unable to delete eventbridge rule: {e}')
+        state["EventBridge Target Removed"] = False
+    try:
+        ev.delete_rule(Name=rule_name, Force=False)
+        state["EventBridge Rule Removed"] = True
+    except Exception as e:
+        print(f'Unable to delete eventbridge rule: {e}')
+        state["EventBridge Rule Removed"] = False
 
-        # failure
-        return exception_reponse(e)
+    # delete stack
+    state["response"] = cf.delete_stack(StackName=state["stack_name"])
+    print(f'Delete initiated for {state["stack_name"]}')
+
+    # return successa
+    return json_response(200, state)
 
 
 #
@@ -365,86 +601,75 @@ def extend_handler(rqst):
 #
 def status_handler(rqst):
 
-    try:
-        # initialize response state
-        state = {}
+    # initialize response state
+    state = {}
 
-        # status stack
-        stack_name = manager.build_stack_name(rqst["cluster"])
-        description = manager.cf.describe_stacks(StackName=stack_name)
-        stack = description["Stacks"][0]
+    # status stack
+    stack_name = build_stack_name(rqst["cluster"])
+    description = cf.describe_stacks(StackName=stack_name)
+    stack = description["Stacks"][0]
 
-        # build cleaned response
-        response = {}
-        for k, v in stack.items():
-            if hasattr(v, "tolist"):
-                response[k] = v.tolist()
-            elif isinstance(v, (datetime)):
-                response[k] = v.isoformat()
-            elif not isinstance(v, (bytes, bytearray)):
-                response[k] = v
-        state["response"] = response
+    # build cleaned response
+    response = {}
+    for k, v in stack.items():
+        if hasattr(v, "tolist"):
+            response[k] = v.tolist()
+        elif isinstance(v, (datetime)):
+            response[k] = v.isoformat()
+        elif not isinstance(v, (bytes, bytearray)):
+            response[k] = v
+    state["response"] = response
 
-        # attempt to get auto-shutdown time
-        rule_name = manager.build_rule_name(stack_name)
-        state["auto_shutdown"] = manager.get_next_trigger_time(rule_name)
+    # attempt to get auto-shutdown time
+    rule_name = build_rule_name(stack_name)
+    state["auto_shutdown"] = get_next_trigger_time(rule_name)
 
-        # get number of nodes
-        node_instances = get_instances_by_name(f'{rqst["cluster"]}-node')
-        state["current_nodes"] = len(node_instances)
+    # get number of nodes
+    node_instances = get_instances_by_name(f'{rqst["cluster"]}-node')
+    state["current_nodes"] = len(node_instances)
 
-        # get version and node capacity
-        ilb_instance = get_instances_by_name(f'{rqst["cluster"]}-ilb')
-        if len(ilb_instance) == 1:
-            tags = ilb_instance[0]["Tags"]
-            for tag in tags:
-                if tag["Key"] == "Version":
-                    state["version"] = tag["Value"]
-                if tag["Key"] == "IsPublic":
-                    state["is_public"] = tag["Value"]
-                if tag["Key"] == "NodeCapacity":
-                    state["node_capacity"] = tag["Value"]
+    # get version and node capacity
+    ilb_instance = get_instances_by_name(f'{rqst["cluster"]}-ilb')
+    if len(ilb_instance) == 1:
+        tags = ilb_instance[0]["Tags"]
+        for tag in tags:
+            if tag["Key"] == "Version":
+                state["version"] = tag["Value"]
+            if tag["Key"] == "IsPublic":
+                state["is_public"] = tag["Value"]
+            if tag["Key"] == "NodeCapacity":
+                state["node_capacity"] = tag["Value"]
 
-        # return success
-        return json_response(200, state)
+    # return success
+    return json_response(200, state)
 
-    except Exception as e:
-
-        # failure
-        return exception_reponse(e)
 
 #
 # Events
 #
 def events_handler(rqst):
 
-    try:
-        # get events for stack
-        stack_name = manager.build_stack_name(rqst["cluster"])
-        description = manager.cf.describe_stack_events(StackName=stack_name)
-        stack_events = description["StackEvents"]
-        print(f'Events requested for {stack_name}')
+    # get events for stack
+    stack_name = build_stack_name(rqst["cluster"])
+    description = cf.describe_stack_events(StackName=stack_name)
+    stack_events = description["StackEvents"]
+    print(f'Events requested for {stack_name}')
 
-        # build cleaned response
-        response = []
-        for e in stack_events:
-            stack_event = {}
-            for k, v in e.items():
-                if hasattr(v, "tolist"):
-                    stack_event[k] = v.tolist()
-                elif isinstance(v, (datetime)):
-                    stack_event[k] = v.isoformat()
-                elif not isinstance(v, (bytes, bytearray)):
-                    stack_event[k] = v
-            response.append(stack_event)
+    # build cleaned response
+    response = []
+    for e in stack_events:
+        stack_event = {}
+        for k, v in e.items():
+            if hasattr(v, "tolist"):
+                stack_event[k] = v.tolist()
+            elif isinstance(v, (datetime)):
+                stack_event[k] = v.isoformat()
+            elif not isinstance(v, (bytes, bytearray)):
+                stack_event[k] = v
+        response.append(stack_event)
 
-        # return success
-        return json_response(200, response)
-
-    except Exception as e:
-
-        # failure
-        return exception_reponse(e)
+    # return success
+    return json_response(200, response)
 
 
 #
@@ -452,63 +677,53 @@ def events_handler(rqst):
 #
 def report_clusters_handler(rqst):
 
-    try:
-        # initialize report
-        report = {}
+    # initialize report
+    report = {}
 
-        # get environment variables
-        region = os.environ["AWS_REGION"]
+    # get environment variables
+    region = os.environ["AWS_REGION"]
 
-        # get list of intelligent load balancers with their tags
-        for instance in get_instances_by_name('*-ilb'):
-            tags = {t['Key']: t['Value'] for t in instance.get('Tags', [])}
-            name = tags.get('Name')
-            if name:
-                # get status of each cluster containing the intelligent load balancer
-                cluster = name.split("-ilb")[0]
-                details = status_handler({"cluster": cluster, "region": region})
-                if details["statusCode"] == 200:
-                    status = json.loads(details["body"])
-                    report[cluster] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+    # get list of intelligent load balancers with their tags
+    for instance in get_instances_by_name('*-ilb'):
+        tags = {t['Key']: t['Value'] for t in instance.get('Tags', [])}
+        name = tags.get('Name')
+        if name:
+            # get status of each cluster containing the intelligent load balancer
+            cluster = name.split("-ilb")[0]
+            details = status_handler({"cluster": cluster, "region": region})
+            if details["statusCode"] == 200:
+                status = json.loads(details["body"])
+                report[cluster] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
 
-        # return success
-        return json_response(200, report)
+    # return success
+    return json_response(200, report)
 
-    except Exception as e:
-
-        # failure
-        return exception_reponse(e)
 
 #
 # Test Report
 #
 def report_tests_handler(rqst):
 
-    try:
-        # get environment variables
-        project_bucket = os.environ["PROJECT_BUCKET"]
-        project_folder = os.environ["PROJECT_FOLDER"]
+    # get environment variables
+    project_bucket = os.environ["PROJECT_BUCKET"]
+    project_folder = os.environ["PROJECT_FOLDER"]
 
-        # get test summary
-        summary_file = f"{rqst["branch"]}-summary.json"
-        manager.s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
+    # get test summary
+    summary_file = f"{rqst["branch"]}-summary.json"
+    s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
 
-        # read test summary
-        with open(f"/tmp/{summary_file}", "r") as file:
-            report = json.loads(file.read())
+    # read test summary
+    with open(f"/tmp/{summary_file}", "r") as file:
+        report = json.loads(file.read())
 
-        # return success
-        return json_response(200, report)
+    # return success
+    return json_response(200, report)
 
-    except Exception as e:
-
-        # failure
-        return exception_reponse(e)
 
 #
 # Test Runner
 #
-def test_handler(rqst):
+def deploy_test_handler(rqst):
 
     try:
         # initialize response status
@@ -523,7 +738,7 @@ def test_handler(rqst):
         container_registry = os.environ['CONTAINER_REGISTRY']
 
         # get arns for auto-shutdown
-        resp = manager.cf.describe_stacks(StackName=stack_name)
+        resp = cf.describe_stacks(StackName=stack_name)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
         scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
@@ -545,7 +760,7 @@ def test_handler(rqst):
         templateBody = open("testrunner.yml").read()
 
         # create stack (default to hardcoded stack name so only one can run at a time)
-        state["response"] = manager.cf.create_stack(StackName='testrunner', TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        state["response"] = cf.create_stack(StackName='testrunner', TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
         # success
         return json_response(200, state)
@@ -579,7 +794,7 @@ def lambda_gateway(event, context):
         elif rqst["path"] == '/extend': # extends the TTL of a cluster
             return extend_handler(rqst)
         elif rqst["path"] == '/destroy': # destroys a cluster
-            return manager.lambda_destroy(rqst, None)
+            return lambda_destroy(rqst, None)
         elif rqst["path"] == '/status': # returns deployment status of a cluster
             return status_handler(rqst)
         elif rqst["path"] == '/events': # returns cloudformation stack events for a cluster deployment
@@ -589,7 +804,7 @@ def lambda_gateway(event, context):
         elif rqst["path"] == '/report/tests': # returns report on status of last test runner deployment
             return report_tests_handler(rqst)
         elif rqst["path"] == '/test': # deploys test runner
-            return test_handler(rqst)
+            return deploy_test_handler(rqst)
 
         # invalid path
         return json_response(404, {'error': 'not found'})

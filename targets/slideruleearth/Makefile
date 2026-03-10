@@ -282,6 +282,11 @@ ams-docker: ## build ams docker image; uses VERSION
 	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) .
 
+ams-run:
+	cd $(ROOT)/applications/ams && \
+	conda run -n ams --no-capture-output \
+	flask --app ams run --debug --port 9082
+
 ########################
 # Cluster Targets
 ########################
@@ -487,9 +492,6 @@ authenticator-delete: ## deletes the lambda authenticator functions
 	aws cloudformation delete-stack --stack-name $(AUTHENTICATOR_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
-authenticator-test-env: ## display needed parameters for running tests
-	@echo JWT_SIGNING_KEY_ARN: $(JWT_SIGNING_KEY_ARN)
-
 ########################
 # Provisioner Targets
 ########################
@@ -507,7 +509,6 @@ provisioner-build: ## create the provisioner lambda zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/manager.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
@@ -755,40 +756,50 @@ distclean: ## fully remove all non-version controlled files and directories
 TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
-AMSTEST ?= # specific ams tests and additional pytest options can be supplied here
-
-MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
-MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
-STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
+LAMBDA_PARMS ?= # json encoded parameters
+LAMBDA_NAME ?= # function to invoke
 
 selftest: ## run the self test on the server code
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_REGION=$(AWS_REGION) \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
-pytest: ## run python client tests; needs special conda environment
-	cd $(PYTHON_CLIENT_DIR) && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(PYTEST)
-	cd $(PYTHON_CLIENT_DIR) && coverage report -m
+sliderule-test: ## run python client tests
+	conda run -n ams --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(PYTEST) && coverage report -m'
 
-jest: ## run node.js client self tests
+ams-test: ## run ams tests
+	conda run -n ams --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest $(PYTEST) && coverage report -m'
+
+authenticator-test: ## run authenticator tests
+	conda run -n authenticator --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/authenticator && \
+	DOMAIN=localhost \
+	AUTHENTICATOR_HOSTNAME=localhost \
+	GITHUB_ORG=myorg \
+	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
+	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
+	ALLOWED_REDIRECT_HOSTS=localhost \
+	SESSION_TABLE=$(AUTHENTICATOR_STACKNAME)-store \
+	GITHUB_AUTHORIZE_URL=http://localhost:9083/login/oauth/authorize \
+	GITHUB_TOKEN_URL=http://localhost:9083/login/oauth/access_token \
+	GITHUB_DEVICE_CODE_URL=http://localhost:9083/login/device/code \
+	GITHUB_API_URL=http://localhost:9083/api \
+	JWT_SIGNING_KEY_ARN=$(JWT_SIGNING_KEY_ARN) \
+	coverage run -m pytest $(PYTEST) && \
+	coverage report -m'
+
+provisioner-test: ## run provisioner tests
+	cd $(ROOT)/applications/provisioner && \
+    DOMAIN=$(DOMAIN) \
+    SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+	conda run -n provisioner --no-capture-output pytest $(PYTEST)
+
+nodejs-jest: ## run node.js client self tests
 	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(CLUSTER) TEST=$(JEST)
 
-amstest: ## run ams tests; needs special conda environment
-	make -C $(ROOT)applications/ams test TEST=$(AMSTEST)
-
-perfmtest: ## run mosaics performance test on the server code
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
-
-perfmsbtest: ## run mosaics serial and batch performance test comparing results
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
-
-perfssbtest: ## run strips serial and batch performance test comparing results
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
-
-LAMBDA_PARMS ?= # json encoded parameters
-LAMBDA_NAME ?= # function to invoke
-
-lambdatest:
+lambda-test:
 	echo $(LAMBDA_PARMS) > /tmp/payload.json
 	aws lambda invoke --function-name $(LAMBDA_NAME) --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
