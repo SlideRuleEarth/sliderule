@@ -376,6 +376,11 @@ cluster-direct-destroy: ## directly destroys cluster via cloud formation
 	aws cloudformation delete-stack --stack-name $(CLUSTER)-cluster
 	aws cloudformation wait stack-delete-complete --stack-name $(CLUSTER)-cluster
 
+cluster-direct-resources: ## list resources associated with cluster that are present
+	aws cloudformation describe-stack-resources --stack-name $(CLUSTER)-cluster \
+		--query 'StackResources[?ResourceStatus!=`DELETE_COMPLETE`].[LogicalResourceId,ResourceStatus,ResourceType]' \
+		--output table
+
 ########################
 # Test Runner Targets
 ########################
@@ -509,6 +514,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
@@ -805,6 +811,9 @@ lambda-test:
 	echo $(LAMBDA_PARMS) > /tmp/payload.json
 	aws lambda invoke --function-name $(LAMBDA_NAME) --payload fileb:///tmp/payload.json /tmp/response.json
 	cat /tmp/response.json | jq
+
+lambda-logs:
+	aws logs tail /aws/lambda/$(LAMBDA_NAME) --since 2h --format short
 
 ########################
 # Help Targets

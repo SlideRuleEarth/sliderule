@@ -69,8 +69,10 @@ Resources:
     Properties:
       FunctionName: !Sub '${AWS::StackName}-schedule'
       Runtime: python3.13
-      Handler: provisioner.lambda_schedule
+      Handler: scheduler.lambda_schedule
       Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
       Timeout: 60
       Code:
         S3Bucket: !Ref ProjectBucket
