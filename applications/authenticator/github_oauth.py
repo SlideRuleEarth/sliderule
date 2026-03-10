@@ -1040,7 +1040,7 @@ def exchange_code_for_token(code):
     return access_token
 
 
-def redirect_to_frontend(redirect_uri, parms=None):
+def redirect_to_frontend(redirect_uri, parms=None, cookie=None):
     """
     Validate that a redirect URI points to an allowed domain with a safe scheme.
     Prevents open redirect attacks where an attacker could redirect the JWT token
@@ -1075,11 +1075,22 @@ def redirect_to_frontend(redirect_uri, parms=None):
         raise RuntimeError(f"Rejected redirect to unauthorized host: {host}")
 
     # Return response
-    return json_response(302, None, headers={
-        'Location': f"{redirect_uri}?{urllib.parse.urlencode(parms)}",
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-    })
-
+    if parms:
+        return json_response(302, None, headers={
+            'Location': f"{redirect_uri}?{urllib.parse.urlencode(parms)}",
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        })
+    elif cookie:
+        return json_response(302, None, headers={
+            'Location': f"{redirect_uri}",
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Set-Cookie': f'token={cookie}; Domain=.{DOMAIN}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=86400'
+        })
+    else:
+        return json_response(302, None, headers={
+            'Location': f"{redirect_uri}",
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        })
 
 # =============================================================================
 # Device Flow handlers (for CLI/Python clients)
@@ -1310,6 +1321,75 @@ def handle_pat_login(event):
             'error_description': 'Error processing PAT login'
         })
 
+
+# =============================================================================
+# GitHub Basic Web Flow
+# =============================================================================
+
+def handle_basic_login(event):
+    """
+    Initiate basic GitHub OAuth 2.0 flow.
+    Scope is limited to access only; used by HAProxy/Grafana
+    """
+    # Get query parameters
+    parms = event.get('queryStringParameters')
+    redirect_uri = parms.get('redirect_uri')
+
+    # Create HMAC-signed state for CSRF protection
+    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+    github_state = create_signed_state(f"{redirect_uri_b64}")
+
+    # Build GitHub authorization URL
+    github_parms = {
+        'client_id': get_github_client("id"),
+        'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
+        'scope': 'read:org',
+        'state': github_state
+    }
+    auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+
+    # Return response
+    return json_response(302, None, headers={
+        'Location': auth_url,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    })
+
+
+def handle_basic_callback(event):
+    """
+    Handle basic GitHub OAuth 2.0 callback.
+    Exchange code for token and redirect to frontend with token in cookie
+    """
+    parms = event.get('queryStringParameters')
+    code = parms.get('code')
+    state = parms.get('state', '')
+    error = parms.get('error')
+    error_description = parms.get('error_description')
+
+    # Verify state parameter FIRST (CSRF protection)
+    redirect_uri = verify_signed_state(state)
+
+    # Check errors from GitHub
+    if error:
+        return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
+
+    # Check code from GitHub
+    if not code:
+        return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
+
+    try:
+        # Authenticate user (gets token and metadata)
+        access_token = exchange_code_for_token(code, event)
+        token, metadata = authenticate_user(f'Bearer {access_token}', ['sliderule:access'])
+
+        # Redirect to frontend with JWT in cookie
+        return redirect_to_frontend(redirect_uri, cookie=token)
+
+    except Exception as e:
+        print(f"Exception in OAuth callback: {e}")
+        return redirect_to_frontend(redirect_uri, parms={'error': f"Error during OAuth callback"})
+
+
 # =============================================================================
 # Refresh tokens
 # =============================================================================
@@ -1486,7 +1566,7 @@ def lambda_gateway(event, context):
     method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
     print(f"Received request: {method} {path}")
 
-    # Web Client Authorization Code flow
+    # Web OAuth2.1 Flow
     if path == '/auth/github/register':
         return handle_register(event)
     elif path == '/auth/github/login':
@@ -1496,15 +1576,21 @@ def lambda_gateway(event, context):
     elif path == '/auth/github/token':
         return handle_token(event)
 
-    # Device Flow for CLI/Python clients
+    # Device Flow (for CLI/Python Clients)
     elif path == '/auth/github/device':
         return handle_device_code_request(event)
     elif path == '/auth/github/device/poll':
         return handle_device_poll(event)
 
-    # PAT Key login
+    # PAT Key Flow
     elif path == '/auth/github/pat':
         return handle_pat_login(event)
+
+    # Web Basic flow
+    elif path == '/auth/github/basic/login':
+        return handle_basic_login(event)
+    elif path == '/auth/github/basic/callback':
+        return handle_basic_callback(event)
 
     # Refresh token
     elif path == '/auth/refresh':
