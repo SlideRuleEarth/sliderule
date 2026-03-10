@@ -41,6 +41,9 @@ GITHUB_API_URL = os.environ.get('GITHUB_API_URL','https://api.github.com')
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
 
+# Basic Flow Client ID
+BASIC_CLIENT_ID = "BASIC"
+
 # Registration configuration
 ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
@@ -875,6 +878,18 @@ def handle_callback(event):
         client_id, redirect_uri_b64, client_state = payload.split(":")
         redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
 
+        # check OAuth errors from GitHub
+        if error:
+            return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
+
+        # check code was returned by GitHub
+        if not github_code:
+            return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
+
+        # check and branch to basic flow (processing will not come back here)
+        if client_id == BASIC_CLIENT_ID:
+            return basic_callback(github_code, redirect_uri)
+
         # get session challenge (and delete so it cannot be reused)
         session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
 
@@ -885,14 +900,6 @@ def handle_callback(event):
         # check redirect_uri (should match because we are the ones that stored it both places)
         if redirect_uri != session_challenge["redirect_uri"]:
             raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
-
-        # check OAuth errors from GitHub
-        if error:
-            return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
-
-        # check code was returned by GitHub
-        if not github_code:
-            return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
 
         # generate unique code to return back to client
         client_code = uuid.uuid4()
@@ -1337,7 +1344,7 @@ def handle_basic_login(event):
 
     # Create HMAC-signed state for CSRF protection
     redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-    github_state = create_signed_state(f"{redirect_uri_b64}")
+    github_state = create_signed_state(f"{BASIC_CLIENT_ID}:{redirect_uri_b64}:none")
 
     # Build GitHub authorization URL
     github_parms = {
@@ -1355,39 +1362,17 @@ def handle_basic_login(event):
     })
 
 
-def handle_basic_callback(event):
+def basic_callback(code, redirect_uri):
     """
     Handle basic GitHub OAuth 2.0 callback.
     Exchange code for token and redirect to frontend with token in cookie
     """
-    parms = event.get('queryStringParameters')
-    code = parms.get('code')
-    state = parms.get('state', '')
-    error = parms.get('error')
-    error_description = parms.get('error_description')
+    # Authenticate user (gets token and ignores metadata)
+    access_token = exchange_code_for_token(code)
+    token, _ = authenticate_user(f'Bearer {access_token}', ['sliderule:access'])
 
-    # Verify state parameter FIRST (CSRF protection)
-    redirect_uri = verify_signed_state(state)
-
-    # Check errors from GitHub
-    if error:
-        return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
-
-    # Check code from GitHub
-    if not code:
-        return redirect_to_frontend(redirect_uri, parms={'error': 'No authorization code received'})
-
-    try:
-        # Authenticate user (gets token and metadata)
-        access_token = exchange_code_for_token(code, event)
-        token, metadata = authenticate_user(f'Bearer {access_token}', ['sliderule:access'])
-
-        # Redirect to frontend with JWT in cookie
-        return redirect_to_frontend(redirect_uri, cookie=token)
-
-    except Exception as e:
-        print(f"Exception in OAuth callback: {e}")
-        return redirect_to_frontend(redirect_uri, parms={'error': f"Error during OAuth callback"})
+    # Redirect to frontend with JWT in cookie
+    return redirect_to_frontend(redirect_uri, cookie=token)
 
 
 # =============================================================================
@@ -1589,8 +1574,6 @@ def lambda_gateway(event, context):
     # Web Basic Flow
     elif path == '/auth/github/basic/login':
         return handle_basic_login(event)
-    elif path == '/auth/github/basic/callback':
-        return handle_basic_callback(event)
 
     # Refresh token
     elif path == '/auth/refresh':

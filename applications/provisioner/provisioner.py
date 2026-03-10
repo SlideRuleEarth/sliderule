@@ -565,35 +565,42 @@ def extend_handler(rqst):
 #
 def lambda_destroy(event, context):
 
-    # initialize response status
-    state = {}
-
-    # get optional request variables
-    cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
-    state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
-
-    # delete eventbridge target and rule
-    rule_name = f'{state["stack_name"]}-auto-shutdown'
-    print(f'Delete initiated for {rule_name}')
     try:
-        ev.remove_targets(Rule=rule_name, Ids=["1"])
-        state["EventBridge Target Removed"] = True
-    except Exception as e:
-        print(f'Unable to delete eventbridge rule: {e}')
-        state["EventBridge Target Removed"] = False
-    try:
-        ev.delete_rule(Name=rule_name, Force=False)
-        state["EventBridge Rule Removed"] = True
-    except Exception as e:
-        print(f'Unable to delete eventbridge rule: {e}')
-        state["EventBridge Rule Removed"] = False
+        # initialize response status
+        state = {"status": True}
 
-    # delete stack
-    state["response"] = cf.delete_stack(StackName=state["stack_name"])
-    print(f'Delete initiated for {state["stack_name"]}')
+        # get optional request variables
+        cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
+        state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
 
-    # return successa
-    return json_response(200, state)
+        # delete eventbridge target and rule
+        rule_name = f'{state["stack_name"]}-auto-shutdown'
+        print(f'Delete initiated for {rule_name}')
+        try:
+            ev.remove_targets(Rule=rule_name, Ids=["1"])
+            state["EventBridge Target Removed"] = True
+        except Exception as e:
+            print(f'Unable to delete eventbridge rule: {e}')
+            state["EventBridge Target Removed"] = False
+        try:
+            ev.delete_rule(Name=rule_name, Force=False)
+            state["EventBridge Rule Removed"] = True
+        except Exception as e:
+            print(f'Unable to delete eventbridge rule: {e}')
+            state["EventBridge Rule Removed"] = False
+
+        # delete stack
+        state["response"] = cf.delete_stack(StackName=state["stack_name"])
+        print(f'Delete initiated for {state["stack_name"]}')
+
+    # explicipty handle exceptions
+    except Exception as e:
+        print(f'Exception in destroy: {e}')
+        state["exception"] = f'Failure in destroy'
+        state["status"] = False
+
+    # return response directly
+    return state
 
 
 #
