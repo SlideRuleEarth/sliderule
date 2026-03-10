@@ -1586,7 +1586,7 @@ def lambda_gateway(event, context):
     elif path == '/auth/github/pat':
         return handle_pat_login(event)
 
-    # Web Basic flow
+    # Web Basic Flow
     elif path == '/auth/github/basic/login':
         return handle_basic_login(event)
     elif path == '/auth/github/basic/callback':
