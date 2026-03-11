@@ -155,7 +155,7 @@ Resources:
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: sliderule-github-oauth
+      Name: !Sub '${AWS::StackName}-gateway'
       Description: GitHub OAuth API for SlideRule
       ProtocolType: HTTP
       CorsConfiguration:

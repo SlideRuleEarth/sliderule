@@ -416,7 +416,7 @@ class Session:
     #
     # authenticate
     #
-    def authenticate (self, github_token=None):
+    def authenticate (self, github_token=None, force_login=False):
         '''
         gets a bearer token (ps_access_token) from sliderule
         to use in requests to private clusters
@@ -428,12 +428,12 @@ class Session:
 
         # authenticate user
         try:
-            if github_user_token:
+            if github_user_token and not force_login:
                 # directly login using a PAT key
                 rsps = self.__patlogin(login_url, github_user_token)
             else:
                 # attempt device flow login (required for admin privileges)
-                rsps = self.__deviceflow(login_url)
+                rsps = self.__deviceflow(login_url, force_login=force_login)
 
             # set internal session data
             if rsps.get('status') == 'success':
@@ -571,19 +571,20 @@ class Session:
     #
     #  __deviceflow
     #
-    def __deviceflow(self, login_url, timeout=60):
+    def __deviceflow(self, login_url, timeout=60, force_login=False):
         """
         Prompt the user through the device flow authentication to GitHub
         """
-        # attempt to retrieve token from local cache
-        result = self.__load_cache("ps_access_token.json")
-        try:
-            if result and (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
-                return result
-            else:
-                logger.info(f"Invalid or expired token: {result["metadata"]["exp"]}")
-        except Exception as e:
-            logger.error(f"Exception occurred when reading token from local cache: {e}")
+        if not force_login:
+            # attempt to retrieve token from local cache
+            result = self.__load_cache("ps_access_token.json")
+            try:
+                if result and (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
+                    return result
+                else:
+                    logger.info(f"Invalid or expired token: {result['metadata']['exp']}")
+            except Exception as e:
+                logger.error(f"Exception occurred when reading token from local cache: {e}")
 
         # sequence user through device flow
         try:
