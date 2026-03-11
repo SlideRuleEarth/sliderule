@@ -451,7 +451,8 @@ recorder-delete: ## deletes the lambda recorder functions
 
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
-ALLOWED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
+TRUSTED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
+THIRD_PARTY_REDIRECT_HOSTS ?= "claude.ai"
 AUTHENTICATOR_ZIPFILE = $(AUTHENTICATOR_STACKNAME).zip
 
 authenticator-build: ## builds the authenticator lambda package zipfile
@@ -480,7 +481,8 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 						ParameterKey=GitHubClientSecretName,ParameterValue=$(GITHUB_CLIENT_SECRET_NAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
-						ParameterKey=AllowedRedirectHosts,ParameterValue=$(ALLOWED_REDIRECT_HOSTS) \
+						ParameterKey=TrustedRedirectHosts,ParameterValue=$(TRUSTED_REDIRECT_HOSTS) \
+						ParameterKey=ThirdPartyRedirectHosts,ParameterValue=$(THIRD_PARTY_REDIRECT_HOSTS) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
@@ -792,7 +794,8 @@ authenticator-test: ## run authenticator tests
 	GITHUB_ORG=myorg \
 	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
 	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
-	ALLOWED_REDIRECT_HOSTS=localhost \
+	TRUSTED_REDIRECT_HOSTS=localhost \
+	THIRD_PARTY_REDIRECT_HOSTS=companyx \
 	SESSION_TABLE=$(AUTHENTICATOR_STACKNAME)-store \
 	GITHUB_AUTHORIZE_URL=http://localhost:9083/login/oauth/authorize \
 	GITHUB_TOKEN_URL=http://localhost:9083/login/oauth/access_token \

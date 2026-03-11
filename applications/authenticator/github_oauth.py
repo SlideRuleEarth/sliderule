@@ -29,7 +29,8 @@ GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
-ALLOWED_REDIRECT_HOSTS = os.environ.get('ALLOWED_REDIRECT_HOSTS', '').split(' ') # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
+TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(' ')) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
+THIRD_PARTY_REDIRECT_HOSTS = set(os.environ.get('THIRD_PARTY_REDIRECT_HOSTS', '').split(' ')) # Untrusted redirect_uri list which forces descope of audience in token
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 
 # GitHub OAuth endpoints (from the environment only for testing)
@@ -38,18 +39,22 @@ GITHUB_TOKEN_URL = os.environ.get('GITHUB_TOKEN_URL','https://github.com/login/o
 GITHUB_DEVICE_CODE_URL = os.environ.get('GITHUB_DEVICE_CODE_URL','https://github.com/login/device/code')
 GITHUB_API_URL = os.environ.get('GITHUB_API_URL','https://api.github.com')
 
+# Scoped restricted to project services (not allowed for third party applications)
+TRUSTED_SCOPES = {"sliderule:access", "sliderule:admin", "provisioner:access", "runner:access"}
+
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
 
 # Basic Flow Client ID
 BASIC_CLIENT_ID = "BASIC"
 
-# Registration configuration
+# OAuth2.1 configuration
+ALLOWED_REDIRECT_HOSTS      = THIRD_PARTY_REDIRECT_HOSTS | TRUSTED_REDIRECT_HOSTS
 ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
 ALLOWED_CHALLENGE_METHODS   = {"S256"}
-ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "sliderule:access", "sliderule:admin"}
+ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources"} | TRUSTED_SCOPES
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15 # seconds
@@ -220,6 +225,31 @@ def json_response(status_code, body, headers=None, with_cors=True, with_cache=Fa
         }
     # return full response
     return response
+
+
+# =============================================================================
+# General Helper Functions
+# =============================================================================
+
+def contains_scope(scope, scopes_to_check):
+    """
+    Returns true if any element of the scope is in the scopes to check
+    """
+    for s in scopes_to_check:
+        if s in scope:
+            return True
+    return False
+
+
+def contains_redirect(redirect_uri, valid_redirect_hosts):
+    """
+    Returns true if redirect_uri is in the list of allowed hosts
+    """
+    host = urllib.parse.urlparse(redirect_uri).hostname
+    for allowed_host in valid_redirect_hosts:
+        if host == allowed_host or host.endswith('.' + allowed_host):
+            return True
+    return False
 
 
 # =============================================================================
@@ -520,16 +550,19 @@ def generate_audience_list(username, teams, org_roles, scope):
     # Get resources from scopes
     resources = {s.split(":")[0] for s in scope}
 
-    # Provide cluster services (exclusive)
-    if ('sliderule' in resources) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
-        audiences.extend(['provisioner', 'runner']) # all members have access to the provisioner and runner
-        if teams: # all members can access services at subdomains tied to teams they belong to
-            audiences.extend(teams)
-        if 'owner' in org_roles: # owners can access all services
-            audiences.append('*')
-    # Provide MCP services (exclusive)
-    elif 'mcp' in resources: # any authenticated user has access to MCP services
-        audiences.append(f'https://mcp.{DOMAIN}')
+    # Provide member services
+    if 'member' in org_roles: # member only access
+        if 'provisioner' in resources: # access to provisioner
+            audiences.append('provisioner')
+        if 'runner' in resources: # access to runner
+            audiences.append('runner')
+        if 'sliderule' in resources: # access to cluster
+            if teams: # all members can access services at subdomains tied to teams they belong to
+                audiences.extend(teams)
+            if 'owner' in org_roles: # owners can access all clusters
+                audiences.append('*')
+        if 'mcp' in resources: # any authenticated user has access to MCP services
+            audiences.append(f'https://mcp.{DOMAIN}')
 
     # Return list of audiences
     return audiences
@@ -632,11 +665,6 @@ def authenticate_user(authorization_str, scope):
     username = user_info.get('login')
     if not username:
         raise RuntimeError('Could not get GitHub username')
-
-    # verify scope
-    for permission in scope:
-        if permission not in ALLOWED_SCOPES:
-            raise RuntimeError(f"Invalid scope: {permission}")
 
     # get user metadata
     org_roles = get_organization_roles(authorization_str, username, scope)
@@ -762,7 +790,7 @@ def handle_register(event: dict) -> dict:
         'response_types':               response_types,
         'token_endpoint_auth_method':   auth_method,
         'code_challenge_method':        challenge_method,
-        'scope':                        scope.split()
+        'scope':                        scope
     }
 
     # store client record
@@ -818,7 +846,7 @@ def handle_login(event):
 
         # check scope
         for s in scope.split():
-            if s not in session["scope"]:
+            if s not in session["scope"].split():
                 raise RuntimeError(f"Invalid scope: {scope}")
 
         # check resource (must be fully specified URL, e.g. https://service.domain/api)
@@ -874,7 +902,7 @@ def handle_login(event):
 
 def handle_callback(event):
     """
-    Handle GitHub OAuth callback.
+    Handle OAuth callback.
     Exchange code for token, build metadata, redirect to frontend.
     Security: Validates HMAC-signed state parameter to prevent CSRF attacks.
     """
@@ -913,20 +941,34 @@ def handle_callback(event):
         if redirect_uri != session_challenge["redirect_uri"]:
             raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
 
+        # construct scope of authorization request
+        scope = session_challenge["scope"]
+        if session_challenge["resource"]:
+            scope.append(session_challenge["resource"].split("https://")[-1].split(".")[0] + ":resources")
+
+        # check rules for scope and redirect
+        if contains_redirect(redirect_uri, THIRD_PARTY_REDIRECT_HOSTS):
+            if contains_scope(scope, TRUSTED_SCOPES):
+                raise RuntimeError(f"Forbidden scope: {scope}")
+        elif contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
+            if not contains_scope(scope, ALLOWED_SCOPES):
+                raise RuntimeError(f"Invalid scope: {scope}")
+        else: # redirect not allowed
+            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+
         # generate unique code to return back to client
         client_code = uuid.uuid4()
 
         # store token and metadata associated with session
         session_store(f"{client_id}/{client_code}", {
             "github_code": github_code,
-            "scope": session_challenge["scope"],
-            "resource": session_challenge["resource"],
+            "scope": scope,
             "code_challenge": session_challenge["code_challenge"],
             "redirect_uri": redirect_uri,
             "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
         })
 
-        # Redirect to frontend with JWT in parameters
+        # redirect to frontend with JWT in parameters
         return redirect_to_frontend(redirect_uri, parms={
             'code': client_code,
             'state': client_state
@@ -957,14 +999,14 @@ def handle_token(event):
 
         # pull out individual parameters
         grant_type      = parms.get('grant_type')
-        code            = parms.get('code')
+        client_code     = parms.get('code')
         redirect_uri    = parms.get('redirect_uri')
         client_id       = parms.get('client_id')
         code_verifier   = parms.get('code_verifier')
 
         # get sessions
         session = session_load(client_id)
-        session_code = session_load(f"{client_id}/{code}", with_delete=True)
+        session_code = session_load(f"{client_id}/{client_code}", with_delete=True)
 
         # check session
         if not session:
@@ -988,18 +1030,18 @@ def handle_token(event):
         if session_code["redirect_uri"] != redirect_uri:
             raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
 
+        # recheck redirect uri against allowed redirect hosts
+        if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
+            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+
         # verify challenge
         if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
             raise RuntimeError("Failed to verify code challenge")
 
-        # construct scope of authorization request
-        scope = session_code["scope"]
-        if session_code["resource"]:
-            scope.append(session_code["resource"].split("https://")[-1].split(".")[0] + ":resources")
-
         # authenticate user (gets token and metadata)
+        # note that scope is created in the above callback and verified there
         access_token = exchange_code_for_token(session_code["github_code"])
-        token, metadata = authenticate_user(f'Bearer {access_token}', scope)
+        token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
 
         # build user interface hints
         info = {
@@ -1076,7 +1118,6 @@ def redirect_to_frontend(redirect_uri, parms=None, cookie=None):
 
     Security checks:
     - Scheme must be https (or http only for localhost/127.0.0.1)
-    - Host must be in ALLOWED_REDIRECT_HOSTS
     """
     # Validate uri host and scheme
     parsed = urllib.parse.urlparse(redirect_uri)
@@ -1092,15 +1133,6 @@ def redirect_to_frontend(redirect_uri, parms=None, cookie=None):
     # http is only allowed for localhost development
     if (scheme == 'http') and (host not in ('localhost', '127.0.0.1')):
        raise RuntimeError(f"Rejected http redirect to non-localhost host: {host}")
-
-    # Check against allowed hosts
-    is_allowed = False
-    for allowed_host in ALLOWED_REDIRECT_HOSTS:
-        if host == allowed_host or host.endswith('.' + allowed_host):
-            is_allowed = True
-            break
-    if not is_allowed:
-        raise RuntimeError(f"Rejected redirect to unauthorized host: {host}")
 
     # Return response
     if parms:
@@ -1269,7 +1301,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata
-        token, metadata = authenticate_user(f'Bearer {access_token}', ['sliderule:access', 'sliderule:admin'])
+        token, metadata = authenticate_user(f'Bearer {access_token}', ['sliderule:access', 'sliderule:admin', 'provisioner:access', 'runner:access'])
 
         # Response with a successful authentication
         return json_response(200, {
@@ -1334,7 +1366,7 @@ def handle_pat_login(event):
             })
 
         # Token is valid! Authenticate user to get your own session token/metadata
-        token, metadata = authenticate_user(f'token {pat}', ['sliderule:access'])
+        token, metadata = authenticate_user(f'token {pat}', ['sliderule:access', 'provisioner:access', 'runner:access'])
         return json_response(200, {
             'status': 'success',
             'token': token,
@@ -1391,6 +1423,11 @@ def basic_callback(code, redirect_uri):
     # Authenticate user (gets token and ignores metadata)
     access_token = exchange_code_for_token(code)
     token, _ = authenticate_user(f'Bearer {access_token}', ['sliderule:access'])
+
+    # check redirect_uri against only the trusted redirect hosts
+    # (since this is the basic authorization flow)
+    if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
+        raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
 
     # Redirect to frontend with JWT in cookie
     return redirect_to_frontend(redirect_uri, cookie=token)

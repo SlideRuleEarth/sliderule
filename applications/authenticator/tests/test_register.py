@@ -36,6 +36,7 @@ def test_nominal():
         'Access-Control-Allow-Headers': 'Content-Type'
     })
     body = json.loads(rsps['body'])
+    scopes = body["scope"].split()
     assert len(body["client_id"]) > 0
     assert int(body["client_id_issued_at"]) <= int(datetime.now().timestamp())
     assert body["client_name"] == "Unknown Client"
@@ -47,9 +48,9 @@ def test_nominal():
     assert body["response_types"][0] == "code"
     assert body["token_endpoint_auth_method"] == "none"
     assert body["code_challenge_method"] == "S256"
-    assert len(body["scope"]) == 2
-    assert body["scope"][0] == "mcp:tools"
-    assert body["scope"][1] == "mcp:resources"
+    assert len(scopes) == 2
+    assert scopes[0] == "mcp:tools"
+    assert scopes[1] == "mcp:resources"
 
 #
 # Test Invalid Redirect

@@ -14,7 +14,9 @@ Parameters:
     Type: String
   CertificateArn:
     Type: String
-  AllowedRedirectHosts:
+  TrustedRedirectHosts:
+    Type: String
+  ThirdPartyRedirectHosts:
     Type: String
   CorsAllowOrigins:
     Type: CommaDelimitedList
@@ -129,7 +131,8 @@ Resources:
           GITHUB_CLIENT_SECRET_NAME: !Ref GitHubClientSecretName
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
-          ALLOWED_REDIRECT_HOSTS: !Ref AllowedRedirectHosts
+          TRUSTED_REDIRECT_HOSTS: !Ref TrustedRedirectHosts
+          THIRD_PARTY_REDIRECT_HOSTS: !Ref ThirdPartyRedirectHosts
           SESSION_TABLE: !Sub '${AWS::StackName}-store'
 
   # DynamoDB Table
