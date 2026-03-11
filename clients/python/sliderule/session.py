@@ -38,6 +38,8 @@ import time
 import logging
 import numpy
 import base64
+from pathlib import Path
+from datetime import datetime, timezone
 from urllib import parse as urllib_parse
 import webbrowser
 from sliderule import version
@@ -573,6 +575,14 @@ class Session:
         """
         Prompt the user through the device flow authentication to GitHub
         """
+        # attempt to retrieve token from local cache
+        result = self.__load_cache("ps_access_token.json")
+        if result and result["status"] == "success" and result["metadata"]["exp"] < int(datetime.now().timestamp()):
+            return result
+        else:
+            logger.info(f"Unsuccessful loading token from local cache")
+
+        # sequence user through device flow
         try:
             # get device info from github
             response                    = self.session.post(login_url + '/auth/github/device')
@@ -616,6 +626,9 @@ class Session:
                 result = response.json()
                 if result['status'] == 'success':
                     print(f"\bsuccess")
+                    # attempt to store token to local cache
+                    if not self.__store_cache("ps_access_token.json", result):
+                        logger.info(f"Unsuccessful storing token to local cache")
                     # return metadata
                     return result
                 elif result['status'] == 'error':
@@ -696,8 +709,6 @@ class Session:
         '''
         cryptographically sign the request
         '''
-        from pathlib import Path
-        from datetime import datetime, timezone
         from cryptography.hazmat.primitives.serialization import load_ssh_private_key
         with open(os.path.join(Path.home(), self.private_key), "rb") as file:
             private_key = load_ssh_private_key(file.read(), password=None)
@@ -710,6 +721,36 @@ class Session:
         signature_b64 = base64.b64encode(signature).decode("ascii")
         headers["x-sliderule-timestamp"] = str(timestamp)
         headers["x-sliderule-signature"] = signature_b64
+
+
+    #
+    #  __load_cache
+    #
+    def __load_cache (self, filename):
+        try:
+            cache_file = Path(Path.home() / ".cache" / "sliderule" / filename)
+            with open(cache_file, "r") as file:
+                return json.loads(file.read())
+        except Exception as e:
+            logger.error(f'Failed load data from {filename}: {e}')
+            return None
+
+    #
+    #  __store_cache
+    #
+    def __store_cache (self, filename, contents):
+        # retrieve token from local cache
+        try:
+            cache_dir = Path(Path.home() / ".cache" / "sliderule")
+            cache_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            cache_file = cache_dir / filename
+            fd = os.open(cache_file, os.O_WRONLY | os.O_CREAT, mode=0o600)
+            with os.fdopen(fd, "w") as file:
+                file.write(contents)
+            return True
+        except Exception as e:
+            logger.error(f'Failed store data to {filename}: {e}')
+            return False
 
     #
     #  __populate

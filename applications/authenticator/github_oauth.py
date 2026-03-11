@@ -821,6 +821,15 @@ def handle_login(event):
             if s not in session["scope"]:
                 raise RuntimeError(f"Invalid scope: {scope}")
 
+        # check resource (must be fully specified URL, e.g. https://service.domain/api)
+        if resource:
+            parsed_resource = urllib.parse.urlparse(resource)
+            parsed_base_domain = ".".join(parsed_resource.hostname.split(".")[1:])
+            if parsed_resource.scheme != "https":
+                raise RuntimeError(f"Invalid resource scheme: {parsed_resource.scheme}")
+            if parsed_base_domain != DOMAIN:
+                raise RuntimeError(f"Invalid resource domain: {parsed_base_domain}")
+
         # store the code challenge associated with session
         session_store(f"{client_id}/challenge", {
             "code_challenge": code_challenge,
