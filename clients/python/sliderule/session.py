@@ -577,10 +577,13 @@ class Session:
         """
         # attempt to retrieve token from local cache
         result = self.__load_cache("ps_access_token.json")
-        if result and result["status"] == "success" and result["metadata"]["exp"] < int(datetime.now().timestamp()):
-            return result
-        else:
-            logger.info(f"Unsuccessful loading token from local cache")
+        try:
+            if result and (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
+                return result
+            else:
+                logger.info(f"Invalid or expired token: {result["metadata"]["exp"]}")
+        except Exception as e:
+            logger.error(f"Exception occurred when reading token from local cache: {e}")
 
         # sequence user through device flow
         try:
@@ -746,7 +749,7 @@ class Session:
             cache_file = cache_dir / filename
             fd = os.open(cache_file, os.O_WRONLY | os.O_CREAT, mode=0o600)
             with os.fdopen(fd, "w") as file:
-                file.write(contents)
+                file.write(json.dumps(contents))
             return True
         except Exception as e:
             logger.error(f'Failed store data to {filename}: {e}')
