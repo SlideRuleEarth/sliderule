@@ -394,8 +394,8 @@ class Session:
                     ttl=ttl,
                     version="latest"
                 )
-                logger.info(f'Requesting deployment of {self.cluster}: {rsps["status"]}')
-                inerror = rsps["status"] == "error"
+                inerror = "error" in rsps
+                logger.info(f'Requesting deployment of {self.cluster}: {inerror}')
 
             # Check for Exit Conditions
             if inerror: # error occurred
@@ -463,6 +463,9 @@ class Session:
             headers = {}
 
         try:
+            # Initialize Response
+            rsps = None
+
             # Build Authorization Header
             self.__buildauthheader(headers)
 
@@ -472,13 +475,15 @@ class Session:
             body = json.dumps(data)
             self.__signrequest(headers, path, body) # (optionally) sign request
             data = self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
-            data.raise_for_status()
 
             # Parse Response
             stream_source = self.__StreamSource(data)
             lines = [line for line in stream_source]
             rsps = b''.join(lines)
             rsps = json.loads(rsps)
+
+            # Check for Errors
+            data.raise_for_status()
 
             # Return Response
             return rsps
@@ -487,7 +492,7 @@ class Session:
             logger.error(f'Failed to make request to {url}: {e}')
             if self.throw_exceptions:
                 raise
-            return {'status': 'error', 'exception': f'{e}'}
+            return {'error': f'{e}', 'error_description': f'{rsps}'}
 
     #
     # __StreamSource

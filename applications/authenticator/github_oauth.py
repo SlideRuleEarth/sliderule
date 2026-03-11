@@ -49,7 +49,7 @@ ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
 ALLOWED_CHALLENGE_METHODS   = {"S256"}
-ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "offline_access", "sliderule:access", "sliderule:admin"}
+ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources", "sliderule:access", "sliderule:admin"}
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15 # seconds
@@ -520,16 +520,15 @@ def generate_audience_list(username, teams, org_roles, scope):
     # Get resources from scopes
     resources = {s.split(":")[0] for s in scope}
 
-    # Provide cluster services
+    # Provide cluster services (exclusive)
     if ('sliderule' in resources) and ('member' in org_roles): # non-members are not allowed access to non-public compute services
         audiences.extend(['provisioner', 'runner']) # all members have access to the provisioner and runner
         if teams: # all members can access services at subdomains tied to teams they belong to
             audiences.extend(teams)
         if 'owner' in org_roles: # owners can access all services
             audiences.append('*')
-
-    # Provide MCP services
-    if 'mcp' in resources: # any authenticated user has access to MCP services
+    # Provide MCP services (exclusive)
+    elif 'mcp' in resources: # any authenticated user has access to MCP services
         audiences.append(f'https://mcp.{DOMAIN}')
 
     # Return list of audiences
@@ -628,24 +627,27 @@ def authenticate_user(authorization_str, scope):
     """
     Build the authentication token and metadata for the user
     """
-    # Get user info
+    # get username
     user_info = get_github_user(authorization_str)
-
-    # Get username
     username = user_info.get('login')
     if not username:
         raise RuntimeError('Could not get GitHub username')
 
-    # Get user metadata
+    # verify scope
+    for permission in scope:
+        if permission not in ALLOWED_SCOPES:
+            raise RuntimeError(f"Invalid scope: {permission}")
+
+    # get user metadata
     org_roles = get_organization_roles(authorization_str, username, scope)
     teams = get_user_teams(authorization_str, org_roles)
     audience_list = generate_audience_list(username, teams, org_roles, scope)
 
-    # Token expiration based on JWT_EXPIRATION_HOURS config
+    # token expiration based on JWT_EXPIRATION_HOURS config
     now = datetime.now(timezone.utc)
     expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
 
-    # Build metadata dictionary
+    # build metadata dictionary
     metadata = {
         'org_roles': org_roles,
         'sub': username,
@@ -687,7 +689,7 @@ def handle_register(event: dict) -> dict:
     response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
     auth_method         = parms.get('token_endpoint_auth_method', 'none')
     challenge_method    = parms.get('code_challenge_method', 'S256') # not an official RFC 7591 field but MCP clients send it
-    scope               = parms.get('scope') # optional per the standard, but required by our implementation
+    scope               = parms.get('scope', '') # optional per the standard
 
     # check redirect_uris
     if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
@@ -784,10 +786,10 @@ def handle_login(event):
         client_id               = parms.get("client_id")
         redirect_uri            = parms.get("redirect_uri")
         client_state            = parms.get("state")
-        scope                   = parms.get("scope")
+        scope                   = parms.get("scope", "") # optional per the standard
         code_challenge          = parms.get("code_challenge")
         code_challenge_method   = parms.get("code_challenge_method")
-        resource                = parms.get("resource") # ignored
+        resource                = parms.get("resource", "") # optional per our implementation
 
         # get session
         session = session_load(client_id)
@@ -823,7 +825,8 @@ def handle_login(event):
         session_store(f"{client_id}/challenge", {
             "code_challenge": code_challenge,
             "redirect_uri": redirect_uri,
-            "scope": scope.split()
+            "scope": scope.split(),
+            "resource": resource
         })
 
         # -----------------
@@ -908,6 +911,7 @@ def handle_callback(event):
         session_store(f"{client_id}/{client_code}", {
             "github_code": github_code,
             "scope": session_challenge["scope"],
+            "resource": session_challenge["resource"],
             "code_challenge": session_challenge["code_challenge"],
             "redirect_uri": redirect_uri,
             "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
@@ -928,6 +932,9 @@ def handle_callback(event):
 
 
 def handle_token(event):
+    """
+    Final stage of authorization where client exchanges code for token.
+    """
     try:
         # Get request body
         body = event.get('body', '{}')
@@ -976,11 +983,16 @@ def handle_token(event):
         if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
             raise RuntimeError("Failed to verify code challenge")
 
-        # Authenticate user (gets token and metadata)
-        access_token = exchange_code_for_token(session_code["github_code"])
-        token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
+        # construct scope of authorization request
+        scope = session_code["scope"]
+        if session_code["resource"]:
+            scope.append(session_code["resource"].split("https://")[-1].split(".")[0] + ":resources")
 
-        # Build user interface hints
+        # authenticate user (gets token and metadata)
+        access_token = exchange_code_for_token(session_code["github_code"])
+        token, metadata = authenticate_user(f'Bearer {access_token}', scope)
+
+        # build user interface hints
         info = {
             'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
@@ -992,7 +1004,7 @@ def handle_token(event):
             'tokenIssuer': metadata['iss']
         }
 
-        # Redirect to frontend with JWT in parameters
+        # redirect to frontend with JWT in parameters
         return json_response(200, {
             "access_token": token,
             "token_type": "Bearer",

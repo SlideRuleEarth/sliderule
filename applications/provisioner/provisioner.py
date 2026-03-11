@@ -106,8 +106,8 @@ def json_response(status_code, body):
 def exception_reponse(e):
     print(f'Exception: {e}')
     if isinstance(e, botocore.exceptions.ClientError) and (e.response['Error']['Code'] == 'ValidationError'):
-        return json_response(404, {'error': 'not found', 'error_description': 'failure in request'})
-    return json_response(500, {'error': 'internal error', 'error_description': 'failure in request'})
+        return json_response(404, {'error': 'not found', 'error_description': f'{e}'})
+    return json_response(500, {'error': 'internal error', 'error_description': f'{e}'})
 
 #
 # Send Email Message

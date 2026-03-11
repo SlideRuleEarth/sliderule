@@ -497,6 +497,9 @@ authenticator-delete: ## deletes the lambda authenticator functions
 	aws cloudformation delete-stack --stack-name $(AUTHENTICATOR_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
+authenticator-logs:
+	aws logs tail /aws/lambda/$(AUTHENTICATOR_STACKNAME)-gateway --since 2h --format short
+
 ########################
 # Provisioner Targets
 ########################
@@ -551,6 +554,9 @@ provisioner-delete: ## deletes the lambda provisioner functions
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(PROVISIONER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(PROVISIONER_STACKNAME)
+
+provisioner-logs:
+	aws logs tail /aws/lambda/$(PROVISIONER_STACKNAME)-gateway --since 2h --format short
 
 ########################
 # Runner Targets

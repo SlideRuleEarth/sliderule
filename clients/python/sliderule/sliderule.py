@@ -341,7 +341,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=Non
             ttl=time_to_live,
             version="latest"
         )
-        logger.info(f'Provisioning request status: {rsps["status"]}')
+        logger.info(f'Provisioning request status: {"error" in rsps}')
 
     # return status
     return available_servers, desired_nodes or 0
