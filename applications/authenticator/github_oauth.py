@@ -562,7 +562,7 @@ def generate_audience_list(username, teams, org_roles, scope):
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
         if 'mcp' in resources: # any authenticated user has access to MCP services
-            audiences.append(f'https://mcp.{DOMAIN}')
+            audiences.append(f'https://mcp.{DOMAIN}/mcp')
 
     # Return list of audiences
     return audiences

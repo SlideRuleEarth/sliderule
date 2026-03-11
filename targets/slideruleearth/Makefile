@@ -795,7 +795,7 @@ authenticator-test: ## run authenticator tests
 	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
 	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
 	TRUSTED_REDIRECT_HOSTS=localhost \
-	THIRD_PARTY_REDIRECT_HOSTS=companyx \
+	THIRD_PARTY_REDIRECT_HOSTS=companyx.com \
 	SESSION_TABLE=$(AUTHENTICATOR_STACKNAME)-store \
 	GITHUB_AUTHORIZE_URL=http://localhost:9083/login/oauth/authorize \
 	GITHUB_TOKEN_URL=http://localhost:9083/login/oauth/access_token \
