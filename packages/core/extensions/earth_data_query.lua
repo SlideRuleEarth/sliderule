@@ -51,7 +51,7 @@ ASSETS = {
         path        = "nsidc-cumulus-prod-protected",
         endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
-        version     = "006",
+        version     = "007",
         api         = "cmr",
         formats     = {".h5"}
     },
@@ -62,7 +62,7 @@ ASSETS = {
         path        = "nsidc-cumulus-prod-protected",
         endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
-        version     = "006",
+        version     = "007",
         api         = "ams",
         formats     = {".h5"},
     },

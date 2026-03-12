@@ -267,7 +267,7 @@ class TestIcesat2:
         ]
         resources = earthdata.cmr(short_name="ATL13", polygon=saltlake, time_start='2018-10-01', time_end='2019-12-01')
         assert init
-        assert len(resources) == 67
+        assert len(resources) == 54
         assert len(resources) == len(set(resources))
         for resource in resources:
             assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime('2018-10-01', '%Y-%m-%d')
