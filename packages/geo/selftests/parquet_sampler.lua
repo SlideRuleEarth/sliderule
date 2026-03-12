@@ -2,6 +2,8 @@ local runner = require("test_executive")
 local srcfile, dirpath = runner.srcscript()
 
 -- Setup --
+core.logmon(core.DEBUG):global("LogMonitor") -- monitor logs and write to stdout
+
 
 local outq_name = "outq-luatest"
 

@@ -73,7 +73,8 @@ class CurlLib
 
         static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                                              bool verify_peer=false, bool verify_hostname=false, int timeout=DATA_TIMEOUT,
-                                             hdrs_t* headers=NULL, const char* unix_socket=NULL, hdrs_t* rsps_headers=NULL);
+                                             hdrs_t* headers=NULL, const char* unix_socket=NULL, hdrs_t* rsps_headers=NULL,
+                                             const char* username=NULL, const char* password=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
         static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator,
                                              int timeout, const std::atomic<bool>* active=NULL, hdrs_t* headers=NULL);

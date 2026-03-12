@@ -18,14 +18,14 @@ To support private cluster management and secure access, the SlideRule team deve
 
 ### SlideRule Authenticator
 
-The _SlideRule Authenticator_ is an AWS Lambda–based authentication service that delegates user authentication to GitHub using OAuth 2.0. User login requests are redirected to GitHub’s authorization endpoint, where credentials are verified by GitHub. Upon successful authentication, GitHub returns an authorization grant that the service exchanges for an access token to establish the user’s identity.
+The _SlideRule Authenticator_ is an AWS Lambda–based authentication service that delegates user authentication to GitHub. User login requests are redirected to GitHub’s authorization endpoint, where credentials are verified by GitHub. Upon successful authentication, GitHub returns an authorization grant that the service exchanges for an access token to establish the user’s identity.
 
 The _SlideRule Authenticator_ is available at https://login.slideruleearth.io and exposes the following API endpoints.
-* __/auth/github/login__: Initiates the OAuth 2.0 authorization code flow for browser-based clients.
+* __/auth/github/login__: Initiates the OAuth 2.1 authorization code flow for browser-based clients.
 * __/auth/github/device__: Implements the OAuth 2.0 device authorization flow for CLI and Python clients.
 * __/auth/github/pat__: Supports authentication using GitHub personal access tokens for automated systems.
 * __/auth/refresh__: Exchanges a valid refresh token for a new JSON Web Token (JWT).
-* __/auth/github/pem__: Returns the public signing key in PEM format.
+* __/auth/pem__: Returns the public signing key in PEM format.
 * __/.well-known/jwks.json__: Publishes the public signing keys in JWKS format.
 * __/.well-known/openid-configuration__: Provides OpenID Connect discovery metadata.
 

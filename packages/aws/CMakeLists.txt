@@ -44,6 +44,7 @@ install (
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/extensions/aws_utils.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/iam_role_auth.lua
     DESTINATION
         ${CONFDIR}/ext
 )

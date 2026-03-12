@@ -770,10 +770,9 @@ distclean: ## fully remove all non-version controlled files and directories
 TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua
 PYTEST ?= # specific pytests and additional pytest options can be supplied here
 JEST ?= # specific jest tests and additional jest options can be supplied here
-LAMBDA_PARMS ?= # json encoded parameters
-LAMBDA_NAME ?= # function to invoke
 
 selftest: ## run the self test on the server code
+	DOMAIN=localhost \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_REGION=$(AWS_REGION) \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
@@ -815,14 +814,6 @@ provisioner-test: ## run provisioner tests
 
 nodejs-jest: ## run node.js client self tests
 	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(CLUSTER) TEST=$(JEST)
-
-lambda-test:
-	echo $(LAMBDA_PARMS) > /tmp/payload.json
-	aws lambda invoke --function-name $(LAMBDA_NAME) --payload fileb:///tmp/payload.json /tmp/response.json
-	cat /tmp/response.json | jq
-
-lambda-logs:
-	aws logs tail /aws/lambda/$(LAMBDA_NAME) --since 2h --format short
 
 ########################
 # Help Targets

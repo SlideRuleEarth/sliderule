@@ -112,7 +112,7 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath, uint32_
     else if(StringLib::find(outputPath, "file://") == outputPath)
     {
         /* Rename File - very fast if both files are on the same partition */
-        status = renameFile(fileName, outputPath);
+        status = renameFile(fileName, &outputPath[7]);
     }
     else
     {

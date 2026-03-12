@@ -40,15 +40,16 @@ end)
 -- Self Test 2 --
 
 runner.unittest("H5 2D Large Array", function()
-    local all_good = true
+    local complete = false
     local startrow = 0
     local numrows = 10000
     local totalrows = 5231049
-    while all_good do
+    local status = true
+    while not complete do
 
         if startrow + numrows >= totalrows then
             numrows = totalrows - startrow
-            all_good = false
+            complete = true
         end
 
         local var = {dataset="gt1r/heights/signal_conf_ph", col=-1, startrow=startrow, numrows=numrows}
@@ -61,11 +62,16 @@ runner.unittest("H5 2D Large Array", function()
         local rectable = recdata:tabulate()
 
         for _,v in ipairs(rectable.data) do
-            runner.assert(((v >= 0) and (v < 5)) or (v == 255))
+            status = ((v >= 0) and (v < 5)) or (v == 255)
+            if not status then
+                complete = true
+                break
+            end
         end
 
         startrow = startrow + numrows
     end
+    runner.assert(status)
 end, {"long"})
 
 -- Clean Up --

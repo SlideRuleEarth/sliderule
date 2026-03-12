@@ -94,7 +94,8 @@ void CurlLib::deinit (void)
  *----------------------------------------------------------------------------*/
 long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                        bool verify_peer, bool verify_hostname, int timeout,
-                       hdrs_t* headers, const char* unix_socket, hdrs_t* rsps_headers)
+                       hdrs_t* headers, const char* unix_socket, hdrs_t* rsps_headers,
+                       const char* username, const char* password)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -127,7 +128,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout); // seconds
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::writeData);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
-        curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
+        curl_easy_setopt(curl, CURLOPT_NETRC, CURL_NETRC_IGNORED);
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -138,6 +139,12 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_print);
         curl_easy_setopt(curl, CURLOPT_DEBUGDATA, url);
 #endif
+        if(username && password)
+        {
+            curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+            curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+            curl_easy_setopt(curl, CURLOPT_UNRESTRICTED_AUTH, 1L); // keep auth through redirects
+        }
 
         if(unix_socket)
         {
@@ -469,6 +476,8 @@ int CurlLib::luaGet (lua_State* L)
         const bool  verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
         const bool  verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
         const bool  get_rsps_hdrs   = LuaObject::getLuaBoolean(L, 6, true, false);
+        const char* username        = LuaObject::getLuaString(L, 7, true, NULL);
+        const char* password        = LuaObject::getLuaString(L, 8, true, NULL);
 
         /* Optionally Allocate List to Hold Response Headers */
         if(get_rsps_hdrs)
@@ -480,7 +489,9 @@ int CurlLib::luaGet (lua_State* L)
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        const long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list, NULL, rsps_headers);
+        const long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size,
+                                                verify_peer, verify_hostname, DATA_TIMEOUT, &header_list, NULL, rsps_headers,
+                                                username, password);
         if(response)
         {
             /* get status and push response */
@@ -548,11 +559,15 @@ int CurlLib::luaPut (lua_State* L)
         const int   num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
         const bool  verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
         const bool  verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
+        const char* username        = LuaObject::getLuaString(L, 6, true, NULL);
+        const char* password        = LuaObject::getLuaString(L, 7, true, NULL);
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        const long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list);
+        const long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size,
+                                                verify_peer, verify_hostname, DATA_TIMEOUT, &header_list, NULL, NULL,
+                                                username, password);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);
@@ -589,11 +604,15 @@ int CurlLib::luaPost (lua_State* L)
         const char* url         = LuaObject::getLuaString(L, 1);
         const char* data        = LuaObject::getLuaString(L, 2, true, NULL);
         const int   num_hdrs    = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
+        const char* username    = LuaObject::getLuaString(L, 4, true, NULL);
+        const char* password    = LuaObject::getLuaString(L, 5, true, NULL);
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        const long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size, false, false, DATA_TIMEOUT, &header_list);
+        const long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size,
+                                                false, false, DATA_TIMEOUT, &header_list, NULL, NULL,
+                                                username, password);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);
@@ -678,6 +697,8 @@ int CurlLib::luaDownload (lua_State* L)
         const char* dst_filename    = LuaObject::getLuaString(L, 2);
         const int   timeout         = LuaObject::getLuaInteger(L, 3, true, DATA_TIMEOUT);
         const int   num_hdrs        = CurlLib::getHeaders(L, 4, header_list); (void)num_hdrs;
+        const char* username        = LuaObject::getLuaString(L, 5, true, NULL);
+        const char* password        = LuaObject::getLuaString(L, 6, true, NULL);
 
         /* Open Local File for Writing */
         fd = fopen(dst_filename, "wb");
@@ -693,11 +714,23 @@ int CurlLib::luaDownload (lua_State* L)
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout); // seconds
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::writeFile);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fd);
-        curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
+        curl_easy_setopt(curl, CURLOPT_NETRC, CURL_NETRC_IGNORED);
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+
+        /* Add Username for Authenticated Requests */
+        if(username)
+        {
+            curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        }
+
+        /* Add Password for Authenticated Requests */
+        if(password)
+        {
+           curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+        }
 
         /* Add Headers */
         if(!header_list.empty())

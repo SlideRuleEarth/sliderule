@@ -6,12 +6,9 @@
 --          It then saves those credentials into SlideRule's credential store
 --          so that when H5Coro issues a S3 request, it can use them to authenticate
 --
---          The equivalent curl command to get the credentials is:
+--          The equivalent curl command (which uses a netrc file) to get the credentials is:
 --
 --              curl -L -n -c .cookies https://data.{daac}.earthdatacloud.nasa.gov/s3credentials
---
---          It is assumed that the credentials for earthdata login are stored in a .netrc file
---          that is either located in the local home directory, it is stored in an S3 bucket
 --
 
 local json = require("json")
@@ -19,45 +16,13 @@ local parm = json.decode(arg[1] or "{}")
 
 local earthdata = parm["earthdata"]
 local identity = parm["identity"]
-local netrc_key = parm["netrc_key"] or string.format("/%s/netrc", sys.getcfg("project_folder"))
-
-local bucket = sys.getcfg("project_bucket")
-
--- download netrc
-local netrc_present = false
-local home = os.getenv("HOME")
-local filename = home.."/.netrc"
-local f = io.open(filename, "r")
-if f == nil then
-    while not netrc_present and sys.alive() do
-        local netrc = aws.s3get(bucket, netrc_key)
-        if netrc then
-            local f = io.open(filename, "w")
-            if f ~= nil then
-                f:write(netrc)
-                f:close()
-                netrc_present = true
-                sys.log(core.INFO, "Copied netrc file to "..home)
-            else
-                sys.log(core.CRITICAL, "Failed to write netrc file")
-            end
-        else
-            sys.log(core.CRITICAL, "Failed to retrieve netrc file... retrying in 5 seconds")
-            sys.wait(5)
-        end
-    end
-else
-    netrc_present = true;
-    sys.log(core.INFO, "Using existing netrc file at "..home)
-    f:close()
-end
 
 -- maintain earth data credentials
-while netrc_present and sys.alive() do
+while sys.alive() do
     sys.log(core.DEBUG, "Fetching Earthdata Credentials...")
 
     -- get new credentials
-    local response, status = core.get(earthdata)
+    local response, status = core.get(earthdata, nil, nil, nil, nil, nil, aws.secret("secrets", "edl_username"), aws.secret("secrets", "edl_password"))
 
     -- convert reponse to credential table
     if status then
