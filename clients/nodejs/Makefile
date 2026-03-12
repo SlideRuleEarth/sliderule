@@ -17,7 +17,6 @@ login: ## login to npm registry
 
 update: ## update project (updates dependencies in package-lock.json file)
 	cd sliderule; npm install
-	npx playwright install
 
 init: ## initialize project
 	cd sliderule; npm init --scope sliderule
