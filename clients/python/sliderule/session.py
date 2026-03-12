@@ -713,18 +713,21 @@ class Session:
         '''
         cryptographically sign the request
         '''
-        from cryptography.hazmat.primitives.serialization import load_ssh_private_key
-        with open(os.path.join(Path.home(), self.private_key), "rb") as file:
-            private_key = load_ssh_private_key(file.read(), password=None)
-        path_b64 = base64.urlsafe_b64encode(path.encode()).decode()
-        timestamp = str(int(datetime.now(timezone.utc).timestamp()))
-        body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
-        canonical_string = f"{path_b64}:{timestamp}:{body_b64}"
-        message_bytes = canonical_string.encode("utf-8")
-        signature = private_key.sign(message_bytes)
-        signature_b64 = base64.b64encode(signature).decode("ascii")
-        headers["x-sliderule-timestamp"] = str(timestamp)
-        headers["x-sliderule-signature"] = signature_b64
+        try:
+            from cryptography.hazmat.primitives.serialization import load_ssh_private_key
+            with open(os.path.join(Path.home(), self.private_key), "rb") as file:
+                private_key = load_ssh_private_key(file.read(), password=None)
+            path_b64 = base64.urlsafe_b64encode(path.encode()).decode()
+            timestamp = str(int(datetime.now(timezone.utc).timestamp()))
+            body_b64 = base64.urlsafe_b64encode(body.encode()).decode()
+            canonical_string = f"{path_b64}:{timestamp}:{body_b64}"
+            message_bytes = canonical_string.encode("utf-8")
+            signature = private_key.sign(message_bytes)
+            signature_b64 = base64.b64encode(signature).decode("ascii")
+            headers["x-sliderule-timestamp"] = str(timestamp)
+            headers["x-sliderule-signature"] = signature_b64
+        except Exception as e:
+            logger.warning(f"Failed to sign request: {e}")
 
 
     #
