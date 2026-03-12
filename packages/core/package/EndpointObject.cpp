@@ -191,8 +191,8 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     long long timestamp;
     if(StringLib::str2llong(timestamp_str->c_str(), &timestamp))
     {
-        int64_t allowed_range_seconds = SystemConfig::settings().signedRequestTimeWindow.value;
-        int64_t now = OsApi::time(OsApi::SYS_CLK) / 1000000; // seconds
+        const int64_t allowed_range_seconds = SystemConfig::settings().signedRequestTimeWindow.value;
+        const int64_t now = OsApi::time(OsApi::SYS_CLK) / 1000000; // seconds
         if((timestamp < (now - allowed_range_seconds)) || (timestamp > (now + allowed_range_seconds)))
         {
             mlog(CRITICAL, "Signed request expired: %lld <> %ld", timestamp, now);
@@ -201,7 +201,7 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     }
 
     /* get public key */
-    string openssh_public_key = SecretManager::get(SecretManager::PUBKEYS_SECRET, account);
+    const string openssh_public_key = SecretManager::get(SecretManager::PUBKEYS_SECRET, account);
     if(openssh_public_key.empty())
     {
         mlog(CRITICAL, "Failed to retrieve public key for %s", account);
@@ -214,8 +214,8 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     }
 
     /* check public key format */
-    size_t first_space = openssh_public_key.find(' ');
-    size_t last_space  = openssh_public_key.rfind(' ');
+    const size_t first_space = openssh_public_key.find(' ');
+    const size_t last_space  = openssh_public_key.rfind(' ');
     if((first_space == string::npos) || (last_space == string::npos) || (first_space >= last_space))
     {
         mlog(CRITICAL, "Public key requires three elements");
@@ -223,8 +223,8 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     }
 
     /* parse (convert to) Ed25519 public key blob */
-    string openssh_public_key_blob_b64 = openssh_public_key.substr(first_space + 1, last_space - first_space - 1);
-    vector<uint8_t> openssh_public_key_blob = StringLib::b64decode(openssh_public_key_blob_b64);
+    const string openssh_public_key_blob_b64 = openssh_public_key.substr(first_space + 1, last_space - first_space - 1);
+    const vector<uint8_t> openssh_public_key_blob = StringLib::b64decode(openssh_public_key_blob_b64);
     if(openssh_public_key_blob.size() < 51)
     {
         mlog(CRITICAL, "Failed to parse base64 encoded public key: %ld", openssh_public_key_blob.size());
@@ -235,21 +235,21 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
      * parse (convert to) public key blob to get 32-byte public key
      *   uint32_t length | "ssh-ed25519" | uint32_t length | 32 byte public key
      */
-    uint32_t public_key_type_len = ((uint32_t)openssh_public_key_blob[0] << 24) | ((uint32_t)openssh_public_key_blob[1] << 16) | ((uint32_t)openssh_public_key_blob[2] << 8) | (uint32_t)openssh_public_key_blob[3];
-    string public_key_type(reinterpret_cast<const char*>(&openssh_public_key_blob[4]), 11);
-    uint32_t public_key_len = ((uint32_t)openssh_public_key_blob[15] << 24) | ((uint32_t)openssh_public_key_blob[16] << 16) | ((uint32_t)openssh_public_key_blob[17] << 8) | (uint32_t)openssh_public_key_blob[18];
+    const uint32_t public_key_type_len = ((uint32_t)openssh_public_key_blob[0] << 24) | ((uint32_t)openssh_public_key_blob[1] << 16) | ((uint32_t)openssh_public_key_blob[2] << 8) | (uint32_t)openssh_public_key_blob[3];
+    const string public_key_type(reinterpret_cast<const char*>(&openssh_public_key_blob[4]), 11);
+    const uint32_t public_key_len = ((uint32_t)openssh_public_key_blob[15] << 24) | ((uint32_t)openssh_public_key_blob[16] << 16) | ((uint32_t)openssh_public_key_blob[17] << 8) | (uint32_t)openssh_public_key_blob[18];
     const uint8_t* public_key = &openssh_public_key_blob[19];
-    if((public_key_type_len != 11) || (public_key_type.compare("ssh-ed25519") != 0) || (public_key_len != 32))
+    if((public_key_type_len != 11) || (public_key_type != "ssh-ed25519") || (public_key_len != 32))
     {
         mlog(CRITICAL, "Invalid format detected in public key: %u %s %u", public_key_type_len, public_key_type.c_str(), public_key_len);
         return false;
     }
 
     /* build canonical message */
-    FString full_path("%s%s/%s", SystemConfig::settings().domain.value.c_str(), path, resource);
+    const FString full_path("%s%s/%s", SystemConfig::settings().domain.value.c_str(), path, resource);
     const string full_path_b64 = StringLib::b64encode(full_path.c_str(), full_path.length());
     const string body_b64 = StringLib::b64encode(body, length);
-    FString message("%s:%s:%s", full_path_b64.c_str(), timestamp_str->c_str(), body_b64.c_str());
+    const FString message("%s:%s:%s", full_path_b64.c_str(), timestamp_str->c_str(), body_b64.c_str());
     const uint8_t* message_bytes = reinterpret_cast<const uint8_t*>(message.c_str());
 
     /* create the EVP_PKEY from raw 32-byte public key */
@@ -280,7 +280,7 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
 
     /* verify signature (Ed25519 uses no digest, hence nullptr for md) */
     const vector<uint8_t> signature = StringLib::b64decode(*signature_str);
-    int result = EVP_DigestVerify(ctx, signature.data(), signature.size(), message_bytes, message.length());
+    const int result = EVP_DigestVerify(ctx, signature.data(), signature.size(), message_bytes, message.length());
     EVP_MD_CTX_free(ctx);
     EVP_PKEY_free(pkey);
 

@@ -666,15 +666,15 @@ vector<uint8_t> StringLib::b64decode(const string& data)
     if (data.empty()) return {};
 
     const unsigned char* p = reinterpret_cast<const unsigned char*>(data.data());
-    size_t len = data.size();
+    const size_t len = data.size();
 
-    size_t full_chunks = len / 4;
+    const size_t full_chunks = len / 4;
     vector<uint8_t> result(full_chunks * 3, 0);
 
     size_t j = 0;
     for (size_t i = 0; i < full_chunks * 4; i += 4)
     {
-        uint32_t n = B64INDEX[p[i]] << 18 | B64INDEX[p[i+1]] << 12 | B64INDEX[p[i+2]] << 6 | B64INDEX[p[i+3]];
+        const uint32_t n = B64INDEX[p[i]] << 18 | B64INDEX[p[i+1]] << 12 | B64INDEX[p[i+2]] << 6 | B64INDEX[p[i+3]];
         result[j++] = n >> 16;
         result[j++] = (n >> 8) & 0xFF;
         result[j++] = n & 0xFF;

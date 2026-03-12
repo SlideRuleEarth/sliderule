@@ -169,7 +169,7 @@ void* Casals1bDataFrame::subsettingThread (void* parm)
     Casals1bDataFrame* df = static_cast<Casals1bDataFrame*>(parm);
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, df->traceId, "casals_1b_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf1b->name, df->beam);
+    const uint32_t trace_id = start_trace(INFO, df->traceId, "casals_1b_subsetter", "{\"context\":\"%s\"}", df->hdf1b->name);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try

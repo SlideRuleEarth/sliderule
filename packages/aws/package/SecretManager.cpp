@@ -63,7 +63,7 @@ Dictionary<string> SecretManager::secretCache;
 string SecretManager::get(const char* secret_name, const char* key)
 {
     // check cache for secret
-    FString cached_secret("%s/%s/%s", SystemConfig::settings().domain.value.c_str(), secret_name, key);
+    const FString cached_secret("%s/%s/%s", SystemConfig::settings().domain.value.c_str(), secret_name, key);
     secretCacheMutex.lock();
     {
         string value;
@@ -76,8 +76,8 @@ string SecretManager::get(const char* secret_name, const char* key)
     secretCacheMutex.unlock();
 
     // setup AWS secrets manager client
-    FString aws_secret("%s/%s", SystemConfig::settings().domain.value.c_str(), secret_name);
-    Aws::SecretsManager::SecretsManagerClient client;
+    const FString aws_secret("%s/%s", SystemConfig::settings().domain.value.c_str(), secret_name);
+    const Aws::SecretsManager::SecretsManagerClient client;
     Aws::SecretsManager::Model::GetSecretValueRequest request;
     request.SetSecretId(aws_secret.c_str());
 
@@ -154,8 +154,8 @@ int SecretManager::luaGet(lua_State* L)
     {
         const char* secret_name = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
-        string secret_value     = get(secret_name, key);
 
+        const string secret_value = get(secret_name, key);
         if(!secret_value.empty()) lua_pushstring(L, secret_value.c_str());
         else lua_pushnil(L);
     }

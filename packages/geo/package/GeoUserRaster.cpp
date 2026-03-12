@@ -69,7 +69,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
 
         /* Get raster length */
         lua_getfield(L, index, RASTERLENGTH_KEY);
-        size_t rasterlength = (size_t)getLuaInteger(L, -1);
+        const size_t rasterlength = (size_t)getLuaInteger(L, -1);
         raster.resize(rasterlength);
         lua_pop(L, 1);
 

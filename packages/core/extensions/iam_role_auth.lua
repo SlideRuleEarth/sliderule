@@ -34,10 +34,10 @@ while sys.alive() do
     sys.log(core.DEBUG, "Fetching IAM role credentials...")
 
     -- get new credentials
-    local response, status = aws_api_rqst(aws_meta_url.."/"..role)
+    local response, api_status = aws_api_rqst(aws_meta_url.."/"..role)
 
     -- convert reponse to credential table
-    if status then
+    if api_status then
         local rc, credential = pcall(json.decode, response)
 
         -- store credentials and wait for next time to update
