@@ -59,12 +59,27 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
 
 ### Security Rules
 
+#### Expirations
+
+At different stages of the authorization flows there are time limits imposed to reduce the risk of compromised credentials.
+
+| Element | Time Limit | Notes |
+|:-------:|:----------:|:-----:|
+| SlideRule JWT | 12 hours ||
+| OAuth2.1 Web Authorization Session | 12 hours | Once a client is dynamically registered it must complete all authorization requests within this time |
+| OAuth2.1 Web Authorization Code | 2 minutes | Once a client receives an authorization code it has this long to exchange it for a token; after its first use the code is no longer valid |
+| GitHub HTTP Requests | 15 seconds | All requests to GitHub APIs must complete promptly |
+| GitHub Authentication Session | 1 minute | Once the SlideRule server initiates the authentication flow with GitHub it has this long to complete the authentication |
+| Signed Request | 1 minute | All signatures on signed requests must be timestamped within this amount of time (+/-) of the signature verification |
+
 #### Cluster Access
 
 Members of the SlideRuleEarth organization have permission to deploy, access, and destroy private clusters namespaced to the organization _teams_ they belong to.  Owners within the organization can deploy, access, and destroy any cluster with a valid namespace (obeying url rules and AWS cloud formation stack name restrictions).  Both members and owners are restricted to node capacity and time-to-live constraints imposed by the the *provisioner*.
 
 | Role | Max Node Capacity | Max TTL |
-|:----:|:---------:|:-------------:|
+|:----:|:-----------------:|:-------:|
+| Owner | 100 | 1 year |
+| Member | 50 | 12 hours |
 
 #### Web Client Restrictions
 
@@ -82,6 +97,7 @@ When MCP resources are requested (either via the `scope` or `resource` field of 
 
 The following services require request signing:
 * All requests to the ***Provisioner*** when the user provides a JWT that identifies them as an Owner.
+* All requests to the ***Runer*** regardless of the role of the user.
 * Requests to the ***Cluster*** (public or private) that route to the Arbitrary Code Execution (`ace`) and Container Runtime Environment Execution (`execre`) endpoints.
 
 ### Flow Diagrams
