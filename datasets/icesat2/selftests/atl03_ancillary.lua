@@ -25,10 +25,10 @@ runner.unittest("ATL03 Ancillary", function()
         cnt = cnt + 1
         status = rec:getvalue("count") == 2
         if not status then
-            print(rec:getvalue("count"))
+            print("Invalid count: ", rec:getvalue("count"))
         end
     end
-    runner.asset(status, "count value was not correct")
+    runner.assert(status, "count value was not correct")
     local expected_cnt = 20658
     runner.assert(cnt == expected_cnt, string.format('failed to read sufficient number of container records, expected: %d, got: %d', expected_cnt, cnt))
     recq:destroy()

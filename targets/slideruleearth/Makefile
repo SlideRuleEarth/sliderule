@@ -313,6 +313,9 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy
 
+cluster-extend: ## invokes the provisioner *extend* lambda function and displays the response
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy
+
 cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy
 
@@ -671,17 +674,21 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
 DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
 DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
 
-documentation: ## generate the static documentation (must be run with docs/environment.yml "rtd" conda environment)
+documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/assets
-	pip install $(PYTHON_CLIENT_DIR)
-	cd $(DOCUMENTATION_STAGE_DIR) && make -C rtd html
+	conda run -n rtd --no-capture-output \
+	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
+	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
+	sphinx-build -M html "source" "build"'
 
 documentation-run: ## locally run the documentation
-	cd $(DOCUMENTATION_STAGE_DIR)/rtd/build/html && python -m http.server 8000
+	conda run -n rtd --no-capture-output \
+	sh -c 'cd $(DOCUMENTATION_STAGE_DIR)/rtd/build/html && \
+	python -m http.server 8000'
 
 documentation-live-update: ## update the documentation in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(DOCUMENTATION_STAGE_DIR)/rtd/build/html s3://$(PROJECT_WEBSITE_BUCKET) --delete

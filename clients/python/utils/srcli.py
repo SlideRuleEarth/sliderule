@@ -53,6 +53,7 @@ session = sliderule.create_session(domain=args.domain, cluster=args.cluster)
 CommandRunner = {
     # Provisioner
     "deploy": lambda: session.provisioner.deploy(is_public=(args.is_public == "true"), node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
+    "extend": lambda: session.provisioner.extend(ttl=args.ttl),
     "destroy": session.provisioner.destroy,
     "status": session.provisioner.status,
     "events": session.provisioner.events,

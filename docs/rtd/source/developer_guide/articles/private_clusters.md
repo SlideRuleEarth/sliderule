@@ -29,10 +29,6 @@ The _SlideRule Authenticator_ is available at https://login.slideruleearth.io an
 * __/.well-known/jwks.json__: Publishes the public signing keys in JWKS format.
 * __/.well-known/openid-configuration__: Provides OpenID Connect discovery metadata.
 
-## OAuth 2.0 Authorization Code Flow
-
-![code flow](../../assets/authenticator_v5_code_flow.png)
-
 ### SlideRule Provisioning System
 
 The _SlideRule Provisioner_ is a serverless provisioning service implemented as a set of AWS Lambda functions. It uses AWS CloudFormation to create, manage, and delete SlideRule clusters. Access to the service requires authentication and verified membership in the SlideRuleEarth GitHub organization.
