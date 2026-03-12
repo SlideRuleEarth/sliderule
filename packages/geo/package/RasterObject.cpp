@@ -269,11 +269,11 @@ uint32_t RasterObject::getSubsets(const MathLib::extent_t& extent, int64_t gps, 
 /*----------------------------------------------------------------------------
  * getBands
  *----------------------------------------------------------------------------*/
-void RasterObject::getBands(std::vector<std::string>& bands)
+void RasterObject::getBands(std::vector<string>& bands)
 {
     for(long i = 0; i < parms->bands.length(); i++)
     {
-        const std::string& bandName = parms->bands[i];
+        const string& bandName = parms->bands[i];
         bands.push_back(bandName);
     }
 }
@@ -281,7 +281,7 @@ void RasterObject::getBands(std::vector<std::string>& bands)
 /*----------------------------------------------------------------------------
  * resolveBands
  *----------------------------------------------------------------------------*/
-void RasterObject::resolveBands(std::vector<std::string>& bands)
+void RasterObject::resolveBands(std::vector<string>& bands)
 {
     return getBands(bands);
 }
@@ -289,7 +289,7 @@ void RasterObject::resolveBands(std::vector<std::string>& bands)
 /*----------------------------------------------------------------------------
  * resolveBandsStrict
  *----------------------------------------------------------------------------*/
-void RasterObject::resolveBandsStrict(std::vector<std::string>& bands)
+void RasterObject::resolveBandsStrict(std::vector<string>& bands)
 {
     if(parms->bands.length() > 0)
     {
@@ -316,7 +316,7 @@ void RasterObject::resolveBands(void* rptr, std::vector<int>& bands)
 {
     GdalRaster* raster = static_cast<GdalRaster*>(rptr);
 
-    std::vector<std::string> bandsNames;
+    std::vector<string> bandsNames;
     resolveBands(bandsNames);
 
     if(bandsNames.empty())
@@ -326,7 +326,7 @@ void RasterObject::resolveBands(void* rptr, std::vector<int>& bands)
     }
     else
     {
-        for(const std::string& bname : bandsNames)
+        for(const string& bname : bandsNames)
         {
             const int bandNum = raster->getBandNumber(bname);
             if(bandNum <= 0)

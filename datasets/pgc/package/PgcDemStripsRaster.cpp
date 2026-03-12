@@ -92,7 +92,7 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
     return true;
 }
 
-void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -127,9 +127,9 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
             const char *fname = feature->GetFieldAsString("dem");
             if(fname && strlen(fname) > 0)
             {
-                std::string fileName(fname);
+                string fileName(fname);
                 std::size_t pos = fileName.find(demName);
-                if (pos == std::string::npos)
+                if (pos == string::npos)
                     throw RunTimeException(DEBUG, RTE_FAILURE, "Could not find marker %s in file", demName.c_str());
 
                 fileName = filePath + fileName.substr(pos);
@@ -144,10 +144,10 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
                 if(parms->flags_file)
                 {
                     /* Replace _dem.tif with _bitmask.tif since the file name is the same per PGC documentation */
-                    const std::string endToken    = "_dem.tif";
-                    const std::string newEndToken = "_bitmask.tif";
+                    const string endToken    = "_dem.tif";
+                    const string newEndToken = "_bitmask.tif";
                     pos = fileName.rfind(endToken);
-                    if(pos != std::string::npos)
+                    if(pos != string::npos)
                     {
                         fileName.replace(pos, endToken.length(), newEndToken.c_str());
                     }

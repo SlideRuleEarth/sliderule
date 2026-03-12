@@ -126,7 +126,7 @@ GeoUserRaster::~GeoUserRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char *file, long filelength) :
-    GeoRaster(L, rqst_parms, key, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif")),
+    GeoRaster(L, rqst_parms, key, string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif")),
     data(NULL)
 {
     if(file == NULL)

@@ -219,8 +219,8 @@ void ArrowSamplerImpl::getMetadata(void)
 
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        const std::string key = file_metadata->key_value_metadata()->key(i);
-        const std::string value = file_metadata->key_value_metadata()->value(i);
+        const string key = file_metadata->key_value_metadata()->key(i);
+        const string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "recordinfo")
         {
@@ -271,8 +271,8 @@ bool ArrowSamplerImpl::getMetadataLegacy(void)
 
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        const std::string key = file_metadata->key_value_metadata()->key(i);
-        const std::string value = file_metadata->key_value_metadata()->value(i);
+        const string key = file_metadata->key_value_metadata()->key(i);
+        const string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "sliderule")
         {
@@ -396,7 +396,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<point_info_t>& points)
     /* Iterate over each item in the geometry column and extract points */
     for(int64_t i = 0; i < binary_array->length(); i++)
     {
-        const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
+        const string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
         const wkbpoint_t point = convertWKBToPoint(wkb_data);
 
         points.emplace_back(point_info_t({{point.x, point.y, 0.0}, 0}));
@@ -459,7 +459,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
      * Pandas and geopands can use/read the file just fine without pandas custom metadata.
      * Removing it is a lot easier than updating it.
      */
-    const std::string pandas_key = "pandas";
+    const string pandas_key = "pandas";
     if(metadata->Contains(pandas_key))
     {
         const int key_index = metadata->FindKey(pandas_key);
@@ -642,7 +642,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
         PARQUET_THROW_NOT_OK(aspect_list_builder.Finish(&aspect_list_array));
     }
 
-    const std::string prefix = sampler->rkey;
+    const string prefix = sampler->rkey;
 
     /* Create fields for the new columns */
     auto band_field = std::make_shared<arrow::Field>(prefix + ".band", arrow::list(arrow::utf8()));
@@ -842,7 +842,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
         PARQUET_THROW_NOT_OK(aspect_builder.Finish(&aspect_array));
     }
 
-    const std::string prefix = sampler->rkey;
+    const string prefix = sampler->rkey;
 
     /* Create fields for the new columns */
     auto band_field = std::make_shared<arrow::Field>(prefix + ".band", arrow::utf8());
@@ -1013,7 +1013,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(std::shared
 /*----------------------------------------------------------------------------
 * convertWKBToPoint
 *----------------------------------------------------------------------------*/
-wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
+wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const string& wkb_data)
 {
     wkbpoint_t point;
 
@@ -1090,8 +1090,8 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     print2term("  Key Value Metadata:\n");
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        const std::string key = file_metadata->key_value_metadata()->key(i);
-        const std::string value = file_metadata->key_value_metadata()->value(i);
+        const string key = file_metadata->key_value_metadata()->key(i);
+        const string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "ARROW:schema") continue;
         print2term("    %s:  %s\n", key.c_str(), value.c_str());
@@ -1108,7 +1108,7 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
 /*----------------------------------------------------------------------------
 * createFileMap
 *----------------------------------------------------------------------------*/
-std::string ArrowSamplerImpl::createFileMap(void)
+string ArrowSamplerImpl::createFileMap(void)
 {
     rapidjson::Document document;
     document.SetObject();
@@ -1134,7 +1134,7 @@ std::string ArrowSamplerImpl::createFileMap(void)
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     document.Accept(writer);
-    std::string serialized_json = buffer.GetString();
+    string serialized_json = buffer.GetString();
     return serialized_json;
 }
 

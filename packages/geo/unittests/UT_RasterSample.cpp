@@ -357,8 +357,8 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
                     errors++;
                 }
 
-                const std::string& serialBand = serial->bandName;
-                const std::string& batchBand  = batch->bandName;
+                const string& serialBand = serial->bandName;
+                const string& batchBand  = batch->bandName;
 
                 if (serialBand != batchBand)
                 {

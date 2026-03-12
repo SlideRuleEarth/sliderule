@@ -44,14 +44,14 @@
  *----------------------------------------------------------------------------*/
 GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key),
- filePath(std::string(parms->asset.asset->getPath())),
+ filePath(string(parms->asset.asset->getPath())),
  indexFile(parms->asset.asset->getIndex())
 {
     /*
      * To support datasets from different years, we use the 'bands' parameter to identify which year's data to sample.
      * This band parameter must be cleared in 'parms' since it does not correspond to an actual band.
      */
-    std::string year("2024");
+    string year("2024");
     if(parms->bands.length() == 0)
     {
         mlog(INFO, "Using latest GEBCO data from %s", year.c_str());
@@ -64,7 +64,7 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, cons
             mlog(INFO, "Using GEBCO data from %s", year.c_str());
 
             /* Clear params->bands */
-            const_cast<FieldList<std::string>&>(parms->bands).clear();
+            const_cast<FieldList<string>&>(parms->bands).clear();
         }
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid band name specified");
     }
@@ -80,7 +80,7 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, cons
  *----------------------------------------------------------------------------*/
 GebcoBathyRaster::~GebcoBathyRaster(void) = default;
 
-void GebcoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+void GebcoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = filePath + "/" + indexFile;

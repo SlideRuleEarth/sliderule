@@ -73,7 +73,7 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
                 BlueTopoBathyRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
                ~BlueTopoBathyRaster (void) override;
 
-        void    getIndexFile (const std::vector<point_info_t>* points, std::string& file) final;
+        void    getIndexFile (const std::vector<point_info_t>* points, string& file) final;
         bool    findRasters  (raster_finder_t* finder) final;
 
         /*--------------------------------------------------------------------
@@ -87,14 +87,14 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
 
         bool validateBandNames (void);
-        bool findIndexFileInS3Bucket (const std::string& bucketPath);
+        bool findIndexFileInS3Bucket (const string& bucketPath);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string filePath;
-        std::string indexBucket;
-        std::string indexFile;
+        string filePath;
+        string indexBucket;
+        string indexFile;
 };
 
 #endif  /* __bluetopo_bathy_raster__ */

@@ -62,7 +62,7 @@ class RasterFileDictionary
         explicit RasterFileDictionary(uint64_t _keySpace=0): keySpace(_keySpace<<32) {}
                 ~RasterFileDictionary(void) = default;
 
-        uint64_t    add      (const std::string& fileName, bool sample=false);
+        uint64_t    add      (const string& fileName, bool sample=false);
         const char* get      (uint64_t fileId);
         void        setSample(uint64_t sampleFileId);
         void        clear    (void);
@@ -93,7 +93,7 @@ class RasterFileDictionary
          *--------------------------------------------------------------------*/
 
         Dictionary<uint64_t>     fileDict;       // Dictionary to store raster file names
-        std::vector<std::string> fileVector;     // Vector to store raster file names by id (index derived from lower 32 bits of fileDict value)
+        std::vector<string> fileVector;     // Vector to store raster file names by id (index derived from lower 32 bits of fileDict value)
         std::set<uint64_t>       sampleIdSet;    // Set to store raster fileIds used only in returned RasterSamples
         uint64_t                 keySpace;       // Key space
         static Mutex             mutex;          // Mutex for thread safety, only add() method is thread safe

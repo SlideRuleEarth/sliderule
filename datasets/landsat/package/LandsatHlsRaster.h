@@ -82,12 +82,12 @@ class LandsatHlsRaster: public GeoIndexedRaster
                  LandsatHlsRaster    (lua_State* L, RequestFields* rqst_parms, const char* key);
                 ~LandsatHlsRaster    (void) override;
 
-        void     getIndexFile        (const std::vector<point_info_t>* points, std::string& file) final;
+        void     getIndexFile        (const std::vector<point_info_t>* points, string& file) final;
         bool     findRasters         (raster_finder_t* finder) final;
 
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;
 
-        void     resolveBands        (std::vector<std::string>& bands) final
+        void     resolveBands        (std::vector<string>& bands) final
                                      { bands.clear(); } /* Landsat bands are in seperate rasters */
 
     private:
@@ -108,9 +108,9 @@ class LandsatHlsRaster: public GeoIndexedRaster
          * Data
          *--------------------------------------------------------------------*/
 
-        std::string filePath;
-        std::string indexFile;
-        std::unordered_map<std::string, bool> bandsDict; /* Bands (rasters) to sample */
+        string filePath;
+        string indexFile;
+        std::unordered_map<string, bool> bandsDict; /* Bands (rasters) to sample */
 
         bool ndsi;
         bool ndvi;

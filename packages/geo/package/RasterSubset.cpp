@@ -53,7 +53,7 @@ Mutex RasterSubset::mutex;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterSubset::RasterSubset(uint64_t _size, const std::string& vsiFile):
+RasterSubset::RasterSubset(uint64_t _size, const string& vsiFile):
     robj(NULL),
     rasterName(vsiFile),
     data(NULL),

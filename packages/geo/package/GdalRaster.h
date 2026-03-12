@@ -108,7 +108,7 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (const RasterObject* _robj, const std::string& _fileName,
+                           GdalRaster     (const RasterObject* _robj, const string& _fileName,
                                            double _gpsTime, uint64_t _fileId,
                                            uint32_t _elevationBandsMask,
                                            overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
@@ -119,7 +119,7 @@ class GdalRaster
         RasterSample*      samplePOI      (OGRPoint* poi, int bandNum);
         RasterSubset*      subsetAOI      (OGRPolygon* poly, int bandNum);
         uint8_t*           getPixels      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);
-        const std::string& getFileName    (void) const { return fileName;}
+        const string& getFileName    (void) const { return fileName;}
         int                getRows        (void) const { return ysize; }
         int                getCols        (void) const { return xsize; }
         const bbox_t&      getBbox        (void) const { return bbox; }
@@ -129,14 +129,14 @@ class GdalRaster
         overrideGeoTransform_t getOverrideGeoTransform(void) const { return overrideGeoTransform; }
         overrideCRS_t      getOverrideCRS (void) const { return overrideCRS; }
         double             getGpsTime     (void) const { return gpsTime; }
-        int                getBandNumber  (const std::string& bandName);
+        int                getBandNumber  (const string& bandName);
 
         /*--------------------------------------------------------------------
          * Static Methods
          *--------------------------------------------------------------------*/
 
         static void        setCRSfromWkt  (OGRSpatialReference& sref, const char* wkt);
-        static std::string getUUID        (void);
+        static string getUUID        (void);
         static void        initAwsAccess  (const GeoFields* _parms);
         static OGRPolygon  makeRectangle  (double minx, double miny, double maxx, double maxy);
         static bool        ispoint        (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPoint25D; }
@@ -159,7 +159,7 @@ class GdalRaster
         overrideGeoTransform_t overrideGeoTransform;
         overrideCRS_t          overrideCRS;
 
-        std::string     fileName;
+        string     fileName;
         GDALDataset    *dset;
         uint32_t        elevationBandsMask;
         uint32_t        xsize;
@@ -178,7 +178,7 @@ class GdalRaster
         double          invGeoTransform[6];
         uint32_t        ssError;
 
-        std::unordered_map<std::string, int> bandMap; /* Maps raster band names to band numbers */
+        std::unordered_map<string, int> bandMap; /* Maps raster band names to band numbers */
 
         /*--------------------------------------------------------------------
          * Static Methods

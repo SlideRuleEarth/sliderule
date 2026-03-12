@@ -60,7 +60,7 @@ class RasterSubset
          * Methods
          *--------------------------------------------------------------------*/
 
-        RasterSubset(uint64_t _size, const std::string& vsiFile);
+        RasterSubset(uint64_t _size, const string& vsiFile);
         ~RasterSubset(void);
 
         const uint8_t*  getData    (void) const {return data;}
@@ -69,7 +69,7 @@ class RasterSubset
         void            releaseData(void);
 
         RasterObject*               robj;
-        const std::string           rasterName;
+        const string           rasterName;
 
     private:
         uint8_t*                    data;

@@ -60,11 +60,11 @@ class GeoUserUrlRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
          GeoUserUrlRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
-         void resolveBands(std::vector<std::string>& bands) override
+         void resolveBands(std::vector<string>& bands) override
                           { resolveBandsStrict(bands); }
 
     private:
-        static std::string getNormalizedUrl(RequestFields* rqst_parms, const char* key);
+        static string getNormalizedUrl(RequestFields* rqst_parms, const char* key);
 };
 
 #endif  /* __geouser_url_raster__ */

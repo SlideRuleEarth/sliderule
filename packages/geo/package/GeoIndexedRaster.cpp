@@ -152,7 +152,7 @@ bool GeoIndexedRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_ti
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::openGeoIndex(const std::string& newFile, OGRGeometry* filter)
+bool GeoIndexedRaster::openGeoIndex(const string& newFile, OGRGeometry* filter)
 {
     /* Trying to open the same file? */
     if(!geoRtree.empty() && newFile == indexFile)
@@ -349,8 +349,8 @@ bool GeoIndexedRaster::filterRasters(int64_t gps_secs, GroupOrdering* groupList,
                 /* URL filter */
                 if(!parms->url_substring.value.empty())
                 {
-                    const std::string fileName = dict.get(rinfo.fileId);
-                    if(fileName.find(parms->url_substring.value) == std::string::npos)
+                    const string fileName = dict.get(rinfo.fileId);
+                    if(fileName.find(parms->url_substring.value) == string::npos)
                     {
                         removeGroup = true;
                         break;

@@ -109,9 +109,9 @@ class ArrowSamplerImpl
         static void                   tableToFeather          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
         static std::shared_ptr<arrow::Table> removeGeometryColumn(std::shared_ptr<arrow::Table>& table);
-        static wkbpoint_t             convertWKBToPoint       (const std::string& wkb_data);
+        static wkbpoint_t             convertWKBToPoint       (const string& wkb_data);
         static void                   printParquetMetadata    (const char* file_path);
-        std::string                   createFileMap           (void);
+        string                   createFileMap           (void);
         static void                   metadataToJson          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
 };

@@ -143,7 +143,7 @@ LandsatHlsRaster::~LandsatHlsRaster(void)
     VSIUnlink(indexFile.c_str());
 }
 
-void LandsatHlsRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+void LandsatHlsRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -187,7 +187,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
                 const char* fname = feature->GetFieldAsString(bandName);
                 if(fname && strlen(fname) > 0)
                 {
-                    const std::string fileName(fname);
+                    const string fileName(fname);
                     const size_t pos = strlen(URL_str);
 
                     raster_info_t rinfo;
@@ -237,12 +237,12 @@ uint32_t LandsatHlsRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
     bool isS2 = false;
     std::size_t pos;
 
-    const std::string featureId = rgroup->featureId;
+    const string featureId = rgroup->featureId;
     pos = featureId.find("HLS.L30");
-    if(pos != std::string::npos) isL8 = true;
+    if(pos != string::npos) isL8 = true;
 
     pos = featureId.find("HLS.S30");
-    if(pos != std::string::npos) isS2 = true;
+    if(pos != string::npos) isS2 = true;
 
     if(!isL8 && !isS2)
         throw RunTimeException(DEBUG, RTE_FAILURE, "Could not find valid Landsat8/Sentinel2 groupId");
@@ -338,7 +338,7 @@ uint32_t LandsatHlsRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
     }
 
     const double groupTime = rgroup->gpsTime;
-    const std::string groupName = featureId + " {\"algo\": \"";
+    const string groupName = featureId + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)
@@ -409,7 +409,7 @@ bool LandsatHlsRaster::validateBandNames(void)
 
     for (int i = 0; i < parms->bands.length(); i++)
     {
-        const std::string& bandName = parms->bands[i];
+        const string& bandName = parms->bands[i];
         if(!validL8Band(bandName.c_str()) && !validS2Band(bandName.c_str()) && !validAlgoName(bandName.c_str()))
         {
             mlog(ERROR, "Invalid band name: %s", bandName.c_str());

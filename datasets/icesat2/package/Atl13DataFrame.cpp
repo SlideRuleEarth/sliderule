@@ -126,7 +126,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     populateDataframe();
 
     /* Calculate Key */
-    dfKey = calculateBeamKey(beam);
+    dfKey = Icesat2Fields::calculateBeamKey(beam);
 
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);

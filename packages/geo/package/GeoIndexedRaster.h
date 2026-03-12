@@ -90,7 +90,7 @@ class GeoIndexedRaster: public RasterObject
         typedef struct RasterInfo {
             int                     elevationBandNum;  // band number for elevation
             int                     flagsBandNum;      // band number for fmask
-            std::string             tag;               // value, fmask, etc
+            string             tag;               // value, fmask, etc
             uint64_t                fileId;            // file dictionary id
             UniqueRaster*           uraster;           // Pointer to the unique raster which contains the sample for this raster
 
@@ -198,9 +198,9 @@ class GeoIndexedRaster: public RasterObject
         static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
 
         virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        bool             openGeoIndex          (const std::string& newFile, OGRGeometry* filter=NULL);
+        bool             openGeoIndex          (const string& newFile, OGRGeometry* filter=NULL);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void     getIndexFile          (const std::vector<point_info_t>* points, std::string& file) = 0;
+        virtual void     getIndexFile          (const std::vector<point_info_t>* points, string& file) = 0;
         virtual bool     findRasters           (raster_finder_t* finder) = 0;
 
         /*--------------------------------------------------------------------
@@ -254,7 +254,7 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::overrideGeoTransform_t gtfcb;
         GdalRaster::overrideCRS_t crscb;
 
-        std::string               indexFile;
+        string               indexFile;
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;

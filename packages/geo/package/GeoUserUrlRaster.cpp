@@ -51,7 +51,7 @@ GeoUserUrlRaster::GeoUserUrlRaster(lua_State* L, RequestFields* rqst_parms, cons
 /*----------------------------------------------------------------------------
  * getNormalizedUrl
  *----------------------------------------------------------------------------*/
-std::string GeoUserUrlRaster::getNormalizedUrl(RequestFields* rqst_parms, const char* key)
+string GeoUserUrlRaster::getNormalizedUrl(RequestFields* rqst_parms, const char* key)
 {
     if(rqst_parms == NULL)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, request parameters are NULL");
@@ -63,7 +63,7 @@ std::string GeoUserUrlRaster::getNormalizedUrl(RequestFields* rqst_parms, const 
     if(parms->url.value.empty())
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, samples.url is empty");
 
-    const std::string& url = parms->url.value;
+    const string& url = parms->url.value;
     if((url.rfind("http://", 0) != 0) && (url.rfind("https://", 0) != 0))
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, samples.url must start with http:// or https://");
 

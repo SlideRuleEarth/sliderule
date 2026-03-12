@@ -73,7 +73,7 @@ class GeoUserRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
         GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* file, long filelength);
-        void resolveBands(std::vector<std::string>& bands) override
+        void resolveBands(std::vector<string>& bands) override
                          { resolveBandsStrict(bands); }
 
     private:
@@ -82,7 +82,7 @@ class GeoUserRaster: public GeoRaster
          * Data
          *--------------------------------------------------------------------*/
 
-         std::string rasterFileName;
+         string rasterFileName;
          GByte* data;
 };
 

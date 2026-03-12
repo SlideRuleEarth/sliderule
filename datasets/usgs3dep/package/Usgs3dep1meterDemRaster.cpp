@@ -79,7 +79,7 @@ Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
     VSIUnlink(indexFile.c_str());
 }
 
-void Usgs3dep1meterDemRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+void Usgs3dep1meterDemRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -112,7 +112,7 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
             {
-                const std::string fileName(fname);
+                const string fileName(fname);
                 const size_t pos = strlen(URL_str);
 
                 raster_info_t rinfo;

@@ -37,7 +37,7 @@
 #include <stdexcept>
 #include "TimeLib.h"
 
-inline int64_t extractGPSTime(const std::string& path)
+inline int64_t extractGPSTime(const string& path)
 {
     std::regex versionRegex(R"(v(\d{4})(\d{2})(\d{2}))");
     std::smatch match;

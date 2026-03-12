@@ -321,7 +321,7 @@ const char* OutputLib::getUniqueFileName (const char* id)
     uuid_generate(uuid);
     uuid_unparse_lower(uuid, uuid_str);
 
-    std::string tmp_file(TMP_FILE_PREFIX);
+    string tmp_file(TMP_FILE_PREFIX);
 
     if(id) tmp_file.append(id).append(".");
     else tmp_file.append("arrow.");
@@ -335,9 +335,9 @@ const char* OutputLib::getUniqueFileName (const char* id)
 *----------------------------------------------------------------------------*/
 char* OutputLib::createMetadataFileName (const char* fileName)
 {
-    std::string path(fileName);
+    string path(fileName);
     const size_t dotIndex = path.find_last_of('.');
-    if(dotIndex != std::string::npos)
+    if(dotIndex != string::npos)
     {
         path.resize(dotIndex);
     }

@@ -211,9 +211,9 @@ GeoFields::GeoFields (void):
 /*----------------------------------------------------------------------------
  * sserror2str
  *----------------------------------------------------------------------------*/
-std::string GeoFields::sserror2str(uint32_t error)
+string GeoFields::sserror2str(uint32_t error)
 {
-    std::string errorStr;
+    string errorStr;
 
     if(error == SS_NO_ERRORS)
     {

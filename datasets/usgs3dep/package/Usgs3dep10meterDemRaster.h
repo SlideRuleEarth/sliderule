@@ -66,7 +66,7 @@ class Usgs3dep10meterDemRaster: public GeoRaster
 
         Usgs3dep10meterDemRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
             GeoRaster(L, rqst_parms, key,
-                    std::string(rqst_parms->geoFields(key)->asset.asset->getIndex()),
+                    string(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                     TimeLib::datetime2gps(2022, 12, 03, 18, 59, 03) / 1000,
                     1,                   /* elevationBandsMask */
                     NULL,                /* overrideGeoTransform */

@@ -155,7 +155,7 @@ GeoJsonRaster::~GeoJsonRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double _cellsize):
- GeoRaster(L, rqst_parms, key, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime()),
+ GeoRaster(L, rqst_parms, key, string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime()),
  data(NULL),
  cellsize(_cellsize),
  cols(0),
@@ -165,7 +165,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
     bool rasterCreated = false;
     GDALDataset* rasterDset = NULL;
     GDALDataset* jsonDset   = NULL;
-    const std::string jsonFile = "/vsimem/" + GdalRaster::getUUID() + ".geojson";
+    const string jsonFile = "/vsimem/" + GdalRaster::getUUID() + ".geojson";
     rasterFileName = getFileName();
     geojstr = StringLib::duplicate(_geojstr);
 

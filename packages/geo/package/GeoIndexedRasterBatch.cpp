@@ -114,7 +114,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         ssErrors = SS_NO_ERRORS;
 
         /* Get index file for the points */
-        std::string ifile;
+        string ifile;
         getIndexFile(&points, ifile);
 
         /* Create a convex hull that wraps around all the points, used for spatial filter.
@@ -754,7 +754,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
                 if(it != gf->localToGlobalFileIds.end())
                     return it->second;
 
-                const std::string fileName = gf->threadFileDict.get(localId);
+                const string fileName = gf->threadFileDict.get(localId);
                 const uint64_t globalId = fileDict.add(fileName);
                 gf->localToGlobalFileIds[localId] = globalId;
                 return globalId;

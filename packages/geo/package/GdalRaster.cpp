@@ -57,7 +57,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(const RasterObject* _robj, const std::string& _fileName,
+GdalRaster::GdalRaster(const RasterObject* _robj, const string& _fileName,
                        double _gpsTime, uint64_t _fileId,
                        uint32_t _elevationBandsMask,
                        overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
@@ -155,7 +155,7 @@ void GdalRaster::open(void)
             /* Only store bands that have valid names */
             if (bandName && strlen(bandName) > 0)
             {
-                bandMap[std::string(bandName)] = i;
+                bandMap[string(bandName)] = i;
                 mlog(DEBUG, "Band %d: %s", i, bandName);
             }
         }
@@ -171,7 +171,7 @@ void GdalRaster::open(void)
                 uint32_t resolvedMask = 0U;
                 for(long i = 0; i < parms->elevation_bands.length(); i++)
                 {
-                    const std::string& bandSpec = parms->elevation_bands[i];
+                    const string& bandSpec = parms->elevation_bands[i];
                     const int bandNum = getBandNumber(bandSpec);
                     if(bandNum <= 0)
                     {
@@ -598,7 +598,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
 /*----------------------------------------------------------------------------
  * getBandNumber
  *----------------------------------------------------------------------------*/
-int GdalRaster::getBandNumber(const std::string& bandName)
+int GdalRaster::getBandNumber(const string& bandName)
 {
     if(bandName.empty())
     {
@@ -658,13 +658,13 @@ void GdalRaster::setCRSfromWkt(OGRSpatialReference& sref, const char* wkt)
 /*----------------------------------------------------------------------------
  * getUUID
  *----------------------------------------------------------------------------*/
-std::string GdalRaster::getUUID(void)
+string GdalRaster::getUUID(void)
 {
     char uuid_str[UUID_STR_LEN];
     uuid_t uuid;
     uuid_generate(uuid);
     uuid_unparse_lower(uuid, uuid_str);
-    return std::string(uuid_str);
+    return string(uuid_str);
 }
 
 
@@ -1439,7 +1439,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
     try
     {
-        std::string vsiName = "/vsimem/" + GdalRaster::getUUID() + fileName;
+        string vsiName = "/vsimem/" + GdalRaster::getUUID() + fileName;
 
         /* If parentPath is a vrt rename it to .tif */
         if (vsiName.substr(vsiName.length() - 4) == ".vrt")

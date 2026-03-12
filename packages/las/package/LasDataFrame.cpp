@@ -222,7 +222,7 @@ int LasDataFrame::luaExport (lua_State* L)
         table.finalize();
 
         pdal::SpatialReference srs;
-        const std::string& crs = dataframe.getCRS();
+        const string& crs = dataframe.getCRS();
         if(!crs.empty())
         {
             srs = pdal::SpatialReference(crs);

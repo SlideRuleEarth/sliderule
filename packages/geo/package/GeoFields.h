@@ -165,7 +165,7 @@ class GeoFields: public FieldDictionary
         GeoFields   (void);
         ~GeoFields  (void) override = default;
 
-        static std::string  sserror2str (uint32_t error);
+        static string  sserror2str (uint32_t error);
 };
 
 /******************************************************************************

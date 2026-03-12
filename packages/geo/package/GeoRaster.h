@@ -63,7 +63,7 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                      GeoRaster  (lua_State* L, RequestFields* rqst_parms, const char* key, const std::string& _fileName,
+                      GeoRaster  (lua_State* L, RequestFields* rqst_parms, const char* key, const string& _fileName,
                                   double _gpsTime=0.0, uint32_t elevationBandsMask=0u,
                                   GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
 
@@ -89,7 +89,7 @@ class GeoRaster: public RasterObject
 
         void onStopSampling(void) override;
 
-         std::string getFileName(void)
+         string getFileName(void)
          {
              return raster.getFileName();
          }
@@ -105,7 +105,7 @@ class GeoRaster: public RasterObject
             GeoRaster*                        owner;
             RequestFields*                    rqstParms;
             const char*                       samplerKey;
-            std::string                       crs;
+            string                       crs;
             RasterObject*                     robj;
             range_t                           range;
             const std::vector<point_info_t>&  points;
@@ -113,7 +113,7 @@ class GeoRaster: public RasterObject
             uint32_t                          ssErrors;
             RasterFileDictionary*             fileDict;
 
-            explicit Reader (GeoRaster* _owner, RequestFields* _rqstParms, const char* _samplerKey, const std::string& _crs,
+            explicit Reader (GeoRaster* _owner, RequestFields* _rqstParms, const char* _samplerKey, const string& _crs,
                              const std::vector<point_info_t>& _points);
                     ~Reader (void);
         } reader_t;

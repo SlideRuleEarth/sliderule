@@ -68,7 +68,7 @@ class GediRaster: public GeoRaster
 
         GediRaster(lua_State* L, RequestFields* rqst_parms, const char* key, int64_t gpsTime, uint32_t elevationBandsMask=0u) :
          GeoRaster(L, rqst_parms, key,
-                 std::string(rqst_parms->geoFields(key)->asset.asset->getPath()),
+                 string(rqst_parms->geoFields(key)->asset.asset->getPath()),
                  gpsTime / 1000,
                  elevationBandsMask) {}
 };

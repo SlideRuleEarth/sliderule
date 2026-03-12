@@ -56,7 +56,7 @@ BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestFields* rqst_parms
         throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid band name specified");
     }
 
-    const std::string bucketPath = filePath + indexBucket;
+    const string bucketPath = filePath + indexBucket;
     if(!findIndexFileInS3Bucket(bucketPath))
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create BlueTopoBathyRaster");
@@ -71,7 +71,7 @@ BlueTopoBathyRaster::~BlueTopoBathyRaster(void) = default;
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void BlueTopoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+void BlueTopoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -90,7 +90,7 @@ bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
 
     try
     {
-        const std::string token(".amazonaws.com/BlueTopo/");
+        const string token(".amazonaws.com/BlueTopo/");
 
         for(uint32_t i = start; i < end; i++)
         {
@@ -105,13 +105,13 @@ bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
             const char* dataFile  = feature->GetFieldAsString("GeoTIFF_link");
             if(dataFile && (strlen(dataFile) > 0))
             {
-                std::string fullPath(dataFile);
+                string fullPath(dataFile);
                 size_t pos = fullPath.find(token);
-                if(pos != std::string::npos)
+                if(pos != string::npos)
                 {
                     pos += token.length();
 
-                    const std::string rasterName = fullPath.substr(pos);
+                    const string rasterName = fullPath.substr(pos);
                     fullPath = filePath + rasterName;
                 }
                 else
@@ -237,7 +237,7 @@ bool BlueTopoBathyRaster::validateBandNames(void)
 /*----------------------------------------------------------------------------
  * findIndexFileInS3Bucket
  *----------------------------------------------------------------------------*/
-bool BlueTopoBathyRaster::findIndexFileInS3Bucket(const std::string& bucketPath)
+bool BlueTopoBathyRaster::findIndexFileInS3Bucket(const string& bucketPath)
 {
     bool found = false;
     char** fileList = VSIReadDir(bucketPath.c_str());
@@ -245,11 +245,11 @@ bool BlueTopoBathyRaster::findIndexFileInS3Bucket(const std::string& bucketPath)
     if(fileList)
     {
         /* Look for .gpkg file, assume there is only one in the bucket */
-        const std::string token = ".gpkg";
+        const string token = ".gpkg";
 
         for(int i = 0; fileList[i] != nullptr; i++)
         {
-            const std::string fileName = fileList[i];
+            const string fileName = fileList[i];
 
             if(fileName.size() >= token.size() &&
                fileName.compare(fileName.size() - token.size(), token.size(), token) == 0)

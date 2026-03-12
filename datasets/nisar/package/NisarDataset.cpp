@@ -55,8 +55,8 @@ const char* NisarDataset::validL2GOFFbands[] = {"//science/LSAR/GOFF/grids/frequ
 
 Mutex NisarDataset::transfMutex;
 Mutex NisarDataset::crsMutex;
-std::unordered_map<std::string, std::array<double, 6>> NisarDataset::transformCache;
-std::unordered_map<std::string, int>                   NisarDataset::crsCache;
+std::unordered_map<string, std::array<double, 6>> NisarDataset::transformCache;
+std::unordered_map<string, int>                   NisarDataset::crsCache;
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -87,7 +87,7 @@ NisarDataset::~NisarDataset(void)
     VSIUnlink(indexFile.c_str());
 }
 
-void NisarDataset::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+void NisarDataset::getIndexFile(const std::vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -120,9 +120,9 @@ bool NisarDataset::findRasters(raster_finder_t* finder)
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
             {
-                const std::string fileName(fname);
+                const string fileName(fname);
                 const size_t pos = strlen(URL_str);
-                const std::string hdf5file = filePath + fileName.substr(pos);
+                const string hdf5file = filePath + fileName.substr(pos);
 
                 /* Build two data sets: along track and slant range offsets */
                 for(uint32_t j = 0; j < validL2GOFFbandsCnt; j++)
@@ -130,7 +130,7 @@ bool NisarDataset::findRasters(raster_finder_t* finder)
                     raster_info_t rinfo;
                     rinfo.elevationBandNum   = 0;
                     rinfo.tag                = VALUE_TAG;
-                    const std::string dsName = "HDF5:\"" + hdf5file + "\":" + validL2GOFFbands[j];
+                    const string dsName = "HDF5:\"" + hdf5file + "\":" + validL2GOFFbands[j];
                     rinfo.fileId             = finder->fileDict.add(dsName);
                     rgroup->infovect.push_back(rinfo);
                 }
@@ -227,15 +227,15 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
     if (!std::regex_match(datasetPath, match, pattern) || match.size() < 3)
         return CE_Failure;
 
-    const std::string hdf5File = match[1];
-    const std::string datasetSubpath = match[2];
+    const string hdf5File = match[1];
+    const string datasetSubpath = match[2];
 
     /* Strip trailing dataset name (e.g., /alongTrackOffset, /slantRangeOffset) */
     const size_t lastSlash = datasetSubpath.find_last_of('/');
-    if (lastSlash == std::string::npos)
+    if (lastSlash == string::npos)
         return CE_Failure;
 
-    std::string layerPrefix = datasetSubpath.substr(0, lastSlash);
+    string layerPrefix = datasetSubpath.substr(0, lastSlash);
 
     /* All three layers uset the same grids, for performance always use the first layer */
     if (!layerPrefix.empty())
@@ -246,7 +246,7 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
     }
 
     /* Build a cache key unique per file+layer*/
-    const std::string cacheKey = hdf5File + "|" + layerPrefix;
+    const string cacheKey = hdf5File + "|" + layerPrefix;
 
     /* Check cache first */
     transfMutex.lock();
@@ -263,8 +263,8 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
 
     /* Not cached, compute geoTransform */
 
-    const std::string xPath = "HDF5:\"" + hdf5File + "\":" + layerPrefix + "/xCoordinates";
-    const std::string yPath = "HDF5:\"" + hdf5File + "\":" + layerPrefix + "/yCoordinates";
+    const string xPath = "HDF5:\"" + hdf5File + "\":" + layerPrefix + "/xCoordinates";
+    const string yPath = "HDF5:\"" + hdf5File + "\":" + layerPrefix + "/yCoordinates";
 
     GDALDataset* xDset = static_cast<GDALDataset*>(GDALOpen(xPath.c_str(), GA_ReadOnly));
     if (!xDset)
@@ -340,20 +340,20 @@ OGRErr NisarDataset::overrideTargetCRS(OGRSpatialReference& target, const void* 
     if (!std::regex_match(datasetPath, match, pattern) || match.size() < 3)
         return OGRERR_FAILURE;
 
-    const std::string hdf5File = match[1];
-    const std::string datasetSubpath = match[2];
+    const string hdf5File = match[1];
+    const string datasetSubpath = match[2];
 
     /* Extract pixelOffsets group prefix (e.g., /science/LSAR/GOFF/grids/frequencyA/pixelOffsets) */
-    const std::string anchor = "/pixelOffsets";
+    const string anchor = "/pixelOffsets";
     const size_t pos = datasetSubpath.find(anchor);
-    if (pos == std::string::npos)
+    if (pos == string::npos)
         return OGRERR_FAILURE;
 
     /* All three layers use the same projection and grids */
-    const std::string pixelOffsetGroup = datasetSubpath.substr(0, pos + anchor.size());
+    const string pixelOffsetGroup = datasetSubpath.substr(0, pos + anchor.size());
 
     /* Build a cache key unique per file+pixelOffsets group */
-    const std::string cacheKey = hdf5File + "|" + pixelOffsetGroup;
+    const string cacheKey = hdf5File + "|" + pixelOffsetGroup;
 
     /* Check cache first */
     crsMutex.lock();
@@ -374,7 +374,7 @@ OGRErr NisarDataset::overrideTargetCRS(OGRSpatialReference& target, const void* 
     if (!dset)
         return OGRERR_FAILURE;
 
-    const std::string epsgKey = "science_LSAR_GOFF_grids_frequencyA_pixelOffsets_projection_epsg_code";
+    const string epsgKey = "science_LSAR_GOFF_grids_frequencyA_pixelOffsets_projection_epsg_code";
     const char* epsgStr = dset->GetMetadataItem(epsgKey.c_str());
     if (epsgStr == NULL)
     {

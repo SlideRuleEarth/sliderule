@@ -500,6 +500,17 @@ class Icesat2Fields: public RequestFields
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
+        // compute a simple key for a beam string
+        static okey_t calculateBeamKey(const char* beam, int max_len = 4)
+        {
+            okey_t key = 0;
+            for(int i = 0; i < max_len && beam && beam[i]; i++)
+            {
+                key += static_cast<int>(beam[i]);
+            }
+            return key;
+        }
+
         // CRS support
         static const char* crsITRF2014()        { static string crs = GeoDataFrame::loadCRSFile("EPSG7912.projjson");         return crs.c_str(); }
         static const char* crsITRF2014_EGM08()  { static string crs = GeoDataFrame::loadCRSFile("EPSG7912_EGM08.projjson");   return crs.c_str(); }
@@ -633,7 +644,5 @@ inline uint32_t toEncoding(Icesat2Fields::signal_conf_t& v) { (void)v; return Fi
 inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Atl24Fields::class_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Atl24Fields::flag_t& v) { (void)v; return Field::INT32; }
-
-okey_t calculateBeamKey(const char* beam, int max_len = 4);
 
 #endif  /* __icesat2_fields__ */

@@ -40,10 +40,10 @@
 #include "OsApi.h"
 
 
-static std::string pgcArcticWkt2;
-static std::string pgcRemaWkt2;
+static string pgcArcticWkt2;
+static string pgcRemaWkt2;
 
-static void loadWKtFile(std::string& str, const std::string& wktPath)
+static void loadWKtFile(string& str, const string& wktPath)
 {
     // print2term("%s\n", wktPath.c_str());
     const std::ifstream f(wktPath);

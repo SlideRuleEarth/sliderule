@@ -50,7 +50,7 @@ public:
     double verticalShift;
     uint64_t fileId;
     uint32_t flags;
-    std::string bandName;
+    string bandName;
 
     struct zonal_t
     {
@@ -98,14 +98,14 @@ public:
         derivs = sample.derivs;
     }
 
-    std::string toString(void) const
+    string toString(void) const
     {
         char buffer[1024];
         snprintf(buffer, sizeof(buffer), "time: %.2lf, value: %.2lf, verticalShift: %.2lf, fileId: %lu, flags: %u, \
                                           stats: {count: %u, min: %.2lf, max: %.2lf, mean: %.2lf, median: %.2lf, stdev: %.2lf, mad: %.2lf}, \
                                           slope_aspect: { count: %u, slope: %.2lf, aspect: %.2lf}",
                 time, value, verticalShift, fileId, flags, stats.count, stats.min, stats.max, stats.mean, stats.median, stats.stdev, stats.mad, derivs.count, derivs.slopeDeg, derivs.aspectDeg);
-        return std::string(buffer);
+        return string(buffer);
     }
 
 };

@@ -107,7 +107,7 @@ class GeoJsonRaster: public GeoRaster
          * Data
          *--------------------------------------------------------------------*/
 
-         std::string rasterFileName;
+         string rasterFileName;
          const char* geojstr;
          uint8_t*    data;
          double      cellsize;
