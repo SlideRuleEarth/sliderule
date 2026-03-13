@@ -213,7 +213,7 @@ def get_user_info(claims):
     username = claims.get('sub', '<anonymous>')
     org_roles = parse_claim_array(claims.get('org_roles', "[]"))
     audiences = parse_claim_array(claims.get('aud', "[]"))
-    deployable_clusters = {audience for audience in audiences if valid_cluster_name(audience)}
+    deployable_clusters = {audience for audience in audiences if (valid_cluster_name(audience) or audience == '*')}
     known_clusters = deployable_clusters - {'*'} | {'sliderule'}
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
@@ -257,9 +257,13 @@ def validate_request(event, info):
 
     # check cluster
     cluster = body.get("cluster")
-    if cluster and ((cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"])):
-        print(f'Access denied to {info["username"]}, allowed clusters: {info["deployableClusters"]}')
-        return None
+    if cluster:
+        if not valid_cluster_name(cluster):
+            print(f'Access denied to {info["username"]}, invalid cluster: {cluster}')
+            return None
+        if (cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"]):
+            print(f'Access denied to {info["username"]}, {cluster} not in allowed clusters: {info["deployableClusters"]}')
+            return None
 
     # check node_capacity
     node_capacity = body.get("node_capacity")

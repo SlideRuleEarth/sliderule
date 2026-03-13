@@ -47,7 +47,7 @@ parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
 args,_ = parser.parse_known_args()
 
 # Create Session
-session = sliderule.create_session(domain=args.domain, cluster=args.cluster)
+session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=True)
 
 # Command Runner
 CommandRunner = {

@@ -331,6 +331,9 @@ cluster-report: ## invokes the provisioner *report* lambda function and displays
 cluster-version: ## calls the cluster version API and displays the response
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version
 
+cluster-info: ## returns metadata associated with the user token
+	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info
+
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster sliderule-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest --commands deploy
