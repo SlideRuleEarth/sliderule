@@ -1,3 +1,8 @@
+#
+# See sliderule/clients/python/utils/atl13_utils.py for code that creates the metadata database
+# See sliderule/clients/python/utils/atl13_generate_mappings for code that creates the granule mappings
+#
+
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
 from . import dbutils

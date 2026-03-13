@@ -1,3 +1,7 @@
+#
+# See sliderule/clients/python/utils/casals_gen_db.py for code that creates the metadata database
+#
+
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
 from . import dbutils
