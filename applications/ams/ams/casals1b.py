@@ -48,7 +48,7 @@ def casals1b_route():
             FROM casals1bdb
             {dbutils.build_time_query(state, data)}
             {dbutils.build_polygon_query(state, data)}
-        """).fetch_arrow_table()
+        """).to_arrow_table()
         hits = len(table)
         if hits > current_app.config['MAX_RESOURCES']:
             raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")

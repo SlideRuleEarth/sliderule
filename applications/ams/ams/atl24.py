@@ -55,7 +55,7 @@ def atl24_route():
             {dbutils.build_range_query(state, data, "bathy_max_depth", "maxdepth0", "maxdepth1")}
             {dbutils.build_name_filter(state, name_filter)}
             {dbutils.build_polygon_query(state, data)}
-        """).fetch_arrow_table()
+        """).to_arrow_table()
         hits = len(table)
         if hits > current_app.config['MAX_RESOURCES']:
             raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
@@ -79,12 +79,13 @@ def granule_route(name):
             SELECT *
             FROM atl24db
             WHERE granule == '{name}'
-        """).fetch_arrow_table()
+        """).to_arrow_table()
         # build response
         response = {}
         for i in range(len(table)):
             row = table.slice(i, i+1)
-            response[row["beam"]] = {
+            beam = str(row.column("beam")[0])
+            response[beam] = {
                 "season": int(row.column("season")[0]),
                 "bathy_photons": int(row.column("bathy_photons")[0]),
                 "bathy_mean_depth": float(row.column("bathy_mean_depth")[0]),

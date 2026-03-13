@@ -71,21 +71,21 @@ def atl13_route():
                 FROM atl13_mask
                 WHERE ATL13refID == {refid}
                 {dbutils.build_name_filter("AND", name_filter)};
-            """).fetch_arrow_table().slice(0, 1)
+            """).to_arrow_table().slice(0, 1)
         elif name != None:
             table = db.execute(f"""
                 SELECT *
                 FROM atl13_mask
                 WHERE Lake_name == '{name}'
                 {dbutils.build_name_filter("AND", name_filter)};
-            """).fetch_arrow_table().slice(0, 1)
+            """).to_arrow_table().slice(0, 1)
         elif coord != None:
             table = db.execute(f"""
                 SELECT *
                 FROM atl13_mask
                 WHERE ST_Contains(geometry, ST_Point({coord['lon']}, {coord['lat']}))
                 {dbutils.build_name_filter("AND", name_filter)};
-            """).fetch_arrow_table().slice(0, 1)
+            """).to_arrow_table().slice(0, 1)
         elif name_filter != None:
             single_lake = False
             state = {'WHERE': False}
@@ -93,7 +93,7 @@ def atl13_route():
                 SELECT *
                 FROM atl13_mask
                 {dbutils.build_name_filter(state, name_filter)};
-            """).fetch_arrow_table().slice(0, 1)
+            """).to_arrow_table().slice(0, 1)
         else:
             raise RuntimeError("must supply at least one query parameter (refid, name, coord, name_filter)")
         # build single lake response
@@ -101,13 +101,13 @@ def atl13_route():
             response = {
                 "refid": int(table.column("ATL13refID")[0]),
                 "hylak": int(table.column("Hylak_id")[0]),
-                "name": int(table.column("Lake_name")[0]),
-                "country": int(table.column("Country")[0]),
-                "continent": int(table.column("Continent")[0]),
+                "name": str(table.column("Lake_name")[0]),
+                "country": str(table.column("Country")[0]),
+                "continent": str(table.column("Continent")[0]),
                 "type": int(table.column("Lake_type")[0]),
-                "area": table.column("Lake_area")[0],
+                "area": str(table.column("Lake_area")[0]),
                 "basin": int(table.column("Basin_ID")[0]),
-                "source": table.column("Source")[0],
+                "source": str(table.column("Source")[0]),
                 "granules": []
             }
             for granule_id in mappings["refids"][str(response["refid"])]:

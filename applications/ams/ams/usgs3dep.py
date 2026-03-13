@@ -1,7 +1,7 @@
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
 from . import dbutils
-import pyarrow
+import datetime
 import json
 import duckdb
 
@@ -46,9 +46,9 @@ def usgs3dep_route():
         table = db.execute(f"""
             SELECT *
             FROM "3depdb"
-            {dbutils.build_time_query(state, data)}
-            {dbutils.build_polygon_query(state, data, "start_datetime")}
-        """).fetch_arrow_table()
+            {dbutils.build_time_query(state, data, "start_datetime")}
+            {dbutils.build_polygon_query(state, data)}
+        """).to_arrow_table()
         # build response
         hits = len(table)
         response = {
@@ -66,13 +66,13 @@ def usgs3dep_route():
             maxY = bbox["ymax"]
             feature = {
                 "type": "Feature",
-                "id": row.column("id")[0],
+                "id": str(row.column("id")[0]),
                 "geometry": {
                     "type": "Polygon",
                     "coordinates": [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]]
                 },
                 "properties": {
-                    "datetime": row.column("start_datetime").as_py().isoformat(),
+                    "datetime": row.column("start_datetime")[0].as_py().isoformat(),
                     "url": assets["elevation"]["href"]
                 }
             }
@@ -94,7 +94,7 @@ def id_route(id):
             SELECT *
             FROM "3depdb"
             WHERE id == '{id}'
-        """).fetch_arrow_table().slice(0, 1)
+        """).to_arrow_table().slice(0, 1)
         # clean data
         row = {}
         for col in table.column_names:
@@ -102,7 +102,7 @@ def id_route(id):
             py_val = val.as_py() # convert PyArrow scalar to Python object
             if isinstance(py_val, list):
                 row[col] = py_val
-            elif isinstance(py_val, (pyarrow.Timestamp,)):
+            elif isinstance(py_val, (datetime.datetime, datetime.date)):
                 row[col] = py_val.isoformat()
             elif not isinstance(py_val, (bytes, bytearray)):
                 row[col] = py_val
