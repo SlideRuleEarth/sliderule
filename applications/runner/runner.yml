@@ -349,7 +349,7 @@ Resources:
         Timeout:
           AttemptDurationSeconds: 3600  # 60 minutes
         ContainerProperties:
-          Image: !Sub "${ContainerRegistry}/sliderule:unstable"
+          Image: !Sub "${ContainerRegistry}/sliderule:latest"
           ResourceRequirements:
             - Type: VCPU
               Value: "1"
