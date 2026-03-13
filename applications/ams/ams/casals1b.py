@@ -1,6 +1,7 @@
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import icesat2
+from . import dbutils
+import pyarrow.compute
 import json
 import duckdb
 
@@ -26,56 +27,7 @@ def close_casals1b(e=None):
         db.close()
 
 def init_app(app):
-    db = duckdb.connect()
-    db.execute("INSTALL spatial;")
-    db.close()
     app.teardown_appcontext(close_casals1b)
-
-####################
-# Helper Functions
-####################
-
-# Private: Check State
-def _check(state):
-    if type(state) == str:
-        return state
-    elif type(state) == dict:
-        if not state['WHERE']:
-            state['WHERE'] = True
-            return 'WHERE'
-        else:
-            return 'AND'
-    else:
-        return ''
-
-# Get Polygon Query
-def get_polygon_query(parms):
-    poly = parms.get("poly")
-    if poly != None:
-        coords = [f'{coord["lon"]} {coord["lat"]}' for coord in poly]
-        return f"POLYGON(({','.join(coords)}))"
-    else:
-        return None
-
-# Build Polygon Query
-def build_polygon_query(clause, poly):
-    if poly != None:
-        return f"{_check(clause)} ST_Intersects(geometry, ST_GeomFromText('{poly}'))"
-    else:
-        return ''
-
-# Build Time Query
-def build_time_query(clause, parms):
-    t0 = parms.get('t0')
-    t1 = parms.get('t1')
-    if t0 != None and t1 != None:
-        return f"{_check(clause)} begin_time BETWEEN '{t0}' AND '{t1}'"
-    elif t0 != None:
-        return f"{_check(clause)} begin_time >= '{t0}'"
-    elif t1 != None:
-        return f"{_check(clause)} begin_time <= '{t1}'"
-    else:
-        return ''
 
 ####################
 # APIs
@@ -89,21 +41,21 @@ def casals1b_route():
     try:
         # execute query
         data = request.get_json()
-        poly = get_polygon_query(data)
         state = {'WHERE': False}
         db = __get_casals1b()
-        cmd = f"""
+        table = db.execute(f"""
             SELECT *
             FROM casals1bdb
-            {icesat2.build_time_query(state, data)}
-            {icesat2.build_polygon_query(state, poly)}
-        """
-        df = db.execute(cmd).df()
-        hits = len(df)
+            {dbutils.build_time_query(state, data)}
+            {dbutils.build_polygon_query(state, data)}
+        """).fetch_arrow_table()
+        hits = len(table)
         if hits > current_app.config['MAX_RESOURCES']:
             raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
         else:
-            response = {"hits": hits, "granules": list(df["granule"].unique())}
+            granules_column = table.column("granule")
+            unique_granules = pyarrow.compute.unique(granules_column)
+            response = {"hits": hits, "granules":unique_granules.to_pylist()}
         return json.dumps(response)
     except Exception as e:
         abort(400, f'Failed to query CASALS 1B metadata service: {e}')

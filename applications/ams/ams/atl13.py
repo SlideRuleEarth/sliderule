@@ -1,6 +1,7 @@
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import icesat2
+from . import dbutils
+import pyarrow.compute
 import threading
 import time
 import json
@@ -42,9 +43,6 @@ def close_atl13(e=None):
         db.close()
 
 def init_app(app):
-    db = duckdb.connect()
-    db.execute("INSTALL spatial;")
-    db.close()
     app.teardown_appcontext(close_atl13)
 
 ####################
@@ -63,58 +61,53 @@ def atl13_route():
         refid = data.get('refid') # reference id
         name = data.get('name') # lake name
         coord = data.get('coord') # coordinate contained in lake
-        poly = None # icesat2.get_polygon_query(data) # currently unsupported by AMS
-        name_filter = icesat2.get_name_filter(data)
+        name_filter = dbutils.get_icesat2_name_filter(data)
         # get metadata
-        mask, mappings = __get_atl13()
+        db, mappings = __get_atl13()
         # perform database query
         if refid != None:
-            data = mask.execute(f"""
+            table = db.execute(f"""
                 SELECT *
                 FROM atl13_mask
                 WHERE ATL13refID == {refid}
-                {icesat2.build_name_filter("AND", name_filter)}
-                {icesat2.build_polygon_query("AND", poly)};
-            """).df().iloc[0]
+                {dbutils.build_name_filter("AND", name_filter)};
+            """).fetch_arrow_table().slice(0, 1)
         elif name != None:
-            data = mask.execute(f"""
+            table = db.execute(f"""
                 SELECT *
                 FROM atl13_mask
                 WHERE Lake_name == '{name}'
-                {icesat2.build_name_filter("AND", name_filter)}
-                {icesat2.build_polygon_query("AND", poly)};
-            """).df().iloc[0]
+                {dbutils.build_name_filter("AND", name_filter)};
+            """).fetch_arrow_table().slice(0, 1)
         elif coord != None:
-            data = mask.execute(f"""
+            table = db.execute(f"""
                 SELECT *
                 FROM atl13_mask
                 WHERE ST_Contains(geometry, ST_Point({coord['lon']}, {coord['lat']}))
-                {icesat2.build_name_filter("AND", name_filter)}
-                {icesat2.build_polygon_query("AND", poly)};
-            """).df().iloc[0]
-        elif name_filter != None or poly != None:
+                {dbutils.build_name_filter("AND", name_filter)};
+            """).fetch_arrow_table().slice(0, 1)
+        elif name_filter != None:
             single_lake = False
             state = {'WHERE': False}
-            data = mask.execute(f"""
+            table = db.execute(f"""
                 SELECT *
                 FROM atl13_mask
-                {icesat2.build_name_filter(state, name_filter)}
-                {icesat2.build_polygon_query(state, poly)};
-            """).df()
+                {dbutils.build_name_filter(state, name_filter)};
+            """).fetch_arrow_table().slice(0, 1)
         else:
-            raise RuntimeError("must supply at least one query parameter (refid, name, coord, poly, name_filter)")
+            raise RuntimeError("must supply at least one query parameter (refid, name, coord, name_filter)")
         # build single lake response
         if single_lake:
             response = {
-                "refid": int(data["ATL13refID"]),
-                "hylak": int(data["Hylak_id"]),
-                "name": data["Lake_name"],
-                "country": data["Country"],
-                "continent": data["Continent"],
-                "type": int(data["Lake_type"]),
-                "area": data["Lake_area"],
-                "basin": int(data["Basin_ID"]),
-                "source": data["Source"],
+                "refid": int(table.column("ATL13refID")[0]),
+                "hylak": int(table.column("Hylak_id")[0]),
+                "name": int(table.column("Lake_name")[0]),
+                "country": int(table.column("Country")[0]),
+                "continent": int(table.column("Continent")[0]),
+                "type": int(table.column("Lake_type")[0]),
+                "area": table.column("Lake_area")[0],
+                "basin": int(table.column("Basin_ID")[0]),
+                "source": table.column("Source")[0],
                 "granules": []
             }
             for granule_id in mappings["refids"][str(response["refid"])]:
@@ -122,11 +115,13 @@ def atl13_route():
             return json.dumps(response)
         # build multiple lake response
         else:
-            hits = len(data)
+            hits = len(table)
             if hits > current_app.config['MAX_RESOURCES']:
                 raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
             else:
-                response = {"hits": hits, "granules":list(data["granule"].unique())}
+                granules_column = table.column("granule")
+                unique_granules = pyarrow.compute.unique(granules_column)
+                response = {"hits": hits, "granules":unique_granules.to_pylist()}
             return json.dumps(response)
     except Exception as e:
         abort(400, f'Failed to query ATL13: {e}')

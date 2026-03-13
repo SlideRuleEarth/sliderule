@@ -1,6 +1,7 @@
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import icesat2
+from . import dbutils
+import pyarrow.compute
 import json
 import duckdb
 
@@ -26,9 +27,6 @@ def close_atl24(e=None):
         db.close()
 
 def init_app(app):
-    db = duckdb.connect()
-    db.execute("INSTALL spatial;")
-    db.close()
     app.teardown_appcontext(close_atl24)
 
 ####################
@@ -43,28 +41,28 @@ def atl24_route():
     try:
         # execute query
         data = request.get_json()
-        poly = icesat2.get_polygon_query(data)
-        name_filter = icesat2.get_name_filter(data)
+        name_filter = dbutils.get_icesat2_name_filter(data)
         state = {'WHERE': False}
         db = __get_atl24()
-        cmd = f"""
+        table = db.execute(f"""
             SELECT *
             FROM atl24db
-            {icesat2.build_time_query(state, data)}
-            {icesat2.build_matching_query(state, data, "season", "season")}
-            {icesat2.build_range_query(state, data, "bathy_photons", "photons0", "photons1")}
-            {icesat2.build_range_query(state, data, "bathy_mean_depth", "meandepth0", "meandepth1")}
-            {icesat2.build_range_query(state, data, "bathy_min_depth", "mindepth0", "mindepth1")}
-            {icesat2.build_range_query(state, data, "bathy_max_depth", "maxdepth0", "maxdepth1")}
-            {icesat2.build_name_filter(state, name_filter)}
-            {icesat2.build_polygon_query(state, poly)}
-        """
-        df = db.execute(cmd).df()
-        hits = len(df)
+            {dbutils.build_time_query(state, data)}
+            {dbutils.build_matching_query(state, data, "season", "season")}
+            {dbutils.build_range_query(state, data, "bathy_photons", "photons0", "photons1")}
+            {dbutils.build_range_query(state, data, "bathy_mean_depth", "meandepth0", "meandepth1")}
+            {dbutils.build_range_query(state, data, "bathy_min_depth", "mindepth0", "mindepth1")}
+            {dbutils.build_range_query(state, data, "bathy_max_depth", "maxdepth0", "maxdepth1")}
+            {dbutils.build_name_filter(state, name_filter)}
+            {dbutils.build_polygon_query(state, data)}
+        """).fetch_arrow_table()
+        hits = len(table)
         if hits > current_app.config['MAX_RESOURCES']:
             raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
         else:
-            response = {"hits": hits, "granules": list(df["granule"].unique())}
+            granules_column = table.column("granule")
+            unique_granules = pyarrow.compute.unique(granules_column)
+            response = {"hits": hits, "granules":unique_granules.to_pylist()}
         return json.dumps(response)
     except Exception as e:
         abort(400, f'Failed to query ATL24 metadata service: {e}')
@@ -77,22 +75,22 @@ def granule_route(name):
     try:
         # execute query
         db = __get_atl24()
-        df = db.execute(f"""
+        table = db.execute(f"""
             SELECT *
             FROM atl24db
             WHERE granule == '{name}'
-        """).df()
+        """).fetch_arrow_table()
         # build response
         response = {}
-        for i in range(len(df)):
-            row = df.iloc[i]
+        for i in range(len(table)):
+            row = table.slice(i, i+1)
             response[row["beam"]] = {
-                "season": int(row["season"]),
-                "bathy_photons": int(row["bathy_photons"]),
-                "bathy_mean_depth": float(row["bathy_mean_depth"]),
-                "bathy_min_depth": float(row["bathy_min_depth"]),
-                "bathy_max_depth": float(row["bathy_max_depth"]),
-                "begin_time": row["begin_time"].isoformat()
+                "season": int(row.column("season")[0]),
+                "bathy_photons": int(row.column("bathy_photons")[0]),
+                "bathy_mean_depth": float(row.column("bathy_mean_depth")[0]),
+                "bathy_min_depth": float(row.column("bathy_min_depth")[0]),
+                "bathy_max_depth": float(row.column("bathy_max_depth")[0]),
+                "begin_time": row.column("begin_time")[0].as_py().isoformat()
             }
         # return response
         return json.dumps(response)

@@ -14,29 +14,21 @@ def __check(state):
         return ''
 
 #
-# Get Polygon Query
+# Build Polygon Query
 #
-def get_polygon_query(parms):
+def build_polygon_query(clause, parms):
     poly = parms.get("poly")
     if poly != None:
         coords = [f'{coord["lon"]} {coord["lat"]}' for coord in poly]
-        return f"POLYGON(({','.join(coords)}))"
-    else:
-        return None
-
-#
-# Build Polygon Query
-#
-def build_polygon_query(clause, poly):
-    if poly != None:
+        poly = f"POLYGON(({','.join(coords)}))"
         return f"{__check(clause)} ST_Intersects(geometry, ST_GeomFromText('{poly}'))"
     else:
         return ''
 
 #
-# Get Name Filter
+# Get ICESat-2 Name Filter
 #
-def get_name_filter(parms):
+def get_icesat2_name_filter(parms):
     if "name_filter" in parms:
         return parms["name_filter"]
     else:
@@ -64,15 +56,15 @@ def build_name_filter(clause, name_filter):
 #
 # Build Time Query
 #
-def build_time_query(clause, parms):
+def build_time_query(clause, parms, time_field="begin_time"):
     t0 = parms.get('t0')
     t1 = parms.get('t1')
     if t0 != None and t1 != None:
-        return f"{__check(clause)} begin_time BETWEEN '{t0}' AND '{t1}'"
+        return f"{__check(clause)} {time_field} BETWEEN '{t0}' AND '{t1}'"
     elif t0 != None:
-        return f"{__check(clause)} begin_time >= '{t0}'"
+        return f"{__check(clause)} {time_field} >= '{t0}'"
     elif t1 != None:
-        return f"{__check(clause)} begin_time <= '{t1}'"
+        return f"{__check(clause)} {time_field} <= '{t1}'"
     else:
         return ''
 

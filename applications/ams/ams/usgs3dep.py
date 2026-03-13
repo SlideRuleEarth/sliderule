@@ -1,7 +1,8 @@
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
+from . import dbutils
+import pyarrow
 import json
-import pandas
 import duckdb
 
 ####################
@@ -26,56 +27,7 @@ def close_3dep(e=None):
         db.close()
 
 def init_app(app):
-    db = duckdb.connect()
-    db.execute("INSTALL spatial;")
-    db.close()
     app.teardown_appcontext(close_3dep)
-
-####################
-# Helper Functions
-####################
-
-#
-# Private: Check State
-#
-def __check(state):
-    if type(state) == str:
-        return state
-    elif type(state) == dict:
-        if not state['WHERE']:
-            state['WHERE'] = True
-            return 'WHERE'
-        else:
-            return 'AND'
-    else:
-        return ''
-
-#
-# Build Polygon Query
-#
-def build_polygon_query(clause, parms):
-    poly = parms.get("poly")
-    if poly != None:
-        coords = [f'{coord["lon"]} {coord["lat"]}' for coord in poly]
-        poly = f"POLYGON(({','.join(coords)}))"
-        return f"{__check(clause)} ST_Intersects(geometry, ST_GeomFromText('{poly}'))"
-    else:
-        return ''
-
-#
-# Build Time Query
-#
-def build_time_query(clause, parms):
-    t0 = parms.get('t0')
-    t1 = parms.get('t1')
-    if t0 != None and t1 != None:
-        return f"{__check(clause)} start_datetime BETWEEN '{t0}' AND '{t1}'"
-    elif t0 != None:
-        return f"{__check(clause)} start_datetime >= '{t0}'"
-    elif t1 != None:
-        return f"{__check(clause)} start_datetime <= '{t1}'"
-    else:
-        return ''
 
 ####################
 # APIs
@@ -91,35 +43,37 @@ def usgs3dep_route():
         data = request.get_json()
         state = {'WHERE': False}
         db = __get_3dep()
-        df = db.execute(f"""
+        table = db.execute(f"""
             SELECT *
             FROM "3depdb"
-            {build_time_query(state, data)}
-            {build_polygon_query(state, data)}
-        """).df()
+            {dbutils.build_time_query(state, data)}
+            {dbutils.build_polygon_query(state, data, "start_datetime")}
+        """).fetch_arrow_table()
         # build response
-        hits = len(df)
+        hits = len(table)
         response = {
             "type": "FeatureCollection",
             "features": [],
             "hits": hits
         }
         for i in range(hits):
-            row = df.iloc[i]
-            minX = row["bbox"]["xmin"]
-            maxX = row["bbox"]["xmax"]
-            minY = row["bbox"]["ymin"]
-            maxY = row["bbox"]["ymax"]
+            row = table.slice(i, i+1)
+            assets = row.column("assets")[0].as_py()
+            bbox = row.column("bbox")[0].as_py()
+            minX = bbox["xmin"]
+            maxX = bbox["xmax"]
+            minY = bbox["ymin"]
+            maxY = bbox["ymax"]
             feature = {
                 "type": "Feature",
-                "id": row["id"],
+                "id": row.column("id")[0],
                 "geometry": {
                     "type": "Polygon",
                     "coordinates": [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]]
                 },
                 "properties": {
-                    "datetime": row["start_datetime"].isoformat(),
-                    "url": row["assets"]["elevation"]["href"]
+                    "datetime": row.column("start_datetime").as_py().isoformat(),
+                    "url": assets["elevation"]["href"]
                 }
             }
             response["features"].append(feature)
@@ -136,20 +90,22 @@ def id_route(id):
     try:
         # execute query
         db = __get_3dep()
-        data = db.execute(f"""
+        table = db.execute(f"""
             SELECT *
             FROM "3depdb"
             WHERE id == '{id}'
-        """).df().iloc[0]
+        """).fetch_arrow_table().slice(0, 1)
         # clean data
         row = {}
-        for k, v in data.items():
-            if hasattr(v, "tolist"):
-                row[k] = v.tolist()
-            elif isinstance(v, (pandas.Timestamp)):
-                row[k] = v.isoformat()
-            elif not isinstance(v, (bytes, bytearray)):
-                row[k] = v
+        for col in table.column_names:
+            val = table.column(col)[0]  # get first row value (Arrow scalar)
+            py_val = val.as_py() # convert PyArrow scalar to Python object
+            if isinstance(py_val, list):
+                row[col] = py_val
+            elif isinstance(py_val, (pyarrow.Timestamp,)):
+                row[col] = py_val.isoformat()
+            elif not isinstance(py_val, (bytes, bytearray)):
+                row[col] = py_val
         # return response
         return json.dumps(row)
     except Exception as e:

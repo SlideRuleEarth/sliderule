@@ -1,4 +1,5 @@
 import os
+import duckdb
 from flask import Flask
 
 # Set Version
@@ -34,6 +35,11 @@ def create_app(test_config=None):
     @app.route('/echo/<var>')
     def echo(var):
         return f'{var}'
+
+    # initialize duckdb
+    db = duckdb.connect()
+    db.execute("INSTALL spatial;")
+    db.close()
 
     # initialize ATL13
     from . import atl13
