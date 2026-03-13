@@ -47,6 +47,7 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
 * ***runner:access*** - access to runner services
 * ***mcp:tools*** - access to mcp server
 * ***mcp:resources*** - access to mcp server
+* ***monitor:access*** - access to cluster monitor
 
 #### Authorization Flows
 
@@ -55,7 +56,7 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
 | OAuth2.1 Web | /auth/github/register, /auth/github/login, /auth/github/callback, /auth/github/token | Owner | _all_ | preferred method for web applications |
 | Device | /auth/github/device, /auth/github/device/poll | Owner | sliderule:access, sliderule:admin, provisioner:access, runner:access | preferred method for python client |
 | PAT Key | /auth/github/pat | Member | sliderule:access, provisioner:access, runner:access | used for CI/CD pipelines |
-| Basic Web | /auth/github/basic/login | Member | sliderule:access | returns JWT via cookie |
+| Basic Web | /auth/github/basic/login | Member | monitor:access | returns JWT via cookie |
 
 ### Security Rules
 

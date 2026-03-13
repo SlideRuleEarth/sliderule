@@ -40,7 +40,7 @@ GITHUB_DEVICE_CODE_URL = os.environ.get('GITHUB_DEVICE_CODE_URL','https://github
 GITHUB_API_URL = os.environ.get('GITHUB_API_URL','https://api.github.com')
 
 # Scoped restricted to project services (not allowed for third party applications)
-TRUSTED_SCOPES = {"sliderule:access", "sliderule:admin", "provisioner:access", "runner:access"}
+TRUSTED_SCOPES = {"sliderule:access", "sliderule:admin", "provisioner:access", "runner:access", "monitor:access"}
 
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
@@ -556,6 +556,8 @@ def generate_audience_list(username, teams, org_roles, scope):
             audiences.append('provisioner')
         if 'runner' in resources: # access to runner
             audiences.append('runner')
+        if 'monitor' in resources: # access to cluster monitor
+            audiences.append('monitor')
         if 'sliderule' in resources: # access to cluster
             if teams: # all members can access services at subdomains tied to teams they belong to
                 audiences.extend(teams)
@@ -1422,7 +1424,7 @@ def basic_callback(code, redirect_uri):
     """
     # Authenticate user (gets token and ignores metadata)
     access_token = exchange_code_for_token(code)
-    token, _ = authenticate_user(f'Bearer {access_token}', ['sliderule:access'])
+    token, _ = authenticate_user(f'Bearer {access_token}', ['monitor:access'])
 
     # check redirect_uri against only the trusted redirect hosts
     # (since this is the basic authorization flow)

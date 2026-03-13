@@ -22,6 +22,12 @@ sm = boto3.client('secretsmanager')
 _pubkey_cache = {}
 
 # ###############################
+# Globals
+# ###############################
+
+SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp','sliderule','monitor']
+
+# ###############################
 # Utilities
 # ###############################
 
@@ -29,7 +35,6 @@ _pubkey_cache = {}
 # Checks on cluster name
 #
 def valid_cluster_name(cluster):
-    SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp']
     if (cluster in SYSTEM_KEYWORDS) or \
        (not re.match(r'^[A-Za-z0-9-_]+$', cluster)) or \
        (len(cluster) > 40):
