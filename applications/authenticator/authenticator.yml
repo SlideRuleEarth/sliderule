@@ -201,6 +201,9 @@ Resources:
       ApiId: !Ref HttpApi
       StageName: '$default'
       AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
 
   # Lambda Permission for API Gateway
   LambdaApiGatewayPermission:

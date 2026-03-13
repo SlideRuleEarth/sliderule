@@ -176,21 +176,28 @@ def session_load(key, with_delete=False):
         _dynamodb_client = boto3.resource('dynamodb')
     table = _dynamodb_client.Table(SESSION_TABLE)
     # retrieve data at 'key'
-    load_response = table.get_item(Key = {
-        "id": key
-    })
-    # delete 'key' if requested
-    if with_delete:
-        delete_response = table.delete_item(
-            Key = {"id": key},
-            ConditionExpression = "attribute_exists(id)"
+    if with_delete: # atomic fetch and delete
+        response = table.delete_item(
+            Key={"id": key},
+            ConditionExpression = "attribute_exists(id)",
+            ReturnValues="ALL_OLD"
         )
-        if delete_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
-            raise RuntimeError(f"Failed to delete {key}: {delete_response}")
-    # check and return loaded data
-    if load_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
-        raise RuntimeError(f"Failed to load {key}: {load_response}")
-    return load_response.get("Item", {}).get("value")
+        item = response.get("Attributes", {})
+    else: # fetch and preserve
+        response = table.get_item(Key = {
+            "id": key
+        })
+        item = response.get("Item", {})
+    # check response
+    if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+        raise RuntimeError(f"Failed to load {key}: {response}")
+    # check time to live
+    now = int(datetime.now().timestamp())
+    expiration = item.get("ttl", 0)
+    if now > expiration:
+        raise RuntimeError(f"Expired value for {key}: {expiration}")
+    # return value
+    return item.get("value")
 
 
 # =============================================================================
@@ -977,10 +984,10 @@ def handle_callback(event):
         })
 
     except Exception as e:
-        print(f"Exception in OAuth callback: {e}")
+        print(f"Exception in OAuth2.1 callback: {e}")
         return json_response(500, {
             'error': 'internal_error',
-            'error_description': 'error during OAuth callback'
+            'error_description': 'error during callback'
         })
 
 
@@ -1021,7 +1028,7 @@ def handle_token(event):
         # check code expiration
         now = int(datetime.now().timestamp())
         expiration = int(session_code["expiration"])
-        if ((now + CODE_EXPIRATION_SECONDS) < expiration) or ((now - expiration) > CODE_EXPIRATION_SECONDS):
+        if now > expiration:
             raise RuntimeError(f"Code has expired: {expiration} {now}")
 
         # check grant type
@@ -1380,7 +1387,7 @@ def handle_pat_login(event):
         return json_response(500, {
             'status': 'error',
             'error': 'internal_error',
-            'error_description': 'Error processing PAT login'
+            'error_description': 'Error processing login'
         })
 
 
@@ -1393,28 +1400,42 @@ def handle_basic_login(event):
     Initiate basic GitHub OAuth 2.0 flow.
     Scope is limited to access only; used by HAProxy/Grafana
     """
-    # Get query parameters
-    parms = event.get('queryStringParameters')
-    redirect_uri = parms.get('redirect_uri')
+    try:
+        # Get query parameters
+        parms = event.get('queryStringParameters')
+        redirect_uri = parms.get('redirect_uri')
 
-    # Create HMAC-signed state for CSRF protection
-    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-    github_state = create_signed_state(f"{BASIC_CLIENT_ID}:{redirect_uri_b64}:none")
+        # check redirect_uri against only the trusted redirect hosts
+        # (since this is the basic authorization flow)
+        if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
+            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
 
-    # Build GitHub authorization URL
-    github_parms = {
-        'client_id': get_github_client("id"),
-        'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
-        'scope': 'read:org',
-        'state': github_state
-    }
-    auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+        # Create HMAC-signed state for CSRF protection
+        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+        github_state = create_signed_state(f"{BASIC_CLIENT_ID}:{redirect_uri_b64}:none")
 
-    # Return response
-    return json_response(302, None, headers={
-        'Location': auth_url,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-    })
+        # Build GitHub authorization URL
+        github_parms = {
+            'client_id': get_github_client("id"),
+            'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
+            'scope': 'read:org',
+            'state': github_state
+        }
+        auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+
+        # Return response
+        return json_response(302, None, headers={
+            'Location': auth_url,
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        })
+
+    except Exception as e:
+        print(f"Error in basic login: {e}")
+        return json_response(500, {
+            'status': 'error',
+            'error': 'internal_error',
+            'error_description': 'Error processing basic login'
+        })
 
 
 def basic_callback(code, redirect_uri):
@@ -1422,17 +1443,25 @@ def basic_callback(code, redirect_uri):
     Handle basic GitHub OAuth 2.0 callback.
     Exchange code for token and redirect to frontend with token in cookie
     """
-    # Authenticate user (gets token and ignores metadata)
-    access_token = exchange_code_for_token(code)
-    token, _ = authenticate_user(f'Bearer {access_token}', ['monitor:access'])
+    try:
+        # Authenticate user (gets token and ignores metadata)
+        access_token = exchange_code_for_token(code)
+        token, _ = authenticate_user(f'Bearer {access_token}', ['monitor:access'])
 
-    # check redirect_uri against only the trusted redirect hosts
-    # (since this is the basic authorization flow)
-    if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
-        raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+        # check redirect_uri against only the trusted redirect hosts
+        # (since this is the basic authorization flow)
+        if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
+            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
 
-    # Redirect to frontend with JWT in cookie
-    return redirect_to_frontend(redirect_uri, cookie=token)
+        # Redirect to frontend with JWT in cookie
+        return redirect_to_frontend(redirect_uri, cookie=token)
+
+    except Exception as e:
+        print(f"Exception in OAuth2.0 callback: {e}")
+        return json_response(500, {
+            'error': 'internal_error',
+            'error_description': 'error during callback'
+        })
 
 
 # =============================================================================
