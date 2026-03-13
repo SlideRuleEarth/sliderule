@@ -311,32 +311,41 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 	docker push $(CONTAINER_REGISTRY)/ams:$(VERSION)
 
 cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy'
 
 cluster-extend: ## invokes the provisioner *extend* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy'
 
 cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy'
 
 cluster-status: ## invokes the provisioner *status* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands status
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands status'
 
 cluster-events: ## invokes the provisioner *events* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands events
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands events'
 
 cluster-report: ## invokes the provisioner *report* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report'
 
 cluster-version: ## calls the cluster version API and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version'
 
 cluster-info: ## returns metadata associated with the user token
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info'
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster sliderule-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest --commands deploy
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster sliderule-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest --commands deploy'
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \

@@ -476,7 +476,12 @@ class Session:
             url = f'https://{path}'
             body = json.dumps(data)
             self.__signrequest(headers, path, body) # (optionally) sign request
-            data = self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            def do_post():
+                return self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            data = do_post()
+            if data.status_code == 401: # AWS API Gateway will often return a 401 on a cold request
+                time.sleep(2)
+                data = do_post()
 
             # Parse Response
             stream_source = self.__StreamSource(data)
