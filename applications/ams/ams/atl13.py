@@ -21,6 +21,8 @@ metalock = threading.Lock()
 
 atl13 = Blueprint('atl13', __name__, url_prefix='/ams')
 
+print("Initializing ATL13 metadata services...")
+
 ####################
 # Module Functions
 ####################

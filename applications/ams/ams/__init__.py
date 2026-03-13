@@ -22,6 +22,8 @@ if not version_found:
 #
 def create_app(test_config=None):
 
+    print("Initializing asset metadata service...")
+
     # create and configure the app
     app = Flask(__name__, instance_relative_config=False)
     if test_config is None:

@@ -15,6 +15,8 @@ import duckdb
 
 usgs3dep = Blueprint('usgs3dep', __name__, url_prefix='/ams')
 
+print("Initializing 3DEP metadata services...")
+
 ####################
 # Module Functions
 ####################

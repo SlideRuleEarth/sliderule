@@ -15,6 +15,8 @@ import duckdb
 
 atl24 = Blueprint('atl24', __name__, url_prefix='/ams')
 
+print("Initializing ATL24 metadata services...")
+
 ####################
 # Module Functions
 ####################

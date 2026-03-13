@@ -15,6 +15,8 @@ import duckdb
 
 casals1b = Blueprint('casals1b', __name__, url_prefix='/ams')
 
+print("Initializing CASALS1B metadata services...")
+
 ####################
 # Module Functions
 ####################
