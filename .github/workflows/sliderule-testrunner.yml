@@ -14,4 +14,4 @@ jobs:
         run: |
           set -e  # stop workflow if curl exits non-zero
           JWT=$(curl -s https://login.slideruleearth.io/auth/github/pat -d "{\"pat\":\"$SLIDERULE_GITHUB_TOKEN\"}" | jq -r '.token')
-          curl -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/test | jq -e '.status'
+          curl --fail-with-body -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/test
