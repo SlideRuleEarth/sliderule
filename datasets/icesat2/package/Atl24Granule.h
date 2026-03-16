@@ -41,7 +41,7 @@
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5Object.h"
 
 /******************************************************************************

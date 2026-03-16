@@ -40,7 +40,7 @@
 #include "FieldList.h"
 #include "GeoDataFrame.h"
 #include "H5DArray.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 
 /******************************************************************************
  * H5 VARIABLE SET

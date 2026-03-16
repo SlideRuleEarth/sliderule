@@ -40,7 +40,7 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "Asset.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 
 /******************************************************************************
  * HDF5 FILE CLASS

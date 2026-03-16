@@ -37,8 +37,8 @@
  ******************************************************************************/
 
 extern "C" {
-void inith5 (void);
-void deinith5 (void);
+void inith5coro (void);
+void deinith5coro (void);
 }
 
 #endif  /* __h5pkg__ */

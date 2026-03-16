@@ -38,7 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 
 /******************************************************************************
  * CLASS
@@ -61,7 +61,7 @@ class H5Object: public LuaObject, public H5Coro::Context
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
-        
+
     private:
 
         /*--------------------------------------------------------------------

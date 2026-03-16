@@ -35,7 +35,7 @@
 
 #include "OsApi.h"
 
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5Array.h"
 #include "H5DArray.h"
 #include "H5Element.h"
@@ -205,7 +205,7 @@ int h5_open (lua_State *L)
  ******************************************************************************/
 
 extern "C" {
-void inith5 (void)
+void inith5coro (void)
 {
     /* Initialize Modules */
     H5Coro::init(H5CORO_THREAD_POOL_SIZE);
@@ -219,7 +219,7 @@ void inith5 (void)
     print2term("%s package initialized (%s)\n", LUA_H5_LIBNAME, LIBID);
 }
 
-void deinith5 (void)
+void deinith5coro (void)
 {
     H5Coro::deinit();
 }

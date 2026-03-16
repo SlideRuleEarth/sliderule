@@ -2,7 +2,7 @@ find_package (ZLIB)
 
 message (STATUS "Including h5 package")
 
-target_compile_definitions (slideruleLib PUBLIC __h5__)
+target_compile_definitions (slideruleLib PUBLIC __h5coro__)
 
 target_link_libraries (slideruleLib PUBLIC ${ZLIB_LIBRARIES})
 
@@ -10,7 +10,7 @@ target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/h5.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/H5Coro.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5CoroLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dataset.cpp
@@ -31,7 +31,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/h5.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Array.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/H5Coro.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5CoroLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dataset.h

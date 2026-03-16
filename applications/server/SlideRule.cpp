@@ -63,8 +63,8 @@
 #include "geo.h"
 #endif
 
-#ifdef __h5__
-#include "h5.h"
+#ifdef __h5coro__
+#include "h5coro.h"
 #endif
 
 #ifdef __legacy__
@@ -391,8 +391,8 @@ int main (int argc, char* argv[])
         initgeo();
     #endif
 
-    #ifdef __h5__
-        inith5();
+    #ifdef __h5coro__
+        inith5coro();
     #endif
 
     #ifdef __legacy__
@@ -552,8 +552,8 @@ int main (int argc, char* argv[])
         deinitlegacy();
     #endif
 
-    #ifdef __h5__
-        deinith5();
+    #ifdef __h5coro__
+        deinith5coro();
     #endif
 
     #ifdef __geo__

@@ -36,7 +36,7 @@
 #include "OsApi.h"
 #include "EventLib.h"
 #include "H5DatasetDevice.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 
 /******************************************************************************
  * STATIC DATA

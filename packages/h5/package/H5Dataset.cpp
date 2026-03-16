@@ -39,7 +39,7 @@
 #include "MathLib.h"
 #include "H5Dense.h"
 #include "H5Dataset.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 
 #include <zlib.h>
 

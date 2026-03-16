@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 
 using H5Coro::info_t;
 using H5Coro::range_t;

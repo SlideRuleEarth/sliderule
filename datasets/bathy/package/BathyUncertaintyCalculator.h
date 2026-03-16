@@ -34,7 +34,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5Array.h"
 #include "BathyFields.h"
 #include "BathyDataFrame.h"

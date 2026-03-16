@@ -38,7 +38,7 @@
 
 #include "Icesat2Parms.h"
 #include "H5Array.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "StringLib.h"
 
 /******************************************************************************

@@ -41,7 +41,7 @@
 
 #include "OsApi.h"
 #include "MsgQ.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5Element.h"
 #include "BathyFields.h"
 #include "BathyGranule.h"
