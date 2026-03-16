@@ -25,7 +25,7 @@ local dataset = parm["dataset"]
 local datatype = parm["datatype"] or core.DYNAMIC
 local col = parm["col"] or 0
 local startrow = parm["startrow"] or 0
-local numrows = parm["numrows"] or h5.ALL_ROWS
+local numrows = parm["numrows"] or h5coro.ALL_ROWS
 local id = parm["id"] or 0
 
 local asset = core.getbyname(asset_name)
@@ -35,7 +35,7 @@ if not asset then
     return
 end
 
-local f = h5.dataset(streaming.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
+local f = h5coro.dataset(streaming.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
 if f:connected() then
     local r = streaming.reader(f, _rqst.rspq)
     r:waiton() -- waits until reader completes

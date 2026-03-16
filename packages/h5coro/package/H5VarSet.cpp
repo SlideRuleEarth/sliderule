@@ -126,7 +126,38 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
 
         if(gdf->appendFromBuffer(dataset_name, data_ptr, size, encoding, nodata) == 0)
         {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add data for <%s>", dataset_name);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * addToGDF
+ *----------------------------------------------------------------------------*/
+void H5VarSet::addToGDF(GeoDataFrame* gdf) const
+{
+    long rows = 0;
+    Dictionary<H5DArray*>::Iterator iter(variables);
+    for(int i = 0; i < iter.length; i++)
+    {
+        const char* dataset_name = iter[i].key;
+        H5DArray* array = iter[i].value;
+        const bool multidim = array->numDimensions() > 1;
+        const uint32_t encoding = multidim ?
+                                  (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
+                                  static_cast<uint32_t>(array->elementType());
+        long dataset_rows = gdf->appendFromBuffer(dataset_name, array->h5f->info.data, array->h5f->info.datasize, encoding, false);
+        if(dataset_rows == 0)
+        {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);
+        }
+        else if(rows == 0)
+        {
+            rows = dataset_rows;
+        }
+        else if(rows != dataset_rows)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "mismatched number of rows in array for <%s>: expected %ld, got %ld", dataset_name, dataset_rows, rows);
         }
     }
 }

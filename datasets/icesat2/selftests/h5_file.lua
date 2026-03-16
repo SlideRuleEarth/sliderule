@@ -13,7 +13,7 @@ runner.authenticate({'nsidc-cloud'})
 
 local atlas_asset = core.getbyname("icesat2")
 local resource = "ATL03_20181015231931_02650102_007_01.h5"
-local f = h5.file(atlas_asset, resource)
+local f = h5coro.file(atlas_asset, resource)
 local rspq = msg.subscribe("h5testq")
 
 -- Self Test --

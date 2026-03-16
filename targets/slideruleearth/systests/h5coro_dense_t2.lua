@@ -35,7 +35,7 @@
     local startrow = 0
     local numrows = core.ALL_ROWS
 
-    f2 = h5.dataset(streaming.READER,
+    f2 = h5coro.dataset(streaming.READER,
                     asset,
                     resource_path,
                     dataset_name,
@@ -65,7 +65,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lat_center"
     dtype = core.DYNAMIC
 
-    f3 = h5.dataset(streaming.READER,
+    f3 = h5coro.dataset(streaming.READER,
                     asset2,
                     resource_path,
                     dataset_name,
@@ -95,7 +95,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lon_center"
     dtype = core.DYNAMIC
 
-    f3 = h5.dataset(streaming.READER,
+    f3 = h5coro.dataset(streaming.READER,
                     asset3,
                     resource_path,
                     dataset_name,
@@ -125,7 +125,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lat_units"
     dtype = core.DYNAMIC -- NOTE: TEXT not valid
 
-    f4 = h5.dataset(streaming.READER,
+    f4 = h5coro.dataset(streaming.READER,
                     asset4,
                     resource_path,
                     dataset_name,
@@ -153,7 +153,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lon_nadir"
     dtype = core.DYNAMIC
 
-    f5 = h5.dataset(streaming.READER,
+    f5 = h5coro.dataset(streaming.READER,
                     asset5,
                     resource_path,
                     dataset_name,

@@ -40,7 +40,7 @@ runner.unittest("ATL06 DataFrame", function()
         resource = "ATL06_20200303180710_10390603_007_01.h5"
     })
 
-    local atl06h5 = h5.object(asset_name, parms["resource"])
+    local atl06h5 = h5coro.object(asset_name, parms["resource"])
     local atl06df = icesat2.atl06x("gt1l", parms, atl06h5, core.EVENTQ)
 
     runner.assert(atl06df:waiton(60000), "timed out creating dataframe", true)
@@ -120,7 +120,7 @@ runner.unittest("ATL06 DataFrame - Ancillary Data", function()
         atl06_fields = {"dem/dem_flag", "dem/dem_h"}
     })
 
-    local atl06h5 = h5.object(asset_name, parms["resource"])
+    local atl06h5 = h5coro.object(asset_name, parms["resource"])
     local atl06df = icesat2.atl06x("gt2r", parms, atl06h5, core.EVENTQ)
 
     runner.assert(atl06df:waiton(60000), "timed out creating dataframe", true)

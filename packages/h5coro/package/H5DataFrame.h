@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_file__
-#define __h5_file__
+#ifndef __h5_dataframe__
+#define __h5_dataframe__
 
 /******************************************************************************
  * INCLUDES
@@ -38,83 +38,42 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RecordObject.h"
+#include "GeoDataFrame.h"
 #include "Asset.h"
 #include "H5CoroLib.h"
+#include "H5Object.h"
+#include "H5VarSet.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class H5File: public LuaObject
+class H5DataFrame: public GeoDataFrame
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
-
-        static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
-
-        static const char* recType;
-        static const RecordObject::fieldDef_t recDef[];
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            char        dataset[MAX_NAME_STR];
-            uint32_t    datatype; // RecordObject::fieldType_t
-            uint32_t    elements; // number of values
-            uint32_t    size; // total size in bytes
-        } h5file_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
-        static void         init                (void);
 
     protected:
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            const char*             dataset;
-            RecordObject::valType_t valtype;
-            H5Coro::range_t         slice[H5Coro::MAX_NDIMS];
-            int                     slicendims;
-            const char*             outqname;
-            H5File*                 h5file;
-        } dataset_info_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5File              (lua_State* L, Asset* _asset, H5Coro::Context* _context);
-                            ~H5File             (void) override;
-
-        static void*        readThread          (void* parm);
-
-        static int          luaRead             (lua_State* L);
-        static int          luaInspect          (lua_State* L);
-        static int          luaReadColumn       (lua_State* L);
+                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* group=NULL);
+                            ~H5DataFrame        (void) override;
+        static int          luaJoin             (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Asset*              asset;
-        H5Coro::Context*    context;
+        H5Object*   h5obj;
+        H5VarSet    data;
 };
 
 #endif  /* __h5_file__ */

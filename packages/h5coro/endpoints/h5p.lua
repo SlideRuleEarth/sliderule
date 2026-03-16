@@ -40,7 +40,7 @@ if not asset then
     return
 end
 
-local f = h5.file(asset, resource)
+local f = h5coro.file(asset, resource)
 if not f then
     local userlog = msg.publish(_rqst.rspq)
     userlog:alert(core.INFO, core.RTE_FAILURE, string.format("failed to open resource: %s", resource))

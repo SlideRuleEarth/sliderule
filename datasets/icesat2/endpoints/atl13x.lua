@@ -49,7 +49,7 @@ dataframe.proxy("atl13x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     local dataframes = {}
     local runners = {}
     local resource = parms["resource"]
-    local h5obj = h5.object(parms["asset"], resource)
+    local h5obj = h5coro.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl13x(beam, parms, h5obj, _rqst.rspq)
         if not dataframes[beam] then

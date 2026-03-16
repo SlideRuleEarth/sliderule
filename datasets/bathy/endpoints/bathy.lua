@@ -20,7 +20,7 @@ dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(u
 
     local resource      = parms["resource"]
     local bathymask     = bathy.mask()
-    local atl03h5       = h5.object(parms["asset"], resource)
+    local atl03h5       = h5coro.object(parms["asset"], resource)
     local atl09h5       = util.get_atl09(parms, t0, t1, userlog, resource)
 --    local ndwi          = parms["generate_ndwi"] and util.get_ndwi(parms, resource) or nil
 --    local granule       = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl03h5, _rqst.rspq) or nil

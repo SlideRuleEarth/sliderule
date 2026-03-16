@@ -10,7 +10,7 @@ local asset = core.asset("local", "nil", "file", dirpath, "empty.index")
 
 runner.unittest("H5Coro File", function()
 
-    local f1 = h5.file(asset, h5_input_file)
+    local f1 = h5coro.file(asset, h5_input_file)
     local rsps1 = msg.subscribe("h5testq")
     f1:read({{dataset="DS1", col=2}}, "h5testq")
     local recdata = rsps1:recvrecord(3000)
@@ -30,7 +30,7 @@ runner.unittest("H5Coro Read Dataset", function()
     local dataq = "dataq"
     local rsps2 = msg.subscribe(dataq)
 
-    local f2 = h5.dataset(streaming.READER, asset, h5_input_file, "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
+    local f2 = h5coro.dataset(streaming.READER, asset, h5_input_file, "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
     local r2 = streaming.reader(f2, dataq)
 
     local vals = rsps2:recvstring(3000)
@@ -51,7 +51,7 @@ runner.unittest("H5Coro Read Dataset as Record", function()
     local recq = "recq"
     local rsps3 = msg.subscribe(recq)
 
-    local f3 = h5.dataset(streaming.READER, asset, h5_input_file, "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
+    local f3 = h5coro.dataset(streaming.READER, asset, h5_input_file, "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
     local r3 = streaming.reader(f3, recq)
 
     local recdata = rsps3:recvrecord(3000)
@@ -72,7 +72,7 @@ runner.unittest("H5Coro Read Dataset Raw", function()
 
     local h5_file = "h5ex_d_gzip.bin"
     local o4 = streaming.writer(streaming.file(streaming.WRITER, streaming.BINARY, h5_file, streaming.FLUSHED), "h5rawq")
-    local f4 = h5.dataset(streaming.READER, asset, h5_input_file, "/DS1", 0, true, core.DYNAMIC, 2)
+    local f4 = h5coro.dataset(streaming.READER, asset, h5_input_file, "/DS1", 0, true, core.DYNAMIC, 2)
     local r4 = streaming.reader(f4, "h5rawq")
 
     r4:waiton()
@@ -99,7 +99,7 @@ end)
 
 runner.unittest("H5Coro 2D Slice (1D Result)", function()
 
-    local f5 = h5.file(asset, h5_input_file)
+    local f5 = h5coro.file(asset, h5_input_file)
     local rsps5 = msg.subscribe("h5slice1q")
 
     -- Use a 2D slice to pull a single column (index 2) for rows 0..3 -> expected [-2, 0, 2, 4]
@@ -124,7 +124,7 @@ end)
 
 runner.unittest("H5Coro Slice 2D Block", function()
 
-    local f6 = h5.file(asset, h5_input_file)
+    local f6 = h5coro.file(asset, h5_input_file)
     local rsps6 = msg.subscribe("h5slice2q")
 
     -- 3x3 block from rows 1..3, cols 1..3 (end exclusive)
@@ -153,7 +153,7 @@ end)
 runner.unittest("H5Coro Slice Semantics (1D)", function()
 
     -- Use a slice that mirrors the default column read (col 0, all rows)
-    local f7a = h5.file(asset, h5_input_file)
+    local f7a = h5coro.file(asset, h5_input_file)
     local rsps7a_full = msg.subscribe("h5slice5q_full")
     f7a:read({{dataset="DS1"}}, "h5slice5q_full")
     local full_rec = rsps7a_full:recvrecord(3000)
@@ -162,7 +162,7 @@ runner.unittest("H5Coro Slice Semantics (1D)", function()
     local rsps7a_slice = msg.subscribe("h5slice5q_slice")
 
     -- slice dims: rows 0..end, col 0..1 (single column)
-    f7a:read({{dataset="DS1", slice={{0, h5.ALL_ROWS}, {0, 1}}}}, "h5slice5q_slice")
+    f7a:read({{dataset="DS1", slice={{0, h5coro.ALL_ROWS}, {0, 1}}}}, "h5slice5q_slice")
     local slice_rec = rsps7a_slice:recvrecord(3000)
     rsps7a_slice:destroy()
     runner.assert(full_rec ~= nil and slice_rec ~= nil, "full or slice record missing")
@@ -182,9 +182,9 @@ end)
 runner.unittest("H5Coro Slice Semantics (2D)", function()
 
     -- Full 2D slice: check size and a small known block
-    local f8 = h5.file(asset, h5_input_file)
+    local f8 = h5coro.file(asset, h5_input_file)
     local rsps8 = msg.subscribe("h5slice2d")
-    f8:read({{dataset="DS1", slice={{0, h5.ALL_ROWS}, {0, h5.ALL_ROWS}}}}, "h5slice2d")
+    f8:read({{dataset="DS1", slice={{0, h5coro.ALL_ROWS}, {0, h5coro.ALL_ROWS}}}}, "h5slice2d")
     local rec2d = rsps8:recvrecord(3000)
     rsps8:destroy()
     runner.assert(rec2d ~= nil, "2D full slice read failed")
@@ -220,7 +220,7 @@ end)
 
 runner.unittest("H5Coro Slice[2:] (1D)", function()
 
-    local f9 = h5.file(asset, h5_input_file)
+    local f9 = h5coro.file(asset, h5_input_file)
     local rsps9_full = msg.subscribe("h5slice6q_full")
     f9:read({{dataset="DS1"}}, "h5slice6q_full")
     local full_rec2 = rsps9_full:recvrecord(3000)
@@ -230,7 +230,7 @@ runner.unittest("H5Coro Slice[2:] (1D)", function()
     local rsps9_slice = msg.subscribe("h5slice6q_slice")
 
     -- start at row 2, all columns
-    f9:read({{dataset="DS1", slice={{2, h5.ALL_ROWS}, {0, 1}}}}, "h5slice6q_slice")
+    f9:read({{dataset="DS1", slice={{2, h5coro.ALL_ROWS}, {0, 1}}}}, "h5slice6q_slice")
     local slice_rec2 = rsps9_slice:recvrecord(3000)
     rsps9_slice:destroy()
     runner.assert(slice_rec2 ~= nil, "slice read failed for row-2 slice comparison")
@@ -252,9 +252,9 @@ end)
 runner.unittest("H5Coro Slice[2:] (2D)", function()
 
     -- Take rows 2..end, all columns; check size and leading values
-    local f10a = h5.file(asset, h5_input_file)
+    local f10a = h5coro.file(asset, h5_input_file)
     local rsps10a = msg.subscribe("h5slice2d_tail_slice")
-    f10a:read({{dataset="DS1", slice={{2, h5.ALL_ROWS}, {0, h5.ALL_ROWS}}}}, "h5slice2d_tail_slice")
+    f10a:read({{dataset="DS1", slice={{2, h5coro.ALL_ROWS}, {0, h5coro.ALL_ROWS}}}}, "h5slice2d_tail_slice")
     local slice_rec3 = rsps10a:recvrecord(3000)
     rsps10a:destroy()
     runner.assert(slice_rec3 ~= nil, "2d tail slice read failed")
@@ -284,7 +284,7 @@ end)
 
 runner.unittest("H5Coro Slice Out of Bounds", function()
 
-    local f10 = h5.file(asset, h5_input_file)
+    local f10 = h5coro.file(asset, h5_input_file)
     local rsps10 = msg.subscribe("h5slice3q")
 
     -- request rows well beyond dataset dims to force failure
@@ -300,7 +300,7 @@ end)
 
 runner.unittest("H5Coro Slice Out of Range", function()
 
-    local f11n = h5.file(asset, h5_input_file)
+    local f11n = h5coro.file(asset, h5_input_file)
     local rsps11n = msg.subscribe("h5slice4q")
 
     -- invalid slice where start > end
@@ -317,7 +317,7 @@ end)
 runner.unittest("H5Coro Slice Truncate Dimension", function()
 
     -- Providing a third dimension to a 2D dataset should ignore the extra dim and still return data
-    local f12 = h5.file(asset, h5_input_file)
+    local f12 = h5coro.file(asset, h5_input_file)
     local rsps12 = msg.subscribe("h5slice_toomany_dims")
     f12:read({{dataset="DS1", slice={{0,1}, {0,1}, {0,1}}}}, "h5slice_toomany_dims")
     local recdata = rsps12:recvrecord(1000)

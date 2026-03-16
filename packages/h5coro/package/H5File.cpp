@@ -61,7 +61,7 @@ const RecordObject::fieldDef_t H5File::recDef[] = {
 };
 
 /******************************************************************************
- * HDF5 FILE CLASS
+ * CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -308,9 +308,6 @@ int H5File::luaRead (lua_State* L)
                 dataset_info_t* info = new dataset_info_t;
                 info->dataset = StringLib::duplicate(dataset);
                 info->valtype = valtype;
-                info->col = col;
-                info->startrow = startrow;
-                info->numrows = numrows;
                 info->slicendims = slicendims;
                 for(int d = 0; d < H5Coro::MAX_NDIMS; d++)
                 {

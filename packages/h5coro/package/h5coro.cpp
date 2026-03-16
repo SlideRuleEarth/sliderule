@@ -40,6 +40,7 @@
 #include "H5DArray.h"
 #include "H5Element.h"
 #include "H5File.h"
+#include "H5DataFrame.h"
 #include "H5DatasetDevice.h"
 #include "H5Object.h"
 
@@ -47,7 +48,7 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_H5_LIBNAME  "h5"
+#define LUA_H5_LIBNAME  "h5coro"
 
 #ifndef H5CORO_THREAD_POOL_SIZE
 #define H5CORO_THREAD_POOL_SIZE 128
@@ -185,6 +186,7 @@ int h5_open (lua_State *L)
 {
     static const struct luaL_Reg h5_functions[] = {
         {"file",        H5File::luaCreate},
+        {"dataframe",   H5DataFrame::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
         {"object",      H5Object::luaCreate},
         {"read",        h5_read},

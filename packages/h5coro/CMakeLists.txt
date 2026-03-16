@@ -13,6 +13,7 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/H5CoroLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DArray.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dataset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DatasetDevice.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5File.cpp
@@ -34,6 +35,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/H5CoroLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DArray.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dataset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DatasetDevice.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Element.h
@@ -48,6 +50,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5p.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5x.lua
     DESTINATION
         ${CONFDIR}/api
 )

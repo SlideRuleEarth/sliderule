@@ -12,7 +12,7 @@ dataframe.proxy("gedi01bx", parms, rqst["parms"], _rqst.rspq, channels, function
     local dataframes = {}
     local resource = parms["resource"]
 
-    local gedi01bh5 = h5.object(parms["asset"], resource)
+    local gedi01bh5 = h5coro.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = gedi.gedi01bx(beam, parms, gedi01bh5, _rqst.rspq)
         if not dataframes[beam] then

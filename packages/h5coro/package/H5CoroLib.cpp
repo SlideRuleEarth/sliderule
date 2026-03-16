@@ -404,6 +404,54 @@ uint64_t H5Coro::Context::hashL2 (uint64_t key)
 }
 
 /******************************************************************************
+ * FIELDS METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreate - create(<parameter table>)
+ *----------------------------------------------------------------------------*/
+int H5Coro::Fields::luaCreate (lua_State* L)
+{
+    Fields* _parms = NULL;
+
+    try
+    {
+        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        const char* asset_name = LuaObject::getLuaString(L, 3);
+        const char* _resource = LuaObject::getLuaString(L, 4);
+
+        _parms = new Fields(L, key_space, asset_name, _resource, {});
+        _parms->fromLua(L, 1);
+
+        return createLuaObject(L, _parms);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete _parms;
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
+    RequestFields (L, key_space, asset_name, _resource, {
+        {"col",         &col},
+        {"startrow",    &startRow},
+        {"numrows",     &numRows},
+        {"groups",      &groups},
+        {"datasets",    &datasets}})
+{
+    for(const FieldDictionary::init_entry_t elem: init_list)
+    {
+        const entry_t entry = {elem.field, false};
+        fields.add(elem.name, entry);
+    }
+}
+
+/******************************************************************************
  * H5CORO METHODS
  ******************************************************************************/
 

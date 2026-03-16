@@ -35,7 +35,7 @@ local col = 0
 local startrow = 0
 local numrows = core.ALL_ROWS
 
-f2 = h5.dataset(streaming.READER,
+f2 = h5coro.dataset(streaming.READER,
                 asset,
                 resource_path,
                 dataset_name,
@@ -64,7 +64,7 @@ rsps2s2 = msg.subscribe(dataq) -- responses posted to dataq
 dataset_name = "/Temp/scale_factor"
 dtype = core.DYNAMIC
 
-f3 = h5.dataset(streaming.READER,
+f3 = h5coro.dataset(streaming.READER,
                 asset2,
                 resource_path,
                 dataset_name,
@@ -93,7 +93,7 @@ rsps2s3 = msg.subscribe(dataq) -- responses posted to dataq
 dataset_name = "/Temp/valid_range"
 dtype = core.INTEGER
 
-f3 = h5.dataset(streaming.READER,
+f3 = h5coro.dataset(streaming.READER,
                 asset3,
                 resource_path,
                 dataset_name,
@@ -125,7 +125,7 @@ rsps2s4 = msg.subscribe(dataq)
 dataset_name = "/Temp/coordinates"
 dtype = core.STRING -- NOTE: TEXT not valid --> use DYNAMIC or STRING
 
-f4 = h5.dataset(streaming.READER,
+f4 = h5coro.dataset(streaming.READER,
                 asset4,
                 resource_path,
                 dataset_name,
@@ -153,7 +153,7 @@ rsps2s5 = msg.subscribe(dataq)
 dataset_name = "/Temp/_FillValue"
 dtype = core.INTEGER
 
-f5 = h5.dataset(streaming.READER,
+f5 = h5coro.dataset(streaming.READER,
                 asset5,
                 resource_path,
                 dataset_name,

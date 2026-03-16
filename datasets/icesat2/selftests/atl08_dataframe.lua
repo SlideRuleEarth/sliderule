@@ -39,7 +39,7 @@ runner.unittest("ATL08 DataFrame", function()
         resource = "ATL08_20200307004141_10890603_007_01.h5"
     })
 
-    local atl08h5 = h5.object(asset_name, parms["resource"])
+    local atl08h5 = h5coro.object(asset_name, parms["resource"])
     local atl08df = icesat2.atl08x("gt3r", parms, atl08h5, core.EVENTQ)
 
     runner.assert(atl08df:waiton(60000), "timed out creating dataframe", true)
@@ -117,7 +117,7 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
         resource = "ATL08_20200307004141_10890603_007_01.h5"
     })
 
-    local atl08h5 = h5.object(asset_name, base_parms["resource"])
+    local atl08h5 = h5coro.object(asset_name, base_parms["resource"])
     local base_df = icesat2.atl08x("gt3r", base_parms, atl08h5, core.EVENTQ)
 
     runner.assert(base_df:waiton(60000), "timed out creating dataframe", true)
@@ -185,7 +185,7 @@ runner.unittest("ATL08 DataFrame - Ancillary Data", function()
         atl08_fields = {"beam_azimuth", "segment_watermask"}
     })
 
-    local atl08h5 = h5.object(asset_name, parms["resource"])
+    local atl08h5 = h5coro.object(asset_name, parms["resource"])
     local atl08df = icesat2.atl08x("gt3r", parms, atl08h5, core.EVENTQ)
 
     runner.assert(atl08df:waiton(60000), "timed out creating dataframe", true)

@@ -41,6 +41,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "Table.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * DEFINES
@@ -204,6 +205,32 @@ namespace H5Coro
         static bool     checkCache  (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
         static uint64_t hashL1      (uint64_t key);
         static uint64_t hashL2      (uint64_t key);
+    };
+
+    /*--------------------------------------------------------------------
+    * Fields Subclass
+    *--------------------------------------------------------------------*/
+
+    struct Fields: public RequestFields
+    {
+        /***********/
+        /* Methods */
+        /***********/
+
+        static int luaCreate (lua_State* L);
+        Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list);
+        virtual ~Fields (void) override = default;
+
+        /********/
+        /* Data */
+        /********/
+
+        FieldElement<long>      col {0};
+        FieldElement<long>      startRow {0};
+        FieldElement<long>      numRows {0};
+        FieldElement<string>    crs;
+        FieldList<string>       groups;
+        FieldList<string>       datasets;
     };
 
     /*--------------------------------------------------------------------
