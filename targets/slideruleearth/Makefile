@@ -324,7 +324,7 @@ cluster-destroy: ## invokes the provisioner *destroy* lambda function and displa
 
 cluster-status: ## invokes the provisioner *status* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands status'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands status --concise --asjson'
 
 cluster-events: ## invokes the provisioner *events* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
@@ -332,15 +332,15 @@ cluster-events: ## invokes the provisioner *events* lambda function and displays
 
 cluster-report: ## invokes the provisioner *report* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --asjson'
 
 cluster-version: ## calls the cluster version API and displays the response
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version --asjson'
 
 cluster-info: ## returns metadata associated with the user token
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info --asjson'
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"

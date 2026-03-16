@@ -41,6 +41,7 @@ parser.add_argument('--ttl',                type=int,               default=60) 
 parser.add_argument('--version',            type=str,               default="unstable")
 parser.add_argument('--branch',             type=str,               default="main")
 parser.add_argument('--report',             type=str,               default="clusters")
+parser.add_argument('--concise',            action='store_true',    default=False)
 parser.add_argument('--args',               nargs='+', type=str,    default=None)
 parser.add_argument('-j', '--asjson',       action='store_true',    default=False)
 parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
@@ -49,13 +50,30 @@ args,_ = parser.parse_known_args()
 # Create Session
 session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=True)
 
+# Helpers
+def display_status():
+    response = session.provisioner.status()
+    if args.concise:
+        return {
+            "StackName": response.get("response", {}).get("StackName"),
+            "StackStatus": response.get("response", {}).get("StackStatus"),
+            "CreationTime": response.get("response", {}).get("CreationTime"),
+            "auto_shutdown": response.get("auto_shutdown"),
+            "current_nodes": response.get("current_nodes"),
+            "version": response.get("version"),
+            "is_public": response.get("is_public"),
+            "node_capacity": response.get("node_capacity")
+        }
+    else:
+        return response
+
 # Command Runner
 CommandRunner = {
     # Provisioner
     "deploy": lambda: session.provisioner.deploy(is_public=(args.is_public == "true"), node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
     "extend": lambda: session.provisioner.extend(ttl=args.ttl),
     "destroy": session.provisioner.destroy,
-    "status": session.provisioner.status,
+    "status": display_status,
     "events": session.provisioner.events,
     "report": lambda: session.provisioner.report(kind=args.report),
     "test": lambda: session.provision("test", {"branch":args.branch}),

@@ -93,7 +93,7 @@ Resources:
             Action:
               - route53:ChangeResourceRecordSets
             Resource:
-              - "arn:aws:route53:::hostedzone/Z0526045IQLILBFI9THF"
+              - !Sub "arn:aws:route53:::hostedzone/${HostedZoneId}"
 
   ## Lambda Function
   CertbotLambda:

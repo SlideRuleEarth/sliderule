@@ -35,7 +35,6 @@ local rsps = {
         environment=sys.getcfg("environment_version"),
         launch=launch,
         duration=duration,
-        packages=packages,
         cluster=sys.getcfg("cluster")
     }
 }
@@ -46,7 +45,9 @@ for _,package in ipairs(packages) do
         local version_function = global.eval("version", package)
         if version_function then
             local package_version, package_build = version_function()
-            rsps[package] = {version=package_version, build=package_build}
+            if package ~= "sys" then
+                rsps[package] = {version=package_version, build=package_build}
+            end
         end
     end
 end
