@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5coro__
-#define __h5coro__
+#ifndef __h5corolib__
+#define __h5corolib__
 
 /******************************************************************************
  * INCLUDES
@@ -218,4 +218,4 @@ namespace H5Coro
     void*       readerThread    (void* parm);
 };
 
-#endif  /* __h5coro__ */
+#endif  /* __h5corolib__ */
