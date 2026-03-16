@@ -1,6 +1,6 @@
 find_package (ZLIB)
 
-message (STATUS "Including h5 package")
+message (STATUS "Including h5coro package")
 
 target_compile_definitions (slideruleLib PUBLIC __h5coro__)
 
@@ -8,7 +8,7 @@ target_link_libraries (slideruleLib PUBLIC ${ZLIB_LIBRARIES})
 
 target_sources(slideruleLib
     PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/package/h5.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/h5coro.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5CoroLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.cpp
@@ -28,7 +28,7 @@ target_include_directories (slideruleLib
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/package/h5.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/h5coro.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Array.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5CoroLib.h
