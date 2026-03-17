@@ -9,34 +9,36 @@ local timeout = parms["timeout"] * 1000
 local dfq_name = "df.".._rqst.rspq
 local resource = parms["resource"]
 local groups = parms["groups"]
+local userlog = msg.publish(_rqst.rspq)
 
--- helper function: error_to_client
-local function error_to_client(message, fatal)
-    local userlog = msg.publish(_rqst.rspq)
-    userlog:alert(core.INFO, core.RTE_FAILURE, string.format("request <%s> for %s: %s", _rqst.rspq, resource, message))
-    if fatal then error(message) end
+-- alert helper function
+local function status_to_client(lvl, code, message)
+    userlog:alert(lvl, code, string.format("request <%s> for %s: %s", _rqst.rspq, resource, message))
+    if code == core.RTE_FAILURE then error(message) end
 end
 
 -- check arrow parameters
-if parms:witharrow() then error_to_client("must specify parquet output parameters", true) end
+if not parms:witharrow() then status_to_client(core.CRITICAL, core.RTE_FAILURE, "must specify parquet output parameters") end
 
 -- get geo columns
-local time_column = parms["time"]:length() > 0 and parms["time"] or nil
-local x_column = parms["x"]:length() > 0 and parms["x"] or nil
-local y_column = parms["y"]:length() > 0 and parms["y"] or nil
-local z_column = parms["z"]:length() > 0 and parms["z"] or nil
+local time_column = parms:length("time") > 0 and parms["time"] or nil
+local x_column = parms:length("x") > 0 and parms["x"] or nil
+local y_column = parms:length("y") > 0 and parms["y"] or nil
+local z_column = parms:length("z") > 0 and parms["z"] or nil
 
 -- get h5 object
 local h5obj = h5coro.object(parms["asset"], resource)
-if not h5obj then error_to_client("failed to open resource", true) end
+if h5obj then status_to_client(core.INFO, core.RTE_STATUS, "opened resource")
+else status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to open resource") end
 
 -- create dataframes for each group
 local dfs = {}
 for _,group in ipairs(groups) do
     local df = h5coro.dataframe(parms, h5obj, group)
-    if not df then error_to_client("failed to create dataframe", true) end
+    if df then status_to_client(core.INFO, core.RTE_STATUS, string.format("created dataframe for group %s", group))
+    else status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("failed to create dataframe for group %s", group)) end
     df:geo(time_column, x_column, y_column, z_column) -- (optionally) set geo columns
-    table.insert(dfs, df)
+    dfs[group] = df
 end
 
 -- create dataframe to receive all group dataframes
@@ -44,35 +46,38 @@ local final_df = core.dataframe({}, {endpoint="h5x", request=json.encode(rqst)})
 final_df:receive(dfq_name, _rqst.rspq, #groups, timeout)
 
 -- join and serialize (send) each dataframe
-for _,df in ipairs(dfs) do
+for group,df in pairs(dfs) do
+    status_to_client(core.INFO, core.RTE_STATUS, string.format("joining dataframe for group %s", group))
     df:join(timeout)
     if df:numrows() > 0 and df:numcols() > 0 then
         if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner
         df:run(core.framesender(dfq_name, parms["key_space"], timeout))
         df:run(core.TERMINATE)
     end
+    status_to_client(core.INFO, core.RTE_STATUS, string.format("dataframe for group %s created with %d columns and %d rows", group, df:numcols(), df:numrows()))
 end
 
 -- wait for each to finish being serialized (sent)
-for _,df in ipairs(dfs) do
+for group,df in pairs(dfs) do
+    status_to_client(core.INFO, core.RTE_STATUS, string.format("waiting for dataframe for group %s", group))
     local status = df:finished(timeout, _rqst.rspq)
-    if not status then error_to_client("timed out waiting for dataframe", true) end
+    if not status then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("timed out waiting for dataframe for group %s", group)) end
 end
 
 -- wait for final dataframe to finish being reconstructed
-if not final_df:waiton(timeout) then error_to_client("failed to build concatenated dataframe", true) end
+if not final_df:waiton(timeout) then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to build concatenated dataframe") end
 
 -- check for final dataframe being empty
-if final_df:numrows() <= 0 or final_df:numcols() <= 0 then error_to_client("produced an empty dataframe", true) end
+if final_df:numrows() <= 0 or final_df:numcols() <= 0 then status_to_client(core.CRITICAL, core.RTE_FAILURE, "produced an empty dataframe") end
 
 -- create arrow dataframe
 local arrow_df = arrow.dataframe(parms, final_df)
-if not arrow_df then error_to_client("failed to create arrow dataframe", true) end
+if not arrow_df then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to create arrow dataframe") end
 
 -- write dataframe to parquet file
 local arrow_filename = arrow_df:export()
-if not arrow_filename then error_to_client("failed to write dataframe", true) end
+if not arrow_filename then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to write dataframe") end
 
 -- send parquet file to user
 local status = core.send2user(arrow_filename, parms, _rqst.rspq)
-if not status then error_to_client("failed to send dataframe", true) end
+if not status then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to send dataframe") end

@@ -189,6 +189,7 @@ int h5_open (lua_State *L)
         {"dataframe",   H5DataFrame::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
         {"object",      H5Object::luaCreate},
+        {"parms",       H5Coro::Fields::luaCreate},
         {"read",        h5_read},
         {NULL,          NULL}
     };
