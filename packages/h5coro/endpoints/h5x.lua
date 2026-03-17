@@ -10,6 +10,7 @@ local dfq_name = "df.".._rqst.rspq
 local resource = parms["resource"]
 local groups = parms["groups"]
 local userlog = msg.publish(_rqst.rspq)
+local dfq = msg.publish(dfq_name)
 
 -- alert helper function
 local function status_to_client(lvl, code, message)
@@ -28,15 +29,13 @@ local z_column = parms:length("z") > 0 and parms["z"] or nil
 
 -- get h5 object
 local h5obj = h5coro.object(parms["asset"], resource)
-if h5obj then status_to_client(core.INFO, core.RTE_STATUS, "opened resource")
-else status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to open resource") end
+if not h5obj then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to open resource") end
 
 -- create dataframes for each group
 local dfs = {}
 for _,group in ipairs(groups) do
     local df = h5coro.dataframe(parms, h5obj, group)
-    if df then status_to_client(core.INFO, core.RTE_STATUS, string.format("created dataframe for group %s", group))
-    else status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("failed to create dataframe for group %s", group)) end
+    if not df then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("failed to create dataframe for group %s", group)) end
     df:geo(time_column, x_column, y_column, z_column) -- (optionally) set geo columns
     dfs[group] = df
 end
@@ -47,28 +46,28 @@ final_df:receive(dfq_name, _rqst.rspq, #groups, timeout)
 
 -- join and serialize (send) each dataframe
 for group,df in pairs(dfs) do
-    status_to_client(core.INFO, core.RTE_STATUS, string.format("joining dataframe for group %s", group))
     df:join(timeout)
     if df:numrows() > 0 and df:numcols() > 0 then
         if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner
         df:run(core.framesender(dfq_name, parms["key_space"], timeout))
-        df:run(core.TERMINATE)
     end
+    df:run(core.TERMINATE)
     status_to_client(core.INFO, core.RTE_STATUS, string.format("dataframe for group %s created with %d columns and %d rows", group, df:numcols(), df:numrows()))
 end
 
 -- wait for each to finish being serialized (sent)
 for group,df in pairs(dfs) do
-    status_to_client(core.INFO, core.RTE_STATUS, string.format("waiting for dataframe for group %s", group))
     local status = df:finished(timeout, _rqst.rspq)
     if not status then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("timed out waiting for dataframe for group %s", group)) end
 end
 
 -- wait for final dataframe to finish being reconstructed
+dfq:sendstring("") -- post termination to final df
 if not final_df:waiton(timeout) then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to build concatenated dataframe") end
 
 -- check for final dataframe being empty
 if final_df:numrows() <= 0 or final_df:numcols() <= 0 then status_to_client(core.CRITICAL, core.RTE_FAILURE, "produced an empty dataframe") end
+status_to_client(core.INFO, core.RTE_STATUS, string.format("final dataframe constructed with %d columns and %d rows", final_df:numcols(), final_df:numrows()))
 
 -- create arrow dataframe
 local arrow_df = arrow.dataframe(parms, final_df)

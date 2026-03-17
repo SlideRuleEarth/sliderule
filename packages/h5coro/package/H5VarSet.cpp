@@ -134,7 +134,7 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
 /*----------------------------------------------------------------------------
  * addToGDF
  *----------------------------------------------------------------------------*/
-void H5VarSet::addToGDF(GeoDataFrame* gdf) const
+long H5VarSet::addToGDF(GeoDataFrame* gdf) const
 {
     long rows = 0;
     Dictionary<H5DArray*>::Iterator iter(variables);
@@ -160,4 +160,5 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf) const
             throw RunTimeException(CRITICAL, RTE_FAILURE, "mismatched number of rows in array for <%s>: expected %ld, got %ld", dataset_name, dataset_rows, rows);
         }
     }
+    return rows;
 }

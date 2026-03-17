@@ -50,7 +50,7 @@ H5DArray::H5DArray(H5Coro::Context* context, const char* dataset, long col, long
     if(context) h5f = H5Coro::readp(context, dataset, RecordObject::DYNAMIC, slice, 2);
     else        h5f = NULL;
 
-    name    = StringLib::duplicate(dataset);
+    name = StringLib::duplicate(dataset);
 }
 
 /*----------------------------------------------------------------------------

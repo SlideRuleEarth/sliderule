@@ -447,7 +447,7 @@ H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name,
         {"y",           &y_column},
         {"z",           &z_column},
         {"groups",      &groups},
-        {"datasets",    &datasets}})
+        {"variables",   &variables}})
 {
     for(const FieldDictionary::init_entry_t elem: init_list)
     {
