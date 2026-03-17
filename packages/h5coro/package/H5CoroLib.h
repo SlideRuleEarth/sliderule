@@ -218,6 +218,7 @@ namespace H5Coro
         /***********/
 
         static int luaCreate (lua_State* L);
+        static const char* defaultCRS (void);
         Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list);
         virtual ~Fields (void) override = default;
 
@@ -229,6 +230,7 @@ namespace H5Coro
         FieldElement<long>      startRow {0};
         FieldElement<long>      numRows {ALL_ROWS};
         FieldElement<string>    crs;
+        FieldElement<string>    index_column;
         FieldElement<string>    time_column;
         FieldElement<string>    x_column;
         FieldElement<string>    y_column;

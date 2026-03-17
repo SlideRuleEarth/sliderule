@@ -40,6 +40,7 @@
 #include "H5Dataset.h"
 #include "H5Dense.h"
 #include "H5CoroLib.h"
+#include "GeoDataFrame.h"
 
 #include <atomic>
 
@@ -434,6 +435,16 @@ int H5Coro::Fields::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * defaultCRS
+ *----------------------------------------------------------------------------*/
+const char* H5Coro::Fields::defaultCRS (void)
+{
+    /* Load and cache the CRS once; returned value is compact PROJJSON. */
+    const static string crs = GeoDataFrame::loadCRSFile("EPSG7912.projjson");
+    return crs.c_str();
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
@@ -442,6 +453,7 @@ H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name,
         {"startrow",    &startRow},
         {"numrows",     &numRows},
         {"crs",         &crs},
+        {"index",       &index_column},
         {"time",        &time_column},
         {"x",           &x_column},
         {"y",           &y_column},
@@ -449,6 +461,7 @@ H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name,
         {"groups",      &groups},
         {"variables",   &variables}})
 {
+    crs.value = defaultCRS(); // initialize
     for(const FieldDictionary::init_entry_t elem: init_list)
     {
         const entry_t entry = {elem.field, false};

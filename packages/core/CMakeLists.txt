@@ -142,11 +142,15 @@ install (
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/data/leap-seconds.list
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912.projjson
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912_EGM08.projjson
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG9989.projjson
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG9989_EGM08.projjson
     DESTINATION
         ${CONFDIR}
 )
 
-# Extensions #
+# extension install
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/extensions/asset.lua
@@ -166,7 +170,7 @@ install (
         ${CONFDIR}/ext
 )
 
-# Endpoints #
+# endpoint install
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/ace.lua

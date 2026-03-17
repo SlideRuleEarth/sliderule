@@ -295,6 +295,7 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaGetMetaData      (lua_State* L);
         static int      luaGetCRS           (lua_State* L);
         static int      luaSetGeoColumns    (lua_State* L);
+        static int      luaBuildIndex       (lua_State* L);
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
 

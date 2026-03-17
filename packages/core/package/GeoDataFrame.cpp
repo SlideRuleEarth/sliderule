@@ -1289,6 +1289,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
     LuaEngine::setAttrFunc(L, "geo",        luaSetGeoColumns);
+    LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
 
@@ -2078,6 +2079,38 @@ int GeoDataFrame::luaSetGeoColumns (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error setting geo columns: %s", e.what());
+    }
+
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaBuildIndex
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaBuildIndex (lua_State* L)
+{
+    bool status = true;
+    try
+    {
+        GeoDataFrame* dataframe = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char* index_column_name = getLuaString(L, 2);
+
+        FieldColumn<int64_t>* index = new FieldColumn<int64_t>;
+        for(int64_t i = 0; i < dataframe->numRows; i++)
+        {
+            index->append(i);
+        }
+
+        if(!dataframe->addColumn(index_column_name, index, true))
+        {
+            delete index;
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add index column: %s", index_column_name);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        status = false;
+        mlog(e.level(), "Error building index: %s", e.what());
     }
 
     return returnLuaStatus(L, status);

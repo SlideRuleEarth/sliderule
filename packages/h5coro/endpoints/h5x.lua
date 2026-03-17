@@ -21,7 +21,8 @@ end
 -- check arrow parameters
 if not parms:witharrow() then status_to_client(core.CRITICAL, core.RTE_FAILURE, "must specify parquet output parameters") end
 
--- get geo columns
+-- get standard columns
+local index_column = parms:length("index") > 0 and parms["index"] or nil
 local time_column = parms:length("time") > 0 and parms["time"] or nil
 local x_column = parms:length("x") > 0 and parms["x"] or nil
 local y_column = parms:length("y") > 0 and parms["y"] or nil
@@ -33,10 +34,9 @@ if not h5obj then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to o
 
 -- create dataframes for each group
 local dfs = {}
-for _,group in ipairs(groups) do
-    local df = h5coro.dataframe(parms, h5obj, group)
+for i,group in ipairs(groups) do
+    local df = h5coro.dataframe(parms, h5obj, group, i)
     if not df then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("failed to create dataframe for group %s", group)) end
-    df:geo(time_column, x_column, y_column, z_column) -- (optionally) set geo columns
     dfs[group] = df
 end
 
@@ -48,6 +48,7 @@ final_df:receive(dfq_name, _rqst.rspq, #groups, timeout)
 for group,df in pairs(dfs) do
     df:join(timeout)
     if df:numrows() > 0 and df:numcols() > 0 then
+        df:geo(time_column, x_column, y_column, z_column) -- (optionally) set geo columns
         if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner
         df:run(core.framesender(dfq_name, parms["key_space"], timeout))
     end
@@ -69,8 +70,14 @@ if not final_df:waiton(timeout) then status_to_client(core.CRITICAL, core.RTE_FA
 if final_df:numrows() <= 0 or final_df:numcols() <= 0 then status_to_client(core.CRITICAL, core.RTE_FAILURE, "produced an empty dataframe") end
 status_to_client(core.INFO, core.RTE_STATUS, string.format("final dataframe constructed with %d columns and %d rows", final_df:numcols(), final_df:numrows()))
 
+-- build index (if necessary)
+if not index_column then
+    index_column = "_index"
+    final_df:buildindex(index_column)
+end
+
 -- create arrow dataframe
-local arrow_df = arrow.dataframe(parms, final_df)
+local arrow_df = arrow.dataframe(parms, final_df, index_column)
 if not arrow_df then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to create arrow dataframe") end
 
 -- write dataframe to parquet file

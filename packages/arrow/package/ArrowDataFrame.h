@@ -71,7 +71,7 @@ class ArrowDataFrame: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArrowDataFrame  (lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe);
+        ArrowDataFrame  (lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe, const char* index_column_name);
         ~ArrowDataFrame (void) override;
 
         /*--------------------------------------------------------------------
@@ -80,6 +80,7 @@ class ArrowDataFrame: public LuaObject
 
         RequestFields* parms;
         GeoDataFrame* dataframe;
+        string indexColumnName;
 };
 
 #endif  /* __arrow_data_frame__ */

@@ -59,10 +59,11 @@ int H5DataFrame::luaCreate(lua_State* L)
         /* Get Parameters */
         _parms = dynamic_cast<H5Coro::Fields*>(getLuaObject(L, 1, H5Coro::Fields::OBJECT_TYPE));
         _h5obj = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
-        const char* group = getLuaString(L, 3, true, NULL);
+        const char* _group = getLuaString(L, 3, true, NULL);
+        okey_t _df_key = getLuaInteger(L, 4, true, 0);
 
         /* Create and Return Object */
-        return createLuaObject(L, new H5DataFrame(L, _parms, _h5obj, group));
+        return createLuaObject(L, new H5DataFrame(L, _parms, _h5obj, _group, _df_key));
     }
     catch(const RunTimeException& e)
     {
@@ -76,10 +77,12 @@ int H5DataFrame::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* group):
-    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, _parms->crs.value.c_str()),
+H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key):
+    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group}}, _parms->crs.value.c_str()),
     h5obj(_h5obj),
-    data(_parms->variables, _h5obj, group, _parms->col.value, _parms->startRow.value, _parms->numRows.value)
+    data(_parms->variables, _h5obj, _group, _parms->col.value, _parms->startRow.value, _parms->numRows.value),
+    group(_group, Field::META_SOURCE_ID),
+    dfKey(_df_key)
 {
     LuaEngine::setAttrFunc(L, "join", luaJoin);
 }
@@ -90,6 +93,14 @@ H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj
 H5DataFrame::~H5DataFrame (void)
 {
     h5obj->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ * luaJoin - :join(<timeout>)
+ *----------------------------------------------------------------------------*/
+okey_t H5DataFrame::getKey (void) const
+{
+    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

@@ -64,16 +64,19 @@ class H5DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* group);
+                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key);
                             ~H5DataFrame        (void) override;
+        okey_t              getKey              (void) const override;
         static int          luaJoin             (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Object*   h5obj;
-        H5VarSet    data;
+        H5Object*               h5obj;
+        H5VarSet                data;
+        FieldElement<string>    group;
+        okey_t                  dfKey;
 };
 
 #endif  /* __h5_file__ */

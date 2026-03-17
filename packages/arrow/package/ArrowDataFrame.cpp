@@ -535,7 +535,8 @@ int ArrowDataFrame::luaCreate (lua_State* L)
     {
         _parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
         _dataframe = dynamic_cast<GeoDataFrame*>(getLuaObject(L, 2, GeoDataFrame::OBJECT_TYPE));
-        return createLuaObject(L, new ArrowDataFrame(L, _parms, _dataframe));
+        const char* index_column_name = getLuaString(L, 3, true, _dataframe->getTimeColumnName().c_str());
+        return createLuaObject(L, new ArrowDataFrame(L, _parms, _dataframe, index_column_name));
     }
     catch(const RunTimeException& e)
     {
@@ -609,7 +610,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
                 if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS());
-                appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
+                appendPandasMetaData(lua_obj->indexColumnName.c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());
                 metadata->Append("recordinfo", dataframe.getInfoAsJson());
@@ -753,10 +754,11 @@ int ArrowDataFrame::luaImport (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe):
+ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe, const char* index_column_name):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    dataframe(_dataframe)
+    dataframe(_dataframe),
+    indexColumnName(index_column_name)
 {
     assert(parms);
     assert(dataframe);

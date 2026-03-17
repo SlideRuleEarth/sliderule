@@ -191,7 +191,7 @@ def h5p (datasets, resource, asset):
 #
 #  DataFrame H5
 #
-def h5x (variables, resource, asset, groups=None, col=None, startrow=None, numrows=None, time_column=None, x_column=None, y_column=None, z_column=None, session=None):
+def h5x (variables, resource, asset, groups=None, col=None, startrow=None, numrows=None, index_column=None, time_column=None, x_column=None, y_column=None, z_column=None, crs=None, session=None):
     '''
     Builds a DataFrame from an HDF5 file where each variable in ``variables`` is a column.
 
@@ -230,14 +230,16 @@ def h5x (variables, resource, asset, groups=None, col=None, startrow=None, numro
     if col: parms["col"] = col
     if startrow: parms["startrow"] = startrow
     if numrows: parms["numrows"] = numrows
-    if time_column: parms["time_column"] = time_column
-    if x_column: parms["x_column"] = x_column
-    if y_column: parms["y_column"] = y_column
-    if z_column: parms["z_column"] = z_column
+    if index_column: parms["index"] = index_column
+    if time_column: parms["time"] = time_column
+    if x_column: parms["x"] = x_column
+    if y_column: parms["y"] = y_column
+    if z_column: parms["z"] = z_column
+    if crs: parms["crs"] = crs
 
     # determine format
     format = "parquet"
-    if time_column and x_column and y_column:
+    if x_column and y_column:
         format = "geoparquet"
 
     # manage output for convenience
