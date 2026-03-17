@@ -164,7 +164,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     utm_zone.setEncodingFlags(META_COLUMN);
 
     /* Call Parent Class Initialization of GeoColumns */
-    populateDataframe();
+    populateGeoColumns();
 
     try
     {

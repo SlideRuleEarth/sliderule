@@ -87,7 +87,7 @@
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
-    /* Derived classes call populateDataframe after column members initialize */
+    /* Derived classes call populateGeoColumns after column members initialize */
 }
 
 /*----------------------------------------------------------------------------

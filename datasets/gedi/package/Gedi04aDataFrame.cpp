@@ -98,7 +98,7 @@ Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFiel
     outq_name)
 {
     /* Call Parent Class Initialization of GeoColumns */
-    populateDataframe();
+    populateGeoColumns();
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);

@@ -173,7 +173,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);
 
     /* Call Parent Class Initialization of GeoColumns */
-    populateDataframe();
+    populateGeoColumns();
 
     /* Set Signal Confidence Index */
     if(parms->surfaceType != Icesat2Fields::SRT_DYNAMIC)

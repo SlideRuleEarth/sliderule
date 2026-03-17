@@ -64,7 +64,7 @@ class H5DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* group=NULL);
+                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* group);
                             ~H5DataFrame        (void) override;
         static int          luaJoin             (lua_State* L);
 

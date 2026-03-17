@@ -441,6 +441,11 @@ H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name,
         {"col",         &col},
         {"startrow",    &startRow},
         {"numrows",     &numRows},
+        {"crs",         &crs},
+        {"time",        &time_column},
+        {"x",           &x_column},
+        {"y",           &y_column},
+        {"z",           &z_column},
         {"groups",      &groups},
         {"datasets",    &datasets}})
 {

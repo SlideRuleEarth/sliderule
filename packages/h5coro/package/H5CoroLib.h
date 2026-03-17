@@ -229,6 +229,10 @@ namespace H5Coro
         FieldElement<long>      startRow {0};
         FieldElement<long>      numRows {0};
         FieldElement<string>    crs;
+        FieldElement<string>    time_column;
+        FieldElement<string>    x_column;
+        FieldElement<string>    y_column;
+        FieldElement<string>    z_column;
         FieldList<string>       groups;
         FieldList<string>       datasets;
     };
