@@ -2113,7 +2113,7 @@ int GeoDataFrame::luaBuildIndex (lua_State* L)
         mlog(e.level(), "Error building index: %s", e.what());
     }
 
-    return returnLuaStatus(L, status);
+    return returnLuaStatus(L, status); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 }
 
 /*----------------------------------------------------------------------------

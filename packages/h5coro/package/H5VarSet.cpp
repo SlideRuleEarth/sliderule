@@ -146,7 +146,7 @@ long H5VarSet::addToGDF(GeoDataFrame* gdf) const
         const uint32_t encoding = multidim ?
                                   (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
                                   static_cast<uint32_t>(array->elementType());
-        long dataset_rows = gdf->appendFromBuffer(dataset_name, array->h5f->info.data, array->h5f->info.datasize, encoding, false);
+        const long dataset_rows = gdf->appendFromBuffer(dataset_name, array->h5f->info.data, array->h5f->info.datasize, encoding, false);
         if(dataset_rows == 0)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);

@@ -60,7 +60,7 @@ int H5DataFrame::luaCreate(lua_State* L)
         _parms = dynamic_cast<H5Coro::Fields*>(getLuaObject(L, 1, H5Coro::Fields::OBJECT_TYPE));
         _h5obj = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* _group = getLuaString(L, 3, true, NULL);
-        okey_t _df_key = getLuaInteger(L, 4, true, 0);
+        const okey_t _df_key = getLuaInteger(L, 4, true, 0);
 
         /* Create and Return Object */
         return createLuaObject(L, new H5DataFrame(L, _parms, _h5obj, _group, _df_key));
