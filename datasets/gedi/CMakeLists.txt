@@ -54,10 +54,3 @@ install (
     DESTINATION
         ${CONFDIR}/api
 )
-
-install (
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/GEDI_EPSG7912.projjson
-    DESTINATION
-        ${CONFDIR}
-)

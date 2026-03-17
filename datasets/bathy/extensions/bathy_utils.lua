@@ -32,7 +32,7 @@ local function get_atl09(parms, t0, t1, userlog, resource)
             end
         end
     end
-    return h5.object(parms["asset09"], resource09)
+    return h5coro.object(parms["asset09"], resource09)
 end
 
 -----------------

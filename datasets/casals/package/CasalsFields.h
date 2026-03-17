@@ -98,7 +98,7 @@ class CasalsFields: public RequestFields
         const char* getResource (void) const { return resource.value.c_str(); }
 
         // CRS support
-        static const char* crsITRF2020() { static string crs = GeoDataFrame::loadCRSFile("CASALS_EPSG9989.projjson"); return crs.c_str(); }
+        static const char* crsITRF2020() { static string crs = GeoDataFrame::loadCRSFile("EPSG9989.projjson"); return crs.c_str(); }
 
         /*--------------------------------------------------------------------
          * Data

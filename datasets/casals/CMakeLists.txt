@@ -30,10 +30,3 @@ install (
     DESTINATION
         ${CONFDIR}/api
 )
-
-install (
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/CASALS_EPSG9989.projjson
-    DESTINATION
-        ${CONFDIR}
-)

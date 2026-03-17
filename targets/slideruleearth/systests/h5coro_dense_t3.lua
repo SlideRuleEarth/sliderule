@@ -32,7 +32,7 @@
     local startrow = 0
     local numrows = core.ALL_ROWS
 
-    f2 = h5.dataset(streaming.READER,
+    f2 = h5coro.dataset(streaming.READER,
                     asset,
                     resource_path,
                     dataset_name,
@@ -61,7 +61,7 @@
     dataset_name = "/goes_imager_projection/semi_major_axis"
     dtype = core.DYNAMIC
 
-    f3 = h5.dataset(streaming.READER,
+    f3 = h5coro.dataset(streaming.READER,
                     asset2,
                     resource_path,
                     dataset_name,

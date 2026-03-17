@@ -26,7 +26,7 @@ runner.unittest("CASALS 1B DataFrame", function()
         resource = "lidar/2024-11-12/casals_l1b_20241112T163941_001_02.h5"
     })
 
-    local casals1bh5 = h5.object("casals1b", parms["resource"])
+    local casals1bh5 = h5coro.object("casals1b", parms["resource"])
     local casals1bdf = casals.casals1bx(parms, casals1bh5, nil, nil, core.EVENTQ)
 
     runner.assert(casals1bdf:waiton(30000), "timed out creating dataframe", true)

@@ -38,7 +38,7 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "RecordObject.h"
 #include "FootprintReader.h"
 #include "Gedi04aReader.h"

@@ -114,7 +114,7 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     if(outq_name) outQ = new Publisher(outq_name);
 
     /* Call Parent Class Initialization of GeoColumns */
-    populateDataframe();
+    populateGeoColumns();
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);

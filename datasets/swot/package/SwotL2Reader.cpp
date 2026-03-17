@@ -38,7 +38,7 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "SwotFields.h"
 #include "SwotL2Reader.h"
 

@@ -27,7 +27,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 import numpy
+import tempfile
 import sliderule
 from sliderule import logger
 
@@ -185,3 +187,87 @@ def h5p (datasets, resource, asset):
 
     # Return Results
     return results
+
+#
+#  DataFrame H5
+#
+def h5x (variables, resource, asset, groups=None, col=None, startrow=None, numrows=None, index_column=None, time_column=None, x_column=None, y_column=None, z_column=None, crs=None, session=None):
+    '''
+    Builds a DataFrame from an HDF5 file where each variable in ``variables`` is a column.
+
+    The ``groups`` parameter is used to create datasets from multiple groups within the file.  For example,
+    if ``groups = ["/data/r1", "/data/r2", "/data/r3"]`` and ``datasets = ["x", "y"]``
+    then the dataframe will have two columns: "x" and "y"
+    that are populated from six datasets within the file: "/data/r1/x", "/data/r2/x", "data/r3/x", and "/data/r1/y", "/data/r2/y", "data/r3/y"
+
+    Parameters
+    ----------
+        variables:  list
+                    list of variables to read from each group
+        resource:   str
+                    HDF5 filename
+        asset:      str
+                    data source asset
+        groups:     list
+                    list of full paths to the groups to read from the file
+
+    Returns
+    -------
+    DataFrame
+        A pandas dataframe of the data read from the file
+    '''
+    # defaults
+    if groups == None:
+        groups = ["/"]
+
+    # baseline parameters
+    parms = {
+        "variables": variables,
+        "groups": groups,
+    }
+
+    # optional parameters
+    if col: parms["col"] = col
+    if startrow: parms["startrow"] = startrow
+    if numrows: parms["numrows"] = numrows
+    if index_column: parms["index"] = index_column
+    if time_column: parms["time"] = time_column
+    if x_column: parms["x"] = x_column
+    if y_column: parms["y"] = y_column
+    if z_column: parms["z"] = z_column
+    if crs: parms["crs"] = crs
+
+    # determine format
+    format = "parquet"
+    if x_column and y_column:
+        format = "geoparquet"
+
+    # manage output for convenience
+    delete_tempfile = False
+    if "output" not in parms:
+        delete_tempfile = True
+        parms["output"] = {
+            "path": tempfile.mktemp(),
+            "format": format,
+            "open_on_complete": True
+        }
+
+    # build request
+    rqst = {
+        "parms": parms,
+        "asset": asset,
+        "resource": resource
+    }
+
+    # make request
+    rsps = sliderule.source("h5x", rqst, stream=True, session=session)
+
+    # build geodataframe
+    gdf = sliderule.procoutputfile(parms, rsps)
+
+    # delete tempfile
+    if delete_tempfile and os.path.exists(parms["output"]["path"]):
+        os.remove(parms["output"]["path"])
+
+    # return geodataframe
+    return gdf

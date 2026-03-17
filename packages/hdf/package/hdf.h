@@ -29,18 +29,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5pkg__
-#define __h5pkg__
+#ifndef __hdfpkg__
+#define __hdfpkg__
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void inith5 (void);
-void deinith5 (void);
+void inithdf (void);
+void deinithdf (void);
 }
 
-#endif  /* __h5pkg__ */
+#endif  /* __hdfpkg__ */
 
 

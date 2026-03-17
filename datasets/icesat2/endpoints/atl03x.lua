@@ -23,16 +23,16 @@ dataframe.proxy("atl03x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     -- atl08
     local atl08h5 = nil
     if parms:stage(icesat2.ATL08) then
-        atl08h5 = h5.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
+        atl08h5 = h5coro.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
     end
     -- atl24
     local atl24h5 = nil
     if parms:stage(icesat2.ATL24) then
         local atl24_filename = resource:gsub("ATL03", "ATL24"):gsub(".h5", "_002_01.h5")
-        atl24h5 = h5.object("icesat2-atl24", atl24_filename)
+        atl24h5 = h5coro.object("icesat2-atl24", atl24_filename)
     end
     -- atl03x
-    local atl03h5 = h5.object(parms["asset"], resource)
+    local atl03h5 = h5coro.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl03x(beam, parms, atl03h5, atl08h5, atl24h5, _rqst.rspq)
         if not dataframes[beam] then

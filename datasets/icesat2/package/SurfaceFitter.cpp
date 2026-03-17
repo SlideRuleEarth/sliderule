@@ -238,7 +238,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     delete ancillary_columns;
 
     // finalize dataframe
-    dataframe->populateDataframe();
+    dataframe->populateGeoColumns();
 
     // update runtime and return success
     updateRunTime(TimeLib::latchtime() - start);

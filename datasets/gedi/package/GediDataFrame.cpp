@@ -87,7 +87,7 @@
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
-    /* Derived classes call populateDataframe after column members initialize */
+    /* Derived classes call populateGeoColumns after column members initialize */
 }
 
 /*----------------------------------------------------------------------------
@@ -117,7 +117,6 @@ okey_t GediDataFrame::getKey (void) const
 const char* GediDataFrame::getCRS (void)
 {
     /* Load and cache the GEDI CRS once; returned value is compact PROJJSON. */
-    const static string crs = GeoDataFrame::loadCRSFile("GEDI_EPSG7912.projjson");
+    const static string crs = GeoDataFrame::loadCRSFile("EPSG7912.projjson");
     return crs.c_str();
 }
-

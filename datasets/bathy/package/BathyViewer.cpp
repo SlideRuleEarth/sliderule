@@ -40,7 +40,7 @@
 
 #include "icesat2.h"
 #include "OsApi.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5Array.h"
 #include "GeoLib.h"
 #include "RasterObject.h"

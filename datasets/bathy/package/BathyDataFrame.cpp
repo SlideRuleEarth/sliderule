@@ -41,7 +41,7 @@
 
 #include "OsApi.h"
 #include "MsgQ.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5Object.h"
 #include "BathyDataFrame.h"
 #include "GeoLib.h"
@@ -164,7 +164,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     utm_zone.setEncodingFlags(META_COLUMN);
 
     /* Call Parent Class Initialization of GeoColumns */
-    populateDataframe();
+    populateGeoColumns();
 
     try
     {

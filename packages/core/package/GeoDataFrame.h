@@ -187,7 +187,8 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        addMetaData         (const char* name, Field* meta, bool free_on_delete);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
-        void                        populateDataframe   (void);
+        bool                        setGeoColumns       (const char* time_column, const char* x_column, const char* y_column, const char* z_column);
+        void                        populateGeoColumns  (void);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
 
         virtual okey_t              getKey              (void) const;
@@ -274,7 +275,7 @@ class GeoDataFrame: public LuaObject, public Field
                                             const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
 
-        void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id);
+        void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
         static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
@@ -293,6 +294,8 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
         static int      luaGetCRS           (lua_State* L);
+        static int      luaSetGeoColumns    (lua_State* L);
+        static int      luaBuildIndex       (lua_State* L);
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
 

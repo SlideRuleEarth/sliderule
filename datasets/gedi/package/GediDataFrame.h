@@ -41,7 +41,7 @@
 #include "GeoDataFrame.h"
 #include "H5Object.h"
 #include "H5Array.h"
-#include "H5Coro.h"
+#include "H5CoroLib.h"
 #include "H5VarSet.h"
 #include "OsApi.h"
 #include "StringLib.h"
