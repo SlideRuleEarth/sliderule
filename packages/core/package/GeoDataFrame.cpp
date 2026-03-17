@@ -1636,17 +1636,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                         // append columns and metadata to dataframe
                         for(rec_ref_t& entry: *df_rec_list)
                         {
-                            gdf_rec_t* rec = entry.rec;
-                            gdf_rec_t data = {
-                                .key        = rec->key,
-                                .type       = rec->type,
-                                .size       = rec->size,
-                                .encoding   = rec->encoding,
-                                .num_rows   = rec->num_rows,
-                                .name       = rec->name,
-                                .data       = rec->data
-                            };
-                            info->dataframe->appendDataframe(&data, source_id);
+                            info->dataframe->appendDataframe(entry.rec, source_id);
                             inq.dereference(entry.ref);
                         }
 
