@@ -103,8 +103,6 @@ SurfaceFitter::~SurfaceFitter (void)
  *----------------------------------------------------------------------------*/
 bool SurfaceFitter::run (GeoDataFrame* dataframe)
 {
-    const double start = TimeLib::latchtime();
-
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
@@ -240,8 +238,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     // finalize dataframe
     dataframe->populateGeoColumns();
 
-    // update runtime and return success
-    updateRunTime(TimeLib::latchtime() - start);
+    // update runtime
     return true;
 }
 

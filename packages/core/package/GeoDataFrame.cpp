@@ -1727,6 +1727,9 @@ void* GeoDataFrame::runThread (void* parm)
             {
                 if(runner)
                 {
+                    // latch the start time
+                    const double start = TimeLib::latchtime();
+
                     // execute frame runner
                     if(!runner->run(dataframe))
                     {
@@ -1734,6 +1737,9 @@ void* GeoDataFrame::runThread (void* parm)
                         mlog(CRITICAL, "error encountered in frame runner: %s", runner->getType());
                         dataframe->active.store(false);
                     }
+
+                    // update runtime
+                    runner->updateRunTime(TimeLib::latchtime() - start);
 
                     // release frame runner
                     runner->releaseLuaObject();

@@ -25,6 +25,12 @@ dataframe.proxy("atl03x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     if parms:stage(icesat2.ATL08) then
         atl08h5 = h5coro.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
     end
+    -- atl09
+    if parms:stage(icesat2.ATL09) then
+        local utils = require("icesat2_utils")
+        local atmo = utils.create_atmo_runner(parms, userlog)
+        table.insert(runners, atmo)
+    end
     -- atl24
     local atl24h5 = nil
     if parms:stage(icesat2.ATL24) then

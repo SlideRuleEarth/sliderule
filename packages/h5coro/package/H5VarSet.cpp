@@ -65,8 +65,9 @@ H5VarSet::H5VarSet(const FieldList<string>& variable_list, H5Coro::Context* cont
 /*----------------------------------------------------------------------------
  * joinToGDF
  *----------------------------------------------------------------------------*/
-void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception)
+bool H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception)
 {
+    bool status = true;
     H5DArray* array = NULL;
     const char* dataset_name = variables.first(&array);
     while(dataset_name != NULL)
@@ -79,10 +80,15 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
 
         if(!gdf->addNewColumn(dataset_name, encoding))
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add column for <%s>", dataset_name);
+            status = false;
+            if(throw_exception)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add column for <%s>", dataset_name);
+            }
         }
         dataset_name = variables.next(&array);
     }
+    return status;
 }
 
 /*----------------------------------------------------------------------------

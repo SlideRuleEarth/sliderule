@@ -414,6 +414,12 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
         stages[STAGE_ATL06] = true;
     }
 
+    // handle atl09 sampline options
+    if(atl09Fields.length() > 0)
+    {
+        stages[STAGE_ATL09] = true;
+    }
+
     // handle PhoREAL options
     if(phoreal.provided)
     {
@@ -535,6 +541,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"atl03_ph_fields",     &atl03PhFields},
         {"atl06_fields",        &atl06Fields},
         {"atl08_fields",        &atl08Fields},
+        {"atl09_fields",        &atl09Fields},
         {"atl13_fields",        &atl13Fields},
         {"granule",             &granuleFields} })
 {

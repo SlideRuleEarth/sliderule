@@ -46,6 +46,7 @@
 #include "Atl06Dispatch.h"
 #include "Atl08DataFrame.h"
 #include "Atl08Dispatch.h"
+#include "Atl09Sampler.h"
 #include "Atl13DataFrame.h"
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
@@ -90,6 +91,7 @@ int icesat2_open (lua_State *L)
         {"atl08x",              Atl08DataFrame::luaCreate},
         {"fit",                 SurfaceFitter::luaCreate},
         {"phoreal",             PhoReal::luaCreate},
+        {"atmo",                Atl09Sampler::luaCreate},
         {"atl13x",              Atl13DataFrame::luaCreate},
         {"atl24x",              Atl24DataFrame::luaCreate},
         {"atl24granule",        Atl24Granule::luaCreate},
@@ -132,9 +134,10 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Fields::ATL08_UNCLASSIFIED);
     LuaEngine::setAttrInt(L, "ATL06",                       Icesat2Fields::STAGE_ATL06);
     LuaEngine::setAttrInt(L, "ATL08",                       Icesat2Fields::STAGE_ATL08);
+    LuaEngine::setAttrInt(L, "ATL09",                       Icesat2Fields::STAGE_ATL09);
+    LuaEngine::setAttrInt(L, "ATL24",                       Icesat2Fields::STAGE_ATL24);
     LuaEngine::setAttrInt(L, "YAPC",                        Icesat2Fields::STAGE_YAPC);
     LuaEngine::setAttrInt(L, "PHOREAL",                     Icesat2Fields::STAGE_PHOREAL);
-    LuaEngine::setAttrInt(L, "ATL24",                       Icesat2Fields::STAGE_ATL24);
 
     return 1;
 }

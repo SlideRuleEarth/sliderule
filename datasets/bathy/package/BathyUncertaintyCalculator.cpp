@@ -229,8 +229,6 @@ BathyUncertaintyCalculator::~BathyUncertaintyCalculator (void)
  *----------------------------------------------------------------------------*/
 bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
 {
-    const double start = TimeLib::latchtime();
-
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
 
     /* join kd resource read */
@@ -356,6 +354,5 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     }
 
     /* mark completion */
-    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }

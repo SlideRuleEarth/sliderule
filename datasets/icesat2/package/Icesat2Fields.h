@@ -357,7 +357,8 @@ class Icesat2Fields: public RequestFields
             STAGE_YAPC = 2,     // yet another photon classifier
             STAGE_PHOREAL = 3,  // atl08 vegetation science
             STAGE_ATL24 = 4,    // atl24 vegetation science
-            NUM_STAGES = 5
+            STAGE_ATL09 = 5,    // sample atmospheric data
+            NUM_STAGES = 6
         } stages_t;
 
         /* Ancillary Field Types */
@@ -564,6 +565,7 @@ class Icesat2Fields: public RequestFields
         FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
+        FieldList<string>                                   atl09Fields;                                            // list of ATL09 fields used by Atl09Sampler
         FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
         Atl03GranuleFields                                  granuleFields;                                          // ATL03 granule attributes
 

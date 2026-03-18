@@ -10,8 +10,17 @@ local channels  = 6 -- number of dataframes per resource (one per beam)
 
 dataframe.proxy("atl06x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
     local dataframes = {}
+    local runners = {}
     local resource = parms["resource"]
 
+    -- atl09
+    if parms:stage(icesat2.ATL09) then
+        local utils = require("icesat2_utils")
+        local atmo = utils.create_atmo_runner(parms, userlog)
+        table.insert(runners, atmo)
+    end
+
+    -- atl06
     local atl06h5 = h5coro.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl06x(beam, parms, atl06h5, _rqst.rspq)
@@ -20,5 +29,5 @@ dataframe.proxy("atl06x", parms, rqst["parms"], _rqst.rspq, channels, function(u
         end
     end
 
-    return dataframes, {}
+    return dataframes, runners
 end)
