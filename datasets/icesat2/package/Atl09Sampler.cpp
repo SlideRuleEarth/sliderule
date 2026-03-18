@@ -57,6 +57,7 @@ const struct luaL_Reg Atl09Sampler::LUA_META_TABLE[] = {
 
 typedef struct {
     long startrow;
+    long endrow;
     long numrows;
 } range_to_sample_t;
 
@@ -68,17 +69,42 @@ static range_to_sample_t get_time_range(H5Array<double>& delta_time, const time8
 {
     range_to_sample_t range_to_sample = {
         .startrow = 0,
-        .numrows = 1
+        .endrow = 0,
+        .numrows = 0
     };
 
     if(delta_time.h5f)
     {
+        // wait for delta times to finish being read
         delta_time.join(timeout_ms, true);
+
+        // find the start and end rows
         for(long i = 0; i < delta_time.size; i++)
         {
             time8_t t = Icesat2Fields::deltatime2timestamp(delta_time[i]);
-            if(t.nanoseconds < min_time.nanoseconds) range_to_sample.startrow = i;
-            else if(t.nanoseconds <= max_time.nanoseconds) range_to_sample.numrows++;
+            if(t.nanoseconds < min_time.nanoseconds)
+            {
+                range_to_sample.startrow = i;
+            }
+            else if(t.nanoseconds <= max_time.nanoseconds)
+            {
+                range_to_sample.endrow = i;
+            }
+            else
+            {
+                range_to_sample.endrow++;
+                break;
+            }
+        }
+
+        // calculate number of rows
+        if(range_to_sample.endrow > range_to_sample.startrow)
+        {
+            range_to_sample.numrows = range_to_sample.endrow - range_to_sample.startrow + 1;
+        }
+        else
+        {
+            range_to_sample.numrows = 1;
         }
     }
 
@@ -173,15 +199,9 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "time column empty for %s", profile.c_str());
         }
 
-        // get minimum and maximum times
+        // get minimum and maximum times (assumes monotonically increasing time)
         time8_t min_time = (*time_column)[0];
-        time8_t max_time = (*time_column)[0];
-        for(long i = 1; i < time_column->length(); i++)
-        {
-            time8_t row_time = (*time_column)[i];
-            if(row_time.nanoseconds < min_time.nanoseconds) min_time = row_time;
-            else if(row_time.nanoseconds > max_time.nanoseconds) max_time = row_time;
-        }
+        time8_t max_time = (*time_column)[time_column->length() - 1];
 
         // separate fields lists into groups
         FieldList<string> bckgrd_atlas_fields;
