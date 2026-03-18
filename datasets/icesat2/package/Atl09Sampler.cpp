@@ -93,14 +93,14 @@ static void sample_data(GeoDataFrame* dataframe, H5Array<double>& delta_time, H5
         data.joinToGDF(dataframe, timeout_ms, true);
 
         // find and append best sample for each variable
-        long group_index = range_to_sample.startrow;
+        long row = 0;
         for(long dataframe_index = 0; dataframe_index < time_column.length(); dataframe_index++)
         {
             time8_t dataframe_time = time_column[dataframe_index];
-            while((group_index < delta_time.size) &&
-                    (Icesat2Fields::deltatime2timestamp(delta_time[group_index]).nanoseconds < dataframe_time.nanoseconds))
-                group_index++;
-            data.addToGDF(dataframe, group_index - range_to_sample.startrow);
+            while((row < (range_to_sample.numrows - 1)) &&
+                  (Icesat2Fields::deltatime2timestamp(delta_time[row + range_to_sample.startrow]).nanoseconds < dataframe_time.nanoseconds))
+                row++;
+            data.addToGDF(dataframe, row);
         }
     }
 }
@@ -166,11 +166,11 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         FieldColumn<time8_t>* time_column = reinterpret_cast<FieldColumn<time8_t>*>(dataframe->getColumn("time_ns"));
         if(!time_column)
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find time column");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find time column for %s", profile.c_str());
         }
         else if(time_column->length() <= 0)
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "time column empty");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "time column empty for %s", profile.c_str());
         }
 
         // get minimum and maximum times

@@ -34,20 +34,21 @@ local function find_atl09_granule (parms, userlog, with_time_range)
     local atl09_attempt = 1
     local atl09_resource = nil
     while true do
+        userlog:alert(core.INFO, core.RTE_STATUS, string.format("Attempt %d of %d ATL09 CMR request: %s", atl09_attempt, atl09_max_retries, json.encode(atl09_parms)))
         local rc2, rsps2 = earthdata.search(atl09_parms)
         if rc2 == earthdata.SUCCESS then
             if #rsps2 == 1 then
                 atl09_resource = rsps2[1]
                 break -- success
             else
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("invalid number of resources for ATL09 CMR request for %s: %d", json.encode(atl09_parms), #rsps2))
+                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("Invalid number of resources for ATL09 CMR request for %s: %d", json.encode(atl09_parms), #rsps2))
                 break -- failure
             end
         else
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed attempt %d to make ATL09 CMR request <%d>: %s", atl09_attempt, rc2, rsps2))
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("Failed attempt %d to make ATL09 CMR request <%d>: %s", atl09_attempt, rc2, rsps2))
             atl09_attempt = atl09_attempt + 1
             if atl09_attempt > atl09_max_retries then
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to make ATL09 CMR request for %s... aborting!", json.encode(atl09_parms)))
+                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("Failed to make ATL09 CMR request for %s... aborting!", json.encode(atl09_parms)))
                 break -- failure
             end
         end
@@ -60,6 +61,7 @@ end
 -- Create ATL09 Atmospheric Sampler Runner --
 local function create_atmo_runner (parms, userlog, with_time_range)
     local atl09_granule = find_atl09_granule(parms, userlog)
+    userlog:alert(core.INFO, core.RTE_STATUS, string.format("Processing atmospheric data from %s", atl09_granule))
     local atl09h5 = h5coro.object("icesat2-atl09", atl09_granule)
     return icesat2.atmo(parms, atl09h5, with_time_range)
 end
