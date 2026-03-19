@@ -25,19 +25,19 @@ _pubkey_cache = {}
 # Globals
 # ###############################
 
-STACK_NAME = os.environ["STACK_NAME"]
-DOMAIN = os.environ["DOMAIN"]
-PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
-PROJECT_FOLDER = os.environ["PROJECT_FOLDER"]
-PROJECT_PUBLIC_BUCKET = os.environ["PROJECT_PUBLIC_BUCKET"]
-CONTAINER_REGISTRY = os.environ['CONTAINER_REGISTRY']
-JWT_ISSUER = os.environ['JWT_ISSUER']
-ALERT_STREAM = os.environ['ALERT_STREAM']
-TELEMETRY_STREAM = os.environ['TELEMETRY_STREAM']
-ENVIRONMENT_VERSION = os.environ['ENVIRONMENT_VERSION']
-AFFILIATES_FILENAME = os.environ['AFFILIATES_FILENAME']
-SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
-ALERT_EMAIL = os.environ['ALERT_EMAIL']
+STACK_NAME = os.environ.get("STACK_NAME")
+DOMAIN = os.environ.get("DOMAIN")
+PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
+PROJECT_FOLDER = os.environ.get("PROJECT_FOLDER")
+PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
+CONTAINER_REGISTRY = os.environ.get('CONTAINER_REGISTRY')
+JWT_ISSUER = os.environ.get('JWT_ISSUER')
+ALERT_STREAM = os.environ.get('ALERT_STREAM')
+TELEMETRY_STREAM = os.environ.get('TELEMETRY_STREAM')
+ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
+AFFILIATES_FILENAME = os.environ.get('AFFILIATES_FILENAME')
+SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL')
+ALERT_EMAIL = os.environ.get('ALERT_EMAIL')
 
 SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp','sliderule','monitor']
 
@@ -158,9 +158,13 @@ def get_affiliation(username):
     """
     Retrieve and return dictionary of affiliation attributes for provided user
     """
-    response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
-    data = json.load(response['Body'])
-    return data.get(username)
+    try:
+        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
+        data = json.load(response['Body']).get(username, {})
+        return data.get("active", False) and data or None
+    except Exception as e:
+        print(f"Failed to get the affiliates file: {e}")
+        return None
 
 # ###############################
 # Business Logic
@@ -282,7 +286,7 @@ def validate_request(event, info):
             return None
 
     # check organization membership
-    if 'member' not in info["orgRoles"]:
+    if ('member' not in info["orgRoles"]) and ('affiliate' not in info["orgRoles"]):
         print(f'Access denied to {info["username"]}, organization roles: {info["orgRoles"]}')
         return None
 

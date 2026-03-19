@@ -47,7 +47,6 @@ def test_key_signing(username):
 def test_sliderule_key_signing(username):
     import sliderule
     session = sliderule.create_session(domain="slideruleearth.io", cluster=None)
-    session.authenticate()
     headers = {}
     session._Session__signrequest(headers, "slideruleearth.io/info", "")
     rsps = lambda_gateway({
