@@ -196,7 +196,7 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         }
         else if(time_column->length() <= 0)
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "time column empty for %s", profile.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "empty dataframe <%s>", profile.c_str());
         }
 
         // get minimum and maximum times (assumes monotonically increasing time)

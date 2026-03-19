@@ -1734,7 +1734,7 @@ void* GeoDataFrame::runThread (void* parm)
                     if(!runner->run(dataframe))
                     {
                         // exit loop on error
-                        mlog(CRITICAL, "error encountered in frame runner: %s", runner->getType());
+                        mlog(CRITICAL, "Error encountered in %s", runner->getType());
                         dataframe->active.store(false);
                     }
 

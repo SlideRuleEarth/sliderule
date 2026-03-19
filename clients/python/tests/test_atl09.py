@@ -48,3 +48,98 @@ class TestAtl09:
         compare(gdf, "bckgrd_atlas/bckgrd_counts", bckgrd_atlas_df, "bckgrd_counts")
         compare(gdf, "high_rate/dem_h", high_rate_df, "dem_h")
         compare(gdf, "low_rate/met_t10m", low_rate_df, "met_t10m")
+
+    def test_atl03x(self, init):
+        parms = {
+            "poly": region,
+            "rgt": 554,
+            "cycle": 8,
+            "region": 2,
+            "beams": ["gt2l"],
+            "atl09_fields": [
+                "bckgrd_atlas/bckgrd_counts",
+                "high_rate/dem_h",
+                "low_rate/met_t10m"
+            ]
+        }
+        gdf = sliderule.run("atl03x", parms)
+        assert init
+        assert gdf.attrs['meta']['srctbl']['0'] == 'ATL03_20200731150749_05540802_007_01.h5'
+        assert len(gdf) == 42267
+
+    def test_atl06x(self, init):
+        parms = {
+            "poly": region,
+            "rgt": 554,
+            "cycle": 8,
+            "region": 2,
+            "beams": ["gt2l"],
+            "atl09_fields": [
+                "low_rate/met_ps",
+                "low_rate/met_t10m"
+            ]
+        }
+        gdf = sliderule.run("atl06x", parms)
+        assert init
+        assert gdf.attrs['meta']['srctbl']['0'] == 'ATL06_20200731150749_05540802_007_01.h5'
+        assert len(gdf["low_rate/met_ps"]) == 1049
+        assert len(gdf["low_rate/met_t10m"]) == 1049
+        assert len(gdf) == 1049
+
+    def test_atl08x(self, init):
+        parms = {
+            "poly": region,
+            "rgt": 554,
+            "cycle": 8,
+            "region": 2,
+            "beams": ["gt2l"],
+            "atl09_fields": [
+                "bckgrd_atlas/bckgrd_counts",
+                "bckgrd_atlas/bckgrd_hist_top"
+            ]
+        }
+        gdf = sliderule.run("atl08x", parms)
+        assert init
+        assert gdf.attrs['meta']['srctbl']['0'] == 'ATL08_20200731150749_05540802_007_01.h5'
+        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 207
+        assert len(gdf["bckgrd_atlas/bckgrd_hist_top"]) == 207
+        assert len(gdf) == 207
+
+    def test_atl13x(self, init):
+        parms = {
+            "atl13": {
+                "refid": 5952002394
+            },
+            "atl09_fields": [
+                "bckgrd_atlas/bckgrd_counts",
+                "bckgrd_atlas/bckgrd_hist_top"
+            ]
+        }
+        gdf = sliderule.run("atl13x", parms)
+        assert init
+        assert 'ATL13_20200111053122_02370601_006_01.h5' in [gdf.attrs['meta']['srctbl'][k] for k in gdf.attrs['meta']['srctbl']]
+        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 5032
+        assert len(gdf["bckgrd_atlas/bckgrd_hist_top"]) == 5032
+        assert len(gdf) == 5032
+
+    def test_atl24x(self, init):
+        poly = [
+            { "lon": -77.86172817025538, "lat": 33.96965679591263  },
+            { "lon": -77.86172817025538, "lat": 34.058170002123106 },
+            { "lon": -77.95509140822963, "lat": 34.058170002123106 },
+            { "lon": -77.95509140822963, "lat": 33.96965679591263  },
+            { "lon": -77.86172817025538, "lat": 33.96965679591263  }
+        ]
+        parms = {
+            "poly": poly,
+            "beams": ["gt1r"],
+            "atl09_fields": [
+                "high_rate/msw_flag"
+            ]
+        }
+        gdf = sliderule.run("atl24x", parms)
+        assert init
+        print("ATTRS", gdf.attrs['meta'])
+        assert 'ATL24_20200505053536_06060706_006_01_002_01.h5' in [gdf.attrs['meta']['srctbl'][k] for k in gdf.attrs['meta']['srctbl']]
+        assert len(gdf["high_rate/msw_flag"]) == 5032
+        assert len(gdf) == 5032
