@@ -32,6 +32,9 @@ HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager 
 TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(' ')) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
 THIRD_PARTY_REDIRECT_HOSTS = set(os.environ.get('THIRD_PARTY_REDIRECT_HOSTS', '').split(' ')) # Untrusted redirect_uri list which forces descope of audience in token
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
+PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
+PROJECT_FOLDER = os.environ["PROJECT_FOLDER"]
+AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
 
 # GitHub OAuth endpoints (from the environment only for testing)
 GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
@@ -80,12 +83,19 @@ _kms_client = None
 # AWS DynamoDB client (initialized lazily for lambda container reuse)
 _dynamodb_client = None
 
+# AWS S3 client (initialized lazily for lambda container reuse)
+_s3_client = None
+
 # =============================================================================
 # AWS Helper Functions
 # =============================================================================
 
 def get_secret(secret_arn):
-    """Retrieve a secret from AWS Secrets Manager."""
+    """
+    Retrieve a secret from AWS Secrets Manager.
+    """
+    # since secrets are cached, the secrets manager client is not cached here
+    # because this function should only be called on the initial container use
     client = boto3.client('secretsmanager')
     response = client.get_secret_value(SecretId=secret_arn)
     return response['SecretString']
@@ -114,7 +124,9 @@ def get_hmac_signing_key():
 
 
 def get_kms_client():
-    """Get or create KMS client (cached for Lambda container reuse)."""
+    """
+    Get or create KMS client (cached for Lambda container reuse).
+    """
     global _kms_client
     if _kms_client is None:
         _kms_client = boto3.client('kms')
@@ -200,6 +212,25 @@ def session_load(key, with_delete=False):
     return item.get("value")
 
 
+def get_s3_client():
+    """
+    Get or create S3 client (cached for Lambda container reuse).
+    """
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client('s3')
+    return _s3_client
+
+
+def get_affiliation(username):
+    """
+    Retrieve and return dictionary of affiliation attributes for provided user
+    """
+    s3 = get_s3_client()
+    response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
+    data = json.load(response['Body'])
+    return data.get(username)
+
 # =============================================================================
 # API Gateway Helper Functions
 # =============================================================================
@@ -238,14 +269,22 @@ def json_response(status_code, body, headers=None, with_cors=True, with_cache=Fa
 # General Helper Functions
 # =============================================================================
 
-def contains_scope(scope, scopes_to_check):
+def contains_scope(scope, scopes_to_check, check="any"):
     """
-    Returns true if any element of the scope is in the scopes to check
+    check="any": returns true if *any* element of the scope is in the scopes to check
+    check="all": returns true if "all" elements of the scope are in the scopes to check
     """
-    for s in scopes_to_check:
-        if s in scope:
-            return True
-    return False
+    if check == "any":
+        for s in scopes_to_check:
+            if s in scope:
+                return True
+        return False
+    elif check == "all":
+        for s in scope:
+            if s not in scopes_to_check:
+                return False
+        return True
+
 
 
 def contains_redirect(redirect_uri, valid_redirect_hosts):
@@ -425,9 +464,9 @@ def get_github_user(authorization_str):
     return response.json()
 
 
-def get_organization_roles(authorization_str, username, scope):
+def get_user_role(authorization_str, username):
     """
-    Builds a list of roles for the user
+    Return users role in organization
     Raises:
         Exception: If GitHub API returns an unexpected error (5xx, 429, etc.)
                    This prevents silently degrading users to non-member status
@@ -468,18 +507,13 @@ def get_organization_roles(authorization_str, username, scope):
         print(f"Unexpected response checking org membership: {response.status_code} {response.text}")
         raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
 
-    # Get requested permissions from scope
-    requesting_trusted = 'sliderule:admin' in scope
-
-    # Build organization roles
-    roles = []
-    if is_org_owner and requesting_trusted:
-        roles = ['owner', 'member']
+    # Return user role
+    if is_org_owner:
+        return 'owner'
     elif is_org_member:
-        roles = ['member']
-
-    # Return organization roles
-    return roles
+        return 'member'
+    else:
+        return None
 
 
 def get_user_teams(authorization_str, org_roles):
@@ -547,7 +581,7 @@ def get_user_teams(authorization_str, org_roles):
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
 
-def generate_audience_list(username, teams, org_roles, scope):
+def generate_audience_list(username, clusters, org_roles, scope):
     """
     Returns a list of services user has access to.
     """
@@ -566,8 +600,8 @@ def generate_audience_list(username, teams, org_roles, scope):
         if 'monitor' in resources: # access to cluster monitor
             audiences.append('monitor')
         if 'sliderule' in resources: # access to cluster
-            if teams: # all members can access services at subdomains tied to teams they belong to
-                audiences.extend(teams)
+            if clusters: # all members can access services at subdomains tied to these clusters
+                audiences.extend(clusters)
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
         if 'mcp' in resources: # any authenticated user has access to MCP services
@@ -669,18 +703,38 @@ def authenticate_user(authorization_str, scope):
     """
     Build the authentication token and metadata for the user
     """
-    # get username
+    # get username (JWT claim)
     user_info = get_github_user(authorization_str)
     username = user_info.get('login')
     if not username:
         raise RuntimeError('Could not get GitHub username')
 
-    # get user metadata
-    org_roles = get_organization_roles(authorization_str, username, scope)
-    teams = get_user_teams(authorization_str, org_roles)
-    audience_list = generate_audience_list(username, teams, org_roles, scope)
+    # get organizational roles (JWT claim)
+    user_role = get_user_role(authorization_str, username)
+    org_roles = []
+    if (user_role == 'owner') and ('sliderule:admin' in scope): # must be owner AND requesting admin
+        org_roles = ['owner', 'member']
+    elif (user_role == 'owner') or (user_role == 'member'): # owners not requesting admin and regular members
+        org_roles = ['member']
 
-    # token expiration based on JWT_EXPIRATION_HOURS config
+    # get clusters (match one-to-one to user's teams)
+    clusters = get_user_teams(authorization_str, org_roles)
+
+    # get affiliation
+    affiliation = get_affiliation(username)
+    if affiliation:
+        # check allowed scopes for affiliate
+        if not contains_scope(scope, affiliation["allowed_scopes"], check="all"):
+            raise RuntimeError(f"Forbidden scope: {scope} not contained in {affiliation["allowed_scopes"]}")
+        # append affiliate to organization roles
+        org_roles.append('affiliate')
+        # append affiliates clusters to clusters
+        clusters.append(affiliation['clusters'])
+
+    # build audience list (JWT claim)
+    audience_list = generate_audience_list(username, clusters, org_roles, scope)
+
+    # token expiration based on JWT_EXPIRATION_HOURS config (JWT claim)
     now = datetime.now(timezone.utc)
     expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
 

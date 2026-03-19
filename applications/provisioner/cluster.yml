@@ -358,7 +358,7 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            VolumeSize: 40
+            VolumeSize: 20
             VolumeType: gp3
             DeleteOnTermination: true
       Tags:
@@ -605,7 +605,7 @@ Resources:
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
             Ebs:
-              VolumeSize: 100
+              VolumeSize: 40
               VolumeType: gp3
               DeleteOnTermination: true
         UserData:

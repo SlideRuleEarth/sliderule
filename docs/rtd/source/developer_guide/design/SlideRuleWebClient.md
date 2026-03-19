@@ -25,7 +25,12 @@ The SlideRule Web Client is a javascript application that runs in a user's brows
 
 The web client runs in a docker container inside a provisioned SlideRule cluster.  It is reached through the Intelligent Load Balancer (haproxy), and athentication proxy (NGINX), provided by the cluster.
 
-![Figure 1](../../assets/web-client-context.png "SlideRule Web Client Context")
+```{figure} ../../assets/web-client-context.png
+:alt: SlideRule Web Client Context
+:align: center
+
+SlideRule Web Client Context
+```
 
 A typical workflow for a user interacting with the web client is:
 1. An area of interest is drawn on the map
@@ -42,21 +47,9 @@ A typical workflow for a user interacting with the web client is:
 
 The client will have four main views:
 1. A ***beginner*** view - a simple map interface that is intuitive and allows users to quickly access basic features of SlideRule
-
-![Figure 2](https://raw.githubusercontent.com/SlideRuleEarth/assets/main/web-client-view2.png "Advanced View")
-
 2. An ***advanced*** view - a feature rich map interface with all of the processing request parameters exposed to the user for advanced SlideRule requests
-
-![Figure 3](https://raw.githubusercontent.com/SlideRuleEarth/assets/main/web-client-view1.png "Beginner View")
-
 3. A ***record*** view - a list of recent SlideRule requests along with the results available to replot and interrogate
-
-![Figure 4](https://raw.githubusercontent.com/SlideRuleEarth/assets/main/web-client-view3.png "Record View")
-
 4. A ***analysis*** view - a map plot of geospatial data or a scatter plot of along track data associated with one of the SlideRule processing requests
-
-![Figure 5](https://raw.githubusercontent.com/SlideRuleEarth/assets/main/web-client-view4.png "Profile View")
-
 
 ## Implementation Considerations
 
