@@ -242,6 +242,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
     bckgrd_delta_time   (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/delta_time").c_str()),
     bckgrd_rate         (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/bckgrd_rate").c_str()),
     geoid               (df->useGeoid ? df->hdf03 : NULL,       FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(),               0,  aoi.first_segment, aoi.num_segments),
+    anc_bckgrd_data     (df->parms->atl03BckgrdFields,df->hdf03,FString("%s/%s", df->beam, "bckgrd_atlas").c_str()),
     anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),        H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(),       H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),            H5Coro::ALL_COLS, aoi.first_photon,  aoi.num_photons)
@@ -269,6 +270,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
     if(df->useGeoid) geoid.join(df->readTimeoutMs, true);
 
     /* Join and Add Ancillary Columns */
+    anc_bckgrd_data.joinToGDF(df, df->readTimeoutMs, true);
     anc_geo_data.joinToGDF(df, df->readTimeoutMs, true);
     anc_corr_data.joinToGDF(df, df->readTimeoutMs, true);
     anc_ph_data.joinToGDF(df, df->readTimeoutMs, true);
@@ -827,6 +829,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Add Ancillary Elements */
+            if(atl03.anc_bckgrd_data.length() > 0)  atl03.anc_bckgrd_data.addToGDF(df, background_index);
             if(atl03.anc_geo_data.length() > 0)     atl03.anc_geo_data.addToGDF(df, current_segment);
             if(atl03.anc_corr_data.length() > 0)    atl03.anc_corr_data.addToGDF(df, current_segment);
             if(atl03.anc_ph_data.length() > 0)      atl03.anc_ph_data.addToGDF(df, current_photon);

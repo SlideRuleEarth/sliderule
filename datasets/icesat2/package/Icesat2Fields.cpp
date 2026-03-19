@@ -536,6 +536,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"maxi",                &maxIterations},
         {"H_min_win",           &minWindow},
         {"sigma_r_max",         &maxRobustDispersion},
+        {"atl03_bckgrd_fields", &atl03BckgrdFields},
         {"atl03_geo_fields",    &atl03GeoFields},
         {"atl03_corr_fields",   &atl03CorrFields},
         {"atl03_ph_fields",     &atl03PhFields},

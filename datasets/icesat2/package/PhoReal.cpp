@@ -129,6 +129,7 @@ bool PhoReal::run (GeoDataFrame* dataframe)
 
     // create new ancillary dataframe columns
     Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03BckgrdFields);
     GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03GeoFields);
     GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03CorrFields);
     GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);

@@ -560,6 +560,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<int>                                   maxIterations {5};                                      // DEPRECATED (use FitFields)
         FieldElement<double>                                minWindow {3.0};                                        // DEPRECATED (use FitFields)
         FieldElement<double>                                maxRobustDispersion {5.0};                              // DEPRECATED (use FitFields)
+        FieldList<string>                                   atl03BckgrdFields;                                      // list of background fields to associate with an extent
         FieldList<string>                                   atl03GeoFields;                                         // list of geolocation fields to associate with an extent
         FieldList<string>                                   atl03CorrFields;                                        // list of geophys_corr fields to associate with an extent
         FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent

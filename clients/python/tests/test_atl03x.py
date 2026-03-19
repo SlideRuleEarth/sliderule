@@ -1,12 +1,9 @@
 """Tests for atl03x"""
 
 import os
-import pytest
 import numpy as np
 from pathlib import Path
-from datetime import datetime
 from sliderule import sliderule, icesat2
-import geopandas as gpd
 
 TESTDIR = Path(__file__).parent
 RESOURCES = ["ATL03_20181019065445_03150111_006_02.h5"]
