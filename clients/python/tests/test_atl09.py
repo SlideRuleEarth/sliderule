@@ -65,6 +65,9 @@ class TestAtl09:
         gdf = sliderule.run("atl03x", parms)
         assert init
         assert gdf.attrs['meta']['srctbl']['0'] == 'ATL03_20200731150749_05540802_007_01.h5'
+        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 42267
+        assert len(gdf["high_rate/dem_h"]) == 42267
+        assert len(gdf["low_rate/met_t10m"]) == 42267
         assert len(gdf) == 42267
 
     def test_atl06x(self, init):
@@ -141,5 +144,50 @@ class TestAtl09:
         assert init
         print("ATTRS", gdf.attrs['meta'])
         assert 'ATL24_20200505053536_06060706_006_01_002_01.h5' in [gdf.attrs['meta']['srctbl'][k] for k in gdf.attrs['meta']['srctbl']]
-        assert len(gdf["high_rate/msw_flag"]) == 5032
-        assert len(gdf) == 5032
+        assert len(gdf["high_rate/msw_flag"]) == 709
+        assert len(gdf) == 709
+
+    def test_atl03x_surface(self, init):
+        parms = {
+            "poly": region,
+            "rgt": 554,
+            "cycle": 8,
+            "region": 2,
+            "beams": ["gt2l"],
+            "fit": {},
+            "atl09_fields": [
+                "bckgrd_atlas/bckgrd_counts",
+                "high_rate/dem_h",
+                "low_rate/met_t10m"
+            ]
+        }
+        gdf = sliderule.run("atl03x", parms)
+        assert init
+        assert gdf.attrs['meta']['srctbl']['0'] == 'ATL03_20200731150749_05540802_007_01.h5'
+        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 1013
+        assert len(gdf["high_rate/dem_h"]) == 1013
+        assert len(gdf["low_rate/met_t10m"]) == 1013
+        assert len(gdf) == 1013
+
+    def test_atl03x_phoreal(self, init):
+        parms = {
+            "poly": region,
+            "rgt": 554,
+            "cycle": 8,
+            "region": 2,
+            "beams": ["gt2l"],
+            "phoreal": {},
+            "atl08_fields": ["sigma_topo"],
+            "atl09_fields": [
+                "bckgrd_atlas/bckgrd_counts",
+                "high_rate/dem_h",
+                "low_rate/met_t10m"
+            ]
+        }
+        gdf = sliderule.run("atl03x", parms)
+        assert init
+        assert gdf.attrs['meta']['srctbl']['0'] == 'ATL03_20200731150749_05540802_007_01.h5'
+        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 996
+        assert len(gdf["high_rate/dem_h"]) == 996
+        assert len(gdf["low_rate/met_t10m"]) == 996
+        assert len(gdf) == 996
