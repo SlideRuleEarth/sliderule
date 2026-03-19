@@ -136,6 +136,7 @@ class Atl03DataFrame: public GeoDataFrame
                 H5Array<float>      bckgrd_rate;
                 H5Array<float>      geoid;
 
+                H5VarSet            anc_bckgrd_data;
                 H5VarSet            anc_geo_data;
                 H5VarSet            anc_corr_data;
                 H5VarSet            anc_ph_data;

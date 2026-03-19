@@ -14,6 +14,7 @@ if parms["key_space"] == core.INVALID_KEY then
     local resources_set_by_ams = false
     local rc_ams, response = earthdata.ams(rqst["parms"], nil, true, "ATL13")
     if rc_ams == earthdata.SUCCESS or rc_ams == earthdata.RC_RSPS_TRUNCATED then
+        if not rqst["parms"]["atl13"] then rqst["parms"]["atl13"] = {} end
         rqst["parms"]["atl13"]["refid"] = response["refid"]
         if not rqst["parms"]["resources"] then
             rqst["parms"]["resources"] = response["granules"]
@@ -44,11 +45,23 @@ if parms["key_space"] == core.INVALID_KEY then
     end
 end
 
+-- set locks if not supplied (since ATL13 requests are subsetted without a polygon)
+rqst["parms"]["locks"] = rqst["locks"] or 1
+
 -- proxy request
 dataframe.proxy("atl13x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
     local dataframes = {}
     local runners = {}
     local resource = parms["resource"]
+
+    -- atl09
+    if parms:stage(icesat2.ATL09) then
+        local utils = require("icesat2_utils")
+        local atmo = utils.create_atmo_runner(parms, userlog)
+        table.insert(runners, atmo)
+    end
+
+    -- atl13
     local h5obj = h5coro.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl13x(beam, parms, h5obj, _rqst.rspq)
@@ -56,5 +69,6 @@ dataframe.proxy("atl13x", parms, rqst["parms"], _rqst.rspq, channels, function(u
             userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
         end
     end
+
     return dataframes, runners
 end)

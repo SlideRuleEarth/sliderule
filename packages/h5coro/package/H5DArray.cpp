@@ -226,7 +226,7 @@ uint64_t H5DArray::serializeRow (uint8_t* buffer, int64_t row) const
 uint8_t* H5DArray::referenceElement (int64_t element) const
 {
     const uint64_t byte_offset = RecordObject::FIELD_TYPE_BYTES[h5f->info.datatype] * element;
-    if(byte_offset > (h5f->info.datasize - h5f->info.typesize)) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of bounds buffer access of element of size %u: %lu > %lu", h5f->info.typesize, byte_offset, h5f->info.datasize);
+    if(byte_offset > (h5f->info.datasize - h5f->info.typesize)) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of bounds buffer access of element of size %u: %lu > %lu", h5f->info.typesize, byte_offset, h5f->info.datasize - h5f->info.typesize);
     return &h5f->info.data[byte_offset];
 }
 

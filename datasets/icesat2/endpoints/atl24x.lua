@@ -22,6 +22,15 @@ dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     local dataframes = {}
     local runners = {}
     local resource = parms["resource"]
+
+    -- atl09
+    if parms:stage(icesat2.ATL09) then
+        local utils = require("icesat2_utils")
+        local atmo = utils.create_atmo_runner(parms, userlog)
+        table.insert(runners, atmo)
+    end
+
+    -- atl24
     local atl24h5 = h5coro.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl24x(beam, parms, atl24h5, _rqst.rspq)
@@ -29,5 +38,6 @@ dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(u
             userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
         end
     end
+
     return dataframes, runners
 end)

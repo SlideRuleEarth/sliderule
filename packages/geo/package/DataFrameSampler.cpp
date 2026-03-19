@@ -130,9 +130,7 @@ DataFrameSampler::~DataFrameSampler(void)
  *----------------------------------------------------------------------------*/
 bool DataFrameSampler::run (GeoDataFrame* dataframe)
 {
-    // latch start time for later runtime calculation
-    const double start = TimeLib::latchtime();
-
+    // get and check crs
     const string& frame_crs = dataframe->getCRS();
     if(frame_crs.empty())
     {
@@ -175,8 +173,7 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
         sampler->samples.clear();
     }
 
-    // update runtime and return success
-    updateRunTime(TimeLib::latchtime() - start);
+    // return success
     return true;
 }
 

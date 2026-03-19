@@ -93,8 +93,6 @@ BathySeaSurfaceFinder::~BathySeaSurfaceFinder (void)
  *----------------------------------------------------------------------------*/
 bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
 {
-    const double start = TimeLib::latchtime();
-
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
     const SurfaceFields& surface_parms = parms->surface;
 
@@ -313,6 +311,5 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
     }
 
     /* Mark Completion */
-    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }

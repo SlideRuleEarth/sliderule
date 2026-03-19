@@ -1,11 +1,8 @@
 """Tests datum support and CRS propagation through to raster sampling code."""
 
-import os
-import pytest
 import numpy as np
 from pathlib import Path
-from datetime import datetime
-from sliderule import sliderule, icesat2
+from sliderule import sliderule
 import geopandas as gpd
 from pyproj import CRS
 

@@ -29,19 +29,19 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __surface_fitter__
-#define __surface_fitter__
+#ifndef __atl09_sampler__
+#define __atl09_sampler__
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
+#include "H5Object.h"
 #include "Icesat2Fields.h"
-#include "Atl03DataFrame.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class SurfaceFitter: public GeoDataFrame::FrameRunner
+class Atl09Sampler: public GeoDataFrame::FrameRunner
 {
     public:
 
@@ -51,6 +51,9 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
+
+        static const int NUM_PROFILES = 3;
+        static const int TEMPORAL_SUBSET_THRESHOLD = 3; // number of ATL09 field per group to read before temporal subsetting employed
 
         /*--------------------------------------------------------------------
          * Methods
@@ -62,56 +65,18 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
     private:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-         static const double SPEED_OF_LIGHT;
-         static const double PULSE_REPITITION_FREQUENCY;
-         static const double RDE_SCALE_FACTOR;
-         static const double SIGMA_BEAM;
-         static const double SIGMA_XMIT;
-
-         /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint32_t    p;                  // index into photon array
-            double      r;                  // residual
-            double      x;                  // x-axis (x_atc relative to extent)
-        } point_t;
-
-        struct result_t {
-            int32_t     n_fit_photons = 0;  // number of photons in final fit
-            uint16_t    pflags = 0;         // processing flags
-            time8_t     time_ns {0};        // nanoseconds from GPS epoch
-            double      latitude = 0;
-            double      longitude = 0;
-            double      h_mean = 0;         // meters from ellipsoid
-            double      dh_fit_dx = 0;      // along track slope
-            double      y_atc = 0;          // distance from reference track
-            double      h_sigma = 0;
-            double      rms_misfit = 0;
-            double      window_height = 0;
-        };
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        SurfaceFitter  (lua_State* L, Icesat2Fields* _parms);
-        ~SurfaceFitter (void) override;
-
-        result_t        iterativeFitStage       (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photon, double center_of_extent);
-        static void     leastSquaresFit         (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
-        static void     quicksort               (point_t* array, int32_t start, int32_t end);
-        static int      quicksortpartition      (point_t* array, int32_t start, int32_t end);
+        Atl09Sampler  (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf09);
+        ~Atl09Sampler (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         Icesat2Fields*  parms;
+        H5Object*       hdf09;
 };
 
 #endif

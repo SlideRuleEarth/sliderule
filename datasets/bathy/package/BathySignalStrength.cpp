@@ -99,8 +99,6 @@ BathySignalStrength::~BathySignalStrength (void)
  *----------------------------------------------------------------------------*/
 bool BathySignalStrength::run(GeoDataFrame* dataframe)
 {
-    const double start = TimeLib::latchtime();
-
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
 
     // initialize parameters
@@ -253,6 +251,5 @@ bool BathySignalStrength::run(GeoDataFrame* dataframe)
     }
 
     // mark completion
-    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }

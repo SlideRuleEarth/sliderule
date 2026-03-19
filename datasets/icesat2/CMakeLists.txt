@@ -15,6 +15,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.cpp
@@ -50,6 +51,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.h
@@ -89,4 +91,11 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
     DESTINATION
         ${CONFDIR}/api
+)
+
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/icesat2_utils.lua
+    DESTINATION
+        ${CONFDIR}/ext
 )

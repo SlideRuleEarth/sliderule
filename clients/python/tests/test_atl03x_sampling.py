@@ -1,12 +1,10 @@
 """Tests for atl03x"""
 
 import os
-import pytest
 import numpy as np
 from pathlib import Path
 from datetime import datetime
 from sliderule import sliderule
-import numpy as np
 
 TESTDIR = Path(__file__).parent
 
