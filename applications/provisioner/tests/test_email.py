@@ -1,6 +1,8 @@
-from provisioner import send_email
 import os
+import importlib
+import provisioner
 
 def test_email(email):
     os.environ["ALERT_EMAIL"] = email
-    assert send_email(f"SlideRule Provisioner Test", "Hello World")
+    importlib.reload(provisioner)
+    assert provisioner.send_email(f"SlideRule Provisioner Test", "Hello World")
