@@ -805,3 +805,60 @@ def lambda_gateway(event, context):
 
         # unhandled exception
         return exception_reponse(e)
+
+# ###############################
+# Main: Local Test Environment
+# ###############################
+
+if __name__ == '__main__':
+
+    # imports
+    import sliderule
+    import argparse
+
+    # command line arguments
+    parser = argparse.ArgumentParser(description="""Provisioner Command Line""")
+    parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
+    parser.add_argument('--cluster',        type=str,               default="developers")
+    parser.add_argument('--path',           type=str,               default="developers")
+    parser.add_argument('--node_capacity',  type=int,               default=None)
+    parser.add_argument('--ttl',            type=int,               default=120)
+    parser.add_argument('--is_public',      action='store_true',    default=False)
+    parser.add_argument('--version',        type=str,               default="latest")
+    parser.add_argument('--branch',         type=str,               default="main")
+    parser.add_argument('--user_service',   action='store_true',    default=False)
+    parser.add_argument('--verbose',        action='store_true',    default=False)
+    args,_ = parser.parse_known_args()
+
+    # sliderule python client session
+    session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=args.verbose, user_service=args.user_service)
+
+    # provisioner request
+    rqst = {
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "org_roles": f'[{" ".join(session.ps_metadata["org_roles"])}]',
+                        "aud": f'[{" ".join(session.ps_metadata["aud"])}]',
+                        "sub": f'{session.ps_metadata["sub"]}'
+                    }
+                }
+            }
+        },
+        "rawPath": args.path,
+        "body": json.dumps({
+            "cluster": args.cluster,
+            "node_capacity": str(args.node_capacity),
+            "ttl": str(args.ttl),
+            "is_public": args.is_public,
+            "version": args.version,
+            "branch": args.branch
+        })
+    }
+
+    # call lambda
+    rsps = lambda_gateway(rqst, None)
+
+    # display response
+    print(json.dumps(rsps, indent=2))
