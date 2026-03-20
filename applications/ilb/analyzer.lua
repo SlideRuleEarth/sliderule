@@ -64,8 +64,14 @@ end
 local function ratelimit(txn)
     local client_ip = txn.sf:src()
     local username = txn:get_var("txn.sub")
+    local service_request = txn:get_var("txn.requested_service")
     local mode = username and #username > 0 and "user" or "ip"
     local originator = username and #username > 0 and username or client_ip
+
+    -- check for user service request (which doesn't get rate limited)
+    if username == service_request then
+        return
+    end
 
     -- check blocked status
     local now = os.time()

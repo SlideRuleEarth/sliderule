@@ -1,6 +1,6 @@
 local default_name = "http://"..sys.getcfg("ipv4")..":"..tostring(sys.getcfg("app_port"))
 local name = arg[1] or default_name
-local service = "sliderule"
+local service = sys.getcfg("cluster")
 local lifetime = 120 -- seconds
 local registration_state = false
 local initial_registration = true

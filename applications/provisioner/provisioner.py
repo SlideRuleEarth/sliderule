@@ -133,13 +133,13 @@ def get_stack_resources(stack_name):
 #
 # Get user asg stacks for parent cluster stack
 #
-def get_user_asg_stack_names(cluster_stack_name):
+def get_cluster_stack_names(cluster_stack_name):
     try:
         paginator = cf.get_paginator('describe_stacks')
         return [
             stack['StackName'] for page in paginator.paginate()
             for stack in page['Stacks']
-            if stack['StackName'].startswith(f"{cluster_stack_name}-")
+            if stack['StackName'].startswith(f"{cluster_stack_name}")
             and stack['StackStatus'] not in ('DELETE_COMPLETE', 'DELETE_IN_PROGRESS')
         ]
     except Exception as e:
@@ -503,7 +503,7 @@ def extend_handler(rqst, kind):
     if kind == 'cluster':
         rule_name = f'{cluster_stack_name}-auto-shutdown'
     elif kind == 'user':
-        rule_name = f'{build_user_asg_stack_name(cluster_stack_name)}-auto-shutdown'
+        rule_name = f'{build_user_asg_stack_name(cluster_stack_name, rqst["username"])}-auto-shutdown'
 
     # calculate new shutdown time
     new_shutdown_time = datetime.now(timezone.utc) + timedelta(minutes=rqst["ttl"])
@@ -533,33 +533,34 @@ def lambda_destroy(event, context):
         cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
         parent_stack_name = event.get("stack_name", build_cluster_stack_name(cluster)) # scheduled deletions pass stack name
 
-        # get list of user asg stacks to delete (will only exist if this is a cluster stack)
-        user_asg_stack_names = get_user_asg_stack_names(parent_stack_name)
+        # get list of stacks to delete
+        stack_names = get_cluster_stack_names(parent_stack_name)
 
         # delete all stacks
-        for stack_name in user_asg_stack_names + [parent_stack_name]:
+        for stack_name in stack_names:
 
             # initialize state info for stack
             state[stack_name] = {}
+            info = state[stack_name]
 
             # delete eventbridge target and rule
             rule_name = f'{stack_name}-auto-shutdown'
             print(f'Delete initiated for {rule_name}')
             try:
                 ev.remove_targets(Rule=rule_name, Ids=["1"])
-                state["EventBridge Target Removed"] = True
+                info["EventBridge Target Removed"] = True
             except Exception as e:
                 print(f'Unable to delete eventbridge rule: {e}')
-                state["EventBridge Target Removed"] = False
+                info["EventBridge Target Removed"] = False
             try:
                 ev.delete_rule(Name=rule_name, Force=False)
-                state["EventBridge Rule Removed"] = True
+                info["EventBridge Rule Removed"] = True
             except Exception as e:
                 print(f'Unable to delete eventbridge rule: {e}')
-                state["EventBridge Rule Removed"] = False
+                info["EventBridge Rule Removed"] = False
 
             # delete stack
-            state["response"] = cf.delete_stack(StackName=stack_name)
+            info["response"] = cf.delete_stack(StackName=stack_name)
             print(f'Delete initiated for {stack_name}')
 
     # explicipty handle exceptions
@@ -574,18 +575,20 @@ def lambda_destroy(event, context):
 #
 # Status
 #
-def status_handler(rqst):
+def status_handler(rqst, kind):
 
     # initialize response state
-    state = {"exists": False}
+    state = {}
 
-    # cluster stack
-    try:
+    # get parent cluster stack name
+    cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
+
+    # status cluster
+    if kind == 'cluster':
+
         # status stack
-        cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
         cluster_stack = get_stack_description(cluster_stack_name)
         state["response"] = clean_description(cluster_stack)
-        state["exists"] = True # cluster stack still exists
 
         # attempt to get auto-shutdown time
         rule_name = scheduler.build_rule_name(cluster_stack_name)
@@ -607,53 +610,43 @@ def status_handler(rqst):
                 if tag["Key"] == "NodeCapacity":
                     state["node_capacity"] = tag["Value"]
 
-    # catch "stack not found" exceptions
-    except Exception as e:
-        if not isinstance(e, botocore.exceptions.ClientError) or (e.response['Error']['Code'] != 'ValidationError'):
-            raise # only let "stack not found" errors go silently
+    # status user asg
+    elif kind == 'user':
 
-    # get list of user asg stacks to status
-    state["user_asgs"] = {}
-    for user_asg_stack_name in get_user_asg_stack_names(cluster_stack_name):
-        state["user_asgs"][user_asg_stack_name] = {}
-        info = state["user_asgs"][user_asg_stack_name]
+        # stack status
+        user_asg_stack_name = build_user_asg_stack_name(cluster_stack_name, rqst["username"])
+        user_asg_stack = get_stack_description(user_asg_stack_name)
+        state["response"] = clean_description(user_asg_stack)
 
-        # user asg stack
-        try:
-            # stack status
-            user_asg_stack = get_stack_description(user_asg_stack_name)
-            info["response"] = clean_description(user_asg_stack)
-            state["exists"] = True # user asg stack still exists
+        # attempt to get auto-shutdown time
+        user_asg_rule_name = scheduler.build_rule_name(user_asg_stack_name)
+        state["auto_shutdown"] = scheduler.get_next_trigger_time(user_asg_rule_name)
 
-            # attempt to get auto-shutdown time
-            user_asg_rule_name = scheduler.build_rule_name(user_asg_stack_name)
-            info["auto_shutdown"] = scheduler.get_next_trigger_time(user_asg_rule_name)
+        # get number of nodes
+        user_asg_node_instances = get_instances_by_name(f'{rqst["cluster"]}-node-{rqst["username"]}')
+        state["current_nodes"] = len(user_asg_node_instances)
 
-            # get number of nodes
-            user_asg_node_instances = get_instances_by_name(f'{rqst["cluster"]}-node-{rqst["username"]}')
-            info["current_nodes"] = len(user_asg_node_instances)
-
-        # catch "stack not found" exceptions
-        except Exception as e:
-            if not isinstance(e, botocore.exceptions.ClientError) or (e.response['Error']['Code'] != 'ValidationError'):
-                raise # only let "stack not found" errors go silently
-
-    # return
-    if state["exists"]:
-        return json_response(200, state)
-    else:
-        return json_response(404, {'error': 'not found', 'error_description': 'no stacks were found associated with this cluster'})
+    # return success
+    return json_response(200, state)
 
 #
 # Events
 #
-def events_handler(rqst):
+def events_handler(rqst, kind):
 
     # get events for stack
     cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
-    description = cf.describe_stack_events(StackName=cluster_stack_name)
+
+    # get stack name
+    if kind == 'cluster':
+        stack_name = cluster_stack_name
+    elif kind == 'user':
+        stack_name = build_user_asg_stack_name(cluster_stack_name, rqst["username"])
+
+    # get stack events
+    description = cf.describe_stack_events(StackName=stack_name)
     stack_events = description["StackEvents"]
-    print(f'Events requested for {cluster_stack_name}')
+    print(f'Events requested for {stack_name}')
 
     # build cleaned response
     response = [clean_description(stack_event) for stack_event in stack_events]
@@ -759,26 +752,43 @@ def lambda_gateway(event, context):
         # route request
         if rqst == None: # check request
             return json_response(403, {'error': 'access denied'})
+
         elif rqst["path"] == '/info': # only uses info, but still requires validated rqst
             return json_response(200, info)
+
         elif rqst["path"] == '/deploy': # deploys a cluster
             return deploy_handler(rqst, 'cluster')
+
         elif rqst["path"] == f'/deploy/{rqst["username"]}': # deploys a user asg connected to a cluster
             return deploy_handler(rqst, 'user')
+
         elif rqst["path"] == '/extend': # extends the TTL of a cluster
             return extend_handler(rqst, 'cluster')
+
         elif rqst["path"] == f'/extend/{rqst["username"]}': # extends the TTL of a user asg connected to a cluster
             return extend_handler(rqst, 'user')
+
         elif rqst["path"] == '/destroy': # destroys a cluster
             return lambda_destroy(rqst, None)
+
         elif rqst["path"] == '/status': # returns deployment status of a cluster
-            return status_handler(rqst)
+            return status_handler(rqst, 'cluster')
+
+        elif rqst["path"] == f'/status/{rqst["username"]}': # returns deployment status of a user asg connected to a cluster
+            return status_handler(rqst, 'user')
+
         elif rqst["path"] == '/events': # returns cloudformation stack events for a cluster deployment
-            return events_handler(rqst)
+            return events_handler(rqst, 'cluster')
+
+        elif rqst["path"] == f'/events/{rqst["username"]}': # returns cloudformation stack events for a user asg connected to a cluster deployment
+            return events_handler(rqst, 'user')
+
         elif rqst["path"] == '/report/clusters' or rqst["path"] == '/report': # returns report of clusters that have been deployed
             return report_clusters_handler(rqst)
+
         elif rqst["path"] == '/report/tests': # returns report on status of last test runner deployment
             return report_tests_handler(rqst)
+
         elif rqst["path"] == '/test': # deploys test runner
             return deploy_test_handler(rqst)
 

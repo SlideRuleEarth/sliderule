@@ -146,12 +146,12 @@ SystemConfig::SystemConfig(void):
         {"project_bucket",              &projectBucket},
         {"project_folder",              &projectFolder},
         {"project_region",              &projectRegion},
-        {"orchestrator_url;",           &orchestratorURL},
+        {"orchestrator",                &orchestrator},
         {"alert_stream",                &alertStream},
         {"telemetry_stream",            &telemetryStream},
         {"cluster",                     &cluster},
         {"domain",                      &domain},
-        {"ams_url",                     &amsURL},
+        {"ams",                         &ams},
         {"container_registry",          &containerRegistry}
     })
 {
@@ -163,12 +163,12 @@ SystemConfig::SystemConfig(void):
     setIfProvided(projectBucket, "PROJECT_BUCKET");
     setIfProvided(projectFolder, "PROJECT_FOLDER");
     setIfProvided(projectRegion, "PROJECT_REGION");
-    setIfProvided(orchestratorURL, "ORCHESTRATOR");
+    setIfProvided(orchestrator, "ORCHESTRATOR");
     setIfProvided(alertStream, "ALERT_STREAM");
     setIfProvided(telemetryStream, "TELEMETRY_STREAM");
     setIfProvided(cluster, "CLUSTER");
     setIfProvided(domain, "DOMAIN");
-    setIfProvided(amsURL, "AMS");
+    setIfProvided(ams, "AMS");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 

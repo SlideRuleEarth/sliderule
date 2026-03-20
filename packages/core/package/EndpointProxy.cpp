@@ -47,8 +47,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* EndpointProxy::SERVICE = "sliderule";
-
 const char* EndpointProxy::OBJECT_TYPE = "EndpointProxy";
 const char* EndpointProxy::LUA_META_NAME = "EndpointProxy";
 const struct luaL_Reg EndpointProxy::LUA_META_TABLE[] = {
@@ -301,6 +299,7 @@ int EndpointProxy::luaNumProxyThreads (lua_State* L)
 void* EndpointProxy::collatorThread (void* parm)
 {
     EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
+    const char* service = SystemConfig::settings().cluster.value.c_str();
     int current_resource = 0;
 
     alert(INFO, RTE_STATUS, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
@@ -310,7 +309,7 @@ void* EndpointProxy::collatorThread (void* parm)
         /* Get Available Nodes */
         const int resources_to_process = proxy->numResources - current_resource;
         const int num_nodes_to_request = MIN(resources_to_process, proxy->numProxyThreads);
-        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout, proxy->locksPerNode);
+        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(service, num_nodes_to_request, proxy->timeout, proxy->locksPerNode);
         if(nodes)
         {
             for(unsigned i = 0; i < nodes->size(); i++)
@@ -395,6 +394,7 @@ void* EndpointProxy::collatorThread (void* parm)
 void* EndpointProxy::proxyThread (void* parm)
 {
     EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
+    const char* service = SystemConfig::settings().cluster.value.c_str();
 
     // build headers
     CurlLib::hdrs_t headers;
@@ -451,7 +451,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     mlog(CRITICAL, "Retrying processing resource [%d out of %d]: %s", current_resource + 1, proxy->numResources, resource);
                     while(proxy->active.load() && (proxy->outQ->getSubCnt() > 0) && !node)
                     {
-                        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout, proxy->locksPerNode);
+                        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(service, 1, proxy->timeout, proxy->locksPerNode);
                         if(nodes)
                         {
                             /* Check Number of Nodes Returned */

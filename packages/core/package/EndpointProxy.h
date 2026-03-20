@@ -61,8 +61,6 @@ class EndpointProxy: public LuaObject
         static const int DEFAULT_PROXY_THREADS = 40; // when no better method to determine is available
         static const int NUM_RETRIES = 3;
 
-        static const char* SERVICE;
-
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];

@@ -112,12 +112,12 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            projectBucket;
         FieldElement<string>            projectFolder;
         FieldElement<string>            projectRegion;
-        FieldElement<string>            orchestratorURL;
+        FieldElement<string>            orchestrator;
         FieldElement<string>            alertStream;
         FieldElement<string>            telemetryStream;
         FieldElement<string>            cluster;
         FieldElement<string>            domain;
-        FieldElement<string>            amsURL;
+        FieldElement<string>            ams;
         FieldElement<string>            containerRegistry;
 
     private:

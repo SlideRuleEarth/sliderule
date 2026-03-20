@@ -53,7 +53,7 @@
 OrchestratorLib::rsps_t OrchestratorLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
 {
     rsps_t rsps;
-    const FString path("%s%s", SystemConfig::settings().orchestratorURL.value.c_str(), resource);
+    const FString path("%s%s", SystemConfig::settings().orchestrator.value.c_str(), resource);
     rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size);
     return rsps;
 }

@@ -72,7 +72,7 @@ AmsLib::rsps_t AmsLib::request (EndpointObject::verb_t verb, const char* resourc
 
     // make request
     rsps_t rsps;
-    const FString path("%s/ams/%s", SystemConfig::settings().amsURL.value.c_str(), resource);
+    const FString path("%s/ams/%s", SystemConfig::settings().ams.value.c_str(), resource);
     rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size,
                                  false, false, CurlLib::DATA_TIMEOUT, &headers);
 
