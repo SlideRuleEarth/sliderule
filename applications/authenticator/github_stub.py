@@ -10,10 +10,6 @@ import json
 
 app = FastAPI()
 
-tmp_username_file = "/tmp/authenticator-pytest-username.txt"
-if os.path.exists(tmp_username_file):
-    os.remove(tmp_username_file)
-
 # #######################
 # Helper Functions
 # #######################
@@ -80,8 +76,11 @@ async def handle_api_user(request: Request):
     form = await request.form()
     data = dict(form)
     try:
+        tmp_username_file = "/tmp/authenticator-pytest-username.txt"
         with open(tmp_username_file, "r") as file:
             username = file.read()
+        if os.path.exists(tmp_username_file):
+            os.remove(tmp_username_file)
     except:
         username = "my-user-name"
     return {
