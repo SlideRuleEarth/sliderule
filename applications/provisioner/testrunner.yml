@@ -34,9 +34,6 @@ Parameters:
   DeleteAfterMinutes:
     Type: Number
     Default: 80
-  DockerComposeVersion:
-    Type: String
-    Default: "v2.24.5"
 
 Resources:
 
@@ -222,7 +219,7 @@ Resources:
           #
           # Install Docker Compose V2
           #
-          curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+          curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
           chmod +x /usr/local/bin/docker-compose
           mkdir -p /usr/local/lib/docker/cli-plugins
           ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose

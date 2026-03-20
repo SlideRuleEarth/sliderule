@@ -408,33 +408,35 @@ def deploy_handler(rqst, kind):
     destroy_lambda_arn = outputs["DestroyLambdaArn"]
     schedule_lambda_arn = outputs["ScheduleLambdaArn"]
 
-    # get user data for instances
-    ilb_user_data = open("ilb.sh").read()
-    monitor_user_data = open("monitor.sh").read()
-    node_user_data = open("node.sh").read()
-
     # get cluster stack name following the naming convention
     cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
 
+    # get user data for instances
+    ilb_user_data = os.path.expandvars(open("ilb.sh").read())
+    monitor_user_data = os.path.expandvars(open("monitor.sh").read())
+    node_user_data = os.path.expandvars(open("node.sh").read())
+
+    # set version in node user data
+    node_user_data = node_user_data.replace("$VERSION", rqst["version"])
+
     # handle cluster deployments
     if kind == 'cluster':
+
+        # set cluster in node user data
+        node_user_data = node_user_data.replace("$CLUSTER", rqst["cluster"])
 
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
             {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
-            {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
-            {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
-            {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
-            {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
             {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
+            {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
             {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
-            {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
             {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
-            {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
-            {"ParameterKey": "JwtIssuer", "ParameterValue": JWT_ISSUER},
+            {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
             {"ParameterKey": "AlertStream", "ParameterValue": ALERT_STREAM},
             {"ParameterKey": "TelemetryStream", "ParameterValue": TELEMETRY_STREAM},
             {"ParameterKey": "IlbUserData", "ParameterValue": ilb_user_data},
@@ -455,6 +457,9 @@ def deploy_handler(rqst, kind):
     # handle user asg deployments
     elif kind == 'user':
 
+        # set cluster in node user data
+        node_user_data = node_user_data.replace("$CLUSTER", rqst["username"])
+
         # get parent stack resources
         resources = get_stack_resources(cluster_stack_name)
         cluster_subnet = resources["ClusterSubnet"]
@@ -466,6 +471,7 @@ def deploy_handler(rqst, kind):
             {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
             {"ParameterKey": "Username", "ParameterValue": rqst["username"]},
             {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
             {"ParameterKey": "ClusterSubnet", "ParameterValue": cluster_subnet},
             {"ParameterKey": "ClusterNodeSG", "ParameterValue": cluster_node_sg},
             {"ParameterKey": "InstanceProfile", "ParameterValue": instance_profile},

@@ -71,7 +71,8 @@ def init (
     plugins=None,
     log_handler=None,
     github_token=None,
-    rethrow=False ):
+    rethrow=False,
+    user_service=False):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -98,6 +99,8 @@ def init (
                         personal access token for GitHub authentication
         rethrow:        bool
                         client rethrows exceptions to be handled by calling code
+        user_service:   bool
+                        requests use user associated asg connected to cluster
 
     Returns
     -------
@@ -119,7 +122,8 @@ def init (
         node_capacity=desired_nodes,
         ttl=time_to_live,
         github_token=github_token,
-        rethrow=rethrow)
+        rethrow=rethrow,
+        user_service=user_service)
     # configure logging
     if log_handler != None:
         logger.addHandler(log_handler)
@@ -327,7 +331,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=Non
     session = checksession(session)
     # get number of nodes currently registered
     try:
-        rsps = session.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0)
+        rsps = session.source("status", parm={"service":session.service}, path="/discovery", retries=0)
         available_servers = rsps["nodes"]
     except Exception as e:
         logger.debug(f'Failed to retrieve number of nodes registered: {e}')

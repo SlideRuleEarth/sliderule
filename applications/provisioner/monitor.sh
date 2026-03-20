@@ -27,20 +27,20 @@ systemctl start docker
 usermod -aG docker ec2-user
 
 # Install Docker Compose V2
-retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+retry curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 mkdir -p /usr/local/lib/docker/cli-plugins
 ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Log into ECR
-aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
+aws ecr get-login-password --region $AWS_REGION  | docker login --username AWS --password-stdin $CONTAINER_REGISTRY
 
 # Create docker-compose.yml
 cat > docker-compose.yml << EOF
 version: "3.9"
 services:
 monitor:
-    image: ${ContainerRegistry}/monitor:${Version}
+    image: $CONTAINER_REGISTRY/monitor:$VERSION
     container_name: monitor
     network_mode: host
     restart: always
@@ -48,7 +48,7 @@ monitor:
     labels:
     - autoheal=true
 monitor-agent:
-    image: ${ContainerRegistry}/monitor-agent:${Version}
+    image: $CONTAINER_REGISTRY/monitor-agent:$VERSION
     container_name: monitor-agent
     network_mode: host
     restart: unless-stopped

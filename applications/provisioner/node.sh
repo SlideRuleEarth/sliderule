@@ -27,31 +27,31 @@ systemctl start docker
 usermod -aG docker ec2-user
 
 # Install Docker Compose V2
-retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+retry curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 mkdir -p /usr/local/lib/docker/cli-plugins
 ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Log into ECR
-aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $CONTAINER_REGISTRY
 
 # Setup environment
 export IPV4=$(hostname -I | awk '{print $1}')
 
 # Download AMS files
 mkdir -p /data
-aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/ams/ /data/ --recursive
+aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/ams/ /data/ --recursive
 
 # Download plugin files
 mkdir -p /plugins
-aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
+aws s3 cp s3://$PROJECT_BUCKET/plugins/ /plugins/ --recursive
 
 # Create docker-compose.yml
 cat > docker-compose.yml << EOF
 version: "3.9"
 services:
     sliderule:
-    image: ${ContainerRegistry}/sliderule:${Version}
+    image: $CONTAINER_REGISTRY/sliderule:$VERSION
     container_name: sliderule
     network_mode: host
     restart: always
@@ -69,17 +69,17 @@ services:
     environment:
         - LOG_FORMAT=FMT_CLOUD
         - IPV4=$IPV4
-        - ENVIRONMENT_VERSION=${EnvironmentVersion}
-        - PROJECT_BUCKET=${ProjectBucket}
-        - PROJECT_FOLDER=${ProjectFolder}
-        - PROJECT_REGION=${AWS::Region}
-        - ORCHESTRATOR=http://${IlbIP}:8050
-        - ALERT_STREAM=${AlertStream}
-        - TELEMETRY_STREAM=${TelemetryStream}
-        - CLUSTER=${Cluster}
-        - DOMAIN=${Domain}
+        - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
+        - PROJECT_BUCKET=$PROJECT_BUCKET
+        - PROJECT_FOLDER=$PROJECT_FOLDER
+        - PROJECT_REGION=$AWS_REGION
+        - ORCHESTRATOR=http://10.0.128.5:8050
+        - ALERT_STREAM=$ALERT_STREAM
+        - TELEMETRY_STREAM=$TELEMETRY_STREAM
+        - CLUSTER=$CLUSTER
+        - DOMAIN=$DOMAIN
         - AMS=http://127.0.0.1:9082
-        - CONTAINER_REGISTRY=${ContainerRegistry}
+        - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
     labels:
         - autoheal=true
     healthcheck:
@@ -89,7 +89,7 @@ services:
         retries: 1
         start_period: 30s
     ams:
-    image: ${ContainerRegistry}/ams:${Version}
+    image: $CONTAINER_REGISTRY/ams:$VERSION
     container_name: ams
     network_mode: host
     restart: always
@@ -100,7 +100,7 @@ services:
     labels:
         - autoheal=true
     monitor-agent:
-    image: ${ContainerRegistry}/monitor-agent:${Version}
+    image: $CONTAINER_REGISTRY/monitor-agent:$VERSION
     container_name: monitor-agent
     network_mode: host
     restart: unless-stopped

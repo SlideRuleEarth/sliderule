@@ -62,7 +62,6 @@ NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
 
-
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 ARCH ?= $(shell arch)
@@ -292,10 +291,6 @@ ams-run:
 # Cluster Targets
 ########################
 
-ILB_USER_DATA = $(shell cat $(ROOT)/applications/provisioner/ilb.sh)
-MONITOR_USER_DATA = $(shell cat $(ROOT)/applications/provisioner/monitor.sh)
-NODE_USER_DATA = $(shell cat $(ROOT)/applications/provisioner/node.sh)
-
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= false
 NODE_CAPACITY ?= 1
@@ -365,26 +360,58 @@ cluster-go-live: ## switch dns entry of public cluster
 cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
 
+########################
+# Cluster Direct Targets
+########################
+
+ILB_USER_DATA = $(shell \
+	AWS_REGION=$(AWS_REGION) \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	JWT_ISSUER=$(JWT_ISSUER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	DOMAIN=$(DOMAIN) \
+	VERSION=$(VERSION) \
+	IS_PUBLIC=$(IS_PUBLIC) \
+	CLUSTER=$(CLUSTER) \
+	envsubst < $(ROOT)/applications/provisioner/ilb.sh)
+
+MONITOR_USER_DATA = $(shell \
+	AWS_REGION=$(AWS_REGION) \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	VERSION=$(VERSION) \
+	envsubst < $(ROOT)/applications/provisioner/monitor.sh)
+
+NODE_USER_DATA = $(shell \
+	AWS_REGION=$(AWS_REGION) \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	IPV4=$(IPV4) \
+	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
+	ALERT_STREAM=$(ALERT_STREAM) \
+	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
+	CLUSTER=$(CLUSTER) \
+	DOMAIN=$(DOMAIN) \
+	VERSION=$(VERSION) \
+	envsubst < $(ROOT)/applications/provisioner/node.sh)
+
 cluster-direct-deploy: ## directly deploys cluster via cloud formation
 	aws cloudformation create-stack \
 		--stack-name 	$(CLUSTER)-cluster \
 		--template-body file://$(ROOT)/applications/provisioner/cluster.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
-						ParameterKey=Version,ParameterValue=$(VERSION) \
+		--parameters	ParameterKey=Version,ParameterValue=$(VERSION) \
 						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
 						ParameterKey=ScheduleLambdaArn,ParameterValue=$(SCHEDULE_LAMBDA_ARN) \
-						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
 						ParameterKey=TTL,ParameterValue=$(TTL) \
-						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
 						ParameterKey=IlbUserData,ParameterValue=$(ILB_USER_DATA) \

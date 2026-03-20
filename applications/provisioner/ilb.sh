@@ -27,26 +27,26 @@ systemctl start docker
 usermod -aG docker ec2-user
 
 # Install Docker Compose V2
-retry curl -L "https://github.com/docker/compose/releases/download/${DockerComposeVersion}/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+retry curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 mkdir -p /usr/local/lib/docker/cli-plugins
 ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Log into ECR
-aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
+aws ecr get-login-password --region $AWS_REGION  | docker login --username AWS --password-stdin $CONTAINER_REGISTRY
 
 # Setup directories and download files
 mkdir -p /etc/haproxy/pem
-retry curl ${JwtIssuer}/auth/pem > /etc/haproxy/pem/pubkey.pem
+retry curl $JWT_ISSUER/auth/pem > /etc/haproxy/pem/pubkey.pem
 mkdir -p /etc/ssl/private
-aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
+aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/$DOMAIN.pem /etc/ssl/private/$DOMAIN.pem
 
 # Create docker-compose.yml
 cat > docker-compose.yml << EOF
 version: "3.9"
 services:
 ilb:
-    image: ${ContainerRegistry}/ilb:${Version}
+    image: $CONTAINER_REGISTRY/ilb:$VERSION
     container_name: ilb
     network_mode: host
     restart: always
@@ -56,10 +56,10 @@ ilb:
     - /etc/ssl/private:/etc/ssl/private
     - /etc/haproxy/pem/:/etc/haproxy/pem/
     environment:
-    - IS_PUBLIC=${IsPublic}
-    - DOMAIN=${Domain}
-    - CLUSTER=${Cluster}
-    - JWT_ISSUER=${JwtIssuer}
+    - IS_PUBLIC=$IS_PUBLIC
+    - DOMAIN=$DOMAIN
+    - CLUSTER=$CLUSTER
+    - JWT_ISSUER=$JWT_ISSUER
     healthcheck:
     test: curl -f http://localhost:8050/discovery/health
     interval: 30s
@@ -69,7 +69,7 @@ ilb:
     labels:
     - autoheal=true
 monitor-agent:
-    image: ${ContainerRegistry}/monitor-agent:${Version}
+    image: $CONTAINER_REGISTRY/monitor-agent:$VERSION
     container_name: monitor-agent
     network_mode: host
     restart: unless-stopped

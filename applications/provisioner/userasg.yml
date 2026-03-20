@@ -9,6 +9,8 @@ Parameters:
     Type: String
   NodeCapacity:
     Type: Number
+  TTL:
+    Type: Number
   ClusterSubnet:
     Type: String
   ClusterNodeSG:

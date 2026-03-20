@@ -143,7 +143,8 @@ class Session:
         decode_aux      = True,
         rethrow         = False,
         github_token    = None,
-        private_key     = PRIVATE_KEY):
+        private_key     = PRIVATE_KEY,
+        user_service    = False):
         '''
         creates and configures a sliderule session
         '''
@@ -188,6 +189,12 @@ class Session:
         if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
             self.authenticate(github_token=github_token)
 
+        # set service
+        if user_service:
+            self.service = self.ps_metadata['sub']
+        else:
+            self.service = self.cluster
+
         # auto-deploy when node capacity provided
         if isinstance(node_capacity, int) and node_capacity > 0:
             self.scaleout(node_capacity, ttl)
@@ -199,16 +206,19 @@ class Session:
         '''
         handles making the HTTP request to the sliderule cluster nodes
         '''
-        if not headers:
-            headers = {}
+        # initialize parameters
+        if not callbacks: callbacks = {}
+        if not headers: headers = {}
 
-        # initialize local variables
+        # initialize response
         rsps = {}
+
+        # initialize headers
         headers = headers | {'x-sliderule-client': f'python-{version.full_version}'}
 
-        # initialize parameters
-        if callbacks == None:
-            callbacks = {}
+        # set service header (if applicable)
+        if self.service != self.cluster:
+            headers = headers | {'x-sliderule-client': self.service}
 
         # build callbacks
         for c in self.callbacks:
@@ -380,7 +390,7 @@ class Session:
 
             # Get Current Cluster Node Capacity
             try:
-                rsps = self.source("status", parm={"service":"sliderule"}, path="/discovery", retries=0, rethrow=True)
+                rsps = self.source("status", parm={"service":self.service}, path="/discovery", retries=0, rethrow=True)
                 available_nodes = rsps["nodes"]
             except RuntimeError:
                 available_nodes = 0
@@ -528,16 +538,19 @@ class Session:
     class __Provisioner:
         def __init__ (self, session):
             self.session = session
+            self.api_path_suffix = ""
+            if self.session.service != self.session.cluster:
+                self.api_path_suffix += f"/{self.session.service}"
         def deploy (self, *, is_public, node_capacity, ttl, version):
-            return self.session.gateway_request("deploy", subdomain="provisioner", data={"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+            return self.session.gateway_request("deploy" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
         def extend (self, *, ttl):
-            return self.session.gateway_request("extend", subdomain="provisioner", data={"cluster": self.session.cluster, "ttl": ttl})
+            return self.session.gateway_request("extend" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster, "ttl": ttl})
         def destroy (self):
             return self.session.gateway_request("destroy", subdomain="provisioner", data={"cluster": self.session.cluster})
         def status (self):
-            return self.session.gateway_request("status", subdomain="provisioner", data={"cluster": self.session.cluster})
+            return self.session.gateway_request("status" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster})
         def events (self):
-            return self.session.gateway_request("events", subdomain="provisioner", data={"cluster": self.session.cluster})
+            return self.session.gateway_request("events" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster})
         def report (self, kind="clusters"):
             return self.session.gateway_request(f"report/{kind}", subdomain="provisioner", data={})
         def info (self):

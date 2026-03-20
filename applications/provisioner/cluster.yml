@@ -8,8 +8,6 @@ Parameters:
   #
   Version:
     Type: String
-  EnvironmentVersion:
-    Type: String
   IsPublic:
     Type: String
     AllowedValues:
@@ -21,22 +19,16 @@ Parameters:
     Type: String
   ProjectBucket:
     Type: String
-  ProjectFolder:
-    Type: String
   ProjectPublicBucket:
     Type: String
   DestroyLambdaArn:
     Type: String
   ScheduleLambdaArn:
     Type: String
-  ContainerRegistry:
-    Type: String
   NodeCapacity:
     Type: Number
   TTL:
     Type: Number
-  JwtIssuer:
-    Type: String
   AlertStream:
     Type: String
   TelemetryStream:
@@ -72,9 +64,6 @@ Parameters:
   ClusterCIDRBlock:
     Type: String
     Default: "10.0.0.0/17"
-  DockerComposeVersion:
-    Type: String
-    Default: "v2.24.5"
 
 Conditions:
 
