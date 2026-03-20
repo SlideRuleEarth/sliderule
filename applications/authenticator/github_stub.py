@@ -19,7 +19,7 @@ def generate_code_verifier() -> str:
     Generate a cryptographically random code_verifier.
 
     OAuth 2.1 / RFC 7636 requirements:
-      - 43–128 characters
+      - 43-128 characters
       - Characters from: A-Z a-z 0-9 - . _ ~  (unreserved URI chars)
 
     Using 32 random bytes → 43-char base64url string (no padding), which
@@ -75,13 +75,21 @@ async def handle_access_token(request: Request):
 async def handle_api_user(request: Request):
     form = await request.form()
     data = dict(form)
+    try:
+        tmp_username_file = "/tmp/authenticator-pytest-username.txt"
+        with open(tmp_username_file, "r") as file:
+            username = file.read()
+        if os.path.exists(tmp_username_file):
+            os.remove(tmp_username_file)
+    except:
+        username = "my-user-name"
     return {
         "received": data,
-        "login": "my-user-name"
+        "login": username
     }
 
-@app.get("/api/orgs/myorg/memberships/my-user-name")
-async def handle_api_memberships(request: Request):
+@app.get("/api/orgs/myorg/memberships/{username}")
+async def handle_api_memberships(username: str, request: Request):
     form = await request.form()
     data = dict(form)
     return {

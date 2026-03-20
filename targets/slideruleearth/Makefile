@@ -98,6 +98,7 @@ DOCUMENTATION_HOSTNAME = docs.$(DOMAIN)
 ALERT_STREAM = recorder-firehose-alerts
 TELEMETRY_STREAM = recorder-firehose-telemetry
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
+AFFILIATES_FILENAME = "affiliates.json"
 
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -500,6 +501,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 						ParameterKey=ThirdPartyRedirectHosts,ParameterValue=$(THIRD_PARTY_REDIRECT_HOSTS) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=AffiliatesFilename,ParameterValue=$(AFFILIATES_FILENAME) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
@@ -559,6 +561,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=AffiliatesFilename,ParameterValue=$(AFFILIATES_FILENAME) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
@@ -820,6 +823,9 @@ authenticator-test: ## run authenticator tests
 	GITHUB_DEVICE_CODE_URL=http://localhost:9083/login/device/code \
 	GITHUB_API_URL=http://localhost:9083/api \
 	JWT_SIGNING_KEY_ARN=$(JWT_SIGNING_KEY_ARN) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \
 	coverage run -m pytest $(PYTEST) && \
 	coverage report -m'
 
@@ -827,6 +833,9 @@ provisioner-test: ## run provisioner tests
 	conda run -n provisioner --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/provisioner && \
     DOMAIN=$(DOMAIN) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \
     SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
 	coverage run -m pytest $(PYTEST) && \
 	coverage report -m'
@@ -837,6 +846,9 @@ nodejs-jest: ## run node.js client self tests
 ########################
 # Help Targets
 ########################
+
+update-cf-env: ## update cloud formation environment for public deployment
+	aws s3 cp /data/$(AFFILIATES_FILENAME) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 
 init-dev-env: ## one-time setup of development environment for running locally
 	mkdir -p /data

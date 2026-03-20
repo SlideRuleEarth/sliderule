@@ -1,4 +1,5 @@
 local earthdata = require("earth_data_query")
+local json = require("json")
 
 -----------------
 --- Get ATL09
@@ -54,8 +55,8 @@ local function get_ndwi(parms, resource)
     -- build hls raster object
     local hls_parms = {
         asset       = "landsat-hls",
-        t0          = t0,
-        t1          = t1,
+        t0          = parms["t0"],
+        t1          = parms["t1"],
         use_poi_time = true,
         bands       = {"NDWI"},
         poly        = hls_poly

@@ -32,6 +32,9 @@ HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager 
 TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(' ')) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
 THIRD_PARTY_REDIRECT_HOSTS = set(os.environ.get('THIRD_PARTY_REDIRECT_HOSTS', '').split(' ')) # Untrusted redirect_uri list which forces descope of audience in token
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
+PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
+PROJECT_FOLDER = os.environ["PROJECT_FOLDER"]
+AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
 
 # GitHub OAuth endpoints (from the environment only for testing)
 GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
@@ -80,12 +83,19 @@ _kms_client = None
 # AWS DynamoDB client (initialized lazily for lambda container reuse)
 _dynamodb_client = None
 
+# AWS S3 client (initialized lazily for lambda container reuse)
+_s3_client = None
+
 # =============================================================================
 # AWS Helper Functions
 # =============================================================================
 
 def get_secret(secret_arn):
-    """Retrieve a secret from AWS Secrets Manager."""
+    """
+    Retrieve a secret from AWS Secrets Manager.
+    """
+    # since secrets are cached, the secrets manager client is not cached here
+    # because this function should only be called on the initial container use
     client = boto3.client('secretsmanager')
     response = client.get_secret_value(SecretId=secret_arn)
     return response['SecretString']
@@ -114,7 +124,9 @@ def get_hmac_signing_key():
 
 
 def get_kms_client():
-    """Get or create KMS client (cached for Lambda container reuse)."""
+    """
+    Get or create KMS client (cached for Lambda container reuse).
+    """
     global _kms_client
     if _kms_client is None:
         _kms_client = boto3.client('kms')
@@ -200,6 +212,29 @@ def session_load(key, with_delete=False):
     return item.get("value")
 
 
+def get_s3_client():
+    """
+    Get or create S3 client (cached for Lambda container reuse).
+    """
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client('s3')
+    return _s3_client
+
+
+def get_affiliation(username):
+    """
+    Retrieve and return dictionary of affiliation attributes for provided user
+    """
+    s3 = get_s3_client()
+    try:
+        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
+        data = json.load(response['Body']).get(username, {})
+        return data.get("active", False) and data or None
+    except Exception as e:
+        print(f"Failed to get the affiliates file: {e}")
+        return None
+
 # =============================================================================
 # API Gateway Helper Functions
 # =============================================================================
@@ -238,14 +273,22 @@ def json_response(status_code, body, headers=None, with_cors=True, with_cache=Fa
 # General Helper Functions
 # =============================================================================
 
-def contains_scope(scope, scopes_to_check):
+def contains_scope(scope, scopes_to_check, check="any"):
     """
-    Returns true if any element of the scope is in the scopes to check
+    check="any": returns true if *any* element of the scope is in the scopes to check
+    check="all": returns true if "all" elements of the scope are in the scopes to check
     """
-    for s in scopes_to_check:
-        if s in scope:
-            return True
-    return False
+    if check == "any":
+        for s in scopes_to_check:
+            if s in scope:
+                return True
+        return False
+    elif check == "all":
+        for s in scope:
+            if s not in scopes_to_check:
+                return False
+        return True
+
 
 
 def contains_redirect(redirect_uri, valid_redirect_hosts):
@@ -425,9 +468,9 @@ def get_github_user(authorization_str):
     return response.json()
 
 
-def get_organization_roles(authorization_str, username, scope):
+def get_user_role(authorization_str, username):
     """
-    Builds a list of roles for the user
+    Return users role in organization
     Raises:
         Exception: If GitHub API returns an unexpected error (5xx, 429, etc.)
                    This prevents silently degrading users to non-member status
@@ -468,18 +511,13 @@ def get_organization_roles(authorization_str, username, scope):
         print(f"Unexpected response checking org membership: {response.status_code} {response.text}")
         raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
 
-    # Get requested permissions from scope
-    requesting_trusted = 'sliderule:admin' in scope
-
-    # Build organization roles
-    roles = []
-    if is_org_owner and requesting_trusted:
-        roles = ['owner', 'member']
+    # Return user role
+    if is_org_owner:
+        return 'owner'
     elif is_org_member:
-        roles = ['member']
-
-    # Return organization roles
-    return roles
+        return 'member'
+    else:
+        return None
 
 
 def get_user_teams(authorization_str, org_roles):
@@ -547,7 +585,7 @@ def get_user_teams(authorization_str, org_roles):
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
 
-def generate_audience_list(username, teams, org_roles, scope):
+def generate_audience_list(username, clusters, org_roles, scope):
     """
     Returns a list of services user has access to.
     """
@@ -566,8 +604,8 @@ def generate_audience_list(username, teams, org_roles, scope):
         if 'monitor' in resources: # access to cluster monitor
             audiences.append('monitor')
         if 'sliderule' in resources: # access to cluster
-            if teams: # all members can access services at subdomains tied to teams they belong to
-                audiences.extend(teams)
+            if clusters: # all members can access services at subdomains tied to these clusters
+                audiences.extend(clusters)
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
         if 'mcp' in resources: # any authenticated user has access to MCP services
@@ -609,78 +647,42 @@ def create_auth_token(metadata):
     return token
 
 
-def refresh_auth_token(token, event):
-    """
-    Refresh an existing JWT by extending its expiration time.
-    Validates the current token and issues a new one with updated timestamps.
-    """
-    # Helper function
-    def base64url_decode(data):
-        # Add padding if needed
-        padding = 4 - (len(data) % 4)
-        if padding != 4:
-            data += '=' * padding
-        return base64.urlsafe_b64decode(data)
-
-    try:
-        # Split token into parts
-        parts = token.split('.')
-        if len(parts) != 3:
-            raise ValueError("Invalid token format")
-        header_b64, payload_b64, signature_b64 = parts
-
-        # Decode header and payload
-        header = json.loads(base64url_decode(header_b64))
-        payload = json.loads(base64url_decode(payload_b64))
-
-        # Verify token algorithm
-        if header.get('alg') != JWT_ALGORITHM:
-            raise ValueError(f"Invalid algorithm: expected {JWT_ALGORITHM}")
-
-        # Verify token signature using KMS
-        signing_input = f"{header_b64}.{payload_b64}"
-        signature = base64url_decode(signature_b64)
-        if not verify_with_kms(signing_input.encode('utf-8'), signature):
-            raise ValueError("Invalid token signature")
-
-        # Check if token is expired
-        now = datetime.now(timezone.utc)
-        exp = payload.get('exp')
-        if not exp:
-            raise ValueError("Token missing expiration")
-        exp_time = datetime.fromtimestamp(exp, tz=timezone.utc)
-        if now > exp_time:
-            raise ValueError("Token expired and cannot be refreshed")
-
-        # Create new metadata with updated timestamps
-        metadata = payload.copy()
-        new_expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
-        metadata['iat'] = int(now.timestamp())
-        metadata['exp'] = int(new_expiration.timestamp())
-
-        # Generate new token and expiration
-        return create_auth_token(metadata), metadata['exp']
-
-    except Exception as e:
-        raise Exception(f"Token refresh failed: {e}")
-
-
 def authenticate_user(authorization_str, scope):
     """
     Build the authentication token and metadata for the user
     """
-    # get username
+    # get username (JWT claim)
     user_info = get_github_user(authorization_str)
     username = user_info.get('login')
     if not username:
         raise RuntimeError('Could not get GitHub username')
 
-    # get user metadata
-    org_roles = get_organization_roles(authorization_str, username, scope)
-    teams = get_user_teams(authorization_str, org_roles)
-    audience_list = generate_audience_list(username, teams, org_roles, scope)
+    # get organizational roles (JWT claim)
+    user_role = get_user_role(authorization_str, username)
+    org_roles = []
+    if (user_role == 'owner') and ('sliderule:admin' in scope): # must be owner AND requesting admin
+        org_roles = ['owner', 'member']
+    elif (user_role == 'owner') or (user_role == 'member'): # owners not requesting admin and regular members
+        org_roles = ['member']
 
-    # token expiration based on JWT_EXPIRATION_HOURS config
+    # get clusters (match one-to-one to user's teams)
+    clusters = get_user_teams(authorization_str, org_roles)
+
+    # get affiliation
+    affiliation = get_affiliation(username)
+    if affiliation:
+        # check allowed scopes for affiliate
+        if not contains_scope(scope, affiliation["allowed_scopes"], check="all"):
+            raise RuntimeError(f"Forbidden scope: {scope} not contained in {affiliation["allowed_scopes"]}")
+        # append affiliate to organization roles
+        org_roles.append('affiliate')
+        # append affiliates clusters to clusters
+        clusters.append(affiliation['clusters'])
+
+    # build audience list (JWT claim)
+    audience_list = generate_audience_list(username, clusters, org_roles, scope)
+
+    # token expiration based on JWT_EXPIRATION_HOURS config (JWT claim)
     now = datetime.now(timezone.utc)
     expiration = now + timedelta(hours=JWT_EXPIRATION_HOURS)
 
@@ -722,7 +724,7 @@ def handle_register(event: dict) -> dict:
     # pull out the individual parameters
     redirect_uris       = parms.get('redirect_uris', [])
     client_name         = parms.get('client_name', 'Unknown Client')
-    grant_types         = parms.get('grant_types', ['authorization_code']) # defaults to ["authorization_code"] per RFC 7591
+    grant_types         = parms.get('grant_types', ['authorization_code']) # default per RFC 7591
     response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
     auth_method         = parms.get('token_endpoint_auth_method', 'none')
     challenge_method    = parms.get('code_challenge_method', 'S256') # not an official RFC 7591 field but MCP clients send it
@@ -1047,10 +1049,17 @@ def handle_token(event):
         if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
             raise RuntimeError("Failed to verify code challenge")
 
-        # authenticate user (gets token and metadata)
-        # note that scope is created in the above callback and verified there
-        access_token = exchange_code_for_token(session_code["github_code"])
-        token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
+        # grant token
+        if grant_type == "authorization_code":
+            # authenticate user (gets token and metadata)
+            # note that scope is created in the above callback and verified there
+            access_token = exchange_code_for_token(session_code["github_code"])
+            token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
+            refresh_token = '' # TODO: revisit
+        elif grant_type == "refresh_token":
+            raise RuntimeError("not supported at this time")
+        else:
+            raise RuntimeError(f"unhandled grant type: {grant_type}")
 
         # build user interface hints
         info = {
@@ -1069,7 +1078,7 @@ def handle_token(event):
             "access_token": token,
             "token_type": "Bearer",
             "expires_in": JWT_EXPIRATION_HOURS * 60 * 60,
-            "refresh_token": token, # TODO: revisit
+            "refresh_token": refresh_token,
             "scope": " ".join(session_code["scope"]),
             "info": info
         })
@@ -1465,25 +1474,13 @@ def basic_callback(code, redirect_uri):
 
 
 # =============================================================================
-# Refresh tokens
+# Refresh tokens - TODO: revisit
 # =============================================================================
 
 def handle_refresh(event):
     """Handle JWT refresh requests"""
     try:
-        # Get token from Authorization header
-        auth_header = event.get('headers', {}).get('authorization', '')
-        if not auth_header.startswith('Bearer '):
-            raise RuntimeError('Missing or invalid authorization header')
-        old_token = auth_header.replace('Bearer ', '')
-
-        # Refresh the token
-        token, expiration = refresh_auth_token(old_token, event)
-        return json_response(200, {
-            'token': token,
-            'exp': expiration
-        })
-
+        raise RuntimeError("not supported at this time")
     except Exception as e:
         print(f"Token refresh failed: {e}")
         return json_response(401, {
@@ -1614,8 +1611,8 @@ def handle_authorization_server(event: dict) -> dict:
     base_url = f"https://{AUTHENTICATOR_HOSTNAME}"
     metadata = {
         "issuer": base_url, # Validates that the metadata document it received came from the expected AS (prevents AS mix-up attacks).
-        "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for any AS that supports authorization_code grant.
-        "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token, and later to refresh an expired token.
+        "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for authorization_code grant.
+        "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
         "scopes_supported": list(ALLOWED_SCOPES),
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
@@ -1624,7 +1621,7 @@ def handle_authorization_server(event: dict) -> dict:
 #        "revocation_endpoint": f"{base_url}/auth/revoke", # invalidate tokens on logout
         "jwks_uri": f"{base_url}/.well-known/jwks.json", # fetching public key to verify JWT signatures
         "id_token_signing_alg_values_supported": ["RS256"], # The signing algorithms used when issuing JWTs.
-        "grant_types_supported": list(ALLOWED_GRANT_TYPES), # allows silent token renewal
+        "grant_types_supported": list(ALLOWED_GRANT_TYPES),
     }
     return json_response(200, metadata, with_cache=True)
 
@@ -1664,7 +1661,7 @@ def lambda_gateway(event, context):
     elif path == '/auth/github/basic/login':
         return handle_basic_login(event)
 
-    # Refresh token
+    # Refresh token (for CLI/Python Clients)
     elif path == '/auth/refresh':
         return handle_refresh(event)
     # Public key endpoint for JWT verification (PEM)

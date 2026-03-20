@@ -33,6 +33,8 @@ Parameters:
     Type: String
   TelemetryStream:
     Type: String
+  AffiliatesFilename:
+    Type: String
   SupportEmail:
     Type: String
   AlertEmail:
@@ -128,6 +130,7 @@ Resources:
           JWT_ISSUER: !Ref JwtIssuer
           ALERT_STREAM: !Ref AlertStream
           TELEMETRY_STREAM: !Ref TelemetryStream
+          AFFILIATES_FILENAME: !Ref AffiliatesFilename
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
 

@@ -25,6 +25,20 @@ _pubkey_cache = {}
 # Globals
 # ###############################
 
+STACK_NAME = os.environ.get("STACK_NAME")
+DOMAIN = os.environ.get("DOMAIN")
+PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
+PROJECT_FOLDER = os.environ.get("PROJECT_FOLDER")
+PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
+CONTAINER_REGISTRY = os.environ.get('CONTAINER_REGISTRY')
+JWT_ISSUER = os.environ.get('JWT_ISSUER')
+ALERT_STREAM = os.environ.get('ALERT_STREAM')
+TELEMETRY_STREAM = os.environ.get('TELEMETRY_STREAM')
+ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
+AFFILIATES_FILENAME = os.environ.get('AFFILIATES_FILENAME')
+SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL')
+ALERT_EMAIL = os.environ.get('ALERT_EMAIL')
+
 SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp','sliderule','monitor']
 
 # ###############################
@@ -118,12 +132,10 @@ def exception_reponse(e):
 # Send Email Message
 #
 def send_email(title, message):
-    support_email = os.environ['SUPPORT_EMAIL']
-    alert_email = os.environ['ALERT_EMAIL']
     response = ses.send_email(
-        Source = support_email,
+        Source = SUPPORT_EMAIL,
         Destination = {
-            "ToAddresses": [alert_email]
+            "ToAddresses": [ALERT_EMAIL]
         },
         Message = {
             "Subject": {
@@ -136,8 +148,23 @@ def send_email(title, message):
     if response["ResponseMetadata"]["HTTPStatusCode"] >= 200 and response["ResponseMetadata"]["HTTPStatusCode"] < 300:
         return True
     else:
-        print(f"Error sending email from {support_email} to {alert_email}: {response}")
+        print(f"Error sending email from {SUPPORT_EMAIL} to {ALERT_EMAIL}: {response}")
         return False
+
+#
+# Get User Affiliation
+#
+def get_affiliation(username):
+    """
+    Retrieve and return dictionary of affiliation attributes for provided user
+    """
+    try:
+        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
+        data = json.load(response['Body']).get(username, {})
+        return data.get("active", False) and data or None
+    except Exception as e:
+        print(f"Failed to get the affiliates file: {e}")
+        return None
 
 # ###############################
 # Business Logic
@@ -157,8 +184,7 @@ def verify_signature(path, body, username, event):
 
         # get public key
         if username not in _pubkey_cache:
-            domain = os.environ["DOMAIN"]
-            secret_name = f"{domain}/pubkeys"
+            secret_name = f"{DOMAIN}/pubkeys"
             secret_string = sm.get_secret_value(SecretId=secret_name)['SecretString']
             _pubkey_cache = json.loads(secret_string)
         public_key = load_ssh_public_key(_pubkey_cache[username].encode("utf-8"))
@@ -222,6 +248,10 @@ def get_user_info(claims):
     known_clusters = deployable_clusters - {'*'} | {'sliderule'}
     max_nodes = get_max_nodes(org_roles)
     max_ttl = get_max_ttl(org_roles)
+    if 'affiliate' in org_roles:
+        affiliation = get_affiliation(username) or {}
+        max_nodes = affiliation.get('max_nodes', max_nodes)
+        max_ttl = affiliation.get('max_ttl', max_nodes)
     return {
         'username': username,
         'orgRoles': org_roles,
@@ -256,7 +286,7 @@ def validate_request(event, info):
             return None
 
     # check organization membership
-    if 'member' not in info["orgRoles"]:
+    if ('member' not in info["orgRoles"]) and ('affiliate' not in info["orgRoles"]):
         print(f'Access denied to {info["username"]}, organization roles: {info["orgRoles"]}')
         return None
 
@@ -307,20 +337,8 @@ def deploy_handler(rqst):
     # initialize response state
     state = {}
 
-    # get environment variables
-    stack_name = os.environ["STACK_NAME"]
-    environment_version = os.environ['ENVIRONMENT_VERSION']
-    domain = os.environ["DOMAIN"]
-    project_bucket = os.environ["PROJECT_BUCKET"]
-    project_folder = os.environ["PROJECT_FOLDER"]
-    project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
-    container_registry = os.environ['CONTAINER_REGISTRY']
-    jwt_issuer = os.environ['JWT_ISSUER']
-    alert_stream = os.environ['ALERT_STREAM']
-    telemetry_stream = os.environ['TELEMETRY_STREAM']
-
     # get arns for auto-shutdown
-    resp = cf.describe_stacks(StackName=stack_name)
+    resp = cf.describe_stacks(StackName=STACK_NAME)
     outputs = resp["Stacks"][0].get("Outputs", [])
     destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
     schedule_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
@@ -332,31 +350,31 @@ def deploy_handler(rqst):
         {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
         {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
         {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
-        {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
-        {"ParameterKey": "Domain", "ParameterValue": domain},
-        {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
-        {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
-        {"ParameterKey": "ProjectPublicBucket", "ParameterValue": project_public_bucket},
+        {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
+        {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
+        {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
+        {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
+        {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
         {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
         {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
-        {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
-        {"ParameterKey": "JwtIssuer", "ParameterValue": jwt_issuer},
-        {"ParameterKey": "AlertStream", "ParameterValue": alert_stream},
-        {"ParameterKey": "TelemetryStream", "ParameterValue": telemetry_stream},
+        {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
+        {"ParameterKey": "JwtIssuer", "ParameterValue": JWT_ISSUER},
+        {"ParameterKey": "AlertStream", "ParameterValue": ALERT_STREAM},
+        {"ParameterKey": "TelemetryStream", "ParameterValue": TELEMETRY_STREAM},
     ]
 
     # read template
     templateBody = open("cluster.yml").read()
 
     # the stack name naming convention is required by Makefile
-    stack_name = build_stack_name(rqst["cluster"])
+    cluster_stack_name = build_stack_name(rqst["cluster"])
 
     # create stack
-    state["response"] = cf.create_stack(StackName=stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+    state["response"] = cf.create_stack(StackName=cluster_stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
     # status deployment
     send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
-    print(f'Deploy initiated for {stack_name}')
+    print(f'Deploy initiated for {cluster_stack_name}')
 
     # return success
     return json_response(200, state)
@@ -440,8 +458,8 @@ def status_handler(rqst):
     state = {}
 
     # status stack
-    stack_name = build_stack_name(rqst["cluster"])
-    description = cf.describe_stacks(StackName=stack_name)
+    cluster_stack_name = build_stack_name(rqst["cluster"])
+    description = cf.describe_stacks(StackName=cluster_stack_name)
     stack = description["Stacks"][0]
 
     # build cleaned response
@@ -456,7 +474,7 @@ def status_handler(rqst):
     state["response"] = response
 
     # attempt to get auto-shutdown time
-    rule_name = scheduler.build_rule_name(stack_name)
+    rule_name = scheduler.build_rule_name(cluster_stack_name)
     state["auto_shutdown"] = scheduler.get_next_trigger_time(rule_name)
 
     # get number of nodes
@@ -485,10 +503,10 @@ def status_handler(rqst):
 def events_handler(rqst):
 
     # get events for stack
-    stack_name = build_stack_name(rqst["cluster"])
-    description = cf.describe_stack_events(StackName=stack_name)
+    cluster_stack_name = build_stack_name(rqst["cluster"])
+    description = cf.describe_stack_events(StackName=cluster_stack_name)
     stack_events = description["StackEvents"]
-    print(f'Events requested for {stack_name}')
+    print(f'Events requested for {cluster_stack_name}')
 
     # build cleaned response
     response = []
@@ -515,9 +533,6 @@ def report_clusters_handler(rqst):
     # initialize report
     report = {}
 
-    # get environment variables
-    region = os.environ["AWS_REGION"]
-
     # get list of intelligent load balancers with their tags
     for instance in get_instances_by_name('*-ilb'):
         tags = {t['Key']: t['Value'] for t in instance.get('Tags', [])}
@@ -525,7 +540,7 @@ def report_clusters_handler(rqst):
         if name:
             # get status of each cluster containing the intelligent load balancer
             cluster = name.split("-ilb")[0]
-            details = status_handler({"cluster": cluster, "region": region})
+            details = status_handler({"cluster": cluster})
             if details["statusCode"] == 200:
                 status = json.loads(details["body"])
                 report[cluster] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
@@ -539,13 +554,9 @@ def report_clusters_handler(rqst):
 #
 def report_tests_handler(rqst):
 
-    # get environment variables
-    project_bucket = os.environ["PROJECT_BUCKET"]
-    project_folder = os.environ["PROJECT_FOLDER"]
-
     # get test summary
     summary_file = f"{rqst["branch"]}-summary.json"
-    s3.download_file(Bucket=project_bucket, Key=f"{project_folder}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
+    s3.download_file(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
 
     # read test summary
     with open(f"/tmp/{summary_file}", "r") as file:
@@ -564,27 +575,19 @@ def deploy_test_handler(rqst):
         # initialize response status
         state = {}
 
-        # get environment variables
-        stack_name = os.environ["STACK_NAME"]
-        domain = os.environ["DOMAIN"]
-        environment_version = os.environ['ENVIRONMENT_VERSION']
-        project_bucket = os.environ["PROJECT_BUCKET"]
-        project_folder = os.environ["PROJECT_FOLDER"]
-        container_registry = os.environ['CONTAINER_REGISTRY']
-
         # get arns for auto-shutdown
-        resp = cf.describe_stacks(StackName=stack_name)
+        resp = cf.describe_stacks(StackName=STACK_NAME)
         outputs = resp["Stacks"][0].get("Outputs", [])
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
         scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
 
         # build parameters for stack creation
         state["parms"] = [
-            {"ParameterKey": "Domain", "ParameterValue": domain},
-            {"ParameterKey": "EnvironmentVersion", "ParameterValue": environment_version},
-            {"ParameterKey": "ProjectBucket", "ParameterValue": project_bucket},
-            {"ParameterKey": "ProjectFolder", "ParameterValue": project_folder},
-            {"ParameterKey": "ContainerRegistry", "ParameterValue": container_registry},
+            {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
+            {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
+            {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
+            {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
+            {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
             {"ParameterKey": "DeployDate", "ParameterValue": datetime.now().strftime("%Y%m%d%H%M%S")},
