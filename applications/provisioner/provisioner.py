@@ -59,13 +59,24 @@ def valid_cluster_name(cluster):
 #
 # Convention for deriving stack name from cluster
 #
-def build_stack_name(cluster):
+def build_cluster_stack_name(cluster):
     if not isinstance(cluster, str):
         return None
     elif valid_cluster_name(cluster):
         return f'{cluster}-cluster'
     else:
         raise RuntimeError(f"Invalid cluster name: {cluster}")
+
+#
+# Convention for deriving user asg stack name from cluster stack name
+#
+def build_user_asg_stack_name(cluster_stack_name, username):
+    if not isinstance(cluster_stack_name, str):
+        return None
+    elif valid_cluster_name(cluster_stack_name):
+        return f'{cluster_stack_name}-{username}-asg'
+    else:
+        raise RuntimeError(f"Invalid cluster stack name: {cluster_stack_name}")
 
 #
 # Get tags for EC2 instances
@@ -81,6 +92,58 @@ def get_instances_by_name(name):
         return [instance for reservation in response["Reservations"] for instance in reservation["Instances"]]
     except Exception as e:
         print(f"Unable to get <{name}> instances: {e}")
+        return []
+
+#
+# Get stack description
+#
+def get_stack_description(stack_name):
+    rsp = cf.describe_stacks(StackName=stack_name)
+    return rsp["Stacks"][0]
+
+#
+# Get stack outputs
+#
+def get_stack_outputs(stack_name):
+    stack = get_stack_description(stack_name)
+    outputs = stack.get("Outputs", [])
+    return {output["OutputKey"]:output["OutputValue"] for output in outputs}
+
+#
+# Clean description
+#
+def clean_description(item):
+    description = {}
+    for k, v in item.items():
+        if hasattr(v, "tolist"):
+            description[k] = v.tolist()
+        elif isinstance(v, (datetime)):
+            description[k] = v.isoformat()
+        elif not isinstance(v, (bytes, bytearray)):
+            description[k] = v
+    return description
+
+#
+# Get resources from a stack
+#
+def get_stack_resources(stack_name):
+    resources = cf.describe_stack_resources(StackName=stack_name)['StackResources']
+    return {r['LogicalResourceId']: r['PhysicalResourceId'] for r in resources}
+
+#
+# Get user asg stacks for parent cluster stack
+#
+def get_user_asg_stack_names(cluster_stack_name):
+    try:
+        paginator = cf.get_paginator('describe_stacks')
+        return [
+            stack['StackName'] for page in paginator.paginate()
+            for stack in page['Stacks']
+            if stack['StackName'].startswith(f"{cluster_stack_name}-")
+            and stack['StackStatus'] not in ('DELETE_COMPLETE', 'DELETE_IN_PROGRESS')
+        ]
+    except Exception as e:
+        print(f"Failed to get user asg stacks: {e}")
         return []
 
 #
@@ -170,6 +233,9 @@ def get_affiliation(username):
 # Business Logic
 # ###############################
 
+#
+# Verify Public/Private Key Signature
+#
 def verify_signature(path, body, username, event):
     """
     Verifies request signature using public key
@@ -332,64 +398,112 @@ def validate_request(event, info):
 #
 # Deploy
 #
-def deploy_handler(rqst):
+def deploy_handler(rqst, kind):
 
     # initialize response state
     state = {}
 
     # get arns for auto-shutdown
-    resp = cf.describe_stacks(StackName=STACK_NAME)
-    outputs = resp["Stacks"][0].get("Outputs", [])
-    destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
-    schedule_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
+    outputs = get_stack_outputs(STACK_NAME)
+    destroy_lambda_arn = outputs["DestroyLambdaArn"]
+    schedule_lambda_arn = outputs["ScheduleLambdaArn"]
 
-    # build parameters for stack creation
-    state["parms"] = [
-        {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
-        {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
-        {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
-        {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
-        {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
-        {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
-        {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
-        {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
-        {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
-        {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
-        {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
-        {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
-        {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
-        {"ParameterKey": "JwtIssuer", "ParameterValue": JWT_ISSUER},
-        {"ParameterKey": "AlertStream", "ParameterValue": ALERT_STREAM},
-        {"ParameterKey": "TelemetryStream", "ParameterValue": TELEMETRY_STREAM},
-    ]
+    # get user data for instances
+    ilb_user_data = open("ilb.sh").read()
+    monitor_user_data = open("monitor.sh").read()
+    node_user_data = open("node.sh").read()
 
-    # read template
-    templateBody = open("cluster.yml").read()
+    # get cluster stack name following the naming convention
+    cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
 
-    # the stack name naming convention is required by Makefile
-    cluster_stack_name = build_stack_name(rqst["cluster"])
+    # handle cluster deployments
+    if kind == 'cluster':
 
-    # create stack
-    state["response"] = cf.create_stack(StackName=cluster_stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+        # build parameters for stack creation
+        state["parms"] = [
+            {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
+            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
+            {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
+            {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
+            {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
+            {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
+            {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
+            {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
+            {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
+            {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
+            {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
+            {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
+            {"ParameterKey": "JwtIssuer", "ParameterValue": JWT_ISSUER},
+            {"ParameterKey": "AlertStream", "ParameterValue": ALERT_STREAM},
+            {"ParameterKey": "TelemetryStream", "ParameterValue": TELEMETRY_STREAM},
+            {"ParameterKey": "IlbUserData", "ParameterValue": ilb_user_data},
+            {"ParameterKey": "MonitorUserData", "ParameterValue": monitor_user_data},
+            {"ParameterKey": "NodeUserData", "ParameterValue": node_user_data}
+        ]
 
-    # status deployment
-    send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
-    print(f'Deploy initiated for {cluster_stack_name}')
+        # read template
+        templateBody = open("cluster.yml").read()
+
+        # create stack
+        state["response"] = cf.create_stack(StackName=cluster_stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+
+        # status deployment
+        send_email(f"SlideRule Cluster Deployed ({rqst['cluster']}/{rqst['username']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
+        print(f'Deploy initiated for {cluster_stack_name}')
+
+    # handle user asg deployments
+    elif kind == 'user':
+
+        # get parent stack resources
+        resources = get_stack_resources(cluster_stack_name)
+        cluster_subnet = resources["ClusterSubnet"]
+        cluster_node_sg = resources["ClusterNodeSG"]
+        instance_profile = resources["InstanceProfile"]
+
+        # build parameters for stack creation
+        state["parms"] = [
+            {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
+            {"ParameterKey": "Username", "ParameterValue": rqst["username"]},
+            {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "ClusterSubnet", "ParameterValue": cluster_subnet},
+            {"ParameterKey": "ClusterNodeSG", "ParameterValue": cluster_node_sg},
+            {"ParameterKey": "InstanceProfile", "ParameterValue": instance_profile},
+            {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
+            {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
+            {"ParameterKey": "NodeUserData", "ParameterValue": node_user_data}
+        ]
+
+        # read template
+        templateBody = open("userasg.yml").read()
+
+        # the stack name naming convention for user asg
+        user_asg_stack_name = build_user_asg_stack_name(cluster_stack_name, rqst["username"])
+
+        # create stack
+        state["response"] = cf.create_stack(StackName=user_asg_stack_name, TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+
+        # status deployment
+        send_email(f"SlideRule Cluster Expanded ({rqst['cluster']}/{rqst['username']}/{rqst['node_capacity']}/{rqst['ttl']})", json.dumps(state, indent=2))
+        print(f'Expand initiated for {user_asg_stack_name}')
 
     # return success
     return json_response(200, state)
 
-
 #
 # Extend
 #
-def extend_handler(rqst):
+def extend_handler(rqst, kind):
 
     # initialize response state
     state = {}
 
     # get rule name
-    rule_name = f'{build_stack_name(rqst["cluster"])}-auto-shutdown'
+    cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
+    if kind == 'cluster':
+        rule_name = f'{cluster_stack_name}-auto-shutdown'
+    elif kind == 'user':
+        rule_name = f'{build_user_asg_stack_name(cluster_stack_name)}-auto-shutdown'
 
     # calculate new shutdown time
     new_shutdown_time = datetime.now(timezone.utc) + timedelta(minutes=rqst["ttl"])
@@ -415,29 +529,38 @@ def lambda_destroy(event, context):
         # initialize response status
         state = {"status": True}
 
-        # get optional request variables
+        # get stack name to delete
         cluster = event.get("cluster") # schedule deletions do not supply cluster parameter
-        state["stack_name"] = event.get("stack_name", build_stack_name(cluster)) # scheduled deletions pass stack name
+        parent_stack_name = event.get("stack_name", build_cluster_stack_name(cluster)) # scheduled deletions pass stack name
 
-        # delete eventbridge target and rule
-        rule_name = f'{state["stack_name"]}-auto-shutdown'
-        print(f'Delete initiated for {rule_name}')
-        try:
-            ev.remove_targets(Rule=rule_name, Ids=["1"])
-            state["EventBridge Target Removed"] = True
-        except Exception as e:
-            print(f'Unable to delete eventbridge rule: {e}')
-            state["EventBridge Target Removed"] = False
-        try:
-            ev.delete_rule(Name=rule_name, Force=False)
-            state["EventBridge Rule Removed"] = True
-        except Exception as e:
-            print(f'Unable to delete eventbridge rule: {e}')
-            state["EventBridge Rule Removed"] = False
+        # get list of user asg stacks to delete (will only exist if this is a cluster stack)
+        user_asg_stack_names = get_user_asg_stack_names(parent_stack_name)
 
-        # delete stack
-        state["response"] = cf.delete_stack(StackName=state["stack_name"])
-        print(f'Delete initiated for {state["stack_name"]}')
+        # delete all stacks
+        for stack_name in user_asg_stack_names + [parent_stack_name]:
+
+            # initialize state info for stack
+            state[stack_name] = {}
+
+            # delete eventbridge target and rule
+            rule_name = f'{stack_name}-auto-shutdown'
+            print(f'Delete initiated for {rule_name}')
+            try:
+                ev.remove_targets(Rule=rule_name, Ids=["1"])
+                state["EventBridge Target Removed"] = True
+            except Exception as e:
+                print(f'Unable to delete eventbridge rule: {e}')
+                state["EventBridge Target Removed"] = False
+            try:
+                ev.delete_rule(Name=rule_name, Force=False)
+                state["EventBridge Rule Removed"] = True
+            except Exception as e:
+                print(f'Unable to delete eventbridge rule: {e}')
+                state["EventBridge Rule Removed"] = False
+
+            # delete stack
+            state["response"] = cf.delete_stack(StackName=stack_name)
+            print(f'Delete initiated for {stack_name}')
 
     # explicipty handle exceptions
     except Exception as e:
@@ -448,54 +571,78 @@ def lambda_destroy(event, context):
     # return response directly
     return state
 
-
 #
 # Status
 #
 def status_handler(rqst):
 
     # initialize response state
-    state = {}
+    state = {"exists": False}
 
-    # status stack
-    cluster_stack_name = build_stack_name(rqst["cluster"])
-    description = cf.describe_stacks(StackName=cluster_stack_name)
-    stack = description["Stacks"][0]
+    # cluster stack
+    try:
+        # status stack
+        cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
+        cluster_stack = get_stack_description(cluster_stack_name)
+        state["response"] = clean_description(cluster_stack)
+        state["exists"] = True # cluster stack still exists
 
-    # build cleaned response
-    response = {}
-    for k, v in stack.items():
-        if hasattr(v, "tolist"):
-            response[k] = v.tolist()
-        elif isinstance(v, (datetime)):
-            response[k] = v.isoformat()
-        elif not isinstance(v, (bytes, bytearray)):
-            response[k] = v
-    state["response"] = response
+        # attempt to get auto-shutdown time
+        rule_name = scheduler.build_rule_name(cluster_stack_name)
+        state["auto_shutdown"] = scheduler.get_next_trigger_time(rule_name)
 
-    # attempt to get auto-shutdown time
-    rule_name = scheduler.build_rule_name(cluster_stack_name)
-    state["auto_shutdown"] = scheduler.get_next_trigger_time(rule_name)
+        # get number of nodes
+        node_instances = get_instances_by_name(f'{rqst["cluster"]}-node')
+        state["current_nodes"] = len(node_instances)
 
-    # get number of nodes
-    node_instances = get_instances_by_name(f'{rqst["cluster"]}-node')
-    state["current_nodes"] = len(node_instances)
+        # get version and node capacity
+        ilb_instance = get_instances_by_name(f'{rqst["cluster"]}-ilb')
+        if len(ilb_instance) == 1:
+            tags = ilb_instance[0]["Tags"]
+            for tag in tags:
+                if tag["Key"] == "Version":
+                    state["version"] = tag["Value"]
+                if tag["Key"] == "IsPublic":
+                    state["is_public"] = tag["Value"]
+                if tag["Key"] == "NodeCapacity":
+                    state["node_capacity"] = tag["Value"]
 
-    # get version and node capacity
-    ilb_instance = get_instances_by_name(f'{rqst["cluster"]}-ilb')
-    if len(ilb_instance) == 1:
-        tags = ilb_instance[0]["Tags"]
-        for tag in tags:
-            if tag["Key"] == "Version":
-                state["version"] = tag["Value"]
-            if tag["Key"] == "IsPublic":
-                state["is_public"] = tag["Value"]
-            if tag["Key"] == "NodeCapacity":
-                state["node_capacity"] = tag["Value"]
+    # catch "stack not found" exceptions
+    except Exception as e:
+        if not isinstance(e, botocore.exceptions.ClientError) or (e.response['Error']['Code'] != 'ValidationError'):
+            raise # only let "stack not found" errors go silently
 
-    # return success
-    return json_response(200, state)
+    # get list of user asg stacks to status
+    state["user_asgs"] = {}
+    for user_asg_stack_name in get_user_asg_stack_names(cluster_stack_name):
+        state["user_asgs"][user_asg_stack_name] = {}
+        info = state["user_asgs"][user_asg_stack_name]
 
+        # user asg stack
+        try:
+            # stack status
+            user_asg_stack = get_stack_description(user_asg_stack_name)
+            info["response"] = clean_description(user_asg_stack)
+            state["exists"] = True # user asg stack still exists
+
+            # attempt to get auto-shutdown time
+            user_asg_rule_name = scheduler.build_rule_name(user_asg_stack_name)
+            info["auto_shutdown"] = scheduler.get_next_trigger_time(user_asg_rule_name)
+
+            # get number of nodes
+            user_asg_node_instances = get_instances_by_name(f'{rqst["cluster"]}-node-{rqst["username"]}')
+            info["current_nodes"] = len(user_asg_node_instances)
+
+        # catch "stack not found" exceptions
+        except Exception as e:
+            if not isinstance(e, botocore.exceptions.ClientError) or (e.response['Error']['Code'] != 'ValidationError'):
+                raise # only let "stack not found" errors go silently
+
+    # return
+    if state["exists"]:
+        return json_response(200, state)
+    else:
+        return json_response(404, {'error': 'not found', 'error_description': 'no stacks were found associated with this cluster'})
 
 #
 # Events
@@ -503,27 +650,16 @@ def status_handler(rqst):
 def events_handler(rqst):
 
     # get events for stack
-    cluster_stack_name = build_stack_name(rqst["cluster"])
+    cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
     description = cf.describe_stack_events(StackName=cluster_stack_name)
     stack_events = description["StackEvents"]
     print(f'Events requested for {cluster_stack_name}')
 
     # build cleaned response
-    response = []
-    for e in stack_events:
-        stack_event = {}
-        for k, v in e.items():
-            if hasattr(v, "tolist"):
-                stack_event[k] = v.tolist()
-            elif isinstance(v, (datetime)):
-                stack_event[k] = v.isoformat()
-            elif not isinstance(v, (bytes, bytearray)):
-                stack_event[k] = v
-        response.append(stack_event)
+    response = [clean_description(stack_event) for stack_event in stack_events]
 
     # return success
     return json_response(200, response)
-
 
 #
 # Cluster Report
@@ -548,7 +684,6 @@ def report_clusters_handler(rqst):
     # return success
     return json_response(200, report)
 
-
 #
 # Test Report
 #
@@ -564,7 +699,6 @@ def report_tests_handler(rqst):
 
     # return success
     return json_response(200, report)
-
 
 #
 # Test Runner
@@ -628,9 +762,13 @@ def lambda_gateway(event, context):
         elif rqst["path"] == '/info': # only uses info, but still requires validated rqst
             return json_response(200, info)
         elif rqst["path"] == '/deploy': # deploys a cluster
-            return deploy_handler(rqst)
+            return deploy_handler(rqst, 'cluster')
+        elif rqst["path"] == f'/deploy/{rqst["username"]}': # deploys a user asg connected to a cluster
+            return deploy_handler(rqst, 'user')
         elif rqst["path"] == '/extend': # extends the TTL of a cluster
-            return extend_handler(rqst)
+            return extend_handler(rqst, 'cluster')
+        elif rqst["path"] == f'/extend/{rqst["username"]}': # extends the TTL of a user asg connected to a cluster
+            return extend_handler(rqst, 'user')
         elif rqst["path"] == '/destroy': # destroys a cluster
             return lambda_destroy(rqst, None)
         elif rqst["path"] == '/status': # returns deployment status of a cluster

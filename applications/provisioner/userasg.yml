@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule User AutoScalingGroup
+
+Parameters:
+
+  Cluster:
+    Type: String
+  Username:
+    Type: String
+  NodeCapacity:
+    Type: Number
+  ClusterSubnet:
+    Type: String
+  ClusterNodeSG:
+    Type: String
+  InstanceProfile:
+    Type: String
+  DestroyLambdaArn:
+    Type: String
+  ScheduleLambdaArn:
+    Type: String
+  NodeUserData:
+    Type: String
+
+Conditions:
+
+  HasAutoShutdown: !And
+    - !Not [!Equals [!Ref ScheduleLambdaArn, ""]]
+    - !Not [!Equals [!Ref DestroyLambdaArn, ""]]
+
+Resources:
+
+  UserLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${Cluster}-lt-${Username}"
+      LaunchTemplateData:
+        ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+        InstanceType: t4g.2xlarge
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            Groups:
+              - !Ref ClusterNodeSG
+        BlockDeviceMappings:
+          - DeviceName: "/dev/xvda"
+            Ebs:
+              VolumeSize: 40
+              VolumeType: gp3
+              DeleteOnTermination: true
+        NodeUserData: !Ref NodeUserData
+
+  UserAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${Cluster}-asg-${Username}"
+      MinSize: !Ref NodeCapacity
+      MaxSize: !Ref NodeCapacity
+      DesiredCapacity: !Ref NodeCapacity
+      VPCZoneIdentifier:
+        - !Ref ClusterSubnet
+      HealthCheckType: EC2
+      LaunchTemplate:
+        LaunchTemplateId: !Ref UserLaunchTemplate
+        Version: !GetAtt UserLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-node-${Username}"
+          PropagateAtLaunch: true
+
+  AutoShutdownCustomResource:
+    Type: Custom::ScheduleStackDeletion
+    Condition: HasAutoShutdown
+    DependsOn:
+      - NodeAutoScalingGroup
+    Properties:
+      ServiceToken: !Ref ScheduleLambdaArn
+      StackName: !Ref AWS::StackName
+      DeleteAfterMinutes: !Ref TTL
+      DeletionLambdaArn: !Ref DestroyLambdaArn

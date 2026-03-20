@@ -292,6 +292,10 @@ ams-run:
 # Cluster Targets
 ########################
 
+ILB_USER_DATA = $(shell cat $(ROOT)/applications/provisioner/ilb.sh)
+MONITOR_USER_DATA = $(shell cat $(ROOT)/applications/provisioner/monitor.sh)
+NODE_USER_DATA = $(shell cat $(ROOT)/applications/provisioner/node.sh)
+
 PUBLIC_IP ?= 127.0.0.1
 IS_PUBLIC ?= false
 NODE_CAPACITY ?= 1
@@ -382,7 +386,10 @@ cluster-direct-deploy: ## directly deploys cluster via cloud formation
 						ParameterKey=TTL,ParameterValue=$(TTL) \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
-						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM)
+						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=IlbUserData,ParameterValue=$(ILB_USER_DATA) \
+						ParameterKey=MonitorUserData,ParameterValue=$(MONITOR_USER_DATA) \
+						ParameterKey=NodeUserData,ParameterValue=$(NODE_USER_DATA)
 	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
 
 cluster-direct-describe: ## directly status cluster created via cloud formation
@@ -538,7 +545,11 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/userasg.yml $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/ilb.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/monitor.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/node.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner functions
