@@ -1,4 +1,3 @@
-ROOT = $(shell pwd)
 TEST ?= tests
 DOMAIN ?= slideruleearth.io
 ORGANIZATION ?= sliderule
@@ -21,9 +20,12 @@ update: ## update project (updates dependencies in package-lock.json file)
 init: ## initialize project
 	cd sliderule; npm init --scope sliderule
 
+release: ## release a new version of the package
+	node utils/modpkg.js $(RELEASE)
+	git add sliderule/package.json
+
 distclean: ## fully remove all non-version controlled files and directories
 	-rm -Rf sliderule/node_modules/
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@echo ROOT:$(ROOT)

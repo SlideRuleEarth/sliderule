@@ -180,11 +180,6 @@ class Session:
             'arrowrec.eof': Session.__arrowrec
         }
 
-        # create wrappers for subclasses
-        self.provisioner = self.__Provisioner(self)
-        self.runner = self.__Runner(self)
-        self.authenticator = self.__Authenticator(self)
-
         # authenticate for non-public clusters
         if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
             self.authenticate(github_token=github_token)
@@ -194,6 +189,11 @@ class Session:
             self.service = self.ps_metadata['sub']
         else:
             self.service = self.cluster
+
+        # create wrappers for gateway applications
+        self.authenticator = self.__Authenticator(self)
+        self.provisioner = self.__Provisioner(self)
+        self.runner = self.__Runner(self)
 
         # auto-deploy when node capacity provided
         if isinstance(node_capacity, int) and node_capacity > 0:

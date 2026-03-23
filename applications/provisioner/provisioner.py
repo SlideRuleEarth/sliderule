@@ -321,8 +321,8 @@ def get_user_info(claims):
     return {
         'username': username,
         'orgRoles': org_roles,
-        'knownClusters': ','.join(known_clusters),
-        'deployableClusters': ','.join(deployable_clusters),
+        'knownClusters': list(known_clusters),
+        'deployableClusters': list(deployable_clusters),
         'maxNodes': max_nodes,
         'maxTTL': max_ttl
     }
@@ -818,22 +818,35 @@ if __name__ == '__main__':
 
     # command line arguments
     parser = argparse.ArgumentParser(description="""Provisioner Command Line""")
-    parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
-    parser.add_argument('--cluster',        type=str,               default="developers")
-    parser.add_argument('--path',           type=str,               default="developers")
-    parser.add_argument('--node_capacity',  type=int,               default=None)
-    parser.add_argument('--ttl',            type=int,               default=120)
-    parser.add_argument('--is_public',      action='store_true',    default=False)
-    parser.add_argument('--version',        type=str,               default="latest")
-    parser.add_argument('--branch',         type=str,               default="main")
+    parser.add_argument('--cluster',        type=str,               default=os.environ.get("CLUSTER"))
+    parser.add_argument('--node_capacity',  type=int,               default=os.environ.get("NODE_CAPACITY"))
+    parser.add_argument('--ttl',            type=int,               default=os.environ.get("TTL"))
+    parser.add_argument('--is_public',      action='store_true',    default=os.environ.get("IS_PUBLIC"))
+    parser.add_argument('--version',        type=str,               default=os.environ.get("VERSION"))
+    parser.add_argument('--branch',         type=str,               default=os.environ.get("BRANCH"))
+    parser.add_argument('--api',            type=str,               default=None)
     parser.add_argument('--user_service',   action='store_true',    default=False)
     parser.add_argument('--verbose',        action='store_true',    default=False)
     args,_ = parser.parse_known_args()
 
     # sliderule python client session
-    session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=args.verbose, user_service=args.user_service)
+    session = sliderule.create_session(domain=DOMAIN, cluster=args.cluster, verbose=args.verbose, user_service=args.user_service)
 
-    # provisioner request
+    # build request body
+    body = json.dumps({
+        "cluster": args.cluster,
+        "node_capacity": str(args.node_capacity),
+        "ttl": str(args.ttl),
+        "is_public": args.is_public,
+        "version": args.version,
+        "branch": args.branch
+    })
+
+    # sign request
+    headers = {}
+    session._Session__signrequest(headers, f"{DOMAIN}{args.api}", body)
+
+    # build request
     rqst = {
         "requestContext": {
             "authorizer": {
@@ -846,19 +859,21 @@ if __name__ == '__main__':
                 }
             }
         },
-        "rawPath": args.path,
-        "body": json.dumps({
-            "cluster": args.cluster,
-            "node_capacity": str(args.node_capacity),
-            "ttl": str(args.ttl),
-            "is_public": args.is_public,
-            "version": args.version,
-            "branch": args.branch
-        })
+        "headers": {
+            "host": DOMAIN,
+            "x-sliderule-timestamp": headers["x-sliderule-timestamp"],
+            "x-sliderule-signature": headers["x-sliderule-signature"],
+        },
+        "rawPath": args.api,
+        "body": body
     }
 
-    # call lambda
+    # make request
     rsps = lambda_gateway(rqst, None)
 
     # display response
-    print(json.dumps(rsps, indent=2))
+    if rsps["statusCode"] == 200:
+        content = json.loads(rsps["body"])
+        print(json.dumps(content, indent=2))
+    else:
+        print(json.dumps(rsps, indent=2))

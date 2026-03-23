@@ -1,40 +1,71 @@
-# In order to complete the release process, the following must be installed and configured in your environment:
-#     * GitHub command line client (gh)
-#           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
-#           The user must authenticate to GitHub via `gh auth login`
-#     * AWS command line client (awscli)
-#           See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
-#           The user must have up-to-date aws credentials
-#     * Docker
-#           The user must be logged into the AWS Elastic Container Registry
-#     * Node.js
-#			The javascript npm package for SlideRule is updated via a node.js script on release
-#     * conda-lock
-#           The Python base image used for the container runtime environment uses conda-lock to create the conda dependency file
+# SlideruleEarth Makefile
 #
-# To release a version of SlideRule:
-#     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
-#        $ aws --profile={profile} sts get-session-token --serial-number arn:aws:iam::742127912612:mfa/{username} --token-code={code}
-#     2. Login to AWS Elastic Container Registry
-#        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-#     3. Login to GitHub
-#        $ gh auth login
-#     4. Select version of `npm`
-#        $ nvm use 20
-#     5. Login to NPMJS
-#        $ cd sliderule/clients/nodejs && make login
-#     6. Execute the makefile target to release the code; X.Y.Z is the tag
-#        $ make release RELEASE=vX.Y.Z
+#	|-------------------------------|
+#   |   Certbot: ssl certificates   |
+#   |-------------------------------|
+#                  	|
+#	|-------------------------------|
+#   |    Authenticator: login       |
+#   |-------------------------------|
+#					|
+#	|-------------------------------|
+#   |    Provisioner: resources     |
+#   |-------------------------------|
+#					|
+#	|-------------------------------|
+#   |  Cluster: science processing  |
+#   |-------------------------------|
+#			|				 |
+#	|---------------| |-------------|
+#   | Python Client | | Web Client  |
+#   |---------------| |-------------|
 #
-# To update the build environment for GitHub actions
-#     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
-#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
-#     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
-#        $ make sliderule-buildenv-docker
-#     3. Push to GitHub container registry
-#        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
+# Typical workflows
 #
-
+#	- Develop the server code using a debug version
+#		$ make config-debug
+#		$ make
+#		$ make selftest
+#
+#	- Run and test a release version of the server code
+#		$ make config-release
+#		$ make
+#		$ make run # in its own shell
+#		$ make sliderule-test
+#		$ make ams-test
+#
+#	- Run and test authenticator
+#		$ make authenticator-test|delete|create
+#
+#	- Run and test provisioner
+#		$ make provisioner-test|delete|create
+#
+#	- Full deployment (from scratch; must be performed in this order)
+#		$ make certbot-create
+#		$ make authenticator-create
+#		$ make provisioner-create
+#		$ make cluster-docker
+#		$ make cluster-docker-push
+#		$ make cluster-deploy
+#
+# The following prerequisites must be installed and configured in your environment:
+#
+#   - GitHub command line client (gh)
+#       See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
+#       The user must authenticate to GitHub via `gh auth login`
+#   - AWS command line client (awscli)
+#       See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
+#       The user must have up-to-date aws credentials
+#   - Docker
+#       The user must be logged into the AWS Elastic Container Registry
+#   - Conda and Conda-Lock
+#		The Python tests use Conda to manage the runtime environment for the test execution
+#       The Python base image used for the container runtime environment uses conda-lock to create the conda dependency file
+#	- AWS credentials with permission to access S3 and AWS Elastic Container Registry (ECR), and log in to ECR
+# 		$ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+#   - GitHub credentials
+#       $ gh auth login
+#
 ROOT = $(shell realpath $(shell pwd)/../..)
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
@@ -62,7 +93,7 @@ NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
 
-MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+IPV4 ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 ARCH ?= $(shell arch)
 TIMESTAMP ?= $(shell date +%Y%m%d%H%M%S)
@@ -72,6 +103,7 @@ BASE_DOMAIN ?= $(basename $(DOMAIN))
 PUBLIC_CLUSTER ?= sliderule
 CLUSTER ?= developers
 VERSION ?= unstable
+BRANCH ?= main
 SUPPORT_EMAIL ?= support@mail.slideruleearth.io
 CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://client.testsliderule.org"
 
@@ -82,6 +114,11 @@ PROJECT_WEBSITE_BUCKET = slideruleearth-documentation-dot
 AWS_ACCOUNT = 742127912612
 AWS_REGION = us-west-2
 CONTAINER_REGISTRY = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
+
+PUBLIC_IP ?= 127.0.0.1
+IS_PUBLIC ?= false
+NODE_CAPACITY ?= 1
+TTL ?= 60
 
 AUTHENTICATOR_STACKNAME = authenticator-$(BASE_DOMAIN)
 PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
@@ -94,10 +131,24 @@ AUTHENTICATOR_HOSTNAME = login.$(DOMAIN)
 PROVISIONER_HOSTNAME = provisioner.$(DOMAIN)
 RUNNER_HOSTNAME = runner.$(DOMAIN)
 DOCUMENTATION_HOSTNAME = docs.$(DOMAIN)
+
+AUTHENTICATOR_ZIPFILE = $(AUTHENTICATOR_STACKNAME).zip
+PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME).zip
+RUNNER_ZIPFILE = $(RUNNER_STACKNAME).zip
+CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
+
 ALERT_STREAM = recorder-firehose-alerts
 TELEMETRY_STREAM = recorder-firehose-telemetry
+
+DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
+DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
+
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
 AFFILIATES_FILENAME = "affiliates.json"
+GITHUB_ORG ?= SlideRuleEarth
+GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
+TRUSTED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
+THIRD_PARTY_REDIRECT_HOSTS ?= "claude.ai"
 
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
@@ -127,10 +178,9 @@ JWT_SIGNING_KEY_ARN = $(shell aws cloudformation describe-stacks \
   --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`JWTSigningKeyArn`].OutputValue' \
   --output text)
-
-########################
-# Local Build Targets
-########################
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
+  --query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_HOSTNAME)'].Id" \
+  --output text)
 
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
@@ -154,6 +204,15 @@ DEBUG_CFG += $(COMMON_CFG)
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += $(COMMON_CFG)
 
+RELEASE ?= # vX.Y.Z
+TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua
+PYTEST ?= # specific pytests and additional pytest options can be supplied here
+JEST ?= # specific jest tests and additional jest options can be supplied here
+
+########################
+# Local Build Targets
+########################
+
 all: ## build the server using the local configuration
 	make -j8 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
@@ -169,7 +228,7 @@ config-release: prep ## configure server to run a release version locally
 
 run: ## run the server locally
 	LOG_FORMAT=FMT_TEXT \
-	IPV4=$(MYIP) \
+	IPV4=$(IPV4) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
@@ -189,12 +248,11 @@ build: ## build the code using the build environment docker container
 		-v $(shell realpath ~/.ssh):/root/.ssh \
 		-v $(ROOT):$(ROOT) \
 		-v /data:/data \
-		-e MYIP=$(MYIP) \
+		-e IPV4=$(IPV4) \
 		-e ROOT=$(ROOT) \
 		-e GITNAME="$(shell git config user.name)" \
 		-e GITEMAIL="$(shell git config user.email)" \
 		-e LOG_FORMAT=FMT_TEXT \
-		-e IPV4=$(MYIP) \
 		-e ENVIRONMENT_VERSION=$(ENVVER) \
 		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
 		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
@@ -211,7 +269,7 @@ build: ## build the code using the build environment docker container
 
 job: ## execute the job runner locally
 	LOG_FORMAT=FMT_TEXT \
-	IPV4=$(MYIP) \
+	IPV4=$(IPV4) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
@@ -219,6 +277,10 @@ job: ## execute the job runner locally
 	CLUSTER=local \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
+
+python: ## update python client in sliderule environment
+	conda run -n sliderule --no-capture-output \
+	sh -c 'cd $(ROOT)/clients/python && pip install .'
 
 ########################
 # Docker Build Targets
@@ -291,11 +353,6 @@ ams-run:
 # Cluster Targets
 ########################
 
-PUBLIC_IP ?= 127.0.0.1
-IS_PUBLIC ?= false
-NODE_CAPACITY ?= 1
-TTL ?= 60
-
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker
 	make ilb-docker
@@ -342,6 +399,27 @@ cluster-info: ## returns metadata associated with the user token
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info --asjson'
 
+cluster-test:
+	VERSION=$(VERSION) \
+	IS_PUBLIC=$(IS_PUBLIC) \
+	DOMAIN=$(DOMAIN) \
+	CLUSTER=$(CLUSTER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	DESTROY_LAMBDA_ARN=$(DESTROY_LAMBDA_ARN) \
+	SCHEDULE_LAMBDA_ARN=$(SCHEDULE_LAMBDA_ARN) \
+	NODE_CAPACITY=$(NODE_CAPACITY) \
+	TTL=$(TTL) \
+	ALERT_STREAM=$(ALERT_STREAM) \
+	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	IPV4=$(IPV4) \
+	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
+	JWT_ISSUER=$(JWT_ISSUER) \
+	AWS_REGION=$(AWS_REGION) \
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(ROOT)/applications/provisioner/provisioner.py $(TEST)'
+
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"
 	conda run -n sliderule --no-capture-output \
@@ -359,65 +437,6 @@ cluster-go-live: ## switch dns entry of public cluster
 
 cluster-take-offline: ## destroy dns entry of public cluster
 	aws cloudformation delete-stack --stack-name dns
-
-########################
-# Cluster Direct Targets
-########################
-
-ILB_USER_DATA = $(shell \
-	AWS_REGION=$(AWS_REGION) \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	JWT_ISSUER=$(JWT_ISSUER) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	DOMAIN=$(DOMAIN) \
-	VERSION=$(VERSION) \
-	IS_PUBLIC=$(IS_PUBLIC) \
-	CLUSTER=$(CLUSTER) \
-	envsubst < $(ROOT)/applications/provisioner/ilb.sh)
-
-MONITOR_USER_DATA = $(shell \
-	AWS_REGION=$(AWS_REGION) \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	VERSION=$(VERSION) \
-	envsubst < $(ROOT)/applications/provisioner/monitor.sh)
-
-NODE_USER_DATA = $(shell \
-	AWS_REGION=$(AWS_REGION) \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	IPV4=$(IPV4) \
-	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
-	ALERT_STREAM=$(ALERT_STREAM) \
-	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
-	CLUSTER=$(CLUSTER) \
-	DOMAIN=$(DOMAIN) \
-	VERSION=$(VERSION) \
-	envsubst < $(ROOT)/applications/provisioner/node.sh)
-
-cluster-direct-deploy: ## directly deploys cluster via cloud formation
-	aws cloudformation create-stack \
-		--stack-name 	$(CLUSTER)-cluster \
-		--template-body file://$(ROOT)/applications/provisioner/cluster.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=Version,ParameterValue=$(VERSION) \
-						ParameterKey=IsPublic,ParameterValue=$(IS_PUBLIC) \
-						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
-						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
-						ParameterKey=ScheduleLambdaArn,ParameterValue=$(SCHEDULE_LAMBDA_ARN) \
-						ParameterKey=NodeCapacity,ParameterValue=$(NODE_CAPACITY) \
-						ParameterKey=TTL,ParameterValue=$(TTL) \
-						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
-						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
-						ParameterKey=IlbUserData,ParameterValue=$(ILB_USER_DATA) \
-						ParameterKey=MonitorUserData,ParameterValue=$(MONITOR_USER_DATA) \
-						ParameterKey=NodeUserData,ParameterValue=$(NODE_USER_DATA)
-	aws cloudformation wait stack-create-complete --stack-name $(CLUSTER)-cluster
 
 cluster-direct-describe: ## directly status cluster created via cloud formation
 	aws cloudformation describe-stack-events --stack-name $(CLUSTER)-cluster
@@ -437,8 +456,6 @@ cluster-direct-resources: ## list resources associated with cluster that are pre
 #	- Requires the provisioner to be created
 #	- The provisioner provides lambdas that are used to destroy the testrunner stack
 #	- The testrunner automatically destroys itself after one hour
-
-BRANCH ?= main
 
 testrunner-create: ## invokes the provisioner lambda function and displays the response
 	aws cloudformation create-stack \
@@ -499,12 +516,6 @@ recorder-delete: ## deletes the lambda recorder functions
 # Authenticator Targets
 ########################
 
-GITHUB_ORG ?= SlideRuleEarth
-GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
-TRUSTED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
-THIRD_PARTY_REDIRECT_HOSTS ?= "claude.ai"
-AUTHENTICATOR_ZIPFILE = $(AUTHENTICATOR_STACKNAME).zip
-
 authenticator-build: ## builds the authenticator lambda package zipfile
 	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
 	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
@@ -556,8 +567,6 @@ authenticator-logs:
 ########################
 # Provisioner Targets
 ########################
-
-PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME).zip
 
 provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
@@ -620,8 +629,6 @@ provisioner-logs:
 # Runner Targets
 ########################
 
-RUNNER_ZIPFILE = $(RUNNER_STACKNAME).zip
-
 runner-build: ## create the runner lambda zipfile
 	-rm -Rf $(RUNNER_STAGE_DIR)
 	mkdir -p $(RUNNER_STAGE_DIR)
@@ -680,8 +687,6 @@ runner-jobs-finished: ## displays all finished jobs
 # Certbot Targets
 ########################
 
-CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
-
 certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
 	mkdir -p $(CERTBOT_STAGE_DIR)
@@ -719,13 +724,6 @@ certbot-delete: ## deletes the lambda certbot function
 ########################
 # Website Targets
 ########################
-
-DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
-	--query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_HOSTNAME)'].Id" \
-	--output text)
-
-DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
-DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
 
 documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
@@ -779,14 +777,10 @@ documentation-render-notebooks: ## execute the notebooks used in the documentati
 # Release Target
 ########################
 
-RELEASE ?= # vX.Y.Z
-
 release: ## tag and release sliderule; needs RELEASE
 	make sliderule-buildenv-docker
 	make ams-lock
 	echo $(RELEASE) > $(ROOT)/version.txt
-	node $(ROOT)/clients/nodejs/utils/modpkg.js $(RELEASE)
-	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
@@ -826,10 +820,6 @@ distclean: ## fully remove all non-version controlled files and directories
 ########################
 # Test Targets
 ########################
-
-TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua
-PYTEST ?= # specific pytests and additional pytest options can be supplied here
-JEST ?= # specific jest tests and additional jest options can be supplied here
 
 selftest: ## run the self test on the server code
 	DOMAIN=localhost \
@@ -905,7 +895,7 @@ environment: ## echo the environment variables
 	@echo AWS_ACCOUNT: $(AWS_ACCOUNT)
 	@echo AWS_REGION: $(AWS_REGION)
 	@echo CONTAINER_REGISTRY: $(CONTAINER_REGISTRY)
-	@echo MYIP: $(MYIP)
+	@echo IPV4: $(IPV4)
 	@echo ENVVER: $(ENVVER)
 	@echo ARCH: $(ARCH)
 	@echo DOMAIN: $(DOMAIN)
