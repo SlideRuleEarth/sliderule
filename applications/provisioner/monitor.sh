@@ -39,43 +39,43 @@ aws ecr get-login-password --region $AWS_REGION  | docker login --username AWS -
 cat > docker-compose.yml << EOF
 version: "3.9"
 services:
-monitor:
+  monitor:
     image: $CONTAINER_REGISTRY/monitor:$VERSION
     container_name: monitor
     network_mode: host
     restart: always
     pull_policy: if_not_present
     labels:
-    - autoheal=true
-monitor-agent:
+      - autoheal=true
+  monitor-agent:
     image: $CONTAINER_REGISTRY/monitor-agent:$VERSION
     container_name: monitor-agent
     network_mode: host
     restart: unless-stopped
     pull_policy: if_not_present
     volumes:
-    - /proc:/host/proc:ro
-    - /sys:/host/sys:ro
-    - /:/rootfs:ro
-    - /var/log:/var/log:ro
-    - /var/log/journal:/var/log/journal:ro
-    - /run/log/journal:/run/log/journal:ro
-    - /etc/machine-id:/etc/machine-id:ro
-    - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-    - DISABLE_PROMTAIL=true
+      - DISABLE_PROMTAIL=true
     labels:
-    - autoheal=true
-autoheal:
+      - autoheal=true
+  autoheal:
     image: willfarrell/autoheal:latest
     container_name: autoheal
     restart: always
     environment:
-    - AUTOHEAL_CONTAINER_LABEL=all
-    - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=30
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
 EOF
 
 # Start services

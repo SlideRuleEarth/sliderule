@@ -94,7 +94,7 @@ def test_admin_request():
                 }
             }
         },
-        "rawPath": "/report",
+        "rawPath": "/report/clusters",
         "body": '{"cluster":"gsfc","node_capacity":"10","ttl":"600"}'
     }, None)
     assert rsps['statusCode'] == 403 # ["*"] requires signed request

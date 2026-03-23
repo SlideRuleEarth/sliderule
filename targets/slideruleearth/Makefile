@@ -389,7 +389,7 @@ cluster-events: ## invokes the provisioner *events* lambda function and displays
 
 cluster-report: ## invokes the provisioner *report* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --asjson'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --concise --asjson'
 
 cluster-version: ## calls the cluster version API and displays the response
 	conda run -n sliderule --no-capture-output \
@@ -400,12 +400,14 @@ cluster-info: ## returns metadata associated with the user token
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info --asjson'
 
 cluster-test:
+	STACK_NAME=$(PROVISIONER_STACKNAME) \
 	VERSION=$(VERSION) \
 	IS_PUBLIC=$(IS_PUBLIC) \
 	DOMAIN=$(DOMAIN) \
 	CLUSTER=$(CLUSTER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
 	DESTROY_LAMBDA_ARN=$(DESTROY_LAMBDA_ARN) \
 	SCHEDULE_LAMBDA_ARN=$(SCHEDULE_LAMBDA_ARN) \
 	NODE_CAPACITY=$(NODE_CAPACITY) \
@@ -416,9 +418,11 @@ cluster-test:
 	IPV4=$(IPV4) \
 	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
 	JWT_ISSUER=$(JWT_ISSUER) \
+	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+    ALERT_EMAIL=$(ALERT_EMAIL) \
 	AWS_REGION=$(AWS_REGION) \
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(ROOT)/applications/provisioner/provisioner.py $(TEST)'
+	sh -c 'cd $(ROOT)/applications/provisioner && python provisioner.py $(TEST)'
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"

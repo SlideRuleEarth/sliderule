@@ -30,6 +30,8 @@
 import json
 import argparse
 import sliderule
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""SlideRule Command Line Interface""")
@@ -42,6 +44,7 @@ parser.add_argument('--version',            type=str,               default="uns
 parser.add_argument('--branch',             type=str,               default="main")
 parser.add_argument('--report',             type=str,               default="clusters")
 parser.add_argument('--concise',            action='store_true',    default=False)
+parser.add_argument('--timezone',           type=str,               default="America/New_York")
 parser.add_argument('--args',               nargs='+', type=str,    default=None)
 parser.add_argument('-j', '--asjson',       action='store_true',    default=False)
 parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
@@ -51,19 +54,22 @@ args,_ = parser.parse_known_args()
 session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=True)
 
 # Helpers
-def display_status():
-    response = session.provisioner.status()
+def display_concise(response):
     if args.concise:
-        return {
-            "StackName": response.get("response", {}).get("StackName"),
-            "StackStatus": response.get("response", {}).get("StackStatus"),
-            "CreationTime": response.get("response", {}).get("CreationTime"),
+        data = {
+            "stack_name": response.get("response", {}).get("StackName"),
+            "stack_status": response.get("response", {}).get("StackStatus"),
+            "creation_time": response.get("response", {}).get("CreationTime"),
             "auto_shutdown": response.get("auto_shutdown"),
             "current_nodes": response.get("current_nodes"),
             "version": response.get("version"),
             "is_public": response.get("is_public"),
             "node_capacity": response.get("node_capacity")
         }
+        for date_field in ["creation_time", "auto_shutdown"]:
+            if data[date_field]:
+                data[date_field] = datetime.fromisoformat(data[date_field]).astimezone(ZoneInfo(args.timezone)).strftime("%Y-%m-%d %H:%M:%S %Z")
+        return {k:data[k] for k in data if data[k] is not None}
     else:
         return response
 
@@ -73,9 +79,9 @@ CommandRunner = {
     "deploy": lambda: session.provisioner.deploy(is_public=(args.is_public == "true"), node_capacity=args.node_capacity, ttl=args.ttl, version=args.version),
     "extend": lambda: session.provisioner.extend(ttl=args.ttl),
     "destroy": session.provisioner.destroy,
-    "status": display_status,
+    "status": lambda: display_concise(session.provisioner.status()),
     "events": session.provisioner.events,
-    "report": lambda: session.provisioner.report(kind=args.report),
+    "report": lambda: {k[0]:display_concise(k[1]) for k in session.provisioner.report(kind=args.report).items()},
     "test": lambda: session.provision("test", {"branch":args.branch}),
     "info": session.provisioner.info,
     # Cluster

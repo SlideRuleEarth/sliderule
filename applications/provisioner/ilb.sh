@@ -45,56 +45,56 @@ aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/$DOMAIN.pem /etc/ssl/private/$DOM
 cat > docker-compose.yml << EOF
 version: "3.9"
 services:
-ilb:
+  ilb:
     image: $CONTAINER_REGISTRY/ilb:$VERSION
     container_name: ilb
     network_mode: host
     restart: always
     pull_policy: if_not_present
     volumes:
-    - /haproxy:/haproxy
-    - /etc/ssl/private:/etc/ssl/private
-    - /etc/haproxy/pem/:/etc/haproxy/pem/
+      - /haproxy:/haproxy
+      - /etc/ssl/private:/etc/ssl/private
+      - /etc/haproxy/pem/:/etc/haproxy/pem/
     environment:
-    - IS_PUBLIC=$IS_PUBLIC
-    - DOMAIN=$DOMAIN
-    - CLUSTER=$CLUSTER
-    - JWT_ISSUER=$JWT_ISSUER
+      - IS_PUBLIC=$IS_PUBLIC
+      - DOMAIN=$DOMAIN
+      - CLUSTER=$CLUSTER
+      - JWT_ISSUER=$JWT_ISSUER
     healthcheck:
-    test: curl -f http://localhost:8050/discovery/health
-    interval: 30s
-    timeout: 10s
-    retries: 1
-    start_period: 30s
+      test: curl -f http://localhost:8050/discovery/health
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
     labels:
-    - autoheal=true
-monitor-agent:
+      - autoheal=true
+  monitor-agent:
     image: $CONTAINER_REGISTRY/monitor-agent:$VERSION
     container_name: monitor-agent
     network_mode: host
     restart: unless-stopped
     pull_policy: if_not_present
     volumes:
-    - /proc:/host/proc:ro
-    - /sys:/host/sys:ro
-    - /:/rootfs:ro
-    - /var/log:/var/log:ro
-    - /var/log/journal:/var/log/journal:ro
-    - /run/log/journal:/run/log/journal:ro
-    - /etc/machine-id:/etc/machine-id:ro
-    - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     labels:
-    - autoheal=true
-autoheal:
+      - autoheal=true
+  autoheal:
     image: willfarrell/autoheal:latest
     container_name: autoheal
     restart: always
     environment:
-    - AUTOHEAL_CONTAINER_LABEL=all
-    - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=30
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
 EOF
 
 # Start services

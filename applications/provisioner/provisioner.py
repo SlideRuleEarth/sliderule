@@ -428,7 +428,7 @@ def deploy_handler(rqst, kind):
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
-            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
+            {"ParameterKey": "IsPublic", "ParameterValue": str(rqst["is_public"])},
             {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
             {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
             {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
@@ -663,7 +663,7 @@ def events_handler(rqst, kind):
 #
 # Cluster Report
 #
-def report_clusters_handler(rqst):
+def report_clusters_handler(cluster):
 
     # initialize report
     report = {}
@@ -674,11 +674,25 @@ def report_clusters_handler(rqst):
         name = tags.get('Name')
         if name:
             # get status of each cluster containing the intelligent load balancer
-            cluster = name.split("-ilb")[0]
-            details = status_handler({"cluster": cluster})
+            cluster_name = name.split("-ilb")[0]
+            if cluster and cluster_name != cluster:
+                continue # for reports that are only for one cluster
+            details = status_handler({"cluster": cluster_name}, 'cluster')
             if details["statusCode"] == 200:
                 status = json.loads(details["body"])
-                report[cluster] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+                report[cluster_name] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+                # get asgs for cluster and status them
+                report[cluster_name]["users"] = {}
+                asg_stack_names = get_cluster_stack_names(build_cluster_stack_name(cluster_name))
+                for asg_stack_name in asg_stack_names:
+                    stack_name_components = asg_stack_name.split("-")
+                    kind = stack_name_components[-1]
+                    if kind == 'asg':
+                        username = stack_name_components[-2]
+                        details = status_handler({"cluster": cluster_name, "username": username}, 'user')
+                        if details["statusCode"] == 200:
+                            status = json.loads(details["body"])
+                            report[cluster_name]["users"][username] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
 
     # return success
     return json_response(200, report)
@@ -789,8 +803,11 @@ def lambda_gateway(event, context):
         elif rqst["path"] == f'/events/{rqst["username"]}': # returns cloudformation stack events for a user asg connected to a cluster deployment
             return events_handler(rqst, 'user')
 
-        elif rqst["path"] == '/report/clusters' or rqst["path"] == '/report': # returns report of clusters that have been deployed
-            return report_clusters_handler(rqst)
+        elif rqst["path"] == '/report/clusters': # returns report of clusters that have been deployed
+            return report_clusters_handler(None)
+
+        elif rqst["path"] == f'/report/clusters/{rqst["cluster"]}': # returns report of clusters that have been deployed
+            return report_clusters_handler(rqst["cluster"])
 
         elif rqst["path"] == '/report/tests': # returns report on status of last test runner deployment
             return report_tests_handler(rqst)
@@ -832,7 +849,8 @@ if __name__ == '__main__':
     # sliderule python client session
     session = sliderule.create_session(domain=DOMAIN, cluster=args.cluster, verbose=args.verbose, user_service=args.user_service)
 
-    # build request body
+    # request parameters
+    path = args.user_service and f"{args.api}/{session.ps_metadata["sub"]}" or args.api
     body = json.dumps({
         "cluster": args.cluster,
         "node_capacity": str(args.node_capacity),
@@ -844,7 +862,7 @@ if __name__ == '__main__':
 
     # sign request
     headers = {}
-    session._Session__signrequest(headers, f"{DOMAIN}{args.api}", body)
+    session._Session__signrequest(headers, f"{DOMAIN}{path}", body)
 
     # build request
     rqst = {
@@ -864,7 +882,7 @@ if __name__ == '__main__':
             "x-sliderule-timestamp": headers["x-sliderule-timestamp"],
             "x-sliderule-signature": headers["x-sliderule-signature"],
         },
-        "rawPath": args.api,
+        "rawPath": path,
         "body": body
     }
 
@@ -872,7 +890,7 @@ if __name__ == '__main__':
     rsps = lambda_gateway(rqst, None)
 
     # display response
-    if rsps["statusCode"] == 200:
+    if rsps.get("statusCode") == 200:
         content = json.loads(rsps["body"])
         print(json.dumps(content, indent=2))
     else:
