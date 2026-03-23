@@ -382,7 +382,7 @@ def validate_request(event, info):
     return {
         "path": path,
         "username": info["username"],
-        "owner": 'owner' in info["orgRoles"],
+        "member": 'member' in info["orgRoles"],
         "cluster": cluster,
         "node_capacity": node_capacity,
         "ttl": ttl,
@@ -803,17 +803,19 @@ def lambda_gateway(event, context):
         elif rqst["path"] == f'/events/{rqst["username"]}': # returns cloudformation stack events for a user asg connected to a cluster deployment
             return events_handler(rqst, 'user')
 
-        elif rqst["path"] == '/report/clusters': # returns report of clusters that have been deployed
-            return report_clusters_handler(None)
+        elif rqst["member"]: # member only APIs
 
-        elif rqst["path"] == f'/report/clusters/{rqst["cluster"]}': # returns report of clusters that have been deployed
-            return report_clusters_handler(rqst["cluster"])
+            if rqst["path"] == '/report/clusters': # returns report of clusters that have been deployed
+                return report_clusters_handler(None)
 
-        elif rqst["path"] == '/report/tests': # returns report on status of last test runner deployment
-            return report_tests_handler(rqst)
+            elif rqst["path"] == f'/report/clusters/{rqst["cluster"]}': # returns report of clusters that have been deployed
+                return report_clusters_handler(rqst["cluster"])
 
-        elif rqst["path"] == '/test': # deploys test runner
-            return deploy_test_handler(rqst)
+            elif rqst["path"] == '/report/tests': # returns report on status of last test runner deployment
+                return report_tests_handler(rqst)
+
+            elif rqst["path"] == '/test': # deploys test runner
+                return deploy_test_handler(rqst)
 
         # invalid path
         return json_response(404, {'error': 'not found'})

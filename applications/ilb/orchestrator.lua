@@ -720,8 +720,11 @@ end
 --
 -- Fetch: next_node
 --
-local function orchestrator_next_node(txn, service)
+local function orchestrator_next_node(txn)
     local address = nil
+
+    -- get service to retrieve nodes from
+    local service = txn:get_var("txn.service")
 
     -- start exclusion block
     GlobalMutex.lock()

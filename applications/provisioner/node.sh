@@ -36,7 +36,7 @@ ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-com
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $CONTAINER_REGISTRY
 
 # Setup environment
-export IPV4=$(hostname -I | awk '{print $1}')
+export MYIP=$(hostname -I | awk '{print $1}')
 
 # Download AMS files
 mkdir -p /data
@@ -59,8 +59,8 @@ services:
     command: ["/usr/local/etc/sliderule/server.lua"]
     ulimits:
       nofile:
-      soft: 8192
-      hard: 8192
+        soft: 8192
+        hard: 8192
     volumes:
       - /etc/ssl/certs:/etc/ssl/certs
       - /var/run/docker.sock:/var/run/docker.sock
@@ -68,7 +68,7 @@ services:
       - /plugins:/plugins
     environment:
       - LOG_FORMAT=FMT_CLOUD
-      - IPV4=$IPV4
+      - IPV4=$MYIP
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
       - PROJECT_BUCKET=$PROJECT_BUCKET
       - PROJECT_FOLDER=$PROJECT_FOLDER
