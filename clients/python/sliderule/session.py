@@ -218,7 +218,7 @@ class Session:
 
         # set service header (if applicable)
         if self.service != self.cluster:
-            headers = headers | {'x-sliderule-client': self.service}
+            headers = headers | {'x-sliderule-service': self.service}
 
         # build callbacks
         for c in self.callbacks:

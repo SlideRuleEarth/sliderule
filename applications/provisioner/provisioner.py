@@ -543,7 +543,7 @@ def lambda_destroy(event, context):
         stack_names = get_cluster_stack_names(parent_stack_name)
 
         # delete all stacks
-        for stack_name in stack_names:
+        for stack_name in stack_names.sort():
 
             # initialize state info for stack
             state[stack_name] = {}
@@ -692,7 +692,7 @@ def report_clusters_handler(cluster):
                         details = status_handler({"cluster": cluster_name, "username": username}, 'user')
                         if details["statusCode"] == 200:
                             status = json.loads(details["body"])
-                            report[cluster_name]["users"][username] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+                            report[cluster_name]["users"][username] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes"] }
 
     # return success
     return json_response(200, report)
@@ -790,6 +790,9 @@ def lambda_gateway(event, context):
 
         elif rqst["path"] == '/destroy': # destroys a cluster
             return lambda_destroy(rqst, None)
+
+        elif rqst["path"] == f'/destroy/{rqst["username"]}': # destroys a user asg connected to a cluster
+            return lambda_destroy(rqst | {"stack_name": build_user_asg_stack_name(build_cluster_stack_name(rqst["cluster"]), rqst["username"])}, None)
 
         elif rqst["path"] == '/status': # returns deployment status of a cluster
             return status_handler(rqst, 'cluster')

@@ -51,7 +51,8 @@ Resources:
               VolumeSize: 40
               VolumeType: gp3
               DeleteOnTermination: true
-        NodeUserData: !Ref NodeUserData
+        UserData:
+          Fn::Base64: !Ref NodeUserData
 
   UserAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -75,7 +76,7 @@ Resources:
     Type: Custom::ScheduleStackDeletion
     Condition: HasAutoShutdown
     DependsOn:
-      - NodeAutoScalingGroup
+      - UserAutoScalingGroup
     Properties:
       ServiceToken: !Ref ScheduleLambdaArn
       StackName: !Ref AWS::StackName
