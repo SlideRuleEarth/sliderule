@@ -4,6 +4,7 @@ import json
 import base64
 import boto3
 import botocore.exceptions
+from string import Template
 from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives.serialization import load_ssh_public_key
 import scheduler
@@ -188,7 +189,7 @@ def json_response(status_code, body):
 def exception_reponse(e):
     print(f'Exception: {e}')
     if isinstance(e, botocore.exceptions.ClientError) and (e.response['Error']['Code'] == 'ValidationError'):
-        return json_response(404, {'error': 'not found', 'error_description': f'{e}'})
+        return json_response(404, {'error': 'does not exist', 'error_description': f'{e}'})
     return json_response(500, {'error': 'internal error', 'error_description': f'{e}'})
 
 #
@@ -228,6 +229,19 @@ def get_affiliation(username):
     except Exception as e:
         print(f"Failed to get the affiliates file: {e}")
         return None
+
+#
+# Populate User Data
+#
+def populate_user_data(script, rqst, service):
+    """
+    Populates environment variables of a user data script using the environment and request parameters
+    """
+    return Template(open(script).read()).safe_substitute(os.environ | {
+        "VERSION": rqst["version"],
+        "IS_PUBLIC": json.dumps(rqst["is_public"]),
+        "SERVICE": service
+    })
 
 # ###############################
 # Business Logic
@@ -411,24 +425,18 @@ def deploy_handler(rqst, kind):
     # get cluster stack name following the naming convention
     cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
 
-    # get user data for instances
-    ilb_user_data = os.path.expandvars(open("ilb.sh").read())
-    monitor_user_data = os.path.expandvars(open("monitor.sh").read())
-    node_user_data = os.path.expandvars(open("node.sh").read())
-
-    # set version in node user data
-    node_user_data = node_user_data.replace("$VERSION", rqst["version"])
-
     # handle cluster deployments
     if kind == 'cluster':
 
-        # set cluster in node user data
-        node_user_data = node_user_data.replace("$SERVICE", rqst["cluster"])
+        # get user data for instances
+        ilb_user_data = populate_user_data("ilb.sh", rqst, rqst["cluster"])
+        monitor_user_data = populate_user_data("monitor.sh", rqst, rqst["cluster"])
+        node_user_data = populate_user_data("node.sh", rqst, rqst["cluster"])
 
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
-            {"ParameterKey": "IsPublic", "ParameterValue": str(rqst["is_public"])},
+            {"ParameterKey": "IsPublic", "ParameterValue": json.dumps(rqst["is_public"])},
             {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
             {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
             {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
@@ -457,8 +465,10 @@ def deploy_handler(rqst, kind):
     # handle user asg deployments
     elif kind == 'user':
 
-        # set cluster in node user data
-        node_user_data = node_user_data.replace("$SERVICE", rqst["username"])
+        # get user data for instances
+        ilb_user_data = populate_user_data("ilb.sh", rqst, rqst["username"])
+        monitor_user_data = populate_user_data("monitor.sh", rqst, rqst["username"])
+        node_user_data = populate_user_data("node.sh", rqst, rqst["username"])
 
         # get parent stack resources
         resources = get_stack_resources(cluster_stack_name)
@@ -843,7 +853,7 @@ if __name__ == '__main__':
     parser.add_argument('--cluster',        type=str,               default=os.environ.get("CLUSTER"))
     parser.add_argument('--node_capacity',  type=int,               default=os.environ.get("NODE_CAPACITY"))
     parser.add_argument('--ttl',            type=int,               default=os.environ.get("TTL"))
-    parser.add_argument('--is_public',      action='store_true',    default=os.environ.get("IS_PUBLIC"))
+    parser.add_argument('--is_public',      action='store_true',    default=(os.environ.get("IS_PUBLIC") == "true"))
     parser.add_argument('--version',        type=str,               default=os.environ.get("VERSION"))
     parser.add_argument('--branch',         type=str,               default=os.environ.get("BRANCH"))
     parser.add_argument('--api',            type=str,               default=None)

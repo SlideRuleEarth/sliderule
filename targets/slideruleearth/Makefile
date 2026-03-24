@@ -187,6 +187,7 @@ USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 BUILD_CONFIG ?= release
 BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(BUILD_CONFIG) && make"
+RUN_CMD ?= $(ROOT)/targets/slideruleearth/server.lua
 ARGS ?=
 
 CLANG_VER ?= ""
@@ -206,9 +207,6 @@ RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += $(COMMON_CFG)
 
 RELEASE ?= # vX.Y.Z
-TEST ?= $(ROOT)/targets/slideruleearth/test_runner.lua
-PYTEST ?= # specific pytests and additional pytest options can be supplied here
-JEST ?= # specific jest tests and additional jest options can be supplied here
 
 ########################
 # Local Build Targets
@@ -239,7 +237,7 @@ run: ## run the server locally
 	DOMAIN=localhost \
 	AMS=http://127.0.0.1:9082 \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/server.lua
+	$(RUNNER) $(INSTALLDIR)/bin/sliderule $(RUN_CMD)
 
 build: ## build the code using the build environment docker container
 	docker run \
@@ -277,11 +275,14 @@ job: ## execute the job runner locally
 	PROJECT_REGION=$(AWS_REGION) \
 	CLUSTER=local \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
+	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 
 python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \
 	sh -c 'cd $(ROOT)/clients/python && pip install .'
+
+selftest: ## run the self test on the server code
+	make run RUN_CMD=$(ROOT)/targets/slideruleearth/test_runner.lua
 
 ########################
 # Docker Build Targets
@@ -302,6 +303,10 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/docker-entrypoint.sh $(SLIDERULE_STAGE_DIR)/
 	cd $(SLIDERULE_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) .
+
+sliderule-test: ## run python client tests
+	conda run -n ams --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -349,6 +354,10 @@ ams-run:
 	cd $(ROOT)/applications/ams && \
 	conda run -n ams --no-capture-output \
 	flask --app ams run --debug --port 9082
+
+ams-test: ## run ams tests
+	conda run -n ams --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest $(ARGS) && coverage report -m'
 
 ########################
 # Cluster Targets
@@ -403,30 +412,6 @@ cluster-info: ## returns metadata associated with the user token
 cluster-authenticate: ## refreshes the user's authorization token with a new authorization cycle
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands authenticate'
-
-cluster-test:
-	STACK_NAME=$(PROVISIONER_STACKNAME) \
-	VERSION=$(VERSION) \
-	IS_PUBLIC=$(IS_PUBLIC) \
-	DOMAIN=$(DOMAIN) \
-	CLUSTER=$(CLUSTER) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
-	DESTROY_LAMBDA_ARN=$(DESTROY_LAMBDA_ARN) \
-	SCHEDULE_LAMBDA_ARN=$(SCHEDULE_LAMBDA_ARN) \
-	NODE_CAPACITY=$(NODE_CAPACITY) \
-	TTL=$(TTL) \
-	ALERT_STREAM=$(ALERT_STREAM) \
-	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
-	JWT_ISSUER=$(JWT_ISSUER) \
-	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
-    ALERT_EMAIL=$(ALERT_EMAIL) \
-	AWS_REGION=$(AWS_REGION) \
-	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/provisioner && python provisioner.py $(TEST)'
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"
@@ -572,6 +557,27 @@ authenticator-delete: ## deletes the lambda authenticator functions
 authenticator-logs:
 	aws logs tail /aws/lambda/$(AUTHENTICATOR_STACKNAME)-gateway --since 2h --format short
 
+authenticator-test: ## run authenticator tests
+	conda run -n authenticator --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/authenticator && \
+	DOMAIN=localhost \
+	AUTHENTICATOR_HOSTNAME=localhost \
+	GITHUB_ORG=myorg \
+	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
+	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
+	TRUSTED_REDIRECT_HOSTS=localhost \
+	THIRD_PARTY_REDIRECT_HOSTS=companyx.com \
+	SESSION_TABLE=$(AUTHENTICATOR_STACKNAME)-store \
+	GITHUB_AUTHORIZE_URL=http://localhost:9083/login/oauth/authorize \
+	GITHUB_TOKEN_URL=http://localhost:9083/login/oauth/access_token \
+	GITHUB_DEVICE_CODE_URL=http://localhost:9083/login/device/code \
+	GITHUB_API_URL=http://localhost:9083/api \
+	JWT_SIGNING_KEY_ARN=$(JWT_SIGNING_KEY_ARN) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	AFFILIATES_FILENAME=$(PROJECT_FOLDER)/$(AFFILIATES_FILENAME) \
+	coverage run -m pytest $(ARGS) && \
+	coverage report -m'
+
 ########################
 # Provisioner Targets
 ########################
@@ -632,6 +638,41 @@ provisioner-delete: ## deletes the lambda provisioner functions
 
 provisioner-logs:
 	aws logs tail /aws/lambda/$(PROVISIONER_STACKNAME)-gateway --since 2h --format short
+
+provisioner-run:
+	STACK_NAME=$(PROVISIONER_STACKNAME) \
+	VERSION=$(VERSION) \
+	IS_PUBLIC=$(IS_PUBLIC) \
+	DOMAIN=$(DOMAIN) \
+	CLUSTER=$(CLUSTER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
+	DESTROY_LAMBDA_ARN=$(DESTROY_LAMBDA_ARN) \
+	SCHEDULE_LAMBDA_ARN=$(SCHEDULE_LAMBDA_ARN) \
+	NODE_CAPACITY=$(NODE_CAPACITY) \
+	TTL=$(TTL) \
+	ALERT_STREAM=$(ALERT_STREAM) \
+	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
+	JWT_ISSUER=$(JWT_ISSUER) \
+	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+    ALERT_EMAIL=$(ALERT_EMAIL) \
+	AWS_REGION=$(AWS_REGION) \
+	conda run -n sliderule --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/provisioner && python provisioner.py $(ARGS)'
+
+provisioner-test: ## run provisioner tests
+	conda run -n provisioner --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/provisioner && \
+    DOMAIN=$(DOMAIN) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \
+    SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+	coverage run -m pytest $(ARGS) && \
+	coverage report -m'
 
 ########################
 # Runner Targets
@@ -824,59 +865,6 @@ distclean: ## fully remove all non-version controlled files and directories
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml
-
-########################
-# Test Targets
-########################
-
-selftest: ## run the self test on the server code
-	DOMAIN=localhost \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_REGION=$(AWS_REGION) \
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
-
-sliderule-test: ## run python client tests
-	conda run -n ams --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(PYTEST) && coverage report -m'
-
-ams-test: ## run ams tests
-	conda run -n ams --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest $(PYTEST) && coverage report -m'
-
-authenticator-test: ## run authenticator tests
-	conda run -n authenticator --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/authenticator && \
-	DOMAIN=localhost \
-	AUTHENTICATOR_HOSTNAME=localhost \
-	GITHUB_ORG=myorg \
-	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
-	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
-	TRUSTED_REDIRECT_HOSTS=localhost \
-	THIRD_PARTY_REDIRECT_HOSTS=companyx.com \
-	SESSION_TABLE=$(AUTHENTICATOR_STACKNAME)-store \
-	GITHUB_AUTHORIZE_URL=http://localhost:9083/login/oauth/authorize \
-	GITHUB_TOKEN_URL=http://localhost:9083/login/oauth/access_token \
-	GITHUB_DEVICE_CODE_URL=http://localhost:9083/login/device/code \
-	GITHUB_API_URL=http://localhost:9083/api \
-	JWT_SIGNING_KEY_ARN=$(JWT_SIGNING_KEY_ARN) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	AFFILIATES_FILENAME=$(PROJECT_FOLDER)/$(AFFILIATES_FILENAME) \
-	coverage run -m pytest $(PYTEST) && \
-	coverage report -m'
-
-provisioner-test: ## run provisioner tests
-	conda run -n provisioner --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/provisioner && \
-    DOMAIN=$(DOMAIN) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \
-    SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
-	coverage run -m pytest $(PYTEST) && \
-	coverage report -m'
-
-nodejs-jest: ## run node.js client self tests
-	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(CLUSTER) TEST=$(JEST)
 
 ########################
 # Help Targets

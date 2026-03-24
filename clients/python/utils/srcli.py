@@ -70,8 +70,9 @@ def display_concise(response):
         for date_field in ["creation_time", "auto_shutdown"]:
             if data[date_field]:
                 data[date_field] = datetime.fromisoformat(data[date_field]).astimezone(ZoneInfo(args.timezone)).strftime("%Y-%m-%d %H:%M:%S %Z")
-        for user in data["users"]:
-            data["users"][user]["auto_shutdown"] = datetime.fromisoformat(data["users"][user]["auto_shutdown"]).astimezone(ZoneInfo(args.timezone)).strftime("%Y-%m-%d %H:%M:%S %Z")
+        if data["users"]:
+            for user in data["users"]:
+                data["users"][user]["auto_shutdown"] = datetime.fromisoformat(data["users"][user]["auto_shutdown"]).astimezone(ZoneInfo(args.timezone)).strftime("%Y-%m-%d %H:%M:%S %Z")
         return {k:data[k] for k in data if data[k] is not None}
     else:
         return response
