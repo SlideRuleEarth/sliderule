@@ -22,8 +22,6 @@ Parameters:
     Type: CommaDelimitedList
   ProjectBucket:
     Type: String
-  ProjectFolder:
-    Type: String
   AffiliatesFilename:
     Type: String
   LambdaZipFile:
@@ -139,7 +137,6 @@ Resources:
           THIRD_PARTY_REDIRECT_HOSTS: !Ref ThirdPartyRedirectHosts
           SESSION_TABLE: !Sub '${AWS::StackName}-store'
           PROJECT_BUCKET: !Ref ProjectBucket
-          PROJECT_FOLDER: !Ref ProjectFolder
           AFFILIATES_FILENAME: !Ref AffiliatesFilename
 
   # DynamoDB Table

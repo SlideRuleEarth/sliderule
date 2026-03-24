@@ -550,7 +550,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 						ParameterKey=ThirdPartyRedirectHosts,ParameterValue=$(THIRD_PARTY_REDIRECT_HOSTS) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=AffiliatesFilename,ParameterValue=$(AFFILIATES_FILENAME) \
+						ParameterKey=AffiliatesFilename,ParameterValue=$(PROJECT_FOLDER)/$(AFFILIATES_FILENAME) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
@@ -856,8 +856,7 @@ authenticator-test: ## run authenticator tests
 	GITHUB_API_URL=http://localhost:9083/api \
 	JWT_SIGNING_KEY_ARN=$(JWT_SIGNING_KEY_ARN) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \
+	AFFILIATES_FILENAME=$(PROJECT_FOLDER)/$(AFFILIATES_FILENAME) \
 	coverage run -m pytest $(PYTEST) && \
 	coverage report -m'
 

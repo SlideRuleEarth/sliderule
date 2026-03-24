@@ -33,7 +33,6 @@ TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(
 THIRD_PARTY_REDIRECT_HOSTS = set(os.environ.get('THIRD_PARTY_REDIRECT_HOSTS', '').split(' ')) # Untrusted redirect_uri list which forces descope of audience in token
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
-PROJECT_FOLDER = os.environ["PROJECT_FOLDER"]
 AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
 
 # GitHub OAuth endpoints (from the environment only for testing)
@@ -228,7 +227,7 @@ def get_affiliation(username):
     """
     s3 = get_s3_client()
     try:
-        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
+        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=AFFILIATES_FILENAME)
         data = json.load(response['Body']).get(username, {})
         return data.get("active", False) and data or None
     except Exception as e:
