@@ -385,9 +385,17 @@ cluster-extend: ## invokes the provisioner *extend* lambda function and displays
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy'
 
+cluster-expand: ## invokes the provisioner *deploy* lambda function for a user asg and displays the response
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --commands deploy --user_service'
+
 cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy'
+
+cluster-contract: ## invokes the provisioner *destroy* lambda function for a user asg and displays the response
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands deploy --user_service'
 
 cluster-status: ## invokes the provisioner *status* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \

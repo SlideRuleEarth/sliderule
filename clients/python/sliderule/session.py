@@ -45,19 +45,6 @@ import webbrowser
 from sliderule import version
 
 ###############################################################################
-# LOGGING
-###############################################################################
-
-logger = logging.getLogger(__name__)
-eventlogger = {
-    0: logger.debug,
-    1: logger.info,
-    2: logger.warning,
-    3: logger.error,
-    4: logger.critical
-}
-
-###############################################################################
 # GLOBALS
 ###############################################################################
 
@@ -164,12 +151,22 @@ class Session:
         self.ps_token_exp = None
         self.ps_metadata = None
         self.ps_lock = threading.Lock()
-        self.console = None
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
 
-        # set log level
-        self.set_verbose(verbose, loglevel)
+        # initialize logging
+        self.logger = logging.getLogger(__name__)
+        self.eventlogger = {
+            0: self.logger.debug,
+            1: self.logger.info,
+            2: self.logger.warning,
+            3: self.logger.error,
+            4: self.logger.critical
+        }
+
+        # set verbosity
+        if verbose:
+            self.set_verbose(loglevel)
 
         # configure callbacks
         self.callbacks = {
@@ -300,14 +297,14 @@ class Session:
 
             # Log Reason for Not Completing
             if not complete:
-                logger.debug(f'{rsps}... {retry_status(remaining_attempts)}')
+                self.logger.debug(f'{rsps}... {retry_status(remaining_attempts)}')
 
         # Check Complete
         if not complete:
             if self.throw_exceptions or rethrow:
                 raise FatalError(f'error in request to {url}: {rsps}')
             else:
-                logger.error(f'Error in request to {url}: {rsps}')
+                self.logger.error(f'Error in request to {url}: {rsps}')
                 rsps = None
 
         # Return Response
@@ -332,9 +329,9 @@ class Session:
     #
     #  set_verbose
     #
-    def set_verbose (self, enable, loglevel=logging.INFO):
+    def set_verbose (self, loglevel=logging.INFO):
         '''
-        set verbosity of log messages by adding/removing the console log
+        set verbosity of log messages by adding the console log
         handler and by setting the log level
         '''
         # massage loglevel parameter if passed in as a string
@@ -353,19 +350,14 @@ class Session:
         elif loglevel == "CRITICAL":
             loglevel = logging.CRITICAL
 
-        # enable/disable logging to console
-        if (enable == True) and (self.console == None):
-            self.console = logging.StreamHandler()
-            logger.addHandler(self.console)
-        elif (enable == False) and (self.console != None):
-            logger.removeHandler(self.console)
-            self.console = None
+        # enable logging to console
+        if len(self.logger.handlers) == 0:
+            self.logger.addHandler(logging.StreamHandler())
 
         # always set level to requested
-        logger.setLevel(loglevel)
-        if self.console != None:
-            self.console.setLevel(loglevel)
-
+        self.logger.setLevel(loglevel)
+        for handler in self.logger.handlers:
+            handler.setLevel(loglevel)
     #
     # scaleout
     #
@@ -407,20 +399,20 @@ class Session:
                     version="latest"
                 )
                 inerror = "error" in rsps
-                logger.info(f'Requesting deployment of {self.cluster}: {inerror}')
+                self.logger.info(f'Requesting deployment of {self.cluster}: {inerror}')
 
             # Check for Exit Conditions
             if inerror: # error occurred
-                logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
+                self.logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
                 break
             elif int(time.time() - start) > self.MAX_PS_CLUSTER_WAIT_SECS: # Timeout
-                logger.error("Maximum time allowed waiting for cluster has been exceeded")
+                self.logger.error("Maximum time allowed waiting for cluster has been exceeded")
                 break
             elif available_nodes >= node_capacity: # Node Capacity Reached
-                logger.info(f"Cluster has reached capacity of {available_nodes} nodes... {int(time.time() - start)} seconds")
+                self.logger.info(f"Cluster has reached capacity of {available_nodes} nodes... {int(time.time() - start)} seconds")
                 break
             else:
-                logger.info(f"Waiting while cluster scales to desired capacity (currently at {available_nodes} nodes, desired is {node_capacity} nodes)... {int(time.time() - start)} seconds")
+                self.logger.info(f"Waiting while cluster scales to desired capacity (currently at {available_nodes} nodes, desired is {node_capacity} nodes)... {int(time.time() - start)} seconds")
                 time.sleep(10.0)
 
     #
@@ -456,10 +448,10 @@ class Session:
                 raise RuntimeError(f'{rsps}')
 
         except Exception as e:
-            logger.error(f'Failure attempting to authenticate: {e}')
+            self.logger.error(f'Failure attempting to authenticate: {e}')
 
         # log status
-        logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
+        self.logger.info(f'Login status to {login_url}: {login_status and "success" or "failure"}')
 
         # return response metadata
         return self.ps_metadata
@@ -491,7 +483,7 @@ class Session:
             data = do_post()
             if data.status_code == 401: # AWS API Gateway will often return a 401 on a cold request
                 retry_delay = 5 # seconds
-                logger.info(f"Retrying gateway post after {retry_delay} seconds ...")
+                self.logger.info(f"Retrying gateway post after {retry_delay} seconds ...")
                 time.sleep(retry_delay)
                 data = do_post()
 
@@ -508,7 +500,7 @@ class Session:
             return rsps
 
         except Exception as e:
-            logger.error(f'Failed to make request to {url}: {e}')
+            self.logger.error(f'Failed to make request to {url}: {e}')
             if self.throw_exceptions:
                 raise
             return {'error': f'{e}', 'error_description': f'{rsps}'}
@@ -602,9 +594,9 @@ class Session:
                 if result and (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
                     return result
                 else:
-                    logger.info(f"Invalid or expired token: {result['metadata']['exp']}")
+                    self.logger.info(f"Invalid or expired token: {result['metadata']['exp']}")
             except Exception as e:
-                logger.error(f"Exception occurred when reading token from local cache: {e}")
+                self.logger.error(f"Exception occurred when reading token from local cache: {e}")
 
         # sequence user through device flow
         try:
@@ -652,26 +644,26 @@ class Session:
                     print(f"\bsuccess")
                     # attempt to store token to local cache
                     if not self.__store_cache("ps_access_token.json", result):
-                        logger.info(f"Unsuccessful storing token to local cache")
+                        self.logger.info(f"Unsuccessful storing token to local cache")
                     # return metadata
                     return result
                 elif result['status'] == 'error':
-                    logger.error(f'error polling for authorization: {result.get("error")}')
+                    self.logger.error(f'error polling for authorization: {result.get("error")}')
                 else: # result['status'] == 'pending'
                     wait_interval = result.get('interval', interval)
                     time.sleep(wait_interval)
 
             # if here then we failed to authenticate
             print('\bfailure')
-            logger.error(f'failed to authenticate to {login_url}')
+            self.logger.error(f'failed to authenticate to {login_url}')
 
         # handle exceptions
         except requests.RequestException as e:
-            logger.error(f"request failed: {e}")
+            self.logger.error(f"request failed: {e}")
         except json.JSONDecodeError:
-            logger.error(f"invalid json response")
+            self.logger.error(f"invalid json response")
         except Exception as e:
-            logger.error(f"internal error: {e}")
+            self.logger.error(f"internal error: {e}")
 
         # return error
         return {'status': 'error'}
@@ -693,11 +685,11 @@ class Session:
 
         # handle exceptions
         except requests.RequestException as e:
-            logger.error(f"request failed: {e}")
+            self.logger.error(f"request failed: {e}")
         except json.JSONDecodeError:
-            logger.error(f"invalid json response")
+            self.logger.error(f"invalid json response")
         except Exception as e:
-            logger.error(f"internal error: {e}")
+            self.logger.error(f"internal error: {e}")
 
         # return error
         return {'status': 'error'}
@@ -722,7 +714,7 @@ class Session:
                         self.ps_access_token = rsps["token"]
                         self.ps_token_exp = int(((rsps['exp'] - now) / 2) + now)
                     except Exception as e:
-                        logger.error(f'Failed to refresh token: {e}')
+                        self.logger.error(f'Failed to refresh token: {e}')
             # Build Authentication Header
             headers['Authorization'] = 'Bearer ' + self.ps_access_token
 
@@ -747,7 +739,7 @@ class Session:
             headers["x-sliderule-timestamp"] = str(timestamp)
             headers["x-sliderule-signature"] = signature_b64
         except Exception as e:
-            logger.warning(f"Failed to sign request: {e}")
+            self.logger.warning(f"Failed to sign request: {e}")
 
 
     #
@@ -759,7 +751,7 @@ class Session:
             with open(cache_file, "r") as file:
                 return json.loads(file.read())
         except Exception as e:
-            logger.error(f'Failed load data from {filename}: {e}')
+            self.logger.error(f'Failed load data from {filename}: {e}')
             return None
 
     #
@@ -776,7 +768,7 @@ class Session:
                 file.write(json.dumps(contents))
             return True
         except Exception as e:
-            logger.error(f'Failed store data to {filename}: {e}')
+            self.logger.error(f'Failed store data to {filename}: {e}')
             return False
 
     #
@@ -980,7 +972,7 @@ class Session:
     #
     @staticmethod
     def __logrec (rec, session):
-        eventlogger[rec['level']]('%d:%s: %s' % (rec["time"], rec['source'], rec["message"]))
+        session.eventlogger[rec['level']]('%d:%s: %s' % (rec["time"], rec['source'], rec["message"]))
 
     #
     #  __alertrec
@@ -988,9 +980,9 @@ class Session:
     @staticmethod
     def __alertrec (rec, session):
         if rec["code"] < 0:
-            eventlogger[rec["level"]]("Alert <%d>: %s", rec["code"], rec["text"])
+            session.eventlogger[rec["level"]]("Alert <%d>: %s", rec["code"], rec["text"])
         else:
-            eventlogger[rec["level"]]("%s", rec["text"])
+            session.eventlogger[rec["level"]]("%s", rec["text"])
 
     #
     #  _arrowrec
@@ -1002,10 +994,10 @@ class Session:
             if rec["__rectype"] == 'arrowrec.meta':
                 if filename in session.arrow_file_table:
                     raise FatalError(f'File transfer already in progress for {filename}')
-                logger.info(f'Writing output file: {filename}')
+                session.logger.info(f'Writing output file: {filename}')
                 session.arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
             elif rec["__rectype"] == 'arrowrec.eof':
-                logger.info(f'Checksum of output file: {rec["checksum"]}')
+                session.logger.info(f'Checksum of output file: {rec["checksum"]}')
             else: # rec["__rectype"] == 'arrowrec.data'
                 data = rec['data']
                 file = session.arrow_file_table[filename]
@@ -1013,7 +1005,7 @@ class Session:
                 file["progress"] += len(data)
                 if file["progress"] >= file["size"]:
                     file["fp"].close()
-                    logger.info(f'Closing output file: {filename}')
+                    session.logger.info(f'Closing output file: {filename}')
                     del session.arrow_file_table[filename]
         except Exception as e:
             raise FatalError(f'Failed to process arrow file: {e}')

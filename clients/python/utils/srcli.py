@@ -43,6 +43,7 @@ parser.add_argument('--ttl',                type=int,               default=60) 
 parser.add_argument('--version',            type=str,               default="unstable")
 parser.add_argument('--branch',             type=str,               default="main")
 parser.add_argument('--report',             type=str,               default="clusters")
+parser.add_argument('--user_service',       action='store_true',    default=False)
 parser.add_argument('--concise',            action='store_true',    default=False)
 parser.add_argument('--timezone',           type=str,               default="America/New_York")
 parser.add_argument('--args',               nargs='+', type=str,    default=None)
@@ -51,7 +52,7 @@ parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
 args,_ = parser.parse_known_args()
 
 # Create Session
-session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=True)
+session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=True, user_service=args.user_service)
 
 # Helpers
 def display_concise(response):

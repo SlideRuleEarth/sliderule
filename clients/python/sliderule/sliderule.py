@@ -126,6 +126,8 @@ def init (
         user_service=user_service)
     # configure logging
     if log_handler != None:
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
         logger.addHandler(log_handler)
     # verify compatibility between client and server versions
     try:
@@ -248,7 +250,8 @@ def set_verbose (enable, loglevel=logging.INFO, session=None):
         >>> sliderule.set_verbose(True, loglevel=logging.INFO)
     '''
     session = checksession(session)
-    session.set_verbose(enable, loglevel)
+    if enable:
+        session.set_verbose(loglevel)
 
 #
 # set_rqst_timeout
