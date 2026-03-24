@@ -126,6 +126,7 @@ RUNNER_STACKNAME = runner-$(BASE_DOMAIN)
 CERTBOT_STACKNAME = certbot-$(BASE_DOMAIN)
 RECORDER_STACKNAME = recorder # not scoped to domain
 TESTRUNNER_STACKNAME = testrunner # not scoped to domain
+DOCUMENTATION_STACKNAME = documentation # not scoped to domain
 
 AUTHENTICATOR_HOSTNAME = login.$(DOMAIN)
 PROVISIONER_HOSTNAME = provisioner.$(DOMAIN)
@@ -750,7 +751,7 @@ documentation-live-update: ## update the documentation in the S3 bucket and inva
 
 documentation-create: ## create documentation stack
 	aws cloudformation create-stack \
-		--stack-name 	documentation \
+		--stack-name 	$(DOCUMENTATION_STACKNAME) \
 		--template-body file://$(ROOT)/docs/cloudfront/documentation.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		us-east-1 \
@@ -758,14 +759,14 @@ documentation-create: ## create documentation stack
 						ParameterKey=DocumentationHostname,ParameterValue=$(DOCUMENTATION_HOSTNAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=ProjectWebsiteBucket,ParameterValue=$(PROJECT_WEBSITE_BUCKET)
-	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name documentation
+	aws cloudformation wait stack-create-complete --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 
 documentation-describe: ## status the creation/deletion of the documentation
-	aws cloudformation describe-stack-events --region us-east-1 --stack-name documentation
+	aws cloudformation describe-stack-events --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 
 documentation-delete: ## deletes the documentation stack
-	aws cloudformation delete-stack --region us-east-1 --stack-name documentation
-	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name documentation
+	aws cloudformation delete-stack --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
+	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 
 documentation-render-notebooks: ## execute the notebooks used in the documentation
 	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(DOCUMENTATION_ASSET_DIR)/boulder_watershed.ipynb --debug
@@ -888,6 +889,9 @@ init-dev-env: ## one-time setup of development environment for running locally
 	curl $(JWT_ISSUER)/auth/pem > /etc/haproxy/pem/pubkey.pem
 	mkdir -p /etc/ssl/private
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(DOMAIN).pem /etc/ssl/private/$(DOMAIN).pem
+
+compose-%: ## (re)start a docker container in the background
+	docker compose -p cluster up -d --force-recreate $*
 
 environment: ## echo the environment variables
 	@echo INSTALLDIR: $(INSTALLDIR)
