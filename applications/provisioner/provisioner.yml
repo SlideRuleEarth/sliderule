@@ -133,7 +133,6 @@ Resources:
           AFFILIATES_FILENAME: !Ref AffiliatesFilename
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
-          AWS_REGION: !Ref AWS::Region
 
   ## IAM Role
   LambdaExecutionRole:
