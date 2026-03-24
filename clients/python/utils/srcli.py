@@ -57,6 +57,8 @@ session = sliderule.create_session(domain=args.domain, cluster=args.cluster, ver
 def display_concise(response):
     if args.concise:
         data = {
+            "error": response.get("error"),
+            "error_description": response.get("error_description"),
             "stack_name": response.get("response", {}).get("StackName"),
             "stack_status": response.get("response", {}).get("StackStatus"),
             "creation_time": response.get("response", {}).get("CreationTime"),

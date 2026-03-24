@@ -240,6 +240,7 @@ def populate_user_data(script, rqst, service):
     return Template(open(script).read()).safe_substitute(os.environ | {
         "VERSION": rqst["version"],
         "IS_PUBLIC": json.dumps(rqst["is_public"]),
+        "CLUSTER": rqst["cluster"],
         "SERVICE": service
     })
 
