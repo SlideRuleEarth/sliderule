@@ -145,11 +145,11 @@ DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environm
 DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
 
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
-AFFILIATES_FILENAME = "affiliates.json"
+AFFILIATES_FILENAME = affiliates.json
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
 TRUSTED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
-THIRD_PARTY_REDIRECT_HOSTS ?= "claude.ai"
+THIRD_PARTY_REDIRECT_HOSTS ?= claude.ai
 
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
