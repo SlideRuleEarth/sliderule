@@ -400,6 +400,10 @@ cluster-info: ## returns metadata associated with the user token
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info --asjson'
 
+cluster-authenticate: ## refreshes the user's authorization token with a new authorization cycle
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands authenticate'
+
 cluster-test:
 	STACK_NAME=$(PROVISIONER_STACKNAME) \
 	VERSION=$(VERSION) \

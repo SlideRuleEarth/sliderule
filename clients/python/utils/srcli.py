@@ -64,11 +64,14 @@ def display_concise(response):
             "current_nodes": response.get("current_nodes"),
             "version": response.get("version"),
             "is_public": response.get("is_public"),
-            "node_capacity": response.get("node_capacity")
+            "node_capacity": response.get("node_capacity"),
+            "users": response.get("users")
         }
         for date_field in ["creation_time", "auto_shutdown"]:
             if data[date_field]:
                 data[date_field] = datetime.fromisoformat(data[date_field]).astimezone(ZoneInfo(args.timezone)).strftime("%Y-%m-%d %H:%M:%S %Z")
+        for user in data["users"]:
+            data["users"][user]["auto_shutdown"] = datetime.fromisoformat(data["users"][user]["auto_shutdown"]).astimezone(ZoneInfo(args.timezone)).strftime("%Y-%m-%d %H:%M:%S %Z")
         return {k:data[k] for k in data if data[k] is not None}
     else:
         return response
@@ -84,6 +87,7 @@ CommandRunner = {
     "report": lambda: {k[0]:display_concise(k[1]) for k in session.provisioner.report(kind=args.report).items()},
     "test": lambda: session.provision("test", {"branch":args.branch}),
     "info": session.provisioner.info,
+    "authenticate": lambda: session.authenticate(force_login=True),
     # Cluster
     "version": lambda: session.source("version"),
     # Runner

@@ -10,9 +10,6 @@ Parameters:
     Type: String
   IsPublic:
     Type: String
-    AllowedValues:
-      - "true"
-      - "false"
   Domain:
     Type: String
   Cluster:
