@@ -11,6 +11,8 @@ Parameters:
     Type: String
   Domain:
     Type: String
+  PublicCluster:
+    Type: String
   ProvisionerHostname:
     Type: String
   JwtIssuer:
@@ -122,6 +124,7 @@ Resources:
           STACK_NAME: !Ref AWS::StackName
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
           DOMAIN: !Ref Domain
+          PUBLIC_CLUSTER: !Ref PublicCluster
           PROJECT_BUCKET: !Ref ProjectBucket
           PROJECT_FOLDER: !Ref ProjectFolder
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket

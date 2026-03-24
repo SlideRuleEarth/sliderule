@@ -16,7 +16,7 @@ register_rqst = build_query_request('/auth/github/register', {
     "response_types": ['code'],
     "auth_method": 'none',
     "challenge_method": 'S256',
-    "scope": 'mcp:tools mcp:resources sliderule:access sliderule:trusted'
+    "scope": 'mcp:tools mcp:resources sliderule:access sliderule:admin'
 })
 
 register_rsps = json.loads(lambda_gateway(register_rqst, None)["body"])

@@ -2,6 +2,7 @@ import os
 import re
 import json
 import base64
+import socket
 import boto3
 import botocore.exceptions
 from string import Template
@@ -28,6 +29,7 @@ _pubkey_cache = {}
 
 STACK_NAME = os.environ.get("STACK_NAME")
 DOMAIN = os.environ.get("DOMAIN")
+PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
 PROJECT_FOLDER = os.environ.get("PROJECT_FOLDER")
 PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
@@ -94,6 +96,25 @@ def get_instances_by_name(name):
     except Exception as e:
         print(f"Unable to get <{name}> instances: {e}")
         return []
+
+#
+# Get full EC2 instance name by name filter and IP address
+#
+def get_instance_by_ip(name_filter, ip):
+    try:
+        response = ec2.describe_instances(
+            Filters=[
+                { "Name": "tag:Name",   "Values": [name_filter] },
+                { "Name": "ip-address", "Values": [ip] }
+            ]
+        )
+        instances = [instance for reservation in response["Reservations"] for instance in reservation["Instances"]]
+        if len(instances) > 0:
+            raise RuntimeError(f"Multiple ({len(instances)}) instances matched")
+        return next((t["Value"] for t in instances[0]["Tags"] if t["Key"] == "Name"), None)
+    except Exception as e:
+        print(f"Unable to get <{name_filter}> instance with IP <{ip}>: {e}")
+        return None
 
 #
 # Get stack description
@@ -371,13 +392,24 @@ def validate_request(event, info):
         print(f'Access denied to {info["username"]}, organization roles: {info["orgRoles"]}')
         return None
 
+    # get public cluster (only for user services)
+    public_cluster_name = None
+    path_components = path.split("/")
+    if (len(path_components) >= 3) and (path_components[-1] == info["username"]):
+        public_ip = socket.gethostbyname(f"{PUBLIC_CLUSTER}.{DOMAIN}")
+        public_cluster_ilb_name = get_instance_by_ip(f"{PUBLIC_CLUSTER}-*-ilb", public_ip)
+        if public_cluster_ilb_name:
+            public_cluster_name = public_cluster_ilb_name.split("-ilb")[0]
+        else:
+            print(f'Unable to locate public cluster for user service request to {PUBLIC_CLUSTER}.{DOMAIN}')
+
     # check cluster
-    cluster = body.get("cluster")
+    cluster = body.get("cluster", public_cluster_name)
     if cluster:
         if not valid_cluster_name(cluster):
             print(f'Access denied to {info["username"]}, invalid cluster: {cluster}')
             return None
-        if (cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"]):
+        if (cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"]) and (cluster != public_cluster_name):
             print(f'Access denied to {info["username"]}, {cluster} not in allowed clusters: {info["deployableClusters"]}')
             return None
 

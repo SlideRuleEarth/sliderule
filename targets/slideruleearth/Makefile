@@ -422,9 +422,9 @@ cluster-authenticate: ## refreshes the user's authorization token with a new aut
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands authenticate'
 
 cluster-deploy-candidate: ## deploy candidate public cluster
-	@echo "Deploying cluster <sliderule-$(TIMESTAMP)>"
+	@echo "Deploying cluster <$(PUBLIC_CLUSTER)-$(TIMESTAMP)>"
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster sliderule-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest --commands deploy'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest --commands deploy'
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
@@ -433,7 +433,7 @@ cluster-go-live: ## switch dns entry of public cluster
 		--capabilities 			CAPABILITY_NAMED_IAM \
 		--region 				$(AWS_REGION) \
 		--parameter-overrides 	Domain=$(DOMAIN) \
-								Subdomain=$(PUBLIC_CLUSTER) \
+								PublicCluster=$(PUBLIC_CLUSTER) \
 								PublicIp=$(PUBLIC_IP)
 
 cluster-take-offline: ## destroy dns entry of public cluster
@@ -619,6 +619,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=PublicCluster,ParameterValue=$(PUBLIC_CLUSTER) \
 						ParameterKey=ProvisionerHostname,ParameterValue=$(PROVISIONER_HOSTNAME) \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
@@ -652,6 +653,7 @@ provisioner-run:
 	VERSION=$(VERSION) \
 	IS_PUBLIC=$(IS_PUBLIC) \
 	DOMAIN=$(DOMAIN) \
+	PUBLIC_CLUSTER=$(PUBLIC_CLUSTER) \
 	CLUSTER=$(CLUSTER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
@@ -675,6 +677,7 @@ provisioner-test: ## run provisioner tests
 	conda run -n provisioner --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/provisioner && \
     DOMAIN=$(DOMAIN) \
+	PUBLIC_CLUSTER=$(PUBLIC_CLUSTER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
 	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \

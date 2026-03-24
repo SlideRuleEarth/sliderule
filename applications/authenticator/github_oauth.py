@@ -289,6 +289,16 @@ def contains_scope(scope, scopes_to_check, check="any"):
         return True
 
 
+def intersection_of_scope(scope_1, scope_2):
+    """
+    return list of scopes that are contained in both
+    """
+    scope_both = []
+    for s in scope_1:
+        if s in scope_2:
+            return scope_both.append(s)
+    return scope_both
+
 
 def contains_redirect(redirect_uri, valid_redirect_hosts):
     """
@@ -656,6 +666,16 @@ def authenticate_user(authorization_str, scope):
     if not username:
         raise RuntimeError('Could not get GitHub username')
 
+    # get affiliation
+    affiliation = get_affiliation(username)
+    if affiliation:
+        # restrict scope to those allowed
+        scope = intersection_of_scope(scope, affiliation["allowed_scopes"])
+        # append affiliate to organization roles
+        org_roles.append('affiliate')
+        # append affiliates clusters to clusters
+        clusters.append(affiliation['clusters'])
+
     # get organizational roles (JWT claim)
     user_role = get_user_role(authorization_str, username)
     org_roles = []
@@ -666,17 +686,6 @@ def authenticate_user(authorization_str, scope):
 
     # get clusters (match one-to-one to user's teams)
     clusters = get_user_teams(authorization_str, org_roles)
-
-    # get affiliation
-    affiliation = get_affiliation(username)
-    if affiliation:
-        # check allowed scopes for affiliate
-        if not contains_scope(scope, affiliation["allowed_scopes"], check="all"):
-            raise RuntimeError(f"Forbidden scope: {scope} not contained in {affiliation["allowed_scopes"]}")
-        # append affiliate to organization roles
-        org_roles.append('affiliate')
-        # append affiliates clusters to clusters
-        clusters.append(affiliation['clusters'])
 
     # build audience list (JWT claim)
     audience_list = generate_audience_list(username, clusters, org_roles, scope)

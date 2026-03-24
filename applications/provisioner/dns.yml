@@ -6,7 +6,7 @@ Parameters:
   Domain:
     Type: String
     Description: "The base domain of the cluster"
-  Subdomain:
+  PublicCluster:
     Type: String
     Description: "The subdomain of the cluster"
   PublicIp:
@@ -18,7 +18,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Sub "${Domain}."
-      Name: !Sub "${Subdomain}.${Domain}"
+      Name: !Sub "${PublicCluster}.${Domain}"
       Type: A
       TTL: "300"
       ResourceRecords:
