@@ -74,7 +74,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: SecretsManagerAccess
+        - PolicyName: !Sub "${AWS::StackName}-SecretsManagerAccess"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -86,7 +86,7 @@ Resources:
                   - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${GitHubClientSecretName}*'
                   # HMAC key for OAuth state signing
                   - !Ref HMACSigningKeySecret
-        - PolicyName: KMSSigningAccess
+        - PolicyName: !Sub "${AWS::StackName}-KMSSigningAccess"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -97,7 +97,7 @@ Resources:
                   - kms:DescribeKey
                 Resource:
                   - !GetAtt JWTSigningKey.Arn
-        - PolicyName: DynamoDBAccessPolicy
+        - PolicyName: !Sub "${AWS::StackName}-DynamoDBAccessPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -110,6 +110,14 @@ Resources:
                   - dynamodb:Query
                   - dynamodb:Scan
                 Resource: !GetAtt OauthStore.Arn
+        - PolicyName: !Sub "${AWS::StackName}-S3Access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${AffiliatesFilename}"
 
   # Lambda Function
   GitHubOAuthLambda:
