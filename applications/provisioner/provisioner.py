@@ -423,7 +423,7 @@ def deploy_handler(rqst, kind):
     if kind == 'cluster':
 
         # set cluster in node user data
-        node_user_data = node_user_data.replace("$CLUSTER", rqst["cluster"])
+        node_user_data = node_user_data.replace("$SERVICE", rqst["cluster"])
 
         # build parameters for stack creation
         state["parms"] = [
@@ -458,7 +458,7 @@ def deploy_handler(rqst, kind):
     elif kind == 'user':
 
         # set cluster in node user data
-        node_user_data = node_user_data.replace("$CLUSTER", rqst["username"])
+        node_user_data = node_user_data.replace("$SERVICE", rqst["username"])
 
         # get parent stack resources
         resources = get_stack_resources(cluster_stack_name)
@@ -543,7 +543,7 @@ def lambda_destroy(event, context):
         stack_names = get_cluster_stack_names(parent_stack_name)
 
         # delete all stacks
-        for stack_name in stack_names.sort():
+        for stack_name in sorted(stack_names, reverse=True):
 
             # initialize state info for stack
             state[stack_name] = {}
