@@ -384,7 +384,9 @@ class Session:
             try:
                 rsps = self.source("status", parm={"service":self.service}, path="/discovery", retries=0, rethrow=True)
                 available_nodes = rsps["nodes"]
-            except RuntimeError:
+                self.logger.info(f'Discovery response for {self.service}: {json.dumps(rsps)}')
+            except RuntimeError as e:
+                self.logger.info(f'Failed to discover available nodes: {e}')
                 available_nodes = 0
 
             # Check if Deployment Needed
@@ -571,7 +573,7 @@ class Session:
     class __Authenticator:
         def __init__ (self, session):
             self.session = session
-        def decode (self):
+        def info (self):
             def decode_part(part):
                 padded = part + "=" * (-len(part) % 4)
                 return json.loads(base64.urlsafe_b64decode(padded))
