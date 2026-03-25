@@ -399,7 +399,7 @@ class Session:
                     version="latest"
                 )
                 inerror = "error" in rsps
-                self.logger.info(f'Requesting deployment of {self.cluster}: {inerror}')
+                self.logger.info(f'Requesting deployment of {self.cluster}: {"failed" if inerror else "succeeded"}')
 
             # Check for Exit Conditions
             if inerror: # error occurred
