@@ -605,7 +605,7 @@ def generate_audience_list(username, clusters, org_roles, scope):
     resources = {s.split(":")[0] for s in scope}
 
     # Provide member services
-    if 'member' in org_roles: # member only access
+    if ('member' in org_roles) or ('affiliate' in org_roles): # member/affiliate only access
         if 'provisioner' in resources: # access to provisioner
             audiences.append('provisioner')
         if 'runner' in resources: # access to runner
