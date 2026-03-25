@@ -378,9 +378,9 @@ class Session:
             try:
                 rsps = self.source("status", parm={"service":self.service}, path="/discovery", retries=0, rethrow=True)
                 available_nodes = rsps["nodes"]
-                self.logger.info(f'Discovery response for {self.service}: {json.dumps(rsps)}')
+                self.logger.debug(f'Discovery response for {self.service}: {json.dumps(rsps)}')
             except RuntimeError as e:
-                self.logger.info(f'Failed to discover available nodes: {e}')
+                self.logger.debug(f'Failed to discover available nodes: {e}')
                 available_nodes = 0
 
             # Check if Deployment Needed

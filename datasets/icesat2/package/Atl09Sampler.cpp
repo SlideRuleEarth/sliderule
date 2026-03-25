@@ -280,8 +280,8 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         const time8_t max_time = (*time_column)[time_column->length() - 1];
 
         // get index column (needed for high rate and low rate groups)
-        FieldColumn<int32_t>* segment_id_column = reinterpret_cast<FieldColumn<int32_t>*>(dataframe->getColumn("segment_id_beg"));
-        if(!segment_id_column) segment_id_column = reinterpret_cast<FieldColumn<int32_t>*>(dataframe->getColumn("segment_id"));
+        FieldColumn<int32_t>* segment_id_column = reinterpret_cast<FieldColumn<int32_t>*>(dataframe->getColumn("segment_id_beg", true));
+        if(!segment_id_column) segment_id_column = reinterpret_cast<FieldColumn<int32_t>*>(dataframe->getColumn("segment_id", true));
         if(!segment_id_column)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find an index column for %s", profile.c_str());

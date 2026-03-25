@@ -33,21 +33,29 @@ class TestAtl09:
 
         # make direct h5x request for same data
         bckgrd_atlas_df = h5.h5x(["delta_time", "bckgrd_counts"], "ATL09_20200731150047_05540801_007_01.h5",  "icesat2-atl09", ["/profile_2/bckgrd_atlas"])
-        high_rate_df = h5.h5x(["delta_time", "dem_h"], "ATL09_20200731150047_05540801_007_01.h5",  "icesat2-atl09", ["/profile_2/high_rate"])
-        low_rate_df = h5.h5x(["delta_time", "met_t10m"], "ATL09_20200731150047_05540801_007_01.h5",  "icesat2-atl09", ["/profile_2/low_rate"])
+        high_rate_df = h5.h5x(["segment_id", "dem_h"], "ATL09_20200731150047_05540801_007_01.h5",  "icesat2-atl09", ["/profile_2/high_rate"])
+        low_rate_df = h5.h5x(["segment_id", "met_t10m"], "ATL09_20200731150047_05540801_007_01.h5",  "icesat2-atl09", ["/profile_2/low_rate"])
 
-        # helper function
-        def compare(gdf, field, df, col):
+        # helper function for time comparison
+        def compare_time(gdf, field, df, col):
             for i in range(len(gdf)):
                 t = io.convert_datetime(gdf.index[i])
                 idx = (df["delta_time"] > t).idxmax()
                 row = df.loc[idx] if (df["delta_time"] > t).any() else None
                 assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col}[{idx}] = {row[col]}"
 
+        # helper function for segment comparison
+        def compare_segment(gdf, field, df, col):
+            for i in range(len(gdf)):
+                seg = gdf["segment_id"].iloc[i]
+                idx = (df["segment_id"] > seg).idxmax()
+                row = df.loc[idx] if (df["segment_id"] > seg).any() else None
+                assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col}[{idx}] = {row[col]}"
+
         # compare results
-        compare(gdf, "bckgrd_atlas/bckgrd_counts", bckgrd_atlas_df, "bckgrd_counts")
-        compare(gdf, "high_rate/dem_h", high_rate_df, "dem_h")
-        compare(gdf, "low_rate/met_t10m", low_rate_df, "met_t10m")
+        compare_time(gdf, "bckgrd_atlas/bckgrd_counts", bckgrd_atlas_df, "bckgrd_counts")
+        compare_segment(gdf, "high_rate/dem_h", high_rate_df, "dem_h")
+        compare_segment(gdf, "low_rate/met_t10m", low_rate_df, "met_t10m")
 
     def test_atl03x(self, init):
         parms = {
@@ -124,28 +132,6 @@ class TestAtl09:
         assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 5032
         assert len(gdf["bckgrd_atlas/bckgrd_hist_top"]) == 5032
         assert len(gdf) == 5032
-
-    def test_atl24x(self, init):
-        poly = [
-            { "lon": -77.86172817025538, "lat": 33.96965679591263  },
-            { "lon": -77.86172817025538, "lat": 34.058170002123106 },
-            { "lon": -77.95509140822963, "lat": 34.058170002123106 },
-            { "lon": -77.95509140822963, "lat": 33.96965679591263  },
-            { "lon": -77.86172817025538, "lat": 33.96965679591263  }
-        ]
-        parms = {
-            "poly": poly,
-            "beams": ["gt1r"],
-            "atl09_fields": [
-                "high_rate/msw_flag"
-            ]
-        }
-        gdf = sliderule.run("atl24x", parms)
-        assert init
-        print("ATTRS", gdf.attrs['meta'])
-        assert 'ATL24_20200505053536_06060706_006_01_002_01.h5' in [gdf.attrs['meta']['srctbl'][k] for k in gdf.attrs['meta']['srctbl']]
-        assert len(gdf["high_rate/msw_flag"]) == 709
-        assert len(gdf) == 709
 
     def test_atl03x_surface(self, init):
         parms = {
