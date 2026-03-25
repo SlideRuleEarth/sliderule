@@ -99,6 +99,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"time_ns",             &time_ns},
         {"latitude",            &latitude},
         {"longitude",           &longitude},
+        {"segment_id",          &segment_id},
         {"x_atc",               &x_atc},
         {"y_atc",               &y_atc},
         {"height",              &height},
@@ -791,6 +792,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl03.delta_time[current_photon]));
             df->latitude.append(atl03.lat_ph[current_photon]);
             df->longitude.append(atl03.lon_ph[current_photon]);
+            df->segment_id.append(atl03.segment_id[current_segment]);
             df->x_atc.append(atl03.dist_ph_along[current_photon] + atl03.segment_dist_x[current_segment]);
             df->y_atc.append(atl03.dist_ph_across[current_photon]);
             df->height.append(height);

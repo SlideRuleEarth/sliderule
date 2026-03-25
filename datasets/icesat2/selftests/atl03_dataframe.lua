@@ -41,7 +41,7 @@ runner.unittest("ATL03 DataFrame", function()
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.assert(atl03df:numrows() == 5912939, string.format("incorrect number of rows: %d", atl03df:numrows()))
-    runner.assert(atl03df:numcols() == 12, string.format("incorrect number of columns: %d", atl03df:numcols()))
+    runner.assert(atl03df:numcols() == 13, string.format("incorrect number of columns: %d", atl03df:numcols()))
 
     check_expected({
         time_ns = 1583304724130344448,
@@ -90,7 +90,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.assert(atl03df:numrows() == 19522774, string.format("incorrect number of rows: %d", atl03df:numrows()))
-    runner.assert(atl03df:numcols() == 22, string.format("incorrect number of columns: %d", atl03df:numcols()))
+    runner.assert(atl03df:numcols() == 23, string.format("incorrect number of columns: %d", atl03df:numcols()))
 
     check_expected({
         time_ns = 1583304724455644416,
@@ -149,7 +149,7 @@ runner.unittest("ATL06 Surface Fitter", function()
     runner.assert(df:inerror() == false, "dataframe encountered error")
 
     runner.assert(df:numrows() == 98924, string.format("incorrect number of rows: %d", df:numrows()))
-    runner.assert(df:numcols() == 13, string.format("incorrect number of columns: %d", df:numcols()))
+    runner.assert(df:numcols() == 14, string.format("incorrect number of columns: %d", df:numcols()))
 
     prettyprint.display(df:row(100))
 

@@ -17,8 +17,6 @@ The ATL03 granules include data associated with the photons in different subgrou
 * gtxx/geophys_corr
 * gtxx/heights
 
-Support for additional subgroups as well as fields present in other data products is forthcoming but unavailable at this time.
-
 When an `atl03sp` or `at06p` processing request specifies ancillary fields, SlideRule reads those fields from the ATL03 granules, subsets them to the region of interest, and correlates them to the dynamically generated photon segment (called and "extent" in the code) they belong to.  The result is a GeoDataFrame with a column for each ancillary field populated by the value associated with each photon for `atl03sp` requests, and elevation for `atl06p` requests.
 
 Note, including ancillary fields in a processing request will increase the amount of time it takes for the request to be processed, and also the amount of data returned, so it should only be used when the fields are needed by the end user.
@@ -26,7 +24,7 @@ Note, including ancillary fields in a processing request will increase the amoun
 
 ## Including an Ancillary Field in an `atl06p` request
 
-The __"atl03_geo_fields"__ parameter is used to request ancillary fields be included in `atl06p` responses.  These fields must come from either the __"gtxx/geolocation"__ or __"gtxx/geophys_corr"__ subgroups.
+The __"atl03_geo_fields"__ and __"atl03_corr_fields"__  parameters are used to request ancillary fields be included in `atl06p` responses.  These fields must come from either the __"gtxx/geolocation"__ or __"gtxx/geophys_corr"__ subgroups respectively.
 
 __Step 1__: Import and initialize the SlideRule Python package for ICESat-2.
 ```python

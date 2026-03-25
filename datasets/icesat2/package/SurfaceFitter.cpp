@@ -109,6 +109,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
     FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
     FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
+    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;                     // first segment used in extent to calculate surface fit
     FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
     FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
     FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
@@ -179,6 +180,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
                 time_ns->append(static_cast<time8_t>(result.time_ns));
                 latitude->append(result.latitude);
                 longitude->append(result.longitude);
+                segment_id_beg->append(df.segment_id[i0]);
                 x_atc->append(center_of_extent);
                 y_atc->append(result.y_atc);
                 photon_start->append(df.ph_index[i0]);
@@ -221,6 +223,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     dataframe->addExistingColumn("time_ns",                 time_ns);
     dataframe->addExistingColumn("latitude",                latitude);
     dataframe->addExistingColumn("longitude",               longitude);
+    dataframe->addExistingColumn("segment_id_beg",          segment_id_beg);
     dataframe->addExistingColumn("x_atc",                   x_atc);
     dataframe->addExistingColumn("y_atc",                   y_atc);
     dataframe->addExistingColumn("photon_start",            photon_start);

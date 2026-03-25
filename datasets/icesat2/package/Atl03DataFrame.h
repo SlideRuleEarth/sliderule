@@ -69,6 +69,7 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
         FieldColumn<double>         latitude {Field::Y_COLUMN};
         FieldColumn<double>         longitude {Field::X_COLUMN};
+        FieldColumn<int32_t>        segment_id;
         FieldColumn<double>         x_atc;                          // double[]: dist_ph_along + segment_distance
         FieldColumn<float>          y_atc;                          // float[]: dist_ph_across
         FieldColumn<float>          height {Field::Z_COLUMN};       // float[]: h_ph

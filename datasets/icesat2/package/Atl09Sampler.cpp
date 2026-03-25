@@ -81,7 +81,7 @@ static range_to_sample_t get_time_range(H5Array<double>& delta_time, const time8
         // find the start and end rows
         for(long i = 0; i < delta_time.size; i++)
         {
-            time8_t t = Icesat2Fields::deltatime2timestamp(delta_time[i]);
+            const time8_t t = Icesat2Fields::deltatime2timestamp(delta_time[i]);
             if(t.nanoseconds < min_time.nanoseconds)
             {
                 range_to_sample.startrow = i;
@@ -111,7 +111,7 @@ static range_to_sample_t get_time_range(H5Array<double>& delta_time, const time8
     return range_to_sample;
 }
 
-static void sample_data(GeoDataFrame* dataframe, H5Array<double>& delta_time, H5VarSet& data, FieldColumn<time8_t>& time_column, const range_to_sample_t& range_to_sample, int timeout_ms)
+static void sample_data_using_time(GeoDataFrame* dataframe, H5Array<double>& delta_time, H5VarSet& data, FieldColumn<time8_t>& time_column, const range_to_sample_t& range_to_sample, int timeout_ms)
 {
     if(delta_time.h5f)
     {
@@ -122,7 +122,7 @@ static void sample_data(GeoDataFrame* dataframe, H5Array<double>& delta_time, H5
         long row = 0;
         for(long dataframe_index = 0; dataframe_index < time_column.length(); dataframe_index++)
         {
-            time8_t dataframe_time = time_column[dataframe_index];
+            const time8_t dataframe_time = time_column[dataframe_index];
             while((row < (range_to_sample.numrows - 1)) &&
                   (Icesat2Fields::deltatime2timestamp(delta_time[row + range_to_sample.startrow]).nanoseconds < dataframe_time.nanoseconds))
                 row++;
@@ -131,7 +131,73 @@ static void sample_data(GeoDataFrame* dataframe, H5Array<double>& delta_time, H5
     }
 }
 
- /******************************************************************************
+static range_to_sample_t get_segment_range(H5Array<int32_t>& seg_ids, const int32_t& min_seg, const int32_t& max_seg, int timeout_ms)
+{
+    range_to_sample_t range_to_sample = {
+        .startrow = 0,
+        .endrow = 0,
+        .numrows = 0
+    };
+
+    if(seg_ids.h5f)
+    {
+        // wait for segment ids to finish being read
+        seg_ids.join(timeout_ms, true);
+
+        // find the start and end rows
+        for(long i = 0; i < seg_ids.size; i++)
+        {
+            const int32_t seg = seg_ids[i];
+            if(seg < min_seg)
+            {
+                range_to_sample.startrow = i;
+            }
+            else if(seg <= max_seg)
+            {
+                range_to_sample.endrow = i;
+            }
+            else
+            {
+                range_to_sample.endrow++;
+                break;
+            }
+        }
+
+        // calculate number of rows
+        if(range_to_sample.endrow > range_to_sample.startrow)
+        {
+            range_to_sample.numrows = range_to_sample.endrow - range_to_sample.startrow + 1;
+        }
+        else
+        {
+            range_to_sample.numrows = 1;
+        }
+    }
+
+    return range_to_sample;
+}
+
+static void sample_data_using_segments(GeoDataFrame* dataframe, H5Array<int32_t>& seg_ids, H5VarSet& data, FieldColumn<int32_t>& segment_id_column, const range_to_sample_t& range_to_sample, int timeout_ms)
+{
+    if(seg_ids.h5f)
+    {
+        // wait for data to finish being read
+        data.joinToGDF(dataframe, timeout_ms, true);
+
+        // find and append best sample for each variable
+        long row = 0;
+        for(long dataframe_index = 0; dataframe_index < segment_id_column.length(); dataframe_index++)
+        {
+            const int32_t seg = segment_id_column[dataframe_index];
+            while((row < (range_to_sample.numrows - 1)) &&
+                  (seg_ids[row + range_to_sample.startrow] < seg))
+                row++;
+            data.addToGDF(dataframe, row);
+        }
+    }
+}
+
+/******************************************************************************
  * METHODS
  ******************************************************************************/
 
@@ -183,12 +249,22 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
 {
     try
     {
-        // get spot metadata
-        FieldElement<uint8_t>* spot = reinterpret_cast<FieldElement<uint8_t>*>(dataframe->getMetaData("spot"));
-        int profile_num = ((spot->value - 1) / 2) + 1;
-        string profile = FString("profile_%d", profile_num).c_str();
+        // get profile to read
+        FieldElement<uint8_t>* gt = reinterpret_cast<FieldElement<uint8_t>*>(dataframe->getMetaData("gt"));
+        int profile_num = 0; // invalid value
+        switch(static_cast<Icesat2Fields::gt_t>(gt->value))
+        {
+            case Icesat2Fields::GT1L: profile_num = 1; break;
+            case Icesat2Fields::GT1R: profile_num = 1; break;
+            case Icesat2Fields::GT2L: profile_num = 2; break;
+            case Icesat2Fields::GT2R: profile_num = 2; break;
+            case Icesat2Fields::GT3L: profile_num = 3; break;
+            case Icesat2Fields::GT3R: profile_num = 3; break;
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid ground track: %d", gt->value);
+        }
+        const string profile = FString("profile_%d", profile_num).c_str();
 
-        // get time column
+        // get time column (needed for background groups)
         FieldColumn<time8_t>* time_column = reinterpret_cast<FieldColumn<time8_t>*>(dataframe->getColumn("time_ns"));
         if(!time_column)
         {
@@ -200,8 +276,24 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         }
 
         // get minimum and maximum times (assumes monotonically increasing time)
-        time8_t min_time = (*time_column)[0];
-        time8_t max_time = (*time_column)[time_column->length() - 1];
+        const time8_t min_time = (*time_column)[0];
+        const time8_t max_time = (*time_column)[time_column->length() - 1];
+
+        // get index column (needed for high rate and low rate groups)
+        FieldColumn<int32_t>* segment_id_column = reinterpret_cast<FieldColumn<int32_t>*>(dataframe->getColumn("segment_id_beg"));
+        if(!segment_id_column) segment_id_column = reinterpret_cast<FieldColumn<int32_t>*>(dataframe->getColumn("segment_id"));
+        if(!segment_id_column)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find an index column for %s", profile.c_str());
+        }
+        else if(segment_id_column && segment_id_column->length() <= 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "empty dataframe <%s>", profile.c_str());
+        }
+
+        // get minimum and maximum segments (assumes monotonically increasing segment id)
+        const int32_t min_seg = (*segment_id_column)[0];
+        const int32_t max_seg = (*segment_id_column)[segment_id_column->length() - 1];
 
         // separate fields lists into groups
         FieldList<string> bckgrd_atlas_fields;
@@ -215,25 +307,25 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
             else if(field.find("low_rate") != std::string::npos) low_rate_fields.append(field);
         }
 
-        // get time variables for each group
+        // get index variables for each group
         H5Array<double> bckgrd_atlas_delta_time(bckgrd_atlas_fields.length() > 0 ? hdf09 : NULL, FString("%s/bckgrd_atlas/delta_time", profile.c_str()).c_str(), 0, 0, H5Coro::ALL_ROWS);
-        H5Array<double> high_rate_delta_time(high_rate_fields.length() > 0 ? hdf09 : NULL, FString("%s/high_rate/delta_time", profile.c_str()).c_str(), 0, 0, H5Coro::ALL_ROWS);
-        H5Array<double> low_rate_delta_time(low_rate_fields.length() > 0 ? hdf09 : NULL, FString("%s/low_rate/delta_time", profile.c_str()).c_str(), 0, 0, H5Coro::ALL_ROWS);
+        H5Array<int32_t> high_rate_seg_ids(high_rate_fields.length() > 0 ? hdf09 : NULL, FString("%s/high_rate/segment_id", profile.c_str()).c_str(), 0, 0, H5Coro::ALL_ROWS);
+        H5Array<int32_t> low_rate_seg_ids(low_rate_fields.length() > 0 ? hdf09 : NULL, FString("%s/low_rate/segment_id", profile.c_str()).c_str(), 0, 0, H5Coro::ALL_ROWS);
 
-        // get time range for each group
-        range_to_sample_t bckgrd_atlas_range_to_sample = get_time_range(bckgrd_atlas_delta_time, min_time, max_time, parms->timeout.value * 1000);
-        range_to_sample_t high_rate_range_to_sample = get_time_range(high_rate_delta_time, min_time, max_time, parms->timeout.value * 1000);
-        range_to_sample_t low_rate_range_to_sample = get_time_range(low_rate_delta_time, min_time, max_time, parms->timeout.value * 1000);
+        // get range for each group
+        const range_to_sample_t bckgrd_atlas_range_to_sample = get_time_range(bckgrd_atlas_delta_time, min_time, max_time, parms->timeout.value * 1000);
+        const range_to_sample_t high_rate_range_to_sample = get_segment_range(high_rate_seg_ids, min_seg, max_seg, parms->timeout.value * 1000);
+        const range_to_sample_t low_rate_range_to_sample = get_segment_range(low_rate_seg_ids, min_seg, max_seg, parms->timeout.value * 1000);
 
-        // get request data variables for each group
+        // get data variables for each group
         H5VarSet bckgrd_atlas_data(bckgrd_atlas_fields, hdf09, profile.c_str(), 0, bckgrd_atlas_range_to_sample.startrow, bckgrd_atlas_range_to_sample.numrows);
         H5VarSet high_rate_data(high_rate_fields, hdf09, profile.c_str(), 0, high_rate_range_to_sample.startrow, high_rate_range_to_sample.numrows);
         H5VarSet low_rate_data(low_rate_fields, hdf09, profile.c_str(), 0, low_rate_range_to_sample.startrow, low_rate_range_to_sample.numrows);
 
         // add data to dataframe from each group
-        sample_data(dataframe, bckgrd_atlas_delta_time, bckgrd_atlas_data, (*time_column), bckgrd_atlas_range_to_sample, parms->timeout.value * 1000);
-        sample_data(dataframe, high_rate_delta_time, high_rate_data, (*time_column), high_rate_range_to_sample, parms->timeout.value * 1000);
-        sample_data(dataframe, low_rate_delta_time, low_rate_data, (*time_column), low_rate_range_to_sample, parms->timeout.value * 1000);
+        sample_data_using_time(dataframe, bckgrd_atlas_delta_time, bckgrd_atlas_data, (*time_column), bckgrd_atlas_range_to_sample, parms->timeout.value * 1000);
+        sample_data_using_segments(dataframe, high_rate_seg_ids, high_rate_data, (*segment_id_column), high_rate_range_to_sample, parms->timeout.value * 1000);
+        sample_data_using_segments(dataframe, low_rate_seg_ids, low_rate_data, (*segment_id_column), low_rate_range_to_sample, parms->timeout.value * 1000);
     }
     catch(const RunTimeException& e)
     {

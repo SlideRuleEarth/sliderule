@@ -93,6 +93,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"time_ns",                 &time_ns},
         {"latitude",                &latitude},
         {"longitude",               &longitude},
+        {"segment_id_beg",          &segment_id_beg},
         {"ht_ortho",                &ht_ortho},
         {"ht_water_surf",           &ht_water_surf},
         {"stdev_water_surf",        &stdev_water_surf},
@@ -166,6 +167,7 @@ okey_t Atl13DataFrame::getKey(void) const
 Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest<double>& aoi):
     sc_orient               (df->hdf13,                            "/orbit_info/sc_orient"),
     delta_time              (df->hdf13, FString("%s/%s", df->beam, "delta_time").c_str(),               0, aoi.first_index, aoi.count),
+    segment_id_beg          (df->hdf13, FString("%s/%s", df->beam, "segment_id_beg").c_str(),           0, aoi.first_index, aoi.count),
     ht_ortho                (df->hdf13, FString("%s/%s", df->beam, "ht_ortho").c_str(),                 0, aoi.first_index, aoi.count),
     ht_water_surf           (df->hdf13, FString("%s/%s", df->beam, "ht_water_surf").c_str(),            0, aoi.first_index, aoi.count),
     stdev_water_surf        (df->hdf13, FString("%s/%s", df->beam, "stdev_water_surf").c_str(),         0, aoi.first_index, aoi.count),
@@ -175,6 +177,7 @@ Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest<d
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
     delta_time.join(df->readTimeoutMs, true);
+    segment_id_beg.join(df->readTimeoutMs, true);
     ht_ortho.join(df->readTimeoutMs, true);
     ht_water_surf.join(df->readTimeoutMs, true);
     stdev_water_surf.join(df->readTimeoutMs, true);
@@ -252,6 +255,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 
             /* Add Photon to DataFrame */
             df->addRow();
+            df->segment_id_beg.append(atl13.segment_id_beg[current_segment]);
             df->ht_ortho.append(atl13.ht_ortho[current_segment]);
             df->ht_water_surf.append(atl13.ht_water_surf[current_segment]);
             df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl13.delta_time[current_segment]));

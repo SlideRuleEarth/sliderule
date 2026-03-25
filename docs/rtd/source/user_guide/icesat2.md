@@ -141,13 +141,16 @@ Extents are optionally filtered based on the number of photons in each extent an
 
 ### 1.4 Ancillary Data
 
-The ancillary field parameters allow the user to request additional fields from the source datasets being subsetted.  Ancillary data returned from the `atl03x` (as well as the`atl03s` and `atl03sp`) APIs are per-photon values that are read from the ATL03 granules.  No processing is performed on the data read out of the ATL03 granule.  The fields must come from either a per-photon variable (atl03_ph_fields), or a per-segment variable (atl03_geo_fields).
+The ancillary field parameters allow the user to request additional fields from the source datasets being subsetted.  Ancillary data returned from the `atl03x` (as well as the`atl03s` and `atl03sp`) APIs are per-photon values that are read from the ATL03 granules.  No processing is performed on the data read out of the ATL03 granule.  The fields must come from either a per-photon variable (atl03_ph_fields), a per-segment variable (atl03_geo_fields, atl03_corr_fields), or a rate variable (atl03_bckgrd_fields).
 
-The `atl03_geo_fields`, `atl03_ph_fields`, and `atl08_fields` are used to specify additional fields in the ATL03 and ATL08 granules to be returned with the photon extent and dowstream customized products. Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.  Note: if a field is requested that is already present in the default GeoDataFrame, then the name of both fields will be changed to include a _x suffix for the default incusion of the field, and a _y for the ancillary inclusion of the field.  In general, they should have the same value, but in some cases the ancillary field goes through different processing steps and may possibly contain a different value.
+Ancillary fields are used to specify additional fields in the ATL03, ATL08, and ATL09 granules to be returned with the photon extent and dowstream customized products. Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.  Note: if a field is requested that is already present in the default GeoDataFrame, then the name of both fields will be changed to include a _x suffix for the default incusion of the field, and a _y for the ancillary inclusion of the field.  In general, they should have the same value, but in some cases the ancillary field goes through different processing steps and may possibly contain a different value.
 
-* `atl03_geo_fields`: fields in the "geolocation" and "geophys_corr" groups of the ATL03 granule
+* `atl03_bckgrd_fields`: fields in the "bckgrd_atlas" group of the ATL03 granule
+* `atl03_geo_fields`: fields in the "geolocation" group of the ATL03 granule
+* `atl03_cor_fields`: fields in the "geophys_corr" group of the ATL03 granule
 * `atl03_ph_fields`: fields in the "heights" group of the ATL03 granule
 * `atl08_fields`: fields in the "land_segments" group of the ATL08 granule
+* `atl09_fields`: fields in the "bckgrd_atlas", "high_rate", and "low_rate" groups of the ATL09 granule (must provide the group name in the request, e.g. "low_rate/bsnow_con")
 
 For example:
 

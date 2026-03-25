@@ -478,7 +478,7 @@ class Session:
                 return self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
             data = do_post()
             if data.status_code == 401: # AWS API Gateway will often return a 401 on a cold request
-                retry_delay = 5 # seconds
+                retry_delay = 1 # seconds
                 self.logger.info(f"Retrying gateway post after {retry_delay} seconds ...")
                 time.sleep(retry_delay)
                 data = do_post()
