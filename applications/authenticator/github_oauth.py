@@ -293,11 +293,11 @@ def intersection_of_scope(scope_1, scope_2):
     """
     return list of scopes that are contained in both
     """
-    scope_both = []
+    scope_intersect = []
     for s in scope_1:
         if s in scope_2:
-            return scope_both.append(s)
-    return scope_both
+            scope_intersect.append(s)
+    return scope_intersect
 
 
 def contains_redirect(redirect_uri, valid_redirect_hosts):
@@ -666,26 +666,26 @@ def authenticate_user(authorization_str, scope):
     if not username:
         raise RuntimeError('Could not get GitHub username')
 
-    # get affiliation
+    # initialize claims
+    org_roles = []
+    clusters = []
+
+    # get affiliation (JWT claims)
     affiliation = get_affiliation(username)
     if affiliation:
-        # restrict scope to those allowed
-        scope = intersection_of_scope(scope, affiliation["allowed_scopes"])
-        # append affiliate to organization roles
-        org_roles.append('affiliate')
-        # append affiliates clusters to clusters
-        clusters.append(affiliation['clusters'])
+        scope = intersection_of_scope(scope, affiliation["allowed_scopes"]) # restrict scope to those allowed
+        org_roles += ['affiliate'] # append affiliate to organization roles
+        clusters += affiliation['clusters'] # append affiliate's clusters to clusters
 
     # get organizational roles (JWT claim)
     user_role = get_user_role(authorization_str, username)
-    org_roles = []
     if (user_role == 'owner') and ('sliderule:admin' in scope): # must be owner AND requesting admin
-        org_roles = ['owner', 'member']
+        org_roles += ['owner', 'member']
     elif (user_role == 'owner') or (user_role == 'member'): # owners not requesting admin and regular members
-        org_roles = ['member']
+        org_roles += ['member']
 
     # get clusters (match one-to-one to user's teams)
-    clusters = get_user_teams(authorization_str, org_roles)
+    clusters += get_user_teams(authorization_str, org_roles)
 
     # build audience list (JWT claim)
     audience_list = generate_audience_list(username, clusters, org_roles, scope)
