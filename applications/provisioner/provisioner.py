@@ -52,7 +52,8 @@ SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp','sli
 # Checks on cluster name
 #
 def valid_cluster_name(cluster):
-    if (cluster in SYSTEM_KEYWORDS) or \
+    if (not isinstance(cluster, str)) or \
+       (cluster in SYSTEM_KEYWORDS) or \
        (not re.match(r'^[A-Za-z0-9-_]+$', cluster)) or \
        (len(cluster) > 40):
         return False
@@ -404,13 +405,15 @@ def validate_request(event, info):
             print(f'Unable to locate public cluster for user service request to {PUBLIC_CLUSTER}.{DOMAIN}')
 
     # check cluster
-    cluster = body.get("cluster", public_cluster_name)
+    cluster = body.get("cluster")
     if cluster:
+        if cluster == PUBLIC_CLUSTER:
+            cluster = public_cluster_name # only set if user service requested
+        elif (cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"]):
+            print(f'Access denied to {info["username"]}, {cluster} not in allowed clusters: {info["deployableClusters"]}')
+            return None
         if not valid_cluster_name(cluster):
             print(f'Access denied to {info["username"]}, invalid cluster: {cluster}')
-            return None
-        if (cluster not in info["deployableClusters"]) and ('*' not in info["deployableClusters"]) and (cluster != public_cluster_name):
-            print(f'Access denied to {info["username"]}, {cluster} not in allowed clusters: {info["deployableClusters"]}')
             return None
 
     # check node_capacity
