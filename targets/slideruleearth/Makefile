@@ -105,7 +105,7 @@ CLUSTER ?= developers
 VERSION ?= unstable
 BRANCH ?= main
 SUPPORT_EMAIL ?= support@mail.slideruleearth.io
-CORS_ALLOW_ORIGINS ?= "https://client.slideruleearth.io\,https://client.testsliderule.org"
+CORS_ALLOW_ORIGINS ?= "https://client.$(DOMAIN)"
 
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
@@ -148,7 +148,7 @@ JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
 AFFILIATES_FILENAME = affiliates.json
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
-TRUSTED_REDIRECT_HOSTS ?= "slideruleearth.io testsliderule.org localhost 127.0.0.1"
+TRUSTED_REDIRECT_HOSTS ?= "$(DOMAIN) localhost 127.0.0.1"
 THIRD_PARTY_REDIRECT_HOSTS ?= claude.ai
 
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
