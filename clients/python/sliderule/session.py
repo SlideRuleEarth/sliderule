@@ -361,20 +361,14 @@ class Session:
     #
     # scaleout
     #
-    def scaleout (self, node_capacity, ttl):
+    def scaleout (self, node_capacity, ttl, version="latest", is_public=False, block=True):
         '''
-        makes a deployment request to the SlideRule Provisioner and waits for the cluster to reach the requested capacity
+        makes a deployment request to the SlideRule Provisioner and (optional, by default) waits for the cluster to reach the requested capacity
         '''
-        # Check Parameters
-        if not isinstance(node_capacity, int) or node_capacity <= 0:
-            raise FatalError(f"Node capacity must be greater than zero ({node_capacity})")
-        if not isinstance(ttl, int) or ttl <= 0:
-            raise FatalError(f"Time to live must be greater than zero ({ttl})")
-
         # Initial Conditions
         available_nodes = 0
         inerror = False
-        deployed = False
+        deploy_needed = isinstance(node_capacity, int) and (node_capacity > 0) and isinstance(ttl, int) and (ttl > 0)
         start = time.time()
 
         # Wait for Cluster to Reach Desired State
@@ -390,22 +384,19 @@ class Session:
                 available_nodes = 0
 
             # Check if Deployment Needed
-            if not deployed and available_nodes < node_capacity:
-                deployed = True
+            if deploy_needed and available_nodes < node_capacity:
+                deploy_needed = False
 
                 # Deployment Request
-                rsps = self.provisioner.deploy(
-                    is_public=False,
-                    node_capacity=node_capacity,
-                    ttl=ttl,
-                    version="latest"
-                )
+                rsps = self.provisioner.deploy(is_public=is_public, node_capacity=node_capacity, ttl=ttl, version=version)
                 inerror = "error" in rsps
                 self.logger.info(f'Requesting deployment of {self.cluster}: {"failed" if inerror else "succeeded"}')
+                if inerror: # error occurred
+                    self.logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
+                    break
 
             # Check for Exit Conditions
-            if inerror: # error occurred
-                self.logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
+            if not block:
                 break
             elif int(time.time() - start) > self.MAX_PS_CLUSTER_WAIT_SECS: # Timeout
                 self.logger.error("Maximum time allowed waiting for cluster has been exceeded")
@@ -416,6 +407,9 @@ class Session:
             else:
                 self.logger.info(f"Waiting while cluster scales to desired capacity (currently at {available_nodes} nodes, desired is {node_capacity} nodes)... {int(time.time() - start)} seconds")
                 time.sleep(10.0)
+
+        # return status
+        return available_nodes, node_capacity or 0
 
     #
     # authenticate
