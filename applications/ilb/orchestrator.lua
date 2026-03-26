@@ -661,7 +661,8 @@ local function backgroud_scrubber()
                 service_registry[address] = nil
             end
             -- set member count
-            StatData.memberCounts[service.."_members"] = total_num_members
+            local member_metric = string.gsub(service, "-", "_").."_members"
+            StatData.memberCounts[member_metric] = total_num_members
         end
 
         -- scrub timed-out transactions
