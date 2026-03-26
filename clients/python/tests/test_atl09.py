@@ -40,7 +40,7 @@ class TestAtl09:
         def compare_time(gdf, field, df, col):
             for i in range(len(gdf)):
                 t = io.convert_datetime(gdf.index[i])
-                idx = (df["delta_time"] > t).idxmax()
+                idx = (df["delta_time"] >= t).idxmax()
                 row = df.loc[idx] if (df["delta_time"] > t).any() else None
                 assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col}[{idx}] = {row[col]}"
 
@@ -48,7 +48,7 @@ class TestAtl09:
         def compare_segment(gdf, field, df, col):
             for i in range(len(gdf)):
                 seg = gdf["segment_id"].iloc[i]
-                idx = (df["segment_id"] > seg).idxmax()
+                idx = (df["segment_id"] >= seg).idxmax()
                 row = df.loc[idx] if (df["segment_id"] > seg).any() else None
                 assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col}[{idx}] = {row[col]}"
 
