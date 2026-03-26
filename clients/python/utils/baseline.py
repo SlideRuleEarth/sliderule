@@ -67,7 +67,7 @@ def gedi_3dep():
         "degrade_filter": True,
         "l2_quality_filter": True,
         "beams": 0,
-        "samples": {"3dep": {"asset": "usgs3dep-1meter-dem"}}
+        "samples": {"3dep": {"asset": "3dep1m"}}
     }
     gdf = gedi.gedi04ap(parms, resources=[resource], as_numpy_array=True)
     samples = [values[0] for values in gdf["3dep.value"] if (type(values) == numpy.ndarray and not math.isnan(values[0]))]
