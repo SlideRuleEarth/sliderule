@@ -178,7 +178,7 @@ class Session:
         }
 
         # authenticate for non-public clusters
-        if self.cluster != self.PUBLIC_CLUSTER and self.cluster != None:
+        if ((self.cluster != self.PUBLIC_CLUSTER) and (self.cluster != None)) or user_service:
             self.authenticate(github_token=github_token)
 
         # set service

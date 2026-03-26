@@ -110,7 +110,7 @@ def get_instance_by_ip(name_filter, ip):
             ]
         )
         instances = [instance for reservation in response["Reservations"] for instance in reservation["Instances"]]
-        if len(instances) > 0:
+        if len(instances) > 1:
             raise RuntimeError(f"Multiple ({len(instances)}) instances matched")
         return next((t["Value"] for t in instances[0]["Tags"] if t["Key"] == "Name"), None)
     except Exception as e:
