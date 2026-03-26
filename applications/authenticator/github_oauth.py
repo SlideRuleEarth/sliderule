@@ -41,8 +41,11 @@ GITHUB_TOKEN_URL = os.environ.get('GITHUB_TOKEN_URL','https://github.com/login/o
 GITHUB_DEVICE_CODE_URL = os.environ.get('GITHUB_DEVICE_CODE_URL','https://github.com/login/device/code')
 GITHUB_API_URL = os.environ.get('GITHUB_API_URL','https://api.github.com')
 
-# Scoped restricted to project services (not allowed for third party applications)
+# Scopes restricted to project services (not allowed for third party applications)
 TRUSTED_SCOPES = {"sliderule:access", "sliderule:admin", "provisioner:access", "runner:access", "monitor:access"}
+
+# Scopes for MCP services
+MCP_SCOPES = {"mcp:tools", "mcp:resources"}
 
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
@@ -56,7 +59,7 @@ ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
 ALLOWED_CHALLENGE_METHODS   = {"S256"}
-ALLOWED_SCOPES              = {"mcp:tools", "mcp:resources"} | TRUSTED_SCOPES
+ALLOWED_SCOPES              = MCP_SCOPES | TRUSTED_SCOPES
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15 # seconds
@@ -736,7 +739,7 @@ def handle_register(event: dict) -> dict:
     response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
     auth_method         = parms.get('token_endpoint_auth_method', 'none')
     challenge_method    = parms.get('code_challenge_method', 'S256') # not an official RFC 7591 field but MCP clients send it
-    scope               = parms.get('scope', '') # optional per the standard
+    scope               = parms.get('scope', ' '.join(MCP_SCOPES)) # optional per the standard, defaults to limited MCP scopes
 
     # check redirect_uris
     if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
