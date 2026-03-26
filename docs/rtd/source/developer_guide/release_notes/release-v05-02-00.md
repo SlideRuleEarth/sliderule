@@ -16,11 +16,17 @@ Version description of the v5.2.0 release of SlideRule Earth.
 
 * **v5.2.0** - ATL09 and ATL13 supported release updated to 007
 
+* **v5.2.1** - Various fixes/improvements for authenticator
+
+* **v5.2.1** - AMS update to support latest version of DuckDB (changes in spatial functionality)
+
 ## Development Updates
 
 * **v5.2.0** - Website landing page hosted by web client with updated _about_ and _contact_ pages.
 
 * **v5.2.0** - Documentation (read-the-docs) for Python Client now hosted at https://docs.slideruleearth.io
+
+* **v5.2.1** - Runner switched over to using `latest` version of containers
 
 ## Getting This Release
 
