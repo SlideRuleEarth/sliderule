@@ -86,7 +86,7 @@ class TestAtl03x_Datum:
         assert gdf1.height.mean() < gdf2.height.mean()
 
         # Compare CRS against files (skip NAVD88)
-        crs_dir = (Path(__file__).parent / "../../../datasets/icesat2/crsfiles").resolve()
+        crs_dir = (Path(__file__).parent / "../../../packages/core/crsfiles").resolve()
         itrf_file_str  = _squash_ws((crs_dir / "EPSG7912.projjson").read_text(encoding="utf-8"))
         egm08_file_str = _squash_ws((crs_dir / "EPSG7912_EGM08.projjson").read_text(encoding="utf-8"))
 
@@ -121,7 +121,7 @@ class TestAtl03x_Datum:
 
         # Both runs should return the same structure (527 rows, 20 columns)
         assert len(gdf_itrf) == 527 and len(gdf_egm) == 527
-        assert len(gdf_itrf.keys()) == 20 and len(gdf_egm.keys()) == 20
+        assert len(gdf_itrf.keys()) == 21 and len(gdf_egm.keys()) == 21
         check_offset(gdf_itrf, gdf_egm)
 
     def test_atl03_sampler_geo_index_raster(self, init):
@@ -140,5 +140,5 @@ class TestAtl03x_Datum:
 
         # Both runs should return the same structure (527 rows, 26 columns)
         assert len(gdf_itrf) == 527 and len(gdf_egm) == 527
-        assert len(gdf_itrf.keys()) == 26 and len(gdf_egm.keys()) == 26
+        assert len(gdf_itrf.keys()) == 27 and len(gdf_egm.keys()) == 27
         check_offset(gdf_itrf, gdf_egm)

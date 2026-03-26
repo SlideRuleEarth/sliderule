@@ -21,7 +21,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
-        assert len(gdf.keys()) == 16
+        assert len(gdf.keys()) == 17
         assert gdf.spot.value_counts()[5] == 386717
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
@@ -36,7 +36,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
-        assert len(gdf.keys()) == 18
+        assert len(gdf.keys()) == 19
         assert gdf.spot.value_counts()[5] == 386717
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
@@ -99,7 +99,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 2675
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 18
         assert gdf["gt"].sum() == 40520
         assert abs(gdf["rms_misfit"].mean() - 0.22276999056339264) < 0.0001
 
@@ -116,7 +116,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 2873
-        assert len(gdf.keys()) == 24
+        assert len(gdf.keys()) == 25
         assert gdf["ph_id_channel"].value_counts()[57.0] == 237
         assert gdf["pce_mframe_cnt"].max() == 110610389.0
         assert abs(gdf["ref_elev"].mean() - 1.5656124586346465) < 0.0001, f'{gdf["ref_elev"].mean()}'
@@ -137,7 +137,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
         assert len(gdf) == 630
-        assert len(gdf.keys()) == 25
+        assert len(gdf.keys()) == 26
         assert gdf["gt"].sum() == 35580
         assert gdf["vegetation_photon_count"].sum() == 16932
         assert abs(gdf["canopy_openness"].mean() - 3.6688475608825684) < 0.000001, f'canopy_openness = {gdf["canopy_openness"].mean()}'
@@ -161,7 +161,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
         assert len(gdf) == 3
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 18
 
     def test_atl24(self, init):
         resource = "ATL03_20181014001920_02350103_006_02.h5"
@@ -173,44 +173,9 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
         assert len(gdf) == 49548
-        assert len(gdf.keys()) == 18
+        assert len(gdf.keys()) == 19
         assert gdf["atl24_class"].value_counts()[41] == 49523
         assert abs(gdf["atl24_confidence"].max() - 0.8872309) < 0.0001, gdf["atl24_confidence"].max()
-
-#
-# Earthdata Cloud no longer hosts ATL03 release 006. This means the
-# ATL24 product generated from it can no longer be correlated to it.
-#
-#    def test_earthdata_atl24(self, init):
-#        parms = {
-#            "cnf": 0,
-#            "poly": [ { "lon": -71.635926, "lat": 41.351689 },
-#                    { "lon": -71.637573, "lat": 41.356567 },
-#                    { "lon": -71.693417, "lat": 41.341954 },
-#                    { "lon": -71.703369, "lat": 41.335941 },
-#                    { "lon": -71.635926, "lat": 41.351689 } ],
-#            "track": 1,
-#            "beams": [ 10 ],
-#            "rgt": 179,
-#            "cycle": 8,
-#            "atl24": {
-#                "class_ph": [ "unclassified", "bathymetry", "sea_surface" ]
-#            },
-#            "cmr": {
-#                "version": '006'
-#            },
-#            "yapc": {
-#                "version": 0,
-#                "score": 0
-#            }
-#        }
-#        gdf = sliderule.run("atl03x", parms)
-#        assert init
-#        assert len(gdf) == 1066
-#        assert len(gdf.keys()) == 19
-#        assert gdf["yapc_score"].max() == 254
-#        assert gdf["yapc_score"].min() == 0
-#        assert gdf["atl24_class"].value_counts()[40] == 4
 
     def test_polygon_track_pair(self, init):
         poly = [
@@ -280,7 +245,7 @@ class TestAtl03x:
         # Ensure no beam slipped through and columns are consistent
         assert gdf_empty.empty
         # Default output columns should remain stable (matches nominal test expectation)
-        assert len(gdf_empty.columns) == 16
+        assert len(gdf_empty.columns) == 17
         assert gdf_empty["gt"].value_counts().empty
 
     def test_aoi_mask_alignment_track_pair(self, init):

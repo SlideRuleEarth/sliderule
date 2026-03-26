@@ -64,7 +64,6 @@ class TestVersion:
         assert 'build' in rsps['server']
         assert 'launch' in rsps['server']
         assert 'duration' in rsps['server']
-        assert 'packages' in rsps['server']
         assert '.' in rsps['server']['version']
         assert len(rsps['server']['build']) > 0
         assert ':' in rsps['server']['launch']

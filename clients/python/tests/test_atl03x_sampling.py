@@ -31,7 +31,7 @@ class TestSampler:
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
         assert len(gdf) == 527
-        assert len(gdf.keys()) == 19
+        assert len(gdf.keys()) == 20
         assert "mosaic.value" in gdf
 
     def test_force_single(self, init):
@@ -47,7 +47,7 @@ class TestSampler:
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
         assert len(gdf) == 197
-        assert len(gdf.keys()) == 20
+        assert len(gdf.keys()) == 21
         assert gdf["cycle"].mean() == 2
         assert abs(gdf["mosaic.value"].mean() - 1474.9005392520041) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
         assert gdf["mosaic.fileid"].mean() == 0
@@ -72,7 +72,7 @@ class TestSampler:
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
         assert len(gdf) == 197
-        assert len(gdf.keys()) == 31
+        assert len(gdf.keys()) == 32
         for column in expected_columns:
             assert column in gdf
 
@@ -95,7 +95,7 @@ class TestSampler:
         mean_value = mean_values[~np.isnan(mean_values)].mean()
         assert init
         assert len(gdf) == 527
-        assert len(gdf.keys()) == 30
+        assert len(gdf.keys()) == 31
         assert gdf["cycle"].mean() == 2
         assert abs(mean_value - 307.9317036290323) < 0.0001, mean_value
 
