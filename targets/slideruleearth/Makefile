@@ -149,7 +149,7 @@ AFFILIATES_FILENAME = affiliates.json
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
 TRUSTED_REDIRECT_HOSTS ?= "$(DOMAIN) localhost 127.0.0.1"
-THIRD_PARTY_REDIRECT_HOSTS ?= claude.ai
+THIRD_PARTY_REDIRECT_HOSTS ?= "claude.ai chatgpt.com"
 
 HOSTED_ZONE_ID = $(shell aws route53 list-hosted-zones-by-name \
   --dns-name $(DOMAIN) \
