@@ -58,5 +58,5 @@ class TestArrow:
         if organization == None or organization == sliderule.session.Session.PUBLIC_DOMAIN: # otherwise need to build authentication headers
             assert isinstance(df, pandas.DataFrame) or isinstance(df, pandas.core.frame.DataFrame)
             assert len(df) == 5814857
-            assert len(df.keys()) == 17
+            assert len(df.keys()) == 18
             assert df["gt"].sum() == 58148570

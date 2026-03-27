@@ -145,6 +145,7 @@ MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
 ScrubInterval = 1 -- second(s)
 DefaultTimeout = 600 -- second(s)
 MaxTimeout = 3600 -- second(s)
+Cluster = os.getenv("CLUSTER")
 
 --
 -- API: /discovery/register
@@ -603,8 +604,8 @@ local function api_status(applet)
 
     -- process request
     local body = applet:receive()
-    local request = json.decode(body)
-    local service = request["service"]
+    local rc, request = pcall(json.decode, body)
+    local service = rc and request["service"] or Cluster
 
     -- initialize local variables
     local num_addresses = 0
