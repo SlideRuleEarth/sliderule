@@ -463,7 +463,7 @@ package:
   category: main
   optional: false
 - name: gunicorn
-  version: 25.2.0
+  version: 25.3.0
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -471,10 +471,10 @@ package:
     python: '>=3.14,<3.15.0a0'
     python_abi: 3.14.*
     setuptools: '>=3.0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/gunicorn-25.2.0-py314h28a4750_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/gunicorn-25.3.0-py314h28a4750_0.conda
   hash:
-    md5: cd6b3adab5c8120f61139dbc5005a010
-    sha256: 6b172728ead18283ff6ac244928ca1fc43efa7fdcbb2a9ca826946cdc33ec566
+    md5: f200261fb3065f60006616665c8700ad
+    sha256: 23a7869b6dfbf0b487d5f34f96b9291f0693c9b5f9767508c401289f544ccb50
   category: main
   optional: false
 - name: icu
