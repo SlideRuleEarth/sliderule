@@ -280,6 +280,28 @@ void PhorealFields::fromLua (lua_State* L, int index)
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor - BlanketFields
+ *----------------------------------------------------------------------------*/
+BlanketFields::BlanketFields():
+    FieldDictionary({ {"max_top_of_surface_percentile", &max_top_of_surface_percentile},
+                      {"median_ground_percentile",  &median_ground_percentile} }),
+    provided(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - BlanketFields
+ *----------------------------------------------------------------------------*/
+void BlanketFields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldDictionary::fromLua(L, index);
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor - Atl13Fields
  *----------------------------------------------------------------------------*/
 Atl13Fields::Atl13Fields():
@@ -411,7 +433,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
     // handle Surface Fitter options
     if(fit.provided)
     {
-        stages[STAGE_ATL06] = true;
+        stages[STAGE_FITTER] = true;
     }
 
     // handle atl09 sampline options
@@ -435,6 +457,16 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
             atl08Class[ATL08_TOP_OF_CANOPY] = true;
             atl08Class[ATL08_UNCLASSIFIED] = false;
         }
+    }
+
+    // handle SurfaceBlanket options
+    if(blanket.provided)
+    {
+        stages[STAGE_BLANKET] = true;
+        stages[STAGE_ATL08] = true;
+        atl08Class[ATL08_GROUND] = true;
+        atl08Class[ATL08_CANOPY] = true;
+        atl08Class[ATL08_TOP_OF_CANOPY] = true;
     }
 
     // handle ATL24 options
@@ -531,6 +563,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"fit",                 &fit},
         {"yapc",                &yapc},
         {"phoreal",             &phoreal},
+        {"als",                 &blanket},
         {"atl13",               &atl13},
         {"atl24",               &atl24},
         {"maxi",                &maxIterations},

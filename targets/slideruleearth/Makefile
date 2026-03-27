@@ -407,7 +407,7 @@ cluster-events: ## invokes the provisioner *events* lambda function and displays
 
 cluster-report: ## invokes the provisioner *report* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --concise --asjson'
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --commands report --concise --asjson'
 
 cluster-version: ## calls the cluster version API and displays the response
 	conda run -n sliderule --no-capture-output \

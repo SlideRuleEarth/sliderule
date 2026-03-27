@@ -137,6 +137,22 @@ struct PhorealFields: public FieldDictionary
     bool provided;
 };
 
+/******************/
+/* Blanket Fields */
+/******************/
+struct BlanketFields: public FieldDictionary
+{
+    FieldElement<double>    max_top_of_surface_percentile {0.98};
+    FieldElement<double>    median_ground_percentile {0.50};
+
+    BlanketFields(void);
+    ~BlanketFields(void) override = default;
+
+    virtual void fromLua (lua_State* L, int index) override;
+
+    bool provided;
+};
+
 /****************/
 /* Atl13 Fields */
 /****************/
@@ -352,13 +368,14 @@ class Icesat2Fields: public RequestFields
 
         /* Algorithm Stages */
         typedef enum {
-            STAGE_ATL06 = 0,    // surface fit
+            STAGE_FITTER = 0,    // surface fit
             STAGE_ATL08 = 1,    // use ATL08 photon classifications
             STAGE_YAPC = 2,     // yet another photon classifier
             STAGE_PHOREAL = 3,  // atl08 vegetation science
             STAGE_ATL24 = 4,    // atl24 vegetation science
             STAGE_ATL09 = 5,    // sample atmospheric data
-            NUM_STAGES = 6
+            STAGE_BLANKET = 6,  // surface blanket
+            NUM_STAGES = 7
         } stages_t;
 
         /* Ancillary Field Types */
@@ -555,6 +572,7 @@ class Icesat2Fields: public RequestFields
         FitFields                                           fit;                                                    // settings used in the surface fitter algorithm
         YapcFields                                          yapc;                                                   // settings used in YAPC algorithm
         PhorealFields                                       phoreal;                                                // phoreal algorithm settings
+        BlanketFields                                       blanket;                                                // blanket algorithm settings
         Atl13Fields                                         atl13;                                                  // atl13 subsetter parameters
         Atl24Fields                                         atl24;                                                  // atl24 algorithm settings
         FieldElement<int>                                   maxIterations {5};                                      // DEPRECATED (use FitFields)
