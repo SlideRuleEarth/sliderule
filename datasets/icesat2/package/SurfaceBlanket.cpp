@@ -245,15 +245,15 @@ void SurfaceBlanket::algorithm (const Atl03DataFrame& df, uint32_t start_photon,
 
     // calculate top of surface height
     result.top_of_surface_h = std::numeric_limits<float>::quiet_NaN();
-    if(topcan_heights.size() > parms->minPhotonCount.value)
+    if(topcan_heights.size() >= static_cast<size_t>(parms->minPhotonCount.value))
     {
         result.top_of_surface_h = percentile(topcan_heights, parms->blanket.max_top_of_surface_percentile.value);
     }
-    else if(canopy_heights.size() > parms->minPhotonCount.value)
+    else if(canopy_heights.size() >= static_cast<size_t>(parms->minPhotonCount.value))
     {
         result.top_of_surface_h = percentile(canopy_heights, parms->blanket.max_top_of_surface_percentile.value);
     }
-    else if(ground_heights.size() > parms->minPhotonCount.value)
+    else if(ground_heights.size() >= static_cast<size_t>(parms->minPhotonCount.value))
     {
         result.top_of_surface_h = percentile(ground_heights, parms->blanket.max_top_of_surface_percentile.value);
     }
@@ -264,7 +264,7 @@ void SurfaceBlanket::algorithm (const Atl03DataFrame& df, uint32_t start_photon,
 
     // calculate median ground height
     result.median_ground_h = std::numeric_limits<float>::quiet_NaN();
-    if(ground_heights.size() > parms->minPhotonCount.value)
+    if(ground_heights.size() >= static_cast<size_t>(parms->minPhotonCount.value))
     {
         result.median_ground_h = percentile(ground_heights, parms->blanket.median_ground_percentile.value);
     }

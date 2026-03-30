@@ -42,13 +42,6 @@
     ],
     "rgt": 179,
     "cycle": 8,
-    "atl24": {
-      "class_ph": [
-        "unclassified",
-        "bathymetry",
-        "sea_surface"
-      ]
-    },
     "yapc": {
       "version": 0,
       "score": 0

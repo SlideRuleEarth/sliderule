@@ -29,7 +29,7 @@ local y_column = parms:length("y") > 0 and parms["y"] or nil
 local z_column = parms:length("z") > 0 and parms["z"] or nil
 
 -- get h5 object
-local h5obj = h5coro.object(parms["asset"], resource)
+local h5obj = h5coro.object(parms["asset"], resource, h5coro.OPTION_USE_NAME_INDEX)
 if not h5obj then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to open resource") end
 
 -- create dataframes for each group

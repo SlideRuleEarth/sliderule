@@ -198,7 +198,11 @@ int h5_open (lua_State *L)
     luaL_newlib(L, h5_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt(L, "ALL_ROWS", H5Coro::ALL_ROWS);
+    LuaEngine::setAttrInt(L, "MAX_NDIMS",               H5Coro::MAX_NDIMS);
+    LuaEngine::setAttrInt(L, "EOR",                     H5Coro::EOR);
+    LuaEngine::setAttrInt(L, "ALL_ROWS",                H5Coro::ALL_ROWS);
+    LuaEngine::setAttrInt(L, "ALL_COLS",                H5Coro::ALL_COLS);
+    LuaEngine::setAttrInt(L, "OPTION_USE_NAME_INDEX",   H5Coro::Context::OPTION_USE_NAME_INDEX);
 
     return 1;
 }
