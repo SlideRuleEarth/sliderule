@@ -53,7 +53,7 @@ The default resulting DataFrame from this endpoint contains the following column
 |cycle|ATLAS orbit cycle number|||
 |region|ATLAS granule region|1-14||
 |rgt|Reference Ground Track|||
-|gt|Beam|'gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r'|Dependent on spacecraft orientation|
+|gt|Beam|10: gt1l, 20: gt1r, 30: gt2l, 40: gt2r, 50: gt3l, 60: gt3r|Dependent on spacecraft orientation|
 
 ### 1.1 Photon-input Parameters
 

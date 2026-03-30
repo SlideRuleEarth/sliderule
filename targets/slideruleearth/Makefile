@@ -849,7 +849,7 @@ release: ## tag and release sliderule; needs RELEASE
 	git commit -m "Version $(RELEASE)"
 	git tag -a $(RELEASE) -m "Version $(RELEASE)"
 	git push --tags && git push
-	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://slideruleearth.io/developer_guide/release_notes/release_notes.html"
+	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://docs.slideruleearth.io/developer_guide/release_notes/release_notes.html"
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
 	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
