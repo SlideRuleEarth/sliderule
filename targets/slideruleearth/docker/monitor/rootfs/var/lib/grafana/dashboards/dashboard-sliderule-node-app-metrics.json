@@ -830,7 +830,7 @@
           "exemplar": true,
           "expr": "rate(atl03x_count{job=\"analyzer_app\"}[1m])",
           "interval": "",
-          "legendFormat": "atl03s",
+          "legendFormat": "atl03x",
           "refId": "A"
         },
         {
@@ -838,7 +838,7 @@
           "expr": "rate(atl06x_count{job=\"analyzer_app\"}[1m])",
           "hide": false,
           "interval": "",
-          "legendFormat": "atl06",
+          "legendFormat": "atl06x",
           "refId": "B"
         },
         {
@@ -846,7 +846,7 @@
           "expr": "rate(atl08x_count{job=\"analyzer_app\"}[1m])",
           "hide": false,
           "interval": "",
-          "legendFormat": "atl08",
+          "legendFormat": "atl08x",
           "refId": "C"
         },
         {
@@ -854,7 +854,7 @@
           "expr": "rate(atl13x_count{job=\"analyzer_app\"}[1m])",
           "hide": false,
           "interval": "",
-          "legendFormat": "gedi02a",
+          "legendFormat": "atl13x",
           "refId": "E"
         },
         {
@@ -862,7 +862,7 @@
           "expr": "rate(atl24x_count{job=\"analyzer_app\"}[1m])  ",
           "hide": false,
           "interval": "",
-          "legendFormat": "gedi04a",
+          "legendFormat": "atl24x",
           "refId": "F"
         }
       ],
