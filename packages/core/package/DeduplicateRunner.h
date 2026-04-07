@@ -36,6 +36,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
+#include "MsgQ.h"
 
 /******************************************************************************
  * CLASS
@@ -65,8 +66,16 @@ class DeduplicateRunner: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        DeduplicateRunner  (lua_State* L);
+        DeduplicateRunner  (lua_State* L, const char* qname, const vector<string>& _column_names, bool _with_removal);
         ~DeduplicateRunner (void) override;
-};
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        Publisher* pubQ;
+        vector<string> columnNames;
+        bool withRemoval;
+    };
 
 #endif

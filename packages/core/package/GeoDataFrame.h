@@ -191,6 +191,7 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        setGeoColumns       (const char* time_column, const char* x_column, const char* y_column, const char* z_column);
         void                        populateGeoColumns  (void);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
+        FieldUntypedColumn*         getUnsafe           (const char* key) const;
 
         virtual okey_t              getKey              (void) const;
 

@@ -78,13 +78,38 @@ struct Hasher // FNV-1a
  * luaCreate - create(<msgq>, <column names>, <with removal>), where
  *      msgq:  post rows that are duplicate
  *      column names: list of columns to compare
- *      with removal: boolean of whether to remove duplicate rows or leave alone
+ *      with removal: boolean of whether to remove duplicate rows or just report
  *----------------------------------------------------------------------------*/
 int DeduplicateRunner::luaCreate (lua_State* L)
 {
     try
     {
-        return createLuaObject(L, new DeduplicateRunner(L));
+        // get parameters
+        const char* qname = getLuaString(L, 1, true, NULL);
+        const int column_names_index = 2;
+        const bool with_removal = getLuaBoolean(L, 3, true, false);
+
+        // get column names
+        vector<string> column_names;
+        if(lua_type(L, column_names_index) == LUA_TTABLE)
+        {
+            const int num_columns = lua_rawlen(L, column_names_index);
+            for(int c = 0; c < num_columns; c++)
+            {
+                lua_rawgeti(L, column_names_index, c + 1);
+                const char* name = getLuaString(L, -1);
+                column_names.emplace_back(name);
+                lua_pop(L, 1);
+            }
+        }
+        else if(lua_type(L, column_names_index) == LUA_TSTRING)
+        {
+            const char* name = getLuaString(L, column_names_index);
+            column_names.emplace_back(name);
+        }
+
+        // create lua object
+        return createLuaObject(L, new DeduplicateRunner(L, qname, column_names, with_removal));
     }
     catch(const RunTimeException& e)
     {
@@ -96,9 +121,16 @@ int DeduplicateRunner::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-DeduplicateRunner::DeduplicateRunner (lua_State* L):
-    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE)
+DeduplicateRunner::DeduplicateRunner (lua_State* L, const char* qname, const vector<string>& _column_names, bool _with_removal):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
+    pubQ(NULL),
+    columnNames(_column_names),
+    withRemoval(_with_removal)
 {
+    if(qname)
+    {
+        pubQ = new Publisher(qname);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -106,6 +138,7 @@ DeduplicateRunner::DeduplicateRunner (lua_State* L):
  *----------------------------------------------------------------------------*/
 DeduplicateRunner::~DeduplicateRunner (void)
 {
+    delete pubQ;
 }
 
 /*----------------------------------------------------------------------------
@@ -116,12 +149,16 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
     // check for empty dataframe
     if(dataframe->length() <= 0) return true;
 
+    // get column names
+    vector<string> column_names;
+    if(columnNames.empty()) column_names = dataframe->getColumnNames();
+    else column_names = columnNames;
+
     // get columns
-    vector<string> column_names = dataframe->getColumnNames();
-    vector<const FieldUntypedColumn*> columns;
+    vector<FieldUntypedColumn*> columns;
     for(const string& column_name: column_names)
     {
-        columns.push_back(&(*dataframe)[column_name.c_str()]);
+        columns.push_back(dataframe->getUnsafe(column_name.c_str()));
     }
 
     // get size of row
@@ -138,8 +175,9 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
         return false;
     }
 
-    // initialize hash table
+    // initialize state variables
     std::unordered_set<string, Hasher, std::equal_to<void>> hash_table;
+    vector<long> rows_to_remove;
 
     // loop through each row and hash data
     uint8_t* hash_data = new uint8_t[row_size];
@@ -176,11 +214,42 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
         std::string_view key(reinterpret_cast<const char*>(hash_data), row_size);
         if(hash_table.find(key) != hash_table.end())
         {
-            printf("duplicate\n");
+            if(pubQ)
+            {
+                // build duplicate record to post
+                FieldDictionary duplicate({});
+                for(size_t col = 0; col < columns.size(); col++)
+                {
+                    Field* element = columns[col]->row(row);
+                    if(!duplicate.add(column_names[col].c_str(), element, true))
+                    {
+                        mlog(CRITICAL, "failed to add duplicate entry for %s row %ld", column_names[col].c_str(), row);
+                        delete element;
+                    }
+                }
+                pubQ->postString("%s", duplicate.toJson().c_str());
+            }
+
+            if(withRemoval)
+            {
+                // save off row to remove
+                rows_to_remove.push_back(row);
+            }
         }
         else
         {
             hash_table.emplace(key);
+        }
+    }
+
+    // remove duplicate rows
+    if(withRemoval)
+    {
+        vector<uint8_t> mask(dataframe->length(), 1);
+        for(long row: rows_to_remove) mask[row] = 0;
+        for(size_t col = 0; col < columns.size(); col++)
+        {
+            dataframe->setNumRows(columns[col]->filter(mask));
         }
     }
 

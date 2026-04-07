@@ -45,6 +45,7 @@
 #include "Field.h"
 #include "FieldList.h"
 #include "FieldArray.h"
+#include "FieldElement.h"
 
 using std::unordered_map;
 
@@ -71,6 +72,8 @@ struct FieldUntypedColumn: public Field
     virtual void fromLua (lua_State* L, int index) override {(void)L; (void)index;};
 
     virtual long raw (uint8_t* buffer, size_t size, long element) const {(void)buffer; (void)size; (void)element; return 0;};
+    virtual Field* row (long element) const {(void)element; return NULL;};
+    virtual long filter (const vector<uint8_t>& mask) {(void)mask; return 0;};
 
     virtual double sum (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
     virtual double mean (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
@@ -114,6 +117,9 @@ class FieldColumn: public FieldUntypedColumn
         T&              operator[]      (long i);
 
         long            raw             (uint8_t* buffer, size_t size, long element) const override;
+        Field*          row             (long element) const override;
+        long            filter          (const vector<uint8_t>& mask) override;
+
         double          sum             (long start_index = 0, long num_elements = -1) const override;
         double          mean            (long start_index = 0, long num_elements = -1) const override;
         double          median          (long start_index = 0, long num_elements = -1) const override;
@@ -625,7 +631,7 @@ T& FieldColumn<T>::operator[](long i)
 }
 
 /*----------------------------------------------------------------------------
- * raw - FieldColumn specific
+ * raw
  *----------------------------------------------------------------------------*/
 template<class T>
 long FieldColumn<T>::raw (uint8_t* buffer, size_t size, long element) const
@@ -640,6 +646,70 @@ long FieldColumn<T>::raw (uint8_t* buffer, size_t size, long element) const
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(&value), sizeof(T));
 
     return sizeof(T);
+}
+
+/*----------------------------------------------------------------------------
+ * row
+ *----------------------------------------------------------------------------*/
+template<class T>
+Field* FieldColumn<T>::row (long element) const
+{
+    T value = operator[](element);
+    return new FieldElement<T>(value);
+}
+
+/*----------------------------------------------------------------------------
+ * filter
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::filter (const vector<uint8_t>& mask)
+{
+    vector<T*> new_chunks;
+    long src_element = 0;
+    long dst_offset = 0;
+    T* chunk = new T[chunkSize];
+
+    // all but last chunk
+    for(long src_c = 0; src_c < currChunk; src_c++)
+    {
+        for(long src_i = 0; src_i < chunkSize; src_i++)
+        {
+            if(mask[src_element++] == 1)
+            {
+                chunk[dst_offset++] = chunks[src_c][src_i];
+                if(dst_offset == chunkSize)
+                {
+                    new_chunks.push_back(chunk);
+                    chunk = new T[chunkSize];
+                    dst_offset = 0;
+                }
+            }
+        }
+    }
+    // last chunk
+    if(currChunk >= 0)
+    {
+        for(long src_i = 0; src_i < currChunkOffset; src_i++)
+        {
+            if(mask[src_element++] == 1)
+            {
+                chunk[dst_offset++] = chunks[currChunk][src_i];
+                if(dst_offset == chunkSize)
+                {
+                    new_chunks.push_back(chunk);
+                    chunk = new T[chunkSize];
+                    dst_offset = 0;
+                }
+            }
+        }
+    }
+    // set members
+    chunks = new_chunks;
+    currChunk = new_chunks.size() - 1;
+    currChunkOffset = dst_offset;
+    numElements = (currChunk * chunkSize) + currChunkOffset;
+    // return new number of elements
+    return numElements;
 }
 
 /*----------------------------------------------------------------------------

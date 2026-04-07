@@ -983,6 +983,14 @@ const FieldUntypedColumn& GeoDataFrame::operator[](const char* key) const
 }
 
 /*----------------------------------------------------------------------------
+ * getUnsafe
+ *----------------------------------------------------------------------------*/
+FieldUntypedColumn* GeoDataFrame::getUnsafe (const char* key) const
+{
+    return getColumn(key, true);
+}
+
+/*----------------------------------------------------------------------------
  * getKey
  *----------------------------------------------------------------------------*/
 okey_t GeoDataFrame::getKey (void) const
