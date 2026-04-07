@@ -612,7 +612,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS());
                 appendPandasMetaData(lua_obj->indexColumnName.c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
-                metadata->Append("meta", dataframe.metaFields.toJson());
+                metadata->Append("meta", dataframe.getMetaAsJson());
                 metadata->Append("recordinfo", dataframe.getInfoAsJson());
                 schema = schema->WithMetadata(metadata);
 

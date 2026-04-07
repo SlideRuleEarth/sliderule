@@ -124,14 +124,14 @@ static void _addColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* data)
     // append data to column
     if(data->type == GeoDataFrame::COLUMN_REC)
     {
-        dataframe->numRows = column->appendBuffer(data->data, data->size);
+        dataframe->setNumRows(column->appendBuffer(data->data, data->size));
     }
     else if(data->type == GeoDataFrame::META_REC)
     {
         if(data->encoding & GeoDataFrame::META_COLUMN)
         {
             T* value_ptr = reinterpret_cast<T*>(data->data);
-            dataframe->numRows = column->appendValue(*value_ptr, data->num_rows);
+            dataframe->setNumRows(column->appendValue(*value_ptr, data->num_rows));
         }
     }
     else
@@ -161,7 +161,7 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
     }
 
     // append source_id to column
-    dataframe->numRows = column->appendValue(source_id, data->num_rows);
+    dataframe->setNumRows(column->appendValue(source_id, data->num_rows));
 
     // get source table from metadata
     FieldDictionary* dict = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
@@ -270,7 +270,7 @@ static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* dat
             FieldList<T> field_list;
             field_list.appendBuffer(&data->data[data_offset], sizes_ptr[j]);
             data_offset += sizes_ptr[j];
-            dataframe->numRows = column->append(field_list);
+            dataframe->setNumRows(column->append(field_list));
         }
     }
     else
@@ -540,13 +540,13 @@ int GeoDataFrame::luaCreate (lua_State* L)
             for(const string& name: column_names)
             {
                 const Field* field = dataframe->getColumn(name.c_str());
-                if(dataframe->numRows == 0)
+                if(dataframe->length() == 0)
                 {
-                    dataframe->numRows = field->length();
+                    dataframe->setNumRows(field->length());
                 }
-                else if(dataframe->numRows != field->length())
+                else if(dataframe->length() != field->length())
                 {
-                    throw RunTimeException(CRITICAL, RTE_FAILURE, "number of rows must match for all columns, %ld != %ld", dataframe->numRows, field->length());
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "number of rows must match for all columns, %ld != %ld", dataframe->length(), field->length());
                 }
             }
         }
@@ -618,6 +618,14 @@ long GeoDataFrame::addRow(void)
 {
     numRows++;
     return numRows;
+}
+
+/*----------------------------------------------------------------------------
+ * getNumRows
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::setNumRows(long rows)
+{
+    numRows = rows;
 }
 
 /*----------------------------------------------------------------------------
@@ -1056,6 +1064,14 @@ string GeoDataFrame::getInfoAsJson (void) const
                     xColumnName.c_str(),
                     yColumnName.c_str(),
                     zColumnName.c_str()).c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * getMetaAsJson
+ *----------------------------------------------------------------------------*/
+string GeoDataFrame::getMetaAsJson (void) const
+{
+    return metaFields.toJson();
 }
 
 /*----------------------------------------------------------------------------
@@ -1904,7 +1920,7 @@ int GeoDataFrame::luaSend(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaReceive - :receive(<input q>, <outq>, [<number of resources>], [<timeout>])
+ * luaReceive - :receive(<input q>, <outq>, [<number of channels>], [<timeout>])
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaReceive(lua_State* L)
 {
@@ -2102,7 +2118,7 @@ int GeoDataFrame::luaBuildIndex (lua_State* L)
         const char* index_column_name = getLuaString(L, 2);
 
         FieldColumn<int64_t>* index = new FieldColumn<int64_t>;
-        for(int64_t i = 0; i < dataframe->numRows; i++)
+        for(int64_t i = 0; i < dataframe->length(); i++)
         {
             index->append(i);
         }

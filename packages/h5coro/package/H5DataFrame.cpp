@@ -61,9 +61,10 @@ int H5DataFrame::luaCreate(lua_State* L)
         _h5obj = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* _group = getLuaString(L, 3, true, NULL);
         const okey_t _df_key = getLuaInteger(L, 4, true, 0);
+        const long _timeout_ms = getLuaInteger(L, 5, true, SystemConfig::settings().requestTimeoutSec.value * 1000);
 
         /* Create and Return Object */
-        return createLuaObject(L, new H5DataFrame(L, _parms, _h5obj, _group, _df_key));
+        return createLuaObject(L, new H5DataFrame(L, _parms, _h5obj, _group, _df_key, _timeout_ms));
     }
     catch(const RunTimeException& e)
     {
@@ -77,14 +78,15 @@ int H5DataFrame::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key):
+H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group}}, _parms->crs.value.c_str()),
     h5obj(_h5obj),
     data(_parms->variables, _h5obj, _group, _parms->col.value, _parms->startRow.value, _parms->numRows.value),
     group(_group, Field::META_SOURCE_ID),
-    dfKey(_df_key)
+    dfKey(_df_key),
+    timeout(_timeout) // milliseconds
 {
-    LuaEngine::setAttrFunc(L, "join", luaJoin);
+    joinPid = new Thread(joinThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -92,6 +94,7 @@ H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj
  *----------------------------------------------------------------------------*/
 H5DataFrame::~H5DataFrame (void)
 {
+    delete joinPid;
     h5obj->releaseLuaObject();
 }
 
@@ -104,33 +107,31 @@ okey_t H5DataFrame::getKey (void) const
 }
 
 /*----------------------------------------------------------------------------
- * luaJoin - :join(<timeout>)
+ * joinThread
  *----------------------------------------------------------------------------*/
-int H5DataFrame::luaJoin (lua_State* L)
+void* H5DataFrame::joinThread (void* parm)
 {
-    H5DataFrame* dataframe = NULL;
-    bool status = true;
+    assert(parm);
+
+    // get dataframe
+    H5DataFrame* dataframe = static_cast<H5DataFrame*>(parm);
 
     try
     {
-        dataframe = dynamic_cast<H5DataFrame*>(getLuaSelf(L, 1));
-        const long timeout_ms = getLuaInteger(L, 2, true, SystemConfig::settings().requestTimeoutSec.value * 1000);
+        // join datasets
+        dataframe->data.joinToGDF(dataframe, dataframe->timeout, true);
 
-        /* Join Datasets */
-        dataframe->data.joinToGDF(dataframe, timeout_ms, true);
-
-        /* Add Datasets */
-        dataframe->numRows = dataframe->data.addToGDF(dataframe);
+        // add datasets
+        dataframe->setNumRows(dataframe->data.addToGDF(dataframe));
     }
     catch(const RunTimeException& e)
     {
+        // handle error
         mlog(e.level(), "Failed to join h5 dataframe: %s", e.what());
-        status = false;
+        dataframe->inError = true;
     }
 
-    /* DataFrame Finished */
-    if(dataframe) dataframe->signalComplete();
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
+    // dataFrame finished
+    dataframe->signalComplete();
+    return NULL;
 }

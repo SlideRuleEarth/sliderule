@@ -44,7 +44,8 @@
  * STRING STATIC DATA
  ******************************************************************************/
 
-const char* StringLib::B64CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const char* StringLib::B64CHARS_STANDARD = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const char* StringLib::B64CHARS_URL      = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 const int StringLib::B64INDEX[256] =
 {
@@ -631,8 +632,9 @@ char* StringLib::checkNullStr (const char* str)
  * Author: polfosol
  * License: assumed to be CC BY-SA 3.0
  *----------------------------------------------------------------------------*/
-string StringLib::b64encode(const void* data, size_t len)
+string StringLib::b64encode(const void* data, size_t len, bool standard)
 {
+    const char* B64CHARS = standard ? B64CHARS_STANDARD : B64CHARS_URL;
     string result((len + 2) / 3 * 4, '=');
     const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
     char *str = result.data();

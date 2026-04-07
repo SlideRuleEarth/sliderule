@@ -231,8 +231,10 @@ class Session:
         # Construct Payload
         if isinstance(parm, dict):
             payload = json.dumps(parm)
-        else:
+        elif parm is not None:
             payload = parm
+        else:
+            payload = ''
 
         # (Optionally) Sign Request
         if sign:

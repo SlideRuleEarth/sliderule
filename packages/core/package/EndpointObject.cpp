@@ -168,8 +168,6 @@ const char* EndpointObject::Request::getHdrStreaming (void) const
  *----------------------------------------------------------------------------*/
 bool EndpointObject::Request::verifyHdrSignature (const char* account) const
 {
-    int status = false;
-
 #ifdef __aws__
     /* check signature */
     string* signature_str;
@@ -247,8 +245,8 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
 
     /* build canonical message */
     const FString full_path("%s%s/%s", SystemConfig::settings().domain.value.c_str(), path, resource);
-    const string full_path_b64 = StringLib::b64encode(full_path.c_str(), full_path.length());
-    const string body_b64 = StringLib::b64encode(body, length);
+    const string full_path_b64 = StringLib::b64encode(full_path.c_str(), full_path.length(), false);
+    const string body_b64 = StringLib::b64encode(body, length, false);
     const FString message("%s:%s:%s", full_path_b64.c_str(), timestamp_str->c_str(), body_b64.c_str());
     const uint8_t* message_bytes = reinterpret_cast<const uint8_t*>(message.c_str());
 
@@ -285,10 +283,13 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     EVP_PKEY_free(pkey);
 
     /* check verification */
-    if(result == 1) status = true;  // 1 = valid
-    else mlog(CRITICAL, "Signed request failed signature verification: %d", result);
+    if(result != 1) // 1 = valid
+    {
+        mlog(CRITICAL, "Signed request failed signature verification: %d", result);
+        return false;
+    }
 #endif
-    return status;
+    return true;
 }
 
 

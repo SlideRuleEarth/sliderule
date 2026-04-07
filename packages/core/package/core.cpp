@@ -37,6 +37,7 @@
 #include "Asset.h"
 #include "AssetIndex.h"
 #include "CurlLib.h"
+#include "DeduplicateRunner.h"
 #include "Dictionary.h"
 #include "EndpointObject.h"
 #include "EndpointProxy.h"
@@ -133,6 +134,7 @@ static int core_open (lua_State *L)
         {"download",        CurlLib::luaDownload},
         {"dataframe",       GeoDataFrame::luaCreate},
         {"framesender",     GeoDataFrame::FrameSender::luaCreate},
+        {"dedup",           DeduplicateRunner::luaCreate},
         {"proxy",           EndpointProxy::luaCreate},
         {"orchreg",         OrchestratorLib::luaRegisterService},
         {"orchselflock",    OrchestratorLib::luaSelfLock},

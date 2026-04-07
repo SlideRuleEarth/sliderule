@@ -92,7 +92,7 @@ class StringLib
         static bool             str2ullong      (const char* str, unsigned long long* val, int base=0);
         static bool             str2double      (const char* str, double* val);
         static char*            checkNullStr    (const char* str);
-        static string           b64encode       (const void* data, size_t len);
+        static string           b64encode       (const void* data, size_t len, bool standard=true);
         static vector<uint8_t>  b64decode       (const string& data);
         static char*            b16encode       (const void* data, int size, bool lower_case, char* dst=NULL);
         static int              printify        (char* buffer, int size);
@@ -109,7 +109,8 @@ class StringLib
          *--------------------------------------------------------------------*/
 
         static const int MAX_NUM_REPLACEMENTS = 16;
-        static const char* B64CHARS;
+        static const char* B64CHARS_STANDARD;
+        static const char* B64CHARS_URL;
         static const int B64INDEX[256];
 };
 

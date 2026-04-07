@@ -178,6 +178,7 @@ class GeoDataFrame: public LuaObject, public Field
         long                        length              (void) const override;
 
         long                        addRow              (void);
+        void                        setNumRows          (long rows);
         long                        appendFromBuffer    (const char* name, const uint8_t* buffer, long size, uint32_t column_encoding=0, bool nodata=false);
         vector<string>              getColumnNames      (void) const;
         bool                        addColumn           (const char* name, FieldUntypedColumn* column, bool free_on_delete);
@@ -203,6 +204,7 @@ class GeoDataFrame: public LuaObject, public Field
         const string&               getYColumnName      (void) const;
         const string&               getZColumnName      (void) const;
         string                      getInfoAsJson       (void) const;
+        string                      getMetaAsJson       (void) const;
         const string&               getCRS              (void) const { return crs; }
         void                        setCRS              (const string& _crs) { crs = _crs; }
 
@@ -218,15 +220,6 @@ class GeoDataFrame: public LuaObject, public Field
         static void         createAncillaryColumns      (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields);
         static void         populateAncillaryColumns    (Dictionary<ancillary_t>* ancillary_columns, const GeoDataFrame& df, int32_t start_index, int32_t num_elements);
         static void         addAncillaryColumns         (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        bool                            inError;
-        long                            numRows;
-        FieldMap<FieldUntypedColumn>    columnFields;
-        FieldDictionary                 metaFields;
 
     protected:
 
@@ -303,25 +296,30 @@ class GeoDataFrame: public LuaObject, public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        const FieldColumn<time8_t>* timeColumn;
-        const FieldColumn<double>*  xColumn;
-        const FieldColumn<double>*  yColumn;
-        const FieldColumn<float>*   zColumn;
+        bool                            inError;
+        long                            numRows;
+        FieldMap<FieldUntypedColumn>    columnFields;
+        FieldDictionary                 metaFields;
 
-        string                      timeColumnName;
-        string                      xColumnName;
-        string                      yColumnName;
-        string                      zColumnName;
+        const FieldColumn<time8_t>*     timeColumn;
+        const FieldColumn<double>*      xColumn;
+        const FieldColumn<double>*      yColumn;
+        const FieldColumn<float>*       zColumn;
 
-        string                      crs;
+        string                          timeColumnName;
+        string                          xColumnName;
+        string                          yColumnName;
+        string                          zColumnName;
 
-        std::atomic<bool>           active;
-        Thread*                     receivePid;
-        Thread*                     runPid;
-        Publisher                   pubRunQ;
-        Subscriber                  subRunQ;
-        Cond                        runSignal;
-        bool                        runComplete;
+        string                          crs;
+
+        std::atomic<bool>               active;
+        Thread*                         receivePid;
+        Thread*                         runPid;
+        Publisher                       pubRunQ;
+        Subscriber                      subRunQ;
+        Cond                            runSignal;
+        bool                            runComplete;
 };
 
 #endif  /* __geo_data_frame__ */

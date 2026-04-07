@@ -35,7 +35,7 @@ if not h5obj then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to o
 -- create dataframes for each group
 local dfs = {}
 for i,group in ipairs(groups) do
-    local df = h5coro.dataframe(parms, h5obj, group, i)
+    local df = h5coro.dataframe(parms, h5obj, group, i, timeout)
     if not df then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("failed to create dataframe for group %s", group)) end
     dfs[group] = df
 end
@@ -46,7 +46,6 @@ final_df:receive(dfq_name, _rqst.rspq, #groups, timeout)
 
 -- join and serialize (send) each dataframe
 for group,df in pairs(dfs) do
-    df:join(timeout)
     if df:numrows() > 0 and df:numcols() > 0 then
         df:geo(time_column, x_column, y_column, z_column) -- (optionally) set geo columns
         if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner

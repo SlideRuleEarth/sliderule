@@ -29,56 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_dataframe__
-#define __h5_dataframe__
+#ifndef __deduplicate_runner__
+#define __deduplicate_runner__
 
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
+#include <limits>
 
 #include "OsApi.h"
-#include "LuaObject.h"
 #include "GeoDataFrame.h"
-#include "Asset.h"
-#include "H5CoroLib.h"
-#include "H5Object.h"
-#include "H5VarSet.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class H5DataFrame: public GeoDataFrame
+class DeduplicateRunner: public GeoDataFrame::FrameRunner
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Methods
+         * Constants
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-
-    protected:
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout);
-                            ~H5DataFrame        (void) override;
-        okey_t              getKey              (void) const override;
-        static void*        joinThread          (void* parm);
+        static int      luaCreate   (lua_State* L);
+        bool            run         (GeoDataFrame* dataframe) override;
 
-        /*--------------------------------------------------------------------
-         * Data
+    private:
+
+         /*--------------------------------------------------------------------
+         * Methods
          *--------------------------------------------------------------------*/
 
-        H5Object*               h5obj;
-        H5VarSet                data;
-        FieldElement<string>    group;
-        okey_t                  dfKey;
-        long                    timeout; // milliseconds
-        Thread*                 joinPid;
+        DeduplicateRunner  (lua_State* L);
+        ~DeduplicateRunner (void) override;
 };
 
-#endif  /* __h5_file__ */
+#endif

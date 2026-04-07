@@ -44,8 +44,6 @@ class MathLib
 
         static const int LOG2DATASIZE = 13;
         static const double EARTHRADIUS;
-        static const char* B64CHARS;
-        static const int B64INDEX[256];
 
         /*--------------------------------------------------------------------
          * Types

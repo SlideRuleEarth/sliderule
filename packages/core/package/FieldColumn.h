@@ -63,13 +63,14 @@ struct FieldUntypedColumn: public Field
 
     typedef unordered_map<int64_t, int64_t> unique_map_t;
 
-    explicit FieldUntypedColumn (uint32_t _encoding=0):
-         Field(COLUMN, _encoding) {};
+    explicit FieldUntypedColumn (uint32_t _encoding=0): Field(COLUMN, _encoding) {};
     ~FieldUntypedColumn (void) = default;
 
     virtual string toJson (void) const override {return string("{}");};
     virtual int toLua (lua_State* L) const override {(void)L; return 0;};
     virtual void fromLua (lua_State* L, int index) override {(void)L; (void)index;};
+
+    virtual long raw (uint8_t* buffer, size_t size, long element) const {(void)buffer; (void)size; (void)element; return 0;};
 
     virtual double sum (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
     virtual double mean (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
@@ -112,6 +113,7 @@ class FieldColumn: public FieldUntypedColumn
         T               operator[]      (long i) const;
         T&              operator[]      (long i);
 
+        long            raw             (uint8_t* buffer, size_t size, long element) const override;
         double          sum             (long start_index = 0, long num_elements = -1) const override;
         double          mean            (long start_index = 0, long num_elements = -1) const override;
         double          median          (long start_index = 0, long num_elements = -1) const override;
@@ -620,6 +622,24 @@ T& FieldColumn<T>::operator[](long i)
     const long chunk_index = i / chunkSize;
     const long chunk_offset = i % chunkSize;
     return chunks[chunk_index][chunk_offset];
+}
+
+/*----------------------------------------------------------------------------
+ * raw - FieldColumn specific
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::raw (uint8_t* buffer, size_t size, long element) const
+{
+    (void)size;
+
+    assert(sizeof(T) <= size);
+    assert(element >= 0);
+    assert(element < numElements);
+
+    T value = operator[](element);
+    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(&value), sizeof(T));
+
+    return sizeof(T);
 }
 
 /*----------------------------------------------------------------------------

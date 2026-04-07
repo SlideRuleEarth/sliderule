@@ -184,6 +184,10 @@ session = sliderule.create_session(cluster="<my_cluster>")
 session.provisioner.destroy()
 ```
 
+## Constraints
+
+* The minimum time-to-live for a private cluster is 15 minutes.  This protects against race conditions in the AWS event scheduling used to bring the cluster down.
+
 ## Troubleshooting
 
 * **Version Incompatibilities**: Private clusters run the latest version of the sliderule server code which may be more recent than the released version running on the public cluster.  If your client is on a different version than the private cluster server, please updated your client using the instructions provided in our [Installation Guide](/getting_started/Install.html).  Note that version incompatibilities will be reported by the client on initialization like so:
@@ -196,7 +200,7 @@ RuntimeError: Client (version (4, 0, 2)) is incompatible with the server (versio
 Connection error to endpoint https://{cluster}.slideruleearth.io/source/version ...retrying request
 ```
 
-* **Quick Restarts**: The DNS entry for the cluster subdomain has a roughly five minute time-to-live and so quickly destroying a cluster and then redeploying it will possibly encounter a few minutes where the new cluster has been deployed but the DNS entries are still pointing to the old cluster.  Waiting for a few minutes will resolved the issue.
+* **Quick Restarts**: The DNS entry for the cluster subdomain has a roughly five minute time-to-live and so quickly destroying a cluster and then redeploying it will possibly encounter a few minutes where the new cluster has been deployed but the DNS entries are still pointing to the old cluster.  Waiting for a few minutes will resolved the issue.  Sometimes DNS entries take longer than the time-to-live setting to propagate; when this happens the cluster will be up but unreachable for ten to fifteen minutes until the records are fully propagated.
 
 * **Intermittent Authorization Errors**: Intermittently the AWS API Gateway for provisioner.slideruleearth.io fails to authorize a valid JWT and returns an error.  We are continuing to debug this effort, but in the meantime, a retry should succeed.  When this happens, users will see a message like:
 ```

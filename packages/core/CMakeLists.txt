@@ -32,6 +32,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/DeduplicateRunner.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointProxy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EventLib.cpp
@@ -91,6 +92,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/DeduplicateRunner.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Dictionary.h
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointProxy.h
