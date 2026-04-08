@@ -176,7 +176,11 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
     }
 
     // initialize state variables
-    std::unordered_set<string, Hasher, std::equal_to<void>> hash_table;
+    const long num_rows = dataframe->length();
+    std::vector<uint8_t> row_storage;
+    row_storage.reserve(num_rows * row_size);
+    std::unordered_set<std::string_view, Hasher, std::equal_to<void>> hash_table;
+    hash_table.reserve(num_rows);
     vector<long> rows_to_remove;
 
     // loop through each row and hash data
@@ -238,7 +242,9 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
         }
         else
         {
-            hash_table.emplace(key);
+            const size_t offset = row_storage.size();
+            row_storage.insert(row_storage.end(), hash_data, hash_data + row_size);
+            hash_table.emplace(reinterpret_cast<const char*>(row_storage.data() + offset), row_size);
         }
     }
 
