@@ -7,11 +7,22 @@
 --
 -- OUTPUT:      JSON object with column definitions for the requested API
 --
--- NOTES:       Column schemas are registered at plugin init from C++
---              DataFrame definitions (see GeoDataFrame::registerSchema).
+-- NOTES:       Reads schema definitions from JSON files on disk
+--              ({confdir}/schemas/*.json) — no C++ registry needed.
 --
 
 local json = require("json")
+
+---------------------------------------------------------------
+-- Read a JSON file from disk
+---------------------------------------------------------------
+local function read_json(path)
+    local f, err = io.open(path, "r")
+    if not f then return nil, err end
+    local text = f:read("*a")
+    f:close()
+    return json.decode(text)
+end
 
 ---------------------------------------------------------------
 -- Parse query string
@@ -29,17 +40,21 @@ end
 ---------------------------------------------------------------
 -- Handle request
 ---------------------------------------------------------------
+local schemas_dir = __confdir .. "/schemas"
 local params = parse_query(_rqst.arg)
 local api = params["api"]
 
 if not api then
     -- Return listing of all registered schemas
-    local apis = core.schema()
-    return json.encode({apis=apis})
+    local index = read_json(schemas_dir .. "/index.json")
+    if not index then
+        return json.encode({error="failed to read schema index"})
+    end
+    return json.encode({apis=index})
 end
 
-local ok, schema = pcall(core.schema, api)
-if not ok then
+local schema = read_json(schemas_dir .. "/" .. api .. ".json")
+if not schema then
     return json.encode({error="unknown api: " .. api})
 end
 

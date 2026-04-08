@@ -35,35 +35,34 @@ When you change an endpoint, there are several files that must stay in sync. Fol
 1. **Create the Lua script** in `{package_or_dataset}/endpoints/{name}.lua`
 2. **Register it in CMakeLists.txt** — add the file to the `install(FILES ...)` block in the package's `CMakeLists.txt` so it gets installed to `${CONFDIR}/api/`
 3. **If it returns Parquet (an `/arrow/*` endpoint):**
-   - Add a `GeoDataFrame::registerSchema()` call in the dataset's init function (e.g., `initicesat2()` in `icesat2.cpp`, `initgedi()` in `gedi.cpp`)
-   - Match field names and types exactly to the DataFrame's `FieldColumn<T>` declarations in the `.h` file
-   - Include `#include "GeoDataFrame.h"` if not already present
+   - Create a JSON schema file in `schemas/{api_name}.json` defining columns, metadata, staged, and dynamic fields
+   - The DataFrame `.h` file should `#include "{api_name}.columns.h"` — the header is auto-generated from the JSON schema at build time
+   - Column schemas are injected automatically into `/source/openapi` from the JSON files — no C++ registration needed
 4. **Update the OpenAPI base template** — add the endpoint path to `packages/core/data/openapi-base.json`:
    - Add a path entry under the appropriate section
-   - For Parquet endpoints: column schemas are injected automatically from `registerSchema()` — no need to add them manually
+   - For Parquet endpoints: column schemas are injected automatically from the JSON schema files
    - For streaming endpoints: use `$ref: "#/components/responses/StreamingResponse"`
 5. **Add selftests** if the endpoint has testable behavior without cloud access
 
 ### Modifying an endpoint (adding/removing/renaming columns)
 
-1. **Update the DataFrame** `.h` file (FieldColumn declarations)
-2. **Update the `registerSchema()` call** to match the new columns
-3. Column schemas in the OpenAPI spec update **automatically** via `/source/openapi` (no manual YAML edit needed for column changes)
-4. **Run the selftest** to verify the schema registry still works
+1. **Update the JSON schema** in `schemas/{api_name}.json` — this is the single source of truth
+2. The generated `.columns.h` header and OpenAPI spec update **automatically** at build time
+3. **Run the selftest** to verify the schema files are valid
 
 ### Removing an endpoint
 
 1. **Remove the Lua script** from the `endpoints/` directory
 2. **Remove it from CMakeLists.txt** install list
-3. **Remove the `registerSchema()` call** if it had one
+3. **Remove the JSON schema** file from `schemas/`
 4. **Remove the path** from `packages/core/data/openapi-base.json`
 
 ### Validation
 
 After any endpoint change, verify:
-- `make selftest` passes (schema tests validate the registry)
+- `make selftest` passes (schema tests validate JSON files on disk)
 - The OpenAPI base template is valid JSON: `python3 -c "import json; json.load(open('packages/core/data/openapi-base.json'))"`
-- Column schemas match C++ code (the schema selftest at `packages/core/selftests/schema.lua` checks this)
+- JSON schemas are valid: `python3 -c "import json, glob; [json.load(open(f)) for f in glob.glob('schemas/*.json')]"`
 - The live spec is correct: `curl http://localhost:9081/source/openapi | python3 -m json.tool`
 
 ## Key Architecture
@@ -79,16 +78,18 @@ After any endpoint change, verify:
 The server dynamically generates a complete OpenAPI 3.1 spec at `GET /source/openapi`.
 
 - **Base template**: `packages/core/data/openapi-base.json` — paths, parameters, examples (no column schemas)
-- **Column schemas**: injected at runtime from `GeoDataFrame::registerSchema()` via `core.schema()`
+- **Column schemas**: injected at runtime from JSON schema files in `${CONFDIR}/schemas/`
 - **Endpoint code**: `packages/core/endpoints/openapi.lua`
-When you add a new Parquet endpoint with `registerSchema()`, its column schema automatically appears in `/source/openapi`. You only need to edit `openapi-base.json` to add the path definition.
+
+When you add a new Parquet endpoint with a JSON schema in `schemas/`, its column schema automatically appears in `/source/openapi`. You only need to edit `openapi-base.json` to add the path definition.
 
 ## File Layout
 
+- `schemas/*.json` — JSON schema files (single source of truth for DataFrame columns)
+- `scripts/generate_columns.py` — generates `.columns.h` C++ headers from JSON schemas
 - `packages/*/endpoints/*.lua` — core and utility endpoint scripts
 - `datasets/*/endpoints/*.lua` — dataset-specific endpoint scripts
 - `packages/*/CMakeLists.txt` — install lists for endpoint scripts
-- `datasets/*/package/{dataset}.cpp` — where `registerSchema()` calls live (in `init{dataset}()`)
 - `packages/core/data/openapi-base.json` — OpenAPI base template (paths + parameters, no column schemas)
-- `packages/core/endpoints/openapi.lua` — generates complete OpenAPI spec with live column schemas
-- `packages/core/selftests/schema.lua` — selftest for the schema registry
+- `packages/core/endpoints/openapi.lua` — generates complete OpenAPI spec from JSON schemas
+- `packages/core/selftests/schema.lua` — selftest for JSON schema files

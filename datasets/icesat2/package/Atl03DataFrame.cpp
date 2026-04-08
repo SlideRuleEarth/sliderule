@@ -95,7 +95,6 @@ int Atl03DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    "atl03x", "Photon-level data (ICESat-2 ATL03)",
     {
         {"time_ns",             &time_ns},
         {"latitude",            &latitude},

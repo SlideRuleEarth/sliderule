@@ -239,9 +239,6 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
     delete ancillary_columns;
 
-    // register schema from live columns (once, skips duplicates)
-    dataframe->registerSchemaFromColumns("atl03x-surface", "Surface-fitted elevation segments (replaces atl03x base columns)");
-
     // finalize dataframe
     dataframe->populateGeoColumns();
 

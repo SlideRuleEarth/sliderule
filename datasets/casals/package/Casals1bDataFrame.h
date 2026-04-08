@@ -67,14 +67,7 @@ class Casals1bDataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* DataFrame Columns */
-        FieldColumn<time8_t>        time_ns   {Field::TIME_COLUMN, 0, "Return timestamp (Unix ns)"};
-        FieldColumn<double>         latitude  {Field::Y_COLUMN,    0, "Latitude (degrees)"};
-        FieldColumn<double>         longitude {Field::X_COLUMN,    0, "Longitude (degrees)"};
-        FieldColumn<float>          refh      {Field::Z_COLUMN,    0, "Reference height (m)"};
-
-        /* DataFrame MetaData */
-        FieldElement<string>        granule;
+#include "casals1bx.columns.h"
 
         /*--------------------------------------------------------------------
          * Methods

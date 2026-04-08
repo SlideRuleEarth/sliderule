@@ -113,38 +113,7 @@ class Atl08DataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        /* DataFrame Columns */
-        FieldColumn<time8_t>     time_ns            {Field::TIME_COLUMN, 0, "Segment timestamp (Unix ns)"};
-        FieldColumn<double>      latitude           {Field::Y_COLUMN,    0, "Latitude (degrees)"};
-        FieldColumn<double>      longitude          {Field::X_COLUMN,    0, "Longitude (degrees)"};
-        FieldColumn<int32_t>     segment_id_beg     {"Starting segment ID"};
-        FieldColumn<int32_t>     n_seg_ph           {"Total photons in segment"};
-        FieldColumn<float>       solar_elevation    {"Solar elevation angle (deg)"};
-        FieldColumn<float>       terrain_slope      {"Terrain slope"};
-        FieldColumn<int32_t>     n_te_photons       {"Terrain photon count"};
-        FieldColumn<int8_t>      te_quality_score   {"Terrain quality score"};
-        FieldColumn<float>       h_te_uncertainty   {"Terrain height uncertainty (m)"};
-        FieldColumn<float>       h_canopy           {"Relative canopy height (m)"};
-        FieldColumn<float>       h_canopy_uncertainty {"Canopy height uncertainty (m)"};
-        FieldColumn<int16_t>     segment_cover      {"Canopy cover percentage"};
-        FieldColumn<int32_t>     n_ca_photons       {"Canopy photon count"};
-        FieldColumn<int8_t>      can_quality_score  {"Canopy quality score"};
-        FieldColumn<uint8_t>     segment_landcover  {"Land cover classification"};
-        FieldColumn<uint8_t>     segment_snowcover  {"Snow cover flag"};
-        FieldColumn<float>       h_te_median        {Field::Z_COLUMN, 0, "Median terrain elevation (m)"};
-        FieldColumn<float>       h_max_canopy       {"Max canopy height (m)"};
-        FieldColumn<float>       h_min_canopy       {"Min canopy height (m)"};
-        FieldColumn<float>       h_mean_canopy      {"Mean canopy height (m)"};
-        FieldColumn<float>       canopy_openness    {"Canopy openness fraction"};
-        FieldColumn<FieldArray<float,NUM_CANOPY_METRICS>> canopy_h_metrics {"18 canopy height percentiles from ATL08 HDF5"};
-
-        /* DataFrame MetaData */
-        FieldElement<uint8_t>    spot    {0, Field::META_COLUMN, "Spot number 1-6"};
-        FieldElement<uint8_t>    cycle   {0, Field::META_COLUMN, "Orbital cycle"};
-        FieldElement<uint8_t>    region  {0, Field::META_COLUMN, "ICESat-2 region number"};
-        FieldElement<uint16_t>   rgt     {0, Field::META_COLUMN, "Reference Ground Track"};
-        FieldElement<uint8_t>    gt      {0, Field::META_COLUMN, "Ground track (10,20,30,40,50,60)"};
-        FieldElement<string>     granule;
+#include "atl08x.columns.h"
 
         std::atomic<bool>   active;
         Thread*             readerPid;

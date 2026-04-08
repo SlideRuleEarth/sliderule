@@ -66,22 +66,7 @@ class Atl13DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* DataFrame Columns */
-        FieldColumn<time8_t>        time_ns         {Field::TIME_COLUMN, 0, "Segment timestamp (Unix ns)"};
-        FieldColumn<double>         latitude        {Field::Y_COLUMN,    0, "Latitude (degrees)"};
-        FieldColumn<double>         longitude       {Field::X_COLUMN,    0, "Longitude (degrees)"};
-        FieldColumn<int32_t>        segment_id_beg  {"Starting segment ID"};
-        FieldColumn<float>          ht_ortho        {Field::Z_COLUMN,    0, "Orthometric height (m)"};
-        FieldColumn<float>          ht_water_surf   {"Water surface height WGS84 (m)"};
-        FieldColumn<float>          stdev_water_surf {"Std deviation of water surface height (m)"};
-        FieldColumn<float>          water_depth     {"Water depth (m)"};
-
-        /* DataFrame MetaData */
-        FieldElement<uint8_t>       spot    {0, Field::META_COLUMN, "Spot number 1-6"};
-        FieldElement<uint8_t>       cycle   {0, Field::META_COLUMN, "Orbital cycle"};
-        FieldElement<uint16_t>      rgt     {0, Field::META_COLUMN, "Reference Ground Track"};
-        FieldElement<uint8_t>       gt      {0, Field::META_COLUMN, "Ground track (10,20,30,40,50,60)"};
-        FieldElement<string>        granule;
+#include "atl13x.columns.h"
 
         /*--------------------------------------------------------------------
          * Methods

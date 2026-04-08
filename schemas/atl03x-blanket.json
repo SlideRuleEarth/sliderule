@@ -1,0 +1,27 @@
+{
+  "api": "atl03x-blanket",
+  "description": "Surface blanket elevation segments (replaces atl03x base columns)",
+  "codegen": false,
+  "columns": [
+    {"name": "time_ns",        "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Segment timestamp (Unix ns)"},
+    {"name": "latitude",       "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",      "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "segment_id_beg", "type": "int32_t",                           "desc": "Starting segment ID"},
+    {"name": "x_atc",          "type": "double",                            "desc": "Along-track distance (m)"},
+    {"name": "y_atc",          "type": "float",                             "desc": "Across-track distance (m)"},
+    {"name": "top_of_surface", "type": "float",    "flags": "Z_COLUMN",    "desc": "Top of reflective surface (m)"},
+    {"name": "median_ground",  "type": "float",                             "desc": "Median ground elevation (m)"},
+    {"name": "pflags",         "type": "uint16_t",                          "desc": "Processing flags"}
+  ],
+  "metadata": [
+    {"name": "spot",   "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle",  "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "region", "type": "uint8_t",  "desc": "ICESat-2 region number"},
+    {"name": "rgt",    "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",     "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl03_geo_fields, atl03_ph_fields, atl03_corr_fields, atl03_bckgrd_fields, atl08_fields parameters.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

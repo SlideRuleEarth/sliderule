@@ -1,0 +1,24 @@
+{
+  "api": "atl13x",
+  "description": "Inland water surface height (ICESat-2 ATL13)",
+  "columns": [
+    {"name": "time_ns",          "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Segment timestamp (Unix ns)"},
+    {"name": "latitude",         "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",        "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "segment_id_beg",   "type": "int32_t",                           "desc": "Starting segment ID"},
+    {"name": "ht_ortho",         "type": "float",    "flags": "Z_COLUMN",    "desc": "Orthometric height (m)"},
+    {"name": "ht_water_surf",    "type": "float",                             "desc": "Water surface height WGS84 (m)"},
+    {"name": "stdev_water_surf", "type": "float",                             "desc": "Std deviation of water surface height (m)"},
+    {"name": "water_depth",      "type": "float",                             "desc": "Water depth (m)"}
+  ],
+  "metadata": [
+    {"name": "spot",  "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle", "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "rgt",   "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",    "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl13_fields parameter. Names and types match the HDF5 source datasets.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

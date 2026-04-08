@@ -1,0 +1,34 @@
+{
+  "api": "atl24x",
+  "description": "Coastal bathymetry (ICESat-2 ATL24)",
+  "columns": [
+    {"name": "class_ph",              "type": "int8_t",                            "desc": "40=bathymetry, 41=sea_surface, 0=unclassified"},
+    {"name": "confidence",            "type": "double",                             "desc": "Classification confidence"},
+    {"name": "time_ns",               "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Photon timestamp (Unix ns)"},
+    {"name": "ellipse_h",             "type": "float",                             "desc": "Ellipsoidal height (m)"},
+    {"name": "invalid_kd",            "type": "uint8_t",                           "desc": "Invalid Kd flag"},
+    {"name": "invalid_wind_speed",    "type": "uint8_t",                           "desc": "Invalid wind speed flag"},
+    {"name": "lat_ph",                "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "lon_ph",                "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "low_confidence_flag",   "type": "uint8_t",                           "desc": "Low confidence flag"},
+    {"name": "night_flag",            "type": "uint8_t",                           "desc": "Night flag"},
+    {"name": "ortho_h",              "type": "float",    "flags": "Z_COLUMN",    "desc": "Orthometric height (m)"},
+    {"name": "sensor_depth_exceeded", "type": "uint8_t",                           "desc": "Sensor depth exceeded flag"},
+    {"name": "sigma_thu",             "type": "float",                             "desc": "Total horizontal uncertainty (m)"},
+    {"name": "sigma_tvu",             "type": "float",                             "desc": "Total vertical uncertainty (m)"},
+    {"name": "surface_h",             "type": "float",                             "desc": "Sea surface height (m)"},
+    {"name": "x_atc",                 "type": "double",                            "desc": "Along-track distance (m)"},
+    {"name": "y_atc",                 "type": "float",                             "desc": "Across-track distance (m)"}
+  ],
+  "metadata": [
+    {"name": "spot",   "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle",  "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "region", "type": "uint8_t",  "desc": "ICESat-2 region number"},
+    {"name": "rgt",    "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",     "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl24 anc_fields parameter. Names and types match the HDF5 source datasets.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

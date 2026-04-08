@@ -135,8 +135,6 @@ static int core_open (lua_State *L)
         {"dataframe",       GeoDataFrame::luaCreate},
         {"framesender",     GeoDataFrame::FrameSender::luaCreate},
         {"dedup",           DeduplicateRunner::luaCreate},
-        {"schema",              GeoDataFrame::luaSchema},
-        {"register_test_schema", GeoDataFrame::luaRegisterTestSchema},
         {"proxy",           EndpointProxy::luaCreate},
         {"orchreg",         OrchestratorLib::luaRegisterService},
         {"orchselflock",    OrchestratorLib::luaSelfLock},

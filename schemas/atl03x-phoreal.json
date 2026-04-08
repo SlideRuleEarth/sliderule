@@ -1,0 +1,39 @@
+{
+  "api": "atl03x-phoreal",
+  "description": "PhoREAL vegetation extent metrics (replaces atl03x base columns)",
+  "codegen": false,
+  "columns": [
+    {"name": "time_ns",                 "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Extent timestamp (Unix ns)"},
+    {"name": "latitude",                "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",               "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "segment_id_beg",          "type": "int32_t",                           "desc": "Starting segment ID"},
+    {"name": "x_atc",                   "type": "double",                            "desc": "Along-track distance (m)"},
+    {"name": "y_atc",                   "type": "float",                             "desc": "Across-track distance (m)"},
+    {"name": "photon_start",            "type": "uint32_t",                          "desc": "Index of first photon"},
+    {"name": "photon_count",            "type": "uint32_t",                          "desc": "Number of photons in extent"},
+    {"name": "pflags",                  "type": "uint16_t",                          "desc": "Processing flags"},
+    {"name": "ground_photon_count",     "type": "uint32_t",                          "desc": "Ground photon count"},
+    {"name": "vegetation_photon_count", "type": "uint32_t",                          "desc": "Vegetation photon count"},
+    {"name": "landcover",               "type": "uint8_t",                           "desc": "Land cover classification"},
+    {"name": "snowcover",               "type": "uint8_t",                           "desc": "Snow cover flag"},
+    {"name": "solar_elevation",         "type": "float",                             "desc": "Solar elevation angle (deg)"},
+    {"name": "h_te_median",             "type": "float",                             "desc": "Median terrain elevation (m)"},
+    {"name": "h_max_canopy",            "type": "float",                             "desc": "Max canopy height (m)"},
+    {"name": "h_min_canopy",            "type": "float",                             "desc": "Min canopy height (m)"},
+    {"name": "h_mean_canopy",           "type": "float",                             "desc": "Mean canopy height (m)"},
+    {"name": "h_canopy",                "type": "float",    "flags": "Z_COLUMN",    "desc": "Relative canopy height (m)"},
+    {"name": "canopy_openness",         "type": "float",                             "desc": "Canopy openness fraction"},
+    {"name": "canopy_h_metrics",        "type": "FieldArray<float,NUM_PERCENTILES>", "desc": "20 canopy height percentiles (5% intervals)"}
+  ],
+  "metadata": [
+    {"name": "spot",   "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle",  "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "region", "type": "uint8_t",  "desc": "ICESat-2 region number"},
+    {"name": "rgt",    "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",     "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl03_geo_fields, atl03_ph_fields, atl03_corr_fields, atl03_bckgrd_fields, atl08_fields parameters.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

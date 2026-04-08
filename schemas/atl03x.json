@@ -1,0 +1,63 @@
+{
+  "api": "atl03x",
+  "description": "Photon-level data (ICESat-2 ATL03)",
+  "columns": [
+    {"name": "time_ns",             "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Photon timestamp (Unix ns)"},
+    {"name": "latitude",            "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",           "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "segment_id",          "type": "int32_t",                           "desc": "ATL03 segment ID"},
+    {"name": "x_atc",               "type": "double",                            "desc": "Along-track distance (m)"},
+    {"name": "y_atc",               "type": "float",                             "desc": "Across-track distance (m)"},
+    {"name": "height",              "type": "float",    "flags": "Z_COLUMN",    "desc": "Photon height WGS84 (m)"},
+    {"name": "solar_elevation",     "type": "float",                             "desc": "Solar elevation angle (deg)"},
+    {"name": "background_rate",     "type": "float",                             "desc": "Background photon rate (Hz)"},
+    {"name": "spacecraft_velocity", "type": "float",                             "desc": "Spacecraft velocity (m/s)"},
+    {"name": "atl03_cnf",           "type": "int8_t",                            "desc": "ATL03 confidence level"},
+    {"name": "quality_ph",          "type": "int8_t",                            "desc": "Photon quality flag"},
+    {"name": "ph_index",            "type": "uint32_t",                          "desc": "Photon index within segment"}
+  ],
+  "metadata": [
+    {"name": "spot",   "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle",  "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "region", "type": "uint8_t",  "desc": "ICESat-2 region number"},
+    {"name": "rgt",    "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",     "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "staged": [
+    {
+      "stage": "phoreal",
+      "description": "ATL08 classification data for photons (enabled when phoreal block is present)",
+      "columns": [
+        {"name": "relief",    "type": "float",   "desc": "Local relief (m)"},
+        {"name": "landcover", "type": "uint8_t", "desc": "Land cover classification"},
+        {"name": "snowcover", "type": "uint8_t", "desc": "Snow cover flag"}
+      ]
+    },
+    {
+      "stage": "atl08",
+      "description": "ATL08 land/vegetation classification (enabled when atl08_class filter is set)",
+      "columns": [
+        {"name": "atl08_class", "type": "uint8_t", "desc": "ATL08 classification"}
+      ]
+    },
+    {
+      "stage": "yapc",
+      "description": "YAPC photon weighting (enabled when yapc block is present)",
+      "columns": [
+        {"name": "yapc_score", "type": "uint16_t", "desc": "YAPC confidence score"}
+      ]
+    },
+    {
+      "stage": "atl24",
+      "description": "ATL24 bathymetry classification (enabled when atl24 block is present)",
+      "columns": [
+        {"name": "atl24_class",      "type": "uint8_t", "desc": "ATL24 classification (if enabled)"},
+        {"name": "atl24_confidence", "type": "float",   "desc": "ATL24 confidence (if enabled)"}
+      ]
+    }
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl03_geo_fields, atl03_ph_fields, atl03_corr_fields, atl03_bckgrd_fields. Names and types match the HDF5 source datasets.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

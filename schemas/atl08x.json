@@ -1,0 +1,40 @@
+{
+  "api": "atl08x",
+  "description": "Land and vegetation height segments (ICESat-2 ATL08)",
+  "columns": [
+    {"name": "time_ns",            "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Segment timestamp (Unix ns)"},
+    {"name": "latitude",           "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",          "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "segment_id_beg",     "type": "int32_t",                           "desc": "Starting segment ID"},
+    {"name": "n_seg_ph",           "type": "int32_t",                           "desc": "Total photons in segment"},
+    {"name": "solar_elevation",    "type": "float",                             "desc": "Solar elevation angle (deg)"},
+    {"name": "terrain_slope",      "type": "float",                             "desc": "Terrain slope"},
+    {"name": "n_te_photons",       "type": "int32_t",                           "desc": "Terrain photon count"},
+    {"name": "te_quality_score",   "type": "int8_t",                            "desc": "Terrain quality score"},
+    {"name": "h_te_uncertainty",   "type": "float",                             "desc": "Terrain height uncertainty (m)"},
+    {"name": "h_canopy",           "type": "float",                             "desc": "Relative canopy height (m)"},
+    {"name": "h_canopy_uncertainty","type": "float",                             "desc": "Canopy height uncertainty (m)"},
+    {"name": "segment_cover",      "type": "int16_t",                           "desc": "Canopy cover percentage"},
+    {"name": "n_ca_photons",       "type": "int32_t",                           "desc": "Canopy photon count"},
+    {"name": "can_quality_score",  "type": "int8_t",                            "desc": "Canopy quality score"},
+    {"name": "segment_landcover",  "type": "uint8_t",                           "desc": "Land cover classification"},
+    {"name": "segment_snowcover",  "type": "uint8_t",                           "desc": "Snow cover flag"},
+    {"name": "h_te_median",        "type": "float",    "flags": "Z_COLUMN",    "desc": "Median terrain elevation (m)"},
+    {"name": "h_max_canopy",       "type": "float",                             "desc": "Max canopy height (m)"},
+    {"name": "h_min_canopy",       "type": "float",                             "desc": "Min canopy height (m)"},
+    {"name": "h_mean_canopy",      "type": "float",                             "desc": "Mean canopy height (m)"},
+    {"name": "canopy_openness",    "type": "float",                             "desc": "Canopy openness fraction"},
+    {"name": "canopy_h_metrics",   "type": "FieldArray<float,NUM_CANOPY_METRICS>", "desc": "18 canopy height percentiles from ATL08 HDF5"}
+  ],
+  "metadata": [
+    {"name": "spot",   "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle",  "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "region", "type": "uint8_t",  "desc": "ICESat-2 region number"},
+    {"name": "rgt",    "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",     "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl08_fields parameter. Names and types match the HDF5 source datasets.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

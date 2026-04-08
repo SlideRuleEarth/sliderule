@@ -81,7 +81,6 @@ int Atl06DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    "atl06x", "Land-ice surface elevation segments (ICESat-2 ATL06)",
     {
         {"time_ns",                 &time_ns},
         {"latitude",                &latitude},

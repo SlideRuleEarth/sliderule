@@ -1,48 +1,68 @@
 local runner = require("test_executive")
+local json = require("json")
 
--- Register a test schema to validate the mechanism
--- (Production schemas register dynamically when DataFrames are first constructed)
-local COL = 0x8000 -- Field::NESTED_COLUMN
+-- Helper: read a JSON file from disk
+local function read_json(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local text = f:read("*a")
+    f:close()
+    local ok, result = pcall(json.decode, text)
+    if ok then return result end
+    return nil
+end
 
-core.register_test_schema("__test__", "Test schema for selftest", {
-    {name="col_a",  encoding=COL + 0x09, description="Test float column",    element=false},
-    {name="col_b",  encoding=COL + 0x02, description="Test int32 column",    element=false},
-    {name="meta_c", encoding=COL + 0x04, description="Test uint8 metadata",  element=true},
-})
+local schemas_dir = __confdir .. "/schemas"
 
--- Self Test: Schema Registry --
+-- Self Test: Schema Index --
 
-runner.unittest("Schema Listing", function()
-    local apis = core.schema()
-    runner.assert(type(apis) == "table", "core.schema() should return a table")
+runner.unittest("Schema Index", function()
+    local index = read_json(schemas_dir .. "/index.json")
+    runner.assert(index ~= nil, "index.json should exist and be valid JSON")
+
     local count = 0
-    for _ in pairs(apis) do count = count + 1 end
-    runner.assert(count > 0, "expected at least one registered schema")
+    for _ in pairs(index) do count = count + 1 end
+    runner.assert(count >= 9, "expected at least 9 APIs in index (got " .. count .. ")")
+
+    -- Spot-check a known API
+    runner.assert(index["atl06x"] ~= nil, "index should contain atl06x")
 end)
 
-runner.unittest("Schema Detail", function()
-    local schema = core.schema("__test__")
-    runner.assert(type(schema) == "table", "schema detail should be a table")
-    runner.assert(schema.description == "Test schema for selftest", "description should match")
-    runner.assert(type(schema.columns) == "table", "schema should have columns")
-    runner.assert(#schema.columns == 3, "schema should have 3 columns")
+-- Self Test: Schema File Structure --
 
-    -- check column fields
+runner.unittest("Schema File Structure", function()
+    local schema = read_json(schemas_dir .. "/atl06x.json")
+    runner.assert(schema ~= nil, "atl06x.json should exist and be valid JSON")
+    runner.assert(schema.api == "atl06x", "api field should be atl06x")
+    runner.assert(type(schema.description) == "string", "description should be a string")
+    runner.assert(type(schema.columns) == "table", "columns should be a table")
+    runner.assert(#schema.columns > 0, "should have at least one column")
+
+    -- Check first column has required fields
     local col = schema.columns[1]
-    runner.assert(col.name == "col_a", "first column name should be col_a")
-    runner.assert(col.type == "float", "first column type should be float")
-    runner.assert(col.description == "Test float column", "first column description should match")
-    runner.assert(col.role == "column", "first column role should be column")
-
-    -- check element field
-    local meta = schema.columns[3]
-    runner.assert(meta.name == "meta_c", "third field name should be meta_c")
-    runner.assert(meta.role == "element", "third field role should be element")
+    runner.assert(col.name ~= nil, "column should have a name")
+    runner.assert(col.type ~= nil, "column should have a type")
+    runner.assert(col.desc ~= nil, "column should have a desc")
 end)
 
-runner.unittest("Schema Unknown API", function()
-    local ok, _ = pcall(core.schema, "nonexistent_api_xyz")
-    runner.assert(not ok, "unknown api should raise an error")
+-- Self Test: All Index Entries Have Files --
+
+runner.unittest("All Index Entries Have Files", function()
+    local index = read_json(schemas_dir .. "/index.json")
+    runner.assert(index ~= nil, "index.json should exist")
+
+    for api_name in pairs(index) do
+        local schema = read_json(schemas_dir .. "/" .. api_name .. ".json")
+        runner.assert(schema ~= nil, api_name .. ".json should exist")
+        runner.assert(schema.api == api_name, api_name .. " api field should match filename")
+    end
+end)
+
+-- Self Test: Unknown API --
+
+runner.unittest("Unknown Schema File", function()
+    local schema = read_json(schemas_dir .. "/nonexistent_api_xyz.json")
+    runner.assert(schema == nil, "nonexistent schema should return nil")
 end)
 
 -- Report Results --

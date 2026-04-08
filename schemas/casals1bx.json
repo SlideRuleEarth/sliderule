@@ -1,0 +1,11 @@
+{
+  "api": "casals1bx",
+  "description": "CASALS L1B geolocated returns",
+  "columns": [
+    {"name": "time_ns",   "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Return timestamp (Unix ns)"},
+    {"name": "latitude",  "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude", "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "refh",      "type": "float",    "flags": "Z_COLUMN",    "desc": "Reference height (m)"}
+  ],
+  "metadata": []
+}

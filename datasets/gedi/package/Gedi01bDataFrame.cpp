@@ -85,7 +85,6 @@ int Gedi01bDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    "gedi01bx", "GEDI L1B geolocated waveforms",
     {
         {"shot_number",         &shot_number},
         {"time_ns",             &time_ns},

@@ -1,0 +1,36 @@
+{
+  "api": "atl06x",
+  "description": "Land-ice surface elevation segments (ICESat-2 ATL06)",
+  "columns": [
+    {"name": "time_ns",                "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Segment timestamp (Unix ns)"},
+    {"name": "latitude",               "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",              "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "x_atc",                  "type": "double",                            "desc": "Along-track distance (m)"},
+    {"name": "y_atc",                  "type": "float",                             "desc": "Across-track distance (m)"},
+    {"name": "h_li",                   "type": "float",    "flags": "Z_COLUMN",    "desc": "Fitted surface height WGS84 (m)"},
+    {"name": "h_li_sigma",             "type": "float",                             "desc": "Height uncertainty (m)"},
+    {"name": "sigma_geo_h",            "type": "float",                             "desc": "Geolocation height uncertainty (m)"},
+    {"name": "atl06_quality_summary",  "type": "int8_t",                            "desc": "Quality summary flag"},
+    {"name": "segment_id",             "type": "uint32_t",                          "desc": "Segment ID"},
+    {"name": "seg_azimuth",            "type": "float",                             "desc": "Segment azimuth (deg)"},
+    {"name": "dh_fit_dx",              "type": "float",                             "desc": "Along-track slope"},
+    {"name": "h_robust_sprd",          "type": "float",                             "desc": "Robust spread of residuals (m)"},
+    {"name": "w_surface_window_final", "type": "float",                             "desc": "Final surface window width (m)"},
+    {"name": "bsnow_conf",             "type": "int8_t",                            "desc": "Blowing snow confidence"},
+    {"name": "bsnow_h",                "type": "float",                             "desc": "Blowing snow height (m)"},
+    {"name": "r_eff",                  "type": "float",                             "desc": "Effective reflectance"},
+    {"name": "tide_ocean",             "type": "float",                             "desc": "Ocean tide correction (m)"},
+    {"name": "n_fit_photons",          "type": "int32_t",                           "desc": "Photons used in fit"}
+  ],
+  "metadata": [
+    {"name": "spot",   "type": "uint8_t",  "desc": "Spot number 1-6"},
+    {"name": "cycle",  "type": "uint8_t",  "desc": "Orbital cycle"},
+    {"name": "region", "type": "uint8_t",  "desc": "ICESat-2 region number"},
+    {"name": "rgt",    "type": "uint16_t", "desc": "Reference Ground Track"},
+    {"name": "gt",     "type": "uint8_t",  "desc": "Ground track (10,20,30,40,50,60)"}
+  ],
+  "dynamic": {
+    "ancillary": "Additional columns from atl06_fields parameter. Names and types match the HDF5 source datasets.",
+    "samples": "Raster sampling adds {key}.value, {key}.time_ns, {key}.fileid columns per entry in the samples block."
+  }
+}

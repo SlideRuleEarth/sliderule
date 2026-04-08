@@ -1,6 +1,6 @@
 # Endpoint Development Guide
 
-This guide documents the steps required when adding, modifying, or removing API endpoints in SlideRule. Multiple files must stay in sync — follow the checklists below to avoid breaking the schema registry, the OpenAPI spec, or the build.
+This guide documents the steps required when adding, modifying, or removing API endpoints in SlideRule. Multiple files must stay in sync — follow the checklists below.
 
 ## Background
 
@@ -17,8 +17,8 @@ Both endpoint types resolve Lua scripts from `${CONFDIR}/api/{name}.lua` at runt
 |---------|----------|
 | Endpoint Lua scripts | `packages/*/endpoints/*.lua` and `datasets/*/endpoints/*.lua` |
 | CMake install lists | `packages/*/CMakeLists.txt` and `datasets/*/CMakeLists.txt` |
-| Schema registration | `datasets/*/package/{dataset}.cpp` (in `init{dataset}()`) |
-| Schema registry C++ | `packages/core/package/GeoDataFrame.cpp` and `.h` |
+| JSON schema definitions | `schemas/*.json` |
+| Column header generator | `scripts/generate_columns.py` |
 | Schema endpoint | `packages/core/endpoints/schema.lua` |
 | Schema selftest | `packages/core/selftests/schema.lua` |
 | OpenAPI base template | `packages/core/data/openapi-base.json` |
@@ -51,60 +51,67 @@ install (
 
 Without this, the script won't be installed and the endpoint will return "Failed execution".
 
-### 3. Register the schema (Parquet endpoints only)
+### 3. Create a JSON schema (Parquet endpoints only)
 
-If the endpoint returns a Parquet DataFrame, add a `GeoDataFrame::registerSchema()` call in the dataset's init function. This powers the `/source/schema` discovery endpoint.
+If the endpoint returns a Parquet DataFrame, create a JSON schema file at `schemas/{api_name}.json`:
 
-```cpp
-#include "GeoDataFrame.h"
-
-void initexample (void)
+```json
 {
-    const uint32_t COL = Field::NESTED_COLUMN;
-    GeoDataFrame::registerSchema("your_api", "Human-readable description", {
-        {"time_ns",    COL | Field::TIME8,   "Timestamp (Unix ns)",  false},
-        {"latitude",   COL | Field::DOUBLE,  "Latitude (degrees)",   false},
-        {"longitude",  COL | Field::DOUBLE,  "Longitude (degrees)",  false},
-        {"value",      COL | Field::FLOAT,   "Measured value",       false},
-        {"spot",       COL | Field::UINT8,   "Spot number",          true},  // true = element (per-batch metadata)
-        {"srcid",      COL | Field::INT32,   "Source granule ID",    false},
-    });
+  "api": "your_api",
+  "description": "Human-readable description",
+  "columns": [
+    {"name": "time_ns",   "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Timestamp (Unix ns)"},
+    {"name": "latitude",  "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude", "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "value",     "type": "float",    "flags": "Z_COLUMN",    "desc": "Measured value"}
+  ],
+  "metadata": [
+    {"name": "spot", "type": "uint8_t", "desc": "Spot number"}
+  ]
 }
 ```
 
-Rules:
-- Field names and types must **exactly match** the `FieldColumn<T>` declarations in the DataFrame `.h` file
-- The last parameter (`is_element`) should be `true` for `FieldElement` metadata fields and `false` for `FieldColumn` row-level data
-- Use `Field::NESTED_LIST | Field::FLOAT` for `FieldList<float>` columns and `Field::NESTED_ARRAY | Field::FLOAT` for `FieldArray<float, N>` columns
+The JSON schema is the **single source of truth** for column definitions. At build time, `scripts/generate_columns.py` generates a `.columns.h` C++ header from each JSON file, and the DataFrame `.h` file uses `#include "{api_name}.columns.h"` instead of inline declarations.
+
+Available column types: `bool`, `int8_t`, `int16_t`, `int32_t`, `int64_t`, `uint8_t`, `uint16_t`, `uint32_t`, `uint64_t`, `float`, `double`, `time8_t`, `string`, `FieldList<T>`, `FieldArray<T,N>`.
+
+Available flags: `TIME_COLUMN`, `X_COLUMN`, `Y_COLUMN`, `Z_COLUMN`.
+
+Optional schema fields:
+- `"staged"` — columns conditionally added via `addColumn()` at runtime
+- `"dynamic"` — documentation for columns added dynamically (ancillary, samples)
+- `"inherits_metadata": true` — metadata is declared in a base class (used by GEDI DataFrames)
+- `"codegen": false` — skip C++ header generation (used by FrameRunner schemas like `atl03x-phoreal`)
 
 ### 4. Update the OpenAPI spec
 
 Edit the base template at `packages/core/data/openapi-base.json`:
 
 1. Add a **path entry** under the appropriate section (`/arrow/your_api` or `/source/your_api`)
-2. For Parquet endpoints, **column schemas are injected automatically** from `registerSchema()` — no need to add them manually
+2. Column schemas are **injected automatically** from the JSON schema files — no manual column definitions needed
 3. Add appropriate `tags`, `operationId`, `summary`, and `description`
 4. Reference the correct response type (`ParquetResponse`, `StreamingResponse`, or `JSONResponse`)
-The server generates the complete OpenAPI spec at runtime via `GET /source/openapi`. This endpoint reads the base template, then injects column schemas from the live `GeoDataFrame::schemaRegistry`.
+
+The server generates the complete OpenAPI spec at runtime via `GET /source/openapi`. This endpoint reads the base template, then injects column schemas by reading JSON files from `${CONFDIR}/schemas/`.
 
 ### 5. Add selftests
 
-If the endpoint has behavior testable without cloud access, add a Lua selftest in `{package_or_dataset}/selftests/`. The existing `packages/core/selftests/schema.lua` automatically validates that all registered schemas are well-formed.
+If the endpoint has behavior testable without cloud access, add a Lua selftest in `{package_or_dataset}/selftests/`. The schema selftest (`packages/core/selftests/schema.lua`) automatically validates that all JSON schema files are well-formed and indexed.
 
 ## Modifying an Endpoint
 
 When adding, removing, or renaming columns in a DataFrame:
 
-1. Update the **DataFrame `.h` file** (`FieldColumn` declarations)
-2. Update the **`registerSchema()` call** to match
-3. Column schemas in the OpenAPI spec update **automatically** — `/source/openapi` reads from the live registry
+1. Update the **JSON schema** in `schemas/{api_name}.json` — this is the single source of truth
+2. The generated `.columns.h` header updates **automatically** at build time
+3. Column schemas in the OpenAPI spec update **automatically** — `/source/openapi` reads from JSON files
 4. Run the selftest to verify
 
 ## Removing an Endpoint
 
 1. Delete the **Lua script** from `endpoints/`
 2. Remove it from the **CMakeLists.txt** install list
-3. Remove the **`registerSchema()` call** if present
+3. Delete the **JSON schema** file from `schemas/`
 4. Remove the **path** from `packages/core/data/openapi-base.json`
 
 ## Validation
@@ -122,11 +129,14 @@ make selftest
 # Validate OpenAPI base template
 python3 -c "import json; json.load(open('packages/core/data/openapi-base.json'))"
 
+# Validate all JSON schemas
+python3 -c "import json, glob; [json.load(open(f)) for f in glob.glob('schemas/*.json')]"
+
 # Test the live endpoint (with server running)
 curl -s http://localhost:9081/source/openapi | python3 -m json.tool > /dev/null && echo "OK"
 ```
 
 The schema selftest (`packages/core/selftests/schema.lua`) verifies:
-- `core.schema()` returns a non-empty table of registered APIs
-- Each registered schema has a description, a non-empty columns array, and valid field metadata (name, type, description, role)
-- Requesting an unknown API raises an error
+- `schemas/index.json` exists and lists at least 9 APIs
+- Each listed API has a valid JSON schema file on disk
+- Schema files contain required fields (`api`, `description`, `columns`)

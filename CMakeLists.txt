@@ -309,6 +309,31 @@ target_include_directories (slideruleLib PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/auto
 
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR})
 
+# Schema Code Generation #
+
+file (GLOB SCHEMA_JSON_FILES ${CMAKE_SOURCE_DIR}/schemas/*.json)
+
+add_custom_command (
+    OUTPUT ${CMAKE_BINARY_DIR}/generated/index.json
+    COMMAND ${CMAKE_COMMAND} -E env python3
+        ${CMAKE_SOURCE_DIR}/scripts/generate_columns.py
+        --output-dir ${CMAKE_BINARY_DIR}/generated
+    DEPENDS ${SCHEMA_JSON_FILES} ${CMAKE_SOURCE_DIR}/scripts/generate_columns.py
+    COMMENT "Generating DataFrame column headers from JSON schemas"
+)
+
+add_custom_target (generate_columns ALL
+    DEPENDS ${CMAKE_BINARY_DIR}/generated/index.json
+)
+
+add_dependencies (slideruleLib generate_columns)
+
+target_include_directories (slideruleLib PUBLIC ${CMAKE_BINARY_DIR}/generated)
+
+install (DIRECTORY ${CMAKE_SOURCE_DIR}/schemas/ DESTINATION ${CONFDIR}/schemas FILES_MATCHING PATTERN "*.json")
+install (FILES ${CMAKE_BINARY_DIR}/generated/index.json DESTINATION ${CONFDIR}/schemas)
+install (DIRECTORY ${CMAKE_BINARY_DIR}/generated/ DESTINATION ${CONFDIR}/generated FILES_MATCHING PATTERN "*.columns.h")
+
 # Server Application
 
 add_subdirectory (applications/server)

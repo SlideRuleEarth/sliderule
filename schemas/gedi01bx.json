@@ -1,0 +1,24 @@
+{
+  "api": "gedi01bx",
+  "description": "GEDI L1B geolocated waveforms",
+  "inherits_metadata": true,
+  "columns": [
+    {"name": "shot_number",     "type": "uint64_t",                          "desc": "GEDI shot number"},
+    {"name": "time_ns",         "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Shot timestamp (Unix ns)"},
+    {"name": "latitude",        "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",       "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "elevation_start", "type": "float",    "flags": "Z_COLUMN",    "desc": "Waveform start elevation (m)"},
+    {"name": "elevation_stop",  "type": "double",                            "desc": "Waveform stop elevation (m)"},
+    {"name": "solar_elevation", "type": "double",                            "desc": "Solar elevation angle (deg)"},
+    {"name": "tx_size",         "type": "uint16_t",                          "desc": "Transmit waveform sample count"},
+    {"name": "rx_size",         "type": "uint16_t",                          "desc": "Receive waveform sample count"},
+    {"name": "flags",           "type": "uint8_t",                           "desc": "Combined quality flags"},
+    {"name": "tx_waveform",     "type": "FieldList<float>",                  "desc": "Transmit waveform samples"},
+    {"name": "rx_waveform",     "type": "FieldList<float>",                  "desc": "Receive waveform samples"}
+  ],
+  "metadata": [
+    {"name": "beam",  "type": "uint8_t",  "desc": "GEDI beam number"},
+    {"name": "orbit", "type": "uint32_t", "desc": "Orbit number"},
+    {"name": "track", "type": "uint16_t", "desc": "Track number"}
+  ]
+}

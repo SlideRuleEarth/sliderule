@@ -89,7 +89,6 @@ int Atl13DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf13, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    "atl13x", "Inland water surface height (ICESat-2 ATL13)",
     {
         {"time_ns",                 &time_ns},
         {"latitude",                &latitude},

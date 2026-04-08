@@ -256,9 +256,6 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
     delete ancillary_columns;
 
-    // register schema from live columns (once, skips duplicates)
-    dataframe->registerSchemaFromColumns("atl03x-phoreal", "PhoREAL vegetation extent metrics (replaces atl03x base columns)");
-
     // finalize dataframe
     dataframe->populateGeoColumns();
 

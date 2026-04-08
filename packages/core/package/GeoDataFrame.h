@@ -108,29 +108,6 @@ class GeoDataFrame: public LuaObject, public Field
         typedef FieldMap<FieldUntypedColumn>::entry_t column_entry_t;
         typedef FieldDictionary::entry_t meta_entry_t;
 
-        /*--------------------------------------------------------------------
-         * Schema Registry
-         *--------------------------------------------------------------------*/
-
-        struct SchemaField {
-            const char* name;
-            uint32_t    encoding;       // Field encoding (e.g. Field::FLOAT | Field::NESTED_COLUMN)
-            const char* description;
-            bool        is_element;     // true = per-batch metadata, false = per-row column
-        };
-
-        struct Schema {
-            const char*             description;
-            vector<SchemaField>     fields;
-        };
-
-        static bool     registerSchema  (const char* api_name, const char* description,
-                                         const std::initializer_list<SchemaField>& fields);
-        bool            registerSchemaFromColumns (const char* api_name, const char* api_description);
-        static int      luaSchema               (lua_State* L);
-        static int      luaRegisterTestSchema   (lua_State* L);
-        static const char* encodingToStr(uint32_t encoding);
-
         typedef enum {
             OP_NONE = 0,
             OP_MEAN = 1,
@@ -288,21 +265,9 @@ class GeoDataFrame: public LuaObject, public Field
                         GeoDataFrame        (lua_State* L,
                                             const char* meta_name,
                                             const struct luaL_Reg meta_table[],
-                                            const char* api_name,
-                                            const char* api_description,
-                                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
-                        GeoDataFrame        (lua_State* L,
-                                            const char* meta_name,
-                                            const struct luaL_Reg meta_table[],
                                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
                                             const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
-
-        void            _initDataFrame      (lua_State* L);
-        void            _autoRegisterSchema (const char* api_name, const char* api_description,
-                                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list);
 
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
@@ -331,8 +296,6 @@ class GeoDataFrame: public LuaObject, public Field
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        static Dictionary<Schema*>      schemaRegistry;
 
         bool                            inError;
         long                            numRows;

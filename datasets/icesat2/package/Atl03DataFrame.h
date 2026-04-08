@@ -65,36 +65,7 @@ class Atl03DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        /* DataFrame Columns */
-        FieldColumn<time8_t>        time_ns             {Field::TIME_COLUMN, 0, "Photon timestamp (Unix ns)"};
-        FieldColumn<double>         latitude            {Field::Y_COLUMN,    0, "Latitude (degrees)"};
-        FieldColumn<double>         longitude           {Field::X_COLUMN,    0, "Longitude (degrees)"};
-        FieldColumn<int32_t>        segment_id          {"ATL03 segment ID"};
-        FieldColumn<double>         x_atc               {"Along-track distance (m)"};
-        FieldColumn<float>          y_atc               {"Across-track distance (m)"};
-        FieldColumn<float>          height              {Field::Z_COLUMN, 0, "Photon height WGS84 (m)"};
-        FieldColumn<float>          solar_elevation     {"Solar elevation angle (deg)"};
-        FieldColumn<float>          background_rate     {"Background photon rate (Hz)"};
-        FieldColumn<float>          spacecraft_velocity {"Spacecraft velocity (m/s)"};
-        FieldColumn<int8_t>         atl03_cnf           {"ATL03 confidence level"};
-        FieldColumn<int8_t>         quality_ph          {"Photon quality flag"};
-        FieldColumn<uint32_t>       ph_index            {"Photon index within segment"};
-
-        FieldColumn<float>          relief              {"Local relief (m)"};
-        FieldColumn<uint8_t>        landcover           {"Land cover classification"};
-        FieldColumn<uint8_t>        snowcover           {"Snow cover flag"};
-        FieldColumn<uint8_t>        atl08_class         {"ATL08 classification"};
-        FieldColumn<uint16_t>       yapc_score          {"YAPC confidence score"};
-        FieldColumn<uint8_t>        atl24_class         {"ATL24 classification (if enabled)"};
-        FieldColumn<float>          atl24_confidence    {"ATL24 confidence (if enabled)"};
-
-        /* DataFrame MetaData */
-        FieldElement<uint8_t>       spot    {0, Field::META_COLUMN, "Spot number 1-6"};
-        FieldElement<uint8_t>       cycle   {0, Field::META_COLUMN, "Orbital cycle"};
-        FieldElement<uint8_t>       region  {0, Field::META_COLUMN, "ICESat-2 region number"};
-        FieldElement<uint16_t>      rgt     {0, Field::META_COLUMN, "Reference Ground Track"};
-        FieldElement<uint8_t>       gt      {0, Field::META_COLUMN, "Ground track (10,20,30,40,50,60)"};
-        FieldElement<string>        granule;
+#include "atl03x.columns.h"
 
         /*--------------------------------------------------------------------
          * Methods

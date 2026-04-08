@@ -93,267 +93,6 @@ const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
 
 const char* GeoDataFrame::CRS_KEY = "crs";
 
-Dictionary<GeoDataFrame::Schema*> GeoDataFrame::schemaRegistry;
-
-/******************************************************************************
- * SCHEMA REGISTRY
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * encodingToStr
- *----------------------------------------------------------------------------*/
-const char* GeoDataFrame::encodingToStr (uint32_t encoding)
-{
-    const uint32_t base_type = encoding & Field::TYPE_MASK;
-    const uint32_t nested    = encoding & Field::NESTED_MASK;
-
-    // determine base type string
-    const char* base_str;
-    switch(base_type)
-    {
-        case Field::BOOL:   base_str = "bool";          break;
-        case Field::INT8:   base_str = "int8";          break;
-        case Field::INT16:  base_str = "int16";         break;
-        case Field::INT32:  base_str = "int32";         break;
-        case Field::INT64:  base_str = "int64";         break;
-        case Field::UINT8:  base_str = "uint8";         break;
-        case Field::UINT16: base_str = "uint16";        break;
-        case Field::UINT32: base_str = "uint32";        break;
-        case Field::UINT64: base_str = "uint64";        break;
-        case Field::FLOAT:  base_str = "float";         break;
-        case Field::DOUBLE: base_str = "double";        break;
-        case Field::TIME8:  base_str = "timestamp[ns]"; break;
-        case Field::STRING: base_str = "string";        break;
-        default:            base_str = "unknown";       break;
-    }
-
-    // handle nested types
-    if(nested & Field::NESTED_ARRAY)
-    {
-        // for static arrays like FieldArray<float,20>
-        static thread_local char buf[64];
-        snprintf(buf, sizeof(buf), "array<%s>", base_str);
-        return buf;
-    }
-    if(nested & Field::NESTED_LIST)
-    {
-        static thread_local char buf[64];
-        snprintf(buf, sizeof(buf), "list<%s>", base_str);
-        return buf;
-    }
-
-    return base_str;
-}
-
-/*----------------------------------------------------------------------------
- * registerSchema
- *----------------------------------------------------------------------------*/
-bool GeoDataFrame::registerSchema (const char* api_name, const char* description,
-                                   const std::initializer_list<SchemaField>& fields)
-{
-    Schema* schema = new Schema();
-    schema->description = description;
-    schema->fields = fields;
-
-    if(!schemaRegistry.add(api_name, schema, true))
-    {
-        mlog(WARNING, "Failed to register schema for %s (duplicate?)", api_name);
-        delete schema;
-        return false;
-    }
-
-    mlog(DEBUG, "Registered schema for %s (%lu fields)", api_name, fields.size());
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * registerSchemaFromColumns - build schema from live dataframe state
- *----------------------------------------------------------------------------*/
-bool GeoDataFrame::registerSchemaFromColumns (const char* api_name, const char* api_description)
-{
-    // skip if already registered
-    try { schemaRegistry[api_name]; return true; } catch(...) {}
-
-    Schema* schema = new Schema();
-    schema->description = api_description;
-
-    // add data columns
-    char** col_keys = NULL;
-    const int num_cols = columnFields.fields.getKeys(&col_keys);
-    for(int i = 0; i < num_cols; i++)
-    {
-        column_entry_t entry;
-        if(columnFields.fields.find(col_keys[i], &entry))
-        {
-            schema->fields.push_back({
-                col_keys[i],
-                entry.field->encoding,
-                entry.field->description ? entry.field->description : "",
-                false
-            });
-        }
-    }
-    delete [] col_keys;
-
-    // add metadata elements
-    char** meta_keys = NULL;
-    const int num_meta = metaFields.fields.getKeys(&meta_keys);
-    for(int i = 0; i < num_meta; i++)
-    {
-        meta_entry_t entry;
-        if(metaFields.fields.find(meta_keys[i], &entry))
-        {
-            // skip granule string (becomes srcid in output)
-            if(entry.field->encoding & META_SOURCE_ID) continue;
-            schema->fields.push_back({
-                meta_keys[i],
-                entry.field->encoding,
-                entry.field->description ? entry.field->description : "",
-                true
-            });
-        }
-    }
-    delete [] meta_keys;
-
-    // add srcid (always present, generated from granule)
-    schema->fields.push_back({"srcid", Field::NESTED_COLUMN | Field::INT32, "Source granule ID (see metadata)", false});
-
-    if(!schemaRegistry.add(api_name, schema, true))
-    {
-        delete schema;
-        return false;
-    }
-
-    mlog(DEBUG, "Registered schema for %s (%lu fields) from live columns", api_name, schema->fields.size());
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * luaRegisterTestSchema - core.register_test_schema(name, description, columns)
- *
- *  columns is a Lua array of {name=, encoding=, description=, element=}
- *  Used only in selftests to validate the schema registry mechanism.
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaRegisterTestSchema (lua_State* L)
-{
-    const char* api_name = LuaObject::getLuaString(L, 1);
-    const char* api_desc = LuaObject::getLuaString(L, 2);
-
-    if(!lua_istable(L, 3))
-    {
-        return luaL_error(L, "register_test_schema: third argument must be a table");
-    }
-
-    Schema* schema = new Schema();
-    schema->description = api_desc;
-
-    const int num_fields = lua_rawlen(L, 3);
-    for(int i = 1; i <= num_fields; i++)
-    {
-        lua_rawgeti(L, 3, i);
-
-        lua_getfield(L, -1, "name");
-        const char* name = lua_tostring(L, -1);
-        lua_pop(L, 1);
-
-        lua_getfield(L, -1, "encoding");
-        const uint32_t encoding = static_cast<uint32_t>(lua_tointeger(L, -1));
-        lua_pop(L, 1);
-
-        lua_getfield(L, -1, "description");
-        const char* desc = lua_tostring(L, -1);
-        lua_pop(L, 1);
-
-        lua_getfield(L, -1, "element");
-        const bool is_element = lua_toboolean(L, -1);
-        lua_pop(L, 1);
-
-        schema->fields.push_back({name, encoding, desc ? desc : "", is_element});
-
-        lua_pop(L, 1); // pop the field table
-    }
-
-    if(!schemaRegistry.add(api_name, schema, true))
-    {
-        delete schema;
-        return luaL_error(L, "register_test_schema: failed to register %s (duplicate?)", api_name);
-    }
-
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaSchema - core.schema([api_name]) → Lua table
- *
- *  No argument: returns {api_name: description, ...}
- *  With argument: returns {description=..., columns=[{name,type,description,role},...]}
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaSchema (lua_State* L)
-{
-    // check for optional api name argument
-    const char* api_name = NULL;
-    if(lua_gettop(L) >= 1 && lua_isstring(L, 1))
-    {
-        api_name = lua_tostring(L, 1);
-    }
-
-    if(!api_name)
-    {
-        // return listing of all registered schemas
-        lua_newtable(L);
-        Dictionary<Schema*>::Iterator iter(schemaRegistry);
-        for(int i = 0; i < iter.length; i++)
-        {
-            lua_pushstring(L, iter[i].value->description);
-            lua_setfield(L, -2, iter[i].key);
-        }
-        return 1;
-    }
-
-    // look up specific schema
-    try
-    {
-        Schema* schema = schemaRegistry[api_name];
-
-        lua_newtable(L);
-
-        // description
-        lua_pushstring(L, schema->description);
-        lua_setfield(L, -2, "description");
-
-        // columns array
-        lua_newtable(L);
-        for(size_t i = 0; i < schema->fields.size(); i++)
-        {
-            const SchemaField& f = schema->fields[i];
-            lua_newtable(L);
-
-            lua_pushstring(L, f.name);
-            lua_setfield(L, -2, "name");
-
-            lua_pushstring(L, encodingToStr(f.encoding));
-            lua_setfield(L, -2, "type");
-
-            lua_pushstring(L, f.description);
-            lua_setfield(L, -2, "description");
-
-            lua_pushstring(L, f.is_element ? "element" : "column");
-            lua_setfield(L, -2, "role");
-
-            lua_rawseti(L, -2, static_cast<int>(i + 1));
-        }
-        lua_setfield(L, -2, "columns");
-
-        return 1;
-    }
-    catch(const RunTimeException& e)
-    {
-        (void)e;
-        return luaL_error(L, "unknown api: %s", api_name);
-    }
-}
-
 /******************************************************************************
  * STATIC FUNCTIONS
  ******************************************************************************/
@@ -1530,10 +1269,29 @@ void GeoDataFrame::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_colum
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------
- * _initDataFrame - shared initialization for both constructors
- *----------------------------------------------------------------------------*/
-void GeoDataFrame::_initDataFrame(lua_State* L)
+GeoDataFrame::GeoDataFrame( lua_State* L,
+                            const char* meta_name,
+                            const struct luaL_Reg meta_table[],
+                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
+                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
+                            const char* _crs):
+    LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
+    Field(DATAFRAME, 0),
+    inError(false),
+    numRows(0),
+    columnFields(column_list),
+    metaFields(meta_list),
+    timeColumn(NULL),
+    xColumn(NULL),
+    yColumn(NULL),
+    zColumn(NULL),
+    crs(_crs == NULL ? "" : _crs),
+    active(true),
+    receivePid(NULL),
+    runPid(NULL),
+    pubRunQ(NULL),
+    subRunQ(pubRunQ),
+    runComplete(false)
 {
     // set lua functions
     LuaEngine::setAttrFunc(L, "inerror",    luaInError);
@@ -1553,120 +1311,6 @@ void GeoDataFrame::_initDataFrame(lua_State* L)
 
     // start runner
     runPid = new Thread(runThread, this);
-}
-
-/*----------------------------------------------------------------------------
- * _autoRegisterSchema - build schema from live column and meta fields
- *----------------------------------------------------------------------------*/
-void GeoDataFrame::_autoRegisterSchema(const char* api_name, const char* api_description,
-                                       const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                                       const std::initializer_list<FieldDictionary::init_entry_t>& meta_list)
-{
-    // only register once per api name
-    try { schemaRegistry[api_name]; return; } catch(...) {}
-
-    Schema* schema = new Schema();
-    schema->description = api_description;
-
-    // add columns
-    for(const auto& entry : column_list)
-    {
-        const FieldUntypedColumn* col = entry.field;
-        schema->fields.push_back({
-            entry.name,
-            col->encoding,
-            col->description ? col->description : "",
-            false
-        });
-    }
-
-    // add metadata elements
-    for(const auto& entry : meta_list)
-    {
-        const Field* field = entry.field;
-        // skip the granule string (becomes srcid in output)
-        if(field->encoding & META_SOURCE_ID) continue;
-        schema->fields.push_back({
-            entry.name,
-            field->encoding,
-            field->description ? field->description : "",
-            true
-        });
-    }
-
-    // add srcid (always present, generated from granule)
-    schema->fields.push_back({"srcid", Field::NESTED_COLUMN | Field::INT32, "Source granule ID (see metadata)", false});
-
-    if(!schemaRegistry.add(api_name, schema, true))
-    {
-        delete schema;
-        return;
-    }
-
-    mlog(DEBUG, "Registered schema for %s (%lu fields) from constructor", api_name, schema->fields.size());
-}
-
-/*----------------------------------------------------------------------------
- * Constructor - with api_name for auto-registration
- *----------------------------------------------------------------------------*/
-GeoDataFrame::GeoDataFrame( lua_State* L,
-                            const char* meta_name,
-                            const struct luaL_Reg meta_table[],
-                            const char* api_name,
-                            const char* api_description,
-                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
-                            const char* _crs):
-    LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
-    Field(DATAFRAME, 0),
-    inError(false),
-    numRows(0),
-    columnFields(column_list),
-    metaFields(meta_list),
-    timeColumn(NULL),
-    xColumn(NULL),
-    yColumn(NULL),
-    zColumn(NULL),
-    crs(_crs == NULL ? "" : _crs),
-    active(true),
-    receivePid(NULL),
-    runPid(NULL),
-    pubRunQ(NULL),
-    subRunQ(pubRunQ),
-    runComplete(false)
-{
-    _autoRegisterSchema(api_name, api_description, column_list, meta_list);
-    _initDataFrame(L);
-}
-
-/*----------------------------------------------------------------------------
- * Constructor - without api_name (no auto-registration)
- *----------------------------------------------------------------------------*/
-GeoDataFrame::GeoDataFrame( lua_State* L,
-                            const char* meta_name,
-                            const struct luaL_Reg meta_table[],
-                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
-                            const char* _crs):
-    LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
-    Field(DATAFRAME, 0),
-    inError(false),
-    numRows(0),
-    columnFields(column_list),
-    metaFields(meta_list),
-    timeColumn(NULL),
-    xColumn(NULL),
-    yColumn(NULL),
-    zColumn(NULL),
-    crs(_crs == NULL ? "" : _crs),
-    active(true),
-    receivePid(NULL),
-    runPid(NULL),
-    pubRunQ(NULL),
-    subRunQ(pubRunQ),
-    runComplete(false)
-{
-    _initDataFrame(L);
 }
 
 /*----------------------------------------------------------------------------

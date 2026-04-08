@@ -1,0 +1,21 @@
+{
+  "api": "gedi04ax",
+  "description": "GEDI L4A above-ground biomass density",
+  "inherits_metadata": true,
+  "columns": [
+    {"name": "shot_number",     "type": "uint64_t",                          "desc": "GEDI shot number"},
+    {"name": "time_ns",         "type": "time8_t",  "flags": "TIME_COLUMN", "desc": "Shot timestamp (Unix ns)"},
+    {"name": "latitude",        "type": "double",   "flags": "Y_COLUMN",    "desc": "Latitude (degrees)"},
+    {"name": "longitude",       "type": "double",   "flags": "X_COLUMN",    "desc": "Longitude (degrees)"},
+    {"name": "agbd",            "type": "float",                             "desc": "Above-ground biomass density (Mg/ha)"},
+    {"name": "elevation",       "type": "float",    "flags": "Z_COLUMN",    "desc": "Elevation of lowest mode (m)"},
+    {"name": "solar_elevation", "type": "float",                             "desc": "Solar elevation angle (deg)"},
+    {"name": "sensitivity",     "type": "float",                             "desc": "Beam sensitivity"},
+    {"name": "flags",           "type": "uint8_t",                           "desc": "Combined quality flags"}
+  ],
+  "metadata": [
+    {"name": "beam",  "type": "uint8_t",  "desc": "GEDI beam number"},
+    {"name": "orbit", "type": "uint32_t", "desc": "Orbit number"},
+    {"name": "track", "type": "uint16_t", "desc": "Track number"}
+  ]
+}

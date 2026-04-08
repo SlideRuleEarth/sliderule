@@ -81,7 +81,6 @@ int Atl08DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    "atl08x", "Land and vegetation height segments (ICESat-2 ATL08)",
     {
         {"time_ns",                 &time_ns},
         {"latitude",                &latitude},
