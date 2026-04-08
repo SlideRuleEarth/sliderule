@@ -236,6 +236,14 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${AlertStream}"
                   - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${TelemetryStream}"
+        - PolicyName: !Sub "${AWS::StackName}-secret-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
 
   # ECS Instance Profile
   InstanceProfile:
@@ -479,6 +487,26 @@ Resources:
                   - batch:ListJobs
                   - batch:CancelJob
                 Resource: "*"
+        - PolicyName: !Sub "${AWS::StackName}-ses-restricted-send-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
+                Condition:
+                  StringEquals:
+                    ses:Recipients: !Sub ${AlertEmail}
+        - PolicyName: !Sub "${AWS::StackName}-secret-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
 
   # API Gateway HTTP API
   HttpApi:

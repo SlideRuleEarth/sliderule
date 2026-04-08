@@ -744,6 +744,9 @@ runner-jobs-inprogress: ## displays all inprogress jobs
 runner-jobs-finished: ## displays all finished jobs
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"
 
+runner-logs:
+	aws logs tail /aws/lambda/$(RUNNER_STACKNAME)-gateway --since 2h --format short
+
 runner-test: ## run runner tests
 	conda run -n runner --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/runner && \
