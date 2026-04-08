@@ -273,7 +273,8 @@ job: ## execute the job runner locally
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
 	PROJECT_REGION=$(AWS_REGION) \
-	CLUSTER=local \
+	CLUSTER=localhost \
+	DOMAIN=localhost \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 

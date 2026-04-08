@@ -100,8 +100,8 @@ if result:find("s3://") == 1 then
     local result_upload_status = aws.s3upload(result_bucket, result_file_path, result_file)
     if not result_upload_status then
         print("Failed to upload results to s3")
-        sys.quit(1) -- failure
+        sys.quit(1) -- failure (with cleanup)
     end
 end
 
-sys.quit(0) -- success
+sys.abort(0) -- success
