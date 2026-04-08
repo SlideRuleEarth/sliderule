@@ -752,14 +752,17 @@
               "type": "string",
               "enum": [
                 "atl03x",
+                "atl03x-blanket",
                 "atl03x-phoreal",
                 "atl03x-surface",
-                "atl03x-blanket",
                 "atl06x",
                 "atl08x",
                 "atl13x",
                 "atl24x",
-                "gedil4ax"
+                "casals1bx",
+                "gedi01bx",
+                "gedi02ax",
+                "gedi04ax"
               ]
             },
             "description": "API name. Use `atl03x-phoreal` for the PhoREAL variant.\nOmit to list all available APIs.\n"
@@ -773,13 +776,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "api": {
+                      "type": "string",
+                      "description": "API identifier"
+                    },
                     "description": {
                       "type": "string",
                       "description": "Human-readable API description"
-                    },
-                    "note": {
-                      "type": "string",
-                      "description": "Additional notes (optional)"
                     },
                     "columns": {
                       "type": "array",
@@ -792,38 +795,31 @@
                           },
                           "type": {
                             "type": "string",
-                            "enum": [
-                              "bool",
-                              "int8",
-                              "int16",
-                              "int32",
-                              "int64",
-                              "uint8",
-                              "uint16",
-                              "uint32",
-                              "uint64",
-                              "float",
-                              "double",
-                              "timestamp[ns]",
-                              "string",
-                              "array<float>",
-                              "list<float>"
-                            ],
-                            "description": "Arrow/Parquet data type"
+                            "description": "C++ type (e.g. int32_t, float, time8_t, FieldList<float>)"
                           },
-                          "description": {
-                            "type": "string"
-                          },
-                          "role": {
+                          "flags": {
                             "type": "string",
-                            "enum": [
-                              "column",
-                              "element"
-                            ],
-                            "description": "'column' = per-row, 'element' = per-batch metadata"
+                            "enum": ["TIME_COLUMN", "X_COLUMN", "Y_COLUMN", "Z_COLUMN"],
+                            "description": "Geo-role flag (optional)"
+                          },
+                          "desc": {
+                            "type": "string",
+                            "description": "Human-readable column description"
                           }
                         }
                       }
+                    },
+                    "metadata": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "type": { "type": "string" },
+                          "desc": { "type": "string" }
+                        }
+                      },
+                      "description": "Per-batch metadata fields"
                     }
                   }
                 },
@@ -833,14 +829,17 @@
                     "value": {
                       "apis": {
                         "atl03x": "Photon-level data (ICESat-2 ATL03)",
+                        "atl03x-blanket": "Surface blanket elevation segments (replaces atl03x base columns)",
                         "atl03x-phoreal": "PhoREAL vegetation extent metrics (replaces atl03x base columns)",
                         "atl03x-surface": "Surface-fitted elevation segments (replaces atl03x base columns)",
-                        "atl03x-blanket": "Surface blanket elevation segments (replaces atl03x base columns)",
                         "atl06x": "Land-ice surface elevation segments (ICESat-2 ATL06)",
                         "atl08x": "Land and vegetation height segments (ICESat-2 ATL08)",
                         "atl13x": "Inland water surface height (ICESat-2 ATL13)",
                         "atl24x": "Coastal bathymetry (ICESat-2 ATL24)",
-                        "gedil4ax": "GEDI L4A above-ground biomass density"
+                        "casals1bx": "CASALS L1B geolocated returns",
+                        "gedi01bx": "GEDI L1B geolocated waveforms",
+                        "gedi02ax": "GEDI L2A elevation and height metrics",
+                        "gedi04ax": "GEDI L4A above-ground biomass density"
                       }
                     }
                   }
@@ -872,26 +871,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-105": null,
-                          "lat:40": null
-                        },
-                        {
-                          "lon:-104.98": null,
-                          "lat:40": null
-                        },
-                        {
-                          "lon:-104.98": null,
-                          "lat:40.02": null
-                        },
-                        {
-                          "lon:-105": null,
-                          "lat:40.02": null
-                        },
-                        {
-                          "lon:-105": null,
-                          "lat:40": null
-                        }
+                        {"lon": -105, "lat": 40},
+                        {"lon": -104.98, "lat": 40},
+                        {"lon": -104.98, "lat": 40.02},
+                        {"lon": -105, "lat": 40.02},
+                        {"lon": -105, "lat": 40}
                       ],
                       "t0": "2023-01-01",
                       "t1": "2023-02-01",
@@ -909,26 +893,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-105": null,
-                          "lat:40": null
-                        },
-                        {
-                          "lon:-104.9": null,
-                          "lat:40": null
-                        },
-                        {
-                          "lon:-104.9": null,
-                          "lat:40.1": null
-                        },
-                        {
-                          "lon:-105": null,
-                          "lat:40.1": null
-                        },
-                        {
-                          "lon:-105": null,
-                          "lat:40": null
-                        }
+                        {"lon": -105, "lat": 40},
+                        {"lon": -104.9, "lat": 40},
+                        {"lon": -104.9, "lat": 40.1},
+                        {"lon": -105, "lat": 40.1},
+                        {"lon": -105, "lat": 40}
                       ],
                       "t0": "2023-06-01",
                       "t1": "2023-09-01",
@@ -950,26 +919,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-82.7": null,
-                          "lat:27.5": null
-                        },
-                        {
-                          "lon:-82.6": null,
-                          "lat:27.5": null
-                        },
-                        {
-                          "lon:-82.6": null,
-                          "lat:27.6": null
-                        },
-                        {
-                          "lon:-82.7": null,
-                          "lat:27.6": null
-                        },
-                        {
-                          "lon:-82.7": null,
-                          "lat:27.5": null
-                        }
+                        {"lon": -82.7, "lat": 27.5},
+                        {"lon": -82.6, "lat": 27.5},
+                        {"lon": -82.6, "lat": 27.6},
+                        {"lon": -82.7, "lat": 27.6},
+                        {"lon": -82.7, "lat": 27.5}
                       ],
                       "t0": "2023-01-01",
                       "t1": "2023-06-01",
@@ -994,26 +948,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-105": null,
-                          "lat:40": null
-                        },
-                        {
-                          "lon:-104.9": null,
-                          "lat:40": null
-                        },
-                        {
-                          "lon:-104.9": null,
-                          "lat:40.1": null
-                        },
-                        {
-                          "lon:-105": null,
-                          "lat:40.1": null
-                        },
-                        {
-                          "lon:-105": null,
-                          "lat:40": null
-                        }
+                        {"lon": -105, "lat": 40},
+                        {"lon": -104.9, "lat": 40},
+                        {"lon": -104.9, "lat": 40.1},
+                        {"lon": -105, "lat": 40.1},
+                        {"lon": -105, "lat": 40}
                       ],
                       "t0": "2023-01-01",
                       "t1": "2023-03-01",
@@ -1039,26 +978,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-120.15": null,
-                          "lat:38.95": null
-                        },
-                        {
-                          "lon:-120.0": null,
-                          "lat:38.95": null
-                        },
-                        {
-                          "lon:-120.0": null,
-                          "lat:39.1": null
-                        },
-                        {
-                          "lon:-120.15": null,
-                          "lat:39.1": null
-                        },
-                        {
-                          "lon:-120.15": null,
-                          "lat:38.95": null
-                        }
+                        {"lon": -120.15, "lat": 38.95},
+                        {"lon": -120, "lat": 38.95},
+                        {"lon": -120, "lat": 39.1},
+                        {"lon": -120.15, "lat": 39.1},
+                        {"lon": -120.15, "lat": 38.95}
                       ],
                       "t0": "2020-01-01",
                       "t1": "2024-01-01",
@@ -1111,26 +1035,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-107.5": null,
-                          "lat:-75.3": null
-                        },
-                        {
-                          "lon:-107.0": null,
-                          "lat:-75.3": null
-                        },
-                        {
-                          "lon:-107.0": null,
-                          "lat:-75.0": null
-                        },
-                        {
-                          "lon:-107.5": null,
-                          "lat:-75.0": null
-                        },
-                        {
-                          "lon:-107.5": null,
-                          "lat:-75.3": null
-                        }
+                        {"lon": -107.5, "lat": -75.3},
+                        {"lon": -107, "lat": -75.3},
+                        {"lon": -107, "lat": -75},
+                        {"lon": -107.5, "lat": -75},
+                        {"lon": -107.5, "lat": -75.3}
                       ],
                       "t0": "2023-01-01",
                       "t1": "2023-06-01",
@@ -1213,26 +1122,11 @@
                   "value": {
                     "parms": {
                       "poly": [
-                        {
-                          "lon:-120.15": null,
-                          "lat:38.95": null
-                        },
-                        {
-                          "lon:-120.0": null,
-                          "lat:38.95": null
-                        },
-                        {
-                          "lon:-120.0": null,
-                          "lat:39.1": null
-                        },
-                        {
-                          "lon:-120.15": null,
-                          "lat:39.1": null
-                        },
-                        {
-                          "lon:-120.15": null,
-                          "lat:38.95": null
-                        }
+                        {"lon": -120.15, "lat": 38.95},
+                        {"lon": -120, "lat": 38.95},
+                        {"lon": -120, "lat": 39.1},
+                        {"lon": -120.15, "lat": 39.1},
+                        {"lon": -120.15, "lat": 38.95}
                       ],
                       "t0": "2019-01-01",
                       "t1": "2024-01-01",
@@ -1314,26 +1208,11 @@
                     "parms": {
                       "asset": "gedi",
                       "poly": [
-                        {
-                          "lon:-62.0": null,
-                          "lat:-3.0": null
-                        },
-                        {
-                          "lon:-61.8": null,
-                          "lat:-3.0": null
-                        },
-                        {
-                          "lon:-61.8": null,
-                          "lat:-2.8": null
-                        },
-                        {
-                          "lon:-62.0": null,
-                          "lat:-2.8": null
-                        },
-                        {
-                          "lon:-62.0": null,
-                          "lat:-3.0": null
-                        }
+                        {"lon": -62, "lat": -3},
+                        {"lon": -61.8, "lat": -3},
+                        {"lon": -61.8, "lat": -2.8},
+                        {"lon": -62, "lat": -2.8},
+                        {"lon": -62, "lat": -3}
                       ],
                       "t0": "2020-01-01",
                       "t1": "2023-01-01",

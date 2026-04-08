@@ -44,18 +44,25 @@ local schemas_dir = __confdir .. "/schemas"
 local params = parse_query(_rqst.arg)
 local api = params["api"]
 
+-- Load the index (used for both listing and validation)
+local index = read_json(schemas_dir .. "/index.json")
+if not index then
+    return json.encode({error="failed to read schema index"})
+end
+
 if not api then
     -- Return listing of all registered schemas
-    local index = read_json(schemas_dir .. "/index.json")
-    if not index then
-        return json.encode({error="failed to read schema index"})
-    end
     return json.encode({apis=index})
+end
+
+-- Validate api against the index to prevent path traversal
+if not index[api] then
+    return json.encode({error="unknown api: " .. api})
 end
 
 local schema = read_json(schemas_dir .. "/" .. api .. ".json")
 if not schema then
-    return json.encode({error="unknown api: " .. api})
+    return json.encode({error="failed to read schema for: " .. api})
 end
 
 return json.encode(schema)
