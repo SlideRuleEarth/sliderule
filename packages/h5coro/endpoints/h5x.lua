@@ -35,7 +35,7 @@ if not h5obj then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to o
 -- create dataframes for each group
 local dfs = {}
 for i,group in ipairs(groups) do
-    local df = h5coro.dataframe(parms, h5obj, group, i, timeout)
+    local df = h5coro.dataframe(parms, h5obj, group, i, timeout, time_column, x_column, y_column, z_column)
     if not df then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("failed to create dataframe for group %s", group)) end
     dfs[group] = df
 end
@@ -45,20 +45,20 @@ local final_df = core.dataframe({}, {endpoint="h5x", request=json.encode(rqst)})
 final_df:receive(dfq_name, _rqst.rspq, #groups, timeout)
 
 -- join and serialize (send) each dataframe
-for group,df in pairs(dfs) do
-    if df:numrows() > 0 and df:numcols() > 0 then
-        df:geo(time_column, x_column, y_column, z_column) -- (optionally) set geo columns
-        if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner
-        df:run(core.framesender(dfq_name, parms["key_space"], timeout))
-    end
+for _,df in pairs(dfs) do
+    if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner
+    df:run(core.framesender(dfq_name, parms["key_space"], timeout))
     df:run(core.TERMINATE)
-    status_to_client(core.INFO, core.RTE_STATUS, string.format("dataframe for group %s created with %d columns and %d rows", group, df:numcols(), df:numrows()))
 end
 
 -- wait for each to finish being serialized (sent)
 for group,df in pairs(dfs) do
     local status = df:finished(timeout, _rqst.rspq)
-    if not status then status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("timed out waiting for dataframe for group %s", group)) end
+    if status then
+        status_to_client(core.INFO, core.RTE_STATUS, string.format("dataframe for group %s created with %d columns and %d rows", group, df:numcols(), df:numrows()))
+    else
+        status_to_client(core.CRITICAL, core.RTE_FAILURE, string.format("timed out waiting for dataframe for group %s", group))
+    end
 end
 
 -- wait for final dataframe to finish being reconstructed

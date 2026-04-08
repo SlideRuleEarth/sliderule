@@ -874,61 +874,6 @@ bool GeoDataFrame::deleteColumn (const char* name)
 }
 
 /*----------------------------------------------------------------------------
- * setGeoColumns
- *----------------------------------------------------------------------------*/
-bool GeoDataFrame::setGeoColumns (const char* time_column, const char* x_column, const char* y_column, const char* z_column)
-{
-    try
-    {
-        // set time field
-        if(time_column)
-        {
-            FieldUntypedColumn* time_field = columnFields.fields[time_column].field;
-            if(time_field->type != COLUMN) throw RunTimeException(CRITICAL, RTE_FAILURE, "time field not a column");
-            if(time_field->getValueEncoding() != TIME8) throw RunTimeException(CRITICAL, RTE_FAILURE, "time field not time8");
-            time_field->setEncodingFlags(TIME_COLUMN);
-        }
-
-        // set x field
-        if(x_column)
-        {
-            FieldUntypedColumn* x_field = columnFields.fields[x_column].field;
-            if(x_field->type != COLUMN) throw RunTimeException(CRITICAL, RTE_FAILURE, "x field not a column");
-            if(x_field->getValueEncoding() != DOUBLE) throw RunTimeException(CRITICAL, RTE_FAILURE, "x field not double");
-            x_field->setEncodingFlags(X_COLUMN);
-        }
-
-        // set y field
-        if(y_column)
-        {
-            FieldUntypedColumn* y_field = columnFields.fields[y_column].field;
-            if(y_field->type != COLUMN) throw RunTimeException(CRITICAL, RTE_FAILURE, "y field not a column");
-            if(y_field->getValueEncoding() != DOUBLE) throw RunTimeException(CRITICAL, RTE_FAILURE, "y field not double");
-            y_field->setEncodingFlags(Y_COLUMN);
-        }
-
-        // set z field
-        if(z_column)
-        {
-            FieldUntypedColumn* z_field = columnFields.fields[z_column].field;
-            if(z_field->type != COLUMN) throw RunTimeException(CRITICAL, RTE_FAILURE, "z field not a column");
-            if(z_field->getValueEncoding() != FLOAT) throw RunTimeException(CRITICAL, RTE_FAILURE, "z field not float");
-            z_field->setEncodingFlags(Z_COLUMN);
-        }
-
-        // populate dataframe geo columns
-        populateGeoColumns();
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(CRITICAL, "Failed to set geo columns: %s", e.what());
-        return false;
-    }
-
-    return true;
-}
-
-/*----------------------------------------------------------------------------
  * populateGeoColumn
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::populateGeoColumns (void)
@@ -1312,7 +1257,6 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
-    LuaEngine::setAttrFunc(L, "geo",        luaSetGeoColumns);
     LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
@@ -2088,30 +2032,6 @@ int GeoDataFrame::luaGetCRS (lua_State* L)
     }
 
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaSetGeoColumns
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaSetGeoColumns (lua_State* L)
-{
-    bool status = false;
-    try
-    {
-        GeoDataFrame* lua_obj   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        const char* time_column = getLuaString(L, 2, true, NULL);
-        const char* x_column    = getLuaString(L, 3, true, NULL);
-        const char* y_column    = getLuaString(L, 4, true, NULL);
-        const char* z_column    = getLuaString(L, 5, true, NULL);
-
-        status = lua_obj->setGeoColumns(time_column, x_column, y_column, z_column);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error setting geo columns: %s", e.what());
-    }
-
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------

@@ -188,7 +188,6 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        addMetaData         (const char* name, Field* meta, bool free_on_delete);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
-        bool                        setGeoColumns       (const char* time_column, const char* x_column, const char* y_column, const char* z_column);
         void                        populateGeoColumns  (void);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
         FieldUntypedColumn*         getUnsafe           (const char* key) const;
@@ -288,7 +287,6 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
         static int      luaGetCRS           (lua_State* L);
-        static int      luaSetGeoColumns    (lua_State* L);
         static int      luaBuildIndex       (lua_State* L);
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);

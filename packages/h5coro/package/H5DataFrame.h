@@ -64,9 +64,11 @@ class H5DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout);
+                            H5DataFrame         (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
+                                                 const char* time_column, const char* x_column, const char* y_column, const char* z_column);
                             ~H5DataFrame        (void) override;
         okey_t              getKey              (void) const override;
+        void                setGeoColumns       (void);
         static void*        joinThread          (void* parm);
 
         /*--------------------------------------------------------------------
@@ -78,6 +80,10 @@ class H5DataFrame: public GeoDataFrame
         FieldElement<string>    group;
         okey_t                  dfKey;
         long                    timeout; // milliseconds
+        const char*             timeColumn;
+        const char*             xColumn;
+        const char*             yColumn;
+        const char*             zColumn;
         Thread*                 joinPid;
 };
 
