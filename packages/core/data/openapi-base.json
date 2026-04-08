@@ -1,0 +1,2676 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SlideRule Earth API",
+    "version": "5.3",
+    "description": "On-demand processing of NASA ICESat-2, GEDI, SWOT, and CASALS satellite data.\n\n## For AI Agents\n\n**Use only `/arrow/*` endpoints.** These return standard file formats (Parquet,\nCSV, GeoParquet, Feather) that can be saved and analyzed with pandas/pyarrow.\nDo NOT use `/source/*` streaming endpoints \u2014 they return binary serialized\nrecords that require the SlideRule Python client to decode.\n\n**Workflow:**\n1. POST to `/arrow/{api}` with parameters and `\"output\": {\"format\": \"parquet\"}`\n2. Save the binary response body to a file (e.g. `result.parquet`)\n3. Query locally with DuckDB, pyarrow, or pandas:\n   - `import duckdb; duckdb.sql(\"SELECT * FROM 'result.parquet' LIMIT 10\")`\n   - `import pandas as pd; df = pd.read_parquet(\"result.parquet\")`\n\n**Keep regions small.** Time ranges can be wide (multi-year is fine for\ntime series analysis), but spatial regions should be tight. If you get\nHTTP 429 (rate limited) or 503 (cluster saturated), wait 30-60s and\nretry with a smaller spatial region.\n\n## Quick Start\n1. Pick an API: atl03x, atl06x, atl08x, atl13x, atl24x, gedi04ax, gedi01bx, gedi02ax, casals1bx\n2. Construct a polygon (counter-clockwise, closed ring, first == last point)\n3. POST to `/arrow/{api}` with `{\"parms\": {..., \"output\": {\"format\": \"parquet\"}}}`\n4. Save response to file and read with pyarrow/pandas\n\n## Column Schemas\nUse `GET /source/schema?api={name}` to discover column names, types, and\ndescriptions for any API at runtime. Or see the component schemas below.\n\n## Discovery\n- GET /source/openapi \u2014 complete OpenAPI 3.1 spec with live column schemas\n- GET /source/schema \u2014 column schemas for all APIs\n- GET /source/defaults \u2014 full parameter tree with defaults\n- GET /source/version \u2014 server version\n- GET /source/health \u2014 cluster health\n"
+  },
+  "servers": [
+    {
+      "url": "https://sliderule.slideruleearth.io",
+      "description": "Public cluster (no auth required)"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "LonLat": {
+        "type": "object",
+        "required": [
+          "lon",
+          "lat"
+        ],
+        "properties": {
+          "lon": {
+            "type": "number",
+            "format": "double"
+          },
+          "lat": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "Polygon": {
+        "type": "array",
+        "minItems": 4,
+        "items": {
+          "$ref": "#/components/schemas/LonLat"
+        },
+        "description": "CCW ring, first == last point."
+      },
+      "RegionMask": {
+        "type": "object",
+        "description": "Raster mask for complex coastlines (alternative to poly).",
+        "properties": {
+          "lonmin": {
+            "type": "number"
+          },
+          "lonmax": {
+            "type": "number"
+          },
+          "latmin": {
+            "type": "number"
+          },
+          "latmax": {
+            "type": "number"
+          },
+          "cols": {
+            "type": "integer"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "cellsize": {
+            "type": "number"
+          },
+          "geojson": {
+            "type": "string"
+          }
+        }
+      },
+      "OutputBlock": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "parquet",
+              "geoparquet",
+              "csv",
+              "feather"
+            ],
+            "default": "geoparquet"
+          },
+          "as_geo": {
+            "type": "boolean",
+            "default": false
+          },
+          "with_checksum": {
+            "type": "boolean",
+            "default": false
+          },
+          "with_validation": {
+            "type": "boolean",
+            "default": false
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Restrict output to these columns only"
+          },
+          "ancillary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RasterSample": {
+        "type": "object",
+        "description": "Sample a raster dataset at each returned point. The dictionary\nkey becomes a column prefix: {\"dem\": {\"asset\": \"esa-copernicus-30meter\"}}\nadds dem.value, dem.time_ns, dem.fileid to every row.\n",
+        "properties": {
+          "asset": {
+            "type": "string",
+            "description": "Registered raster name. Available assets:\n\n**Elevation / DEMs:**\n- arcticdem-mosaic \u2014 ArcticDEM 2m mosaic (PGC, Arctic coverage)\n- arcticdem-strips \u2014 ArcticDEM 2m strips with temporal info (PGC, Arctic)\n- rema-mosaic \u2014 REMA 2m mosaic (PGC, Antarctica)\n- rema-strips \u2014 REMA 2m strips with temporal info (PGC, Antarctica)\n- esa-copernicus-30meter \u2014 Copernicus DEM COP30 global 30m (ESA/OpenTopography)\n- usgs3dep-1meter-dem \u2014 USGS 3DEP 1m DEM (US coverage)\n- usgs3dep-10meter-dem \u2014 USGS 3DEP 10m DEM (US coverage)\n- merit-s3 \u2014 MERIT DEM ~90m global elevation model\n- gebco-s3 \u2014 GEBCO global bathymetry/elevation (~450m)\n\n**Land Cover / Canopy:**\n- esa-worldcover-10meter \u2014 ESA WorldCover 2021 global 10m land cover\n- meta-globalcanopy-1meter \u2014 Meta Global Canopy Height 1m (ALS/GEDI-derived)\n- landsat-hls \u2014 Harmonized Landsat/Sentinel-2 30m multispectral (requires catalog)\n\n**Bathymetry:**\n- bluetopo-bathy \u2014 BlueTopo bathymetry\n\n**GEDI Gridded:**\n- gedil3-elevation \u2014 GEDI L3 gridded elevation\n- gedil3-canopy \u2014 GEDI L3 gridded canopy height\n- gedil3-elevation-stddev \u2014 GEDI L3 elevation standard deviation\n- gedil3-canopy-stddev \u2014 GEDI L3 canopy height standard deviation\n- gedil3-counts \u2014 GEDI L3 shot counts\n- gedil4b \u2014 GEDI L4B gridded biomass\n\n**GEDTM:**\n- gedtm-30meter \u2014 GEDTM 30m terrain model\n- gedtm-std \u2014 GEDTM standard deviation\n- gedtm-dfm \u2014 GEDTM difference from mean\n\n**SWOT Simulated:**\n- swot-sim-ecco-llc4320 \u2014 SWOT simulated SSH (ECCO LLC4320 model)\n- swot-sim-glorys \u2014 SWOT simulated SSH (GLORYS model)\n"
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": [
+              "NearestNeighbour",
+              "Bilinear",
+              "Cubic",
+              "CubicSpline",
+              "Lanczos",
+              "Average",
+              "Mode",
+              "Gauss"
+            ],
+            "default": "NearestNeighbour"
+          },
+          "radius": {
+            "type": "number",
+            "description": "Search radius (m) for zonal stats"
+          },
+          "zonal_stats": {
+            "type": "boolean",
+            "default": false
+          },
+          "closest_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "use_poi_time": {
+            "type": "boolean",
+            "default": false
+          },
+          "catalog": {
+            "type": "object",
+            "description": "GeoJSON STAC/CMR response (required for landsat-hls)"
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "key_space": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PhoREAL": {
+        "type": "object",
+        "properties": {
+          "binsize": {
+            "type": "number",
+            "default": 1.0
+          },
+          "geoloc": {
+            "type": "string",
+            "enum": [
+              "center",
+              "mean",
+              "median"
+            ],
+            "default": "median"
+          },
+          "use_abs_h": {
+            "type": "boolean",
+            "default": false
+          },
+          "above_classifier": {
+            "type": "boolean",
+            "default": false
+          },
+          "send_waveform": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "SurfaceAlgorithm": {
+        "type": "object",
+        "properties": {
+          "dem": {
+            "type": "string",
+            "example": "esa-worldcover-10meter"
+          }
+        }
+      },
+      "ATL24Algorithm": {
+        "type": "object",
+        "properties": {
+          "compact": {
+            "type": "boolean",
+            "default": true
+          },
+          "class_ph": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "unclassified",
+                "bathymetry",
+                "sea_surface"
+              ]
+            }
+          },
+          "confidence_threshold": {
+            "type": "integer",
+            "default": 0
+          },
+          "anc_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "YAPCAlgorithm": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "default": 0
+          },
+          "score": {
+            "type": "integer",
+            "default": 0,
+            "description": "Min score 0-255"
+          },
+          "knn": {
+            "type": "integer",
+            "default": 0
+          },
+          "min_knn": {
+            "type": "integer",
+            "default": 5
+          },
+          "win_h": {
+            "type": "number",
+            "default": 6
+          },
+          "win_x": {
+            "type": "number",
+            "default": 15
+          }
+        }
+      },
+      "ATL13Config": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Water body name filter"
+          },
+          "refid": {
+            "type": "integer",
+            "default": 0
+          },
+          "coord": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lon": {
+                "type": "number"
+              }
+            }
+          },
+          "anc_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "GranuleFilter": {
+        "type": "object",
+        "properties": {
+          "rgt": {
+            "type": "integer",
+            "default": -1
+          },
+          "cycle": {
+            "type": "integer",
+            "default": -1
+          },
+          "region": {
+            "type": "integer",
+            "default": -1
+          },
+          "day": {
+            "type": "integer",
+            "default": -1
+          },
+          "month": {
+            "type": "integer",
+            "default": -1
+          },
+          "year": {
+            "type": "integer",
+            "default": -1
+          },
+          "version": {
+            "type": "integer",
+            "default": -1
+          }
+        }
+      },
+      "CoreParameters": {
+        "type": "object",
+        "properties": {
+          "poly": {
+            "$ref": "#/components/schemas/Polygon"
+          },
+          "region_mask": {
+            "$ref": "#/components/schemas/RegionMask"
+          },
+          "proj": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "north_polar",
+              "south_polar",
+              "plate_carree"
+            ],
+            "default": "auto"
+          },
+          "ignore_poly_for_cmr": {
+            "type": "boolean",
+            "default": false
+          },
+          "t0": {
+            "type": "string",
+            "format": "date",
+            "example": "2022-01-01"
+          },
+          "t1": {
+            "type": "string",
+            "format": "date",
+            "example": "2022-06-01"
+          },
+          "asset": {
+            "type": "string",
+            "default": "icesat2"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit granule list"
+          },
+          "max_resources": {
+            "type": "integer",
+            "default": 300
+          },
+          "cnf": {
+            "description": "Confidence filter. Default: [\"atl03_low\",\"atl03_medium\",\"atl03_high\"].\nInteger shorthand: -2=TEP, -1=noise, 0=background, 1=within10m,\n2=low, 3=medium, 4=high. Use -1 for all photons.\n",
+            "default": [
+              "atl03_low",
+              "atl03_medium",
+              "atl03_high"
+            ]
+          },
+          "quality_ph": {
+            "type": "array",
+            "default": [
+              "atl03_quality_nominal"
+            ]
+          },
+          "srt": {
+            "type": "string",
+            "default": "dynamic",
+            "description": "dynamic|land|ocean|sea_ice|land_ice|inland_water"
+          },
+          "atl08_class": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "atl08_noise|atl08_ground|atl08_canopy|atl08_top_of_canopy|atl08_unclassified"
+          },
+          "pass_invalid": {
+            "type": "boolean",
+            "default": false
+          },
+          "beams": {
+            "type": "array",
+            "default": [
+              "gt1l",
+              "gt1r",
+              "gt2l",
+              "gt2r",
+              "gt3l",
+              "gt3r"
+            ]
+          },
+          "spots": {
+            "type": "array",
+            "default": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "track": {
+            "type": "integer",
+            "default": 0,
+            "description": "0=all, 1, 2, 3"
+          },
+          "granule": {
+            "$ref": "#/components/schemas/GranuleFilter"
+          },
+          "res": {
+            "type": "number",
+            "default": 20,
+            "description": "Along-track resolution (m)"
+          },
+          "len": {
+            "type": "number",
+            "default": 40,
+            "description": "Segment length (m)"
+          },
+          "cnt": {
+            "type": "integer",
+            "default": 10,
+            "description": "Min photon count"
+          },
+          "ats": {
+            "type": "number",
+            "default": 20,
+            "description": "Along-track spread (m)"
+          },
+          "maxi": {
+            "type": "integer",
+            "default": 5,
+            "description": "Max iterations"
+          },
+          "sigma_r_max": {
+            "type": "number",
+            "default": 5
+          },
+          "H_min_win": {
+            "type": "number",
+            "default": 3
+          },
+          "phoreal": {
+            "$ref": "#/components/schemas/PhoREAL"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/SurfaceAlgorithm"
+          },
+          "atl24": {
+            "$ref": "#/components/schemas/ATL24Algorithm"
+          },
+          "yapc": {
+            "$ref": "#/components/schemas/YAPCAlgorithm"
+          },
+          "atl13": {
+            "$ref": "#/components/schemas/ATL13Config"
+          },
+          "atl03_geo_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl03_ph_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl03_corr_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl03_bckgrd_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl06_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl08_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl09_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "atl13_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "samples": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RasterSample"
+            }
+          },
+          "dist_in_seg": {
+            "type": "boolean",
+            "default": false
+          },
+          "datum": {
+            "type": "string",
+            "default": "unspecified"
+          },
+          "podppd": {
+            "type": "integer",
+            "default": 1
+          },
+          "timeout": {
+            "type": "integer",
+            "default": 600
+          },
+          "rqst_timeout": {
+            "type": "integer",
+            "default": 600
+          },
+          "node_timeout": {
+            "type": "integer",
+            "default": 600
+          },
+          "read_timeout": {
+            "type": "integer",
+            "default": 600
+          },
+          "output": {
+            "$ref": "#/components/schemas/OutputBlock"
+          }
+        }
+      },
+      "ProcessingRequest": {
+        "type": "object",
+        "required": [
+          "parms"
+        ],
+        "properties": {
+          "parms": {
+            "$ref": "#/components/schemas/CoreParameters"
+          }
+        }
+      }
+    },
+    "responses": {
+      "ParquetResponse": {
+        "description": "Apache Parquet file. Columns per API documented above.",
+        "content": {
+          "application/octet-stream": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "HTTP 429 \u2014 throttled. Retry after delay or 30-60s."
+      },
+      "ServerBusy": {
+        "description": "HTTP 503 \u2014 cluster is saturated. Retry after 30-60s or reduce region size."
+      },
+      "StreamingResponse": {
+        "description": "Binary stream of serialized RecordObjects. Each record has a header\n(type string + length) followed by the payload. Use the SlideRule\nPython client to deserialize. Stream ends with an empty terminator.\n",
+        "content": {
+          "application/octet-stream": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          }
+        }
+      },
+      "JSONResponse": {
+        "description": "JSON response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "TextResponse": {
+        "description": "Plain text response",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/source/defaults": {
+      "get": {
+        "operationId": "getDefaults",
+        "summary": "All parameters with defaults (runtime discovery)",
+        "description": "Returns complete parameter tree by plugin: cre, icesat2, gedi, swot.\nUse this to discover parameters not documented in this spec.\n",
+        "tags": [
+          "Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON parameter tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/version": {
+      "get": {
+        "operationId": "getVersion",
+        "summary": "Server version",
+        "tags": [
+          "Discovery"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "server": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "example": "5.3.0"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Cluster health",
+        "tags": [
+          "Discovery"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "healthy": {
+                      "type": "boolean"
+                    },
+                    "num_threads": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/openapi": {
+      "get": {
+        "operationId": "getOpenAPI",
+        "summary": "Complete OpenAPI 3.1 spec with live column schemas",
+        "description": "Returns the full OpenAPI spec as JSON with column schemas injected\nat runtime from the schema registry. AI agents and API tooling can\nuse this URL to discover all endpoints, parameters, and response schemas.\n",
+        "tags": [
+          "Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 spec",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/schema": {
+      "get": {
+        "operationId": "getSchema",
+        "summary": "Response column schema for an API",
+        "description": "Returns the Parquet column schema (names, types, descriptions) for a\ngiven arrow API endpoint. Without the `api` parameter, returns the\nlist of available APIs.\n\nExample: GET /source/schema?api=atl06x\n",
+        "tags": [
+          "Discovery"
+        ],
+        "parameters": [
+          {
+            "name": "api",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "atl03x",
+                "atl03x-phoreal",
+                "atl03x-surface",
+                "atl03x-blanket",
+                "atl06x",
+                "atl08x",
+                "atl13x",
+                "atl24x",
+                "gedil4ax"
+              ]
+            },
+            "description": "API name. Use `atl03x-phoreal` for the PhoREAL variant.\nOmit to list all available APIs.\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column schema or API listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string",
+                      "description": "Human-readable API description"
+                    },
+                    "note": {
+                      "type": "string",
+                      "description": "Additional notes (optional)"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Column name in Parquet output"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "bool",
+                              "int8",
+                              "int16",
+                              "int32",
+                              "int64",
+                              "uint8",
+                              "uint16",
+                              "uint32",
+                              "uint64",
+                              "float",
+                              "double",
+                              "timestamp[ns]",
+                              "string",
+                              "array<float>",
+                              "list<float>"
+                            ],
+                            "description": "Arrow/Parquet data type"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "column",
+                              "element"
+                            ],
+                            "description": "'column' = per-row, 'element' = per-batch metadata"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "list_apis": {
+                    "summary": "No api parameter \u2014 list available APIs",
+                    "value": {
+                      "apis": {
+                        "atl03x": "Photon-level data (ICESat-2 ATL03)",
+                        "atl03x-phoreal": "PhoREAL vegetation extent metrics (replaces atl03x base columns)",
+                        "atl03x-surface": "Surface-fitted elevation segments (replaces atl03x base columns)",
+                        "atl03x-blanket": "Surface blanket elevation segments (replaces atl03x base columns)",
+                        "atl06x": "Land-ice surface elevation segments (ICESat-2 ATL06)",
+                        "atl08x": "Land and vegetation height segments (ICESat-2 ATL08)",
+                        "atl13x": "Inland water surface height (ICESat-2 ATL13)",
+                        "atl24x": "Coastal bathymetry (ICESat-2 ATL24)",
+                        "gedil4ax": "GEDI L4A above-ground biomass density"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/atl03x": {
+      "post": {
+        "operationId": "processATL03x",
+        "summary": "Photon-level data \u00b1 algorithms",
+        "description": "Most flexible API. Base columns: ATL03xBaseColumns.\nAlgorithm blocks change the output:\n- phoreal \u2192 REPLACES base with ATL03xPhoREALColumns (extent-level vegetation)\n- surface \u2192 REPLACES base with ATL03xSurfaceColumns (fitted elevation segments)\n- blanket \u2192 REPLACES base with ATL03xBlanketColumns (top-of-surface segments)\n- yapc \u2192 yapc_score always present in base columns; use yapc block to tune\n- atl24 \u2192 atl24_class, atl24_confidence present in base columns (populated when enabled)\n- samples \u2192 appends RasterSampleResponseColumns\n",
+        "tags": [
+          "ICESat-2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              },
+              "examples": {
+                "minimal": {
+                  "summary": "Smallest valid request",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-105": null,
+                          "lat:40": null
+                        },
+                        {
+                          "lon:-104.98": null,
+                          "lat:40": null
+                        },
+                        {
+                          "lon:-104.98": null,
+                          "lat:40.02": null
+                        },
+                        {
+                          "lon:-105": null,
+                          "lat:40.02": null
+                        },
+                        {
+                          "lon:-105": null,
+                          "lat:40": null
+                        }
+                      ],
+                      "t0": "2023-01-01",
+                      "t1": "2023-02-01",
+                      "cnf": 4,
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                },
+                "canopy": {
+                  "summary": "PhoREAL canopy analysis",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-105": null,
+                          "lat:40": null
+                        },
+                        {
+                          "lon:-104.9": null,
+                          "lat:40": null
+                        },
+                        {
+                          "lon:-104.9": null,
+                          "lat:40.1": null
+                        },
+                        {
+                          "lon:-105": null,
+                          "lat:40.1": null
+                        },
+                        {
+                          "lon:-105": null,
+                          "lat:40": null
+                        }
+                      ],
+                      "t0": "2023-06-01",
+                      "t1": "2023-09-01",
+                      "cnf": 4,
+                      "phoreal": {
+                        "binsize": 1.0,
+                        "geoloc": "center"
+                      },
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                },
+                "bathymetry": {
+                  "summary": "Coastal bathymetry",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-82.7": null,
+                          "lat:27.5": null
+                        },
+                        {
+                          "lon:-82.6": null,
+                          "lat:27.5": null
+                        },
+                        {
+                          "lon:-82.6": null,
+                          "lat:27.6": null
+                        },
+                        {
+                          "lon:-82.7": null,
+                          "lat:27.6": null
+                        },
+                        {
+                          "lon:-82.7": null,
+                          "lat:27.5": null
+                        }
+                      ],
+                      "t0": "2023-01-01",
+                      "t1": "2023-06-01",
+                      "cnf": -1,
+                      "srt": "ocean",
+                      "atl24": {
+                        "class_ph": [
+                          "bathymetry",
+                          "sea_surface"
+                        ]
+                      },
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                },
+                "with_dem_sampling": {
+                  "summary": "Photons + co-located DEM and land cover",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-105": null,
+                          "lat:40": null
+                        },
+                        {
+                          "lon:-104.9": null,
+                          "lat:40": null
+                        },
+                        {
+                          "lon:-104.9": null,
+                          "lat:40.1": null
+                        },
+                        {
+                          "lon:-105": null,
+                          "lat:40.1": null
+                        },
+                        {
+                          "lon:-105": null,
+                          "lat:40": null
+                        }
+                      ],
+                      "t0": "2023-01-01",
+                      "t1": "2023-03-01",
+                      "cnf": 4,
+                      "samples": {
+                        "dem": {
+                          "asset": "esa-copernicus-30meter"
+                        },
+                        "landcover": {
+                          "asset": "esa-worldcover-10meter"
+                        }
+                      },
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                },
+                "water_surface": {
+                  "summary": "Lake water surface finding",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-120.15": null,
+                          "lat:38.95": null
+                        },
+                        {
+                          "lon:-120.0": null,
+                          "lat:38.95": null
+                        },
+                        {
+                          "lon:-120.0": null,
+                          "lat:39.1": null
+                        },
+                        {
+                          "lon:-120.15": null,
+                          "lat:39.1": null
+                        },
+                        {
+                          "lon:-120.15": null,
+                          "lat:38.95": null
+                        }
+                      ],
+                      "t0": "2020-01-01",
+                      "t1": "2024-01-01",
+                      "cnf": 4,
+                      "srt": "inland_water",
+                      "surface": {},
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/atl06x": {
+      "post": {
+        "operationId": "processATL06x",
+        "summary": "Land-ice surface elevation (40m segments)",
+        "description": "Fitted surface segments for glaciers and ice sheets.\nTune with: res, len, cnt, ats, maxi, sigma_r_max, H_min_win.\nResponse: ATL06xResponseColumns (24 columns verified live v5.3.0).\n",
+        "tags": [
+          "ICESat-2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              },
+              "examples": {
+                "glacier": {
+                  "summary": "Thwaites Glacier profile",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-107.5": null,
+                          "lat:-75.3": null
+                        },
+                        {
+                          "lon:-107.0": null,
+                          "lat:-75.3": null
+                        },
+                        {
+                          "lon:-107.0": null,
+                          "lat:-75.0": null
+                        },
+                        {
+                          "lon:-107.5": null,
+                          "lat:-75.0": null
+                        },
+                        {
+                          "lon:-107.5": null,
+                          "lat:-75.3": null
+                        }
+                      ],
+                      "t0": "2023-01-01",
+                      "t1": "2023-06-01",
+                      "cnf": 4,
+                      "srt": "land_ice",
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/atl08x": {
+      "post": {
+        "operationId": "processATL08x",
+        "summary": "Land & vegetation height (100m segments)",
+        "description": "Terrain + canopy metrics. Response: ATL08xResponseColumns.\n",
+        "tags": [
+          "ICESat-2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/atl13x": {
+      "post": {
+        "operationId": "processATL13x",
+        "summary": "Inland water surface height",
+        "description": "Lake/reservoir water levels. Response: ATL13xResponseColumns.\nUse atl13 config block to filter by water body name or refid.\n",
+        "tags": [
+          "ICESat-2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              },
+              "examples": {
+                "lake": {
+                  "summary": "Lake Tahoe water levels",
+                  "value": {
+                    "parms": {
+                      "poly": [
+                        {
+                          "lon:-120.15": null,
+                          "lat:38.95": null
+                        },
+                        {
+                          "lon:-120.0": null,
+                          "lat:38.95": null
+                        },
+                        {
+                          "lon:-120.0": null,
+                          "lat:39.1": null
+                        },
+                        {
+                          "lon:-120.15": null,
+                          "lat:39.1": null
+                        },
+                        {
+                          "lon:-120.15": null,
+                          "lat:38.95": null
+                        }
+                      ],
+                      "t0": "2019-01-01",
+                      "t1": "2024-01-01",
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/atl24x": {
+      "post": {
+        "operationId": "processATL24x",
+        "summary": "Coastal bathymetry",
+        "description": "Photon classification for shallow water. Response: ATL24xResponseColumns.\n",
+        "tags": [
+          "ICESat-2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/gedi04ax": {
+      "post": {
+        "operationId": "processGEDIL4Ax",
+        "summary": "GEDI L4A biomass/canopy",
+        "description": "Above-ground biomass density. Response: GEDIL4AxResponseColumns.\nGEDI-specific filters: degrade_filter, l2_quality_filter,\nl4_quality_filter, surface_filter (see /source/defaults \"gedi\").\n",
+        "tags": [
+          "GEDI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              },
+              "examples": {
+                "forest": {
+                  "summary": "Amazon forest biomass",
+                  "value": {
+                    "parms": {
+                      "asset": "gedi",
+                      "poly": [
+                        {
+                          "lon:-62.0": null,
+                          "lat:-3.0": null
+                        },
+                        {
+                          "lon:-61.8": null,
+                          "lat:-3.0": null
+                        },
+                        {
+                          "lon:-61.8": null,
+                          "lat:-2.8": null
+                        },
+                        {
+                          "lon:-62.0": null,
+                          "lat:-2.8": null
+                        },
+                        {
+                          "lon:-62.0": null,
+                          "lat:-3.0": null
+                        }
+                      ],
+                      "t0": "2020-01-01",
+                      "t1": "2023-01-01",
+                      "output": {
+                        "format": "parquet",
+                        "as_geo": false,
+                        "with_checksum": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl03s": {
+      "post": {
+        "operationId": "streamATL03s",
+        "summary": "ATL03 photon records (streaming, single granule)",
+        "description": "Streams ATL03 photon-level records for a single granule.\nReturns binary serialized atl03rec records.\nUse the Python client or /arrow/atl03x for Parquet output.\n",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl03sp": {
+      "post": {
+        "operationId": "streamATL03sp",
+        "summary": "ATL03 photon records (streaming, proxied across cluster)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl03v": {
+      "post": {
+        "operationId": "streamATL03v",
+        "summary": "ATL03 vegetation records (streaming, single granule)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl03vp": {
+      "post": {
+        "operationId": "streamATL03vp",
+        "summary": "ATL03 vegetation records (streaming, proxied across cluster)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl06": {
+      "post": {
+        "operationId": "streamATL06",
+        "summary": "ATL06 elevation records (streaming, single granule)",
+        "description": "Reads ATL03 and processes to ATL06 elevation segments.",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl06p": {
+      "post": {
+        "operationId": "streamATL06p",
+        "summary": "ATL06 elevation records (streaming, proxied across cluster)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl06s": {
+      "post": {
+        "operationId": "streamATL06s",
+        "summary": "ATL06 subsetted records (streaming, single granule)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl06sp": {
+      "post": {
+        "operationId": "streamATL06sp",
+        "summary": "ATL06 subsetted records (streaming, proxied across cluster)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl08": {
+      "post": {
+        "operationId": "streamATL08",
+        "summary": "ATL08 canopy records (streaming, single granule)",
+        "description": "Reads ATL03 and processes to ATL08 canopy segments.",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl08p": {
+      "post": {
+        "operationId": "streamATL08p",
+        "summary": "ATL08 canopy records (streaming, proxied across cluster)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl13s": {
+      "post": {
+        "operationId": "streamATL13s",
+        "summary": "ATL13 inland water records (streaming, single granule)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/atl13sp": {
+      "post": {
+        "operationId": "streamATL13sp",
+        "summary": "ATL13 inland water records (streaming, proxied across cluster)",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/indexer": {
+      "post": {
+        "operationId": "indexATL03",
+        "summary": "Build spatial index for ATL03 granules",
+        "tags": [
+          "ICESat-2 Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "asset": {
+                    "type": "string",
+                    "default": "atlas-local"
+                  },
+                  "timeout": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          }
+        }
+      }
+    },
+    "/arrow/gedi01bx": {
+      "post": {
+        "operationId": "processGEDI01Bx",
+        "summary": "GEDI L1B waveforms (Parquet)",
+        "description": "Geolocated waveforms with transmit/receive samples.\nResponse: GEDI01bxResponseColumns.\n",
+        "tags": [
+          "GEDI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/gedi02ax": {
+      "post": {
+        "operationId": "processGEDI02Ax",
+        "summary": "GEDI L2A elevation/height (Parquet)",
+        "description": "Elevation and canopy height metrics.\nResponse: GEDI02AxResponseColumns.\n",
+        "tags": [
+          "GEDI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/gedi01b": {
+      "post": {
+        "operationId": "streamGEDI01b",
+        "summary": "GEDI L1B records (streaming, single granule)",
+        "tags": [
+          "GEDI Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/gedi01bp": {
+      "post": {
+        "operationId": "streamGEDI01bp",
+        "summary": "GEDI L1B records (streaming, proxied across cluster)",
+        "tags": [
+          "GEDI Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/gedi02a": {
+      "post": {
+        "operationId": "streamGEDI02a",
+        "summary": "GEDI L2A records (streaming, single granule)",
+        "tags": [
+          "GEDI Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/gedi02ap": {
+      "post": {
+        "operationId": "streamGEDI02ap",
+        "summary": "GEDI L2A records (streaming, proxied across cluster)",
+        "tags": [
+          "GEDI Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/gedi04a": {
+      "post": {
+        "operationId": "streamGEDI04a",
+        "summary": "GEDI L4A records (streaming, single granule)",
+        "tags": [
+          "GEDI Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/gedi04ap": {
+      "post": {
+        "operationId": "streamGEDI04ap",
+        "summary": "GEDI L4A records (streaming, proxied across cluster)",
+        "tags": [
+          "GEDI Streaming"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/swotl2": {
+      "post": {
+        "operationId": "streamSWOTL2",
+        "summary": "SWOT L2 water surface records (streaming, single granule)",
+        "tags": [
+          "SWOT"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/swotl2p": {
+      "post": {
+        "operationId": "streamSWOTL2p",
+        "summary": "SWOT L2 water surface records (streaming, proxied across cluster)",
+        "tags": [
+          "SWOT"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/arrow/casals1bx": {
+      "post": {
+        "operationId": "processCASALS1Bx",
+        "summary": "CASALS L1B geolocated returns (Parquet)",
+        "description": "Response: CASALS1bxResponseColumns.\n",
+        "tags": [
+          "CASALS"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/h5": {
+      "post": {
+        "operationId": "readH5Dataset",
+        "summary": "Read single HDF5 dataset (streaming)",
+        "description": "Reads a single dataset from an HDF5 file with optional row/column slicing.\nReturns binary serialized h5dataset records.\n",
+        "tags": [
+          "HDF5"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "asset",
+                  "resource",
+                  "dataset"
+                ],
+                "properties": {
+                  "asset": {
+                    "type": "string",
+                    "description": "Registered asset name"
+                  },
+                  "resource": {
+                    "type": "string",
+                    "description": "HDF5 file path or URL"
+                  },
+                  "dataset": {
+                    "type": "string",
+                    "description": "Dataset path within HDF5 file"
+                  },
+                  "datatype": {
+                    "type": "integer",
+                    "description": "RecordObject data type (0=DYNAMIC)"
+                  },
+                  "col": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "startrow": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "numrows": {
+                    "type": "integer",
+                    "default": -1,
+                    "description": "-1 for all rows"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          }
+        }
+      }
+    },
+    "/source/h5p": {
+      "post": {
+        "operationId": "readH5File",
+        "summary": "Read multiple HDF5 datasets from one file (streaming)",
+        "description": "Reads multiple datasets from a single HDF5 file with slice specifications.\n",
+        "tags": [
+          "HDF5"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "asset",
+                  "resource",
+                  "datasets"
+                ],
+                "properties": {
+                  "asset": {
+                    "type": "string"
+                  },
+                  "resource": {
+                    "type": "string"
+                  },
+                  "datasets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dataset": {
+                          "type": "string"
+                        },
+                        "col": {
+                          "type": "integer"
+                        },
+                        "startrow": {
+                          "type": "integer"
+                        },
+                        "numrows": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          }
+        }
+      }
+    },
+    "/source/h5x": {
+      "post": {
+        "operationId": "readH5Extended",
+        "summary": "Read HDF5 groups as Parquet DataFrame",
+        "description": "Creates DataFrames from HDF5 groups and outputs as Parquet.\nSupports geo-indexing and raster sampling.\n",
+        "tags": [
+          "HDF5"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "asset": {
+                    "type": "string"
+                  },
+                  "resource": {
+                    "type": "string"
+                  },
+                  "parms": {
+                    "type": "object",
+                    "description": "Must include output/arrow parameters"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParquetResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServerBusy"
+          }
+        }
+      }
+    },
+    "/source/samples": {
+      "post": {
+        "operationId": "sampleRaster",
+        "summary": "Sample raster values at coordinates",
+        "description": "Sample one or more raster datasets at specified lat/lon coordinates.\nReturns JSON with sampled values.\n",
+        "tags": [
+          "Geospatial"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "samples": {
+                    "type": "object",
+                    "description": "Raster sampling parameters (asset, algorithm, etc.)"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "description": "Array of [lon, lat] or [lon, lat, height] coordinate arrays"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sampled values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "samples": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/subsets": {
+      "post": {
+        "operationId": "subsetRaster",
+        "summary": "Extract raster subsets by bounding box",
+        "description": "Extract raster data for specified bounding boxes.\n",
+        "tags": [
+          "Geospatial"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subsets": {
+                    "type": "object",
+                    "description": "Raster parameters"
+                  },
+                  "extents": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "description": "Array of [xmin, ymin, xmax, ymax] bounding boxes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/geo": {
+      "post": {
+        "operationId": "geoTransform",
+        "summary": "Coordinate transformations and spatial operations",
+        "description": "Coordinate conversions, polygon splitting, intersection, spatial index operations.\n",
+        "tags": [
+          "Geospatial"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/time": {
+      "get": {
+        "operationId": "convertTime",
+        "summary": "Time format conversion",
+        "description": "Converts between GPS, GMT, DATE, CDS time formats.\n",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "type": "number",
+                    "description": "Time value to convert"
+                  },
+                  "input": {
+                    "type": "string",
+                    "enum": [
+                      "GPS",
+                      "GMT",
+                      "DATE",
+                      "CDS",
+                      "NOW"
+                    ]
+                  },
+                  "output": {
+                    "type": "string",
+                    "enum": [
+                      "GPS",
+                      "GMT",
+                      "DATE",
+                      "CDS"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/event": {
+      "post": {
+        "operationId": "streamEvents",
+        "summary": "Stream application events (logs, traces, telemetry)",
+        "description": "Streams events for the specified duration. Use type bitmask to filter.\n",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "integer",
+                    "description": "Event type bitmask"
+                  },
+                  "duration": {
+                    "type": "integer",
+                    "description": "Streaming duration (seconds)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StreamingResponse"
+          }
+        }
+      }
+    },
+    "/source/definition": {
+      "post": {
+        "operationId": "getDefinition",
+        "summary": "Get record type schema definition",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rectype": {
+                    "type": "string",
+                    "description": "Record type name (e.g. atl03rec)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/assets": {
+      "get": {
+        "operationId": "getAssets",
+        "summary": "List all loaded assets and drivers",
+        "tags": [
+          "Utilities"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/index": {
+      "post": {
+        "operationId": "queryIndex",
+        "summary": "Query spatial indexes for matching resources",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/earthdata": {
+      "post": {
+        "operationId": "queryEarthdata",
+        "summary": "Query Earthdata CMR/AMS for granule metadata",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/prometheus": {
+      "get": {
+        "operationId": "getPrometheus",
+        "summary": "Export metrics in OpenMetrics format",
+        "tags": [
+          "Utilities"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TextResponse"
+          }
+        }
+      }
+    },
+    "/source/ace": {
+      "post": {
+        "operationId": "executeCode",
+        "summary": "Authorized code execution (admin, requires membership + signed request)",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "description": "Lua code to execute"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          },
+          "403": {
+            "description": "Unauthorized (missing membership or invalid signature)"
+          }
+        }
+      }
+    },
+    "/source/ams": {
+      "post": {
+        "operationId": "callAMS",
+        "summary": "Application management system",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          }
+        }
+      }
+    },
+    "/source/execre": {
+      "post": {
+        "operationId": "executeContainer",
+        "summary": "Execute container runtime environment (admin, requires membership)",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string"
+                  },
+                  "command": {
+                    "type": "string"
+                  },
+                  "parms": {
+                    "type": "object"
+                  },
+                  "rqst_timeout": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JSONResponse"
+          },
+          "403": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/source/lscre": {
+      "get": {
+        "operationId": "listContainers",
+        "summary": "List running containers",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TextResponse"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Discovery",
+      "description": "Schema discovery and server status"
+    },
+    {
+      "name": "ICESat-2",
+      "description": "ICESat-2 Parquet/DataFrame APIs (x-series)"
+    },
+    {
+      "name": "ICESat-2 Streaming",
+      "description": "ICESat-2 streaming record APIs (s/p-series). Returns binary serialized\nRecordObjects \u2014 requires the SlideRule Python client to decode.\nAI agents should use the /arrow/* Parquet endpoints instead.\n"
+    },
+    {
+      "name": "GEDI",
+      "description": "GEDI Parquet/DataFrame APIs (x-series)"
+    },
+    {
+      "name": "GEDI Streaming",
+      "description": "GEDI streaming record APIs. Returns binary serialized RecordObjects \u2014\nrequires the SlideRule Python client. AI agents should use /arrow/* instead.\n"
+    },
+    {
+      "name": "SWOT",
+      "description": "SWOT APIs"
+    },
+    {
+      "name": "CASALS",
+      "description": "CASALS APIs"
+    },
+    {
+      "name": "HDF5",
+      "description": "Direct HDF5 data access"
+    },
+    {
+      "name": "Geospatial",
+      "description": "Raster sampling and spatial utilities"
+    },
+    {
+      "name": "Utilities",
+      "description": "Server utilities and data discovery"
+    },
+    {
+      "name": "Admin",
+      "description": "Administrative endpoints (require authentication)"
+    }
+  ]
+}

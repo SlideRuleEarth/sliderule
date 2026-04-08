@@ -21,7 +21,8 @@ Both endpoint types resolve Lua scripts from `${CONFDIR}/api/{name}.lua` at runt
 | Schema registry C++ | `packages/core/package/GeoDataFrame.cpp` and `.h` |
 | Schema endpoint | `packages/core/endpoints/schema.lua` |
 | Schema selftest | `packages/core/selftests/schema.lua` |
-| OpenAPI spec | `sliderule-openapi-complete.yaml` (repo root) |
+| OpenAPI base template | `packages/core/data/openapi-base.json` |
+| OpenAPI endpoint | `packages/core/endpoints/openapi.lua` |
 
 ## Adding a New Endpoint
 
@@ -78,12 +79,13 @@ Rules:
 
 ### 4. Update the OpenAPI spec
 
-Edit `sliderule-openapi-complete.yaml` at the repo root:
+Edit the base template at `packages/core/data/openapi-base.json`:
 
 1. Add a **path entry** under the appropriate section (`/arrow/your_api` or `/source/your_api`)
-2. For Parquet endpoints, add a **response column schema** in `components/schemas/` listing all columns with their types
+2. For Parquet endpoints, **column schemas are injected automatically** from `registerSchema()` — no need to add them manually
 3. Add appropriate `tags`, `operationId`, `summary`, and `description`
 4. Reference the correct response type (`ParquetResponse`, `StreamingResponse`, or `JSONResponse`)
+The server generates the complete OpenAPI spec at runtime via `GET /source/openapi`. This endpoint reads the base template, then injects column schemas from the live `GeoDataFrame::schemaRegistry`.
 
 ### 5. Add selftests
 
@@ -95,7 +97,7 @@ When adding, removing, or renaming columns in a DataFrame:
 
 1. Update the **DataFrame `.h` file** (`FieldColumn` declarations)
 2. Update the **`registerSchema()` call** to match
-3. Update the **OpenAPI spec** response column schema
+3. Column schemas in the OpenAPI spec update **automatically** — `/source/openapi` reads from the live registry
 4. Run the selftest to verify
 
 ## Removing an Endpoint
@@ -103,7 +105,7 @@ When adding, removing, or renaming columns in a DataFrame:
 1. Delete the **Lua script** from `endpoints/`
 2. Remove it from the **CMakeLists.txt** install list
 3. Remove the **`registerSchema()` call** if present
-4. Remove the **path and response schema** from the OpenAPI spec
+4. Remove the **path** from `packages/core/data/openapi-base.json`
 
 ## Validation
 
@@ -117,8 +119,11 @@ cd targets/slideruleearth
 # Run selftests (includes schema validation)
 make selftest
 
-# Validate OpenAPI YAML syntax
-python3 -c "import yaml; yaml.safe_load(open('sliderule-openapi-complete.yaml'))"
+# Validate OpenAPI base template
+python3 -c "import json; json.load(open('packages/core/data/openapi-base.json'))"
+
+# Test the live endpoint (with server running)
+curl -s http://localhost:9081/source/openapi | python3 -m json.tool > /dev/null && echo "OK"
 ```
 
 The schema selftest (`packages/core/selftests/schema.lua`) verifies:
