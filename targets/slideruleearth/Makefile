@@ -744,6 +744,17 @@ runner-jobs-inprogress: ## displays all inprogress jobs
 runner-jobs-finished: ## displays all finished jobs
 	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"
 
+runner-test: ## run runner tests
+	conda run -n runner --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/runner && \
+    DOMAIN=$(DOMAIN) \
+    ENVIRONMENT_VERSION=$(DOENVIRONMENT_VERSIONMAIN) \
+	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
+    SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+    ALERT_EMAIL=$(ALERT_EMAIL) \
+	coverage run -m pytest $(ARGS) && \
+	coverage report -m'
+
 ########################
 # Certbot Targets
 ########################

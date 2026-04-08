@@ -429,6 +429,7 @@ Resources:
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
+          DOMAIN: !Ref Domain
           STACK_NAME: !Ref AWS::StackName
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket

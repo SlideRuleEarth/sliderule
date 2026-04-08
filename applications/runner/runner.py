@@ -11,6 +11,13 @@ from cryptography.hazmat.primitives.serialization import load_ssh_public_key
 # Globals
 # ###############################
 
+DOMAIN = os.environ["DOMAIN"]
+STACK_NAME = os.environ["STACK_NAME"]
+ENVIRONMENT_VERSION = os.environ['ENVIRONMENT_VERSION']
+PROJECT_PUBLIC_BUCKET = os.environ["PROJECT_PUBLIC_BUCKET"]
+SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
+ALERT_EMAIL = os.environ['ALERT_EMAIL']
+
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
 MAX_JOBS_TO_DESCRIBE = 100
 MAX_VCPUS = 8
@@ -66,12 +73,10 @@ def exception_reponse(e):
 # Send Email Message
 #
 def send_email(title, message):
-    support_email = os.environ['SUPPORT_EMAIL']
-    alert_email = os.environ['ALERT_EMAIL']
     response = ses.send_email(
-        Source = support_email,
+        Source = SUPPORT_EMAIL,
         Destination = {
-            "ToAddresses": [alert_email]
+            "ToAddresses": [ALERT_EMAIL]
         },
         Message = {
             "Subject": {
@@ -84,7 +89,7 @@ def send_email(title, message):
     if response["ResponseMetadata"]["HTTPStatusCode"] >= 200 and response["ResponseMetadata"]["HTTPStatusCode"] < 300:
         return True
     else:
-        print(f"Error sending email from {support_email} to {alert_email}: {response}")
+        print(f"Error sending email from {SUPPORT_EMAIL} to {ALERT_EMAIL}: {response}")
         return False
 
 #
@@ -97,8 +102,6 @@ def verify_signature(path, body, username, event):
     global _pubkey_cache
     try:
         # pull out signing parameters from request
-        path = event.get('rawPath', '')
-        body_raw = event.get("body")
         host = event["headers"]["host"]
         timestamp = event["headers"]["x-sliderule-timestamp"]
         signature_b64 = event["headers"]["x-sliderule-signature"]
@@ -106,8 +109,7 @@ def verify_signature(path, body, username, event):
 
         # get public key
         if username not in _pubkey_cache:
-            domain = os.environ["DOMAIN"]
-            secret_name = f"{domain}/pubkeys"
+            secret_name = f"{DOMAIN}/pubkeys"
             secret_string = sm.get_secret_value(SecretId=secret_name)['SecretString']
             _pubkey_cache = json.loads(secret_string)
         public_key = load_ssh_public_key(_pubkey_cache[username].encode("utf-8"))
@@ -150,11 +152,6 @@ def submit_handler(body, username):
     # initialize response state
     state = {}
 
-    # get environment variables
-    stack_name = os.environ["STACK_NAME"]
-    environment_version = os.environ['ENVIRONMENT_VERSION']
-    project_public_bucket = os.environ["PROJECT_PUBLIC_BUCKET"]
-
     # get required request variables
     name = body["name"]
     script = base64.b64decode(body["script"]).decode('utf-8')
@@ -184,20 +181,20 @@ def submit_handler(body, username):
     clean_username = "".join(ch if ch.isalnum() else "_" for ch in username.split(" ")[0][:16])
     clean_name = "".join(ch if ch.isalnum() else "_" for ch in name.split(" ")[0][:16])
     run_id = f"run-{clean_username}-{clean_name}-{final_hash}"
-    run_path = f"{stack_name}/{run_id}"
-    run_url = f"s3://{project_public_bucket}/{run_path}"
+    run_path = f"{STACK_NAME}/{run_id}"
+    run_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{run_path}"
 
     # populate validated initial info
     state["name"] = name
     state["run_url"] = run_url
 
     # load initial files to S3
-    s3.put_object(Bucket=project_public_bucket, Key=f"{run_path}/script.lua", Body=script)
-    s3.put_object(Bucket=project_public_bucket, Key=f"{run_path}/receipt.json", Body=json.dumps({
+    s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/script.lua", Body=script)
+    s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/receipt.json", Body=json.dumps({
         "name": name,
         "username": username,
         "args": {str(i):args_list[i] for i in range(len(args_list))},
-        "environment": environment_version
+        "environment": ENVIRONMENT_VERSION
     }, indent=2))
 
     # optionally build container overrides
@@ -214,8 +211,8 @@ def submit_handler(body, username):
     for i in range(len(args_list)):
         response = batch.submit_job(
             jobName=name,
-            jobQueue=f"{stack_name}-job-queue",
-            jobDefinition=f"{stack_name}-default-job-definition",
+            jobQueue=f"{STACK_NAME}-job-queue",
+            jobDefinition=f"{STACK_NAME}-default-job-definition",
             parameters={
                 "script": f"{run_url}/script.lua",
                 "args": len(args_list[i].strip()) > 0 and args_list[i] or "nil",
@@ -229,7 +226,7 @@ def submit_handler(body, username):
 
     # status deployment
     send_email(f"SlideRule Job Submission (@{username} {name})", json.dumps(state, indent=2))
-    print(f'Jobs submitted on {stack_name}: {len(job_ids)}')
+    print(f'Jobs submitted on {STACK_NAME}: {len(job_ids)}')
 
     # success
     return json_response(200, state)
@@ -276,9 +273,6 @@ def report_queue_handler(body):
     # initialize response state
     state = {"report": {}, "jobs": []}
 
-    # get environment variables
-    stack_name = os.environ["STACK_NAME"]
-
     # get required request variables
     job_state = body["job_state"]
 
@@ -301,7 +295,7 @@ def report_queue_handler(body):
     # list jobs
     for job_status in job_states:
         response = batch.list_jobs(
-            jobQueue=f"{stack_name}-job-queue",
+            jobQueue=f"{STACK_NAME}-job-queue",
             jobStatus=job_status
         )
         state["report"][job_status] = len(response["jobSummaryList"])
@@ -319,9 +313,6 @@ def cancel_handler(body):
     # initialize response state
     state = []
 
-    # get environment variables
-    stack_name = os.environ["STACK_NAME"]
-
     # get optional request variables
     job_list = body.get("job_list")
 
@@ -331,7 +322,7 @@ def cancel_handler(body):
         # find all jobs
         for state in ["SUBMITTED", "PENDING", "RUNNABLE"]:
             response = batch.list_jobs(
-                jobQueue=f"{stack_name}-job-queue",
+                jobQueue=f"{STACK_NAME}-job-queue",
                 jobStatus=state
             )
             for job in response["jobSummaryList"]:
