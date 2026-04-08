@@ -63,7 +63,7 @@ struct FieldUntypedColumn: public Field
 
     typedef unordered_map<int64_t, int64_t> unique_map_t;
 
-    explicit FieldUntypedColumn (uint32_t _encoding=0): Field(COLUMN, _encoding) {};
+    explicit FieldUntypedColumn (uint32_t _encoding=0, const char* _description=NULL): Field(COLUMN, _encoding, _description) {};
     ~FieldUntypedColumn (void) = default;
 
     virtual string toJson (void) const override {return string("{}");};
@@ -94,7 +94,8 @@ class FieldColumn: public FieldUntypedColumn
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldColumn     (uint32_t encoding_mask=0, long _chunk_size=DEFAULT_CHUNK_SIZE);
+        explicit        FieldColumn     (uint32_t encoding_mask=0, long _chunk_size=DEFAULT_CHUNK_SIZE, const char* _description=NULL);
+                        FieldColumn     (const char* _description, uint32_t encoding_mask=0, long _chunk_size=DEFAULT_CHUNK_SIZE);
                         FieldColumn     (const uint8_t* buffer, long size, uint32_t encoding_mask=0);
                         FieldColumn     (const FieldColumn<T>& column);
         virtual         ~FieldColumn    (void) override;
@@ -320,8 +321,21 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<stri
  * Constructor
  *----------------------------------------------------------------------------*/
 template<class T>
-FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size):
-    FieldUntypedColumn(getImpliedEncoding<T>() | encoding_mask),
+FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size, const char* _description):
+    FieldUntypedColumn(getImpliedEncoding<T>() | encoding_mask, _description),
+    currChunk(-1),
+    currChunkOffset(_chunk_size),
+    numElements(0),
+    chunkSize(_chunk_size)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - description first (convenience for columns with no flags)
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldColumn<T>::FieldColumn(const char* _description, uint32_t encoding_mask, long _chunk_size):
+    FieldUntypedColumn(getImpliedEncoding<T>() | encoding_mask, _description),
     currChunk(-1),
     currChunkOffset(_chunk_size),
     numElements(0),

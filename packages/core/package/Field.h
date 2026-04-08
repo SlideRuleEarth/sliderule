@@ -105,8 +105,8 @@ class Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        Field (type_t _type, uint32_t _encoding):
-            type(_type), encoding(_encoding) {};
+        Field (type_t _type, uint32_t _encoding, const char* _description=NULL):
+            type(_type), encoding(_encoding), description(_description) {};
 
         virtual ~Field (void) = default;
 
@@ -174,8 +174,9 @@ class Field
          * Data
          *--------------------------------------------------------------------*/
 
-        type_t type;        // child class type (dictionary, column, etc)
-        uint32_t encoding;  // encoding = 0xn0000vv; n: upper bits for nested types; vv: <value type>
+        type_t type;            // child class type (dictionary, column, etc)
+        uint32_t encoding;      // encoding = 0xn0000vv; n: upper bits for nested types; vv: <value type>
+        const char* description; // human-readable description (for schema generation)
 };
 
 /******************************************************************************

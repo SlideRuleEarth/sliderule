@@ -106,61 +106,6 @@ void initgedi (void)
     RasterObject::registerRaster(LUA_GEDI_L03_COUNTS_RASTER_NAME,           GediRaster::createL3DataRaster);
     RasterObject::registerRaster(LUA_GEDI_L04B_RASTER_NAME,                 GediRaster::createL4DataRaster);
 
-    /* Register Schemas */
-    {
-        const uint32_t COL = Field::NESTED_COLUMN;
-        GeoDataFrame::registerSchema("gedi01bx", "GEDI L1B geolocated waveforms", {
-            {"shot_number",     COL | Field::UINT64, "GEDI shot number",               false},
-            {"time_ns",         COL | Field::TIME8,  "Shot timestamp (Unix ns)",        false},
-            {"latitude",        COL | Field::DOUBLE, "Latitude (degrees)",              false},
-            {"longitude",       COL | Field::DOUBLE, "Longitude (degrees)",             false},
-            {"elevation_start", COL | Field::FLOAT,  "Waveform start elevation (m)",    false},
-            {"elevation_stop",  COL | Field::DOUBLE, "Waveform stop elevation (m)",     false},
-            {"solar_elevation", COL | Field::DOUBLE, "Solar elevation angle (deg)",     false},
-            {"tx_size",         COL | Field::UINT16, "Transmit waveform sample count",  false},
-            {"rx_size",         COL | Field::UINT16, "Receive waveform sample count",   false},
-            {"flags",           COL | Field::UINT8,  "Combined quality flags",          false},
-            {"tx_waveform",     Field::NESTED_LIST | Field::FLOAT, "Transmit waveform samples", false},
-            {"rx_waveform",     Field::NESTED_LIST | Field::FLOAT, "Receive waveform samples",  false},
-            {"beam",            COL | Field::UINT8,  "GEDI beam number",               true},
-            {"orbit",           COL | Field::UINT32, "Orbit number",                   true},
-            {"track",           COL | Field::UINT16, "Track number",                   true},
-            {"srcid",           COL | Field::INT32,  "Source granule ID (see metadata)", false},
-        });
-
-        GeoDataFrame::registerSchema("gedi02ax", "GEDI L2A elevation and height metrics", {
-            {"shot_number",     COL | Field::UINT64, "GEDI shot number",               false},
-            {"time_ns",         COL | Field::TIME8,  "Shot timestamp (Unix ns)",        false},
-            {"latitude",        COL | Field::DOUBLE, "Latitude (degrees)",              false},
-            {"longitude",       COL | Field::DOUBLE, "Longitude (degrees)",             false},
-            {"elevation_lm",    COL | Field::FLOAT,  "Elevation of lowest mode (m)",    false},
-            {"elevation_hr",    COL | Field::FLOAT,  "Elevation of highest return (m)", false},
-            {"solar_elevation", COL | Field::FLOAT,  "Solar elevation angle (deg)",     false},
-            {"sensitivity",     COL | Field::FLOAT,  "Beam sensitivity",               false},
-            {"flags",           COL | Field::UINT8,  "Combined quality flags",          false},
-            {"beam",            COL | Field::UINT8,  "GEDI beam number",               true},
-            {"orbit",           COL | Field::UINT32, "Orbit number",                   true},
-            {"track",           COL | Field::UINT16, "Track number",                   true},
-            {"srcid",           COL | Field::INT32,  "Source granule ID (see metadata)", false},
-        });
-
-        GeoDataFrame::registerSchema("gedil4ax", "GEDI L4A above-ground biomass density", {
-            {"shot_number",     COL | Field::UINT64, "GEDI shot number",               false},
-            {"time_ns",         COL | Field::TIME8,  "Shot timestamp (Unix ns)",        false},
-            {"latitude",        COL | Field::DOUBLE, "Latitude (degrees)",              false},
-            {"longitude",       COL | Field::DOUBLE, "Longitude (degrees)",             false},
-            {"agbd",            COL | Field::FLOAT,  "Above-ground biomass density (Mg/ha)", false},
-            {"elevation",       COL | Field::FLOAT,  "Elevation of lowest mode (m)",    false},
-            {"solar_elevation", COL | Field::FLOAT,  "Solar elevation angle (deg)",     false},
-            {"sensitivity",     COL | Field::FLOAT,  "Beam sensitivity",               false},
-            {"flags",           COL | Field::UINT8,  "Combined quality flags",          false},
-            {"beam",            COL | Field::UINT8,  "GEDI beam number",               true},
-            {"orbit",           COL | Field::UINT32, "Orbit number",                   true},
-            {"track",           COL | Field::UINT16, "Track number",                   true},
-            {"srcid",           COL | Field::INT32,  "Source granule ID (see metadata)", false},
-        });
-    }
-
     /* Extend Lua */
     LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open, LIBID);
 

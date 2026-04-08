@@ -100,15 +100,15 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
-    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;                     // first segment used in extent to calculate surface fit
-    FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<float>*     top_of_surface  = new FieldColumn<float>(Field::Z_COLUMN);      // top of the reflective surface (max percentile of top of canopy or canopy or ground, in that order of preference)
-    FieldColumn<float>*     median_ground   = new FieldColumn<float>;                       // average ground elevation
-    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
+    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN, 0, "Segment timestamp (Unix ns)");
+    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN, 0, "Latitude (degrees)");
+    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN, 0, "Longitude (degrees)");
+    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>("Starting segment ID");
+    FieldColumn<double>*    x_atc           = new FieldColumn<double>("Along-track distance (m)");
+    FieldColumn<float>*     y_atc           = new FieldColumn<float>("Across-track distance (m)");
+    FieldColumn<float>*     top_of_surface  = new FieldColumn<float>(Field::Z_COLUMN, 0, "Top of reflective surface (m)");
+    FieldColumn<float>*     median_ground   = new FieldColumn<float>("Median ground elevation (m)");
+    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>("Processing flags");
 
     // create new ancillary dataframe columns
     Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
@@ -207,6 +207,9 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
     delete ancillary_columns;
+
+    // register schema from live columns (once, skips duplicates)
+    dataframe->registerSchemaFromColumns("atl03x-blanket", "Surface blanket elevation segments (replaces atl03x base columns)");
 
     // finalize dataframe
     dataframe->populateGeoColumns();

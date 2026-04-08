@@ -126,7 +126,9 @@ class GeoDataFrame: public LuaObject, public Field
 
         static bool     registerSchema  (const char* api_name, const char* description,
                                          const std::initializer_list<SchemaField>& fields);
-        static int      luaSchema       (lua_State* L);
+        bool            registerSchemaFromColumns (const char* api_name, const char* api_description);
+        static int      luaSchema               (lua_State* L);
+        static int      luaRegisterTestSchema   (lua_State* L);
         static const char* encodingToStr(uint32_t encoding);
 
         typedef enum {
@@ -286,9 +288,21 @@ class GeoDataFrame: public LuaObject, public Field
                         GeoDataFrame        (lua_State* L,
                                             const char* meta_name,
                                             const struct luaL_Reg meta_table[],
+                                            const char* api_name,
+                                            const char* api_description,
+                                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
+                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
+                        GeoDataFrame        (lua_State* L,
+                                            const char* meta_name,
+                                            const struct luaL_Reg meta_table[],
                                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
                                             const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
+
+        void            _initDataFrame      (lua_State* L);
+        void            _autoRegisterSchema (const char* api_name, const char* api_description,
+                                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
+                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list);
 
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;

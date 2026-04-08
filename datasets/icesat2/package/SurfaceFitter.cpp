@@ -106,20 +106,20 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
-    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;                     // first segment used in extent to calculate surface fit
-    FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
-    FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN);      // meters from ellipsoid
-    FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;                       // along track slope
-    FieldColumn<float>*     window_height   = new FieldColumn<float>;                       // height in meters of final window used in fit
-    FieldColumn<int32_t>*   n_fit_photons   = new FieldColumn<int32_t>;                     // number of photons used in final elevation calculation
-    FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
-    FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
+    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN, 0, "Segment timestamp (Unix ns)");
+    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN, 0, "Latitude (degrees)");
+    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN, 0, "Longitude (degrees)");
+    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>("Starting segment ID");
+    FieldColumn<double>*    x_atc           = new FieldColumn<double>("Along-track distance (m)");
+    FieldColumn<float>*     y_atc           = new FieldColumn<float>("Across-track distance (m)");
+    FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>("Photon index of start of extent");
+    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>("Processing flags");
+    FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN, 0, "Mean surface height WGS84 (m)");
+    FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>("Along-track slope");
+    FieldColumn<float>*     window_height   = new FieldColumn<float>("Final window height used in fit (m)");
+    FieldColumn<int32_t>*   n_fit_photons   = new FieldColumn<int32_t>("Photons used in final fit");
+    FieldColumn<float>*     rms_misfit      = new FieldColumn<float>("RMS of residuals (m)");
+    FieldColumn<float>*     h_sigma         = new FieldColumn<float>("Height uncertainty (m)");
 
     // create new ancillary dataframe columns
     Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
@@ -238,6 +238,9 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
     delete ancillary_columns;
+
+    // register schema from live columns (once, skips duplicates)
+    dataframe->registerSchemaFromColumns("atl03x-surface", "Surface-fitted elevation segments (replaces atl03x base columns)");
 
     // finalize dataframe
     dataframe->populateGeoColumns();

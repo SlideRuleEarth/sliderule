@@ -81,6 +81,7 @@ int Gedi02aDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Gedi02aDataFrame::Gedi02aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    "gedi02ax", "GEDI L2A elevation and height metrics",
     {
         {"shot_number",         &shot_number},
         {"time_ns",             &time_ns},

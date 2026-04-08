@@ -87,15 +87,15 @@ class Gedi02aDataFrame: public GediDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<uint64_t>   shot_number;
-        FieldColumn<time8_t>    time_ns   {Field::TIME_COLUMN};
-        FieldColumn<double>     latitude  {Field::Y_COLUMN};
-        FieldColumn<double>     longitude {Field::X_COLUMN};
-        FieldColumn<float>      elevation_lm {Field::Z_COLUMN};
-        FieldColumn<float>      elevation_hr;
-        FieldColumn<float>      solar_elevation;
-        FieldColumn<float>      sensitivity;
-        FieldColumn<uint8_t>    flags;
+        FieldColumn<uint64_t>   shot_number     {"GEDI shot number"};
+        FieldColumn<time8_t>    time_ns         {Field::TIME_COLUMN, 0, "Shot timestamp (Unix ns)"};
+        FieldColumn<double>     latitude        {Field::Y_COLUMN,    0, "Latitude (degrees)"};
+        FieldColumn<double>     longitude       {Field::X_COLUMN,    0, "Longitude (degrees)"};
+        FieldColumn<float>      elevation_lm    {Field::Z_COLUMN,    0, "Elevation of lowest mode (m)"};
+        FieldColumn<float>      elevation_hr    {"Elevation of highest return (m)"};
+        FieldColumn<float>      solar_elevation {"Solar elevation angle (deg)"};
+        FieldColumn<float>      sensitivity     {"Beam sensitivity"};
+        FieldColumn<uint8_t>    flags           {"Combined quality flags"};
 
         /*--------------------------------------------------------------------
          * Methods

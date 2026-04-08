@@ -53,7 +53,7 @@ class FieldElement: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldElement    (const T& default_value, uint32_t encoding_mask=0);
+        explicit        FieldElement    (const T& default_value, uint32_t encoding_mask=0, const char* _description=NULL);
                         FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
         virtual         ~FieldElement   (void) override = default;
@@ -131,8 +131,8 @@ inline long FieldElement<string>::serialize (uint8_t* buffer, size_t size) const
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask):
-    Field(ELEMENT, getImpliedEncoding<T>() | encoding_mask),
+FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask, const char* _description):
+    Field(ELEMENT, getImpliedEncoding<T>() | encoding_mask, _description),
     value(default_value)
 {
 }

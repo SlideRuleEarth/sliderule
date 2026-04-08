@@ -167,6 +167,123 @@ bool GeoDataFrame::registerSchema (const char* api_name, const char* description
 }
 
 /*----------------------------------------------------------------------------
+ * registerSchemaFromColumns - build schema from live dataframe state
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::registerSchemaFromColumns (const char* api_name, const char* api_description)
+{
+    // skip if already registered
+    try { schemaRegistry[api_name]; return true; } catch(...) {}
+
+    Schema* schema = new Schema();
+    schema->description = api_description;
+
+    // add data columns
+    char** col_keys = NULL;
+    const int num_cols = columnFields.fields.getKeys(&col_keys);
+    for(int i = 0; i < num_cols; i++)
+    {
+        column_entry_t entry;
+        if(columnFields.fields.find(col_keys[i], &entry))
+        {
+            schema->fields.push_back({
+                col_keys[i],
+                entry.field->encoding,
+                entry.field->description ? entry.field->description : "",
+                false
+            });
+        }
+    }
+    delete [] col_keys;
+
+    // add metadata elements
+    char** meta_keys = NULL;
+    const int num_meta = metaFields.fields.getKeys(&meta_keys);
+    for(int i = 0; i < num_meta; i++)
+    {
+        meta_entry_t entry;
+        if(metaFields.fields.find(meta_keys[i], &entry))
+        {
+            // skip granule string (becomes srcid in output)
+            if(entry.field->encoding & META_SOURCE_ID) continue;
+            schema->fields.push_back({
+                meta_keys[i],
+                entry.field->encoding,
+                entry.field->description ? entry.field->description : "",
+                true
+            });
+        }
+    }
+    delete [] meta_keys;
+
+    // add srcid (always present, generated from granule)
+    schema->fields.push_back({"srcid", Field::NESTED_COLUMN | Field::INT32, "Source granule ID (see metadata)", false});
+
+    if(!schemaRegistry.add(api_name, schema, true))
+    {
+        delete schema;
+        return false;
+    }
+
+    mlog(DEBUG, "Registered schema for %s (%lu fields) from live columns", api_name, schema->fields.size());
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRegisterTestSchema - core.register_test_schema(name, description, columns)
+ *
+ *  columns is a Lua array of {name=, encoding=, description=, element=}
+ *  Used only in selftests to validate the schema registry mechanism.
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaRegisterTestSchema (lua_State* L)
+{
+    const char* api_name = LuaObject::getLuaString(L, 1);
+    const char* api_desc = LuaObject::getLuaString(L, 2);
+
+    if(!lua_istable(L, 3))
+    {
+        return luaL_error(L, "register_test_schema: third argument must be a table");
+    }
+
+    Schema* schema = new Schema();
+    schema->description = api_desc;
+
+    const int num_fields = lua_rawlen(L, 3);
+    for(int i = 1; i <= num_fields; i++)
+    {
+        lua_rawgeti(L, 3, i);
+
+        lua_getfield(L, -1, "name");
+        const char* name = lua_tostring(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "encoding");
+        const uint32_t encoding = static_cast<uint32_t>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "description");
+        const char* desc = lua_tostring(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "element");
+        const bool is_element = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        schema->fields.push_back({name, encoding, desc ? desc : "", is_element});
+
+        lua_pop(L, 1); // pop the field table
+    }
+
+    if(!schemaRegistry.add(api_name, schema, true))
+    {
+        delete schema;
+        return luaL_error(L, "register_test_schema: failed to register %s (duplicate?)", api_name);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * luaSchema - core.schema([api_name]) → Lua table
  *
  *  No argument: returns {api_name: description, ...}
@@ -1413,6 +1530,118 @@ void GeoDataFrame::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_colum
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------
+ * _initDataFrame - shared initialization for both constructors
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::_initDataFrame(lua_State* L)
+{
+    // set lua functions
+    LuaEngine::setAttrFunc(L, "inerror",    luaInError);
+    LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
+    LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
+    LuaEngine::setAttrFunc(L, "export",     luaExport);
+    LuaEngine::setAttrFunc(L, "send",       luaSend);
+    LuaEngine::setAttrFunc(L, "receive",    luaReceive);
+    LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
+    LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
+    LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
+    LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
+    LuaEngine::setAttrFunc(L, "geo",        luaSetGeoColumns);
+    LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
+    LuaEngine::setAttrFunc(L, "run",        luaRun);
+    LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
+
+    // start runner
+    runPid = new Thread(runThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * _autoRegisterSchema - build schema from live column and meta fields
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::_autoRegisterSchema(const char* api_name, const char* api_description,
+                                       const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
+                                       const std::initializer_list<FieldDictionary::init_entry_t>& meta_list)
+{
+    // only register once per api name
+    try { schemaRegistry[api_name]; return; } catch(...) {}
+
+    Schema* schema = new Schema();
+    schema->description = api_description;
+
+    // add columns
+    for(const auto& entry : column_list)
+    {
+        const FieldUntypedColumn* col = entry.field;
+        schema->fields.push_back({
+            entry.name,
+            col->encoding,
+            col->description ? col->description : "",
+            false
+        });
+    }
+
+    // add metadata elements
+    for(const auto& entry : meta_list)
+    {
+        const Field* field = entry.field;
+        // skip the granule string (becomes srcid in output)
+        if(field->encoding & META_SOURCE_ID) continue;
+        schema->fields.push_back({
+            entry.name,
+            field->encoding,
+            field->description ? field->description : "",
+            true
+        });
+    }
+
+    // add srcid (always present, generated from granule)
+    schema->fields.push_back({"srcid", Field::NESTED_COLUMN | Field::INT32, "Source granule ID (see metadata)", false});
+
+    if(!schemaRegistry.add(api_name, schema, true))
+    {
+        delete schema;
+        return;
+    }
+
+    mlog(DEBUG, "Registered schema for %s (%lu fields) from constructor", api_name, schema->fields.size());
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - with api_name for auto-registration
+ *----------------------------------------------------------------------------*/
+GeoDataFrame::GeoDataFrame( lua_State* L,
+                            const char* meta_name,
+                            const struct luaL_Reg meta_table[],
+                            const char* api_name,
+                            const char* api_description,
+                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
+                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
+                            const char* _crs):
+    LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
+    Field(DATAFRAME, 0),
+    inError(false),
+    numRows(0),
+    columnFields(column_list),
+    metaFields(meta_list),
+    timeColumn(NULL),
+    xColumn(NULL),
+    yColumn(NULL),
+    zColumn(NULL),
+    crs(_crs == NULL ? "" : _crs),
+    active(true),
+    receivePid(NULL),
+    runPid(NULL),
+    pubRunQ(NULL),
+    subRunQ(pubRunQ),
+    runComplete(false)
+{
+    _autoRegisterSchema(api_name, api_description, column_list, meta_list);
+    _initDataFrame(L);
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - without api_name (no auto-registration)
+ *----------------------------------------------------------------------------*/
 GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
@@ -1437,24 +1666,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     subRunQ(pubRunQ),
     runComplete(false)
 {
-    // set lua functions
-    LuaEngine::setAttrFunc(L, "inerror",    luaInError);
-    LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
-    LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
-    LuaEngine::setAttrFunc(L, "export",     luaExport);
-    LuaEngine::setAttrFunc(L, "send",       luaSend);
-    LuaEngine::setAttrFunc(L, "receive",    luaReceive);
-    LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
-    LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
-    LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
-    LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
-    LuaEngine::setAttrFunc(L, "geo",        luaSetGeoColumns);
-    LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
-    LuaEngine::setAttrFunc(L, "run",        luaRun);
-    LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
-
-    // start runner
-    runPid = new Thread(runThread, this);
+    _initDataFrame(L);
 }
 
 /*----------------------------------------------------------------------------

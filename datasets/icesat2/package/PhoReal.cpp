@@ -106,27 +106,27 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
-    FieldColumn<time8_t>*   time_ns                 = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*    latitude                = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*    longitude               = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<int32_t>*   segment_id_beg          = new FieldColumn<int32_t>;                     // first segment used in extent to calculate vegetation metrics
-    FieldColumn<double>*    x_atc                   = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*     y_atc                   = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<uint32_t>*  photon_start            = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<uint32_t>*  photon_count            = new FieldColumn<uint32_t>;                    // number of photons used in final elevation calculation
-    FieldColumn<uint16_t>*  pflags                  = new FieldColumn<uint16_t>;                    // processing flags
-    FieldColumn<uint32_t>*  ground_photon_count     = new FieldColumn<uint32_t>;                    // number of photons labeled as ground in extent
-    FieldColumn<uint32_t>*  vegetation_photon_count = new FieldColumn<uint32_t>;                    // number of photons labeled as canopy or top of canopy in extent
-    FieldColumn<uint8_t>*   landcover               = new FieldColumn<uint8_t>;                     // atl08 land_segments/segments_landcover
-    FieldColumn<uint8_t>*   snowcover               = new FieldColumn<uint8_t>;                     // atl08 land_segments/segments_snowcover
-    FieldColumn<float>*     solar_elevation         = new FieldColumn<float>;                       // atl03 solar elevation
-    FieldColumn<float>*     h_te_median             = new FieldColumn<float>;                       // median terrain height for ground photons
-    FieldColumn<float>*     h_max_canopy            = new FieldColumn<float>;                       // maximum relief height for canopy photons
-    FieldColumn<float>*     h_min_canopy            = new FieldColumn<float>;                       // minimum relief height for canopy photons
-    FieldColumn<float>*     h_mean_canopy           = new FieldColumn<float>;                       // average relief height for canopy photons
-    FieldColumn<float>*     h_canopy                = new FieldColumn<float>(Field::Z_COLUMN);      // 98th percentile relief height for canopy photons
-    FieldColumn<float>*     canopy_openness         = new FieldColumn<float>;                       // standard deviation of relief height for canopy photons
-    FieldColumn<FieldArray<float,NUM_PERCENTILES>>* canopy_h_metrics = new FieldColumn<FieldArray<float,NUM_PERCENTILES>>;  // relief height at given percentile for canopy photons
+    FieldColumn<time8_t>*   time_ns                 = new FieldColumn<time8_t>(Field::TIME_COLUMN, 0, "Extent timestamp (Unix ns)");
+    FieldColumn<double>*    latitude                = new FieldColumn<double>(Field::Y_COLUMN, 0, "Latitude (degrees)");
+    FieldColumn<double>*    longitude               = new FieldColumn<double>(Field::X_COLUMN, 0, "Longitude (degrees)");
+    FieldColumn<int32_t>*   segment_id_beg          = new FieldColumn<int32_t>("Starting segment ID");
+    FieldColumn<double>*    x_atc                   = new FieldColumn<double>("Along-track distance (m)");
+    FieldColumn<float>*     y_atc                   = new FieldColumn<float>("Across-track distance (m)");
+    FieldColumn<uint32_t>*  photon_start            = new FieldColumn<uint32_t>("Index of first photon");
+    FieldColumn<uint32_t>*  photon_count            = new FieldColumn<uint32_t>("Number of photons in extent");
+    FieldColumn<uint16_t>*  pflags                  = new FieldColumn<uint16_t>("Processing flags");
+    FieldColumn<uint32_t>*  ground_photon_count     = new FieldColumn<uint32_t>("Ground photon count");
+    FieldColumn<uint32_t>*  vegetation_photon_count = new FieldColumn<uint32_t>("Vegetation photon count");
+    FieldColumn<uint8_t>*   landcover               = new FieldColumn<uint8_t>("Land cover classification");
+    FieldColumn<uint8_t>*   snowcover               = new FieldColumn<uint8_t>("Snow cover flag");
+    FieldColumn<float>*     solar_elevation         = new FieldColumn<float>("Solar elevation angle (deg)");
+    FieldColumn<float>*     h_te_median             = new FieldColumn<float>("Median terrain elevation (m)");
+    FieldColumn<float>*     h_max_canopy            = new FieldColumn<float>("Max canopy height (m)");
+    FieldColumn<float>*     h_min_canopy            = new FieldColumn<float>("Min canopy height (m)");
+    FieldColumn<float>*     h_mean_canopy           = new FieldColumn<float>("Mean canopy height (m)");
+    FieldColumn<float>*     h_canopy                = new FieldColumn<float>(Field::Z_COLUMN, 0, "Relative canopy height (m)");
+    FieldColumn<float>*     canopy_openness         = new FieldColumn<float>("Canopy openness fraction");
+    FieldColumn<FieldArray<float,NUM_PERCENTILES>>* canopy_h_metrics = new FieldColumn<FieldArray<float,NUM_PERCENTILES>>("20 canopy height percentiles (5% intervals)");
 
     // create new ancillary dataframe columns
     Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
@@ -255,6 +255,9 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
     delete ancillary_columns;
+
+    // register schema from live columns (once, skips duplicates)
+    dataframe->registerSchemaFromColumns("atl03x-phoreal", "PhoREAL vegetation extent metrics (replaces atl03x base columns)");
 
     // finalize dataframe
     dataframe->populateGeoColumns();

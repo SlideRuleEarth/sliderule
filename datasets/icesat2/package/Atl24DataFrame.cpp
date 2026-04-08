@@ -89,6 +89,7 @@ int Atl24DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    "atl24x", "Coastal bathymetry (ICESat-2 ATL24)",
     {
         {"class_ph",            &class_ph},
         {"confidence",          &confidence},

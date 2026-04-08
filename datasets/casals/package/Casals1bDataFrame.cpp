@@ -88,6 +88,7 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    "casals1bx", "CASALS L1B geolocated returns",
     {
         {"time_ns",         &time_ns},
         {"latitude",        &latitude},

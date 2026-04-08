@@ -101,32 +101,32 @@ class Atl06DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<time8_t>     time_ns   {Field::TIME_COLUMN};
-        FieldColumn<double>      latitude  {Field::Y_COLUMN};
-        FieldColumn<double>      longitude {Field::X_COLUMN};
-        FieldColumn<double>      x_atc;
-        FieldColumn<float>       y_atc;
-        FieldColumn<float>       h_li      {Field::Z_COLUMN};
-        FieldColumn<float>       h_li_sigma;
-        FieldColumn<float>       sigma_geo_h;
-        FieldColumn<int8_t>      atl06_quality_summary;
-        FieldColumn<uint32_t>    segment_id;
-        FieldColumn<float>       seg_azimuth;
-        FieldColumn<float>       dh_fit_dx;
-        FieldColumn<float>       h_robust_sprd;
-        FieldColumn<float>       w_surface_window_final;
-        FieldColumn<int8_t>      bsnow_conf;
-        FieldColumn<float>       bsnow_h;
-        FieldColumn<float>       r_eff;
-        FieldColumn<float>       tide_ocean;
-        FieldColumn<int32_t>     n_fit_photons;
+        FieldColumn<time8_t>     time_ns                {Field::TIME_COLUMN, 0, "Segment timestamp (Unix ns)"};
+        FieldColumn<double>      latitude               {Field::Y_COLUMN,    0, "Latitude (degrees)"};
+        FieldColumn<double>      longitude              {Field::X_COLUMN,    0, "Longitude (degrees)"};
+        FieldColumn<double>      x_atc                  {"Along-track distance (m)"};
+        FieldColumn<float>       y_atc                  {"Across-track distance (m)"};
+        FieldColumn<float>       h_li                   {Field::Z_COLUMN,    0, "Fitted surface height WGS84 (m)"};
+        FieldColumn<float>       h_li_sigma             {"Height uncertainty (m)"};
+        FieldColumn<float>       sigma_geo_h            {"Geolocation height uncertainty (m)"};
+        FieldColumn<int8_t>      atl06_quality_summary  {"Quality summary flag"};
+        FieldColumn<uint32_t>    segment_id             {"Segment ID"};
+        FieldColumn<float>       seg_azimuth            {"Segment azimuth (deg)"};
+        FieldColumn<float>       dh_fit_dx              {"Along-track slope"};
+        FieldColumn<float>       h_robust_sprd          {"Robust spread of residuals (m)"};
+        FieldColumn<float>       w_surface_window_final {"Final surface window width (m)"};
+        FieldColumn<int8_t>      bsnow_conf             {"Blowing snow confidence"};
+        FieldColumn<float>       bsnow_h                {"Blowing snow height (m)"};
+        FieldColumn<float>       r_eff                  {"Effective reflectance"};
+        FieldColumn<float>       tide_ocean             {"Ocean tide correction (m)"};
+        FieldColumn<int32_t>     n_fit_photons          {"Photons used in fit"};
 
         /* DataFrame MetaData */
-        FieldElement<uint8_t>    spot;
-        FieldElement<uint8_t>    cycle;
-        FieldElement<uint8_t>    region;
-        FieldElement<uint16_t>   rgt;
-        FieldElement<uint8_t>    gt;
+        FieldElement<uint8_t>    spot    {0, Field::META_COLUMN, "Spot number 1-6"};
+        FieldElement<uint8_t>    cycle   {0, Field::META_COLUMN, "Orbital cycle"};
+        FieldElement<uint8_t>    region  {0, Field::META_COLUMN, "ICESat-2 region number"};
+        FieldElement<uint16_t>   rgt     {0, Field::META_COLUMN, "Reference Ground Track"};
+        FieldElement<uint8_t>    gt      {0, Field::META_COLUMN, "Ground track (10,20,30,40,50,60)"};
         FieldElement<string>     granule;
 
         std::atomic<bool>   active;

@@ -68,31 +68,31 @@ class Atl24DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<int8_t>         class_ph;
-        FieldColumn<double>         confidence;
-        FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
-        FieldColumn<float>          ellipse_h;
-        FieldColumn<uint8_t>        invalid_kd;
-        FieldColumn<uint8_t>        invalid_wind_speed;
-        FieldColumn<double>         lat_ph {Field::Y_COLUMN};
-        FieldColumn<double>         lon_ph {Field::X_COLUMN};
-        FieldColumn<uint8_t>        low_confidence_flag;
-        FieldColumn<uint8_t>        night_flag;
-        FieldColumn<float>          ortho_h {Field::Z_COLUMN};
-        FieldColumn<uint8_t>        sensor_depth_exceeded;
-        FieldColumn<float>          sigma_thu;
-        FieldColumn<float>          sigma_tvu;
-        FieldColumn<float>          surface_h;
-        FieldColumn<double>         x_atc;
-        FieldColumn<float>          y_atc;
+        FieldColumn<int8_t>         class_ph              {"40=bathymetry, 41=sea_surface, 0=unclassified"};
+        FieldColumn<double>         confidence            {"Classification confidence"};
+        FieldColumn<time8_t>        time_ns               {Field::TIME_COLUMN, 0, "Photon timestamp (Unix ns)"};
+        FieldColumn<float>          ellipse_h             {"Ellipsoidal height (m)"};
+        FieldColumn<uint8_t>        invalid_kd            {"Invalid Kd flag"};
+        FieldColumn<uint8_t>        invalid_wind_speed    {"Invalid wind speed flag"};
+        FieldColumn<double>         lat_ph                {Field::Y_COLUMN, 0, "Latitude (degrees)"};
+        FieldColumn<double>         lon_ph                {Field::X_COLUMN, 0, "Longitude (degrees)"};
+        FieldColumn<uint8_t>        low_confidence_flag   {"Low confidence flag"};
+        FieldColumn<uint8_t>        night_flag            {"Night flag"};
+        FieldColumn<float>          ortho_h               {Field::Z_COLUMN, 0, "Orthometric height (m)"};
+        FieldColumn<uint8_t>        sensor_depth_exceeded {"Sensor depth exceeded flag"};
+        FieldColumn<float>          sigma_thu             {"Total horizontal uncertainty (m)"};
+        FieldColumn<float>          sigma_tvu             {"Total vertical uncertainty (m)"};
+        FieldColumn<float>          surface_h             {"Sea surface height (m)"};
+        FieldColumn<double>         x_atc                 {"Along-track distance (m)"};
+        FieldColumn<float>          y_atc                 {"Across-track distance (m)"};
 
         /* DataFrame MetaData */
-        FieldElement<uint8_t>       spot {0, Field::META_COLUMN};   // 1, 2, 3, 4, 5, 6
-        FieldElement<uint8_t>       cycle {0, Field::META_COLUMN};
-        FieldElement<uint8_t>       region {0, Field::META_COLUMN};
-        FieldElement<uint16_t>      rgt {0, Field::META_COLUMN};
-        FieldElement<uint8_t>       gt {0, Field::META_COLUMN};     // Icesat2Fields::gt_t
-        FieldElement<string>        granule;                        // name of the ATL24 granule
+        FieldElement<uint8_t>       spot    {0, Field::META_COLUMN, "Spot number 1-6"};
+        FieldElement<uint8_t>       cycle   {0, Field::META_COLUMN, "Orbital cycle"};
+        FieldElement<uint8_t>       region  {0, Field::META_COLUMN, "ICESat-2 region number"};
+        FieldElement<uint16_t>      rgt     {0, Field::META_COLUMN, "Reference Ground Track"};
+        FieldElement<uint8_t>       gt      {0, Field::META_COLUMN, "Ground track (10,20,30,40,50,60)"};
+        FieldElement<string>        granule;
 
         /*--------------------------------------------------------------------
          * Methods

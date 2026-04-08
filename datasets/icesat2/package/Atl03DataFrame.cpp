@@ -95,6 +95,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    "atl03x", "Photon-level data (ICESat-2 ATL03)",
     {
         {"time_ns",             &time_ns},
         {"latitude",            &latitude},
@@ -119,11 +120,11 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"granule",             &granule}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
-    spot(0, META_COLUMN),
-    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
-    region(_parms->granuleFields.region.value, META_COLUMN),
-    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
-    gt(0, META_COLUMN),
+    spot(0, META_COLUMN, "Spot number 1-6"),
+    cycle(_parms->granuleFields.cycle.value, META_COLUMN, "Orbital cycle"),
+    region(_parms->granuleFields.region.value, META_COLUMN, "ICESat-2 region number"),
+    rgt(_parms->granuleFields.rgt.value, META_COLUMN, "Reference Ground Track"),
+    gt(0, META_COLUMN, "Ground track (10,20,30,40,50,60)"),
     granule(_hdf03->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),

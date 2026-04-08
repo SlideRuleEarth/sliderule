@@ -89,6 +89,7 @@ int Atl13DataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf13, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
+    "atl13x", "Inland water surface height (ICESat-2 ATL13)",
     {
         {"time_ns",                 &time_ns},
         {"latitude",                &latitude},
@@ -107,10 +108,10 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"granule",                 &granule}
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
-    spot(0, META_COLUMN),
-    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
-    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
-    gt(0, META_COLUMN),
+    spot(0, META_COLUMN, "Spot number 1-6"),
+    cycle(_parms->granuleFields.cycle.value, META_COLUMN, "Orbital cycle"),
+    rgt(_parms->granuleFields.rgt.value, META_COLUMN, "Reference Ground Track"),
+    gt(0, META_COLUMN, "Ground track (10,20,30,40,50,60)"),
     granule(_hdf13->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),

@@ -95,18 +95,18 @@ class Gedi01bDataFrame: public GediDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<uint64_t>           shot_number;
-        FieldColumn<time8_t>            time_ns   {Field::TIME_COLUMN};
-        FieldColumn<double>             latitude  {Field::Y_COLUMN};
-        FieldColumn<double>             longitude {Field::X_COLUMN};
-        FieldColumn<float>              elevation_start {Field::Z_COLUMN};
-        FieldColumn<double>             elevation_stop;
-        FieldColumn<double>             solar_elevation;
-        FieldColumn<uint16_t>           tx_size;
-        FieldColumn<uint16_t>           rx_size;
-        FieldColumn<uint8_t>            flags;
-        FieldColumn<FieldList<float>>   tx_waveform;
-        FieldColumn<FieldList<float>>   rx_waveform;
+        FieldColumn<uint64_t>           shot_number     {"GEDI shot number"};
+        FieldColumn<time8_t>            time_ns         {Field::TIME_COLUMN, 0, "Shot timestamp (Unix ns)"};
+        FieldColumn<double>             latitude        {Field::Y_COLUMN,    0, "Latitude (degrees)"};
+        FieldColumn<double>             longitude       {Field::X_COLUMN,    0, "Longitude (degrees)"};
+        FieldColumn<float>              elevation_start {Field::Z_COLUMN,    0, "Waveform start elevation (m)"};
+        FieldColumn<double>             elevation_stop  {"Waveform stop elevation (m)"};
+        FieldColumn<double>             solar_elevation {"Solar elevation angle (deg)"};
+        FieldColumn<uint16_t>           tx_size         {"Transmit waveform sample count"};
+        FieldColumn<uint16_t>           rx_size         {"Receive waveform sample count"};
+        FieldColumn<uint8_t>            flags           {"Combined quality flags"};
+        FieldColumn<FieldList<float>>   tx_waveform     {"Transmit waveform samples"};
+        FieldColumn<FieldList<float>>   rx_waveform     {"Receive waveform samples"};
 
         /*--------------------------------------------------------------------
          * Methods

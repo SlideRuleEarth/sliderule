@@ -47,9 +47,10 @@
  * Constructor
  *----------------------------------------------------------------------------*/
  GediDataFrame::GediDataFrame(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[],
+                             const char* api_name, const char* api_description,
                              const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
                              GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name):
-    GeoDataFrame(L, meta_name, meta_table, column_list,
+    GeoDataFrame(L, meta_name, meta_table, api_name, api_description, column_list,
     {
         {"beam",    &beam},
         {"orbit",   &orbit},
@@ -57,9 +58,9 @@
         {"granule", &granule}
     },
     getCRS()),
-    beam(0, META_COLUMN),
-    orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
-    track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
+    beam(0, META_COLUMN, "GEDI beam number"),
+    orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN, "Orbit number"),
+    track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN, "Track number"),
     granule(_hdf->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),
