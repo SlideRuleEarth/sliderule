@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "GeoDataFrame.h"
 #include "Casals1bDataFrame.h"
 #include "CasalsFields.h"
 
@@ -71,6 +72,18 @@ int casals_open (lua_State *L)
 extern "C" {
 void initcasals (void)
 {
+    /* Register Schemas */
+    {
+        const uint32_t COL = Field::NESTED_COLUMN;
+        GeoDataFrame::registerSchema("casals1bx", "CASALS L1B geolocated returns", {
+            {"time_ns",         COL | Field::TIME8,  "Return timestamp (Unix ns)",     false},
+            {"latitude",        COL | Field::DOUBLE, "Latitude (degrees)",              false},
+            {"longitude",       COL | Field::DOUBLE, "Longitude (degrees)",             false},
+            {"refh",            COL | Field::FLOAT,  "Reference height (m)",            false},
+            {"srcid",           COL | Field::INT32,  "Source granule ID (see metadata)", false},
+        });
+    }
+
     /* Extend Lua */
     LuaEngine::extend(LUA_CASALS_LIBNAME, casals_open, LIBID);
 

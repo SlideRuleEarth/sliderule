@@ -93,6 +93,150 @@ const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
 
 const char* GeoDataFrame::CRS_KEY = "crs";
 
+Dictionary<GeoDataFrame::Schema*> GeoDataFrame::schemaRegistry;
+
+/******************************************************************************
+ * SCHEMA REGISTRY
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * encodingToStr
+ *----------------------------------------------------------------------------*/
+const char* GeoDataFrame::encodingToStr (uint32_t encoding)
+{
+    const uint32_t base_type = encoding & Field::TYPE_MASK;
+    const uint32_t nested    = encoding & Field::NESTED_MASK;
+
+    // determine base type string
+    const char* base_str;
+    switch(base_type)
+    {
+        case Field::BOOL:   base_str = "bool";          break;
+        case Field::INT8:   base_str = "int8";          break;
+        case Field::INT16:  base_str = "int16";         break;
+        case Field::INT32:  base_str = "int32";         break;
+        case Field::INT64:  base_str = "int64";         break;
+        case Field::UINT8:  base_str = "uint8";         break;
+        case Field::UINT16: base_str = "uint16";        break;
+        case Field::UINT32: base_str = "uint32";        break;
+        case Field::UINT64: base_str = "uint64";        break;
+        case Field::FLOAT:  base_str = "float";         break;
+        case Field::DOUBLE: base_str = "double";        break;
+        case Field::TIME8:  base_str = "timestamp[ns]"; break;
+        case Field::STRING: base_str = "string";        break;
+        default:            base_str = "unknown";       break;
+    }
+
+    // handle nested types
+    if(nested & Field::NESTED_ARRAY)
+    {
+        // for static arrays like FieldArray<float,20>
+        static thread_local char buf[64];
+        snprintf(buf, sizeof(buf), "array<%s>", base_str);
+        return buf;
+    }
+    if(nested & Field::NESTED_LIST)
+    {
+        static thread_local char buf[64];
+        snprintf(buf, sizeof(buf), "list<%s>", base_str);
+        return buf;
+    }
+
+    return base_str;
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::registerSchema (const char* api_name, const char* description,
+                                   const std::initializer_list<SchemaField>& fields)
+{
+    Schema* schema = new Schema();
+    schema->description = description;
+    schema->fields = fields;
+
+    if(!schemaRegistry.add(api_name, schema, true))
+    {
+        mlog(WARNING, "Failed to register schema for %s (duplicate?)", api_name);
+        delete schema;
+        return false;
+    }
+
+    mlog(DEBUG, "Registered schema for %s (%lu fields)", api_name, fields.size());
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * luaSchema - core.schema([api_name]) → Lua table
+ *
+ *  No argument: returns {api_name: description, ...}
+ *  With argument: returns {description=..., columns=[{name,type,description,role},...]}
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaSchema (lua_State* L)
+{
+    // check for optional api name argument
+    const char* api_name = NULL;
+    if(lua_gettop(L) >= 1 && lua_isstring(L, 1))
+    {
+        api_name = lua_tostring(L, 1);
+    }
+
+    if(!api_name)
+    {
+        // return listing of all registered schemas
+        lua_newtable(L);
+        Dictionary<Schema*>::Iterator iter(schemaRegistry);
+        for(int i = 0; i < iter.length; i++)
+        {
+            lua_pushstring(L, iter[i].value->description);
+            lua_setfield(L, -2, iter[i].key);
+        }
+        return 1;
+    }
+
+    // look up specific schema
+    try
+    {
+        Schema* schema = schemaRegistry[api_name];
+
+        lua_newtable(L);
+
+        // description
+        lua_pushstring(L, schema->description);
+        lua_setfield(L, -2, "description");
+
+        // columns array
+        lua_newtable(L);
+        for(size_t i = 0; i < schema->fields.size(); i++)
+        {
+            const SchemaField& f = schema->fields[i];
+            lua_newtable(L);
+
+            lua_pushstring(L, f.name);
+            lua_setfield(L, -2, "name");
+
+            lua_pushstring(L, encodingToStr(f.encoding));
+            lua_setfield(L, -2, "type");
+
+            lua_pushstring(L, f.description);
+            lua_setfield(L, -2, "description");
+
+            lua_pushstring(L, f.is_element ? "element" : "column");
+            lua_setfield(L, -2, "role");
+
+            lua_rawseti(L, -2, static_cast<int>(i + 1));
+        }
+        lua_setfield(L, -2, "columns");
+
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        (void)e;
+        return luaL_error(L, "unknown api: %s", api_name);
+    }
+}
+
 /******************************************************************************
  * STATIC FUNCTIONS
  ******************************************************************************/

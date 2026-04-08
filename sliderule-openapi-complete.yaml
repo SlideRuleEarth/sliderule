@@ -1,0 +1,1691 @@
+openapi: 3.1.0
+info:
+  title: SlideRule Earth API
+  version: "5.3"
+  description: |
+    On-demand processing of NASA ICESat-2, GEDI, SWOT, and CASALS satellite data.
+
+    ## For AI Agents
+
+    **Use only `/arrow/*` endpoints.** These return standard file formats (Parquet,
+    CSV, GeoParquet, Feather) that can be saved and analyzed with pandas/pyarrow.
+    Do NOT use `/source/*` streaming endpoints — they return binary serialized
+    records that require the SlideRule Python client to decode.
+
+    **Workflow:**
+    1. POST to `/arrow/{api}` with parameters and `"output": {"format": "parquet"}`
+    2. Save the binary response body to a file (e.g. `result.parquet`)
+    3. Query locally with DuckDB, pyarrow, or pandas:
+       - `import duckdb; duckdb.sql("SELECT * FROM 'result.parquet' LIMIT 10")`
+       - `import pandas as pd; df = pd.read_parquet("result.parquet")`
+
+    **Keep regions small.** Time ranges can be wide (multi-year is fine for
+    time series analysis), but spatial regions should be tight. If you get
+    HTTP 429 (rate limited) or 503 (cluster saturated), wait 30-60s and
+    retry with a smaller spatial region.
+
+    ## Quick Start
+    1. Pick an API: atl03x, atl06x, atl08x, atl13x, atl24x, gedi04ax, gedi01bx, gedi02ax, casals1bx
+    2. Construct a polygon (counter-clockwise, closed ring, first == last point)
+    3. POST to `/arrow/{api}` with `{"parms": {..., "output": {"format": "parquet"}}}`
+    4. Save response to file and read with pyarrow/pandas
+
+    ## Column Schemas
+    Use `GET /source/schema?api={name}` to discover column names, types, and
+    descriptions for any API at runtime. Or see the component schemas below.
+
+    ## Runtime Discovery (optional)
+    - GET /source/schema — column schemas for all APIs
+    - GET /source/defaults — full parameter tree with defaults
+    - GET /source/version — server version
+    - GET /source/health — cluster health
+
+servers:
+  - url: https://sliderule.slideruleearth.io
+    description: Public cluster (no auth required)
+
+# ══════════════════════════════════════════════
+# Components
+# ══════════════════════════════════════════════
+components:
+  schemas:
+    # ────────────────────────────────────────
+    # Geometry
+    # ────────────────────────────────────────
+    LonLat:
+      type: object
+      required: [lon, lat]
+      properties:
+        lon: { type: number, format: double }
+        lat: { type: number, format: double }
+
+    Polygon:
+      type: array
+      minItems: 4
+      items: { $ref: "#/components/schemas/LonLat" }
+      description: CCW ring, first == last point.
+
+    RegionMask:
+      type: object
+      description: Raster mask for complex coastlines (alternative to poly).
+      properties:
+        lonmin: { type: number }
+        lonmax: { type: number }
+        latmin: { type: number }
+        latmax: { type: number }
+        cols: { type: integer }
+        rows: { type: integer }
+        cellsize: { type: number }
+        geojson: { type: string }
+
+    # ────────────────────────────────────────
+    # Output Control
+    # ────────────────────────────────────────
+    OutputBlock:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [parquet, geoparquet, csv, feather]
+          default: geoparquet
+        as_geo: { type: boolean, default: false }
+        with_checksum: { type: boolean, default: false }
+        with_validation: { type: boolean, default: false }
+        fields:
+          type: array
+          items: { type: string }
+          description: Restrict output to these columns only
+        ancillary:
+          type: array
+          items: { type: string }
+
+    # ────────────────────────────────────────
+    # Raster Sampling
+    # ────────────────────────────────────────
+    RasterSample:
+      type: object
+      description: |
+        Sample a raster dataset at each returned point. The dictionary
+        key becomes a column prefix: {"dem": {"asset": "esa-copernicus-30meter"}}
+        adds dem.value, dem.time_ns, dem.fileid to every row.
+      properties:
+        asset:
+          type: string
+          description: |
+            Registered raster name. Available assets:
+
+            **Elevation / DEMs:**
+            - arcticdem-mosaic — ArcticDEM 2m mosaic (PGC, Arctic coverage)
+            - arcticdem-strips — ArcticDEM 2m strips with temporal info (PGC, Arctic)
+            - rema-mosaic — REMA 2m mosaic (PGC, Antarctica)
+            - rema-strips — REMA 2m strips with temporal info (PGC, Antarctica)
+            - esa-copernicus-30meter — Copernicus DEM COP30 global 30m (ESA/OpenTopography)
+            - usgs3dep-1meter-dem — USGS 3DEP 1m DEM (US coverage)
+            - usgs3dep-10meter-dem — USGS 3DEP 10m DEM (US coverage)
+            - merit-s3 — MERIT DEM ~90m global elevation model
+            - gebco-s3 — GEBCO global bathymetry/elevation (~450m)
+
+            **Land Cover / Canopy:**
+            - esa-worldcover-10meter — ESA WorldCover 2021 global 10m land cover
+            - meta-globalcanopy-1meter — Meta Global Canopy Height 1m (ALS/GEDI-derived)
+            - landsat-hls — Harmonized Landsat/Sentinel-2 30m multispectral (requires catalog)
+
+            **Bathymetry:**
+            - bluetopo-bathy — BlueTopo bathymetry
+
+            **GEDI Gridded:**
+            - gedil3-elevation — GEDI L3 gridded elevation
+            - gedil3-canopy — GEDI L3 gridded canopy height
+            - gedil3-elevation-stddev — GEDI L3 elevation standard deviation
+            - gedil3-canopy-stddev — GEDI L3 canopy height standard deviation
+            - gedil3-counts — GEDI L3 shot counts
+            - gedil4b — GEDI L4B gridded biomass
+
+            **GEDTM:**
+            - gedtm-30meter — GEDTM 30m terrain model
+            - gedtm-std — GEDTM standard deviation
+            - gedtm-dfm — GEDTM difference from mean
+
+            **SWOT Simulated:**
+            - swot-sim-ecco-llc4320 — SWOT simulated SSH (ECCO LLC4320 model)
+            - swot-sim-glorys — SWOT simulated SSH (GLORYS model)
+        algorithm:
+          type: string
+          enum: [NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss]
+          default: NearestNeighbour
+        radius: { type: number, description: "Search radius (m) for zonal stats" }
+        zonal_stats: { type: boolean, default: false }
+        closest_time: { type: string, format: date-time }
+        use_poi_time: { type: boolean, default: false }
+        catalog: { type: object, description: "GeoJSON STAC/CMR response (required for landsat-hls)" }
+        bands: { type: array, items: { type: string } }
+        key_space: { type: integer, format: int64 }
+
+    # ────────────────────────────────────────
+    # Algorithm Blocks (atl03x plug-ins)
+    # ────────────────────────────────────────
+    PhoREAL:
+      type: object
+      properties:
+        binsize: { type: number, default: 1.0 }
+        geoloc: { type: string, enum: [center, mean, median], default: median }
+        use_abs_h: { type: boolean, default: false }
+        above_classifier: { type: boolean, default: false }
+        send_waveform: { type: boolean, default: false }
+
+    SurfaceAlgorithm:
+      type: object
+      properties:
+        dem: { type: string, example: "esa-worldcover-10meter" }
+
+    ATL24Algorithm:
+      type: object
+      properties:
+        compact: { type: boolean, default: true }
+        class_ph:
+          type: array
+          items: { type: string, enum: [unclassified, bathymetry, sea_surface] }
+        confidence_threshold: { type: integer, default: 0 }
+        anc_fields: { type: array, items: { type: string } }
+
+    YAPCAlgorithm:
+      type: object
+      properties:
+        version: { type: integer, default: 0 }
+        score: { type: integer, default: 0, description: "Min score 0-255" }
+        knn: { type: integer, default: 0 }
+        min_knn: { type: integer, default: 5 }
+        win_h: { type: number, default: 6 }
+        win_x: { type: number, default: 15 }
+
+    ATL13Config:
+      type: object
+      properties:
+        name: { type: string, description: "Water body name filter" }
+        refid: { type: integer, default: 0 }
+        coord:
+          type: object
+          properties:
+            lat: { type: number }
+            lon: { type: number }
+        anc_fields: { type: array, items: { type: string } }
+
+    GranuleFilter:
+      type: object
+      properties:
+        rgt: { type: integer, default: -1 }
+        cycle: { type: integer, default: -1 }
+        region: { type: integer, default: -1 }
+        day: { type: integer, default: -1 }
+        month: { type: integer, default: -1 }
+        year: { type: integer, default: -1 }
+        version: { type: integer, default: -1 }
+
+    # ────────────────────────────────────────
+    # Full Request Parameters
+    # ────────────────────────────────────────
+    CoreParameters:
+      type: object
+      properties:
+        # Region
+        poly: { $ref: "#/components/schemas/Polygon" }
+        region_mask: { $ref: "#/components/schemas/RegionMask" }
+        proj: { type: string, enum: [auto, north_polar, south_polar, plate_carree], default: auto }
+        ignore_poly_for_cmr: { type: boolean, default: false }
+
+        # Time
+        t0: { type: string, format: date, example: "2022-01-01" }
+        t1: { type: string, format: date, example: "2022-06-01" }
+
+        # Data source
+        asset: { type: string, default: icesat2 }
+        resources: { type: array, items: { type: string }, description: "Explicit granule list" }
+        max_resources: { type: integer, default: 300 }
+
+        # ICESat-2 photon filters
+        cnf:
+          description: |
+            Confidence filter. Default: ["atl03_low","atl03_medium","atl03_high"].
+            Integer shorthand: -2=TEP, -1=noise, 0=background, 1=within10m,
+            2=low, 3=medium, 4=high. Use -1 for all photons.
+          default: ["atl03_low", "atl03_medium", "atl03_high"]
+        quality_ph: { type: array, default: ["atl03_quality_nominal"] }
+        srt: { type: string, default: dynamic, description: "dynamic|land|ocean|sea_ice|land_ice|inland_water" }
+        atl08_class:
+          type: array
+          items: { type: string }
+          description: "atl08_noise|atl08_ground|atl08_canopy|atl08_top_of_canopy|atl08_unclassified"
+        pass_invalid: { type: boolean, default: false }
+
+        # Beam selection
+        beams:
+          type: array
+          default: ["gt1l","gt1r","gt2l","gt2r","gt3l","gt3r"]
+        spots: { type: array, default: [1,2,3,4,5,6] }
+        track: { type: integer, default: 0, description: "0=all, 1, 2, 3" }
+        granule: { $ref: "#/components/schemas/GranuleFilter" }
+
+        # Along-track processing (atl06x tuning)
+        res: { type: number, default: 20, description: "Along-track resolution (m)" }
+        len: { type: number, default: 40, description: "Segment length (m)" }
+        cnt: { type: integer, default: 10, description: "Min photon count" }
+        ats: { type: number, default: 20, description: "Along-track spread (m)" }
+        maxi: { type: integer, default: 5, description: "Max iterations" }
+        sigma_r_max: { type: number, default: 5 }
+        H_min_win: { type: number, default: 3 }
+
+        # Algorithms (atl03x only)
+        phoreal: { $ref: "#/components/schemas/PhoREAL" }
+        surface: { $ref: "#/components/schemas/SurfaceAlgorithm" }
+        atl24: { $ref: "#/components/schemas/ATL24Algorithm" }
+        yapc: { $ref: "#/components/schemas/YAPCAlgorithm" }
+
+        # ATL13 config
+        atl13: { $ref: "#/components/schemas/ATL13Config" }
+
+        # Ancillary HDF5 fields
+        atl03_geo_fields: { type: array, items: { type: string } }
+        atl03_ph_fields: { type: array, items: { type: string } }
+        atl03_corr_fields: { type: array, items: { type: string } }
+        atl03_bckgrd_fields: { type: array, items: { type: string } }
+        atl06_fields: { type: array, items: { type: string } }
+        atl08_fields: { type: array, items: { type: string } }
+        atl09_fields: { type: array, items: { type: string } }
+        atl13_fields: { type: array, items: { type: string } }
+
+        # Raster sampling
+        samples:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/RasterSample" }
+
+        # Misc
+        dist_in_seg: { type: boolean, default: false }
+        datum: { type: string, default: unspecified }
+        podppd: { type: integer, default: 1 }
+
+        # Timeouts
+        timeout: { type: integer, default: 600 }
+        rqst_timeout: { type: integer, default: 600 }
+        node_timeout: { type: integer, default: 600 }
+        read_timeout: { type: integer, default: 600 }
+
+        # Output
+        output: { $ref: "#/components/schemas/OutputBlock" }
+
+    ProcessingRequest:
+      type: object
+      required: [parms]
+      properties:
+        parms: { $ref: "#/components/schemas/CoreParameters" }
+
+    # ────────────────────────────────────────
+    # Response Column Schemas (machine-readable)
+    # ────────────────────────────────────────
+    ATL03xBaseColumns:
+      type: object
+      description: "atl03x with no algorithm block — verified live v5.3.0"
+      properties:
+        time_ns: { type: string, format: timestamp-ns, description: "Photon timestamp (Unix ns)" }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        segment_id: { type: integer, format: int32, description: "ATL03 segment ID" }
+        x_atc: { type: number, format: double, description: "Along-track distance (m)" }
+        y_atc: { type: number, format: float, description: "Across-track distance (m)" }
+        height: { type: number, format: float, description: "Photon height WGS84 (m)" }
+        solar_elevation: { type: number, format: float, description: "Solar elevation angle (deg)" }
+        background_rate: { type: number, format: float, description: "Background photon rate (Hz)" }
+        spacecraft_velocity: { type: number, format: float, description: "Spacecraft velocity (m/s)" }
+        atl03_cnf: { type: integer, format: int8, description: "ATL03 confidence level" }
+        quality_ph: { type: integer, format: int8, description: "Photon quality flag" }
+        ph_index: { type: integer, format: uint32, description: "Photon index within segment" }
+        relief: { type: number, format: float, description: "Local relief (m)" }
+        landcover: { type: integer, format: uint8, description: "Land cover classification" }
+        snowcover: { type: integer, format: uint8, description: "Snow cover flag" }
+        atl08_class: { type: integer, format: uint8, description: "ATL08 classification" }
+        yapc_score: { type: integer, format: uint16, description: "YAPC confidence score" }
+        atl24_class: { type: integer, format: uint8, description: "ATL24 classification (if enabled)" }
+        atl24_confidence: { type: number, format: float, description: "ATL24 confidence (if enabled)" }
+        spot: { type: integer, format: uint8, description: "Spot number 1-6" }
+        cycle: { type: integer, format: uint8, description: "Orbital cycle" }
+        region: { type: integer, format: uint8, description: "ICESat-2 region number" }
+        rgt: { type: integer, format: uint16, description: "Reference Ground Track" }
+        gt: { type: integer, format: uint8, description: "Ground track (10,20,30,40,50,60)" }
+        srcid: { type: integer, format: int32, description: "Source granule ID (→ metadata srctbl)" }
+
+    ATL03xPhoREALColumns:
+      type: object
+      description: |
+        PhoREAL REPLACES the base atl03x photon-level columns with
+        extent-level vegetation metrics — verified live v5.3.0.
+      properties:
+        time_ns: { type: string, format: timestamp-ns, description: "Extent timestamp (Unix ns)" }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        segment_id_beg: { type: integer, format: int32, description: "Starting segment ID" }
+        x_atc: { type: number, format: double, description: "Along-track distance (m)" }
+        y_atc: { type: number, format: float, description: "Across-track distance (m)" }
+        photon_start: { type: integer, format: uint32, description: "Index of first photon" }
+        photon_count: { type: integer, format: uint32, description: "Number of photons in extent" }
+        pflags: { type: integer, format: uint16, description: "Processing flags" }
+        ground_photon_count: { type: integer, format: uint32, description: "Ground photon count" }
+        vegetation_photon_count: { type: integer, format: uint32, description: "Vegetation photon count" }
+        landcover: { type: integer, format: uint8, description: "Land cover classification" }
+        snowcover: { type: integer, format: uint8, description: "Snow cover flag" }
+        solar_elevation: { type: number, format: float, description: "Solar elevation angle (deg)" }
+        h_te_median: { type: number, format: float, description: "Median terrain elevation (m)" }
+        h_max_canopy: { type: number, format: float, description: "Max canopy height (m)" }
+        h_min_canopy: { type: number, format: float, description: "Min canopy height (m)" }
+        h_mean_canopy: { type: number, format: float, description: "Mean canopy height (m)" }
+        h_canopy: { type: number, format: float, description: "Relative canopy height (m)" }
+        canopy_openness: { type: number, format: float, description: "Canopy openness fraction" }
+        canopy_h_metrics: { type: array, items: { type: number, format: float }, description: "20 canopy height percentiles (5% intervals)" }
+        spot: { type: integer, format: uint8 }
+        cycle: { type: integer, format: uint8 }
+        region: { type: integer, format: uint8 }
+        rgt: { type: integer, format: uint16 }
+        gt: { type: integer, format: uint8 }
+        srcid: { type: integer, format: int32 }
+
+    ATL03xSurfaceColumns:
+      type: object
+      description: |
+        Surface fitter REPLACES the base atl03x photon-level columns with
+        fitted elevation segments — verified from source v5.3.0.
+      properties:
+        time_ns: { type: string, format: timestamp-ns, description: "Segment timestamp (Unix ns)" }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        segment_id_beg: { type: integer, format: int32, description: "Starting segment ID" }
+        x_atc: { type: number, format: double, description: "Along-track distance (m)" }
+        y_atc: { type: number, format: float, description: "Across-track distance (m)" }
+        photon_start: { type: integer, format: uint32, description: "Photon index of start of extent" }
+        pflags: { type: integer, format: uint16, description: "Processing flags" }
+        h_mean: { type: number, format: float, description: "Mean surface height WGS84 (m)" }
+        dh_fit_dx: { type: number, format: float, description: "Along-track slope" }
+        w_surface_window_final: { type: number, format: float, description: "Final window height used in fit (m)" }
+        n_fit_photons: { type: integer, format: int32, description: "Photons used in final fit" }
+        rms_misfit: { type: number, format: float, description: "RMS of residuals (m)" }
+        h_sigma: { type: number, format: float, description: "Height uncertainty (m)" }
+        spot: { type: integer, format: uint8 }
+        cycle: { type: integer, format: uint8 }
+        region: { type: integer, format: uint8 }
+        rgt: { type: integer, format: uint16 }
+        gt: { type: integer, format: uint8 }
+        srcid: { type: integer, format: int32 }
+
+    ATL03xBlanketColumns:
+      type: object
+      description: |
+        Surface blanket REPLACES the base atl03x photon-level columns with
+        top-of-surface and ground elevation segments — verified from source v5.3.0.
+      properties:
+        time_ns: { type: string, format: timestamp-ns, description: "Segment timestamp (Unix ns)" }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        segment_id_beg: { type: integer, format: int32, description: "Starting segment ID" }
+        x_atc: { type: number, format: double, description: "Along-track distance (m)" }
+        y_atc: { type: number, format: float, description: "Across-track distance (m)" }
+        top_of_surface: { type: number, format: float, description: "Top of reflective surface (m)" }
+        median_ground: { type: number, format: float, description: "Median ground elevation (m)" }
+        pflags: { type: integer, format: uint16, description: "Processing flags" }
+        spot: { type: integer, format: uint8 }
+        cycle: { type: integer, format: uint8 }
+        region: { type: integer, format: uint8 }
+        rgt: { type: integer, format: uint16 }
+        gt: { type: integer, format: uint8 }
+        srcid: { type: integer, format: int32 }
+
+    ATL06xResponseColumns:
+      type: object
+      description: "Verified live from server v5.3.0"
+      properties:
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        x_atc: { type: number, format: double, description: "Along-track distance (m)" }
+        y_atc: { type: number, format: float, description: "Across-track distance (m)" }
+        h_li: { type: number, format: float, description: "Fitted surface height WGS84 (m)" }
+        h_li_sigma: { type: number, format: float, description: "Height uncertainty (m)" }
+        sigma_geo_h: { type: number, format: float, description: "Geolocation height uncertainty (m)" }
+        atl06_quality_summary: { type: integer, format: int8, description: "Quality summary flag" }
+        segment_id: { type: integer, format: uint32 }
+        seg_azimuth: { type: number, format: float, description: "Segment azimuth (deg)" }
+        dh_fit_dx: { type: number, format: float, description: "Along-track slope" }
+        h_robust_sprd: { type: number, format: float, description: "Robust spread of residuals (m)" }
+        w_surface_window_final: { type: number, format: float, description: "Final surface window width (m)" }
+        bsnow_conf: { type: integer, format: int8, description: "Blowing snow confidence" }
+        bsnow_h: { type: number, format: float, description: "Blowing snow height (m)" }
+        r_eff: { type: number, format: float, description: "Effective reflectance" }
+        tide_ocean: { type: number, format: float, description: "Ocean tide correction (m)" }
+        n_fit_photons: { type: integer, format: int32, description: "Photons used in fit" }
+        spot: { type: integer, format: uint8 }
+        cycle: { type: integer, format: uint8 }
+        region: { type: integer, format: uint8, description: "ICESat-2 region number" }
+        rgt: { type: integer, format: uint16 }
+        gt: { type: integer, format: uint8 }
+        srcid: { type: integer, format: int32 }
+
+    ATL08xResponseColumns:
+      type: object
+      description: "Verified live from server v5.3.0"
+      properties:
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        segment_id_beg: { type: integer, format: int32, description: "Starting segment ID" }
+        n_seg_ph: { type: integer, format: int32, description: "Total photons in segment" }
+        solar_elevation: { type: number, format: float, description: "Solar elevation angle (deg)" }
+        terrain_slope: { type: number, format: float, description: "Terrain slope" }
+        n_te_photons: { type: integer, format: int32, description: "Terrain photon count" }
+        h_te_uncertainty: { type: number, format: float, description: "Terrain height uncertainty (m)" }
+        h_canopy: { type: number, format: float, description: "Relative canopy height (m)" }
+        h_canopy_uncertainty: { type: number, format: float }
+        segment_cover: { type: integer, format: int16, description: "Canopy cover percentage" }
+        n_ca_photons: { type: integer, format: int32, description: "Canopy photon count" }
+        segment_landcover: { type: integer, format: uint8, description: "Land cover classification" }
+        segment_snowcover: { type: integer, format: uint8, description: "Snow cover flag" }
+        h_te_median: { type: number, format: float, description: "Median terrain elevation (m)" }
+        h_max_canopy: { type: number, format: float, description: "Max canopy height (m)" }
+        h_min_canopy: { type: number, format: float, description: "Min canopy height (m)" }
+        h_mean_canopy: { type: number, format: float, description: "Mean canopy height (m)" }
+        canopy_openness: { type: number, format: float, description: "Canopy openness fraction" }
+        canopy_h_metrics: { type: array, items: { type: number, format: float }, minItems: 18, maxItems: 18, description: "18 canopy height percentiles from ATL08 HDF5" }
+        spot: { type: integer, format: uint8 }
+        cycle: { type: integer, format: uint8 }
+        region: { type: integer, format: uint8, description: "ICESat-2 region number" }
+        rgt: { type: integer, format: uint16 }
+        gt: { type: integer, format: uint8 }
+        srcid: { type: integer, format: int32 }
+
+    ATL13xResponseColumns:
+      type: object
+      description: "Verified live from server v5.3.0"
+      properties:
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        segment_id_beg: { type: integer, format: int32, description: "Starting segment ID" }
+        ht_ortho: { type: number, format: float, description: "Orthometric height (m)" }
+        ht_water_surf: { type: number, format: float, description: "Water surface height WGS84 (m)" }
+        stdev_water_surf: { type: number, format: float, description: "Std deviation of water surface height (m)" }
+        water_depth: { type: number, format: float, description: "Water depth (m)" }
+        spot: { type: integer, format: uint8 }
+        cycle: { type: integer, format: uint8 }
+        rgt: { type: integer, format: uint16 }
+        gt: { type: integer, format: uint8 }
+        srcid: { type: integer, format: int32 }
+
+    ATL24xResponseColumns:
+      type: object
+      description: |
+        Coastal bathymetry photon data from ATL24 — verified from schema registry v5.3.
+        Note: field names differ from atl03x (lat_ph/lon_ph, class_ph/confidence, ortho_h/surface_h).
+      properties:
+        class_ph: { type: integer, format: int8, description: "40=bathymetry, 41=sea_surface, 0=unclassified" }
+        confidence: { type: number, format: double, description: "Classification confidence" }
+        time_ns: { type: string, format: timestamp-ns, description: "Photon timestamp (Unix ns)" }
+        lat_ph: { type: number, format: double, description: "Latitude (degrees)" }
+        lon_ph: { type: number, format: double, description: "Longitude (degrees)" }
+        ortho_h: { type: number, format: float, description: "Orthometric height (m)" }
+        surface_h: { type: number, format: float, description: "Sea surface height (m)" }
+        x_atc: { type: number, format: double, description: "Along-track distance (m)" }
+        y_atc: { type: number, format: float, description: "Across-track distance (m)" }
+        spot: { type: integer, format: uint8, description: "Spot number 1-6" }
+        cycle: { type: integer, format: uint8, description: "Orbital cycle" }
+        region: { type: integer, format: uint8, description: "ICESat-2 region number" }
+        rgt: { type: integer, format: uint16, description: "Reference Ground Track" }
+        gt: { type: integer, format: uint8, description: "Ground track (10,20,30,40,50,60)" }
+        srcid: { type: integer, format: int32, description: "Source granule ID (see metadata)" }
+
+    GEDIL4AxResponseColumns:
+      type: object
+      description: |
+        Arrow DataFrame columns — verified from source v5.3.0.
+        FieldElements beam (uint8), orbit (uint32), track (uint16) are
+        per-batch metadata, not row-level columns.
+      properties:
+        shot_number: { type: integer, format: uint64, description: "GEDI shot number" }
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        agbd: { type: number, format: float, description: "Above-ground biomass density (Mg/ha)" }
+        elevation: { type: number, format: float, description: "Elevation of lowest mode (m)" }
+        solar_elevation: { type: number, format: float, description: "Solar elevation angle (deg)" }
+        sensitivity: { type: number, format: float, description: "Beam sensitivity" }
+        flags: { type: integer, format: uint8, description: "Combined quality flags (degrade, l2/l4 quality, surface)" }
+        beam: { type: integer, format: uint8, description: "GEDI beam number" }
+        orbit: { type: integer, format: uint32, description: "Orbit number" }
+        track: { type: integer, format: uint16, description: "Track number" }
+        srcid: { type: integer, format: int32 }
+
+    RasterSampleResponseColumns:
+      type: object
+      description: |
+        Appended per raster dataset in samples. Prefix = user's key.
+        Example: {"dem": {"asset": "esa-copernicus-30meter"}} → columns
+        dem.value, dem.time_ns, dem.fileid.  For rasters that return
+        multiple samples per point (e.g. strips), columns are list types.
+      properties:
+        "{key}.value": { type: number, format: double, description: "Sampled raster value" }
+        "{key}.time_ns": { type: string, format: timestamp-ns, description: "Raster measurement time" }
+        "{key}.fileid": { type: integer, format: uint64, description: "File identifier (maps to metadata)" }
+        "{key}.flags": { type: integer, format: uint32, description: "Raster quality flags (conditional: only if raster has flags)" }
+        "{key}.band": { type: integer, format: uint16, description: "Band index (conditional: only for multi-band rasters like landsat-hls)" }
+        "{key}.stats.count": { type: integer, format: uint32, description: "Pixels used (zonal_stats only)" }
+        "{key}.stats.min": { type: number, format: double, description: "Min pixel value (zonal_stats only)" }
+        "{key}.stats.max": { type: number, format: double, description: "Max pixel value (zonal_stats only)" }
+        "{key}.stats.mean": { type: number, format: double, description: "Mean pixel value (zonal_stats only)" }
+        "{key}.stats.median": { type: number, format: double, description: "Median pixel value (zonal_stats only)" }
+        "{key}.stats.stdev": { type: number, format: double, description: "Std deviation (zonal_stats only)" }
+        "{key}.stats.mad": { type: number, format: double, description: "Median absolute deviation (zonal_stats only)" }
+        "{key}.deriv.count": { type: integer, format: uint32, description: "Pixels used for spatial derivatives (conditional)" }
+        "{key}.deriv.slope": { type: number, format: double, description: "Spatial slope (conditional)" }
+        "{key}.deriv.aspect": { type: number, format: double, description: "Spatial aspect (conditional)" }
+
+    GEDI01bxResponseColumns:
+      type: object
+      description: "GEDI L1B geolocated waveforms — verified from source"
+      properties:
+        shot_number: { type: integer, format: uint64, description: "GEDI shot number" }
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        elevation_start: { type: number, format: float, description: "Waveform start elevation (m)" }
+        elevation_stop: { type: number, format: double, description: "Waveform stop elevation (m)" }
+        solar_elevation: { type: number, format: double, description: "Solar elevation angle (deg)" }
+        tx_size: { type: integer, format: uint16, description: "Transmit waveform sample count" }
+        rx_size: { type: integer, format: uint16, description: "Receive waveform sample count" }
+        flags: { type: integer, format: uint8, description: "Combined quality flags" }
+        tx_waveform: { type: array, items: { type: number, format: float }, description: "Transmit waveform samples" }
+        rx_waveform: { type: array, items: { type: number, format: float }, description: "Receive waveform samples" }
+        beam: { type: integer, format: uint8, description: "GEDI beam number" }
+        orbit: { type: integer, format: uint32, description: "Orbit number" }
+        track: { type: integer, format: uint16, description: "Track number" }
+        srcid: { type: integer, format: int32 }
+
+    GEDI02AxResponseColumns:
+      type: object
+      description: "GEDI L2A elevation and height metrics — verified from source"
+      properties:
+        shot_number: { type: integer, format: uint64, description: "GEDI shot number" }
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        elevation_lm: { type: number, format: float, description: "Elevation of lowest mode (m)" }
+        elevation_hr: { type: number, format: float, description: "Elevation of highest return (m)" }
+        solar_elevation: { type: number, format: float, description: "Solar elevation angle (deg)" }
+        sensitivity: { type: number, format: float, description: "Beam sensitivity" }
+        flags: { type: integer, format: uint8, description: "Combined quality flags" }
+        beam: { type: integer, format: uint8, description: "GEDI beam number" }
+        orbit: { type: integer, format: uint32, description: "Orbit number" }
+        track: { type: integer, format: uint16, description: "Track number" }
+        srcid: { type: integer, format: int32 }
+
+    CASALS1bxResponseColumns:
+      type: object
+      description: "CASALS L1B geolocated returns — verified from source"
+      properties:
+        time_ns: { type: string, format: timestamp-ns }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        refh: { type: number, format: float, description: "Reference height (m)" }
+        srcid: { type: integer, format: int32 }
+
+    ParquetMetadata:
+      type: object
+      description: |
+        Embedded in the Parquet file's key-value metadata. Access via
+        pyarrow: table.schema.metadata[b'sliderule'], etc.
+      properties:
+        meta:
+          type: object
+          description: "Endpoint name and srctbl mapping srcid → granule filename"
+        sliderule:
+          type: object
+          description: "Server version and parameters used for processing"
+        recordinfo:
+          type: object
+          description: "Identifies which columns are time, x, y, z"
+
+  responses:
+    ParquetResponse:
+      description: Apache Parquet file. Columns per API documented above.
+      content:
+        application/octet-stream:
+          schema: { type: string, format: binary }
+    RateLimited:
+      description: "HTTP 429 — throttled. Retry after delay or 30-60s."
+    ServerBusy:
+      description: "HTTP 503 — cluster is saturated. Retry after 30-60s or reduce region size."
+    StreamingResponse:
+      description: |
+        Binary stream of serialized RecordObjects. Each record has a header
+        (type string + length) followed by the payload. Use the SlideRule
+        Python client to deserialize. Stream ends with an empty terminator.
+      content:
+        application/octet-stream:
+          schema: { type: string, format: binary }
+    JSONResponse:
+      description: JSON response
+      content:
+        application/json:
+          schema: { type: object }
+    TextResponse:
+      description: Plain text response
+      content:
+        text/plain:
+          schema: { type: string }
+
+# ══════════════════════════════════════════════
+# Paths
+# ══════════════════════════════════════════════
+paths:
+  # ── Discovery ──
+  /source/defaults:
+    get:
+      operationId: getDefaults
+      summary: All parameters with defaults (runtime discovery)
+      description: |
+        Returns complete parameter tree by plugin: cre, icesat2, gedi, swot.
+        Use this to discover parameters not documented in this spec.
+      tags: [Discovery]
+      responses:
+        "200":
+          description: JSON parameter tree
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+
+  /source/version:
+    get:
+      operationId: getVersion
+      summary: Server version
+      tags: [Discovery]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  server:
+                    type: object
+                    properties:
+                      version: { type: string, example: "5.3.0" }
+
+  /source/health:
+    get:
+      operationId: getHealth
+      summary: Cluster health
+      tags: [Discovery]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  healthy: { type: boolean }
+                  num_threads: { type: integer }
+
+  /source/schema:
+    get:
+      operationId: getSchema
+      summary: Response column schema for an API
+      description: |
+        Returns the Parquet column schema (names, types, descriptions) for a
+        given arrow API endpoint. Without the `api` parameter, returns the
+        list of available APIs.
+
+        Example: GET /source/schema?api=atl06x
+      tags: [Discovery]
+      parameters:
+        - name: api
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [atl03x, atl03x-phoreal, atl03x-surface, atl03x-blanket, atl06x, atl08x, atl13x, atl24x, gedil4ax]
+          description: |
+            API name. Use `atl03x-phoreal` for the PhoREAL variant.
+            Omit to list all available APIs.
+      responses:
+        "200":
+          description: Column schema or API listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    type: string
+                    description: Human-readable API description
+                  note:
+                    type: string
+                    description: Additional notes (optional)
+                  columns:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string, description: "Column name in Parquet output" }
+                        type:
+                          type: string
+                          enum: [bool, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, double, "timestamp[ns]", string, "array<float>", "list<float>"]
+                          description: "Arrow/Parquet data type"
+                        description: { type: string }
+                        role:
+                          type: string
+                          enum: [column, element]
+                          description: "'column' = per-row, 'element' = per-batch metadata"
+              examples:
+                list_apis:
+                  summary: No api parameter — list available APIs
+                  value:
+                    apis:
+                      atl03x: "Photon-level data (ICESat-2 ATL03)"
+                      atl03x-phoreal: "PhoREAL vegetation extent metrics (replaces atl03x base columns)"
+                      atl03x-surface: "Surface-fitted elevation segments (replaces atl03x base columns)"
+                      atl03x-blanket: "Surface blanket elevation segments (replaces atl03x base columns)"
+                      atl06x: "Land-ice surface elevation segments (ICESat-2 ATL06)"
+                      atl08x: "Land and vegetation height segments (ICESat-2 ATL08)"
+                      atl13x: "Inland water surface height (ICESat-2 ATL13)"
+                      atl24x: "Coastal bathymetry (ICESat-2 ATL24)"
+                      gedil4ax: "GEDI L4A above-ground biomass density"
+
+  # ── ICESat-2 ──
+  /arrow/atl03x:
+    post:
+      operationId: processATL03x
+      summary: "Photon-level data ± algorithms"
+      description: |
+        Most flexible API. Base columns: ATL03xBaseColumns.
+        Algorithm blocks change the output:
+        - phoreal → REPLACES base with ATL03xPhoREALColumns (extent-level vegetation)
+        - surface → REPLACES base with ATL03xSurfaceColumns (fitted elevation segments)
+        - blanket → REPLACES base with ATL03xBlanketColumns (top-of-surface segments)
+        - yapc → yapc_score always present in base columns; use yapc block to tune
+        - atl24 → atl24_class, atl24_confidence present in base columns (populated when enabled)
+        - samples → appends RasterSampleResponseColumns
+      tags: [ICESat-2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+            examples:
+              minimal:
+                summary: Smallest valid request
+                value:
+                  parms:
+                    poly: [{lon:-105,lat:40},{lon:-104.98,lat:40},{lon:-104.98,lat:40.02},{lon:-105,lat:40.02},{lon:-105,lat:40}]
+                    t0: "2023-01-01"
+                    t1: "2023-02-01"
+                    cnf: 4
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+              canopy:
+                summary: PhoREAL canopy analysis
+                value:
+                  parms:
+                    poly: [{lon:-105,lat:40},{lon:-104.9,lat:40},{lon:-104.9,lat:40.1},{lon:-105,lat:40.1},{lon:-105,lat:40}]
+                    t0: "2023-06-01"
+                    t1: "2023-09-01"
+                    cnf: 4
+                    phoreal: {binsize: 1.0, geoloc: center}
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+              bathymetry:
+                summary: Coastal bathymetry
+                value:
+                  parms:
+                    poly: [{lon:-82.7,lat:27.5},{lon:-82.6,lat:27.5},{lon:-82.6,lat:27.6},{lon:-82.7,lat:27.6},{lon:-82.7,lat:27.5}]
+                    t0: "2023-01-01"
+                    t1: "2023-06-01"
+                    cnf: -1
+                    srt: ocean
+                    atl24: {class_ph: [bathymetry, sea_surface]}
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+              with_dem_sampling:
+                summary: Photons + co-located DEM and land cover
+                value:
+                  parms:
+                    poly: [{lon:-105,lat:40},{lon:-104.9,lat:40},{lon:-104.9,lat:40.1},{lon:-105,lat:40.1},{lon:-105,lat:40}]
+                    t0: "2023-01-01"
+                    t1: "2023-03-01"
+                    cnf: 4
+                    samples:
+                      dem: {asset: esa-copernicus-30meter}
+                      landcover: {asset: esa-worldcover-10meter}
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+              water_surface:
+                summary: Lake water surface finding
+                value:
+                  parms:
+                    poly: [{lon:-120.15,lat:38.95},{lon:-120.0,lat:38.95},{lon:-120.0,lat:39.1},{lon:-120.15,lat:39.1},{lon:-120.15,lat:38.95}]
+                    t0: "2020-01-01"
+                    t1: "2024-01-01"
+                    cnf: 4
+                    srt: inland_water
+                    surface: {}
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /arrow/atl06x:
+    post:
+      operationId: processATL06x
+      summary: "Land-ice surface elevation (40m segments)"
+      description: |
+        Fitted surface segments for glaciers and ice sheets.
+        Tune with: res, len, cnt, ats, maxi, sigma_r_max, H_min_win.
+        Response: ATL06xResponseColumns (24 columns verified live v5.3.0).
+      tags: [ICESat-2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+            examples:
+              glacier:
+                summary: Thwaites Glacier profile
+                value:
+                  parms:
+                    poly: [{lon:-107.5,lat:-75.3},{lon:-107.0,lat:-75.3},{lon:-107.0,lat:-75.0},{lon:-107.5,lat:-75.0},{lon:-107.5,lat:-75.3}]
+                    t0: "2023-01-01"
+                    t1: "2023-06-01"
+                    cnf: 4
+                    srt: land_ice
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /arrow/atl08x:
+    post:
+      operationId: processATL08x
+      summary: "Land & vegetation height (100m segments)"
+      description: |
+        Terrain + canopy metrics. Response: ATL08xResponseColumns.
+      tags: [ICESat-2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /arrow/atl13x:
+    post:
+      operationId: processATL13x
+      summary: "Inland water surface height"
+      description: |
+        Lake/reservoir water levels. Response: ATL13xResponseColumns.
+        Use atl13 config block to filter by water body name or refid.
+      tags: [ICESat-2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+            examples:
+              lake:
+                summary: Lake Tahoe water levels
+                value:
+                  parms:
+                    poly: [{lon:-120.15,lat:38.95},{lon:-120.0,lat:38.95},{lon:-120.0,lat:39.1},{lon:-120.15,lat:39.1},{lon:-120.15,lat:38.95}]
+                    t0: "2019-01-01"
+                    t1: "2024-01-01"
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /arrow/atl24x:
+    post:
+      operationId: processATL24x
+      summary: "Coastal bathymetry"
+      description: |
+        Photon classification for shallow water. Response: ATL24xResponseColumns.
+      tags: [ICESat-2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── GEDI ──
+  /arrow/gedi04ax:
+    post:
+      operationId: processGEDIL4Ax
+      summary: "GEDI L4A biomass/canopy"
+      description: |
+        Above-ground biomass density. Response: GEDIL4AxResponseColumns.
+        GEDI-specific filters: degrade_filter, l2_quality_filter,
+        l4_quality_filter, surface_filter (see /source/defaults "gedi").
+      tags: [GEDI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+            examples:
+              forest:
+                summary: Amazon forest biomass
+                value:
+                  parms:
+                    asset: gedi
+                    poly: [{lon:-62.0,lat:-3.0},{lon:-61.8,lat:-3.0},{lon:-61.8,lat:-2.8},{lon:-62.0,lat:-2.8},{lon:-62.0,lat:-3.0}]
+                    t0: "2020-01-01"
+                    t1: "2023-01-01"
+                    output: {format: parquet, as_geo: false, with_checksum: false}
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── ICESat-2 Streaming ──
+  /source/atl03s:
+    post:
+      operationId: streamATL03s
+      summary: "ATL03 photon records (streaming, single granule)"
+      description: |
+        Streams ATL03 photon-level records for a single granule.
+        Returns binary serialized atl03rec records.
+        Use the Python client or /arrow/atl03x for Parquet output.
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl03sp:
+    post:
+      operationId: streamATL03sp
+      summary: "ATL03 photon records (streaming, proxied across cluster)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl03v:
+    post:
+      operationId: streamATL03v
+      summary: "ATL03 vegetation records (streaming, single granule)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl03vp:
+    post:
+      operationId: streamATL03vp
+      summary: "ATL03 vegetation records (streaming, proxied across cluster)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl06:
+    post:
+      operationId: streamATL06
+      summary: "ATL06 elevation records (streaming, single granule)"
+      description: Reads ATL03 and processes to ATL06 elevation segments.
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl06p:
+    post:
+      operationId: streamATL06p
+      summary: "ATL06 elevation records (streaming, proxied across cluster)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl06s:
+    post:
+      operationId: streamATL06s
+      summary: "ATL06 subsetted records (streaming, single granule)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl06sp:
+    post:
+      operationId: streamATL06sp
+      summary: "ATL06 subsetted records (streaming, proxied across cluster)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl08:
+    post:
+      operationId: streamATL08
+      summary: "ATL08 canopy records (streaming, single granule)"
+      description: Reads ATL03 and processes to ATL08 canopy segments.
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl08p:
+    post:
+      operationId: streamATL08p
+      summary: "ATL08 canopy records (streaming, proxied across cluster)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl13s:
+    post:
+      operationId: streamATL13s
+      summary: "ATL13 inland water records (streaming, single granule)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/atl13sp:
+    post:
+      operationId: streamATL13sp
+      summary: "ATL13 inland water records (streaming, proxied across cluster)"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/indexer:
+    post:
+      operationId: indexATL03
+      summary: "Build spatial index for ATL03 granules"
+      tags: [ICESat-2 Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resources: { type: array, items: { type: string } }
+                asset: { type: string, default: atlas-local }
+                timeout: { type: integer }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+
+  # ── GEDI Parquet ──
+  /arrow/gedi01bx:
+    post:
+      operationId: processGEDI01Bx
+      summary: "GEDI L1B waveforms (Parquet)"
+      description: |
+        Geolocated waveforms with transmit/receive samples.
+        Response: GEDI01bxResponseColumns.
+      tags: [GEDI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /arrow/gedi02ax:
+    post:
+      operationId: processGEDI02Ax
+      summary: "GEDI L2A elevation/height (Parquet)"
+      description: |
+        Elevation and canopy height metrics.
+        Response: GEDI02AxResponseColumns.
+      tags: [GEDI]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── GEDI Streaming ──
+  /source/gedi01b:
+    post:
+      operationId: streamGEDI01b
+      summary: "GEDI L1B records (streaming, single granule)"
+      tags: [GEDI Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/gedi01bp:
+    post:
+      operationId: streamGEDI01bp
+      summary: "GEDI L1B records (streaming, proxied across cluster)"
+      tags: [GEDI Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/gedi02a:
+    post:
+      operationId: streamGEDI02a
+      summary: "GEDI L2A records (streaming, single granule)"
+      tags: [GEDI Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/gedi02ap:
+    post:
+      operationId: streamGEDI02ap
+      summary: "GEDI L2A records (streaming, proxied across cluster)"
+      tags: [GEDI Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/gedi04a:
+    post:
+      operationId: streamGEDI04a
+      summary: "GEDI L4A records (streaming, single granule)"
+      tags: [GEDI Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/gedi04ap:
+    post:
+      operationId: streamGEDI04ap
+      summary: "GEDI L4A records (streaming, proxied across cluster)"
+      tags: [GEDI Streaming]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── SWOT ──
+  /source/swotl2:
+    post:
+      operationId: streamSWOTL2
+      summary: "SWOT L2 water surface records (streaming, single granule)"
+      tags: [SWOT]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  /source/swotl2p:
+    post:
+      operationId: streamSWOTL2p
+      summary: "SWOT L2 water surface records (streaming, proxied across cluster)"
+      tags: [SWOT]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── CASALS ──
+  /arrow/casals1bx:
+    post:
+      operationId: processCASALS1Bx
+      summary: "CASALS L1B geolocated returns (Parquet)"
+      description: |
+        Response: CASALS1bxResponseColumns.
+      tags: [CASALS]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── HDF5 Data Access ──
+  /source/h5:
+    post:
+      operationId: readH5Dataset
+      summary: "Read single HDF5 dataset (streaming)"
+      description: |
+        Reads a single dataset from an HDF5 file with optional row/column slicing.
+        Returns binary serialized h5dataset records.
+      tags: [HDF5]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [asset, resource, dataset]
+              properties:
+                asset: { type: string, description: "Registered asset name" }
+                resource: { type: string, description: "HDF5 file path or URL" }
+                dataset: { type: string, description: "Dataset path within HDF5 file" }
+                datatype: { type: integer, description: "RecordObject data type (0=DYNAMIC)" }
+                col: { type: integer, default: 0 }
+                startrow: { type: integer, default: 0 }
+                numrows: { type: integer, default: -1, description: "-1 for all rows" }
+                id: { type: integer, default: 0 }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+
+  /source/h5p:
+    post:
+      operationId: readH5File
+      summary: "Read multiple HDF5 datasets from one file (streaming)"
+      description: |
+        Reads multiple datasets from a single HDF5 file with slice specifications.
+      tags: [HDF5]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [asset, resource, datasets]
+              properties:
+                asset: { type: string }
+                resource: { type: string }
+                datasets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      dataset: { type: string }
+                      col: { type: integer }
+                      startrow: { type: integer }
+                      numrows: { type: integer }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+
+  /source/h5x:
+    post:
+      operationId: readH5Extended
+      summary: "Read HDF5 groups as Parquet DataFrame"
+      description: |
+        Creates DataFrames from HDF5 groups and outputs as Parquet.
+        Supports geo-indexing and raster sampling.
+      tags: [HDF5]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset: { type: string }
+                resource: { type: string }
+                parms:
+                  type: object
+                  description: "Must include output/arrow parameters"
+      responses:
+        "200": { $ref: "#/components/responses/ParquetResponse" }
+        "503": { $ref: "#/components/responses/ServerBusy" }
+
+  # ── Geospatial Utilities ──
+  /source/samples:
+    post:
+      operationId: sampleRaster
+      summary: "Sample raster values at coordinates"
+      description: |
+        Sample one or more raster datasets at specified lat/lon coordinates.
+        Returns JSON with sampled values.
+      tags: [Geospatial]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                samples: { type: object, description: "Raster sampling parameters (asset, algorithm, etc.)" }
+                coordinates:
+                  type: array
+                  items: { type: array, items: { type: number } }
+                  description: "Array of [lon, lat] or [lon, lat, height] coordinate arrays"
+      responses:
+        "200":
+          description: Sampled values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  samples: { type: array, items: { type: number } }
+                  errors: { type: array, items: {} }
+
+  /source/subsets:
+    post:
+      operationId: subsetRaster
+      summary: "Extract raster subsets by bounding box"
+      description: |
+        Extract raster data for specified bounding boxes.
+      tags: [Geospatial]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subsets: { type: object, description: "Raster parameters" }
+                extents:
+                  type: array
+                  items: { type: array, items: { type: number }, minItems: 4, maxItems: 4 }
+                  description: "Array of [xmin, ymin, xmax, ymax] bounding boxes"
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/geo:
+    post:
+      operationId: geoTransform
+      summary: "Coordinate transformations and spatial operations"
+      description: |
+        Coordinate conversions, polygon splitting, intersection, spatial index operations.
+      tags: [Geospatial]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  # ── Server Utilities ──
+  /source/time:
+    get:
+      operationId: convertTime
+      summary: "Time format conversion"
+      description: |
+        Converts between GPS, GMT, DATE, CDS time formats.
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                time: { type: number, description: "Time value to convert" }
+                input: { type: string, enum: [GPS, GMT, DATE, CDS, NOW] }
+                output: { type: string, enum: [GPS, GMT, DATE, CDS] }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/event:
+    post:
+      operationId: streamEvents
+      summary: "Stream application events (logs, traces, telemetry)"
+      description: |
+        Streams events for the specified duration. Use type bitmask to filter.
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: integer, description: "Event type bitmask" }
+                duration: { type: integer, description: "Streaming duration (seconds)" }
+      responses:
+        "200": { $ref: "#/components/responses/StreamingResponse" }
+
+  /source/definition:
+    post:
+      operationId: getDefinition
+      summary: "Get record type schema definition"
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rectype: { type: string, description: "Record type name (e.g. atl03rec)" }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/assets:
+    get:
+      operationId: getAssets
+      summary: "List all loaded assets and drivers"
+      tags: [Utilities]
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/index:
+    post:
+      operationId: queryIndex
+      summary: "Query spatial indexes for matching resources"
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/earthdata:
+    post:
+      operationId: queryEarthdata
+      summary: "Query Earthdata CMR/AMS for granule metadata"
+      tags: [Utilities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/prometheus:
+    get:
+      operationId: getPrometheus
+      summary: "Export metrics in OpenMetrics format"
+      tags: [Utilities]
+      responses:
+        "200": { $ref: "#/components/responses/TextResponse" }
+
+  # ── Admin ──
+  /source/ace:
+    post:
+      operationId: executeCode
+      summary: "Authorized code execution (admin, requires membership + signed request)"
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema: { type: string, description: "Lua code to execute" }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+        "403":
+          description: Unauthorized (missing membership or invalid signature)
+
+  /source/ams:
+    post:
+      operationId: callAMS
+      summary: "Application management system"
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+
+  /source/execre:
+    post:
+      operationId: executeContainer
+      summary: "Execute container runtime environment (admin, requires membership)"
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image: { type: string }
+                command: { type: string }
+                parms: { type: object }
+                rqst_timeout: { type: integer }
+      responses:
+        "200": { $ref: "#/components/responses/JSONResponse" }
+        "403":
+          description: Unauthorized
+
+  /source/lscre:
+    get:
+      operationId: listContainers
+      summary: "List running containers"
+      tags: [Admin]
+      responses:
+        "200": { $ref: "#/components/responses/TextResponse" }
+
+tags:
+  - name: Discovery
+    description: Schema discovery and server status
+  - name: ICESat-2
+    description: ICESat-2 Parquet/DataFrame APIs (x-series)
+  - name: ICESat-2 Streaming
+    description: |
+      ICESat-2 streaming record APIs (s/p-series). Returns binary serialized
+      RecordObjects — requires the SlideRule Python client to decode.
+      AI agents should use the /arrow/* Parquet endpoints instead.
+  - name: GEDI
+    description: GEDI Parquet/DataFrame APIs (x-series)
+  - name: GEDI Streaming
+    description: |
+      GEDI streaming record APIs. Returns binary serialized RecordObjects —
+      requires the SlideRule Python client. AI agents should use /arrow/* instead.
+  - name: SWOT
+    description: SWOT APIs
+  - name: CASALS
+    description: CASALS APIs
+  - name: HDF5
+    description: Direct HDF5 data access
+  - name: Geospatial
+    description: Raster sampling and spatial utilities
+  - name: Utilities
+    description: Server utilities and data discovery
+  - name: Admin
+    description: Administrative endpoints (require authentication)

@@ -186,6 +186,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/schema.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
     DESTINATION

@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include <atomic>
+#include <vector>
 
 #include "OsApi.h"
 #include "LuaObject.h"
@@ -106,6 +107,27 @@ class GeoDataFrame: public LuaObject, public Field
 
         typedef FieldMap<FieldUntypedColumn>::entry_t column_entry_t;
         typedef FieldDictionary::entry_t meta_entry_t;
+
+        /*--------------------------------------------------------------------
+         * Schema Registry
+         *--------------------------------------------------------------------*/
+
+        struct SchemaField {
+            const char* name;
+            uint32_t    encoding;       // Field encoding (e.g. Field::FLOAT | Field::NESTED_COLUMN)
+            const char* description;
+            bool        is_element;     // true = per-batch metadata, false = per-row column
+        };
+
+        struct Schema {
+            const char*             description;
+            vector<SchemaField>     fields;
+        };
+
+        static bool     registerSchema  (const char* api_name, const char* description,
+                                         const std::initializer_list<SchemaField>& fields);
+        static int      luaSchema       (lua_State* L);
+        static const char* encodingToStr(uint32_t encoding);
 
         typedef enum {
             OP_NONE = 0,
@@ -295,6 +317,8 @@ class GeoDataFrame: public LuaObject, public Field
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+        static Dictionary<Schema*>      schemaRegistry;
 
         bool                            inError;
         long                            numRows;
