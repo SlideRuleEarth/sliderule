@@ -388,6 +388,10 @@ Resources:
               Value: !Sub ${TelemetryStream}
             - Name: CLUSTER
               Value: localhost
+            - Name: DOMAIN
+              Value: !Sub ${Domain}
+            - Name: CONTAINER_REGISTRY
+              Value: !Sub ${ContainerRegistry}
           Volumes:
             - Name: plugins
               Host:
@@ -497,8 +501,9 @@ Resources:
                   - ses:SendRawEmail
                 Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
                 Condition:
-                  StringEquals:
-                    ses:Recipients: !Sub ${AlertEmail}
+                  ForAllValues:StringEquals:
+                    ses:Recipients:
+                      - !Sub ${AlertEmail}
         - PolicyName: !Sub "${AWS::StackName}-secret-access"
           PolicyDocument:
             Version: "2012-10-17"

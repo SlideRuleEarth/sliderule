@@ -219,8 +219,9 @@ Resources:
                   - ses:SendRawEmail
                 Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
                 Condition:
-                  StringEquals:
-                    ses:Recipients: !Sub ${AlertEmail}
+                  ForAllValues:StringEquals:
+                    ses:Recipients:
+                      - !Sub ${AlertEmail}
         - PolicyName: !Sub "${AWS::StackName}-secret-access"
           PolicyDocument:
             Version: "2012-10-17"
@@ -229,17 +230,6 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
-        - PolicyName: !Sub "${AWS::StackName}-gateway-batch-access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - batch:SubmitJob
-                  - batch:DescribeJobs
-                  - batch:ListJobs
-                  - batch:CancelJob
-                Resource: "*"
 
   # API Gateway HTTP API
   HttpApi:
@@ -348,10 +338,10 @@ Outputs:
     Description: Lambda that deletes a cluster; available for auto-shutdown
     Value: !GetAtt DestroyLambda.Arn
     Export:
-      Name: sliderule-provisioner-destroy-arn
+      Name: !Sub ${AWS::StackName}-destroy-arn
 
   ScheduleLambdaArn:
     Description: Lambda that schedules the auto-shutdown of a cluster
     Value: !GetAtt ScheduleLambda.Arn
     Export:
-      Name: sliderule-provisioner-scheduler-arn
+      Name: !Sub ${AWS::StackName}-scheduler-arn
