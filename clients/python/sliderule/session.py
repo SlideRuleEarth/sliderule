@@ -552,8 +552,9 @@ class Session:
     class __Runner:
         def __init__ (self, session):
             self.session = session
-        def submit (self, *, name, script, args_list):
-            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args_list": args_list})
+        def submit (self, *, name, script, args_list, optional_args=None):
+            if optional_args == None: optional_parms = {}
+            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args_list": args_list} | optional_args)
         def jobs (self, *, job_list):
             return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
         def queue (self, *, job_state):

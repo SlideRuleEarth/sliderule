@@ -22,8 +22,8 @@ JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEE
 MAX_JOBS_TO_DESCRIBE = 100
 MAX_VCPUS = 8
 MIN_VCPUS = 1
-MAX_MEMORY = 32
-MIN_MEMORY = 8
+MAX_MEMORY = 32768
+MIN_MEMORY = 8192
 
 batch = boto3.client("batch")
 ses = boto3.client('ses')
@@ -319,8 +319,9 @@ def cancel_handler(body):
     # get jobs to delete
     jobs_to_delete = job_list
     if jobs_to_delete == None:
+        jobs_to_delete = []
         # find all jobs
-        for state in ["SUBMITTED", "PENDING", "RUNNABLE"]:
+        for state in ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"]:
             response = batch.list_jobs(
                 jobQueue=f"{STACK_NAME}-job-queue",
                 jobStatus=state

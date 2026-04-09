@@ -104,7 +104,8 @@ PUBLIC_CLUSTER ?= sliderule
 CLUSTER ?= developers
 VERSION ?= unstable
 BRANCH ?= main
-SUPPORT_EMAIL ?= support@mail.slideruleearth.io
+EMAIL_DOMAIN ?= mail.slideruleearth.io
+SUPPORT_EMAIL ?= support@$(EMAIL_DOMAIN)
 CORS_ALLOW_ORIGINS ?= "https://client.$(DOMAIN)"
 
 PROJECT_BUCKET = sliderule
@@ -633,6 +634,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
 						ParameterKey=AffiliatesFilename,ParameterValue=$(AFFILIATES_FILENAME) \
+						ParameterKey=EmailDomain,ParameterValue=$(EMAIL_DOMAIN) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
@@ -723,6 +725,7 @@ runner-create: runner-build ## creates the lambda runner functions
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
+						ParameterKey=EmailDomain,ParameterValue=$(EMAIL_DOMAIN) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
@@ -733,16 +736,21 @@ runner-describe: ## status the creation/deletion of the runner functions
 
 runner-delete: ## deletes the lambda runner functions
 	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-job-queue --state DISABLED
-	- python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(RUNNER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(RUNNER_STACKNAME)
 
 runner-jobs-inprogress: ## displays all inprogress jobs
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUBMITTED PENDING RUNNABLE STARTING RUNNING"
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUBMITTED PENDING RUNNABLE STARTING RUNNING"'
 
 runner-jobs-finished: ## displays all finished jobs
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"'
+
+runner-cancel-all: ## cancels all jobs
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all'
 
 runner-logs:
 	aws logs tail /aws/lambda/$(RUNNER_STACKNAME)-gateway --since 2h --format short

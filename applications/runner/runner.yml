@@ -33,6 +33,8 @@ Parameters:
     Type: String
   TelemetryStream:
     Type: String
+  EmailDomain:
+    Type: String
   SupportEmail:
     Type: String
   AlertEmail:
@@ -499,7 +501,9 @@ Resources:
                 Action:
                   - ses:SendEmail
                   - ses:SendRawEmail
-                Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
+                Resource:
+                  - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailDomain}
+                  - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
                 Condition:
                   ForAllValues:StringEquals:
                     ses:Recipients:

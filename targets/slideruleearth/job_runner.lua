@@ -67,8 +67,8 @@ print(string.format("Running script: %s", script_file))
 -- Execute Script
 --------------------------------------------------
 
-local script_result, script_status = dofile(script_file)
-if not script_status then
+local ok, script_result = pcall(dofile, script_file)
+if not ok then
     print("Script failed execution", script_result)
     sys.quit(1) -- failure
 end
