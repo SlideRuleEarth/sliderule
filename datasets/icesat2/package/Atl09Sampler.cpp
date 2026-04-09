@@ -65,7 +65,7 @@ typedef struct {
  * FUNCTIONS
  ******************************************************************************/
 
-static range_to_sample_t get_time_range(H5Array<double>& delta_time, const time8_t& min_time, const time8_t& max_time, int timeout_ms)
+static range_to_sample_t get_time_range(H5Array<double>& atl09_delta_time, const time8_t& min_time, const time8_t& max_time, int timeout_ms)
 {
     range_to_sample_t range_to_sample = {
         .startrow = 0,
@@ -73,15 +73,15 @@ static range_to_sample_t get_time_range(H5Array<double>& delta_time, const time8
         .numrows = 0
     };
 
-    if(delta_time.h5f)
+    if(atl09_delta_time.h5f)
     {
         // wait for delta times to finish being read
-        delta_time.join(timeout_ms, true);
+        atl09_delta_time.join(timeout_ms, true);
 
         // find the start and end rows
-        for(long i = 0; i < delta_time.size; i++)
+        for(long i = 0; i < atl09_delta_time.size; i++)
         {
-            const time8_t t = Icesat2Fields::deltatime2timestamp(delta_time[i]);
+            const time8_t t = Icesat2Fields::deltatime2timestamp(atl09_delta_time[i]);
             if(t.nanoseconds < min_time.nanoseconds)
             {
                 range_to_sample.startrow = i;
@@ -111,12 +111,12 @@ static range_to_sample_t get_time_range(H5Array<double>& delta_time, const time8
     return range_to_sample;
 }
 
-static void sample_data_using_time(GeoDataFrame* dataframe, H5Array<double>& delta_time, H5VarSet& data, FieldColumn<time8_t>& time_column, const range_to_sample_t& range_to_sample, int timeout_ms)
+static void sample_data_using_time(GeoDataFrame* dataframe, H5Array<double>& atl09_delta_time, H5VarSet& atl09_data, FieldColumn<time8_t>& time_column, const range_to_sample_t& range_to_sample, int timeout_ms)
 {
-    if(delta_time.h5f)
+    if(atl09_delta_time.h5f)
     {
         // wait for data to finish being read
-        data.joinToGDF(dataframe, timeout_ms, true);
+        atl09_data.joinToGDF(dataframe, timeout_ms, true);
 
         // find and append best sample for each variable
         long row = 0;
@@ -124,14 +124,14 @@ static void sample_data_using_time(GeoDataFrame* dataframe, H5Array<double>& del
         {
             const time8_t dataframe_time = time_column[dataframe_index];
             while((row < (range_to_sample.numrows - 1)) &&
-                  (Icesat2Fields::deltatime2timestamp(delta_time[row + range_to_sample.startrow]).nanoseconds < dataframe_time.nanoseconds))
+                  (Icesat2Fields::deltatime2timestamp(atl09_delta_time[row + range_to_sample.startrow + 1]).nanoseconds <= dataframe_time.nanoseconds))
                 row++;
-            data.addToGDF(dataframe, row);
+            atl09_data.addToGDF(dataframe, row);
         }
     }
 }
 
-static range_to_sample_t get_segment_range(H5Array<int32_t>& seg_ids, const int32_t& min_seg, const int32_t& max_seg, int timeout_ms)
+static range_to_sample_t get_segment_range(H5Array<int32_t>& atl09_seg_ids, const int32_t& min_seg, const int32_t& max_seg, int timeout_ms)
 {
     range_to_sample_t range_to_sample = {
         .startrow = 0,
@@ -139,15 +139,15 @@ static range_to_sample_t get_segment_range(H5Array<int32_t>& seg_ids, const int3
         .numrows = 0
     };
 
-    if(seg_ids.h5f)
+    if(atl09_seg_ids.h5f)
     {
         // wait for segment ids to finish being read
-        seg_ids.join(timeout_ms, true);
+        atl09_seg_ids.join(timeout_ms, true);
 
         // find the start and end rows
-        for(long i = 0; i < seg_ids.size; i++)
+        for(long i = 0; i < atl09_seg_ids.size; i++)
         {
-            const int32_t seg = seg_ids[i];
+            const int32_t seg = atl09_seg_ids[i];
             if(seg < min_seg)
             {
                 range_to_sample.startrow = i;
@@ -177,12 +177,12 @@ static range_to_sample_t get_segment_range(H5Array<int32_t>& seg_ids, const int3
     return range_to_sample;
 }
 
-static void sample_data_using_segments(GeoDataFrame* dataframe, H5Array<int32_t>& seg_ids, H5VarSet& data, FieldColumn<int32_t>& segment_id_column, const range_to_sample_t& range_to_sample, int timeout_ms)
+static void sample_data_using_segments(GeoDataFrame* dataframe, H5Array<int32_t>& atl09_seg_ids, H5VarSet& atl09_data, FieldColumn<int32_t>& segment_id_column, const range_to_sample_t& range_to_sample, int timeout_ms)
 {
-    if(seg_ids.h5f)
+    if(atl09_seg_ids.h5f)
     {
         // wait for data to finish being read
-        data.joinToGDF(dataframe, timeout_ms, true);
+        atl09_data.joinToGDF(dataframe, timeout_ms, true);
 
         // find and append best sample for each variable
         long row = 0;
@@ -190,9 +190,9 @@ static void sample_data_using_segments(GeoDataFrame* dataframe, H5Array<int32_t>
         {
             const int32_t seg = segment_id_column[dataframe_index];
             while((row < (range_to_sample.numrows - 1)) &&
-                  (seg_ids[row + range_to_sample.startrow] < seg))
+                  (atl09_seg_ids[row + range_to_sample.startrow + 1] <= seg))
                 row++;
-            data.addToGDF(dataframe, row);
+            atl09_data.addToGDF(dataframe, row);
         }
     }
 }

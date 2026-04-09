@@ -40,17 +40,19 @@ class TestAtl09:
         def compare_time(gdf, field, df, col):
             for i in range(len(gdf)):
                 t = io.convert_datetime(gdf.index[i])
-                idx = (df["delta_time"] >= t).idxmax()
-                row = df.loc[idx] if (df["delta_time"] > t).any() else None
-                assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col}[{idx}] = {row[col]}"
+                mask = df["delta_time"] <= t
+                row = df[mask].iloc[-1] if mask.any() else None
+                assert row is not None, f"No delta_time less than {t} found in df"
+                assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col} = {row[col]}"
 
         # helper function for segment comparison
         def compare_segment(gdf, field, df, col):
             for i in range(len(gdf)):
                 seg = gdf["segment_id"].iloc[i]
-                idx = (df["segment_id"] >= seg).idxmax()
-                row = df.loc[idx] if (df["segment_id"] > seg).any() else None
-                assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col}[{idx}] = {row[col]}"
+                mask = df["segment_id"] <= seg
+                row = df[mask].iloc[-1] if mask.any() else None
+                assert row is not None, f"No segment_id less than {seg} found in df"
+                assert gdf[field].iloc[i] == row[col], f"miscompare on {field}[{i}] = {gdf[field].iloc[i]} to {col} = {row[col]}"
 
         # compare results
         compare_time(gdf, "bckgrd_atlas/bckgrd_counts", bckgrd_atlas_df, "bckgrd_counts")
