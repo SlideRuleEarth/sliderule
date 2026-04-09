@@ -145,6 +145,7 @@ static int core_open (lua_State *L)
         {"ams",             AmsLib::luaRequest},
         {"parms",           RequestFields::luaCreate},
         {"send2user",       OutputLib::luaSend2User},
+        {"schema",          GeoDataFrame::luaSchema},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
         {"ut_field",        UT_Field::luaCreate},

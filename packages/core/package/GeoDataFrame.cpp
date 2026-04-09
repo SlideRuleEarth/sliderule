@@ -62,6 +62,9 @@ const char* GeoDataFrame::SOURCE_ID = "srcid";
 const char* GeoDataFrame::SOURCE_TABLE = "srctbl";
 const char* GeoDataFrame::SOURCE_DATA = "srcdata";
 
+Mutex                              GeoDataFrame::schemaMut;
+Dictionary<GeoDataFrame::Schema*>  GeoDataFrame::schemaRegistry;
+
 const char* GeoDataFrame::LUA_META_NAME = "GeoDataFrame";
 const struct luaL_Reg GeoDataFrame::LUA_META_TABLE[] = {
     {NULL,      NULL}
@@ -917,6 +920,57 @@ void GeoDataFrame::populateGeoColumns (void)
             zColumnName = name;
         }
     }
+
+    // register schema on first construction of this type
+    schemaMut.lock();
+    {
+        if(!schemaRegistry.find(LuaMetaName))
+        {
+            // build description lookup from static table (if provided by subclass)
+            Dictionary<const char*> descLookup;
+            const schema_description_t* descs = getDescriptions();
+            if(descs)
+            {
+                for(int i = 0; descs[i].name != NULL; i++)
+                    descLookup.add(descs[i].name, descs[i].description);
+            }
+
+            Schema* schema = new Schema;
+            schema->name = LuaMetaName;
+            schema->description = LuaMetaName;
+
+            // columns
+            Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator col_iter(columnFields.fields);
+            for(int i = 0; i < col_iter.length; i++)
+            {
+                SchemaField sf;
+                sf.name = col_iter[i].key;
+                encoding2openapi(col_iter[i].value.field->encoding, sf);
+                const char* desc = NULL;
+                descLookup.find(col_iter[i].key, &desc);
+                sf.description = desc ? desc : "";
+                sf.role = "column";
+                schema->fields.push_back(sf);
+            }
+
+            // metadata
+            Dictionary<FieldDictionary::entry_t>::Iterator meta_iter(metaFields.fields);
+            for(int i = 0; i < meta_iter.length; i++)
+            {
+                SchemaField sf;
+                sf.name = meta_iter[i].key;
+                encoding2openapi(meta_iter[i].value.field->encoding, sf);
+                const char* desc = NULL;
+                descLookup.find(meta_iter[i].key, &desc);
+                sf.description = desc ? desc : "";
+                sf.role = "element";
+                schema->fields.push_back(sf);
+            }
+
+            schemaRegistry.add(LuaMetaName, schema);
+        }
+    }
+    schemaMut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -1220,6 +1274,144 @@ void GeoDataFrame::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_colum
 }
 
 /*----------------------------------------------------------------------------
+ * encoding2openapi
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::encoding2openapi (uint32_t encoding, SchemaField& sf)
+{
+    const uint32_t base_type = encoding & Field::TYPE_MASK;
+    const bool nested = (encoding & Field::NESTED_MASK) != 0;
+
+    string base_openapi_type;
+    string base_openapi_format;
+
+    switch(base_type)
+    {
+        case RecordObject::BOOL:    base_openapi_type = "boolean"; break;
+        case RecordObject::INT8:    base_openapi_type = "integer"; base_openapi_format = "int8";   break;
+        case RecordObject::INT16:   base_openapi_type = "integer"; base_openapi_format = "int16";  break;
+        case RecordObject::INT32:   base_openapi_type = "integer"; base_openapi_format = "int32";  break;
+        case RecordObject::INT64:   base_openapi_type = "integer"; base_openapi_format = "int64";  break;
+        case RecordObject::UINT8:   base_openapi_type = "integer"; base_openapi_format = "uint8";  break;
+        case RecordObject::UINT16:  base_openapi_type = "integer"; base_openapi_format = "uint16"; break;
+        case RecordObject::UINT32:  base_openapi_type = "integer"; base_openapi_format = "uint32"; break;
+        case RecordObject::UINT64:  base_openapi_type = "integer"; base_openapi_format = "uint64"; break;
+        case RecordObject::FLOAT:   base_openapi_type = "number";  base_openapi_format = "float";  break;
+        case RecordObject::DOUBLE:  base_openapi_type = "number";  base_openapi_format = "double"; break;
+        case RecordObject::TIME8:   base_openapi_type = "string";  base_openapi_format = "timestamp-ns"; break;
+        case RecordObject::STRING:  base_openapi_type = "string";  break;
+        default:                    base_openapi_type = "string";  break;
+    }
+
+    if(nested)
+    {
+        sf.type = "array";
+        sf.items_type = base_openapi_type;
+        sf.items_format = base_openapi_format;
+    }
+    else
+    {
+        sf.type = base_openapi_type;
+        sf.format = base_openapi_format;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaSchema - core.schema([api_name])
+ *
+ *  0 args: returns {meta_name = description, ...}
+ *  1 arg:  returns {description = "...", columns = [{name, type, format, description, role}, ...]}
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaSchema (lua_State* L)
+{
+    const int num_args = lua_gettop(L);
+
+    if(num_args == 0)
+    {
+        // return listing of all registered schemas
+        lua_newtable(L);
+        schemaMut.lock();
+        {
+            Dictionary<Schema*>::Iterator iter(schemaRegistry);
+            for(int i = 0; i < iter.length; i++)
+            {
+                lua_pushstring(L, iter[i].value->description.c_str());
+                lua_setfield(L, -2, iter[i].key);
+            }
+        }
+        schemaMut.unlock();
+        return 1;
+    }
+
+    // return schema for a specific API
+    const char* api_name = lua_tostring(L, 1);
+    if(api_name == NULL)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    schemaMut.lock();
+    Schema* schema = NULL;
+    const bool found = schemaRegistry.find(api_name, &schema);
+    schemaMut.unlock();
+
+    if(!found || schema == NULL)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    // build result table
+    lua_newtable(L);
+
+    lua_pushstring(L, schema->description.c_str());
+    lua_setfield(L, -2, "description");
+
+    // columns array
+    lua_newtable(L);
+    for(size_t i = 0; i < schema->fields.size(); i++)
+    {
+        const SchemaField& f = schema->fields[i];
+        lua_newtable(L);
+
+        lua_pushstring(L, f.name.c_str());
+        lua_setfield(L, -2, "name");
+
+        lua_pushstring(L, f.type.c_str());
+        lua_setfield(L, -2, "type");
+
+        if(!f.format.empty())
+        {
+            lua_pushstring(L, f.format.c_str());
+            lua_setfield(L, -2, "format");
+        }
+
+        if(!f.items_type.empty())
+        {
+            lua_pushstring(L, f.items_type.c_str());
+            lua_setfield(L, -2, "items_type");
+        }
+
+        if(!f.items_format.empty())
+        {
+            lua_pushstring(L, f.items_format.c_str());
+            lua_setfield(L, -2, "items_format");
+        }
+
+        lua_pushstring(L, f.description.c_str());
+        lua_setfield(L, -2, "description");
+
+        lua_pushstring(L, f.role.c_str());
+        lua_setfield(L, -2, "role");
+
+        lua_rawseti(L, -2, static_cast<int>(i + 1));
+    }
+    lua_setfield(L, -2, "columns");
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoDataFrame::GeoDataFrame( lua_State* L,
@@ -1260,6 +1452,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
+
 
     // start runner
     runPid = new Thread(runThread, this);

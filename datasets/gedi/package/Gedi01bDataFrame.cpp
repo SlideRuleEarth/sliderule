@@ -48,6 +48,28 @@ const struct luaL_Reg Gedi01bDataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t Gedi01bDataFrame::descriptions[] = {
+    {"shot_number",         "unique shot identifier"},
+    {"time_ns",             "GPS nanoseconds"},
+    {"latitude",            "latitude"},
+    {"longitude",           "longitude"},
+    {"elevation_start",     "waveform start elevation (m)"},
+    {"elevation_stop",      "waveform stop elevation (m)"},
+    {"solar_elevation",     "solar elevation angle (deg)"},
+    {"tx_size",             "transmit waveform sample count"},
+    {"rx_size",             "receive waveform sample count"},
+    {"flags",               "quality flags"},
+    {"tx_waveform",         "transmit waveform"},
+    {"rx_waveform",         "receive waveform"},
+    {"beam",                "beam number"},
+    {"orbit",               "orbit number"},
+    {"track",               "track number"},
+    {"granule",             "source granule name"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* Gedi01bDataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * GEDI01B DATAFRAME CLASS
  ******************************************************************************/

@@ -52,6 +52,27 @@ const struct luaL_Reg Atl24DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t Atl24DataFrame::descriptions[] = {
+    {"class_ph",            "photon classification"},
+    {"confidence",          "classification confidence"},
+    {"time_ns",             "GPS nanoseconds"},
+    {"lat_ph",              "photon latitude"},
+    {"lon_ph",              "photon longitude"},
+    {"ortho_h",             "orthometric height (m)"},
+    {"surface_h",           "surface height (m)"},
+    {"x_atc",               "along-track distance (m)"},
+    {"y_atc",               "across-track distance (m)"},
+    {"spot",                "spot number (1-6)"},
+    {"cycle",               "orbital cycle"},
+    {"region",              "region number"},
+    {"rgt",                 "reference ground track"},
+    {"gt",                  "ground track"},
+    {"granule",             "source granule name"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* Atl24DataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * atl24 READER CLASS
  ******************************************************************************/

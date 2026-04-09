@@ -121,6 +121,40 @@ class GeoDataFrame: public LuaObject, public Field
             GeoDataFrame::column_op_t op;
         } ancillary_t;
 
+        struct SchemaField {
+            string name;
+            string type;        // OpenAPI type: "number", "integer", "string", "boolean", "array"
+            string format;      // OpenAPI format: "double", "float", "int32", "timestamp-ns", etc. (empty for arrays)
+            string items_type;  // for arrays: element OpenAPI type (e.g. "number")
+            string items_format;// for arrays: element OpenAPI format (e.g. "float")
+            string description;
+            string role;        // "column" or "element"
+        };
+
+        struct Schema {
+            string name;
+            string description;
+            vector<SchemaField> fields;
+        };
+
+        // Schema descriptions are provided via a static table per subclass.
+        //
+        // Column descriptions cannot be read in the GeoDataFrame base constructor
+        // because derived-class FieldColumn members are not yet initialized at that
+        // point (C++ constructs base classes before derived members). Schema
+        // registration therefore happens in populateGeoColumns(), which subclasses
+        // call after their members are fully constructed.
+        //
+        // This static-table approach duplicates column names (they appear in both
+        // the constructor init list and the description table). To eliminate that
+        // duplication, an alternative is to add a const char* description member to
+        // FieldUntypedColumn/FieldElement (8 bytes per field per instance), which
+        // lets populateGeoColumns() read descriptions directly from the fields.
+        typedef struct {
+            const char* name;
+            const char* description;
+        } schema_description_t;
+
         /*--------------------------------------------------------------------
          * Subclasses
          *--------------------------------------------------------------------*/
@@ -173,6 +207,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         static void                 init                (void);
         static int                  luaCreate           (lua_State* L);
+        static int                  luaSchema           (lua_State* L);
 
         void                        clear               (void) override;
         long                        length              (void) const override;
@@ -268,6 +303,8 @@ class GeoDataFrame: public LuaObject, public Field
                                             const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
 
+        virtual const schema_description_t* getDescriptions (void) const { return NULL; }
+
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
         static void*    receiveThread       (void* parm);
@@ -291,9 +328,14 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
 
+        static void     encoding2openapi    (uint32_t encoding, SchemaField& sf);
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+        static Mutex                    schemaMut;
+        static Dictionary<Schema*>      schemaRegistry;
 
         bool                            inError;
         long                            numRows;

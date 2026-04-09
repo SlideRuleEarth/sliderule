@@ -44,6 +44,39 @@ const struct luaL_Reg Atl08DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t Atl08DataFrame::descriptions[] = {
+    {"time_ns",                 "GPS nanoseconds"},
+    {"latitude",                "latitude (EPSG:7912)"},
+    {"longitude",               "longitude (EPSG:7912)"},
+    {"segment_id_beg",          "beginning segment identifier"},
+    {"segment_landcover",       "land cover classification"},
+    {"segment_snowcover",       "snow cover classification"},
+    {"n_seg_ph",                "number of photons in segment"},
+    {"solar_elevation",         "solar elevation angle (deg)"},
+    {"terrain_slope",           "terrain slope (deg)"},
+    {"n_te_photons",            "number of terrain photons"},
+    {"h_te_uncertainty",        "terrain height uncertainty (m)"},
+    {"h_te_median",             "median terrain height (m)"},
+    {"h_canopy",                "canopy height (m)"},
+    {"h_canopy_uncertainty",    "canopy height uncertainty (m)"},
+    {"segment_cover",           "canopy cover fraction"},
+    {"n_ca_photons",            "number of canopy photons"},
+    {"h_max_canopy",            "maximum canopy height (m)"},
+    {"h_min_canopy",            "minimum canopy height (m)"},
+    {"h_mean_canopy",           "mean canopy height (m)"},
+    {"canopy_openness",         "canopy openness"},
+    {"canopy_h_metrics",        "canopy height percentile metrics"},
+    {"spot",                    "spot number (1-6)"},
+    {"cycle",                   "orbital cycle"},
+    {"region",                  "region number"},
+    {"rgt",                     "reference ground track"},
+    {"gt",                      "ground track"},
+    {"granule",                 "source granule name"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* Atl08DataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * ATL08 DATAFRAME CLASS
  ******************************************************************************/

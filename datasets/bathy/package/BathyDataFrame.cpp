@@ -58,6 +58,44 @@ const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t BathyDataFrame::descriptions[] = {
+    {"time_ns",             "GPS nanoseconds"},
+    {"index_ph",            "photon index"},
+    {"index_seg",           "segment index"},
+    {"lat_ph",              "photon latitude"},
+    {"lon_ph",              "photon longitude"},
+    {"x_ph",                "photon UTM easting (m)"},
+    {"y_ph",                "photon UTM northing (m)"},
+    {"x_atc",               "along-track distance (m)"},
+    {"y_atc",               "across-track distance (m)"},
+    {"surface_h",           "sea surface height (m)"},
+    {"ortho_h",             "orthometric height (m)"},
+    {"ellipse_h",           "ellipsoidal height (m)"},
+    {"sigma_thu",           "total horizontal uncertainty (m)"},
+    {"sigma_tvu",           "total vertical uncertainty (m)"},
+    {"processing_flags",    "processing flags"},
+    {"max_signal_conf",     "maximum signal confidence"},
+    {"quality_ph",          "photon quality flag"},
+    {"class_ph",            "photon classification"},
+    {"geoid_corr_h",        "geoid correction (m)"},
+    {"refracted_dZ",        "refraction depth correction (m)"},
+    {"refracted_lat",       "refraction-corrected latitude"},
+    {"refracted_lon",       "refraction-corrected longitude"},
+    {"subaqueous_sigma_thu","subaqueous horizontal uncertainty (m)"},
+    {"subaqueous_sigma_tvu","subaqueous vertical uncertainty (m)"},
+    {"spot",                "spot number (1-6)"},
+    {"beam",                "beam name"},
+    {"track",               "track number"},
+    {"pair",                "beam pair"},
+    {"utm_zone",            "UTM zone number"},
+    {"utm_is_north",        "UTM hemisphere (1=north, 0=south)"},
+    {"bounding_polygon_lat","bounding polygon latitudes"},
+    {"bounding_polygon_lon","bounding polygon longitudes"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* BathyDataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/

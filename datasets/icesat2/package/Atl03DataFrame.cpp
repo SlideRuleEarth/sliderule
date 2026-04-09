@@ -52,6 +52,31 @@ const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t Atl03DataFrame::descriptions[] = {
+    {"time_ns",             "GPS nanoseconds"},
+    {"latitude",            "latitude (EPSG:7912)"},
+    {"longitude",           "longitude (EPSG:7912)"},
+    {"segment_id",          "segment identifier"},
+    {"x_atc",               "along-track distance (m)"},
+    {"y_atc",               "across-track distance (m)"},
+    {"height",              "photon height (m)"},
+    {"solar_elevation",     "solar elevation angle (deg)"},
+    {"background_rate",     "background photon rate (MHz)"},
+    {"spacecraft_velocity", "spacecraft velocity (m/s)"},
+    {"atl03_cnf",           "ATL03 signal confidence"},
+    {"quality_ph",          "photon quality flag"},
+    {"ph_index",            "photon index within segment"},
+    {"spot",                "spot number (1-6)"},
+    {"cycle",               "orbital cycle"},
+    {"region",              "region number"},
+    {"rgt",                 "reference ground track"},
+    {"gt",                  "ground track"},
+    {"granule",             "source granule name"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* Atl03DataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * ATL03 READER CLASS
  ******************************************************************************/

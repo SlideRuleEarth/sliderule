@@ -121,6 +121,8 @@ class Casals1bDataFrame: public GeoDataFrame
                         Casals1bDataFrame   (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name);
                         ~Casals1bDataFrame  (void) override;
         okey_t          getKey              (void) const override;
+        const schema_description_t* getDescriptions (void) const override;
+        static const schema_description_t descriptions[];
         static void*    subsettingThread    (void* parm);
 };
 

@@ -44,6 +44,37 @@ const struct luaL_Reg Atl06DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t Atl06DataFrame::descriptions[] = {
+    {"time_ns",                 "GPS nanoseconds"},
+    {"latitude",                "latitude (EPSG:7912)"},
+    {"longitude",               "longitude (EPSG:7912)"},
+    {"x_atc",                   "along-track distance (m)"},
+    {"y_atc",                   "across-track distance (m)"},
+    {"h_li",                    "land ice height (m)"},
+    {"h_li_sigma",              "land ice height uncertainty (m)"},
+    {"sigma_geo_h",             "total geolocation uncertainty (m)"},
+    {"atl06_quality_summary",   "quality summary flag"},
+    {"segment_id",              "segment identifier"},
+    {"seg_azimuth",             "segment azimuth (deg)"},
+    {"dh_fit_dx",               "along-track slope"},
+    {"h_robust_sprd",           "robust spread of heights (m)"},
+    {"w_surface_window_final",  "final surface window width (m)"},
+    {"bsnow_conf",              "blowing snow confidence"},
+    {"bsnow_h",                 "blowing snow layer height (m)"},
+    {"r_eff",                   "effective reflectance"},
+    {"tide_ocean",              "ocean tide correction (m)"},
+    {"n_fit_photons",           "number of fit photons"},
+    {"spot",                    "spot number (1-6)"},
+    {"cycle",                   "orbital cycle"},
+    {"region",                  "region number"},
+    {"rgt",                     "reference ground track"},
+    {"gt",                      "ground track"},
+    {"granule",                 "source granule name"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* Atl06DataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * ATL06 DATAFRAME CLASS
  ******************************************************************************/

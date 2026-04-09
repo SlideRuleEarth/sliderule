@@ -44,6 +44,25 @@ const struct luaL_Reg Gedi04aDataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t Gedi04aDataFrame::descriptions[] = {
+    {"shot_number",         "unique shot identifier"},
+    {"time_ns",             "GPS nanoseconds"},
+    {"latitude",            "latitude"},
+    {"longitude",           "longitude"},
+    {"agbd",                "above ground biomass density (Mg/ha)"},
+    {"elevation",           "elevation (m)"},
+    {"solar_elevation",     "solar elevation angle (deg)"},
+    {"sensitivity",         "beam sensitivity"},
+    {"flags",               "quality flags"},
+    {"beam",                "beam number"},
+    {"orbit",               "orbit number"},
+    {"track",               "track number"},
+    {"granule",             "source granule name"},
+    {NULL, NULL}
+};
+
+const GeoDataFrame::schema_description_t* Gedi04aDataFrame::getDescriptions (void) const { return descriptions; }
+
 /******************************************************************************
  * GEDI04A DATAFRAME CLASS
  ******************************************************************************/
