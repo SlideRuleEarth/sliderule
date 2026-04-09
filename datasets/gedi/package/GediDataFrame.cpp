@@ -46,6 +46,30 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+ GediDataFrame::GediDataFrame(const char* meta_name, const struct luaL_Reg meta_table[],
+                            const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list):
+    GeoDataFrame(NULL, meta_name, meta_table, column_list,
+    {
+        {"beam",    &beam},
+        {"orbit",   &orbit},
+        {"track",   &track},
+        {"granule", &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    outQ(NULL),
+    parms(NULL),
+    hdf(NULL),
+    dfKey(0),
+    beamStr(NULL),
+    group{0}
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
  GediDataFrame::GediDataFrame(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[],
                              const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
                              GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name):

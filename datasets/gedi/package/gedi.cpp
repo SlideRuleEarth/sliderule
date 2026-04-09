@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "GeoDataFrame.h"
 #include "FootprintReader.h"
 #include "Gedi01bReader.h"
 #include "Gedi01bDataFrame.h"
@@ -108,6 +109,57 @@ void initgedi (void)
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open, LIBID);
+
+    /* Register Schemas */
+    {
+        GeoDataFrame::registerSchemaByType<Gedi01bDataFrame>("gedi01bx", "GEDI L1B geolocated waveforms", {
+            {"shot_number",     "GEDI shot number"},
+            {"time_ns",         "Shot timestamp (Unix ns)"},
+            {"latitude",        "Latitude (degrees)"},
+            {"longitude",       "Longitude (degrees)"},
+            {"elevation_start", "Waveform start elevation (m)"},
+            {"elevation_stop",  "Waveform stop elevation (m)"},
+            {"solar_elevation", "Solar elevation angle (deg)"},
+            {"tx_size",         "Transmit waveform sample count"},
+            {"rx_size",         "Receive waveform sample count"},
+            {"flags",           "Combined quality flags"},
+            {"tx_waveform",     "Transmit waveform samples"},
+            {"rx_waveform",     "Receive waveform samples"},
+            {"beam",            "GEDI beam number"},
+            {"orbit",           "Orbit number"},
+            {"track",           "Track number"},
+        });
+
+        GeoDataFrame::registerSchemaByType<Gedi02aDataFrame>("gedi02ax", "GEDI L2A elevation and height metrics", {
+            {"shot_number",     "GEDI shot number"},
+            {"time_ns",         "Shot timestamp (Unix ns)"},
+            {"latitude",        "Latitude (degrees)"},
+            {"longitude",       "Longitude (degrees)"},
+            {"elevation_lm",    "Elevation of lowest mode (m)"},
+            {"elevation_hr",    "Elevation of highest return (m)"},
+            {"solar_elevation", "Solar elevation angle (deg)"},
+            {"sensitivity",     "Beam sensitivity"},
+            {"flags",           "Combined quality flags"},
+            {"beam",            "GEDI beam number"},
+            {"orbit",           "Orbit number"},
+            {"track",           "Track number"},
+        });
+
+        GeoDataFrame::registerSchemaByType<Gedi04aDataFrame>("gedi04ax", "GEDI L4A above-ground biomass density", {
+            {"shot_number",     "GEDI shot number"},
+            {"time_ns",         "Shot timestamp (Unix ns)"},
+            {"latitude",        "Latitude (degrees)"},
+            {"longitude",       "Longitude (degrees)"},
+            {"agbd",            "Above-ground biomass density (Mg/ha)"},
+            {"elevation",       "Elevation of lowest mode (m)"},
+            {"solar_elevation", "Solar elevation angle (deg)"},
+            {"sensitivity",     "Beam sensitivity"},
+            {"flags",           "Combined quality flags"},
+            {"beam",            "GEDI beam number"},
+            {"orbit",           "Orbit number"},
+            {"track",           "Track number"},
+        });
+    }
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_GEDI_LIBNAME, LIBID);

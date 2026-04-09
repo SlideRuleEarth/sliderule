@@ -82,6 +82,8 @@ class Casals1bDataFrame: public GeoDataFrame
 
         static int  luaCreate   (lua_State* L);
 
+        Casals1bDataFrame (void); // skeleton for schema introspection
+
     private:
 
         /*--------------------------------------------------------------------

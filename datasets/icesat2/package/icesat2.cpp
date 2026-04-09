@@ -33,6 +33,7 @@
  *INCLUDES
  ******************************************************************************/
 
+#include "GeoDataFrame.h"
 #include "LuaEngine.h"
 #include "RasterObject.h"
 #include "Asset.h"
@@ -171,6 +172,118 @@ void initicesat2 (void)
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open, LIBID);
+
+    /* Register Schemas */
+    {
+        GeoDataFrame::registerSchemaByType<Atl03DataFrame>("atl03x", "Photon-level data (ICESat-2 ATL03)", {
+            {"time_ns",             "Photon timestamp (Unix ns)"},
+            {"latitude",            "Latitude (degrees)"},
+            {"longitude",           "Longitude (degrees)"},
+            {"segment_id",          "ATL03 segment ID"},
+            {"x_atc",               "Along-track distance (m)"},
+            {"y_atc",               "Across-track distance (m)"},
+            {"height",              "Photon height WGS84 (m)"},
+            {"solar_elevation",     "Solar elevation angle (deg)"},
+            {"background_rate",     "Background photon rate (Hz)"},
+            {"spacecraft_velocity", "Spacecraft velocity (m/s)"},
+            {"atl03_cnf",           "ATL03 confidence level"},
+            {"quality_ph",          "Photon quality flag"},
+            {"ph_index",            "Photon index within segment"},
+            {"spot",                "Spot number 1-6"},
+            {"cycle",               "Orbital cycle"},
+            {"region",              "ICESat-2 region number"},
+            {"rgt",                 "Reference Ground Track"},
+            {"gt",                  "Ground track (10,20,30,40,50,60)"},
+        });
+
+        GeoDataFrame::registerSchemaByType<Atl06DataFrame>("atl06x", "Land-ice surface elevation segments (ICESat-2 ATL06)", {
+            {"time_ns",                 "Segment timestamp (Unix ns)"},
+            {"latitude",                "Latitude (degrees)"},
+            {"longitude",               "Longitude (degrees)"},
+            {"x_atc",                   "Along-track distance (m)"},
+            {"y_atc",                   "Across-track distance (m)"},
+            {"h_li",                    "Fitted surface height WGS84 (m)"},
+            {"h_li_sigma",              "Height uncertainty (m)"},
+            {"sigma_geo_h",             "Geolocation height uncertainty (m)"},
+            {"atl06_quality_summary",   "Quality summary flag"},
+            {"segment_id",              "Segment ID"},
+            {"seg_azimuth",             "Segment azimuth (deg)"},
+            {"dh_fit_dx",               "Along-track slope"},
+            {"h_robust_sprd",           "Robust spread of residuals (m)"},
+            {"w_surface_window_final",  "Final surface window width (m)"},
+            {"bsnow_conf",              "Blowing snow confidence"},
+            {"bsnow_h",                 "Blowing snow height (m)"},
+            {"r_eff",                   "Effective reflectance"},
+            {"tide_ocean",              "Ocean tide correction (m)"},
+            {"n_fit_photons",           "Photons used in fit"},
+            {"spot",                    "Spot number 1-6"},
+            {"cycle",                   "Orbital cycle"},
+            {"region",                  "ICESat-2 region number"},
+            {"rgt",                     "Reference Ground Track"},
+            {"gt",                      "Ground track (10,20,30,40,50,60)"},
+        });
+
+        GeoDataFrame::registerSchemaByType<Atl08DataFrame>("atl08x", "Land and vegetation height segments (ICESat-2 ATL08)", {
+            {"time_ns",                 "Segment timestamp (Unix ns)"},
+            {"latitude",                "Latitude (degrees)"},
+            {"longitude",               "Longitude (degrees)"},
+            {"segment_id_beg",          "Starting segment ID"},
+            {"segment_landcover",       "Land cover classification"},
+            {"segment_snowcover",       "Snow cover flag"},
+            {"n_seg_ph",                "Total photons in segment"},
+            {"solar_elevation",         "Solar elevation angle (deg)"},
+            {"terrain_slope",           "Terrain slope"},
+            {"n_te_photons",            "Terrain photon count"},
+            {"h_te_uncertainty",        "Terrain height uncertainty (m)"},
+            {"h_te_median",             "Median terrain elevation (m)"},
+            {"h_canopy",                "Relative canopy height (m)"},
+            {"h_canopy_uncertainty",    "Canopy height uncertainty (m)"},
+            {"segment_cover",           "Canopy cover percentage"},
+            {"n_ca_photons",            "Canopy photon count"},
+            {"h_max_canopy",            "Max canopy height (m)"},
+            {"h_min_canopy",            "Min canopy height (m)"},
+            {"h_mean_canopy",           "Mean canopy height (m)"},
+            {"canopy_openness",         "Canopy openness fraction"},
+            {"canopy_h_metrics",        "Canopy height percentiles from ATL08 HDF5"},
+            {"spot",                    "Spot number 1-6"},
+            {"cycle",                   "Orbital cycle"},
+            {"region",                  "ICESat-2 region number"},
+            {"rgt",                     "Reference Ground Track"},
+            {"gt",                      "Ground track (10,20,30,40,50,60)"},
+        });
+
+        GeoDataFrame::registerSchemaByType<Atl13DataFrame>("atl13x", "Inland water surface height (ICESat-2 ATL13)", {
+            {"time_ns",             "Segment timestamp (Unix ns)"},
+            {"latitude",            "Latitude (degrees)"},
+            {"longitude",           "Longitude (degrees)"},
+            {"segment_id_beg",      "Starting segment ID"},
+            {"ht_ortho",            "Orthometric height (m)"},
+            {"ht_water_surf",       "Water surface height WGS84 (m)"},
+            {"stdev_water_surf",    "Std deviation of water surface height (m)"},
+            {"water_depth",         "Water depth (m)"},
+            {"spot",                "Spot number 1-6"},
+            {"cycle",               "Orbital cycle"},
+            {"rgt",                 "Reference Ground Track"},
+            {"gt",                  "Ground track (10,20,30,40,50,60)"},
+        });
+
+        GeoDataFrame::registerSchemaByType<Atl24DataFrame>("atl24x", "Coastal bathymetry (ICESat-2 ATL24)", {
+            {"class_ph",            "40=bathymetry, 41=sea_surface, 0=unclassified"},
+            {"confidence",          "Classification confidence"},
+            {"time_ns",             "Photon timestamp (Unix ns)"},
+            {"lat_ph",              "Latitude (degrees)"},
+            {"lon_ph",              "Longitude (degrees)"},
+            {"ortho_h",             "Orthometric height (m)"},
+            {"surface_h",           "Sea surface height (m)"},
+            {"x_atc",               "Along-track distance (m)"},
+            {"y_atc",               "Across-track distance (m)"},
+            {"spot",                "Spot number 1-6"},
+            {"cycle",               "Orbital cycle"},
+            {"region",              "ICESat-2 region number"},
+            {"rgt",                 "Reference Ground Track"},
+            {"gt",                  "Ground track (10,20,30,40,50,60)"},
+        });
+    }
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_ICESAT2_LIBNAME, LIBID);

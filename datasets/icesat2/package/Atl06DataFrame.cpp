@@ -79,6 +79,51 @@ int Atl06DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Atl06DataFrame::Atl06DataFrame(void):
+    GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"time_ns",                 &time_ns},
+        {"latitude",                &latitude},
+        {"longitude",               &longitude},
+        {"x_atc",                   &x_atc},
+        {"y_atc",                   &y_atc},
+        {"h_li",                    &h_li},
+        {"h_li_sigma",              &h_li_sigma},
+        {"sigma_geo_h",             &sigma_geo_h},
+        {"atl06_quality_summary",   &atl06_quality_summary},
+        {"segment_id",              &segment_id},
+        {"seg_azimuth",             &seg_azimuth},
+        {"dh_fit_dx",               &dh_fit_dx},
+        {"h_robust_sprd",           &h_robust_sprd},
+        {"w_surface_window_final",  &w_surface_window_final},
+        {"bsnow_conf",              &bsnow_conf},
+        {"bsnow_h",                 &bsnow_h},
+        {"r_eff",                   &r_eff},
+        {"tide_ocean",              &tide_ocean},
+        {"n_fit_photons",           &n_fit_photons}
+    },
+    {
+        {"spot",                    &spot},
+        {"cycle",                   &cycle},
+        {"region",                  &region},
+        {"rgt",                     &rgt},
+        {"gt",                      &gt},
+        {"granule",                 &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    outQ(NULL),
+    parms(NULL),
+    hdf06(NULL),
+    dfKey(0),
+    beam(NULL)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
@@ -155,8 +200,8 @@ Atl06DataFrame::~Atl06DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf06->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf06) hdf06->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

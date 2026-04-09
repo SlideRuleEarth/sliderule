@@ -107,6 +107,40 @@ class GeoDataFrame: public LuaObject, public Field
         typedef FieldMap<FieldUntypedColumn>::entry_t column_entry_t;
         typedef FieldDictionary::entry_t meta_entry_t;
 
+        /*--------------------------------------------------------------------
+         * Schema Registry
+         *--------------------------------------------------------------------*/
+
+        struct SchemaColumn {
+            string name;
+            string type;
+            string description;
+            string flags;
+            bool   is_element;
+        };
+
+        struct SchemaEntry {
+            string                description;
+            vector<SchemaColumn>  columns;
+        };
+
+        static bool registerSchema  (const char* api_name, const char* api_description,
+                                     const GeoDataFrame& skeleton,
+                                     const std::initializer_list<std::pair<const char*, const char*>>& descriptions = {});
+        static bool registerSchema  (const char* api_name, const char* api_description,
+                                     const std::initializer_list<SchemaColumn>& columns);
+        static int  luaSchema       (lua_State* L);
+
+        template<class DF>
+        static bool registerSchemaByType (const char* api_name, const char* api_description,
+                                          const std::initializer_list<std::pair<const char*, const char*>>& descriptions = {})
+        {
+            GeoDataFrame* skeleton = new DF();
+            const bool result = registerSchema(api_name, api_description, *skeleton, descriptions);
+            delete skeleton;
+            return result;
+        }
+
         typedef enum {
             OP_NONE = 0,
             OP_MEAN = 1,
@@ -294,6 +328,8 @@ class GeoDataFrame: public LuaObject, public Field
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+        static Dictionary<SchemaEntry*>  schemaRegistry;
 
         bool                            inError;
         long                            numRows;

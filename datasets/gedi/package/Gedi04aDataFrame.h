@@ -55,6 +55,8 @@ class Gedi04aDataFrame: public GediDataFrame
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
+        Gedi04aDataFrame (void); // skeleton for schema introspection
+
     private:
 
         /*--------------------------------------------------------------------

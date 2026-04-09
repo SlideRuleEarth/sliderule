@@ -87,6 +87,38 @@ int Atl13DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Atl13DataFrame::Atl13DataFrame(void):
+    GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"time_ns",                 &time_ns},
+        {"latitude",                &latitude},
+        {"longitude",               &longitude},
+        {"segment_id_beg",          &segment_id_beg},
+        {"ht_ortho",                &ht_ortho},
+        {"ht_water_surf",           &ht_water_surf},
+        {"stdev_water_surf",        &stdev_water_surf},
+        {"water_depth",             &water_depth},
+    },
+    {
+        {"spot",                    &spot},
+        {"cycle",                   &cycle},
+        {"rgt",                     &rgt},
+        {"gt",                      &gt},
+        {"granule",                 &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    beam(NULL),
+    outQ(NULL),
+    parms(NULL),
+    hdf13(NULL)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf13, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
@@ -149,8 +181,8 @@ Atl13DataFrame::~Atl13DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf13->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf13) hdf13->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

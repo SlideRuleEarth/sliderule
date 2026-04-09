@@ -144,6 +144,7 @@ install (
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/data/leap-seconds.list
+        ${CMAKE_CURRENT_LIST_DIR}/data/openapi-base.json
         ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912.projjson
         ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912_EGM08.projjson
         ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG9989.projjson
@@ -185,7 +186,9 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/openapi.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/schema.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
     DESTINATION

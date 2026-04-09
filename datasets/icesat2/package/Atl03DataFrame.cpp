@@ -93,6 +93,52 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Atl03DataFrame::Atl03DataFrame(void):
+    GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"time_ns",             &time_ns},
+        {"latitude",            &latitude},
+        {"longitude",           &longitude},
+        {"segment_id",          &segment_id},
+        {"x_atc",               &x_atc},
+        {"y_atc",               &y_atc},
+        {"height",              &height},
+        {"solar_elevation",     &solar_elevation},
+        {"background_rate",     &background_rate},
+        {"spacecraft_velocity", &spacecraft_velocity},
+        {"atl03_cnf",           &atl03_cnf},
+        {"quality_ph",          &quality_ph},
+        {"ph_index",            &ph_index},
+    },
+    {
+        {"spot",                &spot},
+        {"cycle",               &cycle},
+        {"region",              &region},
+        {"rgt",                 &rgt},
+        {"gt",                  &gt},
+        {"granule",             &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    signalConfColIndex(0),
+    beam(NULL),
+    outQ(NULL),
+    parms(NULL),
+    hdf03(NULL),
+    hdf08(NULL),
+    hdf24(NULL),
+    dfKey(0),
+    usePodppd(false),
+    useYapc006(false),
+    useYapc007(false),
+    useGeoid(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
@@ -205,8 +251,8 @@ Atl03DataFrame::~Atl03DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf03->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf03) hdf03->releaseLuaObject();
     if(hdf08) hdf08->releaseLuaObject();
     if(hdf24) hdf24->releaseLuaObject();
 }

@@ -62,6 +62,8 @@ class Gedi01bDataFrame: public GediDataFrame
 
         static int  luaCreate   (lua_State* L);
 
+        Gedi01bDataFrame (void); // skeleton for schema introspection
+
     private:
 
         /*--------------------------------------------------------------------

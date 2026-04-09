@@ -1,0 +1,134 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SlideRule Earth API",
+    "description": "Server-side processing of NASA ICESat-2, GEDI, and other Earth science datasets. Returns subsetted, filtered, and algorithmically processed data as Parquet files.",
+    "version": "0.0.0",
+    "contact": {
+      "name": "SlideRule Earth",
+      "url": "https://slideruleearth.io"
+    },
+    "license": {
+      "name": "BSD-3-Clause",
+      "url": "https://github.com/SlideRuleEarth/sliderule/blob/main/LICENSE"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://slideruleearth.io",
+      "description": "Production cluster"
+    }
+  ],
+  "paths": {
+    "/source/version": {
+      "get": {
+        "operationId": "getVersion",
+        "summary": "Server version",
+        "tags": ["Discovery"],
+        "responses": {
+          "200": {
+            "description": "Version information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Health check",
+        "tags": ["Discovery"],
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "healthy": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/defaults": {
+      "get": {
+        "operationId": "getDefaults",
+        "summary": "Default processing parameters",
+        "tags": ["Discovery"],
+        "responses": {
+          "200": {
+            "description": "Default parameter values for all modules",
+            "content": {
+              "application/json": {
+                "schema": {"type": "object"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/schema": {
+      "get": {
+        "operationId": "getSchema",
+        "summary": "Response column schema for an API",
+        "description": "Returns the Parquet column schema (names, types, descriptions) for a given arrow API endpoint. Without the `api` parameter, returns the list of available APIs.",
+        "tags": ["Discovery"],
+        "parameters": [
+          {
+            "name": "api",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API name (e.g. atl06x, gedi04ax). Omit to list all available APIs."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column schema or API listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/openapi": {
+      "get": {
+        "operationId": "getOpenAPI",
+        "summary": "OpenAPI specification",
+        "description": "Returns the complete OpenAPI 3.1 specification with column schemas injected from the live schema registry.",
+        "tags": ["Discovery"],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 specification",
+            "content": {
+              "application/json": {
+                "schema": {"type": "object"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}

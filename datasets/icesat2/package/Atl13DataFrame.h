@@ -89,6 +89,8 @@ class Atl13DataFrame: public GeoDataFrame
 
         static int  luaCreate   (lua_State* L);
 
+        Atl13DataFrame (void); // skeleton for schema introspection
+
     private:
 
         /*--------------------------------------------------------------------

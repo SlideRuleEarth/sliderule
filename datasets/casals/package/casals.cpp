@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "GeoDataFrame.h"
 #include "Casals1bDataFrame.h"
 #include "CasalsFields.h"
 
@@ -73,6 +74,16 @@ void initcasals (void)
 {
     /* Extend Lua */
     LuaEngine::extend(LUA_CASALS_LIBNAME, casals_open, LIBID);
+
+    /* Register Schemas */
+    {
+        GeoDataFrame::registerSchemaByType<Casals1bDataFrame>("casals1bx", "CASALS L1B geolocated returns", {
+            {"time_ns",     "Return timestamp (Unix ns)"},
+            {"latitude",    "Latitude (degrees)"},
+            {"longitude",   "Longitude (degrees)"},
+            {"refh",        "Reference height (m)"},
+        });
+    }
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_CASALS_LIBNAME, LIBID);

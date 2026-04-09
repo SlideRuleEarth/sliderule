@@ -79,6 +79,25 @@ int Gedi04aDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Gedi04aDataFrame::Gedi04aDataFrame(void):
+    GediDataFrame(LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"shot_number",         &shot_number},
+        {"time_ns",             &time_ns},
+        {"latitude",            &latitude},
+        {"longitude",           &longitude},
+        {"agbd",                &agbd},
+        {"elevation",           &elevation},
+        {"solar_elevation",     &solar_elevation},
+        {"sensitivity",         &sensitivity},
+        {"flags",               &flags}
+    })
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf04a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {

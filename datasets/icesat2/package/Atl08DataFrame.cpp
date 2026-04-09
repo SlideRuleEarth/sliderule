@@ -79,6 +79,53 @@ int Atl08DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Atl08DataFrame::Atl08DataFrame(void):
+    GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"time_ns",                 &time_ns},
+        {"latitude",                &latitude},
+        {"longitude",               &longitude},
+        {"segment_id_beg",          &segment_id_beg},
+        {"segment_landcover",       &segment_landcover},
+        {"segment_snowcover",       &segment_snowcover},
+        {"n_seg_ph",                &n_seg_ph},
+        {"solar_elevation",         &solar_elevation},
+        {"terrain_slope",           &terrain_slope},
+        {"n_te_photons",            &n_te_photons},
+        {"h_te_uncertainty",        &h_te_uncertainty},
+        {"h_te_median",             &h_te_median},
+        {"h_canopy",                &h_canopy},
+        {"h_canopy_uncertainty",    &h_canopy_uncertainty},
+        {"segment_cover",           &segment_cover},
+        {"n_ca_photons",            &n_ca_photons},
+        {"h_max_canopy",            &h_max_canopy},
+        {"h_min_canopy",            &h_min_canopy},
+        {"h_mean_canopy",           &h_mean_canopy},
+        {"canopy_openness",         &canopy_openness},
+        {"canopy_h_metrics",        &canopy_h_metrics}
+    },
+    {
+        {"spot",                    &spot},
+        {"cycle",                   &cycle},
+        {"region",                  &region},
+        {"rgt",                     &rgt},
+        {"gt",                      &gt},
+        {"granule",                 &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    outQ(NULL),
+    parms(NULL),
+    hdf08(NULL),
+    dfKey(0),
+    beam(NULL)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
@@ -167,8 +214,8 @@ Atl08DataFrame::~Atl08DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf08->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf08) hdf08->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

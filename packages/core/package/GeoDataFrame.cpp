@@ -36,6 +36,7 @@
 #include <regex>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 #include <cmath>
 #include <cassert>
 #include <rapidjson/document.h>
@@ -92,6 +93,238 @@ const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
 };
 
 const char* GeoDataFrame::CRS_KEY = "crs";
+
+Dictionary<GeoDataFrame::SchemaEntry*> GeoDataFrame::schemaRegistry;
+
+/******************************************************************************
+ * SCHEMA REGISTRY
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * encodingToTypeStr
+ *----------------------------------------------------------------------------*/
+static const char* encodingToTypeStr (uint32_t encoding)
+{
+    const uint32_t base_type = encoding & Field::VALUE_MASK;
+    const uint32_t nested    = encoding & Field::NESTED_MASK;
+
+    const char* base_str;
+    switch(base_type)
+    {
+        case Field::BOOL:   base_str = "bool";    break;
+        case Field::INT8:   base_str = "int8_t";  break;
+        case Field::INT16:  base_str = "int16_t"; break;
+        case Field::INT32:  base_str = "int32_t"; break;
+        case Field::INT64:  base_str = "int64_t"; break;
+        case Field::UINT8:  base_str = "uint8_t"; break;
+        case Field::UINT16: base_str = "uint16_t";break;
+        case Field::UINT32: base_str = "uint32_t";break;
+        case Field::UINT64: base_str = "uint64_t";break;
+        case Field::FLOAT:  base_str = "float";   break;
+        case Field::DOUBLE: base_str = "double";  break;
+        case Field::TIME8:  base_str = "time8_t"; break;
+        case Field::STRING: base_str = "string";  break;
+        default:            base_str = "unknown"; break;
+    }
+
+    if(nested & Field::NESTED_ARRAY)
+    {
+        static thread_local char buf[64];
+        snprintf(buf, sizeof(buf), "array<%s>", base_str);
+        return buf;
+    }
+    if(nested & Field::NESTED_LIST)
+    {
+        static thread_local char buf[64];
+        snprintf(buf, sizeof(buf), "list<%s>", base_str);
+        return buf;
+    }
+
+    return base_str;
+}
+
+/*----------------------------------------------------------------------------
+ * encodingToFlags
+ *----------------------------------------------------------------------------*/
+static const char* encodingToFlags (uint32_t encoding)
+{
+    if(encoding & Field::TIME_COLUMN) return "TIME_COLUMN";
+    if(encoding & Field::X_COLUMN)    return "X_COLUMN";
+    if(encoding & Field::Y_COLUMN)    return "Y_COLUMN";
+    if(encoding & Field::Z_COLUMN)    return "Z_COLUMN";
+    return "";
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema - from skeleton DataFrame + descriptions
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::registerSchema (const char* api_name, const char* api_description,
+                                   const GeoDataFrame& skeleton,
+                                   const std::initializer_list<std::pair<const char*, const char*>>& descriptions)
+{
+    // build description lookup
+    std::unordered_map<string, const char*> desc_map;
+    for(const auto& pair : descriptions)
+    {
+        desc_map[pair.first] = pair.second;
+    }
+
+    SchemaEntry* entry = new SchemaEntry();
+    entry->description = api_description;
+
+    // introspect columns
+    const Dictionary<column_entry_t>& columns = skeleton.getColumns();
+    Dictionary<column_entry_t>::Iterator col_iter(columns);
+    for(int i = 0; i < col_iter.length; i++)
+    {
+        const char* name = col_iter[i].key;
+        const FieldUntypedColumn* field = col_iter[i].value.field;
+
+        const char* desc = "";
+        auto it = desc_map.find(name);
+        if(it != desc_map.end()) desc = it->second;
+
+        entry->columns.push_back({
+            name,
+            encodingToTypeStr(field->encoding),
+            desc,
+            encodingToFlags(field->encoding),
+            false
+        });
+    }
+
+    // introspect metadata
+    const Dictionary<meta_entry_t>& meta = skeleton.getMeta();
+    Dictionary<meta_entry_t>::Iterator meta_iter(meta);
+    for(int i = 0; i < meta_iter.length; i++)
+    {
+        const char* name = meta_iter[i].key;
+        const Field* field = meta_iter[i].value.field;
+
+        // skip granule (becomes srcid in output)
+        if((field->encoding & META_SOURCE_ID) || StringLib::match(name, "granule")) continue;
+
+        const char* desc = "";
+        auto meta_it = desc_map.find(name);
+        if(meta_it != desc_map.end()) desc = meta_it->second;
+
+        entry->columns.push_back({
+            name,
+            encodingToTypeStr(field->encoding),
+            desc,
+            "",
+            true
+        });
+    }
+
+    // srcid is always present in output
+    entry->columns.push_back({"srcid", "int32_t", "Source granule ID (see metadata)", "", false});
+
+    if(!schemaRegistry.add(api_name, entry, true))
+    {
+        mlog(WARNING, "Failed to register schema for %s (duplicate?)", api_name);
+        delete entry;
+        return false;
+    }
+
+    mlog(DEBUG, "Registered schema for %s (%lu columns)", api_name, entry->columns.size());
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema - from explicit column list (for FrameRunner schemas)
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::registerSchema (const char* api_name, const char* api_description,
+                                   const std::initializer_list<SchemaColumn>& columns)
+{
+    SchemaEntry* entry = new SchemaEntry();
+    entry->description = api_description;
+    entry->columns = columns;
+
+    if(!schemaRegistry.add(api_name, entry, true))
+    {
+        mlog(WARNING, "Failed to register schema for %s (duplicate?)", api_name);
+        delete entry;
+        return false;
+    }
+
+    mlog(DEBUG, "Registered schema for %s (%lu columns)", api_name, entry->columns.size());
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * luaSchema - core.schema([api_name])
+ *
+ *  No argument: returns {api_name: description, ...}
+ *  With argument: returns {description=, columns=[{name,type,description,flags,role},...]}
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaSchema (lua_State* L)
+{
+    const char* api_name = NULL;
+    if(lua_gettop(L) >= 1 && lua_isstring(L, 1))
+    {
+        api_name = lua_tostring(L, 1);
+    }
+
+    if(!api_name)
+    {
+        // return listing
+        lua_newtable(L);
+        Dictionary<SchemaEntry*>::Iterator iter(schemaRegistry);
+        for(int i = 0; i < iter.length; i++)
+        {
+            lua_pushstring(L, iter[i].value->description.c_str());
+            lua_setfield(L, -2, iter[i].key);
+        }
+        return 1;
+    }
+
+    // look up specific schema
+    try
+    {
+        SchemaEntry* entry = schemaRegistry[api_name];
+
+        lua_newtable(L);
+
+        lua_pushstring(L, entry->description.c_str());
+        lua_setfield(L, -2, "description");
+
+        lua_newtable(L);
+        for(size_t i = 0; i < entry->columns.size(); i++)
+        {
+            const SchemaColumn& col = entry->columns[i];
+            lua_newtable(L);
+
+            lua_pushstring(L, col.name.c_str());
+            lua_setfield(L, -2, "name");
+
+            lua_pushstring(L, col.type.c_str());
+            lua_setfield(L, -2, "type");
+
+            lua_pushstring(L, col.description.c_str());
+            lua_setfield(L, -2, "description");
+
+            if(!col.flags.empty())
+            {
+                lua_pushstring(L, col.flags.c_str());
+                lua_setfield(L, -2, "flags");
+            }
+
+            lua_pushstring(L, col.is_element ? "element" : "column");
+            lua_setfield(L, -2, "role");
+
+            lua_rawseti(L, -2, static_cast<int>(i + 1));
+        }
+        lua_setfield(L, -2, "columns");
+
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        (void)e;
+        return luaL_error(L, "unknown api: %s", api_name);
+    }
+}
 
 /******************************************************************************
  * STATIC FUNCTIONS
@@ -1239,30 +1472,33 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     yColumn(NULL),
     zColumn(NULL),
     crs(_crs == NULL ? "" : _crs),
-    active(true),
+    active(L != NULL),
     receivePid(NULL),
     runPid(NULL),
     pubRunQ(NULL),
     subRunQ(pubRunQ),
     runComplete(false)
 {
-    // set lua functions
-    LuaEngine::setAttrFunc(L, "inerror",    luaInError);
-    LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
-    LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
-    LuaEngine::setAttrFunc(L, "export",     luaExport);
-    LuaEngine::setAttrFunc(L, "send",       luaSend);
-    LuaEngine::setAttrFunc(L, "receive",    luaReceive);
-    LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
-    LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
-    LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
-    LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
-    LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
-    LuaEngine::setAttrFunc(L, "run",        luaRun);
-    LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
+    if(L)
+    {
+        // set lua functions
+        LuaEngine::setAttrFunc(L, "inerror",    luaInError);
+        LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
+        LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
+        LuaEngine::setAttrFunc(L, "export",     luaExport);
+        LuaEngine::setAttrFunc(L, "send",       luaSend);
+        LuaEngine::setAttrFunc(L, "receive",    luaReceive);
+        LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
+        LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
+        LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
+        LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
+        LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
+        LuaEngine::setAttrFunc(L, "run",        luaRun);
+        LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
 
-    // start runner
-    runPid = new Thread(runThread, this);
+        // start runner
+        runPid = new Thread(runThread, this);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1271,17 +1507,21 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
 GeoDataFrame::~GeoDataFrame(void)
 {
     active.store(false);
+
+    // release pending frame runners (only if runner thread was started)
+    if(runPid)
+    {
+        int recv_status = MsgQ::STATE_OKAY;
+        while(recv_status > 0)
+        {
+            GeoDataFrame::FrameRunner* runner;
+            recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), IO_CHECK);
+            if(recv_status > 0 && runner) runner->releaseLuaObject();
+        }
+    }
+
     delete receivePid;
     delete runPid;
-
-    // release pending frame runners
-    int recv_status = MsgQ::STATE_OKAY;
-    while(recv_status > 0)
-    {
-        GeoDataFrame::FrameRunner* runner;
-        recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), IO_CHECK);
-        if(recv_status > 0 && runner) runner->releaseLuaObject();
-    }
 }
 
 /*----------------------------------------------------------------------------

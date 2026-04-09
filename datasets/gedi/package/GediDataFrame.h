@@ -69,6 +69,9 @@ class GediDataFrame: public GeoDataFrame
 
     protected:
 
+        GediDataFrame (const char* meta_name, const struct luaL_Reg meta_table[],
+                       const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list); // skeleton
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

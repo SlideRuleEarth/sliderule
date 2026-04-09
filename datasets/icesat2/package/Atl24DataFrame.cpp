@@ -87,6 +87,40 @@ int Atl24DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Atl24DataFrame::Atl24DataFrame(void):
+    GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"class_ph",            &class_ph},
+        {"confidence",          &confidence},
+        {"time_ns",             &time_ns},
+        {"lat_ph",              &lat_ph},
+        {"lon_ph",              &lon_ph},
+        {"ortho_h",             &ortho_h},
+        {"surface_h",           &surface_h},
+        {"x_atc",               &x_atc},
+        {"y_atc",               &y_atc},
+    },
+    {
+        {"spot",                &spot},
+        {"cycle",               &cycle},
+        {"region",              &region},
+        {"rgt",                 &rgt},
+        {"gt",                  &gt},
+        {"granule",             &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    beam(NULL),
+    outQ(NULL),
+    parms(NULL),
+    hdf24(NULL)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
@@ -165,8 +199,8 @@ Atl24DataFrame::~Atl24DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf24->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf24) hdf24->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

@@ -86,6 +86,30 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
+Casals1bDataFrame::Casals1bDataFrame(void):
+    GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE,
+    {
+        {"time_ns",         &time_ns},
+        {"latitude",        &latitude},
+        {"longitude",       &longitude},
+        {"refh",            &refh},
+    },
+    {
+        {"granule",         &granule}
+    }),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(0),
+    outQ(NULL),
+    parms(NULL),
+    hdf1b(NULL),
+    dfKey(0)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
 Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
@@ -132,8 +156,8 @@ Casals1bDataFrame::~Casals1bDataFrame (void)
     active.store(false);
     delete readerPid;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf1b->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf1b) hdf1b->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
