@@ -391,7 +391,7 @@ int UT_Field::testDictionary(lua_State* L)
         const string json = bye.toJson();
 
         // check output
-        ut_assert(lua_obj, json == "{\"a\":[true,false],\"cc\":[[true,false],[true,true]],\"e\":true,\"c\":[true,false,true]}", "json output was incorrect: %s", json.c_str());
+        ut_assert(lua_obj, json == "{\"e\":true,\"a\":[true,false],\"c\":[true,false,true],\"cc\":[[true,false],[true,true]]}", "json output was incorrect: %s", json.c_str());
 
         // return status
         lua_pushboolean(L, ut_status(lua_obj));
