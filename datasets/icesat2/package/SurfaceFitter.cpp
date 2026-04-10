@@ -57,23 +57,6 @@ const struct luaL_Reg SurfaceFitter::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t SurfaceFitter::descriptions[] = {
-    {"time_ns",                 "GPS nanoseconds",                      NULL, 0},
-    {"latitude",                "latitude (EPSG:7912)",                 NULL, 0},
-    {"longitude",               "longitude (EPSG:7912)",                NULL, 0},
-    {"segment_id_beg",          "first segment in extent",              NULL, 0},
-    {"x_atc",                   "along-track distance (m)",             NULL, 0},
-    {"y_atc",                   "across-track distance (m)",            NULL, 0},
-    {"photon_start",            "photon index of start of extent",      NULL, 0},
-    {"pflags",                  "processing flags",                     NULL, 0},
-    {"h_mean",                  "mean height from ellipsoid (m)",       NULL, 0},
-    {"dh_fit_dx",               "along-track slope",                    NULL, 0},
-    {"w_surface_window_final",  "final surface window height (m)",      NULL, 0},
-    {"n_fit_photons",           "number of photons in fit",             NULL, 0},
-    {"rms_misfit",              "root-mean-square misfit (m)",          NULL, 0},
-    {"h_sigma",                 "height uncertainty (m)",               NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
 
 /******************************************************************************
  * METHODS
@@ -258,7 +241,24 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     delete ancillary_columns;
 
     // finalize dataframe
-    dataframe->populateGeoColumns("SurfaceFitter", descriptions);
+    const GeoDataFrame::schema_description_t descs[] = {
+        {"time_ns",                 time_ns,         "GPS nanoseconds",                      NULL},
+        {"latitude",                latitude,        "latitude (EPSG:7912)",                 NULL},
+        {"longitude",               longitude,       "longitude (EPSG:7912)",                NULL},
+        {"segment_id_beg",          segment_id_beg,  "first segment in extent",              NULL},
+        {"x_atc",                   x_atc,           "along-track distance (m)",             NULL},
+        {"y_atc",                   y_atc,           "across-track distance (m)",            NULL},
+        {"photon_start",            photon_start,    "photon index of start of extent",      NULL},
+        {"pflags",                  pflags,          "processing flags",                     NULL},
+        {"h_mean",                  h_mean,          "mean height from ellipsoid (m)",       NULL},
+        {"dh_fit_dx",               dh_fit_dx,       "along-track slope",                    NULL},
+        {"w_surface_window_final",  window_height,   "final surface window height (m)",      NULL},
+        {"n_fit_photons",           n_fit_photons,   "number of photons in fit",             NULL},
+        {"rms_misfit",              rms_misfit,      "root-mean-square misfit (m)",          NULL},
+        {"h_sigma",                 h_sigma,         "height uncertainty (m)",               NULL},
+        {NULL, NULL, NULL, NULL}
+    };
+    dataframe->populateGeoColumns("SurfaceFitter", descs);
 
     // update runtime
     return true;

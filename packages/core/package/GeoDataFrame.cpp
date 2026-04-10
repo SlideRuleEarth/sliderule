@@ -877,56 +877,59 @@ bool GeoDataFrame::deleteColumn (const char* name)
 }
 
 /*----------------------------------------------------------------------------
- * populateGeoColumn
+ * addDescription
+ *
+ * Adds a description entry for conditional columns that are not part of the
+ * constructor init list (e.g. columns added via addColumn based on request
+ * parameters). Called from subclass constructor bodies before
+ * populateGeoColumns().
  *----------------------------------------------------------------------------*/
-void GeoDataFrame::populateGeoColumns (void)
+void GeoDataFrame::addDescription (const char* name, const Field* field, const char* description, const char* condition)
 {
-    // populate geo columns
-    Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator iter(columnFields.fields);
-    for(int f = 0; f < iter.length; f++)
-    {
-        const char* name = iter[f].key;
-        const Field* field = iter[f].value.field;
-
-        if(field->encoding & TIME_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == TIME8);
-            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
-            timeColumnName = name;
-        }
-
-        if(field->encoding & X_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            xColumnName = name;
-        }
-
-        if(field->encoding & Y_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            yColumnName = name;
-        }
-
-        if(field->encoding & Z_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == FLOAT);
-            zColumn = dynamic_cast<const FieldColumn<float>*>(field);
-            zColumnName = name;
-        }
-    }
-
-    // register schema using subclass virtual getDescriptions()
-    registerSchema(LuaMetaName, getDescriptions());
+    pendingDescs.push_back({name, field, description, condition});
 }
 
 /*----------------------------------------------------------------------------
- * populateGeoColumns (overload for runners)
+ * populateGeoColumns
+ *
+ * Called from subclass constructors after derived members are initialized.
+ * Uses pendingDescs (stashed during base construction) to register the
+ * schema. Field pointers are now safe to dereference since derived members
+ * are fully constructed by this point.
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::populateGeoColumns (void)
+{
+    discoverGeoColumns();
+
+    schemaMut.lock();
+    {
+        if(!schemaRegistry.find(LuaMetaName))
+        {
+            Schema* schema = new Schema;
+            schema->name = LuaMetaName;
+            schema->description = LuaMetaName;
+
+            for(const auto& desc : pendingDescs)
+            {
+                SchemaField sf;
+                sf.name = desc.name;
+                encoding2openapi(desc.field->encoding, sf);
+                sf.description = desc.description ? desc.description : "";
+                sf.condition = desc.condition ? desc.condition : "";
+                sf.role = (desc.field->type == Field::COLUMN) ? "column" : "element";
+                schema->fields.push_back(sf);
+            }
+
+            schemaRegistry.add(LuaMetaName, schema);
+        }
+    }
+    schemaMut.unlock();
+
+    pendingDescs.clear();
+}
+
+/*----------------------------------------------------------------------------
+ * populateGeoColumns - runner overload (custom schema name)
  *
  * Used by FrameRunners that replace all columns on a dataframe.
  * Registers under schema_name instead of LuaMetaName, so each runner
@@ -939,7 +942,15 @@ void GeoDataFrame::populateGeoColumns (const char* schema_name, const schema_des
     xColumn = NULL;
     yColumn = NULL;
     zColumn = NULL;
+    discoverGeoColumns();
+    registerSchema(schema_name, descs);
+}
 
+/*----------------------------------------------------------------------------
+ * discoverGeoColumns
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::discoverGeoColumns (void)
+{
     Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator iter(columnFields.fields);
     for(int f = 0; f < iter.length; f++)
     {
@@ -978,13 +989,15 @@ void GeoDataFrame::populateGeoColumns (const char* schema_name, const schema_des
             zColumnName = name;
         }
     }
-
-    // register schema under runner's name
-    registerSchema(schema_name, descs);
 }
 
 /*----------------------------------------------------------------------------
  * registerSchema
+ *
+ * Single-pass: iterates the description array directly. Each entry carries
+ * a Field* pointer to the live member, so encoding is read from the field
+ * itself — no duplication. Role (column vs element) is derived from
+ * field->type.
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::registerSchema (const char* schema_name, const schema_description_t* descs)
 {
@@ -992,73 +1005,21 @@ void GeoDataFrame::registerSchema (const char* schema_name, const schema_descrip
     {
         if(!schemaRegistry.find(schema_name))
         {
-            // build description lookup from static table
-            Dictionary<const schema_description_t*> descLookup;
-            if(descs)
-            {
-                for(int i = 0; descs[i].name != NULL; i++)
-                    descLookup.add(descs[i].name, &descs[i]);
-            }
-
             Schema* schema = new Schema;
             schema->name = schema_name;
             schema->description = schema_name;
 
-            // track which description table entries were matched to live fields
-            Dictionary<bool> matched;
-
-            // pass 1: columns present on this instance (type from live field)
-            Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator col_iter(columnFields.fields);
-            for(int i = 0; i < col_iter.length; i++)
-            {
-                SchemaField sf;
-                sf.name = col_iter[i].key;
-                encoding2openapi(col_iter[i].value.field->encoding, sf);
-                const schema_description_t* entry = NULL;
-                if(descLookup.find(col_iter[i].key, &entry) && entry)
-                {
-                    sf.description = entry->description ? entry->description : "";
-                    sf.condition = entry->condition ? entry->condition : "";
-                    matched.add(col_iter[i].key, true);
-                }
-                sf.role = "column";
-                schema->fields.push_back(sf);
-            }
-
-            // pass 1: metadata present on this instance
-            Dictionary<FieldDictionary::entry_t>::Iterator meta_iter(metaFields.fields);
-            for(int i = 0; i < meta_iter.length; i++)
-            {
-                SchemaField sf;
-                sf.name = meta_iter[i].key;
-                encoding2openapi(meta_iter[i].value.field->encoding, sf);
-                const schema_description_t* entry = NULL;
-                if(descLookup.find(meta_iter[i].key, &entry) && entry)
-                {
-                    sf.description = entry->description ? entry->description : "";
-                    sf.condition = entry->condition ? entry->condition : "";
-                    matched.add(meta_iter[i].key, true);
-                }
-                sf.role = "element";
-                schema->fields.push_back(sf);
-            }
-
-            // pass 2: conditional columns absent from this instance
-            // (type from description table encoding)
             if(descs)
             {
                 for(int i = 0; descs[i].name != NULL; i++)
                 {
-                    if(descs[i].condition && descs[i].encoding && !matched.find(descs[i].name))
-                    {
-                        SchemaField sf;
-                        sf.name = descs[i].name;
-                        encoding2openapi(descs[i].encoding, sf);
-                        sf.description = descs[i].description ? descs[i].description : "";
-                        sf.condition = descs[i].condition;
-                        sf.role = "column";
-                        schema->fields.push_back(sf);
-                    }
+                    SchemaField sf;
+                    sf.name = descs[i].name;
+                    encoding2openapi(descs[i].field->encoding, sf);
+                    sf.description = descs[i].description ? descs[i].description : "";
+                    sf.condition = descs[i].condition ? descs[i].condition : "";
+                    sf.role = (descs[i].field->type == Field::COLUMN) ? "column" : "element";
+                    schema->fields.push_back(sf);
                 }
             }
 
@@ -1554,6 +1515,19 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
 
+    // stash descriptions from init lists (field pointers are stored
+    // but NOT dereferenced — derived members initialize after base
+    // construction; pointers are only read in populateGeoColumns())
+    for(const auto& elem : column_list)
+    {
+        if(elem.description)
+            pendingDescs.push_back({elem.name, elem.field, elem.description, elem.condition});
+    }
+    for(const auto& elem : meta_list)
+    {
+        if(elem.description)
+            pendingDescs.push_back({elem.name, elem.field, elem.description, elem.condition});
+    }
 
     // start runner
     runPid = new Thread(runThread, this);

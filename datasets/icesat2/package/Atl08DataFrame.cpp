@@ -44,40 +44,6 @@ const struct luaL_Reg Atl08DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Atl08DataFrame::descriptions[] = {
-    {"time_ns",                 "GPS nanoseconds",                  NULL, 0},
-    {"latitude",                "latitude (EPSG:7912)",             NULL, 0},
-    {"longitude",               "longitude (EPSG:7912)",            NULL, 0},
-    {"segment_id_beg",          "beginning segment identifier",     NULL, 0},
-    {"segment_landcover",       "land cover classification",        NULL, 0},
-    {"segment_snowcover",       "snow cover classification",        NULL, 0},
-    {"n_seg_ph",                "number of photons in segment",     NULL, 0},
-    {"solar_elevation",         "solar elevation angle (deg)",      NULL, 0},
-    {"terrain_slope",           "terrain slope (deg)",              NULL, 0},
-    {"n_te_photons",            "number of terrain photons",        NULL, 0},
-    {"h_te_uncertainty",        "terrain height uncertainty (m)",   NULL, 0},
-    {"h_te_median",             "median terrain height (m)",        NULL, 0},
-    {"h_canopy",                "canopy height (m)",                NULL, 0},
-    {"h_canopy_uncertainty",    "canopy height uncertainty (m)",    NULL, 0},
-    {"segment_cover",           "canopy cover fraction",            NULL, 0},
-    {"n_ca_photons",            "number of canopy photons",         NULL, 0},
-    {"h_max_canopy",            "maximum canopy height (m)",        NULL, 0},
-    {"h_min_canopy",            "minimum canopy height (m)",        NULL, 0},
-    {"h_mean_canopy",           "mean canopy height (m)",           NULL, 0},
-    {"canopy_openness",         "canopy openness",                  NULL, 0},
-    {"canopy_h_metrics",        "canopy height percentile metrics", NULL, 0},
-    {"te_quality_score",        "terrain quality score",            "phoreal.te_quality_filter",    Field::NESTED_COLUMN | Field::INT8},
-    {"can_quality_score",       "canopy quality score",             "phoreal.can_quality_filter",   Field::NESTED_COLUMN | Field::INT8},
-    {"spot",                    "spot number (1-6)",                NULL, 0},
-    {"cycle",                   "orbital cycle",                    NULL, 0},
-    {"region",                  "region number",                    NULL, 0},
-    {"rgt",                     "reference ground track",           NULL, 0},
-    {"gt",                      "ground track",                     NULL, 0},
-    {"granule",                 "source granule name",              NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Atl08DataFrame::getDescriptions (void) const { return descriptions; }
 
 /******************************************************************************
  * ATL08 DATAFRAME CLASS
@@ -117,35 +83,35 @@ int Atl08DataFrame::luaCreate (lua_State* L)
 Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",                 &time_ns},
-        {"latitude",                &latitude},
-        {"longitude",               &longitude},
-        {"segment_id_beg",          &segment_id_beg},
-        {"segment_landcover",       &segment_landcover},
-        {"segment_snowcover",       &segment_snowcover},
-        {"n_seg_ph",                &n_seg_ph},
-        {"solar_elevation",         &solar_elevation},
-        {"terrain_slope",           &terrain_slope},
-        {"n_te_photons",            &n_te_photons},
-        {"h_te_uncertainty",        &h_te_uncertainty},
-        {"h_te_median",             &h_te_median},
-        {"h_canopy",                &h_canopy},
-        {"h_canopy_uncertainty",    &h_canopy_uncertainty},
-        {"segment_cover",           &segment_cover},
-        {"n_ca_photons",            &n_ca_photons},
-        {"h_max_canopy",            &h_max_canopy},
-        {"h_min_canopy",            &h_min_canopy},
-        {"h_mean_canopy",           &h_mean_canopy},
-        {"canopy_openness",         &canopy_openness},
-        {"canopy_h_metrics",        &canopy_h_metrics}
+        {"time_ns",                 &time_ns,              "GPS nanoseconds"},
+        {"latitude",                &latitude,             "latitude (EPSG:7912)"},
+        {"longitude",               &longitude,            "longitude (EPSG:7912)"},
+        {"segment_id_beg",          &segment_id_beg,       "beginning segment identifier"},
+        {"segment_landcover",       &segment_landcover,    "land cover classification"},
+        {"segment_snowcover",       &segment_snowcover,    "snow cover classification"},
+        {"n_seg_ph",                &n_seg_ph,             "number of photons in segment"},
+        {"solar_elevation",         &solar_elevation,      "solar elevation angle (deg)"},
+        {"terrain_slope",           &terrain_slope,        "terrain slope (deg)"},
+        {"n_te_photons",            &n_te_photons,         "number of terrain photons"},
+        {"h_te_uncertainty",        &h_te_uncertainty,     "terrain height uncertainty (m)"},
+        {"h_te_median",             &h_te_median,          "median terrain height (m)"},
+        {"h_canopy",                &h_canopy,             "canopy height (m)"},
+        {"h_canopy_uncertainty",    &h_canopy_uncertainty, "canopy height uncertainty (m)"},
+        {"segment_cover",           &segment_cover,        "canopy cover fraction"},
+        {"n_ca_photons",            &n_ca_photons,         "number of canopy photons"},
+        {"h_max_canopy",            &h_max_canopy,         "maximum canopy height (m)"},
+        {"h_min_canopy",            &h_min_canopy,         "minimum canopy height (m)"},
+        {"h_mean_canopy",           &h_mean_canopy,        "mean canopy height (m)"},
+        {"canopy_openness",         &canopy_openness,      "canopy openness"},
+        {"canopy_h_metrics",        &canopy_h_metrics,     "canopy height percentile metrics"}
     },
     {
-        {"spot",                    &spot},
-        {"cycle",                   &cycle},
-        {"region",                  &region},
-        {"rgt",                     &rgt},
-        {"gt",                      &gt},
-        {"granule",                 &granule}
+        {"spot",                    &spot,                 "spot number (1-6)"},
+        {"cycle",                   &cycle,                "orbital cycle"},
+        {"region",                  &region,               "region number"},
+        {"rgt",                     &rgt,                  "reference ground track"},
+        {"gt",                      &gt,                   "ground track"},
+        {"granule",                 &granule,              "source granule name"}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
     spot(0, META_COLUMN),
@@ -177,10 +143,13 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     {
         addColumn("te_quality_score", &te_quality_score, false);
     }
+    addDescription("te_quality_score",  &te_quality_score,  "terrain quality score",  "phoreal.te_quality_filter");
+
     if(parms->phoreal.can_quality_filter_provided)
     {
         addColumn("can_quality_score", &can_quality_score, false);
     }
+    addDescription("can_quality_score", &can_quality_score, "canopy quality score",   "phoreal.can_quality_filter");
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();

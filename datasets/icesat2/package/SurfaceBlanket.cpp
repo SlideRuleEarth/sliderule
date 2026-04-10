@@ -51,18 +51,6 @@ const struct luaL_Reg SurfaceBlanket::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t SurfaceBlanket::descriptions[] = {
-    {"time_ns",             "GPS nanoseconds",                  NULL, 0},
-    {"latitude",            "latitude (EPSG:7912)",             NULL, 0},
-    {"longitude",           "longitude (EPSG:7912)",            NULL, 0},
-    {"segment_id_beg",      "first segment in extent",          NULL, 0},
-    {"x_atc",               "along-track distance (m)",         NULL, 0},
-    {"y_atc",               "across-track distance (m)",        NULL, 0},
-    {"top_of_surface",      "top of reflective surface (m)",    NULL, 0},
-    {"median_ground",       "median ground elevation (m)",      NULL, 0},
-    {"pflags",              "processing flags",                 NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
 
 /******************************************************************************
  * METHODS
@@ -222,7 +210,19 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
     delete ancillary_columns;
 
     // finalize dataframe
-    dataframe->populateGeoColumns("SurfaceBlanket", descriptions);
+    const GeoDataFrame::schema_description_t descs[] = {
+        {"time_ns",             time_ns,         "GPS nanoseconds",                  NULL},
+        {"latitude",            latitude,        "latitude (EPSG:7912)",             NULL},
+        {"longitude",           longitude,       "longitude (EPSG:7912)",            NULL},
+        {"segment_id_beg",      segment_id_beg,  "first segment in extent",          NULL},
+        {"x_atc",               x_atc,           "along-track distance (m)",         NULL},
+        {"y_atc",               y_atc,           "across-track distance (m)",        NULL},
+        {"top_of_surface",      top_of_surface,  "top of reflective surface (m)",    NULL},
+        {"median_ground",       median_ground,   "median ground elevation (m)",      NULL},
+        {"pflags",              pflags,          "processing flags",                 NULL},
+        {NULL, NULL, NULL, NULL}
+    };
+    dataframe->populateGeoColumns("SurfaceBlanket", descs);
 
     // update runtime
     return true;

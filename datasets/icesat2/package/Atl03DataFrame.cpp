@@ -52,37 +52,6 @@ const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Atl03DataFrame::descriptions[] = {
-    {"time_ns",             "GPS nanoseconds",                  NULL, 0},
-    {"latitude",            "latitude (EPSG:7912)",             NULL, 0},
-    {"longitude",           "longitude (EPSG:7912)",            NULL, 0},
-    {"segment_id",          "segment identifier",               NULL, 0},
-    {"x_atc",               "along-track distance (m)",         NULL, 0},
-    {"y_atc",               "across-track distance (m)",        NULL, 0},
-    {"height",              "photon height (m)",                NULL, 0},
-    {"solar_elevation",     "solar elevation angle (deg)",      NULL, 0},
-    {"background_rate",     "background photon rate (MHz)",     NULL, 0},
-    {"spacecraft_velocity", "spacecraft velocity (m/s)",        NULL, 0},
-    {"atl03_cnf",           "ATL03 signal confidence",          NULL, 0},
-    {"quality_ph",          "photon quality flag",              NULL, 0},
-    {"ph_index",            "photon index within segment",      NULL, 0},
-    {"relief",              "PhoREAL relief",                   "stages.phoreal",   Field::NESTED_COLUMN | Field::FLOAT},
-    {"landcover",           "land cover classification",        "stages.phoreal",   Field::NESTED_COLUMN | Field::UINT8},
-    {"snowcover",           "snow cover classification",        "stages.phoreal",   Field::NESTED_COLUMN | Field::UINT8},
-    {"yapc_score",          "YAPC score",                       "stages.yapc",      Field::NESTED_COLUMN | Field::UINT8},
-    {"atl08_class",         "ATL08 photon classification",      "stages.atl08",     Field::NESTED_COLUMN | Field::INT8},
-    {"atl24_class",         "ATL24 photon classification",      "stages.atl24",     Field::NESTED_COLUMN | Field::UINT8},
-    {"atl24_confidence",    "ATL24 classification confidence",  "stages.atl24",     Field::NESTED_COLUMN | Field::UINT8},
-    {"spot",                "spot number (1-6)",                NULL, 0},
-    {"cycle",               "orbital cycle",                    NULL, 0},
-    {"region",              "region number",                    NULL, 0},
-    {"rgt",                 "reference ground track",           NULL, 0},
-    {"gt",                  "ground track",                     NULL, 0},
-    {"granule",             "source granule name",              NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Atl03DataFrame::getDescriptions (void) const { return descriptions; }
 
 /******************************************************************************
  * ATL03 READER CLASS
@@ -128,27 +97,27 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",             &time_ns},
-        {"latitude",            &latitude},
-        {"longitude",           &longitude},
-        {"segment_id",          &segment_id},
-        {"x_atc",               &x_atc},
-        {"y_atc",               &y_atc},
-        {"height",              &height},
-        {"solar_elevation",     &solar_elevation},
-        {"background_rate",     &background_rate},
-        {"spacecraft_velocity", &spacecraft_velocity},
-        {"atl03_cnf",           &atl03_cnf},
-        {"quality_ph",          &quality_ph},
-        {"ph_index",            &ph_index},
+        {"time_ns",             &time_ns,             "GPS nanoseconds"},
+        {"latitude",            &latitude,            "latitude (EPSG:7912)"},
+        {"longitude",           &longitude,           "longitude (EPSG:7912)"},
+        {"segment_id",          &segment_id,          "segment identifier"},
+        {"x_atc",               &x_atc,               "along-track distance (m)"},
+        {"y_atc",               &y_atc,               "across-track distance (m)"},
+        {"height",              &height,              "photon height (m)"},
+        {"solar_elevation",     &solar_elevation,     "solar elevation angle (deg)"},
+        {"background_rate",     &background_rate,     "background photon rate (MHz)"},
+        {"spacecraft_velocity", &spacecraft_velocity, "spacecraft velocity (m/s)"},
+        {"atl03_cnf",           &atl03_cnf,           "ATL03 signal confidence"},
+        {"quality_ph",          &quality_ph,          "photon quality flag"},
+        {"ph_index",            &ph_index,            "photon index within segment"},
     },
     {
-        {"spot",                &spot},
-        {"cycle",               &cycle},
-        {"region",              &region},
-        {"rgt",                 &rgt},
-        {"gt",                  &gt},
-        {"granule",             &granule}
+        {"spot",                &spot,                "spot number (1-6)"},
+        {"cycle",               &cycle,               "orbital cycle"},
+        {"region",              &region,               "region number"},
+        {"rgt",                 &rgt,                 "reference ground track"},
+        {"gt",                  &gt,                  "ground track"},
+        {"granule",             &granule,             "source granule name"}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
     spot(0, META_COLUMN),
@@ -182,18 +151,23 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         addColumn("landcover",          &landcover,         false);
         addColumn("snowcover",          &snowcover,         false);
     }
+    addDescription("relief",            &relief,            "PhoREAL relief",                   "stages.phoreal");
+    addDescription("landcover",         &landcover,         "land cover classification",        "stages.phoreal");
+    addDescription("snowcover",         &snowcover,         "snow cover classification",        "stages.phoreal");
 
     /* Set Optional YAPC Columns */
     if(parms->stages[Icesat2Fields::STAGE_YAPC])
     {
         addColumn("yapc_score",         &yapc_score,        false);
     }
+    addDescription("yapc_score",        &yapc_score,        "YAPC score",                       "stages.yapc");
 
     /* Set Optional ATL08 Columns */
     if(parms->stages[Icesat2Fields::STAGE_ATL08])
     {
         addColumn("atl08_class",        &atl08_class,       false);
     }
+    addDescription("atl08_class",       &atl08_class,       "ATL08 photon classification",      "stages.atl08");
 
     /* Set Optional ATL24 Columns */
     if(parms->stages[Icesat2Fields::STAGE_ATL24])
@@ -201,6 +175,8 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         addColumn("atl24_class",        &atl24_class,       false);
         addColumn("atl24_confidence",   &atl24_confidence,  false);
     }
+    addDescription("atl24_class",       &atl24_class,       "ATL24 photon classification",      "stages.atl24");
+    addDescription("atl24_confidence",  &atl24_confidence,  "ATL24 classification confidence",  "stages.atl24");
 
     /* Set CRS */
     if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);

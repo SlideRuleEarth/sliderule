@@ -44,36 +44,6 @@ const struct luaL_Reg Atl06DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Atl06DataFrame::descriptions[] = {
-    {"time_ns",                 "GPS nanoseconds",                      NULL, 0},
-    {"latitude",                "latitude (EPSG:7912)",                 NULL, 0},
-    {"longitude",               "longitude (EPSG:7912)",                NULL, 0},
-    {"x_atc",                   "along-track distance (m)",             NULL, 0},
-    {"y_atc",                   "across-track distance (m)",            NULL, 0},
-    {"h_li",                    "land ice height (m)",                  NULL, 0},
-    {"h_li_sigma",              "land ice height uncertainty (m)",      NULL, 0},
-    {"sigma_geo_h",             "total geolocation uncertainty (m)",    NULL, 0},
-    {"atl06_quality_summary",   "quality summary flag",                 NULL, 0},
-    {"segment_id",              "segment identifier",                   NULL, 0},
-    {"seg_azimuth",             "segment azimuth (deg)",                NULL, 0},
-    {"dh_fit_dx",               "along-track slope",                    NULL, 0},
-    {"h_robust_sprd",           "robust spread of heights (m)",         NULL, 0},
-    {"w_surface_window_final",  "final surface window width (m)",       NULL, 0},
-    {"bsnow_conf",              "blowing snow confidence",              NULL, 0},
-    {"bsnow_h",                 "blowing snow layer height (m)",        NULL, 0},
-    {"r_eff",                   "effective reflectance",                NULL, 0},
-    {"tide_ocean",              "ocean tide correction (m)",            NULL, 0},
-    {"n_fit_photons",           "number of fit photons",                NULL, 0},
-    {"spot",                    "spot number (1-6)",                    NULL, 0},
-    {"cycle",                   "orbital cycle",                        NULL, 0},
-    {"region",                  "region number",                        NULL, 0},
-    {"rgt",                     "reference ground track",               NULL, 0},
-    {"gt",                      "ground track",                         NULL, 0},
-    {"granule",                 "source granule name",                  NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Atl06DataFrame::getDescriptions (void) const { return descriptions; }
 
 /******************************************************************************
  * ATL06 DATAFRAME CLASS
@@ -113,33 +83,33 @@ int Atl06DataFrame::luaCreate (lua_State* L)
 Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",                 &time_ns},
-        {"latitude",                &latitude},
-        {"longitude",               &longitude},
-        {"x_atc",                   &x_atc},
-        {"y_atc",                   &y_atc},
-        {"h_li",                    &h_li},
-        {"h_li_sigma",              &h_li_sigma},
-        {"sigma_geo_h",             &sigma_geo_h},
-        {"atl06_quality_summary",   &atl06_quality_summary},
-        {"segment_id",              &segment_id},
-        {"seg_azimuth",             &seg_azimuth},
-        {"dh_fit_dx",               &dh_fit_dx},
-        {"h_robust_sprd",           &h_robust_sprd},
-        {"w_surface_window_final",  &w_surface_window_final},
-        {"bsnow_conf",              &bsnow_conf},
-        {"bsnow_h",                 &bsnow_h},
-        {"r_eff",                   &r_eff},
-        {"tide_ocean",              &tide_ocean},
-        {"n_fit_photons",           &n_fit_photons}
+        {"time_ns",                 &time_ns,                 "GPS nanoseconds"},
+        {"latitude",                &latitude,                "latitude (EPSG:7912)"},
+        {"longitude",               &longitude,               "longitude (EPSG:7912)"},
+        {"x_atc",                   &x_atc,                   "along-track distance (m)"},
+        {"y_atc",                   &y_atc,                   "across-track distance (m)"},
+        {"h_li",                    &h_li,                    "land ice height (m)"},
+        {"h_li_sigma",              &h_li_sigma,              "land ice height uncertainty (m)"},
+        {"sigma_geo_h",             &sigma_geo_h,             "total geolocation uncertainty (m)"},
+        {"atl06_quality_summary",   &atl06_quality_summary,   "quality summary flag"},
+        {"segment_id",              &segment_id,              "segment identifier"},
+        {"seg_azimuth",             &seg_azimuth,             "segment azimuth (deg)"},
+        {"dh_fit_dx",               &dh_fit_dx,               "along-track slope"},
+        {"h_robust_sprd",           &h_robust_sprd,           "robust spread of heights (m)"},
+        {"w_surface_window_final",  &w_surface_window_final,  "final surface window width (m)"},
+        {"bsnow_conf",              &bsnow_conf,              "blowing snow confidence"},
+        {"bsnow_h",                 &bsnow_h,                 "blowing snow layer height (m)"},
+        {"r_eff",                   &r_eff,                   "effective reflectance"},
+        {"tide_ocean",              &tide_ocean,              "ocean tide correction (m)"},
+        {"n_fit_photons",           &n_fit_photons,           "number of fit photons"}
     },
     {
-        {"spot",                    &spot},
-        {"cycle",                   &cycle},
-        {"region",                  &region},
-        {"rgt",                     &rgt},
-        {"gt",                      &gt},
-        {"granule",                 &granule}
+        {"spot",                    &spot,                    "spot number (1-6)"},
+        {"cycle",                   &cycle,                   "orbital cycle"},
+        {"region",                  &region,                  "region number"},
+        {"rgt",                     &rgt,                     "reference ground track"},
+        {"gt",                      &gt,                      "ground track"},
+        {"granule",                 &granule,                 "source granule name"}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
     spot(0, META_COLUMN),

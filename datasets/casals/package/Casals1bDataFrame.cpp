@@ -52,17 +52,6 @@ const struct luaL_Reg Casals1bDataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Casals1bDataFrame::descriptions[] = {
-    {"time_ns",         "GPS nanoseconds",          NULL, 0},
-    {"latitude",        "latitude",                 NULL, 0},
-    {"longitude",       "longitude",                NULL, 0},
-    {"refh",            "reference height (m)",     NULL, 0},
-    {"granule",         "source granule name",      NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Casals1bDataFrame::getDescriptions (void) const { return descriptions; }
-
 /******************************************************************************
  * CLASS
  ******************************************************************************/
@@ -100,13 +89,13 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
 Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",         &time_ns},
-        {"latitude",        &latitude},
-        {"longitude",       &longitude},
-        {"refh",            &refh},
+        {"time_ns",         &time_ns,       "GPS nanoseconds"},
+        {"latitude",        &latitude,      "latitude"},
+        {"longitude",       &longitude,     "longitude"},
+        {"refh",            &refh,          "reference height (m)"},
     },
     {
-        {"granule",         &granule}
+        {"granule",         &granule,       "source granule name"}
     },
     CasalsFields::crsITRF2020()),
     granule(_hdf1b->name, META_SOURCE_ID),

@@ -44,25 +44,6 @@ const struct luaL_Reg Gedi02aDataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Gedi02aDataFrame::descriptions[] = {
-    {"shot_number",         "unique shot identifier",           NULL, 0},
-    {"time_ns",             "GPS nanoseconds",                  NULL, 0},
-    {"latitude",            "latitude",                         NULL, 0},
-    {"longitude",           "longitude",                        NULL, 0},
-    {"elevation_lm",        "elevation lowest mode (m)",        NULL, 0},
-    {"elevation_hr",        "elevation highest return (m)",     NULL, 0},
-    {"solar_elevation",     "solar elevation angle (deg)",      NULL, 0},
-    {"sensitivity",         "beam sensitivity",                 NULL, 0},
-    {"flags",               "quality flags",                    NULL, 0},
-    {"beam",                "beam number",                      NULL, 0},
-    {"orbit",               "orbit number",                     NULL, 0},
-    {"track",               "track number",                     NULL, 0},
-    {"granule",             "source granule name",              NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Gedi02aDataFrame::getDescriptions (void) const { return descriptions; }
-
 /******************************************************************************
  * GEDI02A DATAFRAME CLASS
  ******************************************************************************/
@@ -101,15 +82,15 @@ int Gedi02aDataFrame::luaCreate (lua_State* L)
 Gedi02aDataFrame::Gedi02aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"shot_number",         &shot_number},
-        {"time_ns",             &time_ns},
-        {"latitude",            &latitude},
-        {"longitude",           &longitude},
-        {"elevation_lm",        &elevation_lm},
-        {"elevation_hr",        &elevation_hr},
-        {"solar_elevation",     &solar_elevation},
-        {"sensitivity",         &sensitivity},
-        {"flags",               &flags}
+        {"shot_number",         &shot_number,       "unique shot identifier"},
+        {"time_ns",             &time_ns,           "GPS nanoseconds"},
+        {"latitude",            &latitude,          "latitude"},
+        {"longitude",           &longitude,         "longitude"},
+        {"elevation_lm",        &elevation_lm,      "elevation lowest mode (m)"},
+        {"elevation_hr",        &elevation_hr,      "elevation highest return (m)"},
+        {"solar_elevation",     &solar_elevation,   "solar elevation angle (deg)"},
+        {"sensitivity",         &sensitivity,       "beam sensitivity"},
+        {"flags",               &flags,             "quality flags"}
     },
     _parms,
     _hdf02a,

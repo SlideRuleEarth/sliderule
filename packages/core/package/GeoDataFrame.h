@@ -138,32 +138,13 @@ class GeoDataFrame: public LuaObject, public Field
             vector<SchemaField> fields;
         };
 
-        // Schema descriptions are provided via a static table per subclass.
-        //
-        // Column descriptions cannot be read in the GeoDataFrame base constructor
-        // because derived-class FieldColumn members are not yet initialized at that
-        // point (C++ constructs base classes before derived members). Schema
-        // registration therefore happens in populateGeoColumns(), which subclasses
-        // call after their members are fully constructed.
-        //
-        // This static-table approach duplicates column names (they appear in both
-        // the constructor init list and the description table). To eliminate that
-        // duplication, an alternative is to add a const char* description member to
-        // FieldUntypedColumn/FieldElement (8 bytes per field per instance), which
-        // lets populateGeoColumns() read descriptions directly from the fields.
-        //
-        // The encoding field on conditional columns duplicates type information
-        // from the FieldColumn<T> member declaration. This is necessary because
-        // conditional columns may be absent from columnFields when their stage is
-        // disabled, and we cannot dereference a Field* that isn't in the dictionary.
-        // The encoding lets registerSchema() produce the correct OpenAPI type for
-        // absent columns without adding them to the dataframe (which would create
-        // mixed-length columns that break Parquet serialization).
+        // Schema descriptions for runners (PhoReal, SurfaceFitter, SurfaceBlanket)
+        // which build columns at runtime outside the constructor init list.
         typedef struct {
             const char* name;
+            const Field* field;      // pointer to live member — encoding read from here
             const char* description;
-            const char* condition;   // NULL = always present; non-NULL = when this column appears
-            uint32_t encoding;       // 0 = derive from live field; non-zero = type for absent columns
+            const char* condition;   // NULL = always present; non-NULL = request parameter condition
         } schema_description_t;
 
         /*--------------------------------------------------------------------
@@ -236,6 +217,7 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        deleteColumn        (const char* name);
         void                        populateGeoColumns  (void);
         void                        populateGeoColumns  (const char* schema_name, const schema_description_t* descs);
+        void                        addDescription      (const char* name, const Field* field, const char* description, const char* condition=nullptr);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
         FieldUntypedColumn*         getUnsafe           (const char* key) const;
 
@@ -315,8 +297,6 @@ class GeoDataFrame: public LuaObject, public Field
                                             const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
 
-        virtual const schema_description_t* getDescriptions (void) const { return NULL; }
-
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
         static void*    receiveThread       (void* parm);
@@ -341,7 +321,27 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaRunComplete      (lua_State* L);
 
         static void     encoding2openapi    (uint32_t encoding, SchemaField& sf);
+        void            discoverGeoColumns  (void);
         void            registerSchema      (const char* schema_name, const schema_description_t* descs);
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        // Stashed descriptions extracted from init lists during base
+        // construction. Consumed by populateGeoColumns() once derived
+        // members are initialized, then cleared. Zero per-instance
+        // overhead after construction.
+        //
+        // The field pointer is stored but NOT dereferenced until
+        // populateGeoColumns() runs in the subclass constructor body,
+        // by which point all derived members are fully initialized.
+        struct stashed_desc_t {
+            const char* name;
+            const Field* field;
+            const char* description;
+            const char* condition;
+        };
 
         /*--------------------------------------------------------------------
          * Data
@@ -350,6 +350,7 @@ class GeoDataFrame: public LuaObject, public Field
         static Mutex                    schemaMut;
         static Dictionary<Schema*>      schemaRegistry;
 
+        vector<stashed_desc_t>          pendingDescs;
         bool                            inError;
         long                            numRows;
         FieldMap<FieldUntypedColumn>    columnFields;

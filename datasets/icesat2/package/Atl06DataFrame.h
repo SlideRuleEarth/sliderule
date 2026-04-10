@@ -145,8 +145,6 @@ class Atl06DataFrame: public GeoDataFrame
                         Atl06DataFrame  (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name);
                         ~Atl06DataFrame (void) override;
         okey_t          getKey          (void) const override;
-        const schema_description_t* getDescriptions (void) const override;
-        static const schema_description_t descriptions[];
         static void*    subsettingThread(void* parm);
 };
 

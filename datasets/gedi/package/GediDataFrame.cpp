@@ -51,10 +51,10 @@
                              GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name):
     GeoDataFrame(L, meta_name, meta_table, column_list,
     {
-        {"beam",    &beam},
-        {"orbit",   &orbit},
-        {"track",   &track},
-        {"granule", &granule}
+        {"beam",    &beam,    "beam number"},
+        {"orbit",   &orbit,   "orbit number"},
+        {"track",   &track,   "track number"},
+        {"granule", &granule, "source granule name"}
     },
     getCRS()),
     beam(0, META_COLUMN),

@@ -61,8 +61,6 @@ class SurfaceBlanket: public GeoDataFrame::FrameRunner
         static int      luaCreate   (lua_State* L);
         bool            run         (GeoDataFrame* dataframe) override;
 
-        static const GeoDataFrame::schema_description_t descriptions[];
-
     private:
 
         /*--------------------------------------------------------------------

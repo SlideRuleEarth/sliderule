@@ -234,8 +234,6 @@ class BathyDataFrame: public GeoDataFrame
 
         static int          luaIsValid                  (lua_State* L);
         static int          luaLength                   (lua_State* L);
-        const schema_description_t* getDescriptions     (void) const override;
-        static const schema_description_t descriptions[];
 
         #ifdef __unittesting__
             BathyDataFrame(BathyFields* _parms):

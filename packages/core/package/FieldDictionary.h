@@ -62,6 +62,8 @@ class FieldDictionary: public Field
         typedef struct {
             const char* name;
             Field* field;
+            const char* description = nullptr;
+            const char* condition   = nullptr;
         } init_entry_t;
 
         typedef struct {

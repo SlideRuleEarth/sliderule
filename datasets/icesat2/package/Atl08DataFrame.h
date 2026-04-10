@@ -162,8 +162,6 @@ class Atl08DataFrame: public GeoDataFrame
                         Atl08DataFrame  (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name);
                         ~Atl08DataFrame (void) override;
         okey_t          getKey          (void) const override;
-        const schema_description_t* getDescriptions (void) const override;
-        static const schema_description_t descriptions[];
         static void*    subsettingThread(void* parm);
 };
 

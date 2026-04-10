@@ -58,6 +58,8 @@
         typedef struct {
             const char* name;
             T* field;
+            const char* description = nullptr;
+            const char* condition   = nullptr;
         } init_entry_t;
 
         typedef struct {

@@ -48,28 +48,6 @@ const struct luaL_Reg Gedi01bDataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Gedi01bDataFrame::descriptions[] = {
-    {"shot_number",         "unique shot identifier",           NULL, 0},
-    {"time_ns",             "GPS nanoseconds",                  NULL, 0},
-    {"latitude",            "latitude",                         NULL, 0},
-    {"longitude",           "longitude",                        NULL, 0},
-    {"elevation_start",     "waveform start elevation (m)",     NULL, 0},
-    {"elevation_stop",      "waveform stop elevation (m)",      NULL, 0},
-    {"solar_elevation",     "solar elevation angle (deg)",      NULL, 0},
-    {"tx_size",             "transmit waveform sample count",   NULL, 0},
-    {"rx_size",             "receive waveform sample count",    NULL, 0},
-    {"flags",               "quality flags",                    NULL, 0},
-    {"tx_waveform",         "transmit waveform",                NULL, 0},
-    {"rx_waveform",         "receive waveform",                 NULL, 0},
-    {"beam",                "beam number",                      NULL, 0},
-    {"orbit",               "orbit number",                     NULL, 0},
-    {"track",               "track number",                     NULL, 0},
-    {"granule",             "source granule name",              NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Gedi01bDataFrame::getDescriptions (void) const { return descriptions; }
-
 /******************************************************************************
  * GEDI01B DATAFRAME CLASS
  ******************************************************************************/
@@ -108,18 +86,18 @@ int Gedi01bDataFrame::luaCreate (lua_State* L)
 Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"shot_number",         &shot_number},
-        {"time_ns",             &time_ns},
-        {"latitude",            &latitude},
-        {"longitude",           &longitude},
-        {"elevation_start",     &elevation_start},
-        {"elevation_stop",      &elevation_stop},
-        {"solar_elevation",     &solar_elevation},
-        {"tx_size",             &tx_size},
-        {"rx_size",             &rx_size},
-        {"flags",               &flags},
-        {"tx_waveform",         &tx_waveform},
-        {"rx_waveform",         &rx_waveform}
+        {"shot_number",         &shot_number,       "unique shot identifier"},
+        {"time_ns",             &time_ns,           "GPS nanoseconds"},
+        {"latitude",            &latitude,          "latitude"},
+        {"longitude",           &longitude,         "longitude"},
+        {"elevation_start",     &elevation_start,   "waveform start elevation (m)"},
+        {"elevation_stop",      &elevation_stop,    "waveform stop elevation (m)"},
+        {"solar_elevation",     &solar_elevation,   "solar elevation angle (deg)"},
+        {"tx_size",             &tx_size,           "transmit waveform sample count"},
+        {"rx_size",             &rx_size,           "receive waveform sample count"},
+        {"flags",               &flags,             "quality flags"},
+        {"tx_waveform",         &tx_waveform,       "transmit waveform"},
+        {"rx_waveform",         &rx_waveform,       "receive waveform"}
     },
     _parms,
     _hdf01b,

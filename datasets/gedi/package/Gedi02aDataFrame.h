@@ -103,8 +103,6 @@ class Gedi02aDataFrame: public GediDataFrame
 
                         Gedi02aDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name);
                         ~Gedi02aDataFrame (void) override = default;
-        const schema_description_t* getDescriptions (void) const override;
-        static const schema_description_t descriptions[];
         static void*    subsettingThread  (void* parm);
 };
 

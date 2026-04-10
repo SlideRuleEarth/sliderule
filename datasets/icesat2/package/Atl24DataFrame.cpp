@@ -52,34 +52,6 @@ const struct luaL_Reg Atl24DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const GeoDataFrame::schema_description_t Atl24DataFrame::descriptions[] = {
-    {"class_ph",              "photon classification",                 NULL, 0},
-    {"confidence",            "classification confidence",             NULL, 0},
-    {"time_ns",               "GPS nanoseconds",                      NULL, 0},
-    {"lat_ph",                "photon latitude",                       NULL, 0},
-    {"lon_ph",                "photon longitude",                      NULL, 0},
-    {"ortho_h",               "orthometric height (m)",                NULL, 0},
-    {"surface_h",             "surface height (m)",                    NULL, 0},
-    {"x_atc",                 "along-track distance (m)",              NULL, 0},
-    {"y_atc",                 "across-track distance (m)",             NULL, 0},
-    {"ellipse_h",             "ellipsoidal height (m)",                "!atl24.compact", Field::NESTED_COLUMN | Field::FLOAT},
-    {"invalid_kd",            "invalid Kd flag",                       "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
-    {"invalid_wind_speed",    "invalid wind speed flag",               "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
-    {"low_confidence_flag",   "low confidence flag",                   "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
-    {"night_flag",            "night flag",                            "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
-    {"sensor_depth_exceeded", "sensor depth exceeded flag",            "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
-    {"sigma_thu",             "total horizontal uncertainty (m)",      "!atl24.compact", Field::NESTED_COLUMN | Field::FLOAT},
-    {"sigma_tvu",             "total vertical uncertainty (m)",        "!atl24.compact", Field::NESTED_COLUMN | Field::FLOAT},
-    {"spot",                  "spot number (1-6)",                     NULL, 0},
-    {"cycle",                 "orbital cycle",                         NULL, 0},
-    {"region",                "region number",                         NULL, 0},
-    {"rgt",                   "reference ground track",                NULL, 0},
-    {"gt",                    "ground track",                          NULL, 0},
-    {"granule",               "source granule name",                   NULL, 0},
-    {NULL, NULL, NULL, 0}
-};
-
-const GeoDataFrame::schema_description_t* Atl24DataFrame::getDescriptions (void) const { return descriptions; }
 
 /******************************************************************************
  * atl24 READER CLASS
@@ -119,23 +91,23 @@ int Atl24DataFrame::luaCreate (lua_State* L)
 Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"class_ph",            &class_ph},
-        {"confidence",          &confidence},
-        {"time_ns",             &time_ns},
-        {"lat_ph",              &lat_ph},
-        {"lon_ph",              &lon_ph},
-        {"ortho_h",             &ortho_h},
-        {"surface_h",           &surface_h},
-        {"x_atc",               &x_atc},
-        {"y_atc",               &y_atc},
+        {"class_ph",            &class_ph,              "photon classification"},
+        {"confidence",          &confidence,            "classification confidence"},
+        {"time_ns",             &time_ns,               "GPS nanoseconds"},
+        {"lat_ph",              &lat_ph,                "photon latitude"},
+        {"lon_ph",              &lon_ph,                "photon longitude"},
+        {"ortho_h",             &ortho_h,               "orthometric height (m)"},
+        {"surface_h",           &surface_h,             "surface height (m)"},
+        {"x_atc",               &x_atc,                 "along-track distance (m)"},
+        {"y_atc",               &y_atc,                 "across-track distance (m)"},
     },
     {
-        {"spot",                &spot},
-        {"cycle",               &cycle},
-        {"region",              &region},
-        {"rgt",                 &rgt},
-        {"gt",                  &gt},
-        {"granule",             &granule}
+        {"spot",                &spot,                  "spot number (1-6)"},
+        {"cycle",               &cycle,                 "orbital cycle"},
+        {"region",              &region,                "region number"},
+        {"rgt",                 &rgt,                   "reference ground track"},
+        {"gt",                  &gt,                    "ground track"},
+        {"granule",             &granule,               "source granule name"}
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
     granule(_hdf24->name, META_SOURCE_ID),
@@ -162,6 +134,14 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         addColumn("sigma_thu",              &sigma_thu,             false);
         addColumn("sigma_tvu",              &sigma_tvu,             false);
     }
+    addDescription("ellipse_h",             &ellipse_h,             "ellipsoidal height (m)",           "!atl24.compact");
+    addDescription("invalid_kd",            &invalid_kd,            "invalid Kd flag",                  "!atl24.compact");
+    addDescription("invalid_wind_speed",    &invalid_wind_speed,    "invalid wind speed flag",          "!atl24.compact");
+    addDescription("low_confidence_flag",   &low_confidence_flag,   "low confidence flag",              "!atl24.compact");
+    addDescription("night_flag",            &night_flag,            "night flag",                       "!atl24.compact");
+    addDescription("sensor_depth_exceeded", &sensor_depth_exceeded, "sensor depth exceeded flag",       "!atl24.compact");
+    addDescription("sigma_thu",             &sigma_thu,             "total horizontal uncertainty (m)", "!atl24.compact");
+    addDescription("sigma_tvu",             &sigma_tvu,             "total vertical uncertainty (m)",   "!atl24.compact");
 
     /* Set MetaData from Parameters */
     cycle = parms->granuleFields.cycle.value;
