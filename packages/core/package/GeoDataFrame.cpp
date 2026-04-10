@@ -164,7 +164,7 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
     dataframe->setNumRows(column->appendValue(source_id, data->num_rows));
 
     // get source table from metadata
-    FieldMap<Field>* dict = dynamic_cast<FieldMap<Field>*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
+    FieldMap<Field>* dict = dynamic_cast<FieldMap<Field>*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::MAP, true));
 
     // create new source table if not found
     if(!dict)
@@ -198,7 +198,7 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
 static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* data, int32_t source_id)
 {
     // get source dictionary from metadata
-    FieldMap<Field>* srcdata = dynamic_cast<FieldMap<Field>*>(dataframe->getMetaData(GeoDataFrame::SOURCE_DATA, Field::DICTIONARY, true));
+    FieldMap<Field>* srcdata = dynamic_cast<FieldMap<Field>*>(dataframe->getMetaData(GeoDataFrame::SOURCE_DATA, Field::MAP, true));
 
     // create new source dictionary if not found
     if(!srcdata)

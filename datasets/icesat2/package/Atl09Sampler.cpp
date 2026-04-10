@@ -249,6 +249,12 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
 {
     try
     {
+        // check for empty dataframe
+        if(dataframe->length() <= 0)
+        {
+            return true;
+        }
+
         // get profile to read
         FieldElement<uint8_t>* gt = reinterpret_cast<FieldElement<uint8_t>*>(dataframe->getMetaData("gt"));
         int profile_num = 0; // invalid value
@@ -270,10 +276,6 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find time column for %s", profile.c_str());
         }
-        else if(time_column->length() <= 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "empty dataframe <%s>", profile.c_str());
-        }
 
         // get minimum and maximum times (assumes monotonically increasing time)
         const time8_t min_time = (*time_column)[0];
@@ -285,10 +287,6 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         if(!segment_id_column)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find an index column for %s", profile.c_str());
-        }
-        else if(segment_id_column && segment_id_column->length() <= 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "empty dataframe <%s>", profile.c_str());
         }
 
         // get minimum and maximum segments (assumes monotonically increasing segment id)

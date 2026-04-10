@@ -97,8 +97,7 @@ class Field
             LIST          = 3,
             COLUMN        = 4,
             MAP           = 5,
-            DICTIONARY    = 6,
-            DATAFRAME     = 7
+            DATAFRAME     = 6
         } type_t;
 
         /*--------------------------------------------------------------------
