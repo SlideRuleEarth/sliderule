@@ -57,6 +57,24 @@ const struct luaL_Reg SurfaceFitter::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t SurfaceFitter::descriptions[] = {
+    {"time_ns",                 "GPS nanoseconds",                      NULL, 0},
+    {"latitude",                "latitude (EPSG:7912)",                 NULL, 0},
+    {"longitude",               "longitude (EPSG:7912)",                NULL, 0},
+    {"segment_id_beg",          "first segment in extent",              NULL, 0},
+    {"x_atc",                   "along-track distance (m)",             NULL, 0},
+    {"y_atc",                   "across-track distance (m)",            NULL, 0},
+    {"photon_start",            "photon index of start of extent",      NULL, 0},
+    {"pflags",                  "processing flags",                     NULL, 0},
+    {"h_mean",                  "mean height from ellipsoid (m)",       NULL, 0},
+    {"dh_fit_dx",               "along-track slope",                    NULL, 0},
+    {"w_surface_window_final",  "final surface window height (m)",      NULL, 0},
+    {"n_fit_photons",           "number of photons in fit",             NULL, 0},
+    {"rms_misfit",              "root-mean-square misfit (m)",          NULL, 0},
+    {"h_sigma",                 "height uncertainty (m)",               NULL, 0},
+    {NULL, NULL, NULL, 0}
+};
+
 /******************************************************************************
  * METHODS
  ******************************************************************************/
@@ -240,7 +258,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     delete ancillary_columns;
 
     // finalize dataframe
-    dataframe->populateGeoColumns();
+    dataframe->populateGeoColumns("SurfaceFitter", descriptions);
 
     // update runtime
     return true;

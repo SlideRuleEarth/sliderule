@@ -53,12 +53,12 @@ const struct luaL_Reg Casals1bDataFrame::LUA_META_TABLE[] = {
 };
 
 const GeoDataFrame::schema_description_t Casals1bDataFrame::descriptions[] = {
-    {"time_ns",         "GPS nanoseconds"},
-    {"latitude",        "latitude"},
-    {"longitude",       "longitude"},
-    {"refh",            "reference height (m)"},
-    {"granule",         "source granule name"},
-    {NULL, NULL}
+    {"time_ns",         "GPS nanoseconds",          NULL, 0},
+    {"latitude",        "latitude",                 NULL, 0},
+    {"longitude",       "longitude",                NULL, 0},
+    {"refh",            "reference height (m)",     NULL, 0},
+    {"granule",         "source granule name",      NULL, 0},
+    {NULL, NULL, NULL, 0}
 };
 
 const GeoDataFrame::schema_description_t* Casals1bDataFrame::getDescriptions (void) const { return descriptions; }

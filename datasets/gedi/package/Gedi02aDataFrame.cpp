@@ -45,20 +45,20 @@ const struct luaL_Reg Gedi02aDataFrame::LUA_META_TABLE[] = {
 };
 
 const GeoDataFrame::schema_description_t Gedi02aDataFrame::descriptions[] = {
-    {"shot_number",         "unique shot identifier"},
-    {"time_ns",             "GPS nanoseconds"},
-    {"latitude",            "latitude"},
-    {"longitude",           "longitude"},
-    {"elevation_lm",        "elevation lowest mode (m)"},
-    {"elevation_hr",        "elevation highest return (m)"},
-    {"solar_elevation",     "solar elevation angle (deg)"},
-    {"sensitivity",         "beam sensitivity"},
-    {"flags",               "quality flags"},
-    {"beam",                "beam number"},
-    {"orbit",               "orbit number"},
-    {"track",               "track number"},
-    {"granule",             "source granule name"},
-    {NULL, NULL}
+    {"shot_number",         "unique shot identifier",           NULL, 0},
+    {"time_ns",             "GPS nanoseconds",                  NULL, 0},
+    {"latitude",            "latitude",                         NULL, 0},
+    {"longitude",           "longitude",                        NULL, 0},
+    {"elevation_lm",        "elevation lowest mode (m)",        NULL, 0},
+    {"elevation_hr",        "elevation highest return (m)",     NULL, 0},
+    {"solar_elevation",     "solar elevation angle (deg)",      NULL, 0},
+    {"sensitivity",         "beam sensitivity",                 NULL, 0},
+    {"flags",               "quality flags",                    NULL, 0},
+    {"beam",                "beam number",                      NULL, 0},
+    {"orbit",               "orbit number",                     NULL, 0},
+    {"track",               "track number",                     NULL, 0},
+    {"granule",             "source granule name",              NULL, 0},
+    {NULL, NULL, NULL, 0}
 };
 
 const GeoDataFrame::schema_description_t* Gedi02aDataFrame::getDescriptions (void) const { return descriptions; }

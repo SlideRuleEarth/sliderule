@@ -24,6 +24,7 @@ local function build_column_schemas()
         local schema = core.schema(api_name)
         if schema and schema.columns then
             local properties = {}
+            local required = {}
             for _, col in ipairs(schema.columns) do
                 local prop = {}
                 prop.type = col.type
@@ -40,17 +41,27 @@ local function build_column_schemas()
                 if col.description and col.description ~= "" then
                     prop.description = col.description
                 end
+                if col.condition then
+                    prop.description = (prop.description or "") .. " (condition: " .. col.condition .. ")"
+                end
                 if col.role == "element" then
                     prop.description = (prop.description or "") .. " (per-batch metadata)"
                 end
                 properties[col.name] = prop
+                if not col.condition then
+                    table.insert(required, col.name)
+                end
             end
 
-            result[api_name] = {
+            local schema_entry = {
                 type = "object",
                 description = api_desc,
                 properties = properties
             }
+            if #required > 0 then
+                schema_entry.required = required
+            end
+            result[api_name] = schema_entry
         end
     end
 

@@ -49,23 +49,23 @@ const struct luaL_Reg Gedi01bDataFrame::LUA_META_TABLE[] = {
 };
 
 const GeoDataFrame::schema_description_t Gedi01bDataFrame::descriptions[] = {
-    {"shot_number",         "unique shot identifier"},
-    {"time_ns",             "GPS nanoseconds"},
-    {"latitude",            "latitude"},
-    {"longitude",           "longitude"},
-    {"elevation_start",     "waveform start elevation (m)"},
-    {"elevation_stop",      "waveform stop elevation (m)"},
-    {"solar_elevation",     "solar elevation angle (deg)"},
-    {"tx_size",             "transmit waveform sample count"},
-    {"rx_size",             "receive waveform sample count"},
-    {"flags",               "quality flags"},
-    {"tx_waveform",         "transmit waveform"},
-    {"rx_waveform",         "receive waveform"},
-    {"beam",                "beam number"},
-    {"orbit",               "orbit number"},
-    {"track",               "track number"},
-    {"granule",             "source granule name"},
-    {NULL, NULL}
+    {"shot_number",         "unique shot identifier",           NULL, 0},
+    {"time_ns",             "GPS nanoseconds",                  NULL, 0},
+    {"latitude",            "latitude",                         NULL, 0},
+    {"longitude",           "longitude",                        NULL, 0},
+    {"elevation_start",     "waveform start elevation (m)",     NULL, 0},
+    {"elevation_stop",      "waveform stop elevation (m)",      NULL, 0},
+    {"solar_elevation",     "solar elevation angle (deg)",      NULL, 0},
+    {"tx_size",             "transmit waveform sample count",   NULL, 0},
+    {"rx_size",             "receive waveform sample count",    NULL, 0},
+    {"flags",               "quality flags",                    NULL, 0},
+    {"tx_waveform",         "transmit waveform",                NULL, 0},
+    {"rx_waveform",         "receive waveform",                 NULL, 0},
+    {"beam",                "beam number",                      NULL, 0},
+    {"orbit",               "orbit number",                     NULL, 0},
+    {"track",               "track number",                     NULL, 0},
+    {"granule",             "source granule name",              NULL, 0},
+    {NULL, NULL, NULL, 0}
 };
 
 const GeoDataFrame::schema_description_t* Gedi01bDataFrame::getDescriptions (void) const { return descriptions; }

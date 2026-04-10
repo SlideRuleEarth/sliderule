@@ -57,6 +57,31 @@ const struct luaL_Reg PhoReal::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const GeoDataFrame::schema_description_t PhoReal::descriptions[] = {
+    {"time_ns",                 "GPS nanoseconds",                      NULL, 0},
+    {"latitude",                "latitude (EPSG:7912)",                 NULL, 0},
+    {"longitude",               "longitude (EPSG:7912)",                NULL, 0},
+    {"segment_id_beg",          "first segment in extent",              NULL, 0},
+    {"x_atc",                   "along-track distance (m)",             NULL, 0},
+    {"y_atc",                   "across-track distance (m)",            NULL, 0},
+    {"photon_start",            "photon index of start of extent",      NULL, 0},
+    {"photon_count",            "number of photons in extent",          NULL, 0},
+    {"pflags",                  "processing flags",                     NULL, 0},
+    {"ground_photon_count",     "number of ground photons",             NULL, 0},
+    {"vegetation_photon_count", "number of vegetation photons",         NULL, 0},
+    {"landcover",               "land cover classification",            NULL, 0},
+    {"snowcover",               "snow cover classification",            NULL, 0},
+    {"solar_elevation",         "solar elevation angle (deg)",          NULL, 0},
+    {"h_te_median",             "median terrain height (m)",            NULL, 0},
+    {"h_max_canopy",            "maximum canopy height (m)",            NULL, 0},
+    {"h_min_canopy",            "minimum canopy height (m)",            NULL, 0},
+    {"h_mean_canopy",           "mean canopy height (m)",               NULL, 0},
+    {"h_canopy",                "98th percentile canopy height (m)",    NULL, 0},
+    {"canopy_openness",         "canopy openness (std dev of relief)",  NULL, 0},
+    {"canopy_h_metrics",        "canopy height percentile metrics",     NULL, 0},
+    {NULL, NULL, NULL, 0}
+};
+
 /******************************************************************************
  * METHODS
  ******************************************************************************/
@@ -257,7 +282,7 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     delete ancillary_columns;
 
     // finalize dataframe
-    dataframe->populateGeoColumns();
+    dataframe->populateGeoColumns("PhoReal", descriptions);
 
     // return success
     return true;

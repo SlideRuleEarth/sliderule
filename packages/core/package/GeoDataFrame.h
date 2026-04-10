@@ -129,6 +129,7 @@ class GeoDataFrame: public LuaObject, public Field
             string items_format;// for arrays: element OpenAPI format (e.g. "float")
             string description;
             string role;        // "column" or "element"
+            string condition;   // empty = always present; non-empty = request parameter condition
         };
 
         struct Schema {
@@ -150,9 +151,19 @@ class GeoDataFrame: public LuaObject, public Field
         // duplication, an alternative is to add a const char* description member to
         // FieldUntypedColumn/FieldElement (8 bytes per field per instance), which
         // lets populateGeoColumns() read descriptions directly from the fields.
+        //
+        // The encoding field on conditional columns duplicates type information
+        // from the FieldColumn<T> member declaration. This is necessary because
+        // conditional columns may be absent from columnFields when their stage is
+        // disabled, and we cannot dereference a Field* that isn't in the dictionary.
+        // The encoding lets registerSchema() produce the correct OpenAPI type for
+        // absent columns without adding them to the dataframe (which would create
+        // mixed-length columns that break Parquet serialization).
         typedef struct {
             const char* name;
             const char* description;
+            const char* condition;   // NULL = always present; non-NULL = when this column appears
+            uint32_t encoding;       // 0 = derive from live field; non-zero = type for absent columns
         } schema_description_t;
 
         /*--------------------------------------------------------------------
@@ -224,6 +235,7 @@ class GeoDataFrame: public LuaObject, public Field
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
         void                        populateGeoColumns  (void);
+        void                        populateGeoColumns  (const char* schema_name, const schema_description_t* descs);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
         FieldUntypedColumn*         getUnsafe           (const char* key) const;
 
@@ -329,6 +341,7 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaRunComplete      (lua_State* L);
 
         static void     encoding2openapi    (uint32_t encoding, SchemaField& sf);
+        void            registerSchema      (const char* schema_name, const schema_description_t* descs);
 
         /*--------------------------------------------------------------------
          * Data

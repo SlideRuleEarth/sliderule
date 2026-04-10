@@ -53,20 +53,20 @@ const struct luaL_Reg Atl13DataFrame::LUA_META_TABLE[] = {
 };
 
 const GeoDataFrame::schema_description_t Atl13DataFrame::descriptions[] = {
-    {"time_ns",                 "GPS nanoseconds"},
-    {"latitude",                "latitude (EPSG:7912)"},
-    {"longitude",               "longitude (EPSG:7912)"},
-    {"segment_id_beg",          "beginning segment identifier"},
-    {"ht_ortho",                "orthometric height (m)"},
-    {"ht_water_surf",           "water surface height (m)"},
-    {"stdev_water_surf",        "water surface height std dev (m)"},
-    {"water_depth",             "water depth (m)"},
-    {"spot",                    "spot number (1-6)"},
-    {"cycle",                   "orbital cycle"},
-    {"rgt",                     "reference ground track"},
-    {"gt",                      "ground track"},
-    {"granule",                 "source granule name"},
-    {NULL, NULL}
+    {"time_ns",                 "GPS nanoseconds",                      NULL, 0},
+    {"latitude",                "latitude (EPSG:7912)",                 NULL, 0},
+    {"longitude",               "longitude (EPSG:7912)",                NULL, 0},
+    {"segment_id_beg",          "beginning segment identifier",         NULL, 0},
+    {"ht_ortho",                "orthometric height (m)",               NULL, 0},
+    {"ht_water_surf",           "water surface height (m)",             NULL, 0},
+    {"stdev_water_surf",        "water surface height std dev (m)",     NULL, 0},
+    {"water_depth",             "water depth (m)",                      NULL, 0},
+    {"spot",                    "spot number (1-6)",                    NULL, 0},
+    {"cycle",                   "orbital cycle",                        NULL, 0},
+    {"rgt",                     "reference ground track",               NULL, 0},
+    {"gt",                      "ground track",                         NULL, 0},
+    {"granule",                 "source granule name",                  NULL, 0},
+    {NULL, NULL, NULL, 0}
 };
 
 const GeoDataFrame::schema_description_t* Atl13DataFrame::getDescriptions (void) const { return descriptions; }

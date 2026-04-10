@@ -53,22 +53,30 @@ const struct luaL_Reg Atl24DataFrame::LUA_META_TABLE[] = {
 };
 
 const GeoDataFrame::schema_description_t Atl24DataFrame::descriptions[] = {
-    {"class_ph",            "photon classification"},
-    {"confidence",          "classification confidence"},
-    {"time_ns",             "GPS nanoseconds"},
-    {"lat_ph",              "photon latitude"},
-    {"lon_ph",              "photon longitude"},
-    {"ortho_h",             "orthometric height (m)"},
-    {"surface_h",           "surface height (m)"},
-    {"x_atc",               "along-track distance (m)"},
-    {"y_atc",               "across-track distance (m)"},
-    {"spot",                "spot number (1-6)"},
-    {"cycle",               "orbital cycle"},
-    {"region",              "region number"},
-    {"rgt",                 "reference ground track"},
-    {"gt",                  "ground track"},
-    {"granule",             "source granule name"},
-    {NULL, NULL}
+    {"class_ph",              "photon classification",                 NULL, 0},
+    {"confidence",            "classification confidence",             NULL, 0},
+    {"time_ns",               "GPS nanoseconds",                      NULL, 0},
+    {"lat_ph",                "photon latitude",                       NULL, 0},
+    {"lon_ph",                "photon longitude",                      NULL, 0},
+    {"ortho_h",               "orthometric height (m)",                NULL, 0},
+    {"surface_h",             "surface height (m)",                    NULL, 0},
+    {"x_atc",                 "along-track distance (m)",              NULL, 0},
+    {"y_atc",                 "across-track distance (m)",             NULL, 0},
+    {"ellipse_h",             "ellipsoidal height (m)",                "!atl24.compact", Field::NESTED_COLUMN | Field::FLOAT},
+    {"invalid_kd",            "invalid Kd flag",                       "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
+    {"invalid_wind_speed",    "invalid wind speed flag",               "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
+    {"low_confidence_flag",   "low confidence flag",                   "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
+    {"night_flag",            "night flag",                            "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
+    {"sensor_depth_exceeded", "sensor depth exceeded flag",            "!atl24.compact", Field::NESTED_COLUMN | Field::UINT8},
+    {"sigma_thu",             "total horizontal uncertainty (m)",      "!atl24.compact", Field::NESTED_COLUMN | Field::FLOAT},
+    {"sigma_tvu",             "total vertical uncertainty (m)",        "!atl24.compact", Field::NESTED_COLUMN | Field::FLOAT},
+    {"spot",                  "spot number (1-6)",                     NULL, 0},
+    {"cycle",                 "orbital cycle",                         NULL, 0},
+    {"region",                "region number",                         NULL, 0},
+    {"rgt",                   "reference ground track",                NULL, 0},
+    {"gt",                    "ground track",                          NULL, 0},
+    {"granule",               "source granule name",                   NULL, 0},
+    {NULL, NULL, NULL, 0}
 };
 
 const GeoDataFrame::schema_description_t* Atl24DataFrame::getDescriptions (void) const { return descriptions; }

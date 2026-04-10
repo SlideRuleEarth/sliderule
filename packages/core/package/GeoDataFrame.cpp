@@ -921,53 +921,148 @@ void GeoDataFrame::populateGeoColumns (void)
         }
     }
 
-    // register schema on first construction of this type
+    // register schema using subclass virtual getDescriptions()
+    registerSchema(LuaMetaName, getDescriptions());
+}
+
+/*----------------------------------------------------------------------------
+ * populateGeoColumns (overload for runners)
+ *
+ * Used by FrameRunners that replace all columns on a dataframe.
+ * Registers under schema_name instead of LuaMetaName, so each runner
+ * gets its own schema entry.
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::populateGeoColumns (const char* schema_name, const schema_description_t* descs)
+{
+    // re-discover geo columns after runner replaced them
+    timeColumn = NULL;
+    xColumn = NULL;
+    yColumn = NULL;
+    zColumn = NULL;
+
+    Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator iter(columnFields.fields);
+    for(int f = 0; f < iter.length; f++)
+    {
+        const char* name = iter[f].key;
+        const Field* field = iter[f].value.field;
+
+        if(field->encoding & TIME_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == TIME8);
+            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
+            timeColumnName = name;
+        }
+
+        if(field->encoding & X_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            xColumnName = name;
+        }
+
+        if(field->encoding & Y_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            yColumnName = name;
+        }
+
+        if(field->encoding & Z_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == FLOAT);
+            zColumn = dynamic_cast<const FieldColumn<float>*>(field);
+            zColumnName = name;
+        }
+    }
+
+    // register schema under runner's name
+    registerSchema(schema_name, descs);
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::registerSchema (const char* schema_name, const schema_description_t* descs)
+{
     schemaMut.lock();
     {
-        if(!schemaRegistry.find(LuaMetaName))
+        if(!schemaRegistry.find(schema_name))
         {
-            // build description lookup from static table (if provided by subclass)
-            Dictionary<const char*> descLookup;
-            const schema_description_t* descs = getDescriptions();
+            // build description lookup from static table
+            Dictionary<const schema_description_t*> descLookup;
             if(descs)
             {
                 for(int i = 0; descs[i].name != NULL; i++)
-                    descLookup.add(descs[i].name, descs[i].description);
+                    descLookup.add(descs[i].name, &descs[i]);
             }
 
             Schema* schema = new Schema;
-            schema->name = LuaMetaName;
-            schema->description = LuaMetaName;
+            schema->name = schema_name;
+            schema->description = schema_name;
 
-            // columns
+            // track which description table entries were matched to live fields
+            Dictionary<bool> matched;
+
+            // pass 1: columns present on this instance (type from live field)
             Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator col_iter(columnFields.fields);
             for(int i = 0; i < col_iter.length; i++)
             {
                 SchemaField sf;
                 sf.name = col_iter[i].key;
                 encoding2openapi(col_iter[i].value.field->encoding, sf);
-                const char* desc = NULL;
-                descLookup.find(col_iter[i].key, &desc);
-                sf.description = desc ? desc : "";
+                const schema_description_t* entry = NULL;
+                if(descLookup.find(col_iter[i].key, &entry) && entry)
+                {
+                    sf.description = entry->description ? entry->description : "";
+                    sf.condition = entry->condition ? entry->condition : "";
+                    matched.add(col_iter[i].key, true);
+                }
                 sf.role = "column";
                 schema->fields.push_back(sf);
             }
 
-            // metadata
+            // pass 1: metadata present on this instance
             Dictionary<FieldDictionary::entry_t>::Iterator meta_iter(metaFields.fields);
             for(int i = 0; i < meta_iter.length; i++)
             {
                 SchemaField sf;
                 sf.name = meta_iter[i].key;
                 encoding2openapi(meta_iter[i].value.field->encoding, sf);
-                const char* desc = NULL;
-                descLookup.find(meta_iter[i].key, &desc);
-                sf.description = desc ? desc : "";
+                const schema_description_t* entry = NULL;
+                if(descLookup.find(meta_iter[i].key, &entry) && entry)
+                {
+                    sf.description = entry->description ? entry->description : "";
+                    sf.condition = entry->condition ? entry->condition : "";
+                    matched.add(meta_iter[i].key, true);
+                }
                 sf.role = "element";
                 schema->fields.push_back(sf);
             }
 
-            schemaRegistry.add(LuaMetaName, schema);
+            // pass 2: conditional columns absent from this instance
+            // (type from description table encoding)
+            if(descs)
+            {
+                for(int i = 0; descs[i].name != NULL; i++)
+                {
+                    if(descs[i].condition && descs[i].encoding && !matched.find(descs[i].name))
+                    {
+                        SchemaField sf;
+                        sf.name = descs[i].name;
+                        encoding2openapi(descs[i].encoding, sf);
+                        sf.description = descs[i].description ? descs[i].description : "";
+                        sf.condition = descs[i].condition;
+                        sf.role = "column";
+                        schema->fields.push_back(sf);
+                    }
+                }
+            }
+
+            schemaRegistry.add(schema_name, schema);
         }
     }
     schemaMut.unlock();
@@ -1403,6 +1498,12 @@ int GeoDataFrame::luaSchema (lua_State* L)
 
         lua_pushstring(L, f.role.c_str());
         lua_setfield(L, -2, "role");
+
+        if(!f.condition.empty())
+        {
+            lua_pushstring(L, f.condition.c_str());
+            lua_setfield(L, -2, "condition");
+        }
 
         lua_rawseti(L, -2, static_cast<int>(i + 1));
     }
