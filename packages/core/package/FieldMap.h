@@ -233,10 +233,11 @@ string FieldMap<T>::toJson (void) const
     string str("{");
     for(int i = 0; i < iter.length; i++)
     {
+        const typename Dictionary<entry_t>::kv_t kv = iter[i];
         str += "\"";
-        str += iter[i].key;
+        str += kv.key;
         str += "\":";
-        str += convertToJson(*iter[i].value.field);
+        str += kv.value.field->toJson();
         if(i < iter.length - 1) str += ",";
     }
     str += "}";
