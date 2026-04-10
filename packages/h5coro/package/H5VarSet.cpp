@@ -48,10 +48,25 @@
 H5VarSet::H5VarSet(const FieldList<string>& variable_list, H5Coro::Context* context, const char* group, long col, long startrow, long numrows):
     variables(getDictSize(variable_list.length()))
 {
+    // handle trailing slash in group name
+    const char* separator = "";
+    if(group)
+    {
+        int str_size = StringLib::size(group);
+        if(str_size > 0)
+        {
+            if(group[str_size - 1] != '/')
+            {
+                separator = "/";
+            }
+        }
+    }
+
+    // populate variables
     for(int i = 0; i < variable_list.length(); i++)
     {
         const string& field_name = GeoDataFrame::extractColumnName(variable_list[i]);
-        const FString dataset_name("%s%s%s", group ? group : "", group ? "/" : "", field_name.c_str());
+        const FString dataset_name("%s%s%s", group ? group : "", separator, field_name.c_str());
         H5DArray* array = new H5DArray(context, dataset_name.c_str(), col, startrow, numrows);
         const bool status = variables.add(field_name.c_str(), array);
         if(!status)

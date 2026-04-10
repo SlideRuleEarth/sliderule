@@ -45,7 +45,7 @@ DATATYPES = {
 }
 
 ALL_ROWS = -1
-
+ALL_COLS = -1
 
 ###############################################################################
 # APIs
@@ -63,8 +63,9 @@ def h5 (dataset, resource, asset, datatype=DATATYPES["DYNAMIC"], col=0, startrow
     The ``h5p`` api is the preferred solution for reading multiple datasets.
 
     One of the difficulties in reading HDF5 data directly from a Python script is converting the format of the data as it is stored in HDF5 to a data
-    format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the
-    returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.
+    format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the override the data type of the
+    returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.  If the **datatype**
+    parameter is not supplied, then the code does its best to match the HDF5 type to the corresponding Python type.
 
     The data type is supplied as a ``DATATYPES`` enumeration:
 
@@ -84,7 +85,7 @@ def h5 (dataset, resource, asset, datatype=DATATYPES["DYNAMIC"], col=0, startrow
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
-                    the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned. Ignored if ``slice`` is supplied.
+                    the column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned. Ignored if ``slice`` is supplied. If the variable has more than one column, then by default the first column is read, if all columns are wanted, then set col=-1 and the result will be a flattened array of all of the data.
         startrow:   int
                     the first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension). Ignored if ``slice`` is supplied.
         numrows:    int
@@ -122,6 +123,10 @@ def h5p (datasets, resource, asset):
     need to be read multiple times do not result in multiple requests to S3.
 
     For a full discussion of the data type conversion options, see `h5 </api_reference/h5.html#h5>`_.
+
+    The “slice” parameter for a dataset allows the user to supply a range for each dimension and then flatten the result.
+    For example, in the case of a 2D variable, the slice is effectively [[start_row, end_row], [start_column, end_column]].
+    If all data across all dimensions is wanted, the slice becomes [[0,-1]].
 
     Parameters
     ----------
