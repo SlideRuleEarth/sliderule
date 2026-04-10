@@ -253,8 +253,9 @@ int FieldMap<T>::toLua (lua_State* L) const
     lua_newtable(L);
     for(int i = 0; i < iter.length; i++)
     {
-        lua_pushstring(L, iter[i].key);
-        convertToLua(L, *iter[i].value.field);
+        const typename Dictionary<entry_t>::kv_t kv = iter[i];
+        lua_pushstring(L, kv.key);
+        kv.value.field->toLua(L);
         lua_settable(L, -3);
     }
     return 1;
@@ -268,27 +269,52 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        int table_index = index < 0 ? lua_gettop(L) + index + 1 : index;
-        lua_pushnil(L);
-        while(lua_next(L, table_index) != 0)
+        if(fields.length() > 0) // prepopulated map of fields
         {
-            entry_t entry = {NULL, true};
-            try
+            typename Dictionary<entry_t>::Iterator iter(fields);
+            for(int i = 0; i < iter.length; i++)
             {
-                const char* key = LuaObject::getLuaString(L, -2);
-                entry.field = new T;
-                if(!fields.add(key, entry))
+                typename Dictionary<entry_t>::kv_t kv = iter[i];
+                lua_getfield(L, index, kv.key);
+                try
                 {
-                    throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add entry <%s> to column fields", key);
+                    kv.value.field->fromLua(L, -1);
                 }
-                convertFromLua(L, -1, *entry.field);
+                catch (const RunTimeException& e)
+                {
+                    if(!lua_isnil(L, -1))
+                    {
+                        mlog(WARNING, "Field <%s> using default value: %s", kv.key, e.what());
+                    }
+                }
+                lua_pop(L, 1);
             }
-            catch(const RunTimeException& e)
+        }
+        else // dynamically populate fields
+        {
+            int table_index = index < 0 ? lua_gettop(L) + index + 1 : index;
+            lua_pushnil(L);
+            while(lua_next(L, table_index) != 0)
             {
-                delete entry.field;
-                mlog(ERROR, "Failed to read field: %s", e.what());
+                entry_t entry = {NULL, true};
+                try
+                {
+                    const char* key = LuaObject::getLuaString(L, -2);
+                    entry.field = new T;
+                    if(!fields.add(key, entry))
+                    {
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add entry <%s> to column fields", key);
+                    }
+                    convertFromLua(L, -1, *entry.field);
+                }
+                catch(const RunTimeException& e)
+                {
+                    delete entry.field;
+                    mlog(ERROR, "Failed to read field: %s", e.what());
+                }
+                lua_pop(L, 1);
             }
-            lua_pop(L, 1);
+
         }
     }
 }
