@@ -51,7 +51,7 @@
 /******************/
 /* Granule Fields */
 /******************/
-struct CasalsGranuleFields: public FieldDictionary
+struct CasalsGranuleFields: public FieldMap<Field>
 {
 
     FieldElement<int>   year {-1};      // CASALS granule observation date - year

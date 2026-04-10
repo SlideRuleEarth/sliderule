@@ -164,12 +164,12 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
     dataframe->setNumRows(column->appendValue(source_id, data->num_rows));
 
     // get source table from metadata
-    FieldDictionary* dict = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
+    FieldMap<Field>* dict = dynamic_cast<FieldMap<Field>*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
 
     // create new source table if not found
     if(!dict)
     {
-        dict = new FieldDictionary();
+        dict = new FieldMap<Field>();
         if(!dataframe->addMetaData(GeoDataFrame::SOURCE_TABLE, dict, true))
         {
             delete dict;
@@ -198,12 +198,12 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
 static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* data, int32_t source_id)
 {
     // get source dictionary from metadata
-    FieldDictionary* srcdata = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_DATA, Field::DICTIONARY, true));
+    FieldMap<Field>* srcdata = dynamic_cast<FieldMap<Field>*>(dataframe->getMetaData(GeoDataFrame::SOURCE_DATA, Field::DICTIONARY, true));
 
     // create new source dictionary if not found
     if(!srcdata)
     {
-        srcdata = new FieldDictionary();
+        srcdata = new FieldMap<Field>();
         if(!dataframe->addMetaData(GeoDataFrame::SOURCE_DATA, srcdata, true))
         {
             delete srcdata;
@@ -216,7 +216,7 @@ static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t*
     Field* srcid_field = NULL;
     if(!srcdata->find(srcid.c_str(), &srcid_field))
     {
-        srcid_field = new FieldDictionary();
+        srcid_field = new FieldMap<Field>();
         if(!srcdata->add(srcid.c_str(), srcid_field, true))
         {
             delete srcid_field;
@@ -225,7 +225,7 @@ static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t*
     }
 
     // add metadata to srcid entry in srcdata
-    FieldDictionary* srcid_dict = dynamic_cast<FieldDictionary*>(srcid_field);
+    FieldMap<Field>* srcid_dict = dynamic_cast<FieldMap<Field>*>(srcid_field);
     const string value(reinterpret_cast<const char*>(data->data), data->size);
     FieldElement<string>* value_field = new FieldElement<string>(value);
     if(!srcid_dict->add(data->name, value_field, true))
@@ -1226,7 +1226,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
+                            const std::initializer_list<FieldMap<Field>::init_entry_t>& meta_list,
                             const char* _crs):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),

@@ -40,7 +40,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "FieldElement.h"
 #include "FieldList.h"
 #include "AssetField.h"
@@ -65,7 +65,7 @@
 /*--------------------------------------------------------------------
 * GeoFields
 *--------------------------------------------------------------------*/
-class GeoFields: public FieldDictionary
+class GeoFields: public FieldMap<Field>
 {
     public:
 

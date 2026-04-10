@@ -75,6 +75,7 @@
         virtual         ~FieldMap   (void) override;
 
         long            add         (const char* key, T* field, bool free_on_delete=true);
+        bool            find        (const char* key, T** data);
 
         void            clear       (void) override;
         long            length      (void) const override;
@@ -150,6 +151,28 @@ long FieldMap<T>::add(const char* key, T* field, bool free_on_delete)
     };
     fields.add(key, entry);
     return fields.length();
+}
+
+/*----------------------------------------------------------------------------
+ * find
+ *----------------------------------------------------------------------------*/
+template<class T>
+bool FieldMap<T>::find (const char* key, T** data)
+{
+    assert(data);
+    entry_t entry = {
+        .field = NULL,
+        .free_on_delete = false
+    };
+    if(fields.find(key, &entry))
+    {
+        *data = entry.field;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -269,5 +292,24 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
         }
     }
 }
+
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+inline string convertToJson(const FieldMap<Field>& v) {
+    return v.toJson();
+}
+
+inline int convertToLua(lua_State* L, const FieldMap<Field>& v) {
+    return v.toLua(L);
+}
+
+inline void convertFromLua(lua_State* L, int index, FieldMap<Field>& v) {
+    v.fromLua(L, index);
+}
+
+inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::USER; }
+
 
 #endif  /* __field_map__ */

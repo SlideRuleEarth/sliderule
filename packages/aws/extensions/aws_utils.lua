@@ -55,7 +55,9 @@ local function config_earth_data ()
             sys.wait(1)
         end
     end
-    sys.log(core.CRITICAL, "IAM role established")
+    if aws.csget("iam-role") then
+        sys.log(core.CRITICAL, "IAM role established")
+    end
     -- run earth data authentication scripts
     if sys.getcfg("authenticate_to_nsidc") then
         local script_parms = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"}

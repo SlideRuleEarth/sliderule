@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaEngine.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "FieldElement.h"
 #include "FieldList.h"
 
@@ -50,7 +50,7 @@
  * ARROW PARAMETERS CLASS
  ******************************************************************************/
 
-class OutputFields: public FieldDictionary
+class OutputFields: public FieldMap<Field>
 {
     public:
 

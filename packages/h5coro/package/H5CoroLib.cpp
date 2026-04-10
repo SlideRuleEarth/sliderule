@@ -447,7 +447,7 @@ const char* H5Coro::Fields::defaultCRS (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
+H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list):
     RequestFields (L, key_space, asset_name, _resource, {
         {"col",         &col},
         {"startrow",    &startRow},
@@ -462,7 +462,7 @@ H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name,
         {"variables",   &variables}})
 {
     crs.value = defaultCRS(); // initialize
-    for(const FieldDictionary::init_entry_t elem: init_list)
+    for(const FieldMap<Field>::init_entry_t elem: init_list)
     {
         const entry_t entry = {elem.field, false};
         fields.add(elem.name, entry);

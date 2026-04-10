@@ -42,7 +42,7 @@
 #include "GeoDataFrame.h"
 #include "FieldElement.h"
 #include "FieldEnumeration.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "FieldList.h"
 #include "TimeLib.h"
 
@@ -53,7 +53,7 @@
 /******************/
 /* Granule Fields */
 /******************/
-struct Atl03GranuleFields: public FieldDictionary
+struct Atl03GranuleFields: public FieldMap<Field>
 {
 
     FieldElement<int>   year {-1};      // ATL03 granule observation date - year
@@ -73,7 +73,7 @@ struct Atl03GranuleFields: public FieldDictionary
 /**************/
 /* Fit Fields */
 /**************/
-struct FitFields: public FieldDictionary
+struct FitFields: public FieldMap<Field>
 {
 
     FieldElement<int>       maxIterations {5};          // least squares fit iterations
@@ -91,7 +91,7 @@ struct FitFields: public FieldDictionary
 /***************/
 /* YAPC Fields */
 /***************/
-struct YapcFields: public FieldDictionary
+struct YapcFields: public FieldMap<Field>
 {
     FieldElement<uint16_t>  score {0};      // minimum allowed weight of photon using yapc algorithm
     FieldElement<int>       version {0};    // version of the yapc algorithm to run
@@ -111,7 +111,7 @@ struct YapcFields: public FieldDictionary
 /******************/
 /* PhoREAL Fields */
 /******************/
-struct PhorealFields: public FieldDictionary
+struct PhorealFields: public FieldMap<Field>
 {
     typedef enum {
         MEAN = 0,
@@ -140,7 +140,7 @@ struct PhorealFields: public FieldDictionary
 /******************/
 /* Blanket Fields */
 /******************/
-struct BlanketFields: public FieldDictionary
+struct BlanketFields: public FieldMap<Field>
 {
     FieldElement<double>    max_top_of_surface_percentile {0.98};
     FieldElement<double>    median_ground_percentile {0.50};
@@ -156,7 +156,7 @@ struct BlanketFields: public FieldDictionary
 /****************/
 /* Atl13 Fields */
 /****************/
-struct Atl13Fields: public FieldDictionary
+struct Atl13Fields: public FieldMap<Field>
 {
     typedef enum {
         LAKE                = 1,
@@ -202,7 +202,7 @@ struct Atl13Fields: public FieldDictionary
 /****************/
 /* Atl24 Fields */
 /****************/
-struct Atl24Fields: public FieldDictionary
+struct Atl24Fields: public FieldMap<Field>
 {
     typedef enum {
         UNCLASSIFIED        = 0,
@@ -596,7 +596,7 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list);
+                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
         virtual ~Icesat2Fields  (void) override = default;
 
         static int luaStage (lua_State* L);

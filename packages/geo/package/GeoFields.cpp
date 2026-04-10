@@ -87,7 +87,7 @@ int GeoFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void GeoFields::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);
+    FieldMap<Field>::fromLua(L, index);
 
     /* Sampling Radius */
     if(sampling_radius.value < 0)
@@ -172,7 +172,7 @@ void GeoFields::fromLua (lua_State* L, int index)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoFields::GeoFields (void):
-    FieldDictionary ({
+    FieldMap<Field> ({
         {"algorithm",           &sampling_algo},
         {"radius",              &sampling_radius},
         {"t0",                  &t0},

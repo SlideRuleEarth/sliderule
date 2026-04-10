@@ -50,7 +50,7 @@
 /******************/
 /* Granule Fields */
 /******************/
-struct GediGranuleFields: public FieldDictionary
+struct GediGranuleFields: public FieldMap<Field>
 {
 
     FieldElement<int>   year {-1};      // GEDI granule observation date - year

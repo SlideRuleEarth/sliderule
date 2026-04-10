@@ -58,7 +58,7 @@ void RegionMask::registerRasterizer (burn_func_t func)
  * Constructor - RegionMask
  *----------------------------------------------------------------------------*/
 RegionMask::RegionMask(void):
-    FieldDictionary ({  {"geojson",     &geojson},
+    FieldMap<Field> ({  {"geojson",     &geojson},
                         {"cellsize",    &cellSize},
                         {"cols",        &cols},
                         {"rows",        &rows},
@@ -90,7 +90,7 @@ bool RegionMask::valid (void) const
  *----------------------------------------------------------------------------*/
 void RegionMask::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);
+    FieldMap<Field>::fromLua(L, index);
     if(cellSize.value > 0.0 && !geojson.value.empty())
     {
         if(RegionMask::burnMask)

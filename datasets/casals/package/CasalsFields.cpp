@@ -46,7 +46,7 @@
  * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
 CasalsGranuleFields::CasalsGranuleFields():
-    FieldDictionary({ {"year",      &year},
+    FieldMap<Field>({ {"year",      &year},
                       {"month",     &month},
                       {"day",       &day},
                       {"version",   &version} })

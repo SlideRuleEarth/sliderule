@@ -52,7 +52,7 @@ const char* OutputFields::PARMS = "output";
  * Constructor
  *----------------------------------------------------------------------------*/
 OutputFields::OutputFields (void):
-    FieldDictionary ({
+    FieldMap<Field> ({
         {"path",                &path},
         {"format",              &format},
         {"open_on_complete",    &openOnComplete},
@@ -75,7 +75,7 @@ OutputFields::OutputFields (void):
  *----------------------------------------------------------------------------*/
 void OutputFields::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);
+    FieldMap<Field>::fromLua(L, index);
 
     // check format
     if(format.value == OutputFields::PARQUET && asGeo)

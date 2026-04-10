@@ -108,6 +108,9 @@ class Field
         Field (type_t _type, uint32_t _encoding):
             type(_type), encoding(_encoding) {};
 
+        Field (void):
+            type(FIELD), encoding(0) {};
+
         virtual ~Field (void) = default;
 
         // access
@@ -133,11 +136,20 @@ class Field
 
         // conversion
 
-        virtual string toJson (void) const = 0;
+        virtual string toJson (void) const {
+            return "";
+        };
 
-        virtual int toLua (lua_State* L) const = 0;
+        virtual int toLua (lua_State* L) const {
+            (void)L;
+            return 0;
+        };
 
-        virtual void fromLua (lua_State* L, int index) = 0;
+        virtual void fromLua (lua_State* L, int index) {
+            (void)L;
+            (void)index;
+            return;
+        };
 
         virtual int toLua (lua_State* L, long key) const {
             (void)key;
@@ -194,6 +206,7 @@ inline static string convertToJson(const uint32_t& v) { return std::to_string(v)
 inline static string convertToJson(const uint64_t& v) { return std::to_string(v);       }
 inline static string convertToJson(const float& v)    { return std::to_string(v);       }
 inline static string convertToJson(const double& v)   { return std::to_string(v);       }
+inline static string convertToJson(const Field& v)    { (void)v; return "";             }
 inline static string convertToJson(const time8_t& v)  {
     const int64_t gps = TimeLib::sysex2gpstime(v);
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(gps);
@@ -221,6 +234,7 @@ inline int convertToLua(lua_State* L, const float& v)    { lua_pushnumber(L, v);
 inline int convertToLua(lua_State* L, const double& v)   { lua_pushnumber(L, v);  return 1; }
 inline int convertToLua(lua_State* L, const time8_t& v)  { lua_pushinteger(L, v.nanoseconds);  return 1; }
 inline int convertToLua(lua_State* L, const string& v)   { lua_pushstring(L, v.c_str()); return 1; }
+inline int convertToLua(lua_State* L, const Field& v)    { (void)L; (void)v; return 0; }
 
 // fromlua
 inline void convertFromLua(lua_State* L, int index, bool& v)     { v = LuaObject::getLuaBoolean(L, index); }
@@ -236,6 +250,7 @@ inline void convertFromLua(lua_State* L, int index, float& v)    { v = static_ca
 inline void convertFromLua(lua_State* L, int index, double& v)   { v = LuaObject::getLuaFloat(L, index); }
 inline void convertFromLua(lua_State* L, int index, time8_t& v)  { v = static_cast<int64_t>(LuaObject::getLuaInteger(L, index)); }
 inline void convertFromLua(lua_State* L, int index, string& v)   { v = LuaObject::getLuaString(L, index); }
+inline void convertFromLua(lua_State* L, int index, Field& v)    { (void)L; (void)index; (void)v; }
 
 // encoding
 inline uint32_t toEncoding(bool& v)     { (void)v; return Field::BOOL;   };
@@ -251,6 +266,7 @@ inline uint32_t toEncoding(float& v)    { (void)v; return Field::FLOAT;  };
 inline uint32_t toEncoding(double& v)   { (void)v; return Field::DOUBLE; };
 inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
 inline uint32_t toEncoding(string& v)   { (void)v; return Field::STRING; };
+inline uint32_t toEncoding(Field& v)    { (void)v; return Field::USER;   };
 
 // encoding
 template<class T>

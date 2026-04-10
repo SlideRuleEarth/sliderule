@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "FieldElement.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "LuaObject.h"
 
 /******************************************************************************
@@ -80,7 +80,7 @@ class CredentialStore
          * Typdefs
          *--------------------------------------------------------------------*/
 
-        struct Credential: public FieldDictionary {
+        struct Credential: public FieldMap<Field> {
             FieldElement<string>    accessKeyId;
             FieldElement<string>    secretAccessKey;
             FieldElement<string>    sessionToken;
@@ -90,7 +90,7 @@ class CredentialStore
                 return "{}"; // do not export credentials for security reasons
             };
 
-            Credential(void): FieldDictionary({
+            Credential(void): FieldMap<Field>({
                 {ACCESS_KEY_ID_STR, &accessKeyId},
                 {ACCESS_KEY_ID_STR1, &accessKeyId},
                 {ACCESS_KEY_ID_STR2, &accessKeyId},
@@ -107,7 +107,7 @@ class CredentialStore
                 {EXPIRATION_STR1, &expiration}
             }) {};
 
-            Credential(const Credential& c): FieldDictionary({
+            Credential(const Credential& c): FieldMap<Field>({
                 {ACCESS_KEY_ID_STR, &accessKeyId},
                 {ACCESS_KEY_ID_STR1, &accessKeyId},
                 {ACCESS_KEY_ID_STR2, &accessKeyId},

@@ -37,14 +37,14 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "FieldElement.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class RegionMask: public FieldDictionary
+class RegionMask: public FieldMap<Field>
 {
     public:
 

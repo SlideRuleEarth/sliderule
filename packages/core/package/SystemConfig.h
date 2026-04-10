@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaEngine.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "FieldElement.h"
 #include "FieldList.h"
 
@@ -46,7 +46,7 @@
  * SINGLETON CLASS
  ******************************************************************************/
 
-class SystemConfig: public FieldDictionary
+class SystemConfig: public FieldMap<Field>
 {
     public:
 

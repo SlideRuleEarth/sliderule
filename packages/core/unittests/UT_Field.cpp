@@ -45,7 +45,7 @@
 #include "FieldEnumeration.h"
 #include "FieldList.h"
 #include "FieldColumn.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -356,14 +356,14 @@ int UT_Field::testDictionary(lua_State* L)
         lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
         ut_initialize(lua_obj);
 
-        struct parms: public FieldDictionary
+        struct parms: public FieldMap<Field>
         {
             FieldElement<bool>              e{true};
             FieldArray<bool,2>              a = {true, false};
             FieldColumn<bool>               c;
             FieldColumn<FieldColumn<bool>>  cc;
 
-            parms(): FieldDictionary({
+            parms(): FieldMap<Field>({
                 {"e", &e},
                 {"a", &a},
                 {"c", &c},

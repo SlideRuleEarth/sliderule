@@ -38,7 +38,6 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "FieldDictionary.h"
 #include "FieldElement.h"
 #include "FieldColumn.h"
 #include "FieldMap.h"
@@ -55,7 +54,7 @@
  * CLASS
  ******************************************************************************/
 
-class RequestFields: public LuaObject, public FieldDictionary
+class RequestFields: public LuaObject, public FieldMap<Field>
 {
     public:
 

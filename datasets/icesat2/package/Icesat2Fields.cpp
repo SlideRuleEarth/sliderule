@@ -35,7 +35,7 @@
 
 #include "OsApi.h"
 #include "Icesat2Fields.h"
-#include "FieldDictionary.h"
+#include "FieldMap.h"
 #include "LuaObject.h"
 
 /******************************************************************************
@@ -46,7 +46,7 @@
  * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
 Atl03GranuleFields::Atl03GranuleFields():
-    FieldDictionary({ {"year",      &year},
+    FieldMap<Field>({ {"year",      &year},
                       {"month",     &month},
                       {"day",       &day},
                       {"rgt",       &rgt},
@@ -191,7 +191,7 @@ void Atl03GranuleFields::parseResource (const char* resource)
  * Constructor - FitFields
  *----------------------------------------------------------------------------*/
 FitFields::FitFields():
-    FieldDictionary({ {"maxi",          &maxIterations},
+    FieldMap<Field>({ {"maxi",          &maxIterations},
                       {"H_min_win",     &minWindow},
                       {"sigma_r_max",   &maxRobustDispersion} }),
     provided(false)
@@ -205,7 +205,7 @@ void FitFields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        FieldDictionary::fromLua(L, index);
+        FieldMap<Field>::fromLua(L, index);
         provided = true;
     }
 }
@@ -214,7 +214,7 @@ void FitFields::fromLua (lua_State* L, int index)
  * Constructor - YapcFields
  *----------------------------------------------------------------------------*/
 YapcFields::YapcFields():
-    FieldDictionary({ {"score",     &score},
+    FieldMap<Field>({ {"score",     &score},
                       {"version",   &version},
                       {"knn",       &knn},
                       {"min_knn",   &min_knn},
@@ -231,7 +231,7 @@ void YapcFields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        FieldDictionary::fromLua(L, index);
+        FieldMap<Field>::fromLua(L, index);
         provided = true;
     }
 }
@@ -240,7 +240,7 @@ void YapcFields::fromLua (lua_State* L, int index)
  * Constructor - PhorealFields
  *----------------------------------------------------------------------------*/
 PhorealFields::PhorealFields():
-    FieldDictionary({ {"binsize",           &binsize},
+    FieldMap<Field>({ {"binsize",           &binsize},
                       {"geoloc",            &geoloc},
                       {"use_abs_h",         &use_abs_h},
                       {"send_waveform",     &send_waveform},
@@ -268,7 +268,7 @@ void PhorealFields::fromLua (lua_State* L, int index)
         can_quality_filter_provided = !lua_isnil(L, -1);
         lua_pop(L, 1);
 
-        FieldDictionary::fromLua(L, index);
+        FieldMap<Field>::fromLua(L, index);
 
         if(binsize.value <= 0.0)
         {
@@ -283,7 +283,7 @@ void PhorealFields::fromLua (lua_State* L, int index)
  * Constructor - BlanketFields
  *----------------------------------------------------------------------------*/
 BlanketFields::BlanketFields():
-    FieldDictionary({ {"max_top_of_surface_percentile", &max_top_of_surface_percentile},
+    FieldMap<Field>({ {"max_top_of_surface_percentile", &max_top_of_surface_percentile},
                       {"median_ground_percentile",  &median_ground_percentile} }),
     provided(false)
 {
@@ -296,7 +296,7 @@ void BlanketFields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        FieldDictionary::fromLua(L, index);
+        FieldMap<Field>::fromLua(L, index);
         provided = true;
     }
 }
@@ -305,7 +305,7 @@ void BlanketFields::fromLua (lua_State* L, int index)
  * Constructor - Atl13Fields
  *----------------------------------------------------------------------------*/
 Atl13Fields::Atl13Fields():
-    FieldDictionary({ {"refid",         &reference_id},
+    FieldMap<Field>({ {"refid",         &reference_id},
                       {"name",          &name},
                       {"coord",         &coordinate},
                       {"anc_fields",    &anc_fields} }),
@@ -320,7 +320,7 @@ void Atl13Fields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        FieldDictionary::fromLua(L, index);
+        FieldMap<Field>::fromLua(L, index);
         provided = true;
     }
 }
@@ -329,7 +329,7 @@ void Atl13Fields::fromLua (lua_State* L, int index)
  * Constructor - Atl24Fields
  *----------------------------------------------------------------------------*/
 Atl24Fields::Atl24Fields():
-    FieldDictionary({ {"compact",               &compact},
+    FieldMap<Field>({ {"compact",               &compact},
                       {"class_ph",              &class_ph},
                       {"confidence_threshold",  &confidence_threshold},
                       {"invalid_kd",            &invalid_kd},
@@ -349,7 +349,7 @@ void Atl24Fields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        FieldDictionary::fromLua(L, index);
+        FieldMap<Field>::fromLua(L, index);
 
         if( invalid_kd.anyDisabled() ||
             invalid_wind_speed.anyDisabled() ||
@@ -544,7 +544,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
+Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list):
     RequestFields (L, key_space, asset_name, _resource, {
         {"srt",                 &surfaceType},
         {"pass_invalid",        &passInvalid},
@@ -580,7 +580,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"granule",             &granuleFields} })
 {
     // add additional fields to dictionary
-    for(const FieldDictionary::init_entry_t elem: init_list)
+    for(const FieldMap<Field>::init_entry_t elem: init_list)
     {
         const entry_t entry = {elem.field, false};
         fields.add(elem.name, entry);

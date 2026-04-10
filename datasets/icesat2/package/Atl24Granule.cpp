@@ -112,7 +112,7 @@ int Atl24Granule::luaExport (lua_State* L)
  *----------------------------------------------------------------------------*/
 Atl24Granule::Atl24Granule (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf24, const char* rqstq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary({
+    FieldMap<Field>({
         {"atlas_sdp_gps_epoch", &atlas_sdp_gps_epoch},
         {"data_end_utc",        &data_end_utc},
         {"data_start_utc",      &data_start_utc},

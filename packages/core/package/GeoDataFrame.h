@@ -42,7 +42,6 @@
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "Field.h"
-#include "FieldDictionary.h"
 #include "FieldColumn.h"
 #include "FieldMap.h"
 #include "RecordObject.h"
@@ -105,7 +104,7 @@ class GeoDataFrame: public LuaObject, public Field
         } eof_subrec_t;
 
         typedef FieldMap<FieldUntypedColumn>::entry_t column_entry_t;
-        typedef FieldDictionary::entry_t meta_entry_t;
+        typedef FieldMap<Field>::entry_t meta_entry_t;
 
         typedef enum {
             OP_NONE = 0,
@@ -265,7 +264,7 @@ class GeoDataFrame: public LuaObject, public Field
                                             const char* meta_name,
                                             const struct luaL_Reg meta_table[],
                                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
+                                            const std::initializer_list<FieldMap<Field>::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
 
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
@@ -298,7 +297,7 @@ class GeoDataFrame: public LuaObject, public Field
         bool                            inError;
         long                            numRows;
         FieldMap<FieldUntypedColumn>    columnFields;
-        FieldDictionary                 metaFields;
+        FieldMap<Field>                 metaFields;
 
         const FieldColumn<time8_t>*     timeColumn;
         const FieldColumn<double>*      xColumn;

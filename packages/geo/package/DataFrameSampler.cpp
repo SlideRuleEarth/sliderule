@@ -631,7 +631,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
  *----------------------------------------------------------------------------*/
 bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t* sampler)
 {
-    FieldDictionary file_id_table;
+    FieldMap<Field> file_id_table;
     const std::set<uint64_t>& file_ids = sampler->robj->fileDictGetSampleIds();
     for(std::set<uint64_t>::const_iterator file_id_iter = file_ids.begin(); file_id_iter != file_ids.end(); file_id_iter++)
     {

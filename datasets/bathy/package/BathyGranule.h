@@ -47,7 +47,7 @@
  * CLASS
  ******************************************************************************/
 
-class BathyGranule: public LuaObject, public FieldDictionary
+class BathyGranule: public LuaObject, public FieldMap<Field>
 {
     public:
 

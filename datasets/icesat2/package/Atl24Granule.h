@@ -48,7 +48,7 @@
  * CLASS
  ******************************************************************************/
 
-class Atl24Granule: public LuaObject, public FieldDictionary
+class Atl24Granule: public LuaObject, public FieldMap<Field>
 {
     public:
 

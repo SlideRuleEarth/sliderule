@@ -46,7 +46,7 @@
  * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
 GediGranuleFields::GediGranuleFields():
-    FieldDictionary({ {"year",      &year},
+    FieldMap<Field>({ {"year",      &year},
                       {"doy",       &doy},
                       {"orbit",     &orbit},
                       {"region",    &region},

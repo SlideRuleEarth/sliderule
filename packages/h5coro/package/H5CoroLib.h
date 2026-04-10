@@ -219,7 +219,7 @@ namespace H5Coro
 
         static int luaCreate (lua_State* L);
         static const char* defaultCRS (void);
-        Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list);
+        Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
         virtual ~Fields (void) override = default;
 
         /********/

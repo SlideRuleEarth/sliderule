@@ -221,7 +221,7 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
             if(pubQ)
             {
                 // build duplicate record to post
-                FieldDictionary duplicate({});
+                FieldMap<Field> duplicate({});
                 for(size_t col = 0; col < columns.size(); col++)
                 {
                     Field* element = columns[col]->row(row);

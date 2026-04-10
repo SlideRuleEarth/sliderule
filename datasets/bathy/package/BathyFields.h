@@ -48,7 +48,7 @@
 /******************/
 /* Surface Fields */
 /******************/
-struct SurfaceFields: public FieldDictionary
+struct SurfaceFields: public FieldMap<Field>
 {
     FieldElement<double>    binSize             {0.5};      // meters
     FieldElement<double>    maxRange            {1000.0};   // meters
@@ -60,7 +60,7 @@ struct SurfaceFields: public FieldDictionary
     FieldElement<bool>      modelAsPoisson      {true};
 
     SurfaceFields(void):
-        FieldDictionary({ {"bin_size",            &binSize},
+        FieldMap<Field>({ {"bin_size",            &binSize},
                           {"max_range",           &maxRange},
                           {"max_bins",            &maxBins},
                           {"signal_threshold",    &signalThreshold},
@@ -76,14 +76,14 @@ struct SurfaceFields: public FieldDictionary
 /*********************/
 /* Refraction Fields */
 /*********************/
-struct RefractionFields: public FieldDictionary
+struct RefractionFields: public FieldMap<Field>
 {
     FieldElement<bool>      useWaterRIMask  {true};     // global water refractive index mask downloaded in atl24 init lua routine
     FieldElement<double>    RIAir           {1.00029};  // refraction index of air
     FieldElement<double>    RIWater         {1.34116};  // refraction index of water
 
     RefractionFields(void):
-        FieldDictionary({ {"use_water_ri_mask", &useWaterRIMask},
+        FieldMap<Field>({ {"use_water_ri_mask", &useWaterRIMask},
                           {"ri_air",            &RIAir},
                           {"ri_water",          &RIAir} }) {
     };
@@ -94,12 +94,12 @@ struct RefractionFields: public FieldDictionary
 /**********************/
 /* Uncertainty Fields */
 /**********************/
-struct UncertaintyFields: public FieldDictionary
+struct UncertaintyFields: public FieldMap<Field>
 {
     AssetField assetKd {"viirsj1-s3"}; // global water refractive index mask downloaded in atl24 init lua routine
 
     UncertaintyFields(void):
-        FieldDictionary({ {"asset_kd", &assetKd} }) {
+        FieldMap<Field>({ {"asset_kd", &assetKd} }) {
     };
 
     virtual ~UncertaintyFields(void) override = default;

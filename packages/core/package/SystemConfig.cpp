@@ -122,7 +122,7 @@ int SystemConfig::luaSetField (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 SystemConfig::SystemConfig(void):
-    FieldDictionary ({
+    FieldMap<Field> ({
         {"log_format",                  &logFormat},
         {"log_level",                   &logLevel},
         {"trace_level",                 &traceLevel},

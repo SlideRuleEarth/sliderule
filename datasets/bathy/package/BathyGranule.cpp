@@ -112,7 +112,7 @@ int BathyGranule::luaExport (lua_State* L)
  *----------------------------------------------------------------------------*/
 BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary({
+    FieldMap<Field>({
         {"atlas_sdp_gps_epoch", &atlas_sdp_gps_epoch},
         {"data_end_utc",        &data_end_utc},
         {"data_start_utc",      &data_start_utc},

@@ -435,7 +435,7 @@ const GeoFields* RequestFields::geoFields(const char* key) const
  *----------------------------------------------------------------------------*/
 void RequestFields::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);
+    FieldMap<Field>::fromLua(L, index);
 
     // set timeouts (if necessary)
     if(timeout == IO_INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
@@ -474,7 +474,7 @@ void RequestFields::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary ({
+    FieldMap<Field> ({
         {"asset",               &asset},
         {"resource",            &resource},
         {"resources",           &resources},

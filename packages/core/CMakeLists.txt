@@ -100,7 +100,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Field.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldColumn.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/FieldDictionary.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldElement.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldEnumeration.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldList.h
