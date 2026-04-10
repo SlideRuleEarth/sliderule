@@ -144,39 +144,14 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     assert(_parms);
     assert(_hdf03);
 
-    /* Set Optional PhoREAL Columns */
-    if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
-    {
-        addColumn("relief",             &relief,            false);
-        addColumn("landcover",          &landcover,         false);
-        addColumn("snowcover",          &snowcover,         false);
-    }
-    addDescription("relief",            &relief,            "PhoREAL relief",                   "stages.phoreal");
-    addDescription("landcover",         &landcover,         "land cover classification",        "stages.phoreal");
-    addDescription("snowcover",         &snowcover,         "snow cover classification",        "stages.phoreal");
-
-    /* Set Optional YAPC Columns */
-    if(parms->stages[Icesat2Fields::STAGE_YAPC])
-    {
-        addColumn("yapc_score",         &yapc_score,        false);
-    }
-    addDescription("yapc_score",        &yapc_score,        "YAPC score",                       "stages.yapc");
-
-    /* Set Optional ATL08 Columns */
-    if(parms->stages[Icesat2Fields::STAGE_ATL08])
-    {
-        addColumn("atl08_class",        &atl08_class,       false);
-    }
-    addDescription("atl08_class",       &atl08_class,       "ATL08 photon classification",      "stages.atl08");
-
-    /* Set Optional ATL24 Columns */
-    if(parms->stages[Icesat2Fields::STAGE_ATL24])
-    {
-        addColumn("atl24_class",        &atl24_class,       false);
-        addColumn("atl24_confidence",   &atl24_confidence,  false);
-    }
-    addDescription("atl24_class",       &atl24_class,       "ATL24 photon classification",      "stages.atl24");
-    addDescription("atl24_confidence",  &atl24_confidence,  "ATL24 classification confidence",  "stages.atl24");
+    /* Set Optional Columns */
+    addColumn("relief",             &relief,            false, "PhoREAL relief",                   "stages.phoreal", parms->stages[Icesat2Fields::STAGE_PHOREAL]);
+    addColumn("landcover",          &landcover,         false, "land cover classification",        "stages.phoreal", parms->stages[Icesat2Fields::STAGE_PHOREAL]);
+    addColumn("snowcover",          &snowcover,         false, "snow cover classification",        "stages.phoreal", parms->stages[Icesat2Fields::STAGE_PHOREAL]);
+    addColumn("yapc_score",         &yapc_score,        false, "YAPC score",                       "stages.yapc",    parms->stages[Icesat2Fields::STAGE_YAPC]);
+    addColumn("atl08_class",        &atl08_class,       false, "ATL08 photon classification",      "stages.atl08",   parms->stages[Icesat2Fields::STAGE_ATL08]);
+    addColumn("atl24_class",        &atl24_class,       false, "ATL24 photon classification",      "stages.atl24",   parms->stages[Icesat2Fields::STAGE_ATL24]);
+    addColumn("atl24_confidence",   &atl24_confidence,  false, "ATL24 classification confidence",  "stages.atl24",   parms->stages[Icesat2Fields::STAGE_ATL24]);
 
     /* Set CRS */
     if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);

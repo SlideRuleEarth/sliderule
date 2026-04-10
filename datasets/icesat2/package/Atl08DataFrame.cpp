@@ -139,17 +139,8 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     if(outq_name) outQ = new Publisher(outq_name);
 
     /* Optional Quality Score Columns */
-    if(parms->phoreal.te_quality_filter_provided)
-    {
-        addColumn("te_quality_score", &te_quality_score, false);
-    }
-    addDescription("te_quality_score",  &te_quality_score,  "terrain quality score",  "phoreal.te_quality_filter");
-
-    if(parms->phoreal.can_quality_filter_provided)
-    {
-        addColumn("can_quality_score", &can_quality_score, false);
-    }
-    addDescription("can_quality_score", &can_quality_score, "canopy quality score",   "phoreal.can_quality_filter");
+    addColumn("te_quality_score",  &te_quality_score,  false, "terrain quality score", "phoreal.te_quality_filter", parms->phoreal.te_quality_filter_provided);
+    addColumn("can_quality_score", &can_quality_score, false, "canopy quality score",  "phoreal.can_quality_filter", parms->phoreal.can_quality_filter_provided);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();

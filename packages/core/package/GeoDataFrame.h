@@ -208,7 +208,8 @@ class GeoDataFrame: public LuaObject, public Field
         void                        setNumRows          (long rows);
         long                        appendFromBuffer    (const char* name, const uint8_t* buffer, long size, uint32_t column_encoding=0, bool nodata=false);
         vector<string>              getColumnNames      (void) const;
-        bool                        addColumn           (const char* name, FieldUntypedColumn* column, bool free_on_delete);
+        bool                        addColumn           (const char* name, FieldUntypedColumn* column, bool free_on_delete,
+                                                         const char* description=nullptr, const char* condition=nullptr, bool enabled=true);
         bool                        addNewColumn        (const char* name, uint32_t column_encoding);
         bool                        addExistingColumn   (const char* name, FieldUntypedColumn* column);
         FieldUntypedColumn*         getColumn           (const char* name, bool no_throw=false) const;
@@ -217,7 +218,6 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        deleteColumn        (const char* name);
         void                        populateGeoColumns  (void);
         void                        populateGeoColumns  (const char* schema_name, const schema_description_t* descs);
-        void                        addDescription      (const char* name, const Field* field, const char* description, const char* condition=nullptr);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
         FieldUntypedColumn*         getUnsafe           (const char* key) const;
 

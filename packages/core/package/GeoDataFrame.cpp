@@ -710,9 +710,21 @@ vector<string> GeoDataFrame::getColumnNames(void) const
 
 /*----------------------------------------------------------------------------
  * addColumn - assumes memory is properly allocated already
+ *
+ * When description is provided, stashes it in pendingDescs for schema
+ * registration. When enabled is false, the column is not added to the
+ * dataframe but the description is still registered (for documenting
+ * conditional columns in the schema).
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addColumn (const char* name, FieldUntypedColumn* column, bool free_on_delete)
+bool GeoDataFrame::addColumn (const char* name, FieldUntypedColumn* column, bool free_on_delete,
+                              const char* description, const char* condition, bool enabled)
 {
+    if(description)
+        pendingDescs.push_back({name, column, description, condition});
+
+    if(!enabled)
+        return true;
+
     return columnFields.add(name, column, free_on_delete);
 }
 
@@ -874,19 +886,6 @@ bool GeoDataFrame::deleteColumn (const char* name)
         return columnFields.fields.remove(name);
     }
     return false;
-}
-
-/*----------------------------------------------------------------------------
- * addDescription
- *
- * Adds a description entry for conditional columns that are not part of the
- * constructor init list (e.g. columns added via addColumn based on request
- * parameters). Called from subclass constructor bodies before
- * populateGeoColumns().
- *----------------------------------------------------------------------------*/
-void GeoDataFrame::addDescription (const char* name, const Field* field, const char* description, const char* condition)
-{
-    pendingDescs.push_back({name, field, description, condition});
 }
 
 /*----------------------------------------------------------------------------

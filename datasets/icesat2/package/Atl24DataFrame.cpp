@@ -123,25 +123,15 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     assert(_hdf24);
 
     /* Set Non-Compact Columns */
-    if(!parms->atl24.compact.value)
-    {
-        addColumn("ellipse_h",              &ellipse_h,             false);
-        addColumn("invalid_kd",             &invalid_kd,            false);
-        addColumn("invalid_wind_speed",     &invalid_wind_speed,    false);
-        addColumn("low_confidence_flag",    &low_confidence_flag,   false);
-        addColumn("night_flag",             &night_flag,            false);
-        addColumn("sensor_depth_exceeded",  &sensor_depth_exceeded, false);
-        addColumn("sigma_thu",              &sigma_thu,             false);
-        addColumn("sigma_tvu",              &sigma_tvu,             false);
-    }
-    addDescription("ellipse_h",             &ellipse_h,             "ellipsoidal height (m)",           "!atl24.compact");
-    addDescription("invalid_kd",            &invalid_kd,            "invalid Kd flag",                  "!atl24.compact");
-    addDescription("invalid_wind_speed",    &invalid_wind_speed,    "invalid wind speed flag",          "!atl24.compact");
-    addDescription("low_confidence_flag",   &low_confidence_flag,   "low confidence flag",              "!atl24.compact");
-    addDescription("night_flag",            &night_flag,            "night flag",                       "!atl24.compact");
-    addDescription("sensor_depth_exceeded", &sensor_depth_exceeded, "sensor depth exceeded flag",       "!atl24.compact");
-    addDescription("sigma_thu",             &sigma_thu,             "total horizontal uncertainty (m)", "!atl24.compact");
-    addDescription("sigma_tvu",             &sigma_tvu,             "total vertical uncertainty (m)",   "!atl24.compact");
+    const bool non_compact = !parms->atl24.compact.value;
+    addColumn("ellipse_h",              &ellipse_h,             false, "ellipsoidal height (m)",           "!atl24.compact", non_compact);
+    addColumn("invalid_kd",             &invalid_kd,            false, "invalid Kd flag",                  "!atl24.compact", non_compact);
+    addColumn("invalid_wind_speed",     &invalid_wind_speed,    false, "invalid wind speed flag",          "!atl24.compact", non_compact);
+    addColumn("low_confidence_flag",    &low_confidence_flag,   false, "low confidence flag",              "!atl24.compact", non_compact);
+    addColumn("night_flag",             &night_flag,            false, "night flag",                       "!atl24.compact", non_compact);
+    addColumn("sensor_depth_exceeded",  &sensor_depth_exceeded, false, "sensor depth exceeded flag",       "!atl24.compact", non_compact);
+    addColumn("sigma_thu",             &sigma_thu,              false, "total horizontal uncertainty (m)", "!atl24.compact", non_compact);
+    addColumn("sigma_tvu",             &sigma_tvu,              false, "total vertical uncertainty (m)",   "!atl24.compact", non_compact);
 
     /* Set MetaData from Parameters */
     cycle = parms->granuleFields.cycle.value;
