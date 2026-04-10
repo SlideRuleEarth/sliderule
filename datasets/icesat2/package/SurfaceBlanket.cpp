@@ -156,7 +156,7 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
             algorithm(df, i0, num_photons, result);
 
             // populate surface blanket columns
-            time8_t t(static_cast<int64_t>(df.time_ns.mean(i0, num_photons)));
+            const time8_t t(static_cast<int64_t>(df.time_ns.mean(i0, num_photons)));
             time_ns->append(t);
             latitude->append(df.latitude.mean(i0, num_photons));
             longitude->append(df.longitude.mean(i0, num_photons));
@@ -279,17 +279,17 @@ void SurfaceBlanket::algorithm (const Atl03DataFrame& df, uint32_t start_photon,
  *----------------------------------------------------------------------------*/
 double SurfaceBlanket::percentile(vector<float>& data, double p)
 {
-    size_t n = data.size();
-    double idx = p * (n - 1);
+    const size_t n = data.size();
+    const double idx = p * (n - 1);
 
-    size_t k = static_cast<size_t>(idx);
-    double frac = idx - k;
+    const size_t k = static_cast<size_t>(idx);
+    const double frac = idx - k;
 
     std::nth_element(data.begin(), data.begin() + k, data.end());
-    double a = data[k];
+    const double a = data[k];
 
     std::nth_element(data.begin(), data.begin() + k + 1, data.end());
-    double b = data[k + 1];
+    const double b = data[k + 1];
 
     return a + (frac * (b - a));
 }

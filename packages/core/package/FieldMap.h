@@ -74,7 +74,7 @@
                         FieldMap    (std::initializer_list<init_entry_t> init_list);
         virtual         ~FieldMap   (void) override;
 
-        long            add         (const char* key, T* field, bool free_on_delete=true);
+        bool            add         (const char* key, T* field, bool free_on_delete=true);
         bool            find        (const char* key, T** data);
 
         void            clear       (void) override;
@@ -143,14 +143,13 @@ FieldMap<T>::~FieldMap(void)
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldMap<T>::add(const char* key, T* field, bool free_on_delete)
+bool FieldMap<T>::add(const char* key, T* field, bool free_on_delete)
 {
     entry_t entry = {
         .field = field,
         .free_on_delete = free_on_delete
     };
-    fields.add(key, entry);
-    return fields.length();
+    return fields.add(key, entry);
 }
 
 /*----------------------------------------------------------------------------

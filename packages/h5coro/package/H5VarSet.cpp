@@ -52,7 +52,7 @@ H5VarSet::H5VarSet(const FieldList<string>& variable_list, H5Coro::Context* cont
     const char* separator = "";
     if(group)
     {
-        int str_size = StringLib::size(group);
+        const int str_size = StringLib::size(group);
         if(str_size > 0)
         {
             if(group[str_size - 1] != '/')

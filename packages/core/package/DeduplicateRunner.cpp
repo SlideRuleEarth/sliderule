@@ -62,7 +62,7 @@ struct Hasher // FNV-1a
     size_t operator()(std::string_view v) const
     {
         uint64_t hash = 1469598103934665603ULL;
-        for (unsigned char c : v) {
+        for (const unsigned char c : v) {
             hash ^= c;
             hash *= 1099511628211ULL;
         }
@@ -156,6 +156,7 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
 
     // get columns
     vector<FieldUntypedColumn*> columns;
+    columns.reserve(column_names.size());
     for(const string& column_name: column_names)
     {
         columns.push_back(dataframe->getUnsafe(column_name.c_str()));
@@ -215,7 +216,7 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
         }
 
         // insert data into hash table
-        std::string_view key(reinterpret_cast<const char*>(hash_data), row_size);
+        const std::string_view key(reinterpret_cast<const char*>(hash_data), row_size);
         if(hash_table.find(key) != hash_table.end())
         {
             if(pubQ)
@@ -252,7 +253,7 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
     if(withRemoval)
     {
         vector<uint8_t> mask(dataframe->length(), 1);
-        for(long row: rows_to_remove) mask[row] = 0;
+        for(const long row: rows_to_remove) mask[row] = 0;
         for(size_t col = 0; col < columns.size(); col++)
         {
             dataframe->setNumRows(columns[col]->filter(mask));
@@ -260,5 +261,6 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
     }
 
     // update runtime
+    delete [] hash_data;
     return true;
 }
