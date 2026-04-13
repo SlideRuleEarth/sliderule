@@ -58,21 +58,21 @@
     },
     getCRS()),
     beam(0, META_COLUMN),
-    orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
-    track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
-    granule(_hdf->name, META_SOURCE_ID),
+    orbit(_parms ? static_cast<uint32_t>(_parms->granule_fields.orbit.value) : 0, META_COLUMN),
+    track(_parms ? static_cast<uint16_t>(_parms->granule_fields.track.value) : 0, META_COLUMN),
+    granule(_hdf ? _hdf->name : "", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
+    readTimeoutMs(_parms ? _parms->readTimeout.value * 1000 : 0),
     outQ(NULL),
     parms(_parms),
     hdf(_hdf),
     dfKey(0),
-    beamStr(StringLib::duplicate(beam_str)),
+    beamStr(beam_str ? StringLib::duplicate(beam_str) : NULL),
     group{0}
 {
-    assert(_parms);
-    assert(_hdf);
+    /* Schema-only: skip all runtime initialization */
+    if(!_parms) return;
 
     /* Resolve Beam */
     const int beam_index = beamIndexFromString(beam_str);

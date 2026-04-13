@@ -53,6 +53,9 @@ const struct luaL_Reg Gedi04aDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Gedi04aDataFrame::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+        return createLuaObject(L, new Gedi04aDataFrame(L, NULL, NULL, NULL, NULL));
+
     GediFields* _parms = NULL;
     H5Object* _hdf04a = NULL;
 
@@ -99,6 +102,9 @@ Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFiel
 {
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
+
+    /* Schema-only: skip all runtime initialization */
+    if(!_parms) return;
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);

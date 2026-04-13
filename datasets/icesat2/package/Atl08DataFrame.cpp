@@ -54,6 +54,9 @@ const struct luaL_Reg Atl08DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl08DataFrame::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+        return createLuaObject(L, new Atl08DataFrame(L, NULL, NULL, NULL, NULL));
+
     Icesat2Fields* _parms = NULL;
     H5Object* _hdf08 = NULL;
 
@@ -113,37 +116,37 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt,                   "ground track"},
         {"granule",                 &granule,              "source granule name"}
     },
-    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
+    _parms ? Icesat2Fields::defaultITRF(_parms->granuleFields.version.value) : NULL),
     spot(0, META_COLUMN),
-    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
-    region(_parms->granuleFields.region.value, META_COLUMN),
-    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
+    cycle(_parms ? _parms->granuleFields.cycle.value : 0, META_COLUMN),
+    region(_parms ? _parms->granuleFields.region.value : 0, META_COLUMN),
+    rgt(_parms ? _parms->granuleFields.rgt.value : 0, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf08->name, META_SOURCE_ID),
+    granule(_hdf08 ? _hdf08->name : "", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
+    readTimeoutMs(_parms ? _parms->readTimeout.value * 1000 : 0),
     outQ(NULL),
     parms(_parms),
     hdf08(_hdf08),
     dfKey(0),
-    beam(StringLib::duplicate(beam_str))
+    beam(beam_str ? StringLib::duplicate(beam_str) : NULL)
 {
-    assert(_parms);
-    assert(_hdf08);
+    const bool schema_only = (_parms == NULL);
+    addColumn("te_quality_score",  &te_quality_score,  false, "terrain quality score", "phoreal.te_quality_filter", schema_only ? false : parms->phoreal.te_quality_filter_provided);
+    addColumn("can_quality_score", &can_quality_score, false, "canopy quality score",  "phoreal.can_quality_filter", schema_only ? false : parms->phoreal.can_quality_filter_provided);
+
+    /* Call Parent Class Initialization of GeoColumns */
+    populateGeoColumns();
+
+    /* Schema-only: skip all runtime initialization */
+    if(schema_only) return;
 
     /* Calculate Key */
     dfKey = Icesat2Fields::calculateBeamKey(beam);
 
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
-
-    /* Optional Quality Score Columns */
-    addColumn("te_quality_score",  &te_quality_score,  false, "terrain quality score", "phoreal.te_quality_filter", parms->phoreal.te_quality_filter_provided);
-    addColumn("can_quality_score", &can_quality_score, false, "canopy quality score",  "phoreal.can_quality_filter", parms->phoreal.can_quality_filter_provided);
-
-    /* Call Parent Class Initialization of GeoColumns */
-    populateGeoColumns();
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId(traceId);
@@ -162,8 +165,8 @@ Atl08DataFrame::~Atl08DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf08->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf08) hdf08->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

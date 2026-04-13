@@ -62,6 +62,12 @@ const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03DataFrame::luaCreate (lua_State* L)
 {
+    /* Schema-only: no arguments creates a lightweight instance for schema registration */
+    if(lua_gettop(L) == 0)
+    {
+        return createLuaObject(L, new Atl03DataFrame(L, NULL, NULL, NULL, NULL, NULL, NULL));
+    }
+
     Icesat2Fields* _parms = NULL;
     H5Object* _hdf03 = NULL;
     H5Object* _hdf08 = NULL;
@@ -119,45 +125,46 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt,                  "ground track"},
         {"granule",             &granule,             "source granule name"}
     },
-    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
+    _parms ? Icesat2Fields::defaultITRF(_parms->granuleFields.version.value) : NULL),
     spot(0, META_COLUMN),
-    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
-    region(_parms->granuleFields.region.value, META_COLUMN),
-    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
+    cycle(_parms ? _parms->granuleFields.cycle.value : 0, META_COLUMN),
+    region(_parms ? _parms->granuleFields.region.value : 0, META_COLUMN),
+    rgt(_parms ? _parms->granuleFields.rgt.value : 0, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf03->name, META_SOURCE_ID),
+    granule(_hdf03 ? _hdf03->name : "", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
-    signalConfColIndex(H5Coro::ALL_COLS),
-    beam(FString("%s", beam_str).c_str(true)),
+    readTimeoutMs(_parms ? _parms->readTimeout.value * 1000 : 0),
+    signalConfColIndex(_parms ? H5Coro::ALL_COLS : 0),
+    beam(beam_str ? FString("%s", beam_str).c_str(true) : NULL),
     outQ(NULL),
     parms(_parms),
     hdf03(_hdf03),
     hdf08(_hdf08),
     hdf24(_hdf24),
-    usePodppd(parms->podppdMask.value != 0x00),
-    useYapc006(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)),
-    useYapc007(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
-    useGeoid(parms->datum.value == MathLib::EGM08)
+    usePodppd(_parms ? (parms->podppdMask.value != 0x00) : false),
+    useYapc006(_parms ? (parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)) : false),
+    useYapc007(_parms ? (parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)) : false),
+    useGeoid(_parms ? (parms->datum.value == MathLib::EGM08) : false)
 {
-    assert(_parms);
-    assert(_hdf03);
-
-    /* Set Optional Columns */
-    addColumn("relief",             &relief,            false, "PhoREAL relief",                   "stages.phoreal", parms->stages[Icesat2Fields::STAGE_PHOREAL]);
-    addColumn("landcover",          &landcover,         false, "land cover classification",        "stages.phoreal", parms->stages[Icesat2Fields::STAGE_PHOREAL]);
-    addColumn("snowcover",          &snowcover,         false, "snow cover classification",        "stages.phoreal", parms->stages[Icesat2Fields::STAGE_PHOREAL]);
-    addColumn("yapc_score",         &yapc_score,        false, "YAPC score",                       "stages.yapc",    parms->stages[Icesat2Fields::STAGE_YAPC]);
-    addColumn("atl08_class",        &atl08_class,       false, "ATL08 photon classification",      "stages.atl08",   parms->stages[Icesat2Fields::STAGE_ATL08]);
-    addColumn("atl24_class",        &atl24_class,       false, "ATL24 photon classification",      "stages.atl24",   parms->stages[Icesat2Fields::STAGE_ATL24]);
-    addColumn("atl24_confidence",   &atl24_confidence,  false, "ATL24 classification confidence",  "stages.atl24",   parms->stages[Icesat2Fields::STAGE_ATL24]);
-
-    /* Set CRS */
-    if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);
+    /* Register conditional columns (enabled=false for schema-only mode) */
+    const bool schema_only = (_parms == NULL);
+    addColumn("relief",             &relief,            false, "PhoREAL relief",                   "stages.phoreal", schema_only ? false : parms->stages[Icesat2Fields::STAGE_PHOREAL]);
+    addColumn("landcover",          &landcover,         false, "land cover classification",        "stages.phoreal", schema_only ? false : parms->stages[Icesat2Fields::STAGE_PHOREAL]);
+    addColumn("snowcover",          &snowcover,         false, "snow cover classification",        "stages.phoreal", schema_only ? false : parms->stages[Icesat2Fields::STAGE_PHOREAL]);
+    addColumn("yapc_score",         &yapc_score,        false, "YAPC score",                       "stages.yapc",    schema_only ? false : parms->stages[Icesat2Fields::STAGE_YAPC]);
+    addColumn("atl08_class",        &atl08_class,       false, "ATL08 photon classification",      "stages.atl08",   schema_only ? false : parms->stages[Icesat2Fields::STAGE_ATL08]);
+    addColumn("atl24_class",        &atl24_class,       false, "ATL24 photon classification",      "stages.atl24",   schema_only ? false : parms->stages[Icesat2Fields::STAGE_ATL24]);
+    addColumn("atl24_confidence",   &atl24_confidence,  false, "ATL24 classification confidence",  "stages.atl24",   schema_only ? false : parms->stages[Icesat2Fields::STAGE_ATL24]);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
+
+    /* Schema-only: skip all runtime initialization */
+    if(schema_only) return;
+
+    /* Set CRS */
+    if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);
 
     /* Set Signal Confidence Index */
     if(parms->surfaceType != Icesat2Fields::SRT_DYNAMIC)
@@ -188,8 +195,8 @@ Atl03DataFrame::~Atl03DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf03->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf03) hdf03->releaseLuaObject();
     if(hdf08) hdf08->releaseLuaObject();
     if(hdf24) hdf24->releaseLuaObject();
 }

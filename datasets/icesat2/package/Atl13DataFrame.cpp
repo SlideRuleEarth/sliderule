@@ -62,6 +62,9 @@ const struct luaL_Reg Atl13DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl13DataFrame::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+        return createLuaObject(L, new Atl13DataFrame(L, NULL, NULL, NULL, NULL));
+
     Icesat2Fields* _parms = NULL;
     H5Object* _hdf13 = NULL;
 
@@ -107,25 +110,26 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt,               "ground track"},
         {"granule",                 &granule,          "source granule name"}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
+    _parms ? Icesat2Fields::defaultEGM(_parms->granuleFields.version.value) : NULL),
     spot(0, META_COLUMN),
-    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
-    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
+    cycle(_parms ? _parms->granuleFields.cycle.value : 0, META_COLUMN),
+    rgt(_parms ? _parms->granuleFields.rgt.value : 0, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf13->name, META_SOURCE_ID),
+    granule(_hdf13 ? _hdf13->name : "", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
-    beam(FString("%s", beam_str).c_str(true)),
+    readTimeoutMs(_parms ? _parms->readTimeout.value * 1000 : 0),
+    beam(beam_str ? FString("%s", beam_str).c_str(true) : NULL),
     outQ(NULL),
     parms(_parms),
-    hdf13(_hdf13)
+    hdf13(_hdf13),
+    dfKey(0)
 {
-    assert(_parms);
-    assert(_hdf13);
-
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
+
+    /* Schema-only: skip all runtime initialization */
+    if(!_parms) return;
 
     /* Calculate Key */
     dfKey = Icesat2Fields::calculateBeamKey(beam);
@@ -150,8 +154,8 @@ Atl13DataFrame::~Atl13DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf13->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf13) hdf13->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

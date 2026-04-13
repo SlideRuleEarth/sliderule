@@ -61,6 +61,9 @@ const struct luaL_Reg Casals1bDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Casals1bDataFrame::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+        return createLuaObject(L, new Casals1bDataFrame(L, NULL, NULL, NULL));
+
     CasalsFields* _parms = NULL;
     H5Object* _hdf1b = NULL;
 
@@ -97,24 +100,24 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     {
         {"granule",         &granule,       "source granule name"}
     },
-    CasalsFields::crsITRF2020()),
-    granule(_hdf1b->name, META_SOURCE_ID),
+    _parms ? CasalsFields::crsITRF2020() : NULL),
+    granule(_hdf1b ? _hdf1b->name : "", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
+    readTimeoutMs(_parms ? _parms->readTimeout.value * 1000 : 0),
     outQ(NULL),
     parms(_parms),
     hdf1b(_hdf1b),
-    dfKey(1)
+    dfKey(_parms ? 1 : 0)
 {
-    assert(_parms);
-    assert(_hdf1b);
+    /* Call Parent Class Initialization of GeoColumns */
+    populateGeoColumns();
+
+    /* Schema-only: skip all runtime initialization */
+    if(!_parms) return;
 
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
-
-    /* Call Parent Class Initialization of GeoColumns */
-    populateGeoColumns();
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
@@ -132,8 +135,8 @@ Casals1bDataFrame::~Casals1bDataFrame (void)
     active.store(false);
     delete readerPid;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf1b->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf1b) hdf1b->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

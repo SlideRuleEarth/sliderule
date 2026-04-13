@@ -62,6 +62,9 @@ const struct luaL_Reg Atl24DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl24DataFrame::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+        return createLuaObject(L, new Atl24DataFrame(L, NULL, NULL, NULL, NULL));
+
     Icesat2Fields* _parms = NULL;
     H5Object* _hdf24 = NULL;
 
@@ -109,21 +112,20 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt,                    "ground track"},
         {"granule",             &granule,               "source granule name"}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
-    granule(_hdf24->name, META_SOURCE_ID),
+    _parms ? Icesat2Fields::defaultEGM(_parms->granuleFields.version.value) : NULL),
+    granule(_hdf24 ? _hdf24->name : "", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
-    readTimeoutMs(_parms->readTimeout.value * 1000),
-    beam(FString("%s", beam_str).c_str(true)),
+    readTimeoutMs(_parms ? _parms->readTimeout.value * 1000 : 0),
+    beam(beam_str ? FString("%s", beam_str).c_str(true) : NULL),
     outQ(NULL),
     parms(_parms),
-    hdf24(_hdf24)
+    hdf24(_hdf24),
+    dfKey(0)
 {
-    assert(_parms);
-    assert(_hdf24);
-
-    /* Set Non-Compact Columns */
-    const bool non_compact = !parms->atl24.compact.value;
+    /* Register conditional columns (enabled=false for schema-only mode) */
+    const bool schema_only = (_parms == NULL);
+    const bool non_compact = schema_only ? false : !parms->atl24.compact.value;
     addColumn("ellipse_h",              &ellipse_h,             false, "ellipsoidal height (m)",           "!atl24.compact", non_compact);
     addColumn("invalid_kd",             &invalid_kd,            false, "invalid Kd flag",                  "!atl24.compact", non_compact);
     addColumn("invalid_wind_speed",     &invalid_wind_speed,    false, "invalid wind speed flag",          "!atl24.compact", non_compact);
@@ -132,6 +134,12 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     addColumn("sensor_depth_exceeded",  &sensor_depth_exceeded, false, "sensor depth exceeded flag",       "!atl24.compact", non_compact);
     addColumn("sigma_thu",             &sigma_thu,              false, "total horizontal uncertainty (m)", "!atl24.compact", non_compact);
     addColumn("sigma_tvu",             &sigma_tvu,              false, "total vertical uncertainty (m)",   "!atl24.compact", non_compact);
+
+    /* Call Parent Class Initialization of GeoColumns */
+    populateGeoColumns();
+
+    /* Schema-only: skip all runtime initialization */
+    if(schema_only) return;
 
     /* Set MetaData from Parameters */
     cycle = parms->granuleFields.cycle.value;
@@ -143,9 +151,6 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
 
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
-
-    /* Call Parent Class Initialization of GeoColumns */
-    populateGeoColumns();
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
@@ -164,8 +169,8 @@ Atl24DataFrame::~Atl24DataFrame (void)
     delete readerPid;
     delete [] beam;
     delete outQ;
-    parms->releaseLuaObject();
-    hdf24->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
+    if(hdf24) hdf24->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
