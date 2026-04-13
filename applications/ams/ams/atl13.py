@@ -31,7 +31,7 @@ def __get_atl13():
     global metadata, metalock
     # get mask
     if 'db' not in g:
-        g.db = duckdb.connect(current_app.config['ATL13_MASK'], read_only=True)
+        g.db = duckdb.connect(current_app.config['ATL13_REFIDS'], read_only=True)
         g.db.execute("LOAD spatial;")
     # get mappings
     with metalock:
@@ -75,21 +75,21 @@ def atl13_route():
         if refid != None:
             table = db.execute(f"""
                 SELECT *
-                FROM atl13_mask
+                FROM atl13refids
                 WHERE ATL13refID == {refid}
                 {dbutils.build_name_filter("AND", name_filter)};
             """).to_arrow_table().slice(0, 1)
         elif name != None:
             table = db.execute(f"""
                 SELECT *
-                FROM atl13_mask
+                FROM atl13refids
                 WHERE Lake_name == '{name}'
                 {dbutils.build_name_filter("AND", name_filter)};
             """).to_arrow_table().slice(0, 1)
         elif coord != None:
             table = db.execute(f"""
                 SELECT *
-                FROM atl13_mask
+                FROM atl13refids
                 WHERE ST_Contains(geometry, ST_Point({coord['lon']}, {coord['lat']}))
                 {dbutils.build_name_filter("AND", name_filter)};
             """).to_arrow_table().slice(0, 1)
@@ -98,7 +98,7 @@ def atl13_route():
             state = {'WHERE': False}
             table = db.execute(f"""
                 SELECT *
-                FROM atl13_mask
+                FROM atl13refids
                 {dbutils.build_name_filter(state, name_filter)};
             """).to_arrow_table().slice(0, 1)
         else:
