@@ -3,9 +3,13 @@
 --
 -- INPUT:       query string: api=<api_name>
 --              e.g. /source/schema?api=Atl03DataFrame
---              If no api parameter, returns all schemas.
+--              If no api parameter, returns all schemas as a map keyed by API name.
 --
--- OUTPUT:      JSON object with column definitions
+-- OUTPUT:      JSON object with column schemas for the current product APIs
+--              (the "x" endpoints: atl03x, atl06x, atl08x, atl13x, atl24x,
+--              gedi01bx, gedi02ax, gedi04ax, casals1bx) and their associated
+--              processing runners (SurfaceFitter, PhoReal, SurfaceBlanket).
+--              Deprecated/legacy interfaces are intentionally excluded.
 --
 local json = require("json")
 

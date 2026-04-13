@@ -64,8 +64,8 @@
     "/source/schema": {
       "get": {
         "operationId": "getSchema",
-        "summary": "Response column schema for an API",
-        "description": "Returns the column schema (names, types, descriptions) for a given API endpoint. Without the `api` parameter, returns the list of available APIs.",
+        "summary": "Column schemas for current product APIs",
+        "description": "Returns the column schema (names, types, formats, descriptions) for the current product APIs — the x endpoints and their processing runners. Deprecated/legacy interfaces are intentionally excluded. Without the `api` parameter, returns all schemas as a map keyed by API name.",
         "tags": ["Discovery"],
         "parameters": [
           {
@@ -75,7 +75,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "API name (e.g. Atl06DataFrame). Omit to list all available APIs."
+            "description": "API name (e.g. Atl06DataFrame, SurfaceFitter). Omit to return the full schema map for all current APIs."
           }
         ],
         "responses": {
