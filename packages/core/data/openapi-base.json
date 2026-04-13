@@ -109,6 +109,303 @@
           }
         }
       }
+    },
+    "/arrow/atl03x": {
+      "post": {
+        "operationId": "atl03x",
+        "summary": "ICESat-2 ATL03 photon-level data",
+        "description": "Returns geolocated photons from ICESat-2 ATL03 granules as an Apache Parquet file. Supports optional processing stages: surface fitting (ATL06-SR), vegetation metrics (PhoREAL/ATL08), YAPC photon weighting, and bathymetry classification (ATL24). Request parameters are documented at /source/defaults under the icesat2 key.",
+        "tags": ["ICESat-2"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name (e.g. ATL03_20181019065445_03150111_006_02.h5)"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Atl03DataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/atl06x": {
+      "post": {
+        "operationId": "atl06x",
+        "summary": "ICESat-2 ATL06 land ice heights",
+        "description": "Returns land ice segment heights from ICESat-2 ATL06 granules as an Apache Parquet file. Each row is a 40m along-track segment with fitted surface elevation. Request parameters are documented at /source/defaults under the icesat2 key.",
+        "tags": ["ICESat-2"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name (e.g. ATL06_20181019065445_03150111_006_02.h5)"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Atl06DataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/atl08x": {
+      "post": {
+        "operationId": "atl08x",
+        "summary": "ICESat-2 ATL08 vegetation and canopy heights",
+        "description": "Returns vegetation and terrain segment data from ICESat-2 ATL08 granules as an Apache Parquet file. Each row is a 100m along-track segment with canopy height, terrain height, and land cover classification. Request parameters are documented at /source/defaults under the icesat2 key.",
+        "tags": ["ICESat-2"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name (e.g. ATL08_20181019065445_03150111_006_02.h5)"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Atl08DataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/atl13x": {
+      "post": {
+        "operationId": "atl13x",
+        "summary": "ICESat-2 ATL13 inland water surface heights",
+        "description": "Returns inland water body surface height measurements from ICESat-2 ATL13 granules as an Apache Parquet file. Each row is a water surface segment with orthometric height, water surface height, and depth. Request parameters are documented at /source/defaults under the icesat2 key.",
+        "tags": ["ICESat-2"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name (e.g. ATL13_20181019065445_03150111_006_02.h5)"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Atl13DataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/atl24x": {
+      "post": {
+        "operationId": "atl24x",
+        "summary": "ICESat-2 ATL24 bathymetry photon classification",
+        "description": "Returns bathymetry-classified photons from ICESat-2 ATL24 granules as an Apache Parquet file. Each row is a photon with classification (sea surface, seafloor, water column, etc.), refraction-corrected depth, and uncertainty estimates. Request parameters are documented at /source/defaults under the icesat2 key.",
+        "tags": ["ICESat-2"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name (e.g. ATL24_20181019065445_03150111_002_01.h5)"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Atl24DataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/gedi01bx": {
+      "post": {
+        "operationId": "gedi01bx",
+        "summary": "GEDI L1B geolocated waveforms",
+        "description": "Returns geolocated waveform data from GEDI L1B granules as an Apache Parquet file. Each row is a shot with transmit and receive waveforms, geolocation, and quality flags. Request parameters are documented at /source/defaults under the gedi key.",
+        "tags": ["GEDI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name (e.g. GEDI01_B_2019108002012_O01959_01_T03909_02_005_02_V002.h5)"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Gedi01bDataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/gedi02ax": {
+      "post": {
+        "operationId": "gedi02ax",
+        "summary": "GEDI L2A footprint elevations",
+        "description": "Returns ground elevation and canopy top height from GEDI L2A granules as an Apache Parquet file. Each row is a footprint with elevation from the lowest detected mode, highest return, sensitivity, and quality flags. Request parameters are documented at /source/defaults under the gedi key.",
+        "tags": ["GEDI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Gedi02aDataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/gedi04ax": {
+      "post": {
+        "operationId": "gedi04ax",
+        "summary": "GEDI L4A above-ground biomass density",
+        "description": "Returns above-ground biomass density estimates from GEDI L4A granules as an Apache Parquet file. Each row is a footprint with biomass density (Mg/ha), elevation, sensitivity, and quality flags. Request parameters are documented at /source/defaults under the gedi key.",
+        "tags": ["GEDI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Gedi04aDataFrame"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrow/casals1bx": {
+      "post": {
+        "operationId": "casals1bx",
+        "summary": "CASALS L1B geolocated photons",
+        "description": "Returns geolocated photons from CASALS L1B granules as an Apache Parquet file. Each row is a photon with latitude, longitude, reference height, and timestamp. Request parameters are documented at /source/defaults under the casals key.",
+        "tags": ["CASALS"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parms": {"type": "object", "description": "Processing parameters (see /source/defaults for structure and defaults)"},
+                  "resource": {"type": "string", "description": "Granule name"}
+                },
+                "required": ["parms", "resource"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apache Parquet file with GeoParquet metadata",
+            "content": {
+              "application/octet-stream": {
+                "schema": {"$ref": "#/components/schemas/Casals1bDataFrame"}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
