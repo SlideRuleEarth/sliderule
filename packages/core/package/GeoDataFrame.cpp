@@ -1374,7 +1374,7 @@ void GeoDataFrame::encoding2openapi (uint32_t encoding, SchemaField& sf)
  * luaSchema - core.schema([api_name])
  *
  *  0 args: returns {meta_name = description, ...}
- *  1 arg:  returns {description = "...", columns = [{name, type, format, description, role}, ...]}
+ *  1 arg:  returns {description = "...", columns = [{name, type, format, items_type, items_format, description, condition, role}, ...]}
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaSchema (lua_State* L)
 {

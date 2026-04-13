@@ -330,8 +330,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         // Stashed descriptions extracted from init lists during base
         // construction. Consumed by populateGeoColumns() once derived
-        // members are initialized, then cleared. Zero per-instance
-        // overhead after construction.
+        // members are initialized, then cleared.
         //
         // The field pointer is stored but NOT dereferenced until
         // populateGeoColumns() runs in the subclass constructor body,

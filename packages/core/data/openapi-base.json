@@ -253,7 +253,7 @@
       "post": {
         "operationId": "atl24x",
         "summary": "ICESat-2 ATL24 bathymetry photon classification",
-        "description": "Returns bathymetry-classified photons from ICESat-2 ATL24 granules as an Apache Parquet file. Each row is a photon with classification (sea surface, seafloor, water column, etc.), refraction-corrected depth, and uncertainty estimates. Request parameters are documented at /source/defaults under the icesat2 key.",
+        "description": "Returns bathymetry-classified photons from ICESat-2 ATL24 granules as an Apache Parquet file. Each row is a photon with classification (sea surface, seafloor, water column, etc.), heights, and uncertainty estimates. Request parameters are documented at /source/defaults under the icesat2 key.",
         "tags": ["ICESat-2"],
         "requestBody": {
           "required": true,
