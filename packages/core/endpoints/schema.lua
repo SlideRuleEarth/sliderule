@@ -18,6 +18,10 @@ if __icesat2__ then
     icesat2.atl08x()
     icesat2.atl13x()
     icesat2.atl24x()
+    -- Runner schemas (replace atl03x columns when processing stages are active)
+    icesat2.fit()
+    icesat2.phoreal()
+    icesat2.blanket()
 end
 
 if __gedi__ then

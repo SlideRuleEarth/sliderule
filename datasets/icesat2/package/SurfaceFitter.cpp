@@ -67,6 +67,13 @@ const struct luaL_Reg SurfaceFitter::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int SurfaceFitter::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+    {
+        registerSchema();
+        lua_pushnil(L);
+        return 1;
+    }
+
     Icesat2Fields* _parms = NULL;
 
     try
@@ -80,6 +87,46 @@ int SurfaceFitter::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema - register column schema without a live dataframe
+ *----------------------------------------------------------------------------*/
+void SurfaceFitter::registerSchema (void)
+{
+    FieldColumn<time8_t>   time_ns        (Field::TIME_COLUMN);
+    FieldColumn<double>    latitude       (Field::Y_COLUMN);
+    FieldColumn<double>    longitude      (Field::X_COLUMN);
+    FieldColumn<int32_t>   segment_id_beg;
+    FieldColumn<double>    x_atc;
+    FieldColumn<float>     y_atc;
+    FieldColumn<uint32_t>  photon_start;
+    FieldColumn<uint16_t>  pflags;
+    FieldColumn<float>     h_mean         (Field::Z_COLUMN);
+    FieldColumn<float>     dh_fit_dx;
+    FieldColumn<float>     window_height;
+    FieldColumn<int32_t>   n_fit_photons;
+    FieldColumn<float>     rms_misfit;
+    FieldColumn<float>     h_sigma;
+
+    const GeoDataFrame::schema_description_t descs[] = {
+        {"time_ns",                 &time_ns,         "GPS nanoseconds",                      NULL},
+        {"latitude",                &latitude,        "latitude (EPSG:7912)",                 NULL},
+        {"longitude",               &longitude,       "longitude (EPSG:7912)",                NULL},
+        {"segment_id_beg",          &segment_id_beg,  "first segment in extent",              NULL},
+        {"x_atc",                   &x_atc,           "along-track distance (m)",             NULL},
+        {"y_atc",                   &y_atc,           "across-track distance (m)",            NULL},
+        {"photon_start",            &photon_start,    "photon index of start of extent",      NULL},
+        {"pflags",                  &pflags,          "processing flags",                     NULL},
+        {"h_mean",                  &h_mean,          "mean height from ellipsoid (m)",       NULL},
+        {"dh_fit_dx",               &dh_fit_dx,       "along-track slope",                    NULL},
+        {"w_surface_window_final",  &window_height,   "final surface window height (m)",      NULL},
+        {"n_fit_photons",           &n_fit_photons,   "number of photons in fit",             NULL},
+        {"rms_misfit",              &rms_misfit,      "root-mean-square misfit (m)",          NULL},
+        {"h_sigma",                 &h_sigma,         "height uncertainty (m)",               NULL},
+        {NULL, NULL, NULL, NULL}
+    };
+    GeoDataFrame::registerSchema("SurfaceFitter", descs);
 }
 
 /*----------------------------------------------------------------------------

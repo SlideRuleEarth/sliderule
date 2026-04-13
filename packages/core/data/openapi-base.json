@@ -114,7 +114,7 @@
       "post": {
         "operationId": "atl03x",
         "summary": "ICESat-2 ATL03 photon-level data",
-        "description": "Returns geolocated photons from ICESat-2 ATL03 granules as an Apache Parquet file. Supports optional processing stages: surface fitting (ATL06-SR), vegetation metrics (PhoREAL/ATL08), YAPC photon weighting, and bathymetry classification (ATL24). Request parameters are documented at /source/defaults under the icesat2 key.",
+        "description": "Returns geolocated photons from ICESat-2 ATL03 granules as an Apache Parquet file. The response schema depends on which processing stage is active: default returns Atl03DataFrame columns; with stages.fitter enabled, returns SurfaceFitter columns (fitted surface elevations); with stages.phoreal enabled, returns PhoReal columns (vegetation canopy metrics); with stages.blanket enabled, returns SurfaceBlanket columns (top-of-surface elevations). Also supports YAPC photon weighting (stages.yapc) and ATL08/ATL24 classification as additional columns on the default schema. Request parameters are documented at /source/defaults under the icesat2 key.",
         "tags": ["ICESat-2"],
         "requestBody": {
           "required": true,
@@ -133,10 +133,17 @@
         },
         "responses": {
           "200": {
-            "description": "Apache Parquet file with GeoParquet metadata",
+            "description": "Apache Parquet file with GeoParquet metadata. Schema varies by processing stage.",
             "content": {
               "application/octet-stream": {
-                "schema": {"$ref": "#/components/schemas/Atl03DataFrame"}
+                "schema": {
+                  "oneOf": [
+                    {"$ref": "#/components/schemas/Atl03DataFrame"},
+                    {"$ref": "#/components/schemas/SurfaceFitter"},
+                    {"$ref": "#/components/schemas/PhoReal"},
+                    {"$ref": "#/components/schemas/SurfaceBlanket"}
+                  ]
+                }
               }
             }
           }

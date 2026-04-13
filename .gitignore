@@ -56,3 +56,4 @@ report.xml
 .infracost/
 __pycache__/
 tmp_schema_test/
+tmp_schema_test.zip

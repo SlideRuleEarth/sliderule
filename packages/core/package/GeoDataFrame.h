@@ -200,6 +200,7 @@ class GeoDataFrame: public LuaObject, public Field
         static void                 init                (void);
         static int                  luaCreate           (lua_State* L);
         static int                  luaSchema           (lua_State* L);
+        static void                 registerSchema      (const char* schema_name, const schema_description_t* descs);
 
         void                        clear               (void) override;
         long                        length              (void) const override;
@@ -322,7 +323,6 @@ class GeoDataFrame: public LuaObject, public Field
 
         static void     encoding2openapi    (uint32_t encoding, SchemaField& sf);
         void            discoverGeoColumns  (void);
-        void            registerSchema      (const char* schema_name, const schema_description_t* descs);
 
         /*--------------------------------------------------------------------
          * Typedefs

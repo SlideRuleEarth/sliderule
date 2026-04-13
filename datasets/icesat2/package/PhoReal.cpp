@@ -67,6 +67,13 @@ const struct luaL_Reg PhoReal::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int PhoReal::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+    {
+        registerSchema();
+        lua_pushnil(L);
+        return 1;
+    }
+
     Icesat2Fields* _parms = NULL;
 
     try
@@ -80,6 +87,60 @@ int PhoReal::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema - register column schema without a live dataframe
+ *----------------------------------------------------------------------------*/
+void PhoReal::registerSchema (void)
+{
+    FieldColumn<time8_t>   time_ns                 (Field::TIME_COLUMN);
+    FieldColumn<double>    latitude                (Field::Y_COLUMN);
+    FieldColumn<double>    longitude               (Field::X_COLUMN);
+    FieldColumn<int32_t>   segment_id_beg;
+    FieldColumn<double>    x_atc;
+    FieldColumn<float>     y_atc;
+    FieldColumn<uint32_t>  photon_start;
+    FieldColumn<uint32_t>  photon_count;
+    FieldColumn<uint16_t>  pflags;
+    FieldColumn<uint32_t>  ground_photon_count;
+    FieldColumn<uint32_t>  vegetation_photon_count;
+    FieldColumn<uint8_t>   landcover;
+    FieldColumn<uint8_t>   snowcover;
+    FieldColumn<float>     solar_elevation;
+    FieldColumn<float>     h_te_median;
+    FieldColumn<float>     h_max_canopy;
+    FieldColumn<float>     h_min_canopy;
+    FieldColumn<float>     h_mean_canopy;
+    FieldColumn<float>     h_canopy                (Field::Z_COLUMN);
+    FieldColumn<float>     canopy_openness;
+    FieldColumn<FieldArray<float,NUM_PERCENTILES>> canopy_h_metrics;
+
+    const GeoDataFrame::schema_description_t descs[] = {
+        {"time_ns",                 &time_ns,                 "GPS nanoseconds",                      NULL},
+        {"latitude",                &latitude,                "latitude (EPSG:7912)",                 NULL},
+        {"longitude",               &longitude,               "longitude (EPSG:7912)",                NULL},
+        {"segment_id_beg",          &segment_id_beg,          "first segment in extent",              NULL},
+        {"x_atc",                   &x_atc,                   "along-track distance (m)",             NULL},
+        {"y_atc",                   &y_atc,                   "across-track distance (m)",            NULL},
+        {"photon_start",            &photon_start,            "photon index of start of extent",      NULL},
+        {"photon_count",            &photon_count,            "number of photons in extent",          NULL},
+        {"pflags",                  &pflags,                  "processing flags",                     NULL},
+        {"ground_photon_count",     &ground_photon_count,     "number of ground photons",             NULL},
+        {"vegetation_photon_count", &vegetation_photon_count, "number of vegetation photons",         NULL},
+        {"landcover",               &landcover,               "land cover classification",            NULL},
+        {"snowcover",               &snowcover,               "snow cover classification",            NULL},
+        {"solar_elevation",         &solar_elevation,         "solar elevation angle (deg)",          NULL},
+        {"h_te_median",             &h_te_median,             "median terrain height (m)",            NULL},
+        {"h_max_canopy",            &h_max_canopy,            "maximum canopy height (m)",            NULL},
+        {"h_min_canopy",            &h_min_canopy,            "minimum canopy height (m)",            NULL},
+        {"h_mean_canopy",           &h_mean_canopy,           "mean canopy height (m)",               NULL},
+        {"h_canopy",                &h_canopy,                "98th percentile canopy height (m)",    NULL},
+        {"canopy_openness",         &canopy_openness,         "canopy openness (std dev of relief)",  NULL},
+        {"canopy_h_metrics",        &canopy_h_metrics,        "canopy height percentile metrics",     NULL},
+        {NULL, NULL, NULL, NULL}
+    };
+    GeoDataFrame::registerSchema("PhoReal", descs);
 }
 
 /*----------------------------------------------------------------------------

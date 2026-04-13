@@ -61,6 +61,13 @@ const struct luaL_Reg SurfaceBlanket::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int SurfaceBlanket::luaCreate (lua_State* L)
 {
+    if(lua_gettop(L) == 0)
+    {
+        registerSchema();
+        lua_pushnil(L);
+        return 1;
+    }
+
     Icesat2Fields* _parms = NULL;
 
     try
@@ -74,6 +81,36 @@ int SurfaceBlanket::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * registerSchema - register column schema without a live dataframe
+ *----------------------------------------------------------------------------*/
+void SurfaceBlanket::registerSchema (void)
+{
+    FieldColumn<time8_t>   time_ns        (Field::TIME_COLUMN);
+    FieldColumn<double>    latitude       (Field::Y_COLUMN);
+    FieldColumn<double>    longitude      (Field::X_COLUMN);
+    FieldColumn<int32_t>   segment_id_beg;
+    FieldColumn<double>    x_atc;
+    FieldColumn<float>     y_atc;
+    FieldColumn<float>     top_of_surface (Field::Z_COLUMN);
+    FieldColumn<float>     median_ground;
+    FieldColumn<uint16_t>  pflags;
+
+    const GeoDataFrame::schema_description_t descs[] = {
+        {"time_ns",             &time_ns,         "GPS nanoseconds",                  NULL},
+        {"latitude",            &latitude,        "latitude (EPSG:7912)",             NULL},
+        {"longitude",           &longitude,       "longitude (EPSG:7912)",            NULL},
+        {"segment_id_beg",      &segment_id_beg,  "first segment in extent",          NULL},
+        {"x_atc",               &x_atc,           "along-track distance (m)",         NULL},
+        {"y_atc",               &y_atc,           "across-track distance (m)",        NULL},
+        {"top_of_surface",      &top_of_surface,  "top of reflective surface (m)",    NULL},
+        {"median_ground",       &median_ground,   "median ground elevation (m)",      NULL},
+        {"pflags",              &pflags,          "processing flags",                 NULL},
+        {NULL, NULL, NULL, NULL}
+    };
+    GeoDataFrame::registerSchema("SurfaceBlanket", descs);
 }
 
 /*----------------------------------------------------------------------------

@@ -6,12 +6,38 @@
 -- OUTPUT:      Complete OpenAPI 3.1 spec as JSON with live column schemas
 --              injected from the GeoDataFrame schema registry.
 --
--- NOTES:       Reads the base spec template from {confdir}/openapi-base.json,
---              then injects column schemas from core.schema() into
---              components.schemas before returning the complete spec.
+-- NOTES:       Instantiates schema-only DataFrames at load time to populate
+--              the schema registry, reads the base spec template from
+--              {confdir}/openapi-base.json, injects column schemas into
+--              components.schemas, and returns the complete spec.
 --
 
 local json = require("json")
+
+---------------------------------------------------------------
+-- Instantiate schema-only DataFrames (no threads, no H5 reads)
+---------------------------------------------------------------
+if __icesat2__ then
+    icesat2.atl03x()
+    icesat2.atl06x()
+    icesat2.atl08x()
+    icesat2.atl13x()
+    icesat2.atl24x()
+    -- Runner schemas (replace atl03x columns when processing stages are active)
+    icesat2.fit()
+    icesat2.phoreal()
+    icesat2.blanket()
+end
+
+if __gedi__ then
+    gedi.gedi01bx()
+    gedi.gedi02ax()
+    gedi.gedi04ax()
+end
+
+if __casals__ then
+    casals.casals1bx()
+end
 
 ---------------------------------------------------------------
 -- Build response column schemas from the live registry
@@ -25,6 +51,7 @@ local function build_column_schemas()
         if schema and schema.columns then
             local properties = {}
             local required = {}
+            local metadata = {}
             for _, col in ipairs(schema.columns) do
                 local prop = {}
                 prop.type = col.type
@@ -44,12 +71,16 @@ local function build_column_schemas()
                 if col.condition then
                     prop.description = (prop.description or "") .. " (condition: " .. col.condition .. ")"
                 end
+
+                -- Separate per-row columns from per-file metadata
                 if col.role == "element" then
-                    prop.description = (prop.description or "") .. " (per-batch metadata)"
-                end
-                properties[col.name] = prop
-                if not col.condition then
-                    table.insert(required, col.name)
+                    prop.description = (prop.description or "") .. " (per-file metadata, not a row column)"
+                    metadata[col.name] = prop
+                else
+                    properties[col.name] = prop
+                    if not col.condition then
+                        table.insert(required, col.name)
+                    end
                 end
             end
 
@@ -60,6 +91,9 @@ local function build_column_schemas()
             }
             if #required > 0 then
                 schema_entry.required = required
+            end
+            if next(metadata) then
+                schema_entry["x-metadata"] = metadata
             end
             result[api_name] = schema_entry
         end
