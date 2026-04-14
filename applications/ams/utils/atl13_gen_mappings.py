@@ -20,13 +20,13 @@ parser.add_argument('--verbose',        action='store_true',    default=False)
 parser.add_argument('--dryrun',         action='store_true',    default=False)
 args,_ = parser.parse_known_args()
 
-# initialize organization
-if args.organization == "None":
-    args.organization = None
-
 # initialize client
-if not args.dryrun:
-    sliderule.init(args.domain, organization=args.organization, verbose=args.verbose)
+if args.organization == "None":
+    session = sliderule.create_session(domain="slideruleearth.io", cluster=None, verbose=args.verbose, rqst_timeout=(10,600))
+    session.authenticate()
+    session.domain = "localhost"
+elif not args.dryrun:
+    session = sliderule.create_session(domain=args.domain, cluster=args.organization, verbose=args.verbose)
 
 # -------------------------------------------
 # globals
@@ -80,7 +80,7 @@ def worker (granule):
     if args.dryrun:
         return (granule, None)
     else:
-        return (granule, sliderule.source("ace", remote_procedure(granule), sign=True))
+        return (granule, sliderule.source("ace", remote_procedure(granule), sign=True, session=session))
 
 # -------------------------------------------
 # query CMR for ATL13 granules

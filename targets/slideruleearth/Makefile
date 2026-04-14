@@ -258,7 +258,7 @@ build: ## build the code using the build environment docker container
 		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
 		-e PROJECT_REGION=$(AWS_REGION) \
 		-e ORCHESTRATOR=http://127.0.0.1:8050 \
-		-e CLUSTER=local \
+		-e CLUSTER=localhost \
 		-e DOMAIN=localhost \
 		-e AMS=http://127.0.0.1:9082 \
 		-e CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \

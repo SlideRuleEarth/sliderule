@@ -243,8 +243,12 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
         return false;
     }
 
+    /* build subdomain from cluster */
+    bool is_localhost = SystemConfig::settings().domain.value == "localhost";
+    const FString subdomain("%s%s", is_localhost ? "" : SystemConfig::settings().cluster.value.c_str(), is_localhost ? "" : ".");
+
     /* build canonical message */
-    const FString full_path("%s%s/%s", SystemConfig::settings().domain.value.c_str(), path, resource);
+    const FString full_path("%s%s%s/%s", subdomain.c_str(), SystemConfig::settings().domain.value.c_str(), path, resource);
     const string full_path_b64 = StringLib::b64encode(full_path.c_str(), full_path.length(), false);
     const string body_b64 = StringLib::b64encode(body, length, false);
     const FString message("%s:%s:%s", full_path_b64.c_str(), timestamp_str->c_str(), body_b64.c_str());
