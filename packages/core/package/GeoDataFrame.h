@@ -218,7 +218,7 @@ class GeoDataFrame: public LuaObject, public Field
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
         void                        populateGeoColumns  (void);
-        void                        populateGeoColumns  (const char* schema_name, const schema_description_t* descs);
+        void                        refreshGeoColumns   (void);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
         FieldUntypedColumn*         getUnsafe           (const char* key) const;
 

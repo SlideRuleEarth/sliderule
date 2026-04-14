@@ -928,21 +928,19 @@ void GeoDataFrame::populateGeoColumns (void)
 }
 
 /*----------------------------------------------------------------------------
- * populateGeoColumns - runner overload (custom schema name)
+ * refreshGeoColumns
  *
- * Used by FrameRunners that replace all columns on a dataframe.
- * Registers under schema_name instead of LuaMetaName, so each runner
- * gets its own schema entry.
+ * Called by FrameRunners after replacing columns on a dataframe.
+ * Re-discovers which columns carry time/x/y/z roles.
+ * Schema is NOT registered here — runners register once at startup.
  *----------------------------------------------------------------------------*/
-void GeoDataFrame::populateGeoColumns (const char* schema_name, const schema_description_t* descs)
+void GeoDataFrame::refreshGeoColumns (void)
 {
-    // re-discover geo columns after runner replaced them
     timeColumn = NULL;
     xColumn = NULL;
     yColumn = NULL;
     zColumn = NULL;
     discoverGeoColumns();
-    registerSchema(schema_name, descs);
 }
 
 /*----------------------------------------------------------------------------

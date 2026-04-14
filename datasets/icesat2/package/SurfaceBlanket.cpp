@@ -247,19 +247,7 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
     delete ancillary_columns;
 
     // finalize dataframe
-    const GeoDataFrame::schema_description_t descs[] = {
-        {"time_ns",             time_ns,         "GPS nanoseconds",                  NULL},
-        {"latitude",            latitude,        "latitude (EPSG:7912)",             NULL},
-        {"longitude",           longitude,       "longitude (EPSG:7912)",            NULL},
-        {"segment_id_beg",      segment_id_beg,  "first segment in extent",          NULL},
-        {"x_atc",               x_atc,           "along-track distance (m)",         NULL},
-        {"y_atc",               y_atc,           "across-track distance (m)",        NULL},
-        {"top_of_surface",      top_of_surface,  "top of reflective surface (m)",    NULL},
-        {"median_ground",       median_ground,   "median ground elevation (m)",      NULL},
-        {"pflags",              pflags,          "processing flags",                 NULL},
-        {NULL, NULL, NULL, NULL}
-    };
-    dataframe->populateGeoColumns("SurfaceBlanket", descs);
+    dataframe->refreshGeoColumns();
 
     // update runtime
     return true;
