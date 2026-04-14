@@ -223,7 +223,7 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${AlertStream}"
                   - !Sub "arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:deliverystream/${TelemetryStream}"
-        - PolicyName: !Sub "${Cluster}-pubkey-access"
+        - PolicyName: !Sub "${Cluster}-secret-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:

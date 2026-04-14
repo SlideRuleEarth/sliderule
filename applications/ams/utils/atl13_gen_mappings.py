@@ -45,7 +45,7 @@ def remote_procedure(granule):
 local json = require("json")
 
 local asset = core.getbyname("icesat2-atl13r007")
-local h5obj = h5.file(asset, "{granule}")
+local h5obj = h5coro.file(asset, "{granule}")
 
 local column_gt1l = h5obj:readp("gt1l/atl13refid")
 local column_gt1r = h5obj:readp("gt1r/atl13refid")
@@ -123,8 +123,8 @@ with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
     futures = [executor.submit(worker, granule) for granule in granules_to_process]
     for future in as_completed(futures):
         granule, result = future.result()
-        print(f'Processed {granule}: {len(result)} reference ids')
         try:
+            print(f'Processed {granule}: {len(result)} reference ids')
             for refid in result:
                 if refid not in atl13_refids:
                     atl13_refids[refid] = set()
