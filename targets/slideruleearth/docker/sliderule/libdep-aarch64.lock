@@ -1,9 +1,9 @@
 rapidjson: v1.1.0-763-g24b5e7a8
 arrow: apache-arrow-19.0.1-0-g07b05dad1a
-PROJ: 9.8.0-0-g2b60ecbe
+PROJ: 9.8.1-0-gf08fa86c
 geos: 3.14.1-0-gc389f532d
 hdf5: hdf5-1.14.6-0-g7bf3404409
-aws-sdk-cpp: 1.11.767-0-ga6dedc82cb4
-gdal: v3.12.2-0-gad23f3eddc
+aws-sdk-cpp: 1.11.790-0-gcad95407f1e
+gdal: v3.12.3-0-g5e70e43057
 libgeotiff: 1.7.4-0-g96024f6
-PDAL: 2.10.0-0-gbfe12d259
+PDAL: 2.10.1-0-gbbdf8b27d

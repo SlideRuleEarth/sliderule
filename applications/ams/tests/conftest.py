@@ -6,7 +6,7 @@ def app():
     app = create_app({
         'TESTING': True,
         'ATL13_MAPPINGS': '/data/atl13.json',
-        'ATL13_REFIDS': '/data/atl13refids.db',
+        'ATL13_DB': '/data/atl13db.db',
         'ATL24_DB': '/data/atl24r2.db',
         'USGS3DEP_DB': '/data/3dep.db',
         'CASALS1B_DB': '/data/casals1b.db',

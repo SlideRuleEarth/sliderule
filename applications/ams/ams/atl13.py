@@ -31,7 +31,7 @@ def __get_atl13():
     global metadata, metalock
     # get mask
     if 'db' not in g:
-        g.db = duckdb.connect(current_app.config['ATL13_REFIDS'], read_only=True)
+        g.db = duckdb.connect(current_app.config['ATL13_DB'], read_only=True)
         g.db.execute("LOAD spatial;")
     # get mappings
     with metalock:
