@@ -28,12 +28,12 @@ class TestAMS:
     def test_atl13_refid(self, init):
         granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"refid": 5952002394}})
         assert init
-        assert len(granules) == 43
+        assert len(granules) == 51
 
     def test_atl13_name(self, init):
-        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"name": "Caspian Sea"}, "max_resources": 1500})
+        granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"name": "Caspian Sea"}, "max_resources": 2000})
         assert init
-        assert len(granules) == 1372
+        assert len(granules) == 1569
 
     def test_atl13_coord(self, init):
         granules = earthdata.search({"asset": "icesat2-atl13", "atl13": {"coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}}})

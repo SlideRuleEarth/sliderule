@@ -337,10 +337,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 {
     /* Create Lua User Data Object */
     lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
-    if(!lua_obj->userData)
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to allocate new user data");
-    }
+    assert(lua_obj->userData); // memory allocations must succeed
 
     /* Bump Reference Count */
     lua_obj->referenceCount.fetch_add(1, std::memory_order_relaxed);
