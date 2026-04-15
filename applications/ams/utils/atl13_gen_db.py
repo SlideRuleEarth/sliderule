@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import time
 import argparse
@@ -16,128 +15,145 @@ parser.add_argument('--atl13_shapefile',    type=str,               default="/da
 parser.add_argument('--atl13_mappings',     type=str,               default="/data/ATL13/atl13_mappings.json")
 parser.add_argument('--atl13_granules',     type=str,               default="/data/ATL13/atl13_granules.parquet")
 parser.add_argument('--atl13_db',           type=str,               default="/data/atl13db.db")
+parser.add_argument('--test_only',          action='store_true',    default=False)
 args,_ = parser.parse_known_args()
 
 # -------------------------------------------
-# convert shapefile to duckdb
+# build database
 # -------------------------------------------
 
-# open duckdb database
-try:
-    os.remove(args.atl13_db)
-    print(f'Replacing old database {args.atl13_db}')
-except:
-    print(f'Creating new database {args.atl13_db}')
-db = duckdb.connect(args.atl13_db)
-db.execute(f"""
-    INSTALL spatial;
-    LOAD spatial;
-""")
+if not args.test_only:
 
-# read refid and granule mappings
-with open(args.atl13_mappings, "r") as file:
-    print(f'Loading ATL13 mappings {args.atl13_mappings}')
-    atl13_mappings = json.load(file)
+    # open duckdb database
+    try:
+        os.remove(args.atl13_db)
+        print(f'Replacing old database {args.atl13_db}')
+    except:
+        print(f'Creating new database {args.atl13_db}')
+    db = duckdb.connect(args.atl13_db)
+    db.execute(f"""
+        INSTALL spatial;
+        LOAD spatial;
+    """)
 
-# read shapefile into geodataframe
-print(f'Reading shapefile {args.atl13_shapefile}')
-gdf = gpd.read_file(args.atl13_shapefile)
-gdf["ATL13refID"] = gdf["ATL13refID"].astype(int) # convert refids to integers
-refids_to_granule_ids = {int(k): v for k, v in atl13_mappings["refids"].items()}
-gdf["granules"] = gdf["ATL13refID"].map(refids_to_granule_ids) # add refid mappings to dataframe
+    # read refid and granule mappings
+    with open(args.atl13_mappings, "r") as file:
+        print(f'Loading ATL13 mappings {args.atl13_mappings}')
+        atl13_mappings = json.load(file)
 
-# convert refids parquet file into duckdb table
-parquet_filename = tempfile.mktemp() + ".parquet"
-print(f'Writing refid table from {parquet_filename}')
-gdf.to_parquet(parquet_filename)
-db.execute(f"""
-    CREATE TABLE atl13refids AS
-    SELECT *
-    FROM '{parquet_filename}'
-    ORDER BY ATL13refID;
-    CREATE INDEX idx_refids_geom ON atl13refids USING RTREE(geometry);
-""")
-os.remove(parquet_filename)
+    # read shapefile into geodataframe
+    print(f'Reading shapefile {args.atl13_shapefile}')
+    gdf = gpd.read_file(args.atl13_shapefile)
+    gdf["ATL13refID"] = gdf["ATL13refID"].astype(int) # convert refids to integers
+    refids_to_granule_ids = {int(k): v for k, v in atl13_mappings["refids"].items()}
+    gdf["granules"] = gdf["ATL13refID"].map(refids_to_granule_ids) # add refid mappings to dataframe
 
-# convert granules parquet file into duckdb table
-print(f'Writing granule table from {args.atl13_granules}')
-db.execute(f"""
-    CREATE TABLE atl13granules AS
-    SELECT
-        * EXCLUDE (begin_time),
-        CAST(begin_time AS TIMESTAMP) AS begin_time
-    FROM '{args.atl13_granules}'
-    ORDER BY begin_time;
-    CREATE INDEX idx_begin_time ON atl13granules(begin_time);
-    CREATE INDEX idx_granules ON atl13granules(granule);
-    CREATE INDEX idx_granules_geom ON atl13granules USING RTREE(geometry);
-""")
+    # convert refids parquet file into duckdb table
+    parquet_filename = tempfile.mktemp() + ".parquet"
+    print(f'Writing refid table from {parquet_filename}')
+    gdf.to_parquet(parquet_filename)
+    db.execute(f"""
+        CREATE TABLE atl13refids AS
+        SELECT *
+        FROM '{parquet_filename}'
+        ORDER BY ATL13refID;
+        CREATE INDEX idx_refids_geom ON atl13refids USING RTREE(geometry);
+    """)
+    os.remove(parquet_filename)
 
-# convert granule mappings to duckdb table
-print(f'Writing granule ids table')
-ids = list(atl13_mappings["granules"].keys())
-granules = list(atl13_mappings["granules"].values())
-granule_df = gpd.pd.DataFrame({"ids": ids, "granules": granules})
-db.register("granule_df", granule_df)
-db.execute(f"""
-    CREATE TABLE atl13gids AS
-    SELECT *
-    FROM granule_df
-    ORDER BY ids;
-    CREATE INDEX idx_gids ON atl13gids(ids);
-""")
-db.unregister("granule_df")
+    # convert granules parquet file into duckdb table
+    print(f'Writing granule table from {args.atl13_granules}')
+    db.execute(f"""
+        CREATE TABLE atl13granules AS
+        SELECT
+            * EXCLUDE (begin_time),
+            CAST(begin_time AS TIMESTAMP) AS begin_time
+        FROM '{args.atl13_granules}'
+        ORDER BY begin_time;
+        CREATE INDEX idx_begin_time ON atl13granules(begin_time);
+        CREATE INDEX idx_granules ON atl13granules(granule);
+        CREATE INDEX idx_granules_geom ON atl13granules USING RTREE(geometry);
+    """)
 
-# finish up
-print(f'Complete')
+    # convert granule mappings to duckdb table
+    print(f'Writing granule ids table')
+    ids = [int(k) for k in list(atl13_mappings["granules"].keys())]
+    granules = list(atl13_mappings["granules"].values())
+    granule_df = gpd.pd.DataFrame({"ids": ids, "granules": granules})
+    db.register("granule_df", granule_df)
+    db.execute(f"""
+        CREATE TABLE atl13gids AS
+        SELECT *
+        FROM granule_df
+        ORDER BY ids;
+        CREATE INDEX idx_gids ON atl13gids(ids);
+    """)
+    db.unregister("granule_df")
+
+    # finish up
+    print(f'Complete')
 
 # -------------------------------------------
 # run test
 # -------------------------------------------
 
 # read body mask
-print(f'Loading ATL13 body mask... ', end='')
-sys.stdout.flush()
-start_time = time.perf_counter()
 db = duckdb.connect(args.atl13_db)
-db.execute("LOAD spatial;")
-print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
+db.execute(f"""
+    INSTALL spatial;
+    LOAD spatial;
+""")
 
 # test refid lookup
 entry_by_refid = 5952002394
-df = db.execute(f"""
-    SELECT *
-    FROM atl13refids
-    WHERE ATL13refID == {entry_by_refid};
-""").df()
-print("REFID TEST", df)
+result = db.execute("""
+    WITH ids AS (
+        SELECT UNNEST(granules) AS gid
+        FROM atl13refids
+        WHERE ATL13refID = $1
+    )
+    SELECT g.granules
+    FROM ids
+    JOIN atl13gids g ON g.ids = ids.gid
+""", [entry_by_refid]).fetchnumpy()["granules"].tolist()
+print("\nREFID TEST", len(result), result[:3])
 
 # test name lookup
 entry_by_name = "Caspian Sea"
-df = db.execute(f"""
-    SELECT *
-    FROM atl13refids
-    WHERE Lake_name == '{entry_by_name}';
-""").df()
-print("NAME TEST", df)
+result = db.execute("""
+    WITH ids AS (
+        SELECT UNNEST(granules) AS gid, ATL13refID
+        FROM atl13refids
+        WHERE Lake_name = $1
+    )
+    SELECT ids.ATL13refID, g.granules
+    FROM ids
+    JOIN atl13gids g ON g.ids = ids.gid
+""", [entry_by_name]).fetchnumpy()
+print("\nNAME TEST", (result["ATL13refID"] == result["ATL13refID"][0]).all(), len(result["granules"]), result["granules"][:3])
 
 # test coordinate lookup
 entry_by_coord = [-86.79835088109307, 42.762733124439904]
-df = db.execute(f"""
-    SELECT *
-    FROM atl13refids
-    WHERE ST_Contains(geometry, ST_Point({entry_by_coord[0]}, {entry_by_coord[1]}));
-""").df()
-print("COORD TEST", df)
+result = db.execute("""
+    WITH ids AS (
+        SELECT UNNEST(granules) AS gid, ATL13refID
+        FROM atl13refids
+        WHERE ST_Contains(geometry, ST_Point($1, $2))
+    )
+    SELECT ids.ATL13refID, g.granules
+    FROM ids
+    JOIN atl13gids g ON g.ids = ids.gid
+""", [entry_by_coord[0], entry_by_coord[1]]).fetchnumpy()
+print("\nCOORD TEST", (result["ATL13refID"] == result["ATL13refID"][0]).all(), len(result["granules"]), result["granules"][:3])
 
 # describe refid database
 df = db.execute("DESCRIBE atl13refids").fetchdf()
-print("DESCRIBE REFIDS", df)
+print("\nDESCRIBE REFIDS\n", df)
 
 # describe granule database
 df = db.execute("DESCRIBE atl13granules").fetchdf()
-print("DESCRIBE GRANULES", df)
+print("\nDESCRIBE GRANULES\n", df)
 
 # describe mapping database
 df = db.execute("DESCRIBE atl13gids").fetchdf()
-print("DESCRIBE GRANULE IDS", df)
+print("\nDESCRIBE GRANULE IDS\n", df)

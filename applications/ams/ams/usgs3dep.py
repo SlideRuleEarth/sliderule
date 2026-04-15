@@ -86,6 +86,7 @@ def usgs3dep_route():
         # return response
         return json.dumps(response)
     except Exception as e:
+        print(f"Exception: {e}")
         abort(400, f'Failed to query 3DEP metadata service: {e}')
 
 #
@@ -115,4 +116,5 @@ def id_route(id):
         # return response
         return json.dumps(row)
     except Exception as e:
+        print(f"Exception: {e}")
         abort(400, f'Failed to query 3DEP metadata service: {e}')

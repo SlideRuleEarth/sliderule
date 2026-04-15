@@ -56,14 +56,12 @@ def casals1b_route():
             {dbutils.build_polygon_query(state, data)}
         """).to_arrow_table()
         hits = len(table)
-        if hits > current_app.config['MAX_RESOURCES']:
-            raise RuntimeError(f"request exceeded maximum number of resources allowed - {hits}")
-        else:
-            granules_column = table.column("granule")
-            unique_granules = pyarrow.compute.unique(granules_column)
-            response = {"hits": hits, "granules":unique_granules.to_pylist()}
+        granules_column = table.column("granule")
+        unique_granules = pyarrow.compute.unique(granules_column)
+        response = {"hits": hits, "granules":unique_granules.to_pylist()}
         return json.dumps(response)
     except Exception as e:
+        print(f"Exception: {e}")
         abort(400, f'Failed to query CASALS 1B metadata service: {e}')
 
 #
@@ -76,4 +74,5 @@ def search_mask():
             contents = file.read()
         return contents
     except Exception as e:
+        print(f"Exception: {e}")
         abort(400, f'Failed to query CASALS 1B metadata service: {e}')

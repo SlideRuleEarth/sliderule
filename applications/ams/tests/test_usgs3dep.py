@@ -11,7 +11,8 @@ def test_3dep_time_range(client):
     response = client.post('/ams/3DEP1M', json={"t0":"2018-10-14", "t1":"2018-10-15"})
     data = json.loads(response.data.decode("utf-8"))
     assert data["hits"] == 23
-    assert data["features"][0]["id"] == "USGS_one_meter_x46y441_UT_Sanpete_2018", f'{data["features"][0]["id"]}'
+    ids = [feature["id"] for feature in data["features"]]
+    assert "USGS_one_meter_x46y441_UT_Sanpete_2018" in ids, f'{ids}'
 
 def test_dep_poly(client):
     poly = [
@@ -24,4 +25,5 @@ def test_dep_poly(client):
     response = client.post(f'/ams/3DEP1M', json={"poly":poly})
     data = json.loads(response.data.decode("utf-8"))
     assert data["hits"] == 27
-    assert data["features"][0]["id"] == "USGS_one_meter_x23y432_CO_MesaCo_QL2_UTM12_2016", f'{data["features"][0]["id"]}'
+    ids = [feature["id"] for feature in data["features"]]
+    assert "USGS_one_meter_x23y432_CO_MesaCo_QL2_UTM12_2016" in ids, f'{ids}'

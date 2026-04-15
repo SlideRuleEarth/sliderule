@@ -10,8 +10,7 @@ def app():
         'ATL24_DB': '/data/atl24r2.db',
         'USGS3DEP_DB': '/data/3dep.db',
         'CASALS1B_DB': '/data/casals1b.db',
-        'CASALS1B_SEARCH_MASK': '/data/casals1b.geojson',
-        'MAX_RESOURCES': 10000
+        'CASALS1B_SEARCH_MASK': '/data/casals1b.geojson'
     })
     yield app
 
