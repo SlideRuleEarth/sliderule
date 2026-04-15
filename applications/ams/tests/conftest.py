@@ -5,7 +5,7 @@ from ams import create_app
 def app():
     app = create_app({
         'TESTING': True,
-        'ATL13_DB': '/data/atl13db.db',
+        'ATL13_DB': '/data/atl13r7.db',
         'ATL24_DB': '/data/atl24r2.db',
         'USGS3DEP_DB': '/data/3dep.db',
         'CASALS1B_DB': '/data/casals1b.db',

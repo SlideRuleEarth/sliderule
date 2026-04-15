@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import argparse
+import tempfile
 import duckdb
 import boto3
 import numpy as np
@@ -18,7 +19,6 @@ parser.add_argument('--url',            type=str,               default="s3://ca
 parser.add_argument('--filename',       type=str,               default=None) # "lidar/2024-11-12/casals_l1b_20241112T163941_001_02.h5"
 parser.add_argument('--search_mask',    type=str,               default="/data/casals1b.geojson")
 parser.add_argument('--tile_size',      type=int,               default=10000) # 10km
-parser.add_argument('--parquet_file',   type=str,               default="/data/casals1b.parquet")
 parser.add_argument('--db_file',        type=str,               default="/data/casals1b.db")
 parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   type=str,               default="sliderule")
@@ -119,9 +119,10 @@ print(f'completed in {time.perf_counter() - start_time:.2f} seconds')
 # -------------------------------------------
 
 # create parquet database file
-display(f'Writing parquet file {args.parquet_file} of collection... ')
+parquet_file = tempfile.mktemp() + ".parquet"
+display(f'Writing parquet file {parquet_file} of collection... ')
 start_time = time.perf_counter()
-collection_gdf.to_parquet(args.parquet_file, index=True)
+collection_gdf.to_parquet(parquet_file, index=True)
 print(f'completed in {time.perf_counter() - start_time:.2f} seconds')
 
 # create duckdb database file
@@ -139,7 +140,7 @@ db.execute(f"""
     SELECT
         * EXCLUDE (begin_time),
         CAST(begin_time AS TIMESTAMP) AS begin_time
-    FROM '{args.parquet_file}'
+    FROM '{parquet_file}'
     ORDER BY begin_time;
     CREATE INDEX idx_begin_time ON casals1bdb(begin_time);
     CREATE INDEX idx_granule ON casals1bdb(granule);

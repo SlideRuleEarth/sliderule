@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description="""ATL24""")
 parser.add_argument('--atl13_shapefile',    type=str,               default="/data/ATL13/ATL13_Inland_Water_Body_Mask_v3_20191220.shp")
 parser.add_argument('--atl13_mappings',     type=str,               default="/data/ATL13/atl13_mappings.json")
 parser.add_argument('--atl13_granules',     type=str,               default="/data/ATL13/atl13_granules.parquet")
-parser.add_argument('--atl13_db',           type=str,               default="/data/atl13db.db")
+parser.add_argument('--atl13_db',           type=str,               default="/data/atl13r7.db")
 parser.add_argument('--test_only',          action='store_true',    default=False)
 args,_ = parser.parse_known_args()
 

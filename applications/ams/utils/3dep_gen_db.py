@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import argparse
+import tempfile
 import duckdb
 import geopandas as gpd
 from shapely.geometry import Polygon
@@ -10,9 +11,8 @@ from shapely.geometry import Polygon
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""3DEP""")
-parser.add_argument('--parquet_file',   type=str,   default="/data/catalogv2.parquet")
+parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/3dep_catalog_v3.parquet")
 parser.add_argument('--db_file',        type=str,   default="/data/3dep.db")
-parser.add_argument('--tmp_file',       type=str,   default="/tmp/3dep.parquet")
 args,_ = parser.parse_known_args()
 
 # -------------------------------------------
@@ -27,10 +27,11 @@ print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 # -------------------------------------------
 # create temporary parquet file
 # -------------------------------------------
-print(f'Writing parquet file {args.tmp_file}... ', end='')
+tmp_file = tempfile.mktemp() + ".parquet"
+print(f'Writing parquet file {tmp_file}... ', end='')
 sys.stdout.flush()
 start_time = time.perf_counter()
-gdf.to_parquet(args.tmp_file, index=True)
+gdf.to_parquet(tmp_file, index=True)
 print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------
@@ -54,7 +55,7 @@ db.execute(f"""
         CAST(start_datetime AS TIMESTAMP) AS start_datetime,
         CAST(end_datetime AS TIMESTAMP) AS end_datetime,
         to_json("proj:projjson") AS "proj:projjson"
-    FROM '{args.tmp_file}';
+    FROM '{tmp_file}';
 
     CREATE INDEX idx_id ON "3depdb"(id);
     CREATE INDEX idx_geom ON "3depdb" USING RTREE(geometry);
