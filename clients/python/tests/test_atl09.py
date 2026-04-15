@@ -130,10 +130,10 @@ class TestAtl09:
         }
         gdf = sliderule.run("atl13x", parms)
         assert init
-        assert 'ATL13_20200111053122_02370601_006_01.h5' in [gdf.attrs['meta']['srctbl'][k] for k in gdf.attrs['meta']['srctbl']]
-        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 5032
-        assert len(gdf["bckgrd_atlas/bckgrd_hist_top"]) == 5032
-        assert len(gdf) == 5032
+        assert 'ATL13_20200111053122_02370601_007_01.h5' in [gdf.attrs['meta']['srctbl'][k] for k in gdf.attrs['meta']['srctbl']]
+        assert len(gdf["bckgrd_atlas/bckgrd_counts"]) == 5849
+        assert len(gdf["bckgrd_atlas/bckgrd_hist_top"]) == 5849
+        assert len(gdf) == 5849
 
     def test_atl03x_surface(self, init):
         parms = {

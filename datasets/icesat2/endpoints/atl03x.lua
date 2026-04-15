@@ -31,8 +31,9 @@ dataframe.proxy("atl03x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     -- atl09
     if parms:stage(icesat2.ATL09) then
         local utils = require("icesat2_utils")
-        local atmo = utils.create_atmo_runner(parms, userlog)
-        table.insert(runners, atmo)
+        if not utils.add_atmo_runner(runners, parms, userlog) then
+            return {}, {} -- unable to process this resource
+        end
     end
     -- atl24
     local atl24h5 = nil

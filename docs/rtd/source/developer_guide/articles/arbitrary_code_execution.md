@@ -39,7 +39,7 @@ local json = require("json")
 
 -- 2. create an h5coro object from the granule to be processed
 local asset = core.getbyname("icesat2-atl13")
-local h5obj = h5coro.file(asset, "ATL13_20250302152414_11692601_006_01.h5")
+local h5obj = h5coro.file(asset, "ATL13_20250302152414_11692601_007_01.h5")
 
 -- 3. read the reference id out of each of the 6 beams
 local column_gt1l = h5obj:readp("gt1l/atl13refid")

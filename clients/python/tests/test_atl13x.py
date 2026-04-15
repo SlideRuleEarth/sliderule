@@ -13,10 +13,10 @@ class TestAtl13x:
             "type": "FeatureCollection",
             "features": [ { "type": "Feature", "properties": {}, "geometry": { "coordinates": [ [ [49.63305859097062, 43.517023064094445], [49.63305859097062, 43.26673730943335], [50.39096571145933, 43.26673730943335], [50.39096571145933, 43.517023064094445], [49.63305859097062, 43.517023064094445] ] ], "type": "Polygon" } } ]
         })
-        parms = { "atl13": { "name": "Caspian Sea" }, "poly": region["poly"], "max_resources": 500, "t0": '2022-01-01', "t1": '2022-04-01'}
+        parms = { "atl13": { "name": "Caspian Sea" }, "poly": region["poly"], "t0": '2022-09-01', "t1": '2022-10-01'}
         gdf = sliderule.run("atl13x", parms)
         assert init
-        assert len(gdf) == 520
+        assert len(gdf) == 525
 
     def test_coord(self, init):
         parms = { "atl13": {"coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}} }
@@ -26,6 +26,15 @@ class TestAtl13x:
 
     def test_poly(self, init):
         # Pawnee Lake Coordinates
+        gdf_coord = sliderule.run("atl13x", {
+            "atl13": {
+                "coord": {
+                    "lon": -96.87354790276703,
+                    "lat": 40.846535052574865
+                }
+            },
+        }, resources=["ATL13_20240707040137_03012401_007_01.h5"])
+        # Pawnee Lake Polygon
         poly_points = [
             { "lon": -96.88981325008096, "lat": 40.837055699310184 },
             { "lon": -96.86808274338642, "lat": 40.82851431769919 },
@@ -34,20 +43,9 @@ class TestAtl13x:
             { "lon": -96.89796118392523, "lat": 40.86494776390094 },
             { "lon": -96.88981325008096, "lat": 40.837055699310184 }
         ]
-        gdf_coord = sliderule.run("atl13x",
-            {
-                "atl13": {
-                    "coord": {
-                        "lon": -96.87354790276703,
-                        "lat": 40.846535052574865
-                    }
-                },
-            }, resources=["ATL13_20240707040137_03012401_006_01.h5"])
-        # Pawnee Lake Polygon
-        gdf_poly = sliderule.run("atl13x",
-            {
-                "poly": poly_points
-            }, resources=["ATL13_20240707040137_03012401_006_01.h5"])
+        gdf_poly = sliderule.run("atl13x", {
+            "poly": poly_points
+        }, resources=["ATL13_20240707040137_03012401_007_01.h5"])
         # Checks
         assert init
         assert len(gdf_coord) == 111
@@ -68,7 +66,7 @@ class TestAtl13x:
 
     def test_refid_poly_interaction(self, init):
         # Ref ID only
-        gdf_refid = sliderule.run("atl13x", {"atl13": {"refid": 5952002394}}, resources=["ATL13_20240707040137_03012401_006_01.h5"])
+        gdf_refid = sliderule.run("atl13x", {"atl13": {"refid": 5952002394}}, resources=["ATL13_20240707040137_03012401_007_01.h5"])
 
         # Same ref ID plus polygon
         poly_points = [
@@ -79,7 +77,7 @@ class TestAtl13x:
             { "lon": -96.89796118392523, "lat": 40.86494776390094 },
             { "lon": -96.88981325008096, "lat": 40.837055699310184 }
         ]
-        gdf_refid_poly = sliderule.run("atl13x", {"atl13": {"refid": 5952002394}, "poly": poly_points}, resources=["ATL13_20240707040137_03012401_006_01.h5"])
+        gdf_refid_poly = sliderule.run("atl13x", {"atl13": {"refid": 5952002394}, "poly": poly_points}, resources=["ATL13_20240707040137_03012401_007_01.h5"])
 
         assert init
         assert len(gdf_refid_poly) <= len(gdf_refid)
@@ -100,6 +98,6 @@ class TestAtl13x:
             { "lon": 0.0, "lat": 0.1 },
             { "lon": 0.0, "lat": 0.0 },
         ]
-        gdf_empty = sliderule.run("atl13x", {"poly": empty_poly}, resources=["ATL13_20240707040137_03012401_006_01.h5"])
+        gdf_empty = sliderule.run("atl13x", {"poly": empty_poly}, resources=["ATL13_20240707040137_03012401_007_01.h5"])
         assert init
         assert len(gdf_empty) == 0

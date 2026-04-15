@@ -146,6 +146,25 @@ result = db.execute("""
 """, [entry_by_coord[0], entry_by_coord[1]]).fetchnumpy()
 print("\nCOORD TEST", (result["ATL13refID"] == result["ATL13refID"][0]).all(), len(result["granules"]), result["granules"][:3])
 
+
+# test poly lookup
+poly = [
+    { "lon": -96.88981325008096, "lat": 40.837055699310184 },
+    { "lon": -96.86808274338642, "lat": 40.82851431769919 },
+    { "lon": -96.85261897514089, "lat": 40.84322718702893 },
+    { "lon": -96.86342385851648, "lat": 40.86183431906426 },
+    { "lon": -96.89796118392523, "lat": 40.86494776390094 },
+    { "lon": -96.88981325008096, "lat": 40.837055699310184 }
+]
+coords = [f'{coord["lon"]} {coord["lat"]}' for coord in poly]
+poly = f"POLYGON(({','.join(coords)}))"
+result = db.execute(f"""
+    SELECT granule
+    FROM atl13granules
+    WHERE ST_Intersects(geometry, ST_GeomFromText('{poly}'));
+""").fetchnumpy()
+print("\nPOLY TEST", len(result["granule"]), result["granule"][:3])
+
 # describe refid database
 df = db.execute("DESCRIBE atl13refids").fetchdf()
 print("\nDESCRIBE REFIDS\n", df)

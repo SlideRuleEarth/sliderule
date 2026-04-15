@@ -58,17 +58,6 @@ ASSETS = {
     ["icesat2-atl13"] = {
         name        = "ATL13",
         identity    = "nsidc-cloud",
-        driver      = "s3atl13",
-        path        = "nsidc-cumulus-prod-protected",
-        endpoint    = "s3.us-west-2.amazonaws.com",
-        provider    = "NSIDC_CPRD",
-        version     = "007",
-        api         = "ams",
-        formats     = {".h5"},
-    },
-    ["icesat2-atl13r007"] = {
-        name        = "ATL13",
-        identity    = "nsidc-cloud",
         driver      = "cumulus", -- release 007 uses the standard ATLAS path covention
         path        = "nsidc-cumulus-prod-protected",
         endpoint    = "s3.us-west-2.amazonaws.com",

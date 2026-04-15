@@ -44,7 +44,7 @@ def remote_procedure(granule):
     return f"""
 local json = require("json")
 
-local asset = core.getbyname("icesat2-atl13r007")
+local asset = core.getbyname("icesat2-atl13")
 local h5obj = h5coro.file(asset, "{granule}")
 
 local column_gt1l = h5obj:readp("gt1l/atl13refid")

@@ -10,37 +10,12 @@ local channels  = 6 -- number of dataframes per resource
 
 -- attempt to populate resources on initial request
 if parms["key_space"] == core.INVALID_KEY then
-    -- get resources
-    local resources_set_by_ams = false
     local rc_ams, response = earthdata.ams(rqst["parms"], nil, true, "ATL13")
     if rc_ams == earthdata.SUCCESS or rc_ams == earthdata.RC_RSPS_TRUNCATED then
         if not rqst["parms"]["atl13"] then rqst["parms"]["atl13"] = {} end
         rqst["parms"]["atl13"]["refid"] = response["refid"]
         if not rqst["parms"]["resources"] then
             rqst["parms"]["resources"] = response["granules"]
-            resources_set_by_ams = true
-        end
-    end
-    -- apply polygon if supplied
-    if resources_set_by_ams and ((parms:length("poly") > 0) or (parms:length("t0") > 0) or (parms:length("t1") > 0)) then
-        local rc_cmr, cmr_response = earthdata.cmr(rqst["parms"], nil, false, "ATL13")
-        if rc_cmr == RC_SUCCESS and type(cmr_response) == 'table' then
-            -- pull out all resources from cmr query
-            local resources_to_process = {}
-            for _,resource in ipairs(cmr_response) do
-                resources_to_process[resource] = true
-            end
-            -- keep only resources also found in ams query
-            local resources = {}
-            for _,resource in ipairs(rqst["parms"]["resources"]) do
-                if resources_to_process[resource] then
-                    table.insert(resources, resource)
-                end
-            end
-            -- update request parameters
-            rqst["parms"]["resources"] = resources
-        else
-            sys.log(core.CRITICAL, string.format("request <%s> earthdata queury failed: %d", _rqst.id, rc_cmr))
         end
     end
 end
@@ -57,8 +32,9 @@ dataframe.proxy("atl13x", parms, rqst["parms"], _rqst.rspq, channels, function(u
     -- atl09
     if parms:stage(icesat2.ATL09) then
         local utils = require("icesat2_utils")
-        local atmo = utils.create_atmo_runner(parms, userlog)
-        table.insert(runners, atmo)
+        if not utils.add_atmo_runner(runners, parms, userlog) then
+            return {}, {} -- unable to process this resource
+        end
     end
 
     -- atl13

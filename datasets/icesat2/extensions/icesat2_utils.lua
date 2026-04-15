@@ -55,19 +55,26 @@ local function find_atl09_granule (parms, userlog, with_time_range)
     end
 
     -- return atl09 resources
-    return atl09_resource
+    return atl09_resource, name_filter
 end
 
--- Create ATL09 Atmospheric Sampler Runner --
-local function create_atmo_runner (parms, userlog, with_time_range)
-    local atl09_granule = find_atl09_granule(parms, userlog)
-    userlog:alert(core.INFO, core.RTE_STATUS, string.format("Processing atmospheric data from %s", atl09_granule))
-    local atl09h5 = h5coro.object("icesat2-atl09", atl09_granule)
-    return icesat2.atmo(parms, atl09h5, with_time_range)
+-- Add ATL09 Atmospheric Sampler Runner --
+local function add_atmo_runner (runners, parms, userlog)
+    local atl09_granule, name_filter = find_atl09_granule(parms, userlog)
+    if atl09_granule then
+        userlog:alert(core.INFO, core.RTE_STATUS, string.format("Processing atmospheric data from %s", atl09_granule))
+        local atl09h5 = h5coro.object("icesat2-atl09", atl09_granule)
+        local atmo = icesat2.atmo(parms, atl09h5)
+        table.insert(runners, atmo)
+        return true
+    else
+        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("Failed to find atmospheric data using %s", name_filter))
+        return false
+    end
 end
 
 -- Exported Package --
 return {
     find_atl09_granule = find_atl09_granule,
-    create_atmo_runner = create_atmo_runner
+    add_atmo_runner = add_atmo_runner
 }

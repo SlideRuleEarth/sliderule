@@ -49,8 +49,6 @@ def _query_by_refid(db, data):
             SELECT UNNEST(granules) AS gid
             FROM atl13refids
             WHERE ATL13refID = $1
-            {dbutils.build_name_filter("AND", dbutils.get_icesat2_name_filter(data))}
-            {dbutils.build_polygon_query("AND", data)}
         )
         SELECT g.granules
         FROM ids
@@ -68,8 +66,6 @@ def _query_by_name(db, data):
             SELECT UNNEST(granules) AS gid, ATL13refID
             FROM atl13refids
             WHERE Lake_name == $1
-            {dbutils.build_name_filter("AND", dbutils.get_icesat2_name_filter(data))}
-            {dbutils.build_polygon_query("AND", data)}
         )
         SELECT ids.ATL13refID, g.granules
         FROM ids
@@ -90,8 +86,6 @@ def _query_by_coord(db, data):
             SELECT UNNEST(granules) AS gid, ATL13refID
             FROM atl13refids
             WHERE ST_Contains(geometry, ST_Point($1, $2))
-            {dbutils.build_name_filter("AND", dbutils.get_icesat2_name_filter(data))}
-            {dbutils.build_polygon_query("AND", data)}
         )
         SELECT ids.ATL13refID, g.granules
         FROM ids
@@ -107,18 +101,17 @@ def _query_by_coord(db, data):
 #
 def _query_multiple(db, data):
     state = {'WHERE': False}
-    table = db.execute(f"""
-        WITH ids AS (
-            SELECT UNNEST(granules) AS gid, ATL13refID
-            FROM atl13refids
-            {dbutils.build_name_filter(state, dbutils.get_icesat2_name_filter(data))}
+    name_filter = dbutils.get_icesat2_name_filter(data)
+    if name_filter or ("poly" in data) or ("begin_time" in data):
+        return db.execute(f"""
+            SELECT granule
+            FROM atl13granules
+            {dbutils.build_name_filter(state, name_filter)}
             {dbutils.build_polygon_query(state, data)}
-        )
-        SELECT ids.ATL13refID, g.granules
-        FROM ids
-        JOIN atl13gids g ON g.ids = ids.gid
-    """).fetchnumpy()
-    return None, table["granules"]
+            {dbutils.build_time_query(state, data)}
+        """).fetchnumpy()["granule"]
+    else:
+        return None
 
 ####################
 # APIs
@@ -132,15 +125,21 @@ def atl13_route():
     try:
         data = request.get_json()
         db = _get_atl13()
-        # perform query
-        for query in [_query_by_refid, _query_by_name, _query_by_coord, _query_multiple]:
-            refid, granules = query(db, data)
-            if refid: break # lake has been found
+        # perform single lake query
+        for query in [_query_by_refid, _query_by_name, _query_by_coord]:
+            lake_refid, lake_granules = query(db, data)
+            if lake_refid: break # lake has been found
+        # perform general query
+        global_granules = _query_multiple(db, data)
+        if global_granules is not None:
+            granules = list(set(global_granules) & set(lake_granules))
+        else:
+            granules = lake_granules.tolist()
         # return response
         return json.dumps({
             "hits": len(granules),
-            "refid": int(refid),
-            "granules": granules.tolist()
+            "refid": int(lake_refid),
+            "granules": granules
         })
     except Exception as e:
         print(f"Exception: {e}")
