@@ -244,7 +244,7 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     }
 
     /* build subdomain from cluster */
-    bool is_localhost = SystemConfig::settings().domain.value == "localhost";
+    const bool is_localhost = SystemConfig::settings().domain.value == "localhost";
     const FString subdomain("%s%s", is_localhost ? "" : SystemConfig::settings().cluster.value.c_str(), is_localhost ? "" : ".");
 
     /* build canonical message */

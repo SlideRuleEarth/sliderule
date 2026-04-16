@@ -14,9 +14,29 @@ Version description of the v5.3.0 release of SlideRule Earth.
 
 * **v5.3.0** - Clusters support user service capacity requests; authorized users can request an autoscaling group of nodes on the public cluster dedicated just to them, similar to how a private cluster works, but going through the public load balancer
 
+* **v5.3.0** - [2e25ecf](https://github.com/SlideRuleEarth/sliderule/commit/2e25ecf3007bbd417e2aae00ff4f5162de10b65e) - added `segment_id` to atl03x dataframe
+
+* **v5.3.1** - [b5e47e9](https://github.com/SlideRuleEarth/sliderule/commit/b5e47e9530f70439f8fff12d21625df0f78a3f08) - SurfaceBlanket runner `iceat2.blanket` provides ground and canopy heights for ATL03 data
+
+* **v5.3.1** - [4c87b9e](https://github.com/SlideRuleEarth/sliderule/commit/4c87b9e39fad93326968d8879276f7df093b2653) - Deduplicator frame runner `dedup` provided for remove duplicate rows in dataframes
+
+* **v5.3.1** - ATL13 AMS support upgraded to release 007, along with internal optimizations and full support for geospatial queries
+
 ## Issues Resolved
 
 * **v5.3.0** - [2e25ecf](https://github.com/SlideRuleEarth/sliderule/commit/2e25ecf3007bbd417e2aae00ff4f5162de10b65e) - ATL09 sampling now uses delta_time only for bckgrd_atlas group and uses segment_id for high_rate and low_rate groups.
+
+* **v5.3.1** - [581a221](https://github.com/SlideRuleEarth/sliderule/commit/581a221952b7da58546a3dc36b5dc16868eec492) - Orchestrator fix for service names that are break prometheus metric collection
+
+* **v5.3.1** - [2c55f19](https://github.com/SlideRuleEarth/sliderule/commit/2c55f19ccd1c0d807ace631b349570f9d3dbd3f7), [514c01f](https://github.com/SlideRuleEarth/sliderule/commit/514c01fd234780b7c7fa8f72189653adbe47015d) - User service fixes and documentation
+
+* **v5.3.1** - [f5c172b](https://github.com/SlideRuleEarth/sliderule/commit/f5c172b6989029ecb3404a31f36bdf9f0fb31050) - `h5x` to use NAME_INDEX_OPTION
+
+* **v5.3.1** - [4c87b9e](https://github.com/SlideRuleEarth/sliderule/commit/4c87b9e39fad93326968d8879276f7df093b2653) - base64 encoding support for standard and URL encodings
+
+* **v5.3.1** - [bd0e9a8](https://github.com/SlideRuleEarth/sliderule/commit/bd0e9a82f6ddceb70c5bbfdb24aa224143ebe9f8) - ATL09 sampler alignment fixes
+
+* **v5.3.1** - [#603](https://github.com/SlideRuleEarth/sliderule/issues/603) - support for trailing slashes in `h5x` group names; enhanced h5coro docs
 
 ## Development Updates
 
@@ -25,6 +45,10 @@ Version description of the v5.3.0 release of SlideRule Earth.
 * **v5.3.0** - [4c6ca35](https://github.com/SlideRuleEarth/sliderule/commit/4c6ca35dd6b597c8ea4ad750deaae7602e6a478e) - improved user friendliness of makefile cluster target outputs
 
 * **v5.3.0** - [4c6ca35](https://github.com/SlideRuleEarth/sliderule/commit/4c6ca35dd6b597c8ea4ad750deaae7602e6a478e) - trimmed the package list from the version output
+
+* **v5.3.1** - Third-party support for ChatGPT authorization
+
+* **v5.3.1** - Job runner updates and fixes
 
 ## Getting This Release
 

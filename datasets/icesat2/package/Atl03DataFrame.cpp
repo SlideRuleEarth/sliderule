@@ -751,35 +751,9 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             const float spacecraft_velocity = static_cast<float>(sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3)));
 
             /* Calculate Background Rate */
-            double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
-            while(background_index < atl03.bckgrd_rate.size)
+            while((background_index < (atl03.bckgrd_rate.size - 1)) &&
+                  (atl03.bckgrd_delta_time[background_index + 1] <= atl03.segment_delta_time[current_segment]))
             {
-                const double curr_bckgrd_time = atl03.bckgrd_delta_time[background_index];
-                const double segment_time = atl03.segment_delta_time[current_segment];
-                if(curr_bckgrd_time >= segment_time)
-                {
-                    /* Interpolate Background Rate */
-                    if(background_index > 0)
-                    {
-                        const double prev_bckgrd_time = atl03.bckgrd_delta_time[background_index - 1];
-                        const double prev_bckgrd_rate = atl03.bckgrd_rate[background_index - 1];
-                        const double curr_bckgrd_rate = atl03.bckgrd_rate[background_index];
-
-                        const double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
-                        const double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
-                        const double segment_to_bckgrd_delta = segment_time - prev_bckgrd_time;
-
-                        background_rate = ((bckgrd_rise / bckgrd_run) * segment_to_bckgrd_delta) + prev_bckgrd_rate;
-                    }
-                    else
-                    {
-                        /* Use First Background Rate (no interpolation) */
-                        background_rate = atl03.bckgrd_rate[0];
-                    }
-                    break;
-                }
-
-                /* Go To Next Background Rate */
                 background_index++;
             }
 
@@ -797,7 +771,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->y_atc.append(atl03.dist_ph_across[current_photon]);
             df->height.append(height);
             df->solar_elevation.append(atl03.solar_elevation[current_segment]);
-            df->background_rate.append(background_rate);
+            df->background_rate.append(atl03.bckgrd_rate[background_index]);
             df->atl03_cnf.append(atl03_cnf);
             df->quality_ph.append(static_cast<int8_t>(quality_ph));
             df->spacecraft_velocity.append(spacecraft_velocity);

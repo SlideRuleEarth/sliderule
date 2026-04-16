@@ -51,7 +51,7 @@ runner.unittest("ATL03 DataFrame", function()
         y_atc = 3271.814941,
         height = 2178.863281,
         solar_elevation = -11.243111,
-        background_rate = 33019.824219,
+        background_rate = 32401.623047,
         spacecraft_velocity = 7096.781738,
         atl03_cnf = 4,
         quality_ph = 0,
