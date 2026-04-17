@@ -378,7 +378,7 @@ int LuaLibrarySys::lsys_healthy (lua_State* L)
 
     /* Check Memory Usage */
     const double current_memory_usage = OsApi::memusage();
-    if(current_memory_usage >= SystemConfig::settings().streamMemoryThreshold.value)
+    if(current_memory_usage >= SystemConfig::settings().memoryThreshold.value)
     {
         health = false;
     }

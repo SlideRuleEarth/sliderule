@@ -118,19 +118,25 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
     /* Handle Text and JSON Output */
     if(selected_output == TEXT or selected_output == JSON)
     {
-        if(result && !in_error)
+        if(lua_status != LUA_OK)
         {
-            sendHeader(OK, content2str(selected_output), &request->rspq, result);
+            FString error_msg("Endpoint %s encountered error: %s", request->resource, lua_tostring(L, -1));
+            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
-        else if(result)
+        else if(in_error)
+        {
+            FString error_msg("Endpoint %s returned no results", request->resource);
+            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
+        }
+        else if(!result)
         {
             sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result);
         }
         else
         {
-            FString error_msg("Endpoint %s returned no results", request->resource);
-            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
-            throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
+            sendHeader(OK, content2str(selected_output), &request->rspq, result);
         }
     }
 }
@@ -419,7 +425,7 @@ void* LuaEndpoint::requestThread (void* parm)
         checkSignature(request, engine.getLuaState()); // throws on error
         checkMemoryUsage(request); // throws on error
         content_t selected_output = selectOutput(request, engine.getLuaState()); // throws on error, returns output format
-        executeEndpoint(request, &engine, selected_output); // executes registered handler, throws on error
+        executeEndpoint(request, &engine, selected_output, arguments); // executes registered handler, throws on error
     }
     catch(const RunTimeException& e)
     {

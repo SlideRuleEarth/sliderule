@@ -49,7 +49,7 @@
 
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
 FString EndpointObject::serverHead("sliderule/%s", LIBID);
-std::unordered_map<string, EndpointObject::endpoint_handler_f> EndpointObject::endpointHandlers;
+std::unordered_map<EndpointObject::content_t, EndpointObject::handler_f> EndpointObject::endpointHandlers;
 
  /******************************************************************************
  * REQUEST SUBCLASS

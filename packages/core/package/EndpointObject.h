@@ -39,6 +39,7 @@
 #include <unordered_map>
 
 #include "OsApi.h"
+#include "MsgQ.h"
 #include "StringLib.h"
 #include "Dictionary.h"
 #include "LuaObject.h"

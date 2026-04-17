@@ -48,7 +48,7 @@
  *----------------------------------------------------------------------------*/
 void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments)
 {
-    assert(selected_output == EndpointObject::ARROW);
+    assert(selected_output == EndpointObject::ARROW); (void)selected_output;
 
     /* Start Response Thread */
     const Thread rqst_pid(requestThread, request); // will join before exiting this function
@@ -74,6 +74,12 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     /* Execute Main Function */
     int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
     lua_pop(L, 1);
+
+    /* Log Status */
+    if(lua_status != LUA_OK)
+    {
+        mlog(CRITICAL, "Failed to execute endpoint %s: %d", request->resource, lua_status);
+    }
 }
 
 /*----------------------------------------------------------------------------
