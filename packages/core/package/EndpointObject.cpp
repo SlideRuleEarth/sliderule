@@ -66,7 +66,8 @@ EndpointObject::Request::Request (const char* _id):
     body        (NULL),
     length      (0),
     trace_id    (ORIGIN),
-    id          (StringLib::duplicate(_id))
+    id          (StringLib::duplicate(_id)),
+    rspq        (id)
 {
 }
 
@@ -91,8 +92,6 @@ int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, cons
     LuaEngine::setAttrStr(L, "id", rqst_id);
     LuaEngine::setAttrStr(L, "rspq", rspq_name);
     LuaEngine::setAttrStr(L, "srcip", getHdrSourceIp());
-    LuaEngine::setAttrStr(L, "orgroles", getHdrOrgRoles());
-    LuaEngine::setAttrBool(L, "signed", verifyHdrSignature(getHdrAccount()));
     LuaEngine::setAttrStr(L, "arg", argument);
     lua_setglobal(L, "_rqst");
     return 1;
@@ -148,19 +147,6 @@ const char* EndpointObject::Request::getHdrOrgRoles (void) const
         return hdr_str->c_str();
     }
     return "[]";
-}
-
-/*----------------------------------------------------------------------------
- * getHdrStreaming
- *----------------------------------------------------------------------------*/
-const char* EndpointObject::Request::getHdrStreaming (void) const
-{
-    string* hdr_str;
-    if(headers.find("x-sliderule-streaming", &hdr_str))
-    {
-        return hdr_str->c_str();
-    }
-    return NULL; // special default case
 }
 
 /*----------------------------------------------------------------------------
@@ -296,8 +282,6 @@ bool EndpointObject::Request::verifyHdrSignature (const char* account) const
     return true;
 }
 
-
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -381,6 +365,37 @@ const char* EndpointObject::code2str (code_t code)
 }
 
 /*----------------------------------------------------------------------------
+ * str2content
+ *----------------------------------------------------------------------------*/
+EndpointObject::content_t EndpointObject::str2content (const char* str)
+{
+    if(StringLib::match(str, "text"))                       return TEXT;
+    if(StringLib::match(str, "text/plain"))                 return TEXT;
+    if(StringLib::match(str, "json"))                       return JSON;
+    if(StringLib::match(str, "application/json"))           return JSON;
+    if(StringLib::match(str, "binary"))                     return BINARY;
+    if(StringLib::match(str, "application/octet-stream"))   return BINARY;
+    if(StringLib::match(str, "arrow"))                      return ARROW;
+    if(StringLib::match(str, "application/arrow"))          return ARROW;
+    return UNKNOWN;
+}
+
+/*----------------------------------------------------------------------------
+ * content2str
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::content2str (content_t content)
+{
+    switch(content)
+    {
+        case TEXT:      return "text/plain";
+        case JSON:      return "application/json";
+        case BINARY:    return "application/octet-stream";
+        case ARROW:     return "application/arrow";
+        default:        return "unknown";
+    }
+}
+
+/*----------------------------------------------------------------------------
  * buildheader
  *----------------------------------------------------------------------------*/
 int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type, int content_length, const char* transfer_encoding, const char* server)
@@ -397,4 +412,24 @@ int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const 
     StringLib::concat(hdr_str, "\r\n",  MAX_HDR_SIZE);
 
     return StringLib::size(hdr_str);
+}
+
+/*----------------------------------------------------------------------------
+ * sendHeader
+ *----------------------------------------------------------------------------*/
+void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* content_type, Publisher* rspq, const char* msg, const char* transfer_encoding)
+{
+    char header[MAX_HDR_SIZE];
+    if(msg)
+    {
+        const int result_length = StringLib::size(msg);
+        const int header_length = buildheader(header, http_code, content_type, result_length, transfer_encoding, serverHead.c_str());
+        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+        rspq->postCopy(msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
+    }
+    else
+    {
+        const int header_length = buildheader(header, http_code, content_type, 0, transfer_encoding, serverHead.c_str());
+        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+    }
 }

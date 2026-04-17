@@ -1,25 +1,38 @@
---
--- ENDPOINT:    /source/assets
---
--- INPUT:       none
---
--- OUTPUT:      json string of all the assets
---
-local json = require("json")
-local asset = require("asset")
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    -- imports
+    local json = require("json")
+    local earthdata = require("earth_data_query")
 
-local assets = asset.loaddir()
-local directory =  {}
-for key,obj in pairs(assets) do
-    local name, identity, driver, path, index, region, endpoint = obj:info()
-    directory[key] = {name=name, identity=identity, driver=driver, path=path, index=index, region=region, endpoint=endpoint}
+    -- build directory of assets
+    local directory = {}
+    local assets = earthdata.load()
+    for _,asset in pairs(assets) do
+        local name, identity, driver, path, index, endpoint, status = asset:info()
+        if status then
+            directory[name] = {name=name, identity=identity, driver=driver, path=path, index=index, endpoint=endpoint}
+        end
+    end
+
+    -- return response
+    return json.encode({
+        directory = directory,
+        drivers = core.iodrivers(),
+        rasters = geo.factories()
+    })
 end
 
-local response = {
-    directory = directory,
-    drivers = core.iodrivers(),
-    rasters = geo.factories()
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "Assets",
+    logging = core.DEBUG,
+    description = "Lists available assets, drivers, and rasters",
+    roles = {},
+    signed = false,
+    outputs = {"json"}
 }
-
-return json.encode(response)
-

@@ -65,13 +65,13 @@ int LuaEngine::pathPrefixLength = 0;
  *
  *  PROTECTED_MODE
  *----------------------------------------------------------------------------*/
-LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id, luaStepHook hook, bool paused)
+LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id, luaStepHook hook)
 {
     /* Initialize Parameters */
     engineId        = engineIds++;
     engineInError   = false;
     mode            = PROTECTED_MODE;
-    traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
+    traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"name\":\"%s\",\"id\":%ld}", name, engineId);
     dInfo           = NULL;
     L               = createState(hook);
 
@@ -91,12 +91,8 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
     pInfo->argv[pInfo->argc] = NULL;
 
     /* Start Lua Thread */
-    engineActive.store(false, std::memory_order_release);
-    if(!paused)
-    {
-        engineActive.store(true, std::memory_order_release);
-        engineThread = new Thread(protectedThread, pInfo);
-    }
+    engineActive.store(true, std::memory_order_release);
+    engineThread = new Thread(protectedThread, pInfo);
 }
 
 /*----------------------------------------------------------------------------
@@ -104,13 +100,13 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
  *
  *  DIRECT_MODE
  *----------------------------------------------------------------------------*/
-LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, luaStepHook hook, bool paused)
+LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, luaStepHook hook)
 {
     /* Initialize Parameters */
     engineId        = engineIds++;
     engineInError   = false;
     mode            = DIRECT_MODE;
-    traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"script\":\"%s\"}", script);
+    traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"script\":\"%s\",\"id\":%ld}", script, engineId);
     pInfo           = NULL;
     L               = createState(hook);
 
@@ -121,12 +117,25 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
     dInfo->arg    = StringLib::duplicate(arg);
 
     /* Start Script Thread */
-    engineActive.store(false, std::memory_order_release);
-    if(!paused)
-    {
-        engineActive.store(true, std::memory_order_release);
-        engineThread = new Thread(directThread, dInfo);
-    }
+    engineActive.store(true, std::memory_order_release);
+    engineThread = new Thread(directThread, dInfo);
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *
+ *  MANUAL_MODE
+ *----------------------------------------------------------------------------*/
+LuaEngine::LuaEngine(uint32_t trace_id, luaStepHook hook):
+    engineInError(false),
+    mode(MANUAL_MODE),
+    pInfo(NULL),
+    dInfo(NULL)
+{
+    engineId = engineIds++;
+    traceId = start_trace(CRITICAL, trace_id, "lua_engine", "{\"script\":\"%s\",\"id\":%ld}", script, engineId);
+    engineActive.store(true, std::memory_order_release);
+    L = createState(hook);
 }
 
 /*----------------------------------------------------------------------------
@@ -428,7 +437,7 @@ lua_State* LuaEngine::getLuaState (void)
     return L;
 }
 
- /*----------------------------------------------------------------------------
+/*----------------------------------------------------------------------------
  * getEngineId
  *----------------------------------------------------------------------------*/
 uint64_t LuaEngine::getEngineId(void) const
@@ -439,43 +448,30 @@ uint64_t LuaEngine::getEngineId(void) const
 /*----------------------------------------------------------------------------
  * executeEngine
  *----------------------------------------------------------------------------*/
-bool LuaEngine::executeEngine(int timeout_ms)
+bool LuaEngine::execute(const char* script, const char* arg)
 {
-    bool status = false;
+    /* Create Arg Table */
+    lua_createtable(L, 1, 0);
+    lua_pushstring(L, arg);
+    lua_rawseti(L, -2, 1);
+    lua_setglobal(L, "arg");
 
-    engineSignal.lock();
+    /* Execute Script */
+    int status = luaL_loadfile(L, script);
+    if(status == LUA_OK)
     {
-        if(!engineActive.load(std::memory_order_acquire))
-        {
-            /* Execute Engine */
-            if(mode == PROTECTED_MODE)
-            {
-                engineActive.store(true, std::memory_order_release);
-                engineThread = new Thread(protectedThread, pInfo);
-            }
-            else if(mode == DIRECT_MODE)
-            {
-                engineActive.store(true, std::memory_order_release);
-                engineThread = new Thread(directThread, dInfo);
-                if(timeout_ms != IO_CHECK)
-                {
-                    engineSignal.wait(ENGINE_EXIT_SIGNAL, timeout_ms);
-                }
-            }
-
-            /*
-             * completion is true if engine no longer active
-             * and if there are no errors
-             */
-            status = (!engineActive.load(std::memory_order_acquire)) && (!engineInError);
-
-            /* Reset Error State */
-            engineInError = false;
-        }
+        status = lua_pcall(L, 0, LUA_MULTRET, 0);
     }
-    engineSignal.unlock();
 
-    return status;
+    /* Log Error */
+    if(status != LUA_OK)
+    {
+        engineInError = true;
+        logErrorMessage();
+    }
+
+    /* Return Script Status */
+    return status == LUA_OK;
 }
 
 /*----------------------------------------------------------------------------
@@ -491,12 +487,8 @@ bool LuaEngine::isActive(void) const
  *----------------------------------------------------------------------------*/
 void LuaEngine::setBoolean (const char* name, bool val)
 {
-    engineSignal.lock();
-    {
-        lua_pushboolean(L, val);
-        lua_setglobal(L, name);
-    }
-    engineSignal.unlock();
+    lua_pushboolean(L, val);
+    lua_setglobal(L, name);
 }
 
 /*----------------------------------------------------------------------------
@@ -504,12 +496,8 @@ void LuaEngine::setBoolean (const char* name, bool val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setInteger (const char* name, long val)
 {
-    engineSignal.lock();
-    {
-        lua_pushinteger(L, val);
-        lua_setglobal(L, name);
-    }
-    engineSignal.unlock();
+    lua_pushinteger(L, val);
+    lua_setglobal(L, name);
 }
 
 /*----------------------------------------------------------------------------
@@ -517,12 +505,8 @@ void LuaEngine::setInteger (const char* name, long val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setNumber (const char* name, double val)
 {
-    engineSignal.lock();
-    {
-        lua_pushnumber(L, val);
-        lua_setglobal(L, name);
-    }
-    engineSignal.unlock();
+    lua_pushnumber(L, val);
+    lua_setglobal(L, name);
 }
 
 /*----------------------------------------------------------------------------
@@ -530,12 +514,8 @@ void LuaEngine::setNumber (const char* name, double val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setString (const char* name, const char* val)
 {
-    engineSignal.lock();
-    {
-        lua_pushstring(L, val);
-        lua_setglobal(L, name);
-    }
-    engineSignal.unlock();
+    lua_pushstring(L, val);
+    lua_setglobal(L, name);
 }
 
 /*----------------------------------------------------------------------------
@@ -543,12 +523,8 @@ void LuaEngine::setString (const char* name, const char* val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setFunction (const char* name, lua_CFunction val)
 {
-    engineSignal.lock();
-    {
-        lua_pushcfunction(L, val);
-        lua_setglobal(L, name);
-    }
-    engineSignal.unlock();
+    lua_pushcfunction(L, val);
+    lua_setglobal(L, name);
 }
 
 /*----------------------------------------------------------------------------
@@ -556,12 +532,8 @@ void LuaEngine::setFunction (const char* name, lua_CFunction val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setObject (const char* name, void* val)
 {
-    engineSignal.lock();
-    {
-        lua_pushlightuserdata(L, val);
-        lua_setglobal(L, name);
-    }
-    engineSignal.unlock();
+    lua_pushlightuserdata(L, val);
+    lua_setglobal(L, name);
 }
 
 /*----------------------------------------------------------------------------
@@ -602,29 +574,21 @@ void* LuaEngine::protectedThread (void* parm)
 {
     protectedThread_t* p = static_cast<protectedThread_t*>(parm);
 
-    p->engine->engineSignal.lock();
+    /* Run Script */
+    lua_pushcfunction(p->engine->L, &pmain);            /* to call 'pmain' in protected mode */
+    lua_pushinteger(p->engine->L, p->argc);             /* 1st argument */
+    lua_pushlightuserdata(p->engine->L, p->argv);       /* 2nd argument */
+    const int status = lua_pcall(p->engine->L, 2, 1, 0);/* do the call */
+    const int result = lua_toboolean(p->engine->L, -1); /* get result */
+    if (status != LUA_OK || result == 0)
     {
-        /* Run Script */
-        lua_pushcfunction(p->engine->L, &pmain);            /* to call 'pmain' in protected mode */
-        lua_pushinteger(p->engine->L, p->argc);             /* 1st argument */
-        lua_pushlightuserdata(p->engine->L, p->argv);       /* 2nd argument */
-        const int status = lua_pcall(p->engine->L, 2, 1, 0);/* do the call */
-        const int result = lua_toboolean(p->engine->L, -1); /* get result */
-        if (status != LUA_OK || result == 0)
-        {
-            mlog(CRITICAL, "%s exited with error", p->argc > 0 ? p->argv[0] : "lua script");
-            p->engine->engineInError = true;
-        }
-        else
-        {
-            mlog(DEBUG, "%s executed", p->argc > 0 ? p->argv[0] : "lua script");
-        }
-
-        /* Set Inactive */
-        p->engine->engineActive.store(false, std::memory_order_release);
-        p->engine->engineSignal.signal(ENGINE_EXIT_SIGNAL);
+        mlog(CRITICAL, "%s exited with error", p->argc > 0 ? p->argv[0] : "lua script");
+        p->engine->engineInError = true;
     }
-    p->engine->engineSignal.unlock();
+    else
+    {
+        mlog(DEBUG, "%s executed", p->argc > 0 ? p->argv[0] : "lua script");
+    }
 
     return NULL;
 }
@@ -635,37 +599,7 @@ void* LuaEngine::protectedThread (void* parm)
 void* LuaEngine::directThread (void* parm)
 {
     directThread_t* d = static_cast<directThread_t*>(parm);
-
-    d->engine->engineSignal.lock();
-    {
-        lua_State* L = d->engine->L;
-
-        /* Create Arg Table */
-        lua_createtable(L, 1, 0);
-        lua_pushstring(L, d->arg);
-        lua_rawseti(L, -2, 1);
-        lua_setglobal(L, "arg");
-
-        /* Execute Script */
-        int status = luaL_loadfile(L, d->script);
-        if(status == LUA_OK)
-        {
-            status = lua_pcall(L, 0, LUA_MULTRET, 0);
-        }
-
-        /* Log Error */
-        if (status != LUA_OK)
-        {
-            d->engine->engineInError = true;
-            d->engine->logErrorMessage();
-        }
-
-        /* Set Inactive */
-        d->engine->engineActive.store(false, std::memory_order_release);
-        d->engine->engineSignal.signal(ENGINE_EXIT_SIGNAL);
-    }
-    d->engine->engineSignal.unlock();
-
+    d->engine->execute(d->script, d->arg);
     return NULL;
 }
 
@@ -675,14 +609,14 @@ void* LuaEngine::directThread (void* parm)
 lua_State* LuaEngine::createState(luaStepHook hook)
 {
     /* Initialize Lua */
-    lua_State* l = luaL_newstate();     /* opens Lua */
-    assert(l);                          /* not enough memory to create lua state */
+    lua_State* l = luaL_newstate(); // opens Lua
+    assert(l); // not enough memory to create lua state
     if(hook) lua_sethook(l, hook, LUA_MASKLINE, 0);
 
     /* Register Interpreter Object */
     lua_pushstring(l, LUA_SELFKEY);
     lua_pushlightuserdata(l, static_cast<void*>(this));
-    lua_settable(l, LUA_REGISTRYINDEX); /* registry[LUA_SELFKEY] = this */
+    lua_settable(l, LUA_REGISTRYINDEX); // registry[LUA_SELFKEY] = this
 
     /* Register Application Libraries */
     pkgInitTableMutex.lock();
@@ -709,7 +643,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     pkgInitTableMutex.unlock();
 
     /* Open Libraries */
-    lua_pushboolean(l, 1);  /* signal for libraries to ignore env. vars. */
+    lua_pushboolean(l, 1); // signal for libraries to ignore env. vars
     lua_setfield(l, LUA_REGISTRYINDEX, "LUA_NOENV");
     luaL_openlibs(l);  /* open standard libraries */
 
@@ -725,7 +659,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     const FString lpath("%s/ext/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
-    lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5
+    lua_pop(l, 1 ); // get rid of the string on the stack we just pushed
     lua_pushstring(l, lpath.c_str()); // push the new one
     lua_setfield(l, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
     lua_pop(l, 1 ); // get rid of package table from top of stack
@@ -749,10 +683,9 @@ void LuaEngine::logErrorMessage (void)
 
     /* Cannot log here because console monitor may be garbage collected
      * as a result of the script error; so instead write to stderr. */
-    // mlog(CRITICAL, "%s", msg);
     fprintf(stderr, "%s\n", msg);
 
-    /* remove message */
+    /* Remove Message */
     lua_pop(L, 1);
 }
 

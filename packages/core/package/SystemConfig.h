@@ -97,8 +97,7 @@ class SystemConfig: public FieldMap<Field>
         FieldElement<bool>              authenticateToPODAAC        {true};
         FieldElement<bool>              authenticateToASF           {true};
         FieldElement<bool>              registerAsService           {true};
-        FieldElement<float>             normalMemoryThreshold       {1.0};
-        FieldElement<float>             streamMemoryThreshold       {0.75};
+        FieldElement<float>             memoryThreshold             {0.75};
         FieldElement<int>               msgQDepth                   {10000};
         FieldElement<bool>              inCloud                     {false};
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute

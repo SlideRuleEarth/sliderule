@@ -1,4 +1,19 @@
---
--- ENDPOINT:    /source/ams
---
-return core.ams("POST", _rqst.arg, arg[1])
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    return core.ams("POST", _rqst.arg, arg[1])
+end
+
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "Asset Metadata Service",
+    description = "Pass-through to Asset Metadata Service API",
+    logging = core.CRITICAL,
+    roles = {},
+    signed = false,
+    outputs = {"json"}
+}

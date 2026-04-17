@@ -537,7 +537,7 @@ int HttpServer::onRead(int fd)
                 }
                 routeTableMut.unlock();
 
-                connection->streaming = endpoint->handleRequest(connection->request);
+                endpoint->handleRequest(connection->request);
                 connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             }
             catch(const RunTimeException& e)
@@ -653,7 +653,20 @@ int HttpServer::onWrite(int fd)
                     state->ref_index += bytes;
                     if(state->ref_index == state->ref.size)
                     {
-                        state->header_sent = true;
+                        if(!state->header_sent)
+                        {
+                            state->header_sent = true;
+                            const char* hdr_str_ptr = reinterpret_cast<const char*>(state->ref.data);
+                            while((hdr_str_ptr = strstr(hdr_str_ptr, "Content-Type:")) != NULL)
+                            {
+                                if(strncmp(hdr_str_ptr, "Content-Type: application/octet-stream", 38) == 0)
+                                {
+                                    connection->streaming = true;
+                                    break;
+                                }
+                                hdr_str_ptr += 13;
+                            }
+                        }
                         ref_complete = true;
                     }
                 }

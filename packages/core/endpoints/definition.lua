@@ -1,19 +1,27 @@
---
--- ENDPOINT:    /source/definition
---
--- INPUT:       arg[1]
---              {
---                  "rectype":  "<record type>"
---              }
---
--- OUTPUT:      <record definition>
---
--- NOTES:       1. Both the input and the output are json objects
---
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    local json = require("json")
+    local parm = json.decode(arg[1])
+    local def = msg.definition(parm["rectype"])
+    return json.encode(def)
+end
 
-local json = require("json")
-local parm = json.decode(arg[1])
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "Record Definition",
+    description = "Defines the on-the-wire format and structure for a given record type",
+    logging = core.DEBUG,
+    roles = {},
+    signed = false,
+    outputs = {"json"}
+}
 
-local def = msg.definition(parm["rectype"])
-
-return json.encode(def)
+-- INPUT
+--  {
+--      "rectype":  "<record type>"
+--  }

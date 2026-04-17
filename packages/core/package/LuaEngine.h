@@ -78,6 +78,7 @@ class LuaEngine
         typedef enum {
             PROTECTED_MODE,
             DIRECT_MODE,
+            MANUAL_MODE,
             INVALID_MODE
         } mode_t;
 
@@ -89,8 +90,9 @@ class LuaEngine
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEngine       (const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // protected mode
-        explicit            LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
+                            LuaEngine       (const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id=ORIGIN, luaStepHook hook=NULL); // protected mode
+        explicit            LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL); // direct mode
+        explicit            LuaEngine       (uint32_t trace_id=ORIGIN, luaStepHook hook=NULL); // manual mode
                             ~LuaEngine      (void);
 
         static void         init            (void);
@@ -110,7 +112,7 @@ class LuaEngine
 
         lua_State*          getLuaState     (void);
         uint64_t            getEngineId     (void) const;
-        bool                executeEngine   (int timeout_ms);
+        bool                execute         (const char* script, const char* arg);
         bool                isActive        (void) const;
         void                setBoolean      (const char* name, bool val);
         void                setInteger      (const char* name, long val);
@@ -165,7 +167,6 @@ class LuaEngine
         std::atomic<bool>               engineActive;
         bool                            engineInError;
         Thread*                         engineThread;
-        Cond                            engineSignal;
 
         mode_t                          mode;
         uint32_t                        traceId;

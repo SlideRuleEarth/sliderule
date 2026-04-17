@@ -95,7 +95,7 @@ LuaScript::LuaScript(lua_State* L, const char* script, const char* arg, bool as_
     {
         const char* safe_filename = StringLib::replace(script, "..", "_");
         const FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, prefix, PATH_DELIMETER, safe_filename);
-        engine = new LuaEngine(safe_pathname.c_str(), arg, traceId, LuaEngine::abortHook, false);
+        engine = new LuaEngine(safe_pathname.c_str(), arg, traceId, LuaEngine::abortHook);
         delete [] safe_filename;
     }
     else

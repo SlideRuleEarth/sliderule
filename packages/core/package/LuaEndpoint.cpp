@@ -33,6 +33,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <algorithm>
+
 #include "LuaEndpoint.h"
 #include "OsApi.h"
 #include "SystemConfig.h"
@@ -46,6 +48,12 @@ const char* LuaEndpoint::LUA_META_NAME = "LuaEndpoint";
 const struct luaL_Reg LuaEndpoint::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
+
+const char* LuaEndpoint::ENDPOINT_MAIN = "main";
+const char* LuaEndpoint::ENDPOINT_LOGGING = "logging";
+const char* LuaEndpoint::ENDPOINT_ROLES = "roles";
+const char* LuaEndpoint::ENDPOINT_SIGNED = "signed";
+const char* LuaEndpoint::ENDPOINT_OUTPUTS = "outputs";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -86,42 +94,281 @@ LuaEndpoint::LuaEndpoint(lua_State* L):
 LuaEndpoint::~LuaEndpoint(void) = default;
 
 /*----------------------------------------------------------------------------
- * handleRequest - returns true if streaming (chunked) response
+ * handleRequest
  *----------------------------------------------------------------------------*/
-bool LuaEndpoint::handleRequest (Request* request)
+void LuaEndpoint::handleRequest (Request* request)
 {
-    // Allocate and Initialize Endpoint Info Struct
-    info_t* info = new info_t;
-    info->request = request;
-    info->streaming = true;
+    const Thread pid(requestThread, request, false);
+}
 
-    // Determine Streaming
-    if(request->verb == GET)
+/*----------------------------------------------------------------------------
+ * loadLuaScript
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::loadLuaScript (Request* request, LuaEngine* engine)
+{
+    const char* argument_ptr = NULL;
+    const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
+
+    request->setLuaTable(engine->getLuaState(), request->id, "", argument_ptr);
+
+    const bool status = engine->execute(script_path, reinterpret_cast<const char*>(request->body));
+    if(!status) // check status of loading script
     {
-        info->streaming = false;
+        FString error_msg("Failed to load script %s for request %s", script_path, request->id);
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        delete [] script_path;
+        throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
+    }
+
+    if(!lua_istable(engine->getLuaState(), -1)) // check script properly returned an endpoint package
+    {
+        FString error_msg("Malformed endpoint in %s for request %s", script_path, request->id);
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        delete [] script_path;
+        throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
+    }
+
+    delete [] script_path;
+}
+
+/*----------------------------------------------------------------------------
+ * logRequest
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::logRequest (Request* request, lua_State* L)
+{
+    event_level_t log_level = INFO;
+    lua_getfield(L, -1, ENDPOINT_LOGGING);
+    if(lua_isinteger(L, -1))
+    {
+        log_level = static_cast<event_level_t>(lua_tointeger(L, -1));
     }
     else
     {
-        // Check Header (needed for web javascript client, potentially others)
-        // some clients do not allow a GET to have a request body
-        // but SlideRule supports GETs on endpoints that use a
-        // request body to determine what is sent in the response;
-        // in those cases, the client can issue a POST with a request
-        // body and provide this header set to "0", and SlideRule
-        // will treat it like a GET and return a normal response
-        // based on the contents of the request body.
-        const char* streaming_header = request->getHdrStreaming();
-        if(streaming_header != NULL && StringLib::match(streaming_header, "0"))
+        mlog(WARNING, "Logging level for %s was not explicitly set", request->resource);
+    }
+    lua_pop(L, 1);
+    mlog(log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
+
+}
+
+/*----------------------------------------------------------------------------
+ * checkRole
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::checkRole (Request* request, lua_State* L)
+{
+    lua_getfield(L, -1, ENDPOINT_ROLES);
+    if(lua_istable(L, -1))
+    {
+        const int tbl_size = lua_rawlen(L, -1);
+        if(tbl_size > 0) // only perform checks if roles are supplied
         {
-            info->streaming = false;
+            /* Read Roles from Endpoint */
+            vector<string> roles;
+            for(int i = 0; i < tbl_size; i++)
+            {
+                lua_rawgeti(L, -1, i + 1);
+                if(lua_isstring(L, -1))
+                {
+                    roles.emplace_back(lua_tostring(L, -1));
+                }
+                else
+                {
+                    mlog(WARNING, "Invalid entry encountered: %d, %d", i, lua_type(L, -1));
+                }
+                lua_pop(L, 1);
+            }
+
+            /* Get and Check Roles from Request */
+            const char* org_roles_hdr = request->getHdrOrgRoles();
+            List<string*>* user_roles = StringLib::split(org_roles_hdr, StringLib::size(org_roles_hdr), ' ');
+            bool match_found = false;
+            for(const string& role: roles)
+            {
+                for(int i = 0; i < user_roles->length(); i++)
+                {
+                    if(role == *user_roles->get(i))
+                    {
+                        match_found = true;
+                        break;
+                    }
+                }
+            }
+
+            /* Handle No Matching Role Found */
+            if(!match_found)
+            {
+                FString error_msg("User must be a member to execute this endpoint");
+                sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
+                throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
+            }
         }
     }
+    else
+    {
+        mlog(WARNING, "Organizational role requirement for %s was not explicitly set", request->id);
+    }
+    lua_pop(L, 1);
+}
 
-    // Start Thread
-    const Thread pid(requestThread, info, false);
+/*----------------------------------------------------------------------------
+ * checkSignature
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::checkSignature (Request* request, lua_State* L)
+{
+    lua_getfield(L, -1, ENDPOINT_SIGNED);
+    if(lua_isboolean(L, -1))
+    {
+        const bool signature_required = lua_toboolean(L, -1);
+        if(signature_required)
+        {
+            const bool is_signed = request->verifyHdrSignature(request->getHdrAccount());
+            if(!is_signed)
+            {
+                FString error_msg("User must use a signed request for this endpoint");
+                sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
+                throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
 
-    // Return Response Type
-    return info->streaming;
+            }
+        }
+    }
+    else
+    {
+        mlog(WARNING, "Signature requirement for %s was not explicitly set", request->id);
+    }
+    lua_pop(L, 1);
+}
+
+/*----------------------------------------------------------------------------
+ * selectOutput
+ *----------------------------------------------------------------------------*/
+EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, lua_State* L)
+{
+    /* Get Supported Outputs */
+    vector<content_t> outputs;
+    lua_getfield(L, -1, ENDPOINT_OUTPUTS);
+    if(lua_istable(L, -1))
+    {
+        const int tbl_size = lua_rawlen(L, -1);
+        if(tbl_size > 0)
+        {
+            /* Read Outputs from Endpoint */
+            for(int i = 0; i < tbl_size; i++)
+            {
+                lua_rawgeti(L, -1, i + 1);
+                if(lua_isstring(L, -1))
+                {
+                    const char* content_str = lua_tostring(L, -1);
+                    content_t content = str2content(content_str);
+                    if(content != UNKNOWN)
+                    {
+                        outputs.push_back(content);
+                    }
+                    else
+                    {
+                        mlog(WARNING, "Unrecognized output specified in %s: %s", request->resource, content_str);
+                    }
+                }
+                else
+                {
+                    mlog(WARNING, "Invalid entry encountered: %d, %d", i, lua_type(L, -1));
+                }
+                lua_pop(L, 1);
+            }
+        }
+    }
+    else
+    {
+        mlog(WARNING, "Output for %s was not explicitly set", request->resource);
+    }
+    lua_pop(L, 1);
+
+    /* Select Output */
+    string* accept_hdr;
+    if(request->headers.find("Accept", &accept_hdr)) // user requested output
+    {
+        content_t accepted_content = str2content(accept_hdr->c_str());
+        if(accepted_content == UNKNOWN)
+        {
+            FString error_msg("Unsupported output: %s", accept_hdr->c_str());
+            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
+        }
+        else if(std::find(outputs.begin(), outputs.end(), accepted_content) == outputs.end())
+        {
+            FString error_msg("Endpoint %s does not support %s output", request->resource, content2str(accepted_content));
+            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, error_msg.c_str());
+        }
+        return accepted_content; // use requested output
+    }
+    else if(!outputs.empty()) // nothing was requested
+    {
+        return outputs.front(); // use first output provided by endpoint
+    }
+    else // nothing is provided or requested
+    {
+        return TEXT; // default output
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * checkMemoryUsage
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::checkMemoryUsage(Request* request)
+{
+    const double memory_usage = OsApi::memusage();
+    if(memory_usage >= SystemConfig::settings().memoryThreshold.value)
+    {
+        FString error_msg("Memory (%d%%) exceeded threshold, not performing request: %s", (int)(memory_usage * 100.0), request->resource);
+        sendHeader(Service_Unavailable, content2str(TEXT), &request->rspq, error_msg.c_str());
+        throw RunTimeException(ERROR, RTE_NOT_ENOUGH_MEMORY, "%s", error_msg.c_str());
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * executeEndpoint
+ *----------------------------------------------------------------------------*/
+const char* LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_t selected_output, bool* in_error)
+{
+    lua_State* L = engine->getLuaState();
+    lua_getfield(L, -1, ENDPOINT_MAIN);
+    if(!lua_isfunction(L, -1))
+    {
+        FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
+    }
+    if(selected_output == BINARY)
+    {
+        sendHeader(OK, content2str(BINARY), &request->rspq, NULL, "chunked");
+    }
+    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
+    lua_pop(L, 1);
+    return engine->getResult(in_error);
+}
+
+/*----------------------------------------------------------------------------
+ * executeEndpoint
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::handleResponse (Request* request, content_t selected_output, const char* result, bool in_error)
+{
+    if(selected_output == TEXT or selected_output == JSON)
+    {
+        if(result && !in_error)
+        {
+            sendHeader(OK, content2str(selected_output), &request->rspq, result);
+        }
+        else if(result)
+        {
+            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result);
+        }
+        else
+        {
+            FString error_msg("Endpoint %s returned no results", request->resource);
+            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -129,42 +376,37 @@ bool LuaEndpoint::handleRequest (Request* request)
  *----------------------------------------------------------------------------*/
 void* LuaEndpoint::requestThread (void* parm)
 {
-    info_t* info = static_cast<info_t*>(parm);
-    EndpointObject::Request* request = info->request;
+    EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
     const double start = TimeLib::latchtime();
-    int status_code = RTE_STATUS;
 
-    /* Get Request Script */
-    const char* argument_ptr = NULL;
-    const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
+    /* Initialize State Variables */
+    int status_code = RTE_STATUS;
+    bool in_error = false;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
-    /* Log Request */
-    const event_level_t log_level =  info->streaming ? INFO : DEBUG;
-    mlog(log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
-
-    /* Create Publisher */
-    Publisher* rspq = new Publisher(request->id);
-
-    /* Handle Response */
-    if(info->streaming)
+    /* Execute Lua Script */
+    try
     {
-        status_code = streamResponse(script_path, argument_ptr, request, rspq, trace_id);
+        LuaEngine engine(trace_id, NULL); // TODO: implement lua hook that checks for the timeout to have expired
+        loadLuaScript(request, &engine); // throws on error
+        logRequest(request, engine.getLuaState()); // logs request
+        checkRole(request, engine.getLuaState()); // throws on error
+        checkSignature(request, engine.getLuaState()); // throws on error
+        checkMemoryUsage(request); // throws on error
+        content_t selected_output = selectOutput(request, engine.getLuaState()); // throws on error, returns output format
+        const char* result = executeEndpoint(request, &engine, selected_output, &in_error); // throws on error, returns results and error status
+        handleResponse(request, selected_output, result, in_error); // throws on error
     }
-    else
+    catch(const RunTimeException& e)
     {
-        status_code = normalResponse(script_path, argument_ptr, request, rspq, trace_id);
+        mlog(e.level(), "%s", e.what());
     }
 
     /* End Response */
-    const int rc = rspq->postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
-    if(rc <= 0)
-    {
-        mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
-        status_code = RTE_DID_NOT_COMPLETE;
-    }
+    const int rc = request->rspq.postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
+    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", request->rspq.getName(), rc);
 
     /* Generate Telemetry */
     const EventLib::tlm_input_t tlm = {
@@ -178,149 +420,11 @@ void* LuaEndpoint::requestThread (void* parm)
     telemeter(INFO, tlm);
 
     /* Clean Up */
-    delete rspq;
-    delete [] script_path;
     delete request;
-    delete info;
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * normalResponse
- *----------------------------------------------------------------------------*/
-int LuaEndpoint::normalResponse (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id)
-{
-    int status_code = RTE_STATUS;
-    char header[MAX_HDR_SIZE];
-    double mem;
-
-    LuaEngine* engine = NULL;
-
-    /* Check Memory */
-    if( (SystemConfig::settings().normalMemoryThreshold.value >= 1.0) ||
-        ((mem = OsApi::memusage()) < SystemConfig::settings().normalMemoryThreshold.value) )
-    {
-        /* Launch Engine */
-        engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
-        request->setLuaTable(engine->getLuaState(), request->id, "", argument);
-        const bool status = engine->executeEngine(SystemConfig::settings().requestTimeoutSec.value * 1000);
-
-        /* Send Response */
-        if(status)
-        {
-            bool in_error = false;
-            const char* result = engine->getResult(&in_error);
-            if(result)
-            {
-                /* Set Success/Failure */
-                EndpointObject::code_t http_code;
-                if(!in_error)   http_code = OK;
-                else            http_code = Internal_Server_Error;
-
-                /* Return Results */
-                const int result_length = StringLib::size(result);
-                const int header_length = buildheader(header, http_code, "text/plain", result_length, NULL, serverHead.c_str());
-                rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-                rspq->postCopy(result, result_length, SystemConfig::settings().publishTimeoutMs.value);
-            }
-            else
-            {
-                /* Missing Results */
-                mlog(ERROR, "Script returned no results: %s", scriptpath);
-                const char* error_msg = "Missing results";
-                const int result_length = StringLib::size(error_msg);
-                const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
-                rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-                rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
-                status_code = RTE_RESOURCE_DOES_NOT_EXIST;
-            }
-        }
-        else
-        {
-            /* Failed Execution */
-            mlog(ERROR, "Failed to execute request: %s", scriptpath);
-            const char* error_msg = "Failed execution";
-            const int result_length = StringLib::size(error_msg);
-            const int header_length = buildheader(header, Internal_Server_Error, "text/plain", result_length, NULL, serverHead.c_str());
-            rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-            rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
-            status_code = RTE_FAILURE;
-        }
-    }
-    else
-    {
-        /* Memory Exceeded */
-        mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
-        const char* error_msg = "Memory exceeded";
-        const int result_length = StringLib::size(error_msg);
-        const int header_length = buildheader(header, Service_Unavailable, "text/plain", result_length, NULL, serverHead.c_str());
-        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-        rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
-        status_code = RTE_NOT_ENOUGH_MEMORY;
-}
-
-    /* Clean Up */
-    delete engine;
-
-    /* Return Status Code */
-    return status_code;
-}
-
-/*----------------------------------------------------------------------------
- * streamResponse
- *----------------------------------------------------------------------------*/
-int LuaEndpoint::streamResponse (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id)
-{
-    int status_code = RTE_STATUS;
-    char header[MAX_HDR_SIZE];
-    double mem;
-
-    LuaEngine* engine = NULL;
-
-    /* Check Memory */
-    if( (SystemConfig::settings().streamMemoryThreshold.value >= 1.0) ||
-        ((mem = OsApi::memusage()) < SystemConfig::settings().streamMemoryThreshold.value) )
-    {
-        /* Send Header */
-        const int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
-        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-
-        /* Create Engine */
-        engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
-
-        /* Supply Global Variables to Script */
-        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument);
-
-        /* Execute Engine
-         *  The call to execute the script blocks on completion of the script. The lua state context
-         *  is locked and cannot be accessed until the script completes */
-        const bool status = engine->executeEngine(IO_PEND);
-
-        /* Check Status
-         *  At this point the http header has already been sent, so an error header cannot be sent;
-         *  but we can log the error and report it as such in telemetry */
-        if(!status)
-        {
-            mlog(CRITICAL, "Failed to execute script %s", scriptpath);
-            status_code = RTE_FAILURE;
-        }
-    }
-    else
-    {
-        mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
-        const int header_length = buildheader(header, Service_Unavailable);
-        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-        status_code = RTE_NOT_ENOUGH_MEMORY;
-    }
-
-    /* Clean Up */
-    delete engine;
-
-    /* Return Status Code */
-    return status_code;
 }

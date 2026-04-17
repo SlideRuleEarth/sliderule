@@ -83,11 +83,20 @@ class EndpointObject: public LuaObject
             Unauthorized = 401,
             Not_Found = 404,
             Method_Not_Allowed = 405,
+            Not_Acceptable = 406,
             Request_Timeout = 408,
             Internal_Server_Error = 500,
             Method_Not_Implemented = 501,
             Service_Unavailable = 503
         } code_t;
+
+        typedef enum {
+            TEXT = 1,
+            JSON = 2,
+            BINARY = 3,
+            ARROW = 4,
+            UNKNOWN = 5
+        } content_t;
 
         typedef Dictionary<string*> HeaderDictionary;
 
@@ -108,6 +117,7 @@ class EndpointObject: public LuaObject
                 long                length; // of body
                 uint32_t            trace_id;
                 const char*         id; // must be unique
+                Publisher           rspq;
 
                 explicit Request (const char* _id);
                 ~Request (void);
@@ -117,7 +127,6 @@ class EndpointObject: public LuaObject
                 const char* getHdrClient        (void) const;
                 const char* getHdrAccount       (void) const;
                 const char* getHdrOrgRoles      (void) const;
-                const char* getHdrStreaming     (void) const;
                 bool        verifyHdrSignature  (const char* account) const;
         };
 
@@ -132,9 +141,12 @@ class EndpointObject: public LuaObject
         static const char*  verb2str            (verb_t verb);
         static code_t       str2code            (const char* str);
         static const char*  code2str            (code_t code);
+        static content_t    str2content         (const char* str);
+        static const char*  content2str         (content_t content);
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
+        static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg, const char* transfer_encoding=NULL);
 
-        virtual bool        handleRequest       (Request* request) = 0;
+        virtual void        handleRequest       (Request* request) = 0;
 
         /*--------------------------------------------------------------------
          * Data

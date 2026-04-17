@@ -13,15 +13,6 @@ local input     = "parms.json" -- well known file name
 local output    = "results.json" -- well known file name
 
 -------------------------------------------------------
--- verify permissions
--------------------------------------------------------
-if not global.membership(_rqst.orgroles) then -- check if member
-    return "user must be a sliderule member to execute this endpoint", false
-elseif not _rqst.signed then -- check request signature
-    return "user must used a signed request for this endpoint", false
-end
-
--------------------------------------------------------
 -- initialize container runtime environment
 -------------------------------------------------------
 local crenv = runner.setup()

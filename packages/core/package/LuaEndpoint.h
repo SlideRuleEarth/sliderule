@@ -56,6 +56,12 @@ class LuaEndpoint: public EndpointObject
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
+        static const char* ENDPOINT_MAIN;
+        static const char* ENDPOINT_LOGGING;
+        static const char* ENDPOINT_ROLES;
+        static const char* ENDPOINT_SIGNED;
+        static const char* ENDPOINT_OUTPUTS;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -65,25 +71,24 @@ class LuaEndpoint: public EndpointObject
     protected:
 
         /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-         typedef struct {
-            Request*        request;
-            bool            streaming;
-        } info_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEndpoint     (lua_State* L);
-                            ~LuaEndpoint    (void) override;
+                            LuaEndpoint         (lua_State* L);
+                            ~LuaEndpoint        (void) override;
 
-        bool                handleRequest   (Request* request) override;
-        static void*        requestThread   (void* parm);
-        static int          normalResponse  (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id);
-        static int          streamResponse  (const char* scriptpath, const char* argument, Request* request, Publisher* rspq, uint32_t trace_id);
+        void                handleRequest       (Request* request) override;
+
+        static void         loadLuaScript       (Request* request, LuaEngine* engine);
+        static void         logRequest          (Request* request, lua_State* L);
+        static void         checkRole           (Request* request, lua_State* L);
+        static void         checkSignature      (Request* request, lua_State* L);
+        static content_t    selectOutput        (Request* request, lua_State* L);
+        static void         checkMemoryUsage    (Request* request);
+        static const char*  executeEndpoint     (Request* request, LuaEngine* engine, content_t selected_output, bool* in_error);
+        static void         handleResponse      (Request* request, content_t selected_output, const char* result, bool in_error);
+
+        static void*        requestThread       (void* parm);
 };
 
 #endif  /* __lua_endpoint__ */

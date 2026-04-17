@@ -29,27 +29,10 @@ local function split(str, delimiter)
     return result
 end
 
-
-local function membership(roles) -- determine membership
-    local is_member = false
-    local status, org_roles = pcall(json.decode, roles)
-    if status then
-        local n = #org_roles
-        for i = 1, n do
-            if org_roles[i] == "member" then
-                is_member = true
-                break
-            end
-        end
-    end
-    return is_member
-end
-
 local package = {
     eval = eval,
     check = check,
-    split = split,
-    membership = membership
+    split = split
 }
 
 return package
