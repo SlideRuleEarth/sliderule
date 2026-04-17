@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <unordered_map>
+
 #include "OsApi.h"
 #include "StringLib.h"
 #include "Dictionary.h"
@@ -131,6 +133,12 @@ class EndpointObject: public LuaObject
         };
 
         /*--------------------------------------------------------------------
+         * Endpoint Handler Typedef
+         *--------------------------------------------------------------------*/
+
+         typedef void (*handler_f) (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -146,13 +154,18 @@ class EndpointObject: public LuaObject
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
         static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg, const char* transfer_encoding=NULL);
 
+        static void         registerHandler     (content_t content, handler_f handler);
+        static handler_f    retrieveHandler     (content_t content);
+
         virtual void        handleRequest       (Request* request) = 0;
+
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-         static FString     serverHead;
+         static FString serverHead;
+         static std::unordered_map<content_t, handler_f> endpointHandlers;
  };
 
 #endif  /* __endpoint_object__ */

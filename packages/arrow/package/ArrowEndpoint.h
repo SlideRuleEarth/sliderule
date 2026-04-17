@@ -37,53 +37,17 @@
  ******************************************************************************/
 
 #include "EndpointObject.h"
+#include "LuaEndpoint.h"
 #include "OsApi.h"
-#include "MsgQ.h"
-#include "LuaEngine.h"
 
 /******************************************************************************
  * PISTACHE SERVER CLASS
  ******************************************************************************/
 
-class ArrowEndpoint: public EndpointObject
+struct ArrowEndpoint: public LuaEndpoint
 {
-    public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static int          luaCreate       (lua_State* L);
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint32_t        trace_id;
-            const char*     rqst_id;
-        } rsps_info_t;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                            ArrowEndpoint   (lua_State* L);
-                            ~ArrowEndpoint  (void) override;
-
-        static void*        requestThread   (void* parm); // executes lua script
-        static void*        responseThread  (void* parm); // processes response records before sending to http server
-        static bool         sendHeader      (Publisher* outq, code_t http_code, const char* error_msg=NULL);
-        bool                handleRequest   (Request* request) override;
+    static void defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
+    static void* responseThread (void* parm);
 };
 
 #endif  /* __arrow_endpoint__ */

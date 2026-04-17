@@ -277,6 +277,11 @@ void initcore (void)
     LuaEngine::extend(LuaLibraryTime::LUA_TIMELIBNAME, LuaLibraryTime::luaopen_timelib, LIBID);
     LuaEngine::extend(LUA_CORE_LIBNAME, core_open, LIBID);
 
+    /* Register Endpoint Content Handlers */
+    EndpointObject::registerHandler(EndpointObject::TEXT, LuaEndpoint::defaultHandler);
+    EndpointObject::registerHandler(EndpointObject::JSON, LuaEndpoint::defaultHandler);
+    EndpointObject::registerHandler(EndpointObject::BINARY, LuaEndpoint::defaultHandler);
+
     /* Print Status */
     print2term("%s package initialized (%s)\n", LUA_CORE_LIBNAME, LIBID);
 }

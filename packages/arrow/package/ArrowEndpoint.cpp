@@ -40,127 +40,40 @@
 #include "SystemConfig.h"
 
 /******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-const char* ArrowEndpoint::LUA_META_NAME = "ArrowEndpoint";
-const struct luaL_Reg ArrowEndpoint::LUA_META_TABLE[] = {
-    {NULL,          NULL}
-};
-
-/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - endpoint([<normal memory threshold>], [<stream memory threshold>])
+ * defaultHandler
  *----------------------------------------------------------------------------*/
-int ArrowEndpoint::luaCreate (lua_State* L)
+void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments)
 {
-    try
-    {
-        /* Create Lua Endpoint */
-        return createLuaObject(L, new ArrowEndpoint(L));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
+    assert(selected_output == EndpointObject::ARROW);
 
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
+    /* Start Response Thread */
+    const Thread rqst_pid(requestThread, request); // will join before exiting this function
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-ArrowEndpoint::ArrowEndpoint(lua_State* L):
-    EndpointObject(L, LUA_META_NAME, LUA_META_TABLE)
-{
-}
+    /* Get Lua State */
+    lua_State* L = engine->getLuaState();
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-ArrowEndpoint::~ArrowEndpoint(void) = default;
-
-/*----------------------------------------------------------------------------
- * requestThread
- *----------------------------------------------------------------------------*/
-void* ArrowEndpoint::requestThread (void* parm)
-{
-    int status_code = RTE_STATUS;
-    EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
-    const double start = TimeLib::latchtime();
-
-    /* Get Request Script */
-    const char* argument_ptr = NULL;
-    const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
-
-    /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, request->trace_id, "arrow_endpoint_request", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
-
-    /* Log Request */
-    mlog(INFO, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
-
-    /* Create Publisher to Arrow Response Queue */
-    const FString arrow_rspq("%s-arrow", request->id); // well known, must match responseThread
-    Publisher* rspq = new Publisher(arrow_rspq.c_str());
-
-    /* Create Engine */
-    LuaEngine* engine = new LuaEngine(script_path, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
+     /* Create Publisher to Arrow Response Queue */
+    Publisher* rspq = new Publisher(FString("%s-arrow", request->id).c_str());
 
     /* Supply Global Variables to Script */
-    request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), argument_ptr);
+    request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), arguments);
 
-    /* Execute Engine
-        *  The call to execute the script blocks on completion of the script. The lua state context
-        *  is locked and cannot be accessed until the script completes */
-    const bool status = engine->executeEngine(IO_PEND);
-
-    /* Check Status
-        *  At this point the http header has already been sent, so an error header cannot be sent;
-        *  but we can log the error and report it as such in telemetry */
-    if(!status)
+    /* Get Main Function */
+    lua_getfield(L, -1, ENDPOINT_MAIN);
+    if(!lua_isfunction(L, -1))
     {
-        mlog(CRITICAL, "Failed to execute script %s", script_path);
-        status_code = RTE_FAILURE;
+        FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
-    /* Clean Up */
-    delete engine;
-
-    /* End Response */
-    const int rc = rspq->postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
-    if(rc <= 0)
-    {
-        mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
-        status_code = RTE_DID_NOT_COMPLETE;
-    }
-
-    /* Generate Metric for Endpoint */
-    const EventLib::tlm_input_t tlm = {
-        .code = status_code,
-        .duration = static_cast<float>(TimeLib::latchtime() - start),
-        .source_ip = request->getHdrSourceIp(),
-        .endpoint = request->resource,
-        .client = request->getHdrClient(),
-        .account = request->getHdrAccount()
-    };
-    telemeter(INFO, tlm);
-
-    /* Clean Up */
-    delete rspq;
-    delete [] script_path;
-    delete request; // deleted here only
-
-    /* Stop Trace */
-    stop_trace(INFO, trace_id);
-
-    /* Return */
-    return NULL;
+    /* Execute Main Function */
+    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
+    lua_pop(L, 1);
 }
 
 /*----------------------------------------------------------------------------
@@ -168,17 +81,17 @@ void* ArrowEndpoint::requestThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* ArrowEndpoint::responseThread (void* parm)
 {
-    rsps_info_t* info = static_cast<rsps_info_t*>(parm);
+    Request* request = static_cast<Request*>(parm);
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, info->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", info->rqst_id);
+    const uint32_t trace_id = start_trace(INFO, request->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", request->id);
 
     /* Create Subscriber to Arrow Response Queue */
-    const FString arrow_rspq("%s-arrow", info->rqst_id); // well known, must match requestThread
+    const FString arrow_rspq("%s-arrow", request->id); // well known, must match requestThread
     Subscriber inq(arrow_rspq.c_str());
 
     /* Create Publisher */
-    Publisher rspq(info->rqst_id);
+    Publisher rspq(request->id);
 
     /* Initialize State Variables */
     long bytes_to_send = 0;
@@ -211,7 +124,8 @@ void* ArrowEndpoint::responseThread (void* parm)
                             /* Send Header */
                             if(!hdr_sent)
                             {
-                                hdr_sent = sendHeader(&rspq, OK);
+                                hdr_sent = true;
+                                sendHeader(OK, content2str(ARROW), &rspq, NULL, "chunked");
                             }
 
                             /* Post Arrow Bytes */
@@ -230,7 +144,8 @@ void* ArrowEndpoint::responseThread (void* parm)
                             /* Send Header */
                             if(!hdr_sent)
                             {
-                                hdr_sent = sendHeader(&rspq, Internal_Server_Error, "Corrupted transfer");
+                                hdr_sent = true;
+                                sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Corrupted transfer");
                             }
 
                             /* Mark Failure */
@@ -251,7 +166,8 @@ void* ArrowEndpoint::responseThread (void* parm)
                     /* Send Header */
                     if(!hdr_sent)
                     {
-                        hdr_sent = sendHeader(&rspq, Internal_Server_Error, "Invalid record");
+                        hdr_sent = true;
+                        sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Invalid record");
                     }
 
                     /* Mark Failure */
@@ -265,7 +181,8 @@ void* ArrowEndpoint::responseThread (void* parm)
                 /* Send Header */
                 if(!hdr_sent)
                 {
-                    hdr_sent = sendHeader(&rspq, Service_Unavailable, "Failed execution");
+                    hdr_sent = true;
+                    sendHeader(Service_Unavailable, content2str(TEXT), &rspq, "Failed execution");
                 }
 
                 /* Mark Failure - `complete` should have been set above when all bytes received */
@@ -281,7 +198,8 @@ void* ArrowEndpoint::responseThread (void* parm)
             /* Send Header */
             if(!hdr_sent)
             {
-                hdr_sent = sendHeader(&rspq, Internal_Server_Error, "Queing failure");
+                hdr_sent = true;
+                sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Queing failure");
             }
 
             /* Mark Failure */
@@ -293,60 +211,12 @@ void* ArrowEndpoint::responseThread (void* parm)
     /* (If Not Sent) Send Header */
     if(!hdr_sent)
     {
-        sendHeader(&rspq, Internal_Server_Error, "Missing data");
+        sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Missing data");
     }
-
-    /* Post Terminator */
-    const int rc = rspq.postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
-    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on <%s>: %d", rspq.getName(), rc);
-
-    /* Clean Up */
-    delete [] info->rqst_id;
-    delete info;
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * sendHeader
- *----------------------------------------------------------------------------*/
-bool ArrowEndpoint::sendHeader (Publisher* outq, code_t http_code, const char* error_msg)
-{
-    bool hdr_sent = false;
-    char header[MAX_HDR_SIZE];
-
-    const int header_length = buildheader(header, http_code, "application/octet-stream", 0, "chunked", serverHead.c_str());
-    const int rc = outq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
-    if(rc > 0)  hdr_sent = true;
-    else        mlog(CRITICAL, "Failed to post header on <%s>: %d", outq->getName(), rc);
-
-    if(http_code != OK)
-    {
-        const int rc2 = outq->postCopy(error_msg, StringLib::size(error_msg), SystemConfig::settings().publishTimeoutMs.value);
-        if(rc2 <= 0) mlog(CRITICAL, "Failed to post error message on <%s>: %d", outq->getName(), rc2);
-    }
-
-    return hdr_sent;
-}
-
-/*----------------------------------------------------------------------------
- * handleRequest - returns true if streaming (chunked) response
- *----------------------------------------------------------------------------*/
-bool ArrowEndpoint::handleRequest (Request* request)
-{
-    /* Start Response Thread */
-    rsps_info_t* response_info = new rsps_info_t;
-    response_info->trace_id = request->trace_id;
-    response_info->rqst_id = StringLib::duplicate(request->id);
-    const Thread rsps_pid(responseThread, response_info, false);
-
-    /* Start Response Thread */
-    const Thread rqst_pid(requestThread, request, false);
-
-    /* Return Response Type (only streaming supported) */
-    return true;
 }

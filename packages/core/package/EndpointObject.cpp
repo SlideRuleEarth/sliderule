@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include <openssl/evp.h>
+#include <unordered_map>
 
 #include "EndpointObject.h"
 #include "EventLib.h"
@@ -47,8 +48,8 @@
  ******************************************************************************/
 
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
-
 FString EndpointObject::serverHead("sliderule/%s", LIBID);
+std::unordered_map<string, EndpointObject::endpoint_handler_f> EndpointObject::endpointHandlers;
 
  /******************************************************************************
  * REQUEST SUBCLASS
@@ -431,5 +432,29 @@ void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* c
     {
         const int header_length = buildheader(header, http_code, content_type, 0, transfer_encoding, serverHead.c_str());
         rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * registerHandler - NOT THREAD SAFE
+ *----------------------------------------------------------------------------*/
+void EndpointObject::registerHandler (content_t content, handler_f handler)
+{
+    endpointHandlers[content] = handler;
+}
+
+/*----------------------------------------------------------------------------
+ * retrieveHandler - NOT THREAD SAFE
+ *----------------------------------------------------------------------------*/
+EndpointObject::handler_f EndpointObject::retrieveHandler (content_t content)
+{
+    if (endpointHandlers.contains(content))
+    {
+        return endpointHandlers.at(content);
+    }
+    else
+    {
+        return NULL;
     }
 }

@@ -79,6 +79,9 @@ void initarrow (void)
     /* Extend Lua */
     LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open, LIBID);
 
+    /* Register Endpoint Content Handlers */
+    EndpointObject::registerHandler(EndpointObject::ARROW, ArrowEndpoint::defaultHandler);
+
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_ARROW_LIBNAME, LIBID);
 }

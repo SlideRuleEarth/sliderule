@@ -76,6 +76,65 @@ int LuaEndpoint::luaCreate (lua_State* L)
     }
 }
 
+/*----------------------------------------------------------------------------
+ * defaultHandler
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments)
+{
+    /* Get Lua State */
+    lua_State* L = engine->getLuaState();
+
+    /* Set Environment */
+    if(selected_output == BINARY)
+    {
+        request->setLuaTable(L, request->id, request->rspq.getName(), arguments);
+    }
+    else
+    {
+        request->setLuaTable(L, request->id, "", arguments);
+    }
+
+    /* Get Main Function */
+    lua_getfield(L, -1, ENDPOINT_MAIN);
+    if(!lua_isfunction(L, -1))
+    {
+        FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
+    }
+
+    /* Send Header for Binary Output */
+    if(selected_output == BINARY)
+    {
+        sendHeader(OK, content2str(BINARY), &request->rspq, NULL, "chunked");
+    }
+
+    /* Execute Main Function */
+    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
+    lua_pop(L, 1);
+    bool in_error = false;
+    const char* result = engine->getResult(&in_error);
+
+    /* Handle Text and JSON Output */
+    if(selected_output == TEXT or selected_output == JSON)
+    {
+        if(result && !in_error)
+        {
+            sendHeader(OK, content2str(selected_output), &request->rspq, result);
+        }
+        else if(result)
+        {
+            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result);
+        }
+        else
+        {
+            FString error_msg("Endpoint %s returned no results", request->resource);
+            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
+        }
+    }
+}
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -104,31 +163,22 @@ void LuaEndpoint::handleRequest (Request* request)
 /*----------------------------------------------------------------------------
  * loadLuaScript
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::loadLuaScript (Request* request, LuaEngine* engine)
+void LuaEndpoint::loadLuaScript (Request* request, LuaEngine* engine, const char* script)
 {
-    const char* argument_ptr = NULL;
-    const char* script_path = LuaEngine::sanitize(request->resource, &argument_ptr);
-
-    request->setLuaTable(engine->getLuaState(), request->id, "", argument_ptr);
-
-    const bool status = engine->execute(script_path, reinterpret_cast<const char*>(request->body));
+    const bool status = engine->execute(script, reinterpret_cast<const char*>(request->body));
     if(!status) // check status of loading script
     {
-        FString error_msg("Failed to load script %s for request %s", script_path, request->id);
+        FString error_msg("Failed to load script %s for request %s", script, request->id);
         sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
-        delete [] script_path;
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
     if(!lua_istable(engine->getLuaState(), -1)) // check script properly returned an endpoint package
     {
-        FString error_msg("Malformed endpoint in %s for request %s", script_path, request->id);
+        FString error_msg("Malformed endpoint in %s for request %s", script, request->id);
         sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
-        delete [] script_path;
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
-
-    delete [] script_path;
 }
 
 /*----------------------------------------------------------------------------
@@ -328,46 +378,18 @@ void LuaEndpoint::checkMemoryUsage(Request* request)
 /*----------------------------------------------------------------------------
  * executeEndpoint
  *----------------------------------------------------------------------------*/
-const char* LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_t selected_output, bool* in_error)
+void LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments)
 {
-    lua_State* L = engine->getLuaState();
-    lua_getfield(L, -1, ENDPOINT_MAIN);
-    if(!lua_isfunction(L, -1))
+    handler_f handler = retrieveHandler(selected_output); // returns NULL if no handler is found
+    if(handler)
     {
-        FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
-        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
+        handler(request, engine, selected_output, arguments);
     }
-    if(selected_output == BINARY)
+    else
     {
-        sendHeader(OK, content2str(BINARY), &request->rspq, NULL, "chunked");
-    }
-    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
-    lua_pop(L, 1);
-    return engine->getResult(in_error);
-}
-
-/*----------------------------------------------------------------------------
- * executeEndpoint
- *----------------------------------------------------------------------------*/
-void LuaEndpoint::handleResponse (Request* request, content_t selected_output, const char* result, bool in_error)
-{
-    if(selected_output == TEXT or selected_output == JSON)
-    {
-        if(result && !in_error)
-        {
-            sendHeader(OK, content2str(selected_output), &request->rspq, result);
-        }
-        else if(result)
-        {
-            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result);
-        }
-        else
-        {
-            FString error_msg("Endpoint %s returned no results", request->resource);
-            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
-            throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
-        }
+        FString error_msg("Unable to handle requested format: %s", content2str(selected_output));
+        sendHeader(Method_Not_Implemented, content2str(TEXT), &request->rspq, error_msg.c_str());
+        throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
 }
 
@@ -378,30 +400,31 @@ void* LuaEndpoint::requestThread (void* parm)
 {
     EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
     const double start = TimeLib::latchtime();
-
-    /* Initialize State Variables */
     int status_code = RTE_STATUS;
-    bool in_error = false;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+
+    /* Get Script and Arguments */
+    const char* arguments = NULL;
+    const char* script = LuaEngine::sanitize(request->resource, &arguments);
 
     /* Execute Lua Script */
     try
     {
         LuaEngine engine(trace_id, NULL); // TODO: implement lua hook that checks for the timeout to have expired
-        loadLuaScript(request, &engine); // throws on error
+        loadLuaScript(request, &engine, script); // throws on error
         logRequest(request, engine.getLuaState()); // logs request
         checkRole(request, engine.getLuaState()); // throws on error
         checkSignature(request, engine.getLuaState()); // throws on error
         checkMemoryUsage(request); // throws on error
         content_t selected_output = selectOutput(request, engine.getLuaState()); // throws on error, returns output format
-        const char* result = executeEndpoint(request, &engine, selected_output, &in_error); // throws on error, returns results and error status
-        handleResponse(request, selected_output, result, in_error); // throws on error
+        executeEndpoint(request, &engine, selected_output); // executes registered handler, throws on error
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "%s", e.what());
+        status_code = e.code();
     }
 
     /* End Response */
@@ -421,6 +444,7 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Clean Up */
     delete request;
+    delete [] script;
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
