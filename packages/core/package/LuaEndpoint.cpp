@@ -110,10 +110,9 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
     }
 
     /* Execute Main Function */
-    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
-    lua_pop(L, 1);
+    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0); // removes function from stack
     bool in_error = false;
-    const char* result = engine->getResult(&in_error);
+    const char* result = engine->getResult(&in_error, 1);
 
     /* Handle Text and JSON Output */
     if(selected_output == TEXT or selected_output == JSON)
@@ -124,13 +123,13 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
             sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
-        else if(in_error)
+        else if(!result)
         {
             FString error_msg("Endpoint %s returned no results", request->resource);
             sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
             throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
         }
-        else if(!result)
+        else if(in_error)
         {
             sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result);
         }
@@ -411,6 +410,9 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
+    /* Initialize Lua Engine */
+    LuaEngine engine(trace_id, NULL); // TODO: implement lua hook that checks for the timeout to have expired
+
     /* Get Script and Arguments */
     const char* arguments = NULL;
     const char* script = LuaEngine::sanitize(request->resource, &arguments);
@@ -418,7 +420,6 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Execute Lua Script */
     try
     {
-        LuaEngine engine(trace_id, NULL); // TODO: implement lua hook that checks for the timeout to have expired
         loadLuaScript(request, &engine, script); // throws on error
         logRequest(request, engine.getLuaState()); // logs request
         checkRole(request, engine.getLuaState()); // throws on error

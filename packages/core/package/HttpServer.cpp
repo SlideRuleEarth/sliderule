@@ -656,12 +656,18 @@ int HttpServer::onWrite(int fd)
                         if(!state->header_sent)
                         {
                             state->header_sent = true;
+                            connection->streaming = true;
                             const char* hdr_str_ptr = reinterpret_cast<const char*>(state->ref.data);
                             while((hdr_str_ptr = strstr(hdr_str_ptr, "Content-Type:")) != NULL)
                             {
-                                if(strncmp(hdr_str_ptr, "Content-Type: application/octet-stream", 38) == 0)
+                                if(strncmp(hdr_str_ptr, "Content-Type: application/json", 30) == 0)
                                 {
-                                    connection->streaming = true;
+                                    connection->streaming = false;
+                                    break;
+                                }
+                                else if(strncmp(hdr_str_ptr, "Content-Type: text/plain", 24) == 0)
+                                {
+                                    connection->streaming = false;
                                     break;
                                 }
                                 hdr_str_ptr += 13;

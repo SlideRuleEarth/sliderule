@@ -128,6 +128,7 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
  *----------------------------------------------------------------------------*/
 LuaEngine::LuaEngine(uint32_t trace_id, luaStepHook hook):
     engineInError(false),
+    engineThread(NULL),
     mode(MANUAL_MODE),
     pInfo(NULL),
     dInfo(NULL)
@@ -539,14 +540,14 @@ void LuaEngine::setObject (const char* name, void* val)
 /*----------------------------------------------------------------------------
  * getResult
  *----------------------------------------------------------------------------*/
-const char* LuaEngine::getResult (bool* in_error)
+const char* LuaEngine::getResult (bool* in_error, int offset)
 {
     if(in_error != NULL)
     {
-        if( (lua_gettop(L) >= 2) && // the lua context has a variable for the error status
-            (lua_isboolean(L, 2)) ) // the variable is of the boolean type
+        if( (lua_gettop(L) >= (2 + offset)) && // the lua context has a variable for the error status
+            (lua_isboolean(L, (2 + offset))) ) // the variable is of the boolean type
         {
-            *in_error = !lua_toboolean(L, 2); // set the error status
+            *in_error = !lua_toboolean(L, (2 + offset)); // set the error status
         }
         else
         {
@@ -554,10 +555,10 @@ const char* LuaEngine::getResult (bool* in_error)
         }
     }
 
-    if( (lua_gettop(L) >= 1) && // the lua context has a variable for the results
-        lua_isstring(L, 1) )    // the result variable is a string
+    if( (lua_gettop(L) >= (1 + offset)) && // the lua context has a variable for the results
+        lua_isstring(L, (1 + offset)) )    // the result variable is a string
     {
-        return lua_tostring(L, 1); // return results
+        return lua_tostring(L, (1 + offset)); // return results
     }
 
     return NULL; // return null to indicate results were not obtainable

@@ -120,7 +120,7 @@ class LuaEngine
         void                setString       (const char* name, const char* val);
         void                setFunction     (const char* name, lua_CFunction val);
         void                setObject       (const char* name, void* val);
-        const char*         getResult       (bool* in_error=NULL);
+        const char*         getResult       (bool* in_error=NULL, int offset=0);
 
     private:
 

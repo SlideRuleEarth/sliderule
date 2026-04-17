@@ -399,15 +399,14 @@ const char* EndpointObject::content2str (content_t content)
 /*----------------------------------------------------------------------------
  * buildheader
  *----------------------------------------------------------------------------*/
-int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type, int content_length, const char* transfer_encoding, const char* server)
+int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type, int content_length, const char* transfer_encoding)
 {
     char str_buf[MAX_HDR_SIZE];
 
-    StringLib::format(hdr_str, MAX_HDR_SIZE, "HTTP/1.1 %d %s\r\n", code, code2str(code));
+    StringLib::format(hdr_str, MAX_HDR_SIZE, "HTTP/1.1 %d %s\r\nServer: %s\r\n", code, code2str(code), serverHead.c_str());
 
-    if(server)              StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Server: %s\r\n",               server),            MAX_HDR_SIZE);
     if(content_type)        StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Type: %s\r\n",         content_type),      MAX_HDR_SIZE);
-    if(content_length)      StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Length: %d\r\n",       content_length),    MAX_HDR_SIZE);
+    if(content_length >= 0) StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Length: %d\r\n",       content_length),    MAX_HDR_SIZE);
     if(transfer_encoding)   StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Transfer-Encoding: %s\r\n",    transfer_encoding), MAX_HDR_SIZE);
 
     StringLib::concat(hdr_str, "\r\n",  MAX_HDR_SIZE);
@@ -424,13 +423,13 @@ void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* c
     if(msg)
     {
         const int result_length = StringLib::size(msg);
-        const int header_length = buildheader(header, http_code, content_type, result_length, transfer_encoding, serverHead.c_str());
+        const int header_length = buildheader(header, http_code, content_type, result_length, transfer_encoding);
         rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
         rspq->postCopy(msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
     }
     else
     {
-        const int header_length = buildheader(header, http_code, content_type, 0, transfer_encoding, serverHead.c_str());
+        const int header_length = buildheader(header, http_code, content_type, 0, transfer_encoding);
         rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
     }
 }
