@@ -1,12 +1,26 @@
---
--- ENDPOINT:    /source/atl03vp
---
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    local json = require("json")
+    local proxy = require("proxy")
 
-local json = require("json")
-local proxy = require("proxy")
+    local rqst = json.decode(arg[1])
+    local resources = rqst["resources"]
+    local parms = rqst["parms"]
 
-local rqst = json.decode(arg[1])
-local resources = rqst["resources"]
-local parms = rqst["parms"]
+    proxy.proxy(resources, parms, "atl03v", "atl03vrec")
+end
 
-proxy.proxy(resources, parms, "atl03v", "atl03vrec")
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "ATL03 Parallel Viewer",
+    description = "Spatially and temporally subsets segments from multiple ATL03 granules with additional filters (s-series)",
+    logging = core.CRITICAL,
+    roles = {},
+    signed = false,
+    outputs = {"binary", "arrow"}
+}

@@ -72,8 +72,7 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     }
 
     /* Execute Main Function */
-    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0);
-    lua_pop(L, 1);
+    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0); // function is popped from stack
 
     /* Log Status */
     if(lua_status != LUA_OK)
