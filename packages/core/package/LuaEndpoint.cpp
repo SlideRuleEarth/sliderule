@@ -168,8 +168,11 @@ void LuaEndpoint::handleRequest (Request* request)
 /*----------------------------------------------------------------------------
  * loadLuaScript
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::loadLuaScript (Request* request, LuaEngine* engine, const string& script)
+void LuaEndpoint::loadLuaScript (Request* request, LuaEngine* engine, const string& script, endpoint_t& endpoint)
 {
+    lua_State* L = engine->getLuaState();
+
+    // execute script
     const bool status = engine->execute(script.c_str(), reinterpret_cast<const char*>(request->body));
     if(!status) // check status of loading script
     {
@@ -184,78 +187,36 @@ void LuaEndpoint::loadLuaScript (Request* request, LuaEngine* engine, const stri
         sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
-}
 
-/*----------------------------------------------------------------------------
- * logRequest
- *----------------------------------------------------------------------------*/
-void LuaEndpoint::logRequest (Request* request, lua_State* L)
-{
-    event_level_t log_level = INFO;
+    // get log level
     lua_getfield(L, -1, ENDPOINT_LOGGING);
     if(lua_isinteger(L, -1))
     {
-        log_level = static_cast<event_level_t>(lua_tointeger(L, -1));
+        endpoint.log_level = static_cast<event_level_t>(lua_tointeger(L, -1));
     }
     else
     {
         mlog(WARNING, "Logging level for %s was not explicitly set", request->resource);
     }
     lua_pop(L, 1);
-    mlog(log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
 
-}
-
-/*----------------------------------------------------------------------------
- * checkRole
- *----------------------------------------------------------------------------*/
-void LuaEndpoint::checkRole (Request* request, lua_State* L)
-{
+    // get supported roles
     lua_getfield(L, -1, ENDPOINT_ROLES);
     if(lua_istable(L, -1))
     {
         const int tbl_size = lua_rawlen(L, -1);
-        if(tbl_size > 0) // only perform checks if roles are supplied
+        for(int i = 0; i < tbl_size; i++)
         {
-            /* Read Roles from Endpoint */
-            vector<string> roles;
-            for(int i = 0; i < tbl_size; i++)
+            lua_rawgeti(L, -1, i + 1);
+            if(lua_isstring(L, -1))
             {
-                lua_rawgeti(L, -1, i + 1);
-                if(lua_isstring(L, -1))
-                {
-                    roles.emplace_back(lua_tostring(L, -1));
-                }
-                else
-                {
-                    mlog(WARNING, "Invalid entry encountered: %d, %d", i, lua_type(L, -1));
-                }
-                lua_pop(L, 1);
+                endpoint.allowed_roles.emplace_back(lua_tostring(L, -1));
             }
-
-            /* Get and Check Roles from Request */
-            const char* org_roles_hdr = request->getHdrOrgRoles();
-            List<string*>* user_roles = StringLib::split(org_roles_hdr, StringLib::size(org_roles_hdr), ' ');
-            bool match_found = false;
-            for(const string& role: roles)
+            else
             {
-                for(int i = 0; i < user_roles->length(); i++)
-                {
-                    if(role == *user_roles->get(i))
-                    {
-                        match_found = true;
-                        break;
-                    }
-                }
+                mlog(WARNING, "Invalid entry encountered: %d, %d", i, lua_type(L, -1));
             }
-
-            /* Handle No Matching Role Found */
-            if(!match_found)
-            {
-                FString error_msg("User must be a member to execute this endpoint");
-                sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
-                throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
-            }
+            lua_pop(L, 1);
         }
     }
     else
@@ -263,72 +224,45 @@ void LuaEndpoint::checkRole (Request* request, lua_State* L)
         mlog(WARNING, "Organizational role requirement for %s was not explicitly set", request->id);
     }
     lua_pop(L, 1);
-}
 
-/*----------------------------------------------------------------------------
- * checkSignature
- *----------------------------------------------------------------------------*/
-void LuaEndpoint::checkSignature (Request* request, lua_State* L)
-{
+    // get signature required
     lua_getfield(L, -1, ENDPOINT_SIGNED);
     if(lua_isboolean(L, -1))
     {
-        const bool signature_required = lua_toboolean(L, -1);
-        if(signature_required)
-        {
-            const bool is_signed = request->verifyHdrSignature(request->getHdrAccount());
-            if(!is_signed)
-            {
-                FString error_msg("User must use a signed request for this endpoint");
-                sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
-                throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
-
-            }
-        }
+        endpoint.signature_required = lua_toboolean(L, -1);
     }
     else
     {
         mlog(WARNING, "Signature requirement for %s was not explicitly set", request->id);
     }
     lua_pop(L, 1);
-}
 
-/*----------------------------------------------------------------------------
- * selectOutput
- *----------------------------------------------------------------------------*/
-EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, lua_State* L, const string& extension)
-{
-    /* Get Supported Outputs */
-    vector<content_t> outputs;
+    // get supported outputs
     lua_getfield(L, -1, ENDPOINT_OUTPUTS);
     if(lua_istable(L, -1))
     {
         const int tbl_size = lua_rawlen(L, -1);
-        if(tbl_size > 0)
+        for(int i = 0; i < tbl_size; i++)
         {
-            /* Read Outputs from Endpoint */
-            for(int i = 0; i < tbl_size; i++)
+            lua_rawgeti(L, -1, i + 1);
+            if(lua_isstring(L, -1))
             {
-                lua_rawgeti(L, -1, i + 1);
-                if(lua_isstring(L, -1))
+                const char* content_str = lua_tostring(L, -1);
+                content_t content = str2content(content_str);
+                if(content != UNKNOWN)
                 {
-                    const char* content_str = lua_tostring(L, -1);
-                    content_t content = str2content(content_str);
-                    if(content != UNKNOWN)
-                    {
-                        outputs.push_back(content);
-                    }
-                    else
-                    {
-                        mlog(WARNING, "Unrecognized output specified in %s: %s", request->resource, content_str);
-                    }
+                    endpoint.supported_outputs.push_back(content);
                 }
                 else
                 {
-                    mlog(WARNING, "Invalid entry encountered: %d, %d", i, lua_type(L, -1));
+                    mlog(WARNING, "Unrecognized output specified in %s: %s", request->resource, content_str);
                 }
-                lua_pop(L, 1);
             }
+            else
+            {
+                mlog(WARNING, "Invalid entry encountered: %d, %d", i, lua_type(L, -1));
+            }
+            lua_pop(L, 1);
         }
     }
     else
@@ -336,7 +270,73 @@ EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, lua_State
         mlog(WARNING, "Output for %s was not explicitly set", request->resource);
     }
     lua_pop(L, 1);
+}
 
+/*----------------------------------------------------------------------------
+ * logRequest
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::logRequest (Request* request, const endpoint_t& endpoint)
+{
+    mlog(endpoint.log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
+
+}
+
+/*----------------------------------------------------------------------------
+ * checkRole
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::checkRole (Request* request, const endpoint_t& endpoint)
+{
+    if(!endpoint.allowed_roles.empty())
+    {
+        /* Get and Check Roles from Request */
+        const char* org_roles_hdr = request->getHdrOrgRoles();
+        List<string*>* user_roles = StringLib::split(org_roles_hdr, StringLib::size(org_roles_hdr), ' ');
+        bool match_found = false;
+        for(const string& role: endpoint.allowed_roles)
+        {
+            for(int i = 0; i < user_roles->length(); i++)
+            {
+                if(role == *user_roles->get(i))
+                {
+                    match_found = true;
+                    break;
+                }
+            }
+        }
+
+        /* Handle No Matching Role Found */
+        if(!match_found)
+        {
+            FString error_msg("User must be a member to execute this endpoint");
+            sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * checkSignature
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::checkSignature (Request* request, const endpoint_t& endpoint)
+{
+    if(endpoint.signature_required)
+    {
+        const bool is_signed = request->verifyHdrSignature(request->getHdrAccount());
+        if(!is_signed)
+        {
+            FString error_msg("User must use a signed request for this endpoint");
+            sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
+            throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
+
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * selectOutput
+ *----------------------------------------------------------------------------*/
+EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, const endpoint_t& endpoint, const string& extension)
+{
     /* Select Output */
     string* accept_hdr;
     if(request->headers.find("Accept", &accept_hdr)) // user requested output via header
@@ -348,7 +348,7 @@ EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, lua_State
             sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
-        else if(std::find(outputs.begin(), outputs.end(), accepted_content) == outputs.end())
+        else if(std::find(endpoint.supported_outputs.begin(), endpoint.supported_outputs.end(), accepted_content) == endpoint.supported_outputs.end())
         {
             FString error_msg("Endpoint %s does not support %s output", request->resource, content2str(accepted_content));
             sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
@@ -365,7 +365,7 @@ EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, lua_State
             sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
-        else if(std::find(outputs.begin(), outputs.end(), extension_content) == outputs.end())
+        else if(std::find(endpoint.supported_outputs.begin(), endpoint.supported_outputs.end(), extension_content) == endpoint.supported_outputs.end())
         {
             FString error_msg("Endpoint %s does not support %s output", request->resource, content2str(extension_content));
             sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
@@ -374,9 +374,9 @@ EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, lua_State
         return extension_content; // use requested output
 
     }
-    else if(!outputs.empty()) // nothing was requested
+    else if(!endpoint.supported_outputs.empty()) // nothing was requested
     {
-        return outputs.front(); // use first output provided by endpoint
+        return endpoint.supported_outputs.front(); // use first output provided by endpoint
     }
     else // nothing is provided or requested
     {
@@ -401,7 +401,7 @@ void LuaEndpoint::checkMemoryUsage(Request* request)
 /*----------------------------------------------------------------------------
  * executeEndpoint
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_t selected_output, const string& arguments)
+void LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, const string& arguments, content_t selected_output)
 {
     handler_f handler = retrieveHandler(selected_output); // returns NULL if no handler is found
     if(handler)
@@ -437,13 +437,14 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Execute Lua Script */
     try
     {
-        loadLuaScript(request, &engine, script.path.c_str()); // throws on error
-        logRequest(request, engine.getLuaState()); // logs request
-        checkRole(request, engine.getLuaState()); // throws on error
-        checkSignature(request, engine.getLuaState()); // throws on error
+        endpoint_t endpoint;
+        loadLuaScript(request, &engine, script.path, endpoint); // throws on error
+        logRequest(request, endpoint); // logs request
+        checkRole(request, endpoint); // throws on error
+        checkSignature(request, endpoint); // throws on error
+        content_t selected_output = selectOutput(request, endpoint, script.extension); // throws on error, returns output format
         checkMemoryUsage(request); // throws on error
-        content_t selected_output = selectOutput(request, engine.getLuaState(), script.extension); // throws on error, returns output format
-        executeEndpoint(request, &engine, selected_output, script.argument.c_str()); // executes registered handler, throws on error
+        executeEndpoint(request, &engine, script.argument, selected_output); // executes registered handler, throws on error
     }
     catch(const RunTimeException& e)
     {
