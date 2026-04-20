@@ -1,12 +1,26 @@
---
--- ENDPOINT:    /source/gedi01bp
---
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    local json = require("json")
+    local proxy = require("proxy")
 
-local json = require("json")
-local proxy = require("proxy")
+    local rqst = json.decode(arg[1])
+    local resources = rqst["resources"]
+    local parms = rqst["parms"]
 
-local rqst = json.decode(arg[1])
-local resources = rqst["resources"]
-local parms = rqst["parms"]
+    proxy.proxy(resources, parms, "swotl2", "swotl2var")
+end
 
-proxy.proxy(resources, parms, "swotl2", "swotl2var")
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "SWOT L2 Parallel Subsetter",
+    description = "Spatially and temporally subsets multiple SWOT L2 granules with additional filters (s-series)",
+    logging = core.CRITICAL,
+    roles = {},
+    signed = false,
+    outputs = {"binary", "arrow"}
+}

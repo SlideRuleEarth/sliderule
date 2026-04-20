@@ -1,12 +1,26 @@
---
--- ENDPOINT:    /source/gedi01bp
---
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    local json = require("json")
+    local proxy = require("proxy")
 
-local json = require("json")
-local proxy = require("proxy")
+    local rqst = json.decode(arg[1])
+    local resources = rqst["resources"]
+    local parms = rqst["parms"]
 
-local rqst = json.decode(arg[1])
-local resources = rqst["resources"]
-local parms = rqst["parms"]
+    proxy.proxy(resources, parms, "gedi01b", "gedi01brec")
+end
 
-proxy.proxy(resources, parms, "gedi01b", "gedi01brec")
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "GEDI 1B Parallel Subsetter",
+    description = "Spatially and temporally subsets waveforms from multiple GEDI 1B granules with additional filters (s-series)",
+    logging = core.CRITICAL,
+    roles = {},
+    signed = false,
+    outputs = {"binary", "arrow"}
+}

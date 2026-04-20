@@ -82,6 +82,12 @@ class LuaEngine
             INVALID_MODE
         } mode_t;
 
+        typedef struct {
+            string path;
+            string argument;
+            string extension;
+        } script_t;
+
         typedef int (*luaOpenLibFunc) (lua_State* L);
 
         typedef void (*luaStepHook) (lua_State *L, lua_Debug *ar);
@@ -107,7 +113,7 @@ class LuaEngine
         static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
         static void         showStack       (lua_State* l, const char* prefix=NULL);
-        static const char*  sanitize        (const char* url, const char** argument);
+        static script_t     sanitize        (const char* resource);
         static void         abortHook       (lua_State* L, lua_Debug *ar);
 
         lua_State*          getLuaState     (void);
@@ -172,9 +178,6 @@ class LuaEngine
         uint32_t                        traceId;
         protectedThread_t*              pInfo;
         directThread_t*                 dInfo;
-
-        static const char*              pathPrefix;
-        static int                      pathPrefixLength; // does not include null terminator
 
         /*--------------------------------------------------------------------
          * Methods

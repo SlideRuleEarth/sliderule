@@ -80,13 +80,13 @@ class LuaEndpoint: public EndpointObject
 
         void                handleRequest       (Request* request) override;
 
-        static void         loadLuaScript       (Request* request, LuaEngine* engine, const char* script);
+        static void         loadLuaScript       (Request* request, LuaEngine* engine, const string& script);
         static void         logRequest          (Request* request, lua_State* L);
         static void         checkRole           (Request* request, lua_State* L);
         static void         checkSignature      (Request* request, lua_State* L);
-        static content_t    selectOutput        (Request* request, lua_State* L);
+        static content_t    selectOutput        (Request* request, lua_State* , const string& extension);
         static void         checkMemoryUsage    (Request* request);
-        static void         executeEndpoint     (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
+        static void         executeEndpoint     (Request* request, LuaEngine* engine, content_t selected_output, const string& arguments);
 
         static void*        requestThread       (void* parm);
 };

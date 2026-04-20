@@ -53,9 +53,6 @@ Mutex LuaEngine::pkgInitTableMutex;
 
 std::atomic<uint64_t> LuaEngine::engineIds{1};
 
-const char* LuaEngine::pathPrefix = NULL;
-int LuaEngine::pathPrefixLength = 0;
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -177,8 +174,6 @@ LuaEngine::~LuaEngine(void)
  *----------------------------------------------------------------------------*/
 void LuaEngine::init(void)
 {
-    pathPrefix = LUA_RESOURCE_PATH;
-    pathPrefixLength = StringLib::size(pathPrefix);
 }
 
 /*----------------------------------------------------------------------------
@@ -359,53 +354,66 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
 /*----------------------------------------------------------------------------
  * sanitize
  *
- *  Note: must delete returned string
+ *  Examples:
+ *      source/endpoint.json/arg --> .path=/usr/local/etc/sliderule/endpoint, .argument=arg, .extension=json
+ *      source/endpoint.arrow?arg --> .path=/usr/local/etc/sliderule/endpoint, .argument=arg, .extension=arrow
  *----------------------------------------------------------------------------*/
-const char* LuaEngine::sanitize (const char* url, const char** argument)
+LuaEngine::script_t LuaEngine::sanitize (const char* resource)
 {
-    assert(url);
-    assert(argument);
+    assert(resource);
+    script_t script;
 
-    // the following two urls will
-    // result in resource=endpoint and argument=arg
-    // https://cluster.domain/source/endpoint/arg
-    // https://cluster.domain/source/endpoint?arg
-    int url_len = 0;
+    // get lengths
+    //  endpoint.json/arg
+    //  |----------------| => resource_len
+    //  |------------| => endpoint_len
+    //  |-------| => script_len
+    int resource_len = 0;
     int endpoint_len = 0;
-
-    // get endpoint length
+    int script_len = 0;
     while(true)
     {
-        if( (url[url_len] == PATH_DELIMETER) ||
-            (url[url_len] == '?') ||
-            (url[url_len] == '\0') )
+        if(resource[resource_len] == '\0')
         {
-            endpoint_len = url_len;
+            if(endpoint_len == 0) endpoint_len = resource_len;
+            if(script_len == 0) script_len = resource_len;
             break;
         }
-        url_len++;
+
+        if( (resource[resource_len] == '/') ||
+            (resource[resource_len] == '?') )
+        {
+            if(endpoint_len == 0) endpoint_len = resource_len;
+            if(script_len == 0) script_len = resource_len;
+        }
+
+        if(resource[resource_len] == '.')
+        {
+            if(script_len == 0) script_len = resource_len;
+        }
+
+        resource_len++;
     }
 
-    // get url length
-    while(url[url_len] != '\0')
-    {
-        url_len++;
-    }
+    // set path for the resource
+    script.path = LUA_RESOURCE_PATH + string(resource, script_len) + ".lua";
 
     // set argument if it exists
-    const int argument_len = url_len - endpoint_len;
+    const int argument_len = resource_len - endpoint_len;
     if(argument_len > 1) // 1 accounts for / and ?
     {
-        *argument = &url[endpoint_len + 1];
+        script.argument = &resource[endpoint_len + 1];
     }
 
-    // build and return the path to the resource
-    const size_t len = pathPrefixLength + endpoint_len + 5; // 4 for ".lua", 1 for null termination
-    char* resource = new char [len];
-    StringLib::copy(resource, pathPrefix, pathPrefixLength + 1);
-    StringLib::copy(&resource[pathPrefixLength], url, endpoint_len + 1);
-    StringLib::copy(&resource[pathPrefixLength + endpoint_len], ".lua", 5);
-    return resource;
+    // set extension
+    const int extension_len = endpoint_len - (script_len + 1);
+    if(extension_len > 0)
+    {
+        script.extension = string(&resource[script_len + 1], extension_len);
+    }
+
+    // return script structure
+    return script;
 }
 
 /*----------------------------------------------------------------------------
