@@ -73,7 +73,7 @@ class StringLib
         static char*            format          (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static int              formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static char*            copy            (char* dst, const char* src, int _size);
-        static char*            find            (const char* big, const char* little);
+        static char*            find            (const char* big, const char* little, int big_len=-1, int little_len=-1);
         static char*            find            (const char* str, char c, bool first=true);
         static int              size            (const char* str);
         static int              nsize           (const char* str, int size);

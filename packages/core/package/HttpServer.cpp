@@ -658,21 +658,15 @@ int HttpServer::onWrite(int fd)
                             state->header_sent = true;
                             connection->streaming = true;
                             const char* hdr_str_ptr = reinterpret_cast<const char*>(state->ref.data);
-                            while((hdr_str_ptr = strstr(hdr_str_ptr, "Content-Type:")) != NULL)
+                            static const FString json_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::JSON));
+                            static const FString text_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::TEXT));
+                            if(strncmp(hdr_str_ptr, json_content_type.c_str(), MIN(json_content_type.size(), state->ref.size)) == 0)
                             {
-                                static const FString json_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::JSON));
-                                static const FString text_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::TEXT));
-                                if(strncmp(hdr_str_ptr, json_content_type.c_str(), json_content_type.size()) == 0)
-                                {
-                                    connection->streaming = false;
-                                    break;
-                                }
-                                else if(strncmp(hdr_str_ptr, text_content_type.c_str(), text_content_type.size()) == 0)
-                                {
-                                    connection->streaming = false;
-                                    break;
-                                }
-                                hdr_str_ptr += 13;
+                                connection->streaming = false;
+                            }
+                            else if(strncmp(hdr_str_ptr, text_content_type.c_str(), MIN(text_content_type.size(), state->ref.size)) == 0)
+                            {
+                                connection->streaming = false;
                             }
                         }
                         ref_complete = true;

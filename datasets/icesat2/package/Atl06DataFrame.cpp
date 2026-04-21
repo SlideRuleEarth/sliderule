@@ -298,7 +298,6 @@ void* Atl06DataFrame::subsettingThread (void* parm)
             {
                 atl06.anc_data.addToGDF(df, segment);
             }
-
         }
     }
     catch(const RunTimeException& e)

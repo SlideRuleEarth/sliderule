@@ -245,10 +245,10 @@ char* StringLib::copy(char* dst, const char* src, int _size)
  *
  *  returns NULL if string not found
  *----------------------------------------------------------------------------*/
-char* StringLib::find(const char* big, const char* little)
+char* StringLib::find(const char* big, const char* little, int big_len, int little_len)
 {
-    const int little_len = strlen(little);
-    const int big_len = strlen(big);
+    if(big_len < 0) big_len = strlen(big);
+    if(little_len < 0) little_len = strlen(little);
 
     if(little_len > 0)
     {

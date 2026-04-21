@@ -399,38 +399,39 @@ const char* EndpointObject::content2str (content_t content)
 /*----------------------------------------------------------------------------
  * buildheader
  *----------------------------------------------------------------------------*/
-int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type, int content_length, const char* transfer_encoding)
+string EndpointObject::buildheader (code_t code, const char* content_type, int content_length, const char* transfer_encoding)
 {
-    char str_buf[MAX_HDR_SIZE];
-
-    StringLib::format(hdr_str, MAX_HDR_SIZE, "HTTP/1.1 %d %s\r\nServer: %s\r\n", code, code2str(code), serverHead.c_str());
-
-    if(content_type)        StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Type: %s\r\n",         content_type),      MAX_HDR_SIZE);
-    if(content_length >= 0) StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Content-Length: %d\r\n",       content_length),    MAX_HDR_SIZE);
-    if(transfer_encoding)   StringLib::concat(hdr_str, StringLib::format(str_buf, MAX_HDR_SIZE, "Transfer-Encoding: %s\r\n",    transfer_encoding), MAX_HDR_SIZE);
-
-    StringLib::concat(hdr_str, "\r\n",  MAX_HDR_SIZE);
-
-    return StringLib::size(hdr_str);
+    string hdr;
+    hdr.reserve(MAX_STR_SIZE);
+    hdr = FString("HTTP/1.1 %d %s\r\nServer: %s\r\n", code, code2str(code), serverHead.c_str()).c_str();
+    if(content_type) hdr += FString("Content-Type: %s\r\n", content_type).c_str();
+    if(content_length >= 0) hdr += FString("Content-Length: %d\r\n", content_length).c_str();
+    if(transfer_encoding) hdr += FString("Transfer-Encoding: %s\r\n", transfer_encoding).c_str();
+    hdr += "\r\n";
+    return hdr;
 }
 
 /*----------------------------------------------------------------------------
  * sendHeader
  *----------------------------------------------------------------------------*/
-void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* content_type, Publisher* rspq, const char* msg, const char* transfer_encoding)
+void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* content_type, Publisher* rspq, const char* msg, bool chunked)
 {
-    char header[MAX_HDR_SIZE];
     if(msg)
     {
         const int result_length = StringLib::size(msg);
-        const int header_length = buildheader(header, http_code, content_type, result_length, transfer_encoding);
-        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+        const string header = buildheader(http_code, content_type, result_length, NULL);
+        rspq->postCopy(header.data(), header.size(), SystemConfig::settings().publishTimeoutMs.value);
         rspq->postCopy(msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
+    }
+    else if(chunked)
+    {
+        const string header = buildheader(http_code, content_type, -1, "chunked");
+        rspq->postCopy(header.data(), header.size(), SystemConfig::settings().publishTimeoutMs.value);
     }
     else
     {
-        const int header_length = buildheader(header, http_code, content_type, 0, transfer_encoding);
-        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+        const string header = buildheader(http_code, content_type, 0, NULL);
+        rspq->postCopy(header.data(), header.size(), SystemConfig::settings().publishTimeoutMs.value);
     }
 }
 

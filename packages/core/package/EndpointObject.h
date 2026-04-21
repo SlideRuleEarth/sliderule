@@ -57,8 +57,6 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const char* OBJECT_TYPE;
-
-        static const int MAX_HDR_SIZE = MAX_STR_SIZE;
         static const int EXPECTED_MAX_HEADER_FIELDS = 32;
 
         /*--------------------------------------------------------------------
@@ -152,8 +150,8 @@ class EndpointObject: public LuaObject
         static const char*  code2str            (code_t code);
         static content_t    str2content         (const char* str);
         static const char*  content2str         (content_t content);
-        static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL);
-        static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg, const char* transfer_encoding=NULL);
+        static string       buildheader         (code_t code, const char* content_type, int content_length, const char* transfer_encoding);
+        static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg, bool chunked=false);
 
         static void         registerHandler     (content_t content, handler_f handler);
         static handler_f    retrieveHandler     (content_t content);

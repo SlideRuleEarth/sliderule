@@ -131,7 +131,7 @@ LuaEngine::LuaEngine(uint32_t trace_id, luaStepHook hook):
     dInfo(NULL)
 {
     engineId = engineIds++;
-    traceId = start_trace(CRITICAL, trace_id, "lua_engine", "{\"script\":\"%s\",\"id\":%ld}", script, engineId);
+    traceId = start_trace(CRITICAL, trace_id, "lua_engine", "{\"id\":%ld}", engineId);
     engineActive.store(true, std::memory_order_release);
     L = createState(hook);
 }

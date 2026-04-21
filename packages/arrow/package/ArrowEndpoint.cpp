@@ -66,13 +66,13 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     lua_getfield(L, -1, ENDPOINT_MAIN);
     if(!lua_isfunction(L, -1))
     {
-        FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
+        const FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
         sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
         throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
     /* Execute Main Function */
-    int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0); // function is popped from stack
+    const int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0); // function is popped from stack
 
     /* Log Status */
     if(lua_status != LUA_OK)
@@ -130,7 +130,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                             if(!hdr_sent)
                             {
                                 hdr_sent = true;
-                                sendHeader(OK, content2str(ARROW), &rspq, NULL, "chunked");
+                                sendHeader(OK, content2str(ARROW), &rspq, NULL, true);
                             }
 
                             /* Post Arrow Bytes */
