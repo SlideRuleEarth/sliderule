@@ -157,6 +157,7 @@ HttpServer::Connection::~Connection (void)
         rsps_state.rspq->dereference(rsps_state.ref);
         rsps_state.ref_status = 0;
     }
+
     delete rsps_state.rspq;
 
     /* Free Id */
@@ -656,7 +657,6 @@ int HttpServer::onWrite(int fd)
                         if(!state->header_sent)
                         {
                             state->header_sent = true;
-                            connection->streaming = true;
                             const char* hdr_str_ptr = reinterpret_cast<const char*>(state->ref.data);
                             static const FString json_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::JSON));
                             static const FString text_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::TEXT));
@@ -667,6 +667,10 @@ int HttpServer::onWrite(int fd)
                             else if(strncmp(hdr_str_ptr, text_content_type.c_str(), MIN(text_content_type.size(), state->ref.size)) == 0)
                             {
                                 connection->streaming = false;
+                            }
+                            else // streaming content
+                            {
+                                connection->streaming = true;
                             }
                         }
                         ref_complete = true;
