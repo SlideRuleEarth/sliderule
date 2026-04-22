@@ -1,11 +1,21 @@
---
--- ENDPOINT:    /source/cre
---
--- INPUT:       None
---
--- OUTPUT:      <list of running containers as json>
---
+-------------------------------------------------------
+-- main
+-------------------------------------------------------
+local function main()
+    local http_code, size, response, status = cre.list()
+    print(status, http_code, size, response)
+    return response
+end
 
-local http_code, size, response, status = cre.list()
-print(status, http_code, size, response)
-return response
+-------------------------------------------------------
+-- endpoint
+-------------------------------------------------------
+return {
+    main = main,
+    name = "List Containers",
+    description = "List available docker images that can be executed by a user",
+    logging = core.CRITICAL,
+    roles = {"member", "owner"},
+    signed = true,
+    outputs = {"json"}
+}
