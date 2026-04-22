@@ -65,7 +65,6 @@ class GediDataFrame: public GeoDataFrame
                         GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name);
 
         ~GediDataFrame (void) override;
-        okey_t getKey  (void) const override;
 
     protected:
 
@@ -84,7 +83,6 @@ class GediDataFrame: public GeoDataFrame
         Publisher*        outQ;
         GediFields*       parms;
         H5Object*         hdf;
-        okey_t            dfKey;
         const char*       beamStr;
         char              group[9];
 

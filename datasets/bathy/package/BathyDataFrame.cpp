@@ -123,16 +123,25 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     },
     {
         {"spot",                &spot},
-        {"beam",                &beam},
-        {"track",               &track},
-        {"pair",                &pair},
+        {"cycle",               &cycle},
+        {"region",              &region},
+        {"rgt",                 &rgt},
+        {"gt",                  &gt},
+        {"granule",             &granule},
         {"utm_zone",            &utm_zone},
         {"utm_is_north",        &utm_is_north},
         {"bounding_polygon_lat",&bounding_polygon_lat},
         {"bounding_polygon_lon",&bounding_polygon_lon}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
-    beam(beam_str),
+    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Fields::calculateBeamKey(beam)), // dfKey
+    spot(0, META_COLUMN),
+    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
+    region(_parms->granuleFields.region.value, META_COLUMN),
+    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
+    gt(0, META_COLUMN),
+    granule(_hdf03->name, META_SOURCE_ID),
+    utm_zone(0, META_COLUMN),
     active(false),
     pid(NULL),
     parmsPtr(_parms),
@@ -142,14 +151,10 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     rqstQ(NULL),
     signalConfColIndex(0),
     readTimeoutMs(parms.readTimeout.value * 1000),
-    valid(false)
+    beam(StringLib::duplicate(beam_str))
 {
     /* Create Request Queue Publisher (if supplied) */
     if(rqstq_name) rqstQ = new Publisher(rqstq_name);
-
-    /* Set MetaData Sent as Columns */
-    spot.setEncodingFlags(META_COLUMN);
-    utm_zone.setEncodingFlags(META_COLUMN);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
@@ -165,10 +170,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {
             signalConfColIndex = static_cast<int>(parms.surfaceType.value);
         }
-
-        /* Set Track and Pair ( gt<track><pair> - e.g. gt1l )*/
-        track = static_cast<int>(beam.value[2]) - 0x30;
-        pair = beam.value[3] == 'l' ? Icesat2Fields::RPT_L : Icesat2Fields::RPT_R;
 
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);
@@ -196,6 +197,7 @@ BathyDataFrame::~BathyDataFrame (void)
     active.store(false);
     delete pid;
     delete rqstQ;
+    delete [] beam;
     if(hdf03) hdf03->releaseLuaObject();
     if(parmsPtr) parmsPtr->releaseLuaObject();
     if(bathyMask) bathyMask->releaseLuaObject();
@@ -205,9 +207,9 @@ BathyDataFrame::~BathyDataFrame (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
-    segment_lat    (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/reference_photon_lat").c_str()),
-    segment_lon    (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/reference_photon_lon").c_str()),
-    segment_ph_cnt (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_ph_cnt").c_str()),
+    segment_lat    (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/segment_ph_cnt").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -420,31 +422,31 @@ void BathyDataFrame::Region::rasterregion (const BathyDataFrame& dataframe)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Region& region):
-    sc_orient           (dataframe.hdf03,                                                "/orbit_info/sc_orient"),
-    bounding_polygon_lat(dataframe.hdf03,                                                "/orbit_info/bounding_polygon_lat1"),
-    bounding_polygon_lon(dataframe.hdf03,                                                "/orbit_info/bounding_polygon_lon1"),
-    velocity_sc         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
-    segment_dist_x      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
-    solar_elevation     (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/solar_elevation").c_str(), 0, region.first_segment, region.num_segments),
-    sigma_h             (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_h").c_str(),         0, region.first_segment, region.num_segments),
-    sigma_along         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_along").c_str(),     0, region.first_segment, region.num_segments),
-    sigma_across        (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_across").c_str(),    0, region.first_segment, region.num_segments),
-    ref_azimuth         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/ref_azimuth").c_str(),     0, region.first_segment, region.num_segments),
-    ref_elev            (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/ref_elev").c_str(),        0, region.first_segment, region.num_segments),
-    geoid               (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geophys_corr/geoid").c_str(),          0, region.first_segment, region.num_segments),
-    dem_h               (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geophys_corr/dem_h").c_str(),          0, region.first_segment, region.num_segments),
-    dist_ph_along       (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/dist_ph_along").c_str(),       0, region.first_photon,  region.num_photons),
-    dist_ph_across      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/dist_ph_across").c_str(),      0, region.first_photon,  region.num_photons),
-    h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
-    weight_ph           (dataframe.parms.granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
-    lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
-    lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
-    delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
-    bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
+    sc_orient           (dataframe.hdf03,                                  "/orbit_info/sc_orient"),
+    bounding_polygon_lat(dataframe.hdf03,                                  "/orbit_info/bounding_polygon_lat1"),
+    bounding_polygon_lon(dataframe.hdf03,                                  "/orbit_info/bounding_polygon_lon1"),
+    velocity_sc         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
+    segment_dist_x      (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
+    solar_elevation     (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/solar_elevation").c_str(), 0, region.first_segment, region.num_segments),
+    sigma_h             (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/sigma_h").c_str(),         0, region.first_segment, region.num_segments),
+    sigma_along         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/sigma_along").c_str(),     0, region.first_segment, region.num_segments),
+    sigma_across        (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/sigma_across").c_str(),    0, region.first_segment, region.num_segments),
+    ref_azimuth         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/ref_azimuth").c_str(),     0, region.first_segment, region.num_segments),
+    ref_elev            (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/ref_elev").c_str(),        0, region.first_segment, region.num_segments),
+    geoid               (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geophys_corr/geoid").c_str(),          0, region.first_segment, region.num_segments),
+    dem_h               (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geophys_corr/dem_h").c_str(),          0, region.first_segment, region.num_segments),
+    dist_ph_along       (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/dist_ph_along").c_str(),       0, region.first_photon,  region.num_photons),
+    dist_ph_across      (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/dist_ph_across").c_str(),      0, region.first_photon,  region.num_photons),
+    h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
+    quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
+    weight_ph           (dataframe.parms.granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
+    lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
+    delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (dataframe.hdf03, FString("%s/%s", dataframe.beam, "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(dataframe.readTimeoutMs, true);
     bounding_polygon_lat.join(dataframe.readTimeoutMs, true);
@@ -503,7 +505,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         bool on_boundary = true; // true when a spatial subsetting boundary is encountered
 
         /* Set Spot*/
-        dataframe.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)dataframe.track.value, dataframe.pair.value);
+        dataframe.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], dataframe.beam);
 
         /* Get UTM Transformation and Set UTM Zone */
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
@@ -532,7 +534,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld)!", parms.resource.value.c_str(), dataframe.beam.value.c_str(), current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld)!", parms.resource.value.c_str(), dataframe.beam, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
@@ -670,7 +672,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
+        alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.active, "Failure on resource %s beam %s: %s", parms.resource.value.c_str(), dataframe.beam, e.what());
         dataframe.inError = true;
     }
 

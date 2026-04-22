@@ -106,7 +106,8 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt},
         {"granule",                 &granule}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
+    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
@@ -115,7 +116,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
-    beam(FString("%s", beam_str).c_str(true)),
+    beam(StringLib::duplicate(beam_str)),
     outQ(NULL),
     parms(_parms),
     hdf13(_hdf13)
@@ -125,9 +126,6 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
-
-    /* Calculate Key */
-    dfKey = Icesat2Fields::calculateBeamKey(beam);
 
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
@@ -151,14 +149,6 @@ Atl13DataFrame::~Atl13DataFrame (void)
     delete outQ;
     parms->releaseLuaObject();
     hdf13->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Atl13DataFrame::getKey(void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

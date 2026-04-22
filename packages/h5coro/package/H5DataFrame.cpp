@@ -84,11 +84,10 @@ int H5DataFrame::luaCreate(lua_State* L)
  *----------------------------------------------------------------------------*/
 H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
                           const char* time_column, const char* x_column, const char* y_column, const char* z_column):
-    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group}}, _parms->crs.value.c_str()),
+    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group}}, _parms->crs.value.c_str(), _df_key),
     h5obj(_h5obj),
     data(_parms->variables, _h5obj, _group, _parms->col.value, _parms->startRow.value, _parms->numRows.value),
     group(_group, Field::META_SOURCE_ID),
-    dfKey(_df_key),
     timeout(_timeout), // milliseconds
     timeColumn(time_column),
     xColumn(x_column),
@@ -105,14 +104,6 @@ H5DataFrame::~H5DataFrame (void)
 {
     delete joinPid;
     h5obj->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * luaJoin - :join(<timeout>)
- *----------------------------------------------------------------------------*/
-okey_t H5DataFrame::getKey (void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

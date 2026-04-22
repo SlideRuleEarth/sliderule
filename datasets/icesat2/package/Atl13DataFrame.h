@@ -125,7 +125,6 @@ class Atl13DataFrame: public GeoDataFrame
         Publisher*          outQ;
         Icesat2Fields*      parms;
         H5Object*           hdf13;  // atl13 granule
-        okey_t              dfKey;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -134,7 +133,6 @@ class Atl13DataFrame: public GeoDataFrame
                         Atl13DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms,
                                              H5Object* _hdf13, const char* outq_name);
                         ~Atl13DataFrame     (void) override;
-        okey_t          getKey              (void) const override;
         static void*    subsettingThread    (void* parm);
 };
 

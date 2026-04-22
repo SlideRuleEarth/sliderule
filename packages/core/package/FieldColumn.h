@@ -270,6 +270,21 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldArray<float
     }
     return column;
 }
+template<int N>
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldArray<double, N>>& v, long start_index, long num_elements) {
+    const long total_elements = num_elements * N;
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < (start_index + num_elements); i++) {
+        for(int j = 0; j < N; j++) {
+            column.data[index++] = static_cast<double>(v[i][j]);
+        }
+    }
+    return column;
+}
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<string>>& v, long start_index, long num_elements) {
     (void)v;
     (void)start_index;

@@ -135,7 +135,6 @@ class Atl06DataFrame: public GeoDataFrame
         Publisher*          outQ;
         Icesat2Fields*      parms;
         H5Object*           hdf06;
-        okey_t              dfKey;
         const char*         beam;
 
         /*--------------------------------------------------------------------
@@ -144,7 +143,6 @@ class Atl06DataFrame: public GeoDataFrame
 
                         Atl06DataFrame  (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name);
                         ~Atl06DataFrame (void) override;
-        okey_t          getKey          (void) const override;
         static void*    subsettingThread(void* parm);
 };
 

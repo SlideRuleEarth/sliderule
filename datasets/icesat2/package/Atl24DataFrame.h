@@ -148,7 +148,6 @@ class Atl24DataFrame: public GeoDataFrame
         Publisher*          outQ;
         Icesat2Fields*      parms;
         H5Object*           hdf24;  // atl24 granule
-        okey_t              dfKey;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -156,7 +155,6 @@ class Atl24DataFrame: public GeoDataFrame
 
                         Atl24DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name);
                         ~Atl24DataFrame     (void) override;
-        okey_t          getKey              (void) const override;
         static void*    subsettingThread    (void* parm);
 };
 

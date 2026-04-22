@@ -108,12 +108,13 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt},
         {"granule",             &granule}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value)),
+    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
     granule(_hdf24->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
-    beam(FString("%s", beam_str).c_str(true)),
+    beam(StringLib::duplicate(beam_str)),
     outQ(NULL),
     parms(_parms),
     hdf24(_hdf24)
@@ -138,9 +139,6 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     cycle = parms->granuleFields.cycle.value;
     region = parms->granuleFields.region.value;
     rgt = parms->granuleFields.rgt.value;
-
-    /* Calculate Key */
-    dfKey = Icesat2Fields::calculateBeamKey(beam);
 
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
@@ -167,14 +165,6 @@ Atl24DataFrame::~Atl24DataFrame (void)
     delete outQ;
     parms->releaseLuaObject();
     hdf24->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Atl24DataFrame::getKey(void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

@@ -940,7 +940,7 @@ FieldUntypedColumn* GeoDataFrame::getUnsafe (const char* key) const
  *----------------------------------------------------------------------------*/
 okey_t GeoDataFrame::getKey (void) const
 {
-    return 0;
+    return dfKey;
 }
 
 /*----------------------------------------------------------------------------
@@ -1227,7 +1227,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
                             const std::initializer_list<FieldMap<Field>::init_entry_t>& meta_list,
-                            const char* _crs):
+                            const char* _crs, okey_t df_key):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
     inError(false),
@@ -1239,6 +1239,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     yColumn(NULL),
     zColumn(NULL),
     crs(_crs == NULL ? "" : _crs),
+    dfKey(df_key),
     active(true),
     receivePid(NULL),
     runPid(NULL),

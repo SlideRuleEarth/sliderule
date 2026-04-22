@@ -110,7 +110,8 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt},
         {"granule",                 &granule}
     },
-    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
+    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
+    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -123,14 +124,10 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     outQ(NULL),
     parms(_parms),
     hdf06(_hdf06),
-    dfKey(0),
     beam(StringLib::duplicate(beam_str))
 {
     assert(_parms);
     assert(_hdf06);
-
-    /* Calculate Key */
-    dfKey = Icesat2Fields::calculateBeamKey(beam);
 
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
@@ -157,14 +154,6 @@ Atl06DataFrame::~Atl06DataFrame (void)
     delete outQ;
     parms->releaseLuaObject();
     hdf06->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Atl06DataFrame::getKey (void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

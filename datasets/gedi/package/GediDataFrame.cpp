@@ -56,7 +56,8 @@
         {"track",   &track},
         {"granule", &granule}
     },
-    getCRS()),
+    getCRS(), // crs
+    beamIndexFromString(beam_str)), // dfKey
     beam(0, META_COLUMN),
     orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
     track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
@@ -67,7 +68,6 @@
     outQ(NULL),
     parms(_parms),
     hdf(_hdf),
-    dfKey(0),
     beamStr(StringLib::duplicate(beam_str)),
     group{0}
 {
@@ -75,14 +75,10 @@
     assert(_hdf);
 
     /* Resolve Beam */
-    const int beam_index = beamIndexFromString(beam_str);
-    StringLib::format(group, sizeof(group), "%s", GediFields::beam2group(beam_index));
+    StringLib::format(group, sizeof(group), "%s", GediFields::beam2group(static_cast<int>(dfKey)));
     GediFields::beam_t beam_id;
-    convertFromIndex(beam_index, beam_id);
+    convertFromIndex(static_cast<int>(dfKey), beam_id);
     beam = static_cast<uint8_t>(beam_id);
-
-    /* Set DataFrame Key */
-    dfKey = static_cast<okey_t>(beam_index);
 
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
@@ -101,14 +97,6 @@ GediDataFrame::~GediDataFrame (void)
     delete outQ;
     if(parms) parms->releaseLuaObject();
     if(hdf) hdf->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t GediDataFrame::getKey (void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

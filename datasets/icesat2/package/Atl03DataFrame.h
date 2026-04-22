@@ -228,7 +228,6 @@ class Atl03DataFrame: public GeoDataFrame
         H5Object*           hdf03;  // atl03 granule
         H5Object*           hdf08;  // atl08 granule
         H5Object*           hdf24;  // atl24 granule
-        okey_t              dfKey;
         bool                usePodppd;
         bool                useYapc006;
         bool                useYapc007;
@@ -242,7 +241,6 @@ class Atl03DataFrame: public GeoDataFrame
                                              H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24,
                                              const char* outq_name);
                         ~Atl03DataFrame     (void) override;
-        okey_t          getKey              (void) const override;
         static void*    subsettingThread    (void* parm);
 };
 

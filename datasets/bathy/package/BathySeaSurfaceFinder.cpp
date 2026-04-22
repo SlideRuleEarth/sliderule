@@ -42,7 +42,6 @@
 #include "BathyFields.h"
 #include "BathySeaSurfaceFinder.h"
 
-
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -280,7 +279,8 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Failed to find sea surface for beam %s at photon %ld: %s", df.beam.value.c_str(), p0, e.what());
+            FieldElement<uint8_t>* gt = reinterpret_cast<FieldElement<uint8_t>*>(df.getMetaData("gt", Field::FIELD, true));
+            mlog(e.level(), "Failed to find sea surface for beam %d at photon %ld: %s", gt ? gt->value : 0, p0, e.what());
             for(long i = p0; i < p1; i++)
             {
                 df.processing_flags[i] = df.processing_flags[i] | BathyFields::SEA_SURFACE_UNDETECTED;

@@ -97,15 +97,15 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     {
         {"granule",         &granule}
     },
-    CasalsFields::crsITRF2020()),
+    CasalsFields::crsITRF2020(), // crs
+    1), // dfKey
     granule(_hdf1b->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
     outQ(NULL),
     parms(_parms),
-    hdf1b(_hdf1b),
-    dfKey(1)
+    hdf1b(_hdf1b)
 {
     assert(_parms);
     assert(_hdf1b);
@@ -134,14 +134,6 @@ Casals1bDataFrame::~Casals1bDataFrame (void)
     delete outQ;
     parms->releaseLuaObject();
     hdf1b->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Casals1bDataFrame::getKey(void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

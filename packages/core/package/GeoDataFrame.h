@@ -190,8 +190,7 @@ class GeoDataFrame: public LuaObject, public Field
         void                        populateGeoColumns  (void);
         const FieldUntypedColumn&   operator[]          (const char* key) const;
         FieldUntypedColumn*         getUnsafe           (const char* key) const;
-
-        virtual okey_t              getKey              (void) const;
+        okey_t                      getKey              (void) const;
 
         const FieldColumn<time8_t>* getTimeColumn       (void) const;
         const FieldColumn<double>*  getXColumn          (void) const;
@@ -264,7 +263,7 @@ class GeoDataFrame: public LuaObject, public Field
                                             const char* meta_name,
                                             const struct luaL_Reg meta_table[],
                                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                                            const std::initializer_list<FieldMap<Field>::init_entry_t>& meta_list, const char* _crs=NULL);
+                                            const std::initializer_list<FieldMap<Field>::init_entry_t>& meta_list, const char* _crs=NULL, okey_t df_key=0);
         virtual         ~GeoDataFrame       (void) override;
 
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
@@ -310,6 +309,7 @@ class GeoDataFrame: public LuaObject, public Field
         string                          zColumnName;
 
         string                          crs;
+        okey_t                          dfKey;
 
         std::atomic<bool>               active;
         Thread*                         receivePid;

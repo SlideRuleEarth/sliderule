@@ -78,10 +78,12 @@ class BathyDataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* Meta Data */
-        FieldElement<string>        beam;               // ATL03 beam (i.e. gt1l, gt1r, gt2l, gt2r, gt3l, gt3r)
-        FieldElement<int>           track {0};          // ATL03 track (i.e. 1, 2, 3)
-        FieldElement<int>           pair;               // ATL03 pair (i.e. left, right)
-        FieldElement<int>           spot {0};           // ATL03 spot (1, 2, 3, 4, 5, 6)
+        FieldElement<uint8_t>       spot;
+        FieldElement<uint8_t>       cycle;
+        FieldElement<uint8_t>       region;
+        FieldElement<uint16_t>      rgt;
+        FieldElement<uint8_t>       gt;
+        FieldElement<string>        granule;
         FieldElement<int>           utm_zone;
         FieldElement<bool>          utm_is_north;
         FieldList<double>           bounding_polygon_lat;
@@ -189,7 +191,8 @@ class BathyDataFrame: public GeoDataFrame
         Publisher*                  rqstQ;
         int                         signalConfColIndex;
         int                         readTimeoutMs;
-        bool                        valid;
+        okey_t                      dfKey;
+        const char*                 beam;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -201,7 +204,6 @@ class BathyDataFrame: public GeoDataFrame
         static void*        subsettingThread            (void* parm);
         static float        calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
 
-        static int          luaIsValid                  (lua_State* L);
         static int          luaLength                   (lua_State* L);
 
         #ifdef __unittesting__

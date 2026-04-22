@@ -112,7 +112,6 @@ class Casals1bDataFrame: public GeoDataFrame
         Publisher*          outQ;
         CasalsFields*       parms;
         H5Object*           hdf1b;  // casals granule
-        okey_t              dfKey;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -120,7 +119,6 @@ class Casals1bDataFrame: public GeoDataFrame
 
                         Casals1bDataFrame   (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name);
                         ~Casals1bDataFrame  (void) override;
-        okey_t          getKey              (void) const override;
         static void*    subsettingThread    (void* parm);
 };
 

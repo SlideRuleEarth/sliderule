@@ -77,8 +77,9 @@ local function get_viirs(parms, rgps)
     local _,doy         = time.gps2gmt(rgps)
     local doy_8d_start  = ((doy - 1) & ~7) + 1
     local doy_8d_stop   = doy_8d_start + 7
-    local gps_start     = time.gmt2gps(string.format("%04d:%03d:00:00:00", parms["year"], doy_8d_start))
-    local gps_stop      = time.gmt2gps(string.format("%04d:%03d:00:00:00", parms["year"], doy_8d_stop))
+    local year          = parms["granule"]["year"]
+    local gps_start     = time.gmt2gps(string.format("%04d:%03d:00:00:00", year, doy_8d_start))
+    local gps_stop      = time.gmt2gps(string.format("%04d:%03d:00:00:00", year, doy_8d_stop))
     local year_start, month_start, day_start = time.gps2date(gps_start)
     local year_stop,  month_stop,  day_stop  = time.gps2date(gps_stop)
     if year_start ~= year_stop then

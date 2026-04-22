@@ -118,7 +118,8 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt},
         {"granule",             &granule}
     },
-    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value)),
+    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
+    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -129,7 +130,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
     signalConfColIndex(H5Coro::ALL_COLS),
-    beam(FString("%s", beam_str).c_str(true)),
+    beam(StringLib::duplicate(beam_str)),
     outQ(NULL),
     parms(_parms),
     hdf03(_hdf03),
@@ -182,9 +183,6 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         signalConfColIndex = static_cast<int>(parms->surfaceType.value);
     }
 
-    /* Calculate Key */
-    dfKey = Icesat2Fields::calculateBeamKey(beam);
-
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
@@ -209,14 +207,6 @@ Atl03DataFrame::~Atl03DataFrame (void)
     hdf03->releaseLuaObject();
     if(hdf08) hdf08->releaseLuaObject();
     if(hdf24) hdf24->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * getKey
- *----------------------------------------------------------------------------*/
-okey_t Atl03DataFrame::getKey(void) const
-{
-    return dfKey;
 }
 
 /*----------------------------------------------------------------------------
