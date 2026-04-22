@@ -131,14 +131,21 @@ def atl13_route():
             if lake_refid: break # lake has been found
         # perform general query
         global_granules = _query_multiple(db, data)
-        if global_granules is not None:
+        # combine granule results
+        if (global_granules is not None) and (lake_granules is not None):
             granules = list(set(global_granules) & set(lake_granules))
-        else:
+        elif (global_granules is not None):
+            granules = global_granules.tolist()
+        elif (lake_granules is not None):
             granules = lake_granules.tolist()
+        else:
+            granules = []
+        # set reference id
+        refid = int(lake_refid) if lake_refid is not None else None
         # return response
         return json.dumps({
             "hits": len(granules),
-            "refid": int(lake_refid),
+            "refid": refid,
             "granules": granules
         })
     except Exception as e:
