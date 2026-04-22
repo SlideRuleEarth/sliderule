@@ -4,7 +4,7 @@ local json = require("json")
 -- Setup --
 
 local endpoint  = core.endpoint()
-local server    = core.httpd(10081):attach(endpoint, "/source"):untilup()
+local server    = core.httpd({["/source"]=endpoint},10081):untilup()
 local client    = streaming.http("127.0.0.1", 10081)
 
 -- Self Test --

@@ -18,9 +18,10 @@ local source_endpoint = core.endpoint():global("SourceEndpoint")
 local arrow_endpoint = arrow.endpoint():global("ArrowEndpoint")
 
 -- Run Application HTTP Server --
-local app_server = core.httpd(sys.getcfg("app_port")):global("AppServer")
-app_server:attach(source_endpoint, "/source")
-app_server:attach(arrow_endpoint, "/arrow")
+local app_server = core.httpd({
+    ["/source"] = source_endpoint,
+    ["/arrow"] = arrow_endpoint
+}, sys.getcfg("app_port")):global("AppServer")
 
 --------------------------------------------------
 -- Register Services

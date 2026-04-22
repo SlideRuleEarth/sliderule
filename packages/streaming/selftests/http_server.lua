@@ -16,7 +16,7 @@ local json_object = '{ \
 local tmpfile = os.tmpname()
 
 local endpoint = core.endpoint()
-local server   = core.httpd(10081):attach(endpoint, "/source"):untilup()
+local server   = core.httpd({["/source"]=endpoint},10081):untilup()
 
 -- Self Test --
 

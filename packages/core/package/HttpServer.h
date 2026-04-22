@@ -73,9 +73,6 @@ class HttpServer: public LuaObject
 
         static int          luaCreate       (lua_State* L);
 
-                            HttpServer      (lua_State* L, const char* _ip_addr, int _port, int max_connections);
-                            ~HttpServer     (void) override;
-
         const char*         getIpAddr       (void) const;
         int                 getPort         (void) const;
 
@@ -144,7 +141,6 @@ class HttpServer: public LuaObject
         Table<Connection*, int>         connections;
 
         Dictionary<RouteEntry*>         routeTable;
-        Mutex                           routeTableMut;
 
         char*                           ipAddr;
         int                             port;
@@ -152,6 +148,9 @@ class HttpServer: public LuaObject
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
+
+                            HttpServer          (lua_State* L, const char* _ip_addr, int _port, const std::unordered_map<string, EndpointObject*>& routes, int max_connections);
+                            ~HttpServer         (void) override;
 
         static void         extractPath         (const char* url, const char** path, const char** resource);
         static bool         processHttpHeader   (char* buf, EndpointObject::Request* request);
@@ -165,8 +164,6 @@ class HttpServer: public LuaObject
         int                 onConnect           (int fd);
         int                 onDisconnect        (int fd);
 
-        static int          luaAttach           (lua_State* L);
-        static int          luaMetric           (lua_State* L);
         static int          luaUntilUp          (lua_State* L);
 };
 

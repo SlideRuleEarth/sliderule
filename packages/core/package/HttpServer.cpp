@@ -44,7 +44,6 @@
 const char* HttpServer::OBJECT_TYPE = "HttpServer";
 const char* HttpServer::LUA_META_NAME = "HttpServer";
 const struct luaL_Reg HttpServer::LUA_META_TABLE[] = {
-    {"attach",      luaAttach},
     {"untilup",     luaUntilUp},
     {NULL,          NULL}
 };
@@ -63,9 +62,29 @@ int HttpServer::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const int   port            = (int)getLuaInteger(L, 1);
-        const char* ip_addr         = getLuaString(L, 2, true, NULL);
-        const int   max_connections = (int)getLuaInteger(L, 3, true, DEFAULT_MAX_CONNECTIONS);
+        const int   endpoint_index  = 1;
+        const int   port            = (int)getLuaInteger(L, 2);
+        const char* ip_addr         = getLuaString(L, 3, true, NULL);
+        const int   max_connections = (int)getLuaInteger(L, 4, true, DEFAULT_MAX_CONNECTIONS);
+
+        /* Get and Attach Endpoints */
+        std::unordered_map<string, EndpointObject*> routes;
+        if(lua_istable(L, endpoint_index))
+        {
+            lua_pushnil(L);  // first key
+            while (lua_next(L, endpoint_index) != 0)
+            {
+                const char* path = getLuaString(L, -2);
+                EndpointObject* endpoint = dynamic_cast<EndpointObject*>(getLuaObject(L, -1, EndpointObject::OBJECT_TYPE));
+                auto [it, inserted] = routes.try_emplace(path, endpoint);
+                if(!inserted)
+                {
+                    endpoint->releaseLuaObject();
+                    throw RunTimeException(ERROR, RTE_FAILURE, "duplicate path in routes: %s", path);
+                }
+                lua_pop(L, 1); // remove value, keep key for next iteration
+            }
+        }
 
         /* Get Server Parameter */
         if( ip_addr && (StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*")) )
@@ -74,38 +93,13 @@ int HttpServer::luaCreate (lua_State* L)
         }
 
         /* Return File Device Object */
-        return createLuaObject(L, new HttpServer(L, ip_addr, port, max_connections));
+        return createLuaObject(L, new HttpServer(L, ip_addr, port, routes, max_connections));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating HttpServer: %s", e.what());
         return returnLuaStatus(L, false);
     }
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_connections):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    connections(max_connections)
-{
-    ipAddr = StringLib::duplicate(_ip_addr);
-    port = _port;
-
-    active.store(true);
-    listening.store(false, std::memory_order_release);
-    listenerPid = new Thread(listenerThread, this);
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-HttpServer::~HttpServer(void)
-{
-    active.store(false);
-    delete listenerPid;
-    delete [] ipAddr;
 }
 
 /*----------------------------------------------------------------------------
@@ -204,6 +198,41 @@ void HttpServer::Connection::initialize (const char* _name)
     /* Create Request */
     request = new EndpointObject::Request(id);
     request->trace_id = trace_id;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, const std::unordered_map<string, EndpointObject*>& routes, int max_connections):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    connections(max_connections)
+{
+    ipAddr = StringLib::duplicate(_ip_addr);
+    port = _port;
+
+    for(const auto& [key, value]: routes)
+    {
+        RouteEntry* route = new RouteEntry(value);
+        if(!routeTable.add(key.c_str(), route, true))
+        {
+            delete route;
+            mlog(CRITICAL, "Detected duplicate path in routes: %s", key.c_str());
+        }
+    }
+
+    active.store(true);
+    listening.store(false, std::memory_order_release);
+    listenerPid = new Thread(listenerThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+HttpServer::~HttpServer(void)
+{
+    active.store(false);
+    delete listenerPid;
+    delete [] ipAddr;
 }
 
 /*----------------------------------------------------------------------------
@@ -531,13 +560,7 @@ int HttpServer::onRead(int fd)
             const char* path = connection->request->path;
             try
             {
-                EndpointObject* endpoint;
-                routeTableMut.lock();
-                {
-                    endpoint = routeTable[path]->route;
-                }
-                routeTableMut.unlock();
-
+                EndpointObject* endpoint = routeTable[path]->route;
                 endpoint->handleRequest(connection->request);
                 connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             }
@@ -789,43 +812,6 @@ int HttpServer::onDisconnect(int fd)
     }
 
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * luaAttach - :attach(<EndpointObject>)
- *----------------------------------------------------------------------------*/
-int HttpServer::luaAttach (lua_State* L)
-{
-    bool status = false;
-    EndpointObject* endpoint = NULL;
-
-    try
-    {
-        /* Get Self */
-        HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
-
-        /* Get Parameters */
-        endpoint = dynamic_cast<EndpointObject*>(getLuaObject(L, 2, EndpointObject::OBJECT_TYPE));
-        const char* url = getLuaString(L, 3);
-
-        /* Add Route to Table */
-        RouteEntry* entry = new RouteEntry(endpoint);
-        lua_obj->routeTableMut.lock();
-        {
-            status = lua_obj->routeTable.add(url, entry, true);
-        }
-        lua_obj->routeTableMut.unlock();
-
-        if(!status) delete entry;
-    }
-    catch(const RunTimeException& e)
-    {
-        if(endpoint) endpoint->releaseLuaObject();
-        mlog(e.level(), "Error attaching handler: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------
