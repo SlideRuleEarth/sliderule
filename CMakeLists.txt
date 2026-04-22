@@ -167,7 +167,7 @@ option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
 
 # Dataset Options #
 
-option (USE_BATHY_DATASET "Include the Bathy dataset" OFF)
+option (USE_BATHY_DATASET "Include the Bathy dataset" ON)
 option (USE_BLUETOPO_DATASET "Include the BlueTopo dataset" ON)
 option (USE_CASALS_DATASET "Include the CASALS dataset" ON)
 option (USE_GEBCO_DATASET "Include the GEBCO dataset" ON)

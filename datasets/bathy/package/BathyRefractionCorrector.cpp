@@ -36,12 +36,12 @@
 #include <cmath>
 #include <numeric>
 #include <algorithm>
+#include <limits>
 
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "BathyFields.h"
 #include "BathyRefractionCorrector.h"
-
 
 /******************************************************************************
  * STATIC DATA
@@ -191,6 +191,18 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
     const RefractionFields& refraction_parms = parms->refraction;
 
+    /* Get Sea Surface Column */
+    FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h"));
+    if(!surface_h)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find surface_h column");
+    }
+
+    /* Create New Columns */
+    FieldColumn<float>*     refracted_dZ  = new FieldColumn<float>;
+    FieldColumn<double>*    refracted_lat = new FieldColumn<double>;
+    FieldColumn<double>*    refracted_lon = new FieldColumn<double>;
+
     /* Get UTM Transformation */
     GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north);
 
@@ -206,7 +218,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
         }
 
         /* Correct All Subaqueous Photons */
-        const double depth = df.surface_h[i] - df.geoid_corr_h[i]; // compute un-refraction-corrected depths
+        const double depth = (*surface_h)[i] - df.geoid_corr_h[i]; // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Count Subaqueous Photons */
@@ -229,29 +241,29 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double dE = dY * sin(static_cast<double>(df.ref_az[i]));          // UTM offsets
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
-            /* Apply Refraction Correction */
-#if 0
-// to be restored when python code ported to c++
-            df.ortho_h[i] = df.ortho_h[i] + dZ;
-            df.ellipse_h[i] = df.ellipse_h[i] + dZ;
-#else
-            df.refracted_dZ[i] = dZ;
-#endif
-
             /* Correct Latitude and Longitude */
             const double corr_x_ph = df.x_ph[i] + dE;
             const double corr_y_ph = df.y_ph[i] + dN;
             const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
-#if 0
-// to be restored when python code ported to c++
-            df.lat_ph[i] = point.x;
-            df.lon_ph[i] = point.y;
-#else
-            df.refracted_lat[i] = point.x;
-            df.refracted_lon[i] = point.y;
-#endif
+
+            /* Apply Refraction Correction */
+            refracted_dZ->append(dZ);
+            refracted_lat->append(point.x);
+            refracted_lon->append(point.y);
+        }
+        else
+        {
+            /* Set to NaN */
+            refracted_dZ->append(std::numeric_limits<float>::quiet_NaN());
+            refracted_lat->append(std::numeric_limits<double>::quiet_NaN());
+            refracted_lon->append(std::numeric_limits<double>::quiet_NaN());
         }
     }
+
+    /* Add Columns */
+    df.addExistingColumn("refracted_dZ", refracted_dZ);
+    df.addExistingColumn("refracted_lat", refracted_lat);
+    df.addExistingColumn("refracted_lon", refracted_lon);
 
     /* Mark Completion */
     return true;

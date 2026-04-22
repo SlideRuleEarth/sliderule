@@ -87,7 +87,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
         else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
+        return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, rqstq_name, _mask));
     }
     catch(const RunTimeException& e)
     {
@@ -103,7 +103,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask):
+BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns},
@@ -115,22 +115,11 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"y_ph",                &y_ph},
         {"x_atc",               &x_atc},
         {"y_atc",               &y_atc},
-        {"surface_h",           &surface_h},
-        {"ortho_h",             &ortho_h},
         {"ellipse_h",           &ellipse_h},
-        {"sigma_thu",           &sigma_thu},
-        {"sigma_tvu",           &sigma_tvu},
         {"processing_flags",    &processing_flags},
         {"max_signal_conf",     &max_signal_conf},
         {"quality_ph",          &quality_ph},
-        {"class_ph",            &class_ph},
         {"geoid_corr_h",        &geoid_corr_h},
-        // temporary columns for python code
-        {"refracted_dZ",        &refracted_dZ},
-        {"refracted_lat",       &refracted_lat},
-        {"refracted_lon",       &refracted_lon},
-        {"subaqueous_sigma_thu", &subaqueous_sigma_thu},
-        {"subaqueous_sigma_tvu", &subaqueous_sigma_tvu}
     },
     {
         {"spot",                &spot},
@@ -150,7 +139,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     parms(*_parms),
     bathyMask(_mask),
     hdf03(_hdf03),
-    hdf09(_hdf09),
     rqstQ(NULL),
     signalConfColIndex(0),
     readTimeoutMs(parms.readTimeout.value * 1000),
@@ -207,12 +195,8 @@ BathyDataFrame::~BathyDataFrame (void)
 {
     active.store(false);
     delete pid;
-
     delete rqstQ;
-
     if(hdf03) hdf03->releaseLuaObject();
-    if(hdf09) hdf09->releaseLuaObject();
-
     if(parmsPtr) parmsPtr->releaseLuaObject();
     if(bathyMask) bathyMask->releaseLuaObject();
 }
@@ -490,29 +474,6 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
 }
 
 /*----------------------------------------------------------------------------
- * Atl09Class::Constructor
- *----------------------------------------------------------------------------*/
-BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
-    valid       (false),
-    met_u10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_u10m", dataframe.track.value).c_str()),
-    met_v10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_v10m", dataframe.track.value).c_str()),
-    delta_time  (dataframe.hdf09, FString("profile_%d/low_rate/delta_time", dataframe.track.value).c_str())
-{
-    try
-    {
-        if(!dataframe.hdf09) throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid HDF5 ATL09 object");
-        met_u10m.join(dataframe.readTimeoutMs, true);
-        met_v10m.join(dataframe.readTimeoutMs, true);
-        delta_time.join(dataframe.readTimeoutMs, true);
-        valid = true;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(CRITICAL, "ATL09 data unavailable for <%s>: %s", dataframe.parms.resource.value.c_str(), e.what());
-    }
-}
-
-/*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
 void* BathyDataFrame::subsettingThread (void* parm)
@@ -533,16 +494,12 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
         /* Read ATL03/09 Datasets */
         const Atl03Data atl03(dataframe, region);
-        const Atl09Class atl09(dataframe);
 
         /* Initialize Extent State */
         int32_t current_photon = 0; // index into the photon rate variables
         int32_t current_segment = 0; // index into the segment rate variables
-        int32_t previous_segment = -1; // previous index used to determine when segment has changed (and segment level variables need to be changed)
         int32_t photon_in_segment = 0; // the photon number in the current segment
         int32_t bckgrd_index = 0; // background 50Hz group
-        int32_t low_rate_index = 0; // ATL09 low rate group
-        float wind_v = BathyFields::DEFAULT_WIND_SPEED; // segment level wind speed
         bool on_boundary = true; // true when a spatial subsetting boundary is encountered
 
         /* Set Spot*/
@@ -673,29 +630,11 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 /* Save Off Latest Delta Time */
                 const double current_delta_time = atl03.delta_time[current_photon];
 
-                /* Calculate Segment Level Fields */
-                if(previous_segment != current_segment)
-                {
-                    previous_segment = current_segment;
-
-                    /* Calculate Wind Speed */
-                    if(atl09.valid)
-                    {
-                        /* Find Closest ATL09 Low Rate Entry */
-                        while((low_rate_index < (atl09.delta_time.size - 1)) && (atl09.delta_time[low_rate_index+1] < current_delta_time))
-                        {
-                            low_rate_index++;
-                        }
-                        wind_v = sqrt(pow(atl09.met_u10m[low_rate_index], 2.0) + pow(atl09.met_v10m[low_rate_index], 2.0));
-                    }
-                }
-
                 /* Set Initial Processing Flags */
                 uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
                 processing_flags |= static_cast<uint32_t>(yapc_score) << 24;
                 if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
                 if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
-                if(!atl09.valid) processing_flags |= BathyFields::INVALID_WIND_SPEED;
 
                 /* Add Photon to DataFrame */
                 dataframe.addRow(); // start new row in dataframe
@@ -709,15 +648,11 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction
-                dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // later corrected by refraction correction
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
                 dataframe.processing_flags.append(processing_flags);
-
-                /* Add Additional Photon Data to DataFrame */
                 dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
                 dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
-                dataframe.wind_v.append(wind_v);
                 dataframe.ref_el.append(atl03.ref_elev[current_segment]);
                 dataframe.ref_az.append(atl03.ref_azimuth[current_segment]);
                 dataframe.sigma_across.append(atl03.sigma_across[current_segment]);
@@ -732,20 +667,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
             /* Go to Next Photon */
             current_photon++;
         }
-
-        /* Initialize Additional DataFrame Columns (populated later) */
-        dataframe.class_ph.initialize(dataframe.length(), static_cast<uint8_t>(BathyFields::UNCLASSIFIED));
-        dataframe.surface_h.initialize(dataframe.length(), 0.0); // populated by sea surface finder
-        dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
-        dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
-
-        /* Initialize Temporary Columns to Support Python Code */
-        dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);
-        dataframe.refracted_lat.initialize(dataframe.length(), 0.0);
-        dataframe.refracted_lon.initialize(dataframe.length(), 0.0);
-        dataframe.subaqueous_sigma_thu.initialize(dataframe.length(), 0.0);
-        dataframe.subaqueous_sigma_tvu.initialize(dataframe.length(), 0.0);
-
     }
     catch(const RunTimeException& e)
     {

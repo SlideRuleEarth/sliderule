@@ -56,7 +56,6 @@ struct SurfaceFields: public FieldMap<Field>
     FieldElement<double>    signalThreshold     {3.0};      // standard deviations
     FieldElement<double>    minPeakSeparation   {0.5};      // meters
     FieldElement<double>    highestPeakRatio    {1.2};
-    FieldElement<double>    surfaceWidth        {3.0};      // standard deviations
     FieldElement<bool>      modelAsPoisson      {true};
 
     SurfaceFields(void):
@@ -66,7 +65,6 @@ struct SurfaceFields: public FieldMap<Field>
                           {"signal_threshold",    &signalThreshold},
                           {"min_peak_separation", &minPeakSeparation},
                           {"highest_peak_ration", &highestPeakRatio},
-                          {"surace_width",        &surfaceWidth},
                           {"model_as_poisoon",    &modelAsPoisson} }) {
     };
 
@@ -143,9 +141,6 @@ class BathyFields: public Icesat2Fields
             INVALID_KD              = 0x00000008,
             INVALID_WIND_SPEED      = 0x00000010,
             NIGHT_FLAG              = 0x00000020,
-            BATHY_CONFIDENCE        = 0x0000FF00,
-            YAPC_SCORE              = 0x00FF0000,
-            BATHY_SIGNAL            = 0xFF000000,
         } flags_t;
 
         /*--------------------------------------------------------------------

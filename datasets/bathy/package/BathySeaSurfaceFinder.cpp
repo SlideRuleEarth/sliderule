@@ -96,11 +96,16 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
     const SurfaceFields& surface_parms = parms->surface;
 
+    /* create new column */
+    FieldColumn<float>* surface_h = new FieldColumn<float>;
+
     /* for each extent (p0 = start photon) */
     for(long p0 = 0; p0 < df.length(); p0 += parms->phInExtent.value)
     {
         /* calculate last photon in extent */
         const long p1 = MIN(df.length(), p0 + parms->phInExtent.value);
+
+        float cur_surface_h = std::numeric_limits<float>::quiet_NaN();
 
         try
         {
@@ -115,7 +120,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             vector<double> heights;
             for(long i = p0; i < p1; i++)
             {
-                const double height = static_cast<double>(df.ortho_h[i]);
+                const double height = static_cast<double>(df.geoid_corr_h[i]);
                 const double time_secs = static_cast<double>(df.time_ns[i].nanoseconds) / 1000000000.0;
 
                 /* get min and max height */
@@ -270,35 +275,8 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
                 throw RunTimeException(WARNING, RTE_STATUS, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
             }
 
-            /* calculate width of highest peak */
-            const double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
-            const double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
-            long peak_width = 1;
-            for(long i = highest_peak_bin + 1; i < num_bins; i++)
-            {
-                if(smoothed_histogram[i] > peak_half_max) peak_width++;
-                else break;
-            }
-            for(long i = highest_peak_bin - 1; i >= 0; i--)
-            {
-                if(smoothed_histogram[i] > peak_half_max) peak_width++;
-                else break;
-            }
-            const double peak_stddev = (peak_width * surface_parms.binSize.value) / 2.35;
-
-            /* calculate sea surface height and label sea surface photons */
-            const float cur_surface_h = min_h + (highest_peak_bin * surface_parms.binSize.value) + (surface_parms.binSize.value / 2.0);
-            const double min_surface_h = cur_surface_h - (peak_stddev * surface_parms.surfaceWidth.value);
-            const double max_surface_h = cur_surface_h + (peak_stddev * surface_parms.surfaceWidth.value);
-            for(long i = p0; i < p1; i++)
-            {
-                df.surface_h[i] = cur_surface_h;
-                if( df.ortho_h[i] >= min_surface_h &&
-                    df.ortho_h[i] <= max_surface_h )
-                {
-                    df.class_ph[i] = BathyFields::SEA_SURFACE;
-                }
-            }
+            /* calculate sea surface height */
+            cur_surface_h = min_h + (highest_peak_bin * surface_parms.binSize.value) + (surface_parms.binSize.value / 2.0);
         }
         catch(const RunTimeException& e)
         {
@@ -308,8 +286,17 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
                 df.processing_flags[i] = df.processing_flags[i] | BathyFields::SEA_SURFACE_UNDETECTED;
             }
         }
+
+        /* add surface height to dataframe column */
+        for(long i = p0; i < p1; i++)
+        {
+            surface_h->append(cur_surface_h);
+        }
     }
 
-    /* Mark Completion */
+    /* add new column */
+    df.addExistingColumn("surface_h", surface_h);
+
+    /* mark completion */
     return true;
 }

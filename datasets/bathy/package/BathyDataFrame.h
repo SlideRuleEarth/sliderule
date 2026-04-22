@@ -97,30 +97,17 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
         FieldColumn<double>         y_atc;              // dist_ph_across
-        FieldColumn<float>          ortho_h {Field::Z_COLUMN}; // refraction corrected, geoid corrected height of photon
-        FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
-        FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
-        FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
-        FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing errors and warnings (top 8 bits reserved for classifiers)
+        FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing intermediate results, errors, and warnings
         FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
         FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
-        FieldColumn<int8_t>         class_ph;           // photon classification
         FieldColumn<float>          background_rate;    // PE per second
-        FieldColumn<float>          geoid_corr_h;       // orthometric height without refraction correction (passed to classifiers)
-        FieldColumn<float>          wind_v;             // wind speed (in meters/second)
+        FieldColumn<float>          geoid_corr_h {Field::Z_COLUMN}; // orthometric height without refraction correction (passed to classifiers)
         FieldColumn<float>          ref_el;             // reference elevation
         FieldColumn<float>          ref_az;             // reference aziumth
         FieldColumn<float>          sigma_across;       // across track aerial uncertainty
         FieldColumn<float>          sigma_along;        // along track aerial uncertainty
         FieldColumn<float>          sigma_h;            // vertical aerial uncertainty
-
-        // temporary column so that python code can apply calculations on subaqueous photons
-        FieldColumn<float>          refracted_dZ;
-        FieldColumn<double>         refracted_lat;
-        FieldColumn<double>         refracted_lon;
-        FieldColumn<float>          subaqueous_sigma_thu;
-        FieldColumn<float>          subaqueous_sigma_tvu;
 
     private:
 
@@ -189,23 +176,6 @@ class BathyDataFrame: public GeoDataFrame
                 H5Array<float>      bckgrd_rate;
         };
 
-        /* Atl09 Subclass */
-        class Atl09Class
-        {
-            public:
-
-                explicit Atl09Class (const BathyDataFrame& dataframe);
-                ~Atl09Class         (void) = default;
-
-                /* Generated Data */
-                bool                valid;
-
-                /* Read Data */
-                H5Array<float>      met_u10m;
-                H5Array<float>      met_v10m;
-                H5Array<double>     delta_time;
-        };
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -216,7 +186,6 @@ class BathyDataFrame: public GeoDataFrame
         const BathyFields&          parms;
         BathyMask*                  bathyMask;
         H5Object*                   hdf03;      // atl03 granule
-        H5Object*                   hdf09;      // atl09 granule
         Publisher*                  rqstQ;
         int                         signalConfColIndex;
         int                         readTimeoutMs;
@@ -226,7 +195,7 @@ class BathyDataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyDataFrame              (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask);
+                            BathyDataFrame              (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask);
                             ~BathyDataFrame             (void) override;
 
         static void*        subsettingThread            (void* parm);
@@ -244,7 +213,6 @@ class BathyDataFrame: public GeoDataFrame
                 parms(*_parms),
                 bathyMask(NULL),
                 hdf03(NULL),
-                hdf09(NULL),
                 rqstQ(NULL),
                 signalConfColIndex(0),
                 readTimeoutMs(0),

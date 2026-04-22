@@ -231,8 +231,26 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
 {
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
 
+    /* get sea surface column */
+    FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h"));
+    if(!surface_h)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find surface_h column");
+    }
+
+    /* get atl09 wind speed column */
+    FieldColumn<float>* wind_v = reinterpret_cast<FieldColumn<float>*>(df.getColumn("met_v10m"));
+    if(!wind_v)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find met_v10m column");
+    }
+
     /* join kd resource read */
     kd490->join(parms->readTimeout.value * 1000);
+
+    /* create new columns */
+    FieldColumn<float>* sigma_thu = new FieldColumn<float>;
+    FieldColumn<float>* sigma_tvu = new FieldColumn<float>;
 
     /* segment level variables */
     int32_t previous_segment = -1;
@@ -257,7 +275,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
 
             /* get wind speed index */
-            const int wind_speed = static_cast<int>(roundf(df.wind_v[i]));
+            const int wind_speed = static_cast<int>(roundf((*wind_v)[i]));
             wind_speed_index = 0;
             while( (wind_speed_index < (NUM_WIND_SPEED_RANGES - 1)) && (wind_speed > WIND_SPEED_RANGES[wind_speed_index + 1][0]) )
             {
@@ -295,7 +313,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
         /* calculate subaqueous uncertainty */
         double subaqueous_horizontal_uncertainty = 0.0;
         double subaqueous_vertical_uncertainty = 0.0;
-        const double depth = df.surface_h[i] - df.geoid_corr_h[i];
+        const double depth = (*surface_h)[i] - df.geoid_corr_h[i];
         if(depth > 0.0)
         {
             /* uncertainty coefficients */
@@ -318,40 +336,16 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
         }
 
         /* set total uncertainties */
-#if 0
-// to be restored when python code ported to c++
-        df.sigma_thu[i] = sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
+        sigma_thu->append(sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
                                  (df.sigma_along[i] * df.sigma_along[i]) +
-                                 (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) );
-        df.sigma_tvu[i] = sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
-                                 (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) );
-#else
-        df.sigma_thu[i] = sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
-                                 (df.sigma_along[i] * df.sigma_along[i]) );
-        df.sigma_tvu[i] = df.sigma_h[i];
-        df.subaqueous_sigma_thu[i] = sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
-                                            (df.sigma_along[i] * df.sigma_along[i]) +
-                                            (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) );
-        df.subaqueous_sigma_tvu[i] = sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
-                                            (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) );
-#endif
-
-        /* output diagnostic csv file */
-#if 0
-        static fileptr_t fp[BathyFields::NUM_SPOTS] = {NULL, NULL, NULL, NULL, NULL, NULL};
-        int s = df.spot.value - 1; // spot index
-        if(fp[s] == NULL)
-        {
-            fp[s] = fopen(FString("uncertainty_%d.csv",df.spot.value).c_str(), "w");
-            fprintf(fp[s], "ref_el,wind_v,lon_ph,lat_ph,surface_h,geoid_corr_h,subaqueous_horizontal_uncertainty,subaqueous_vertical_uncertainty\n");
-        }
-        fprintf(fp[s],"%f,%f,%lf,%lf,%f,%f,%lf,%lf\n", df.ref_el[i], df.wind_v[i], df.lon_ph[i], df.lat_ph[i], df.surface_h[i], df.geoid_corr_h[i], subaqueous_horizontal_uncertainty, subaqueous_vertical_uncertainty);
-        if((i + 1) == df.length())
-        {
-            fclose(fp[s]);
-        }
-#endif
+                                 (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) ));
+        sigma_tvu->append(sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
+                                 (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) ));
     }
+
+    /* add columns */
+    df.addExistingColumn("sigma_thu", sigma_thu);
+    df.addExistingColumn("sigma_tvu", sigma_tvu);
 
     /* mark completion */
     return true;

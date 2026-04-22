@@ -121,6 +121,13 @@ bool BathySignalStrength::run(GeoDataFrame* dataframe)
         return false;
     }
 
+    // create and initialize new column
+    FieldColumn<uint16_t>* signal_strength = new FieldColumn<uint16_t>;
+    for(long i = 0; i < dataframe->length(); i++)
+    {
+        signal_strength->append(0);
+    }
+
     // histogram processing
     long next_extent_start_i = 0;
     while(true)
@@ -224,14 +231,14 @@ bool BathySignalStrength::run(GeoDataFrame* dataframe)
                 if(bin >= 0 && bin <= histo_numbins)
                 {
                     /* get current signal score from processing flags */
-                    uint32_t signal_score = (df.processing_flags[k] & BathyFields::BATHY_SIGNAL) >> 16;
+                    uint32_t signal_score = (*signal_strength)[k];
 
                     /* set signal score */
                     if(signal_score == 0) signal_score = histogram[bin];
                     else signal_score = MAX(histogram[bin], signal_score);
 
                     /* populate processing flags with latest signal score */
-                    df.processing_flags[k] = df.processing_flags[k] | ((signal_score << 16) & BathyFields::BATHY_SIGNAL);
+                    (*signal_strength)[k] = signal_score;
                 }
                 else
                 {
@@ -249,6 +256,9 @@ bool BathySignalStrength::run(GeoDataFrame* dataframe)
             break;
         }
     }
+
+    // add new column
+    df.addExistingColumn("signal_strength", signal_strength);
 
     // mark completion
     return true;
