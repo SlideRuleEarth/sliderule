@@ -909,6 +909,7 @@ update-cf-env: ## update cloud formation environment for public deployment
 
 init-dev-env: ## one-time setup of development environment for running locally
 	mkdir -p /data
+	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/server/ /data/ --recursive
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/ /data/ --recursive
 	mkdir -p /etc/haproxy/pem
 	curl $(JWT_ISSUER)/auth/pem > /etc/haproxy/pem/pubkey.pem

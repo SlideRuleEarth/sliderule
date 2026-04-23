@@ -38,6 +38,10 @@ aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --
 # Setup environment
 export MYIP=$(hostname -I | awk '{print $1}')
 
+# Download server files
+mkdir -p /data
+aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/server/ /data/ --recursive
+
 # Download AMS files
 mkdir -p /data
 aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/ams/ /data/ --recursive

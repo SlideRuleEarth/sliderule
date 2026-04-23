@@ -224,6 +224,8 @@ int UT_BathyRefractionCorrector::luaRefractionTest (lua_State* L)
             dataframe.geoid_corr_h.append(PH_REF_EXPECTED[i].z);
             dataframe.ref_az.append(PH_REF_EXPECTED[i].ref_az);
             dataframe.ref_el.append(PH_REF_EXPECTED[i].ref_el);
+            dataframe.lat_ph.append(0.0);
+            dataframe.lon_ph.append(0.0);
         }
         dataframe.addExistingColumn("surface_h", surface_h);
 
