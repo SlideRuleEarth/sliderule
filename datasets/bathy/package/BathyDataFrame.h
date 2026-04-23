@@ -84,8 +84,6 @@ class BathyDataFrame: public GeoDataFrame
         FieldElement<uint16_t>      rgt;
         FieldElement<uint8_t>       gt;
         FieldElement<string>        granule;
-        FieldElement<int>           utm_zone;
-        FieldElement<bool>          utm_is_north;
         FieldList<double>           bounding_polygon_lat;
         FieldList<double>           bounding_polygon_lon;
 
@@ -95,6 +93,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<int32_t>        index_seg;          // index into segment level groups in source ATL03 granule
         FieldColumn<double>         lat_ph {Field::Y_COLUMN}; // latitude of photon (EPSG 7912)
         FieldColumn<double>         lon_ph {Field::X_COLUMN}; // longitude of photon (EPSG 7912)
+        FieldColumn<int32_t>        segment_id;         // atl03 segment id
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
         FieldColumn<double>         y_atc;              // dist_ph_across
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
@@ -154,6 +153,7 @@ class BathyDataFrame: public GeoDataFrame
                 H5Array<double>     bounding_polygon_lon;
                 H5Array<float>      velocity_sc;
                 H5Array<double>     segment_delta_time;
+                H5Array<int32_t>    segment_id;
                 H5Array<double>     segment_dist_x;
                 H5Array<float>      solar_elevation;
                 H5Array<float>      sigma_h;

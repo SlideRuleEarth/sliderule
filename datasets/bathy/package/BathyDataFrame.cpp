@@ -70,7 +70,6 @@ int BathyDataFrame::luaCreate (lua_State* L)
     BathyFields* _parms = NULL;
     BathyMask* _mask = NULL;
     H5Object* _hdf03 = NULL;
-    H5Object* _hdf09 = NULL;
 
     try
     {
@@ -79,8 +78,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
-        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
-        const char* rqstq_name = getLuaString(L, 6, true, NULL);
+        const char* rqstq_name = getLuaString(L, 5, true, NULL);
 
         /* Check for Null Resource and Asset */
         if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
@@ -94,7 +92,6 @@ int BathyDataFrame::luaCreate (lua_State* L)
         if(_parms) _parms->releaseLuaObject();
         if(_mask) _mask->releaseLuaObject();
         if(_hdf03) _hdf03->releaseLuaObject();
-        if(_hdf09) _hdf09->releaseLuaObject();
         mlog(e.level(), "Error creating BathyDataFrame: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -111,6 +108,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"index_seg",           &index_seg},
         {"lat_ph",              &lat_ph},
         {"lon_ph",              &lon_ph},
+        {"segment_id",          &segment_id},
         {"x_atc",               &x_atc},
         {"y_atc",               &y_atc},
         {"ellipse_h",           &ellipse_h},
@@ -126,8 +124,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"rgt",                 &rgt},
         {"gt",                  &gt},
         {"granule",             &granule},
-        {"utm_zone",            &utm_zone},
-        {"utm_is_north",        &utm_is_north},
         {"bounding_polygon_lat",&bounding_polygon_lat},
         {"bounding_polygon_lon",&bounding_polygon_lon}
     },
@@ -137,9 +133,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
-    gt(0, META_COLUMN),
+    gt(Icesat2Fields::getGroundTrack(beam_str), META_COLUMN),
     granule(_hdf03->name, META_SOURCE_ID),
-    utm_zone(0, META_COLUMN),
     active(false),
     pid(NULL),
     parmsPtr(_parms),
@@ -425,6 +420,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     bounding_polygon_lon(dataframe.hdf03,                                  "/orbit_info/bounding_polygon_lon1"),
     velocity_sc         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
+    segment_id          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/segment_id").c_str(),      0, region.first_segment, region.num_segments),
     segment_dist_x      (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
     solar_elevation     (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/solar_elevation").c_str(), 0, region.first_segment, region.num_segments),
     sigma_h             (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/sigma_h").c_str(),         0, region.first_segment, region.num_segments),
@@ -451,6 +447,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     bounding_polygon_lon.join(dataframe.readTimeoutMs, true);
     velocity_sc.join(dataframe.readTimeoutMs, true);
     segment_delta_time.join(dataframe.readTimeoutMs, true);
+    segment_id.join(dataframe.readTimeoutMs, true);
     segment_dist_x.join(dataframe.readTimeoutMs, true);
     solar_elevation.join(dataframe.readTimeoutMs, true);
     sigma_h.join(dataframe.readTimeoutMs, true);
@@ -629,6 +626,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
                 dataframe.lat_ph.append(atl03.lat_ph[current_photon]);  // corrected by refraction correction
                 dataframe.lon_ph.append(atl03.lon_ph[current_photon]);  // corrected by refraction correction
+                dataframe.segment_id.append(atl03.segment_id[current_segment]);
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction
