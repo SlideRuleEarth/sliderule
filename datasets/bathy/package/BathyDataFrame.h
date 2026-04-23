@@ -95,8 +95,6 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<int32_t>        index_seg;          // index into segment level groups in source ATL03 granule
         FieldColumn<double>         lat_ph {Field::Y_COLUMN}; // latitude of photon (EPSG 7912)
         FieldColumn<double>         lon_ph {Field::X_COLUMN}; // longitude of photon (EPSG 7912)
-        FieldColumn<double>         x_ph;               // the easting coordinate in meters of the photon for the given UTM zone
-        FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
         FieldColumn<double>         y_atc;              // dist_ph_across
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
@@ -208,7 +206,7 @@ class BathyDataFrame: public GeoDataFrame
 
         #ifdef __unittesting__
             BathyDataFrame(BathyFields* _parms):
-                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Fields::crsITRF2014_EGM08()),
+                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Fields::crsITRF2014_EGM08(), 0),
                 active(false),
                 pid(NULL),
                 parmsPtr(_parms),
@@ -217,8 +215,7 @@ class BathyDataFrame: public GeoDataFrame
                 hdf03(NULL),
                 rqstQ(NULL),
                 signalConfColIndex(0),
-                readTimeoutMs(0),
-                valid(false) {};
+                readTimeoutMs(0) {};
         #endif
 
         /*--------------------------------------------------------------------

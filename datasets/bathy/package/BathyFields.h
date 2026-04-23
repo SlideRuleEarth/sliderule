@@ -141,6 +141,7 @@ class BathyFields: public Icesat2Fields
             INVALID_KD              = 0x00000008,
             INVALID_WIND_SPEED      = 0x00000010,
             NIGHT_FLAG              = 0x00000020,
+            TRANSFORM_ERROR_FLAG    = 0x00000040,
         } flags_t;
 
         /*--------------------------------------------------------------------

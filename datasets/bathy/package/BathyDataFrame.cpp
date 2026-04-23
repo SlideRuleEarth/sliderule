@@ -111,8 +111,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"index_seg",           &index_seg},
         {"lat_ph",              &lat_ph},
         {"lon_ph",              &lon_ph},
-        {"x_ph",                &x_ph},
-        {"y_ph",                &y_ph},
         {"x_atc",               &x_atc},
         {"y_atc",               &y_atc},
         {"ellipse_h",           &ellipse_h},
@@ -134,7 +132,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"bounding_polygon_lon",&bounding_polygon_lon}
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam)), // dfKey
+    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -486,7 +484,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.getResource(), dataframe.track.value);
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%s}", parms.asset.getName(), parms.getResource(), dataframe.beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -506,11 +504,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
         /* Set Spot*/
         dataframe.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], dataframe.beam);
-
-        /* Get UTM Transformation and Set UTM Zone */
-        GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
-        dataframe.utm_zone = utm_transform.zone;
-        dataframe.utm_is_north = region.segment_lat[0] >= 0.0;
 
         /* Set Bounding Polygon */
         for(int i = 0; i < atl03.bounding_polygon_lat.size; i++)
@@ -620,15 +613,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
                     break;
                 }
 
-                /* Calculate UTM Coordinates */
-                const double latitude = atl03.lat_ph[current_photon];
-                const double longitude = atl03.lon_ph[current_photon];
-                const GeoLib::point_t coord = utm_transform.calculateCoordinates(latitude, longitude);
-                if(utm_transform.in_error)
-                {
-                    throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to convert %lf,%lf to UTM zone %d", latitude, longitude, utm_transform.zone);
-                }
-
                 /* Save Off Latest Delta Time */
                 const double current_delta_time = atl03.delta_time[current_photon];
 
@@ -643,10 +627,8 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
-                dataframe.lat_ph.append(latitude);  // corrected by refraction correction
-                dataframe.lon_ph.append(longitude);  // corrected by refraction correction
-                dataframe.x_ph.append(coord.x);
-                dataframe.y_ph.append(coord.y);
+                dataframe.lat_ph.append(atl03.lat_ph[current_photon]);  // corrected by refraction correction
+                dataframe.lon_ph.append(atl03.lon_ph[current_photon]);  // corrected by refraction correction
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction

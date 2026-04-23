@@ -190,6 +190,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
 {
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
     const RefractionFields& refraction_parms = parms->refraction;
+    bool first_transform_error = true;
 
     /* Get Sea Surface Column */
     FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h"));
@@ -203,8 +204,9 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     FieldColumn<double>*    refracted_lat = new FieldColumn<double>;
     FieldColumn<double>*    refracted_lon = new FieldColumn<double>;
 
-    /* Get UTM Transformation */
-    GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north);
+    /* Get UTM Transformations */
+    GeoLib::UTMTransform utm_transform(df.lat_ph[0], df.lon_ph[0]);
+    GeoLib::UTMTransform wgs84_transform(utm_transform.zone, utm_transform.is_north);
 
     /* Run Refraction Correction */
     for(long i = 0; i < df.length(); i++)
@@ -241,10 +243,31 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double dE = dY * sin(static_cast<double>(df.ref_az[i]));          // UTM offsets
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
+            /* Calculate UTM Coordinates */
+            const GeoLib::point_t coord = utm_transform.calculateCoordinates(df.lat_ph[i], df.lon_ph[i]);
+            if(utm_transform.in_error)
+            {
+                if(first_transform_error)
+                {
+                    first_transform_error = false;
+                    mlog(CRITICAL, "Unable to convert %lf,%lf to UTM zone %d", df.lat_ph[i], df.lon_ph[i], utm_transform.zone);
+                }
+                df.processing_flags[i] |= BathyFields::TRANSFORM_ERROR_FLAG;
+            }
+
             /* Correct Latitude and Longitude */
-            const double corr_x_ph = df.x_ph[i] + dE;
-            const double corr_y_ph = df.y_ph[i] + dN;
-            const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+            const double corr_x_ph = coord.x + dE;
+            const double corr_y_ph = coord.y + dN;
+            const GeoLib::point_t point = wgs84_transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+            if(wgs84_transform.in_error)
+            {
+                if(first_transform_error)
+                {
+                    first_transform_error = false;
+                    mlog(CRITICAL, "Unable to convert %lf,%lf to WSG84 coordinates", corr_x_ph, corr_y_ph);
+                }
+                df.processing_flags[i] |= BathyFields::TRANSFORM_ERROR_FLAG;
+            }
 
             /* Apply Refraction Correction */
             refracted_dZ->append(dZ);
