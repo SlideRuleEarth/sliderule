@@ -51,7 +51,8 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     assert(selected_output == EndpointObject::ARROW); (void)selected_output;
 
     /* Start Response Thread */
-    info_t info = {.request = request};
+    info_t info;
+    info.request = request;
     const Thread rqst_pid(responseThread, &info); // will join before exiting this function
     info.ready.take(); // blocks until response thread runs and creates subscribers
 

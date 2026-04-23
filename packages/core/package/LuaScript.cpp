@@ -66,10 +66,9 @@ int LuaScript::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* script = getLuaString(L, 1);
         const char* arg = getLuaString(L, 2, true, NULL);
-        const bool as_endpoint = getLuaBoolean(L, 3, true, false);
 
         /* Return Lua Script Object */
-        return createLuaObject(L, new LuaScript(L, script, arg, as_endpoint));
+        return createLuaObject(L, new LuaScript(L, script, arg));
     }
     catch(const RunTimeException& e)
     {
