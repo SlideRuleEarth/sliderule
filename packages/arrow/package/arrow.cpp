@@ -58,7 +58,6 @@ int arrow_open (lua_State* L)
     static const struct luaL_Reg arrow_functions[] = {
         {"builder",     ArrowBuilder::luaCreate},
         {"dataframe",   ArrowDataFrame::luaCreate},
-        {"endpoint",    ArrowEndpoint::luaCreate},
         {"sampler",     ArrowSampler::luaCreate},
         {NULL,          NULL}
     };

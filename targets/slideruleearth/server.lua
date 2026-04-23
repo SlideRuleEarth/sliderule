@@ -15,12 +15,10 @@ aws_utils.config_earth_data() -- assets and credentials
 
 -- Configure Application Endpoints --
 local source_endpoint = core.endpoint():global("SourceEndpoint")
-local arrow_endpoint = arrow.endpoint():global("ArrowEndpoint")
 
 -- Run Application HTTP Server --
 local app_server = core.httpd({
-    ["/source"] = source_endpoint,
-    ["/arrow"] = arrow_endpoint
+    ["/source"] = source_endpoint
 }, sys.getcfg("app_port")):global("AppServer")
 
 --------------------------------------------------

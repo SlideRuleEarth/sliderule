@@ -101,30 +101,30 @@ Python Client Earthdata - Clusters
 
 ## 4. Responses
 
-A response from a SlideRule processing request, is an HTTP response provided directly back to the user with the data results in the payload of the response packets. There are three types of SlideRule responses corresponding to the three types of endpoints SlideRule supports: (1) normal endpoints, (2) arrow endpoints, (3) streaming endpoints.
+A response from a SlideRule processing request, is an HTTP response provided directly back to the user with the data results in the payload of the response packets. There are four types of SlideRule responses: (1) text, (2) json, (3) arrow, and (4) binary.
 
-#### Normal
+#### TEXT
 
-Normal endpoints are accessed via the GET HTTP method on the `/source` path and return a discrete block of ASCII text, typically formatted as JSON.
+Plain text responses are typically returned when an error occurs soon enough in the processing for SlideRule to respond with an HTTP error code and description of the error.  There are a few other cases where an endpoint will return just plain text, for example, endpoints that support prometheus metric collection return the data in the prometheus metric format which is plain text.
 
-These services can be easily accessed via curl or other HTTP-based tools, and contain self-describing data. When using the SlideRule Python client, they are accessed via the `sliderule.source(..., stream=False)` call.
+#### JSON
+
+JSON responses are returned by endpoints that return structured text data.  Most endpoints that do not return science data return the data as JSON.
 
 #### Arrow
 
-Arrow endpoints are accessed via the POST HTTP method on the `/arrow` path and return an Apache Arrow supported format: parquet, csv, or feather.
+Arrow responses are returned by endpoints that return "DataFrame" like science data. They are accessed via the POST HTTP method to those endpoints with either the `.arrow` extension added to the end of the endpoint name or with the HTTP header `Accept: application/arrow`.  Depending on the contents of the `Output` parameter in the request, the data is returned in one of the following possible Apache Arrow formats: parquet, csv, or feather.
 
-These services can be easily accessed via curl or other HTTP-based tools, but are not directly supported using the SlideRule Python client.  The reason is that they are designed specifically so that a native client is not needed; both `cURL` and the Python `requests` package are sufficient for working this these services.  You can find both [cURL examples](https://github.com/SlideRuleEarth/sliderule/tree/main/clients/curl/examples) and [Python examples](https://github.com/SlideRuleEarth/sliderule/tree/main/clients/python/examples) in the SlideRule git repository.
+These services can be easily accessed via curl or other HTTP-based tools, but are not directly supported using the SlideRule Python client.  The reason is that they are designed specifically so that a native client is not needed; both `cURL` and the Python `requests` package are sufficient for working with these services.  You can find both [cURL examples](https://github.com/SlideRuleEarth/sliderule/tree/main/clients/curl/examples) and [Python examples](https://github.com/SlideRuleEarth/sliderule/tree/main/clients/python/examples) in the SlideRule git repository.
 
-Any SlideRule endpoint accessible via the `/arrow` path is also accessible via the `/source` via the streaming method described below.  The streaming method also allows for the data to be returned in an Apache Arrow supported format; so no functionality is lost.
+#### Binary
 
-#### Streaming
-
-Streaming endpoints are accessed via the POST HTTP method on the `source` path and return a serialized stream of binary records containing the results of the processing request.
+Binary responses are returned by endpoints that return structured science data.  Any endpoint that supports the _arrow_ format also supports returning the data as binary.  All endpoints that return structured science data default to returning the data as binary and require not additional extensions or headers in the request.  Binary endpoints are accessed via the POST HTTP method on the `source` path and return a serialized stream of binary records containing the results of the processing request.
 
 These responses contain much richer information (log messages, errors, support for multiple files), but are more difficult to work with third-party tools since the returned data must be parsed and the data itself is not self-describing. When using the SlideRule Python client, these services are accessed via the `sliderule.source(..., stream=True)` call, along with the many other API functions which make it easier to work with these services. The SlideRule Python client takes care of any additional service calls needed in order to parse the streaming results and return a self-describing Python data structure (i.e. the elements of the data structure are named in such a way as to indicate the type and content of the returned data).
 
 :::{note}
-If you want to process streamed results outside of the SlideRule Python Client, then a brief description of the format of the data follows. For additional guidance, the hidden functions inside the sliderule.py source code provide the code which performs the stream processing for the SlideRule Python Client.
+If you want to process streamed binary results outside of the SlideRule Python Client, then a brief description of the format of the data follows. For additional guidance, the hidden functions inside the sliderule.py source code provide the code which performs the stream processing for the SlideRule Python Client.
 
 Each response record is formatted as: <record header><record type><record data> where,
 
