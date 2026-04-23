@@ -46,7 +46,13 @@
 
 struct ArrowEndpoint: public LuaEndpoint
 {
+    typedef struct {
+        Request* request;
+        Sem ready;
+    } info_t;
+
     static void defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
+
     static void* responseThread (void* parm);
 };
 

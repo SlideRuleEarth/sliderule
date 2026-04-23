@@ -10,9 +10,9 @@ from sliderule import sliderule
 
 def make_rqst(endpoint, domain, organization, data):
     if organization == None:
-        url = f'http://{domain}/arrow/{endpoint}'
+        url = f'http://{domain}/source/{endpoint}.arrow'
     else:
-        url = f'https://{organization}.{domain}/arrow/{endpoint}'
+        url = f'https://{organization}.{domain}/source/{endpoint}.arrow'
         print(f'URL = {url}')
     data = {"parms": data}
     session = requests.Session()

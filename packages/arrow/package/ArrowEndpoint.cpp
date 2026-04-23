@@ -51,16 +51,15 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     assert(selected_output == EndpointObject::ARROW); (void)selected_output;
 
     /* Start Response Thread */
-    const Thread rqst_pid(requestThread, request); // will join before exiting this function
+    info_t info = {.request = request};
+    const Thread rqst_pid(responseThread, &info); // will join before exiting this function
+    info.ready.take(); // blocks until response thread runs and creates subscribers
 
     /* Get Lua State */
     lua_State* L = engine->getLuaState();
 
-     /* Create Publisher to Arrow Response Queue */
-    Publisher* rspq = new Publisher(FString("%s-arrow", request->id).c_str());
-
     /* Supply Global Variables to Script */
-    request->setLuaTable(engine->getLuaState(), request->id, rspq->getName(), arguments);
+    request->setLuaTable(engine->getLuaState(), request->id, FString("%s-arrow", request->id).c_str(), arguments);
 
     /* Get Main Function */
     lua_getfield(L, -1, ENDPOINT_MAIN);
@@ -86,7 +85,8 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
  *----------------------------------------------------------------------------*/
 void* ArrowEndpoint::responseThread (void* parm)
 {
-    Request* request = static_cast<Request*>(parm);
+    info_t* info = static_cast<info_t*>(parm);
+    Request* request = info->request;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "arrow_endpoint_response", "{\"id\":\"%s\"}", request->id);
@@ -102,6 +102,9 @@ void* ArrowEndpoint::responseThread (void* parm)
     long bytes_to_send = 0;
     bool complete = false;
     bool hdr_sent = false;
+
+    /* Ready To Go */
+    info->ready.give(); // signals to defaultHandler to continue
 
     /* While Receiving Messages */
     while(!complete)
