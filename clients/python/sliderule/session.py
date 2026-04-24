@@ -593,7 +593,8 @@ class Session:
                 if result and (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
                     return result
                 else:
-                    self.logger.info(f"Invalid or expired token: {result['metadata']['exp']}")
+                    ts = datetime.fromtimestamp(result['metadata']['exp'])
+                    self.logger.info(f"Invalid or expired token: {ts.strftime("%Y-%m-%d %H:%M:%S")}")
             except Exception as e:
                 self.logger.error(f"Exception occurred when reading token from local cache: {e}")
 
