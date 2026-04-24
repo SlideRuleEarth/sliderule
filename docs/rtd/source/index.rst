@@ -110,7 +110,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Python Client Reference
+   :caption: Python API Reference
 
    api_reference/sliderule.rst
    api_reference/icesat2.rst

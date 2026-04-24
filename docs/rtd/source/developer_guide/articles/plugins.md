@@ -1,16 +1,12 @@
-# Building a Plugin for SlideRule
+# 2025-09-10: Building a Plugin for SlideRule
 
-2025-09-10
+:::{note}
+SlideRule plugins allow independent organizations to extend the functionality of SlideRule without needing to modify the SlideRule source code.  Independent development teams can build their plugins against the SlideRule code base and produce executable modules that can be loaded by the SlideRule executable at runtime.  These plugins leverage the features of SlideRule (scalabilty, web services, and data processing), while providing application-specific functionality.
+:::
 
 ## Overview
 
-This document walks through the process of building and installing a plugin for SlideRule.  Plugins extend the functionality of SlideRule through additional Lua scripts and shared objects.  The SlideRule executable searches for shared objects in a specific location and dynamically loads those objects early in the startup process.  Lua scripts installed in special locations are accessible from the SlideRule runtime as Lua extensions or APIs.
-
-The purpose of a SlideRule plugin is to allow independent organizations to extend the functionality of SlideRule without needing to modify the SlideRule source code.  Independent development teams can build their plugins against the SlideRule code base and produce executable modules that can be loaded by the SlideRule executable at runtime.  These plugins can leverage the features of SlideRule (scalabilty, web services, and data processing), while providing specific functionality needed by their application.
-
-:::{note}
-All plugins loaded by the SlideRule executable on the public cluster must be coordinated by the SlideRule development team.
-:::
+This document walks through the process of building and installing a plugin for SlideRule.  Plugins extend the functionality of SlideRule through additional Lua scripts and shared objects.  The SlideRule executable searches for shared objects in a specific location and dynamically loads those objects early in the startup process.  Lua scripts installed in special locations are accessible from the SlideRule runtime as Lua extensions or APIs. All plugins loaded by the SlideRule executable on the public cluster must be coordinated by the SlideRule development team.
 
 ## Components of a Plugin
 
