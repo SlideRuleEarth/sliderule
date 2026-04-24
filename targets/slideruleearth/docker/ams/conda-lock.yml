@@ -353,15 +353,15 @@ package:
   category: main
   optional: false
 - name: ca-certificates
-  version: 2026.2.25
+  version: 2026.4.22
   manager: conda
   platform: linux-aarch64
   dependencies:
     __unix: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.2.25-hbd8a1cb_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.4.22-hbd8a1cb_0.conda
   hash:
-    md5: 4492fd26db29495f0ba23f146cd5638d
-    sha256: 67cc7101b36421c5913a1687ef1b99f85b5d6868da3abbf6ec1a4181e79782fc
+    md5: e18ad67cf881dcadee8b8d9e2f8e5f73
+    sha256: c9dbcc8039a52023660d6d1bbf87594a93dd69c6ac5a2a44323af2c92976728d
   category: main
   optional: false
 - name: click
@@ -568,11 +568,10 @@ package:
   category: main
   optional: false
 - name: libarrow
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    __cuda: ''
     aws-crt-cpp: '>=0.37.4,<0.37.5.0a0'
     aws-sdk-cpp: '>=1.11.747,<1.11.748.0a0'
     azure-core-cpp: '>=1.16.2,<1.16.3.0a0'
@@ -595,77 +594,77 @@ package:
     orc: '>=2.3.0,<2.3.1.0a0'
     snappy: '>=1.2.2,<1.3.0a0'
     zstd: '>=1.5.7,<1.6.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-23.0.1-h1c0d118_9_cuda.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-24.0.0-h155c802_0_cpu.conda
   hash:
-    md5: 5f0a97f96e25df368c19e6e0ae194fb2
-    sha256: 108c07982a12948e82be2a4ba8905b8f9db68a30d0eec8a49a256353119cb685
+    md5: 11d88a6e4405afea88743a42ca80f5c1
+    sha256: 0d6a022c15f840238f2cb36385cf3d0e125632ea10b31f9695fd78e66d796e3a
   category: main
   optional: false
 - name: libarrow-acero
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libarrow: 23.0.1
-    libarrow-compute: 23.0.1
+    libarrow: 24.0.0
+    libarrow-compute: 24.0.0
     libgcc: '>=14'
     libstdcxx: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-acero-23.0.1-hb326ee9_9_cuda.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-acero-24.0.0-hb326ee9_0_cpu.conda
   hash:
-    md5: 2b3f247a7683da92b5224b884b79ffb1
-    sha256: a26d64340010c0d7553760599a870ad0c7390bcec8689525c7f6ca6a6d9782b2
+    md5: 900903947ab458509eb60ce7572b9606
+    sha256: 35ef2bdeef76f7104291f7f54f7b77175647e3d55486ff254af6fc473cd2bde7
   category: main
   optional: false
 - name: libarrow-compute
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libarrow: 23.0.1
+    libarrow: 24.0.0
     libgcc: '>=14'
     libre2-11: '>=2025.11.5'
     libstdcxx: '>=14'
     libutf8proc: '>=2.11.3,<2.12.0a0'
     re2: ''
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-compute-23.0.1-hdd99842_9_cuda.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-compute-24.0.0-hdd99842_0_cpu.conda
   hash:
-    md5: c26b66a4341536161925eda1416fcb72
-    sha256: 19e05b4d49e7c0c715382d5a11d1b17841e4656370fe3fea7c8bd9b53cb92dd8
+    md5: 28f5e762d04905f359f9966992f03192
+    sha256: c82ccb3296b3de77fb6e1bae9ffc05e6e970354733d08aeec5757ff4f5a418c6
   category: main
   optional: false
 - name: libarrow-dataset
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libarrow: 23.0.1
-    libarrow-acero: 23.0.1
-    libarrow-compute: 23.0.1
+    libarrow: 24.0.0
+    libarrow-acero: 24.0.0
+    libarrow-compute: 24.0.0
     libgcc: '>=14'
-    libparquet: 23.0.1
+    libparquet: 24.0.0
     libstdcxx: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-dataset-23.0.1-hb326ee9_9_cuda.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-dataset-24.0.0-hb326ee9_0_cpu.conda
   hash:
-    md5: b4bdaeec22cc13e5524e2805c93de29c
-    sha256: 7deb35494fc6618665e083e7d9204dec221804955e85a2eb8b4abd217331d6c6
+    md5: aaedfcaf30422514c645433bbc6c9811
+    sha256: 722bc078838857cfce8b359862a5d429832ef63378a34198adb75017db06f7e5
   category: main
   optional: false
 - name: libarrow-substrait
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
     libabseil: '>=20260107.1,<20260108.0a0'
-    libarrow: 23.0.1
-    libarrow-acero: 23.0.1
-    libarrow-dataset: 23.0.1
+    libarrow: 24.0.0
+    libarrow-acero: 24.0.0
+    libarrow-dataset: 24.0.0
     libgcc: '>=14'
     libprotobuf: '>=6.33.5,<6.33.6.0a0'
     libstdcxx: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-substrait-23.0.1-hf29bd21_9_cuda.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-substrait-24.0.0-hf29bd21_0_cpu.conda
   hash:
-    md5: 46117a02a2220ca83cbd952921ad1a43
-    sha256: b72a2684b151ae6a2d1f8bc1e9ab9408382553f84c7a748417df159abff1865a
+    md5: 9da25b792376c43b542f84a090e7360c
+    sha256: b8d8bece44cb8dc15f3c6465fbec55c9b95a840a16c7ce10e71141bc4c86e8d0
   category: main
   optional: false
 - name: libblas
@@ -1050,19 +1049,19 @@ package:
   category: main
   optional: false
 - name: libparquet
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libarrow: 23.0.1
+    libarrow: 24.0.0
     libgcc: '>=14'
     libstdcxx: '>=14'
     libthrift: '>=0.22.0,<0.22.1.0a0'
-    openssl: '>=3.5.5,<4.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libparquet-23.0.1-h87079af_9_cuda.conda
+    openssl: '>=3.5.6,<4.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libparquet-24.0.0-h87079af_0_cpu.conda
   hash:
-    md5: 4fd47d3b4b9e10cd1e328391d0c65293
-    sha256: e2196493242677b256f3f62ba1ede386cad213abfe2a009350840d9d6897e9d2
+    md5: 4bbb4a45a5003d580a7313174a1ff04b
+    sha256: 051649368d2f52e44373cbfd6389fbeaf2e166058cd26e5f0597b077765e3fb1
   category: main
   optional: false
 - name: libprotobuf
@@ -1153,12 +1152,12 @@ package:
     libevent: '>=2.1.12,<2.1.13.0a0'
     libgcc: '>=14'
     libstdcxx: '>=14'
-    libzlib: '>=1.3.1,<2.0a0'
-    openssl: '>=3.5.1,<4.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libthrift-0.22.0-h046380b_1.conda
+    libzlib: '>=1.3.2,<2.0a0'
+    openssl: '>=3.5.6,<4.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libthrift-0.22.0-ha522d1d_2.conda
   hash:
-    md5: 775bd916d4f0db14754da3f4a5575d15
-    sha256: 43fdf51565c239246a169e2d04bd35e3e2e227ccf8fcd4e2bba77431eadee623
+    md5: 6ecb1ee3cbccd5c3b9ba044e24515153
+    sha256: c43ccf2e53750a84962c2440359ec54fed01b36838d0a08e36f4b294c7d837a6
   category: main
   optional: false
 - name: libutf8proc
@@ -1186,34 +1185,34 @@ package:
   category: main
   optional: false
 - name: libxml2
-  version: 2.15.2
+  version: 2.15.3
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=14'
     libiconv: '>=1.18,<2.0a0'
-    liblzma: '>=5.8.2,<6.0a0'
-    libxml2-16: 2.15.2
-    libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libxml2-2.15.2-h49afab2_0.conda
+    liblzma: '>=5.8.3,<6.0a0'
+    libxml2-16: 2.15.3
+    libzlib: '>=1.3.2,<2.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libxml2-2.15.3-h9ba8346_0.conda
   hash:
-    md5: 8e7352cb825c97f6f8945db66ac074f4
-    sha256: 7325511542b860dee82d862ab5264e9b89d47cf587eb0b627a74ab51c205928c
+    md5: 15078261d03e3c3c83a42df605f7f34a
+    sha256: 74aa3c62e0ec4491343b95ce4ca8812ad2f9bb015369e29cb3b4b9b4302d8cb0
   category: main
   optional: false
 - name: libxml2-16
-  version: 2.15.2
+  version: 2.15.3
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=14'
     libiconv: '>=1.18,<2.0a0'
-    liblzma: '>=5.8.2,<6.0a0'
-    libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libxml2-16-2.15.2-h064b767_0.conda
+    liblzma: '>=5.8.3,<6.0a0'
+    libzlib: '>=1.3.2,<2.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libxml2-16-2.15.3-h064b767_0.conda
   hash:
-    md5: 3a4f72b35cd5058f10b37643c20b10f7
-    sha256: dac2d213b589bb43be9a0c69715be36ac78a50d422d74e64bb0dfba3646df6e5
+    md5: 876c5457664559cdc67c4ac71e2945cb
+    sha256: 96e9bd642c013ce3407c23b3819204ea8a591567d62b49baa4bafb2f1487326c
   category: main
   optional: false
 - name: libzlib
@@ -1381,39 +1380,39 @@ package:
   category: main
   optional: false
 - name: pyarrow
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libarrow-acero: 23.0.1.*
-    libarrow-dataset: 23.0.1.*
-    libarrow-substrait: 23.0.1.*
-    libparquet: 23.0.1.*
-    pyarrow-core: 23.0.1
+    libarrow-acero: 24.0.0.*
+    libarrow-dataset: 24.0.0.*
+    libarrow-substrait: 24.0.0.*
+    libparquet: 24.0.0.*
+    pyarrow-core: 24.0.0
     python: '>=3.14,<3.15.0a0'
     python_abi: 3.14.*
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pyarrow-23.0.1-py314ha42fa4b_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pyarrow-24.0.0-py314ha42fa4b_0.conda
   hash:
-    md5: 24eca7677253643f9007b566047e43cb
-    sha256: bf5378cbd30623ec1722dbdedb31d1f445e3756594c2fb8021139451d9de2d8f
+    md5: 5ff5453a03ed465ed6f73c580bd0b559
+    sha256: d00250e4cac1494daa7844213bb6224038b849f4a6e37b1bffe29f0a666e0e33
   category: main
   optional: false
 - name: pyarrow-core
-  version: 23.0.1
+  version: 24.0.0
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libarrow: 23.0.1.*
-    libarrow-compute: 23.0.1.*
+    libarrow: 24.0.0.*
+    libarrow-compute: 24.0.0.*
     libgcc: '>=14'
     libstdcxx: '>=14'
-    libzlib: '>=1.3.1,<2.0a0'
+    libzlib: '>=1.3.2,<2.0a0'
     python: '>=3.14,<3.15.0a0'
     python_abi: 3.14.*
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pyarrow-core-23.0.1-py314h36888ad_0_cuda.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pyarrow-core-24.0.0-py314h70cbd86_0_cpu.conda
   hash:
-    md5: 054c9ad0f2cce49fc24f1b8982bda553
-    sha256: 128276012f786c96737ef14fd79a1196b79eacbf3003b8eab6e874e0a8f65ed9
+    md5: d184cad8f261425e6ffbaccf5a2e8a54
+    sha256: 78d192866022eb77c664475dde3acb185102c99ca5176a08f2a3d0bcfd2ea779
   category: main
   optional: false
 - name: pygments
