@@ -8,3 +8,4 @@ dependencies:
   - boto3
   - geoip2
   - pandas
+  - pillow

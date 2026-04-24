@@ -4,6 +4,7 @@ import time
 import argparse
 import boto3
 import pandas as pd
+import numpy as np
 import geoip2.database
 from datetime import datetime, timezone
 
@@ -21,6 +22,7 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument('--start',  type=str,   required=True, help='start is required as ISO datetime string YYYY-MM-DD HH:MM:SS)') #
 parser.add_argument('--end',    type=str,   default=f'{datetime.now()}') # optional ISO datetime string
+parser.add_argument('--grid',   type=str,   default=None) # sliderule_usage_grid.png
 args,_ = parser.parse_known_args()
 
 # -------------------------------------------
@@ -280,6 +282,41 @@ def get_timespan(table, where_clause):
     return {'start': start_dt, 'end': end_dt, 'span': end_dt - start_dt}
 
 # -------------------------------------------
+# AIO grid
+# -------------------------------------------
+def aoi_sql_grid(table, where_clause):
+    from PIL import Image
+    query = f"""
+        SELECT
+            CAST(FLOOR((aoi_x + 180.0) / 0.25) AS INTEGER) AS grid_x,
+            CAST(FLOOR((aoi_y + 90.0)  / 0.25) AS INTEGER) AS grid_y,
+            COUNT(*) AS point_count
+        FROM "recorder-database"."telemetry"
+        WHERE aoi_x IS NOT NULL
+        AND aoi_y IS NOT NULL
+        AND {where_clause}
+        GROUP BY
+            FLOOR((aoi_x + 180.0) / 0.25),
+            FLOOR((aoi_y + 90.0)  / 0.25)
+        ORDER BY
+            grid_x, grid_y;
+    """
+    rows = execute_query(query, f'AOI of {table}')
+    grid = np.zeros((720, 1440), dtype=np.uint32)
+    for row in rows:
+        print(f"{int(row["grid_y"])},{int(row["grid_x"])} => {row["point_count"]}")
+        grid[int(row["grid_y"]), int(row["grid_x"])] = row["point_count"]
+    # normalize data to uint8
+    max_val = grid.max()
+    if max_val > 0:
+        normalized = (grid / max_val * 255).astype(np.uint8)
+    else:
+        normalized = grid.astype(np.uint8)
+    # data is a (720, 1440) uint8 numpy array, lat -90→90 bottom→top
+    img = Image.fromarray(np.flipud(normalized), mode='L')
+    img.save(args.grid)
+
+# -------------------------------------------
 # display stats
 # -------------------------------------------
 def display_stats(title, stats, sort_values=False):
@@ -306,15 +343,14 @@ ensure_partitions_for_range(ALERTS_TABLE, expected, 'alerts', start_dt, end_dt)
 # query for usage statistics
 telemetry_table                 = f'"{GLUE_DATABASE}".{TELEMETRY_TABLE}'
 alerts_table                    = f'"{GLUE_DATABASE}".{ALERTS_TABLE}'
-telemetry_where                 = build_where_clause(start_dt, end_dt, days)
-alerts_where                    = build_where_clause(start_dt, end_dt, days)
-time_stats                      = get_timespan(telemetry_table, telemetry_where)
-unique_ip_counts                = value_counts(telemetry_table, 'source_ip', telemetry_where)
+where_clause                    = build_where_clause(start_dt, end_dt, days)
+time_stats                      = get_timespan(telemetry_table, where_clause)
+unique_ip_counts                = value_counts(telemetry_table, 'source_ip', where_clause)
 source_location_counts          = build_location_counts(unique_ip_counts)
-client_counts                   = value_counts(telemetry_table, 'client', telemetry_where)
-endpoint_counts                 = value_counts(telemetry_table, 'endpoint', telemetry_where)
-telemetry_status_code_counts    = value_counts(telemetry_table, 'code', telemetry_where)
-alert_status_code_counts        = value_counts(alerts_table, 'code', alerts_where)
+client_counts                   = value_counts(telemetry_table, 'client', where_clause)
+endpoint_counts                 = value_counts(telemetry_table, 'endpoint', where_clause)
+telemetry_status_code_counts    = value_counts(telemetry_table, 'code', where_clause)
+alert_status_code_counts        = value_counts(alerts_table, 'code', where_clause)
 summary = {
     'Start':                        time_stats["start"].strftime("%Y-%m-%d %H:%M:%S"),
     'End':                          time_stats["end"].strftime("%Y-%m-%d %H:%M:%S"),
@@ -338,3 +374,11 @@ display_stats('Endpoints', endpoint_counts, True)
 display_stats('Request Codes', telemetry_status_code_counts, True)
 display_stats('Alert Codes', alert_status_code_counts, True)
 display_stats('Summary', summary, False)
+
+# grid requests
+if args.grid:
+    aoi_sql_grid(telemetry_table, where_clause)
+    display_stats('Globe', {
+        'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
+        'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
+    }, False)
