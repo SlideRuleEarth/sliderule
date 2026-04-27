@@ -1,13 +1,17 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local dataframe = require("dataframe")
+local json      = require("json")
+local earthdata = require("earth_data_query")
+local rqst      = json.decode(arg[1])
+local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl13", rqst["resource"])
+local channels  = 6 -- number of dataframes per resource
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local dataframe = require("dataframe")
-    local json      = require("json")
-    local earthdata = require("earth_data_query")
-    local rqst      = json.decode(arg[1])
-    local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl13", rqst["resource"])
-    local channels  = 6 -- number of dataframes per resource
 
     -- attempt to populate resources on initial request
     if parms["key_space"] == core.INVALID_KEY then
@@ -56,6 +60,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "ATL13 Dataframe",
     description = "Spatially and temporally subsets ATL13 granule lake metrics with additional filters (x-series)",
     logging = core.CRITICAL,

@@ -1,12 +1,15 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = json.decode(arg[1])
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local json = require("json")
 
     -- initialize variables
-    local parm = json.decode(arg[1])
     local result = {resources={}}
 
     -- recursive function
@@ -53,10 +56,11 @@ local function main()
     end
 
     -- build resource array
-    build_resource_array(parm, true)
+    build_resource_array(parms, true)
 
     -- return results
     return json.encode(result)
+
 end
 
 -------------------------------------------------------
@@ -64,6 +68,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Geospatial Index",
     description = "Query internal geospatial indexes for resources to process",
     logging = core.INFO,

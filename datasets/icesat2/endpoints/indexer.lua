@@ -1,17 +1,20 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json          = require("json")
+local rqst          = json.decode(arg[1])
+local parms         = rqst["parms"]
+local atl03_asset   = rqst["asset"] or "atlas-local"
+local resources     = rqst["resources"]
+local timeout       = rqst["timeout"] or core.RQST_TIMEOUT
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
 
     -- Create User Log --
     local userlog = msg.publish(_rqst.rspq)
-
-    -- Request Parameters --
-    local rqst = json.decode(arg[1])
-    local atl03_asset = rqst["asset"] or "atlas-local"
-    local resources = rqst["resources"]
-    local timeout = rqst["timeout"] or core.RQST_TIMEOUT
 
     -- Post Initial Status Progress --
     userlog:alert(core.DEBUG, core.RTE_STATUS, string.format("atl03 indexing initiated on %s data...", atl03_asset))
@@ -46,6 +49,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "ATL03 Indexer",
     description = "Generate spatial/temporal index records for a set of ATL03 granules",
     logging = core.CRITICAL,

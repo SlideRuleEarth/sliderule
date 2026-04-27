@@ -1,4 +1,9 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local parms = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -9,7 +14,6 @@ local function main()
         sys.log(core.CRITICAL, string.format("user code failed to execute with: %s", err))
         return string.format("unable to load user provided code: %s", err), false
     end
-
     -- execute and return results
     local result = loaded_code()
     return result
@@ -20,6 +24,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Arbitrary Code Execution",
     description = "Execute user supplied lua code",
     logging = core.CRITICAL,

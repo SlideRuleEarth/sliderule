@@ -1,11 +1,14 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json      = require("json")
+local earthdata = require("earth_data_query")
+local parms     = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local json = require("json")
-    local earthdata = require("earth_data_query")
-
     -- build directory of assets
     local directory = {}
     local assets = earthdata.load()
@@ -15,7 +18,6 @@ local function main()
             directory[name] = {name=name, identity=identity, driver=driver, path=path, index=index, endpoint=endpoint}
         end
     end
-
     -- return response
     return json.encode({
         directory = directory,
@@ -29,6 +31,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Assets",
     logging = core.DEBUG,
     description = "Lists available assets, drivers, and rasters",

@@ -1,10 +1,14 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local global    = require("global")
+local json      = require("json")
+local parms     = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local global = require("global")
-    local json = require("json")
 
     -- system version
     local version, build, launch, duration, packages = sys.version()
@@ -37,6 +41,7 @@ local function main()
 
     -- return response
     return json.encode(rsps)
+
 end
 
 -------------------------------------------------------
@@ -44,6 +49,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Version",
     description = "Returns current version and configuration of server",
     logging = core.DEBUG,

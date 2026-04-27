@@ -1,19 +1,20 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json      = require("json")
+local runner    = require("container_runtime")
+local rqst      = json.decode(arg[1])
+local timeout   = rqst["rqst_timeout"] or 600000
+local parms     = rqst["parms"]
+local image     = rqst["image"]
+local command   = rqst["command"]
+local input     = "parms.json" -- well known file name
+local output    = "results.json" -- well known file name
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local json      = require("json")
-    local runner    = require("container_runtime")
-
-    -- initialize parameters
-    local rqst      = json.decode(arg[1])
-    local timeout   = rqst["rqst_timeout"] or 600000
-    local parms     = rqst["parms"]
-    local image     = rqst["image"]
-    local command   = rqst["command"]
-    local input     = "parms.json" -- well known file name
-    local output    = "results.json" -- well known file name
 
     -- initialize container runtime environment
     local crenv = runner.setup()
@@ -48,9 +49,12 @@ local function main()
         response = { status = false, result = string.format("error opening result file: %s", err) }
     end
 
-    -- return
+    -- cleanup runtime environment
     runner.cleanup(crenv)
+
+    -- return
     return json.encode(response), true
+
 end
 
 -------------------------------------------------------
@@ -58,6 +62,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Execute Container Runtime Environment",
     description = "Execute a user specified docker image",
     logging = core.CRITICAL,

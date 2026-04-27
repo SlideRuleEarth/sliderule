@@ -1,19 +1,22 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json      = require("json")
+local rqst      = json.decode(arg[1])
+local parms     = h5coro.parms(rqst["parms"], rqst["key_space"], rqst["asset"], rqst["resource"])
+local timeout   = parms["timeout"] * 1000
+local resource  = parms["resource"]
+local groups    = parms["groups"]
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local json = require("json")
 
-    -- initialize parameters
-    local rqst = json.decode(arg[1])
-    local parms = h5coro.parms(rqst["parms"], rqst["key_space"], rqst["asset"], rqst["resource"])
-    local timeout = parms["timeout"] * 1000
-    local dfq_name = "df.".._rqst.rspq
-    local resource = parms["resource"]
-    local groups = parms["groups"]
-    local userlog = msg.publish(_rqst.rspq)
-    local dfq = msg.publish(dfq_name)
+    -- initialize queues
+    local dfq_name  = "df.".._rqst.rspq
+    local userlog   = msg.publish(_rqst.rspq)
+    local dfq       = msg.publish(dfq_name)
 
     -- alert helper function
     local function status_to_client(lvl, code, message)
@@ -89,6 +92,7 @@ local function main()
     -- send parquet file to user
     local status = core.send2user(arrow_filename, parms, _rqst.rspq)
     if not status then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to send dataframe") end
+
 end
 
 -------------------------------------------------------
@@ -96,6 +100,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "H5Coro Dataframe",
     description = "Read values from an HDF5 object using an H5Coro dataframe reader (x-series)",
     logging = core.CRITICAL,

@@ -1,10 +1,14 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = json.decode(arg[1])
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
-    local parm = json.decode(arg[1])
-    local def = msg.definition(parm["rectype"])
+    local def = msg.definition(parms["rectype"])
     return json.encode(def)
 end
 
@@ -13,6 +17,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Record Definition",
     description = "Defines the on-the-wire format and structure for a given record type",
     logging = core.DEBUG,

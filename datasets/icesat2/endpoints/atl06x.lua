@@ -1,13 +1,17 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local dataframe = require("dataframe")
+local json      = require("json")
+local rqst      = json.decode(arg[1])
+local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl06", rqst["resource"])
+local channels  = 6 -- number of dataframes per resource (one per beam)
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local dataframe = require("dataframe")
-    local json      = require("json")
-    local rqst      = json.decode(arg[1])
-    local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl06", rqst["resource"])
-    local channels  = 6 -- number of dataframes per resource (one per beam)
-    -- proxy request
+
     dataframe.proxy("atl06x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
         local dataframes = {}
         local runners = {}
@@ -39,6 +43,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "ATL06 Dataframe",
     description = "Spatially and temporally subsets ATL06 granules elevations with additional filters (x-series)",
     logging = core.CRITICAL,

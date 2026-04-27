@@ -1,8 +1,13 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
     return json.encode({
         core = core.parms():export(),
         cre =  cre.parms():export(),
@@ -18,6 +23,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Defaults",
     description = "Dump of all system request parameters and their default values",
     logging = core.DEBUG,

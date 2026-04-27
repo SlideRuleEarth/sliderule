@@ -1,4 +1,9 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local parms = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -19,6 +24,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Prometheus",
     description = "Provides application metrics in OpenMetrics Text Format used by Prometheus",
     logging = core.DEBUG,

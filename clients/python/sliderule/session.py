@@ -594,7 +594,7 @@ class Session:
                     return result
                 else:
                     ts = datetime.fromtimestamp(result['metadata']['exp'])
-                    self.logger.info(f"Invalid or expired token: {ts.strftime("%Y-%m-%d %H:%M:%S")}")
+                    self.logger.info(f"Invalid or expired token: {ts.strftime('%Y-%m-%d %H:%M:%S')}")
             except Exception as e:
                 self.logger.error(f"Exception occurred when reading token from local cache: {e}")
 

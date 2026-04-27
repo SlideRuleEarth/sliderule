@@ -1,15 +1,18 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local global    = require("global")
+local json      = require("json")
+local parms     = json.decode(arg[1])
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local global = require("global")
-    local json = require("json")
-    local parm = json.decode(arg[1])
 
     -- get parameters
-    local type = global.eval(parm["type"]) or core.LOG
-    local duration = parm["duration"] or 600
+    local type = global.eval(parms["type"]) or core.LOG
+    local duration = parms["duration"] or 600
 
     -- greate dispatcher and publisher
     local dispatcher = streaming.dispatcher(core.EVENTQ)
@@ -34,6 +37,7 @@ local function main()
         seconds = seconds + 1
         sys.wait(1)
     end
+
 end
 
 -------------------------------------------------------
@@ -41,6 +45,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Events",
     description = "List system events that occur for given duration",
     logging = core.CRITICAL,

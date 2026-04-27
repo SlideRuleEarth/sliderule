@@ -1,14 +1,16 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = json.decode(arg[1])
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
-    local parm = json.decode(arg[1])
-
-    print("var1", parm["var1"])
-    print("var2", parm["var2"])
-    print("var3", parm["var3"])
-
+    print("var1", parms["var1"])
+    print("var2", parms["var2"])
+    print("var3", parms["var3"])
     return "{ \"result\": \"Hello World\" }"
 end
 
@@ -17,6 +19,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Example JSON Endpoint",
     description = "Used by http_server selftest",
     logging = core.CRITICAL,

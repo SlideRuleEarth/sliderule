@@ -1,16 +1,17 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = json.decode(arg[1])
+local coord = parms["coordinates"]
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- Imports --
-    local json = require("json")
-
-    -- Request Parameters --
-    local rqst = json.decode(arg[1])
-    local coord = rqst["coordinates"]
 
     -- Get Samples --
-    local dem = geo.raster(geo.parms(rqst[geo.PARMS]))
+    local dem = geo.raster(geo.parms(parms[geo.PARMS]))
 
     -- Build Table --
     local samples = {}
@@ -54,6 +55,7 @@ local function main()
 
     -- Return Response
     return json.encode({samples=samples, errors=errors})
+
 end
 
 -------------------------------------------------------
@@ -61,6 +63,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Raster Sampler",
     description = "Return samples from a raster dataset given a (set of) latitude(s) and longitude(s)",
     logging = core.CRITICAL,

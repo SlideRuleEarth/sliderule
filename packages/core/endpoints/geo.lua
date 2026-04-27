@@ -1,21 +1,24 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = json.decode(arg[1])
+local asset = core.getbyname(parms["asset"], true)
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local json = require("json")
-    local parm = json.decode(arg[1])
 
     -- get parameters
-    local asset = core.getbyname(parm["asset"])
-    local pole = parm["pole"]
-    local lat = parm["lat"]
-    local lon = parm["lon"]
-    local x = parm["x"]
-    local y = parm["y"]
-    local span = parm["span"]
-    local span1 = parm["span1"]
-    local span2 = parm["span2"]
+    local pole = parms["pole"]
+    local lat = parms["lat"]
+    local lon = parms["lon"]
+    local x = parms["x"]
+    local y = parms["y"]
+    local span = parms["span"]
+    local span1 = parms["span1"]
+    local span2 = parms["span2"]
 
     -- initialize results
     local result = {}
@@ -54,6 +57,7 @@ local function main()
 
     -- results
     return json.encode(result)
+
 end
 
 -------------------------------------------------------
@@ -61,6 +65,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Geospatial Index Operation",
     description = "Perform intersection, combination, and split operations on geospatial indexes",
     logging = core.DEBUG,

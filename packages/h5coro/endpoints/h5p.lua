@@ -1,28 +1,22 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json      = require("json")
+local parms     = json.decode(arg[1])
+local asset     = core.getbyname(parms["asset"], true)
+local resource  = parms["resource"]
+local datasets  = parms["datasets"]
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
-    local parm = json.decode(arg[1])
-
-    local asset_name = parm["asset"]
-    local resource = parm["resource"]
-    local datasets = parm["datasets"]
-
-    local asset = core.getbyname(asset_name)
-    if not asset then
-        local userlog = msg.publish(_rqst.rspq)
-        userlog:alert(core.INFO, core.RTE_FAILURE, string.format("invalid asset specified: %s", asset_name))
-        return
-    end
-
     local f = h5coro.file(asset, resource)
     if not f then
         local userlog = msg.publish(_rqst.rspq)
         userlog:alert(core.INFO, core.RTE_FAILURE, string.format("failed to open resource: %s", resource))
         return
     end
-
     f:read(datasets, _rqst.rspq)
 end
 
@@ -31,6 +25,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "H5Coro File Read",
     description = "Read values from an HDF5 object using an H5Coro file reader (p-series)",
     logging = core.CRITICAL,

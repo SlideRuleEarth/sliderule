@@ -1,16 +1,17 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json      = require("json")
+local parms     = json.decode(arg[1])
+local extents   = parms["extents"]
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- Imports --
-    local json = require("json")
-
-    -- Request Parameters --
-    local rqst = json.decode(arg[1])
-    local extents = rqst["extents"]
 
     -- Get Samples --
-    local dem = geo.raster(geo.parms(rqst[geo.PARMS]))
+    local dem = geo.raster(geo.parms(parms[geo.PARMS]))
 
     -- Build Table --
     local subsets = {}
@@ -29,6 +30,7 @@ local function main()
 
     -- Return Response
     return json.encode({subsets=subsets, errors=errors})
+
 end
 
 -------------------------------------------------------
@@ -36,6 +38,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Raster Subsetter",
     description = "Return a subset from a raster dataset given an extent",
     logging = core.CRITICAL,

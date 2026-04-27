@@ -1,4 +1,9 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local parms = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -10,6 +15,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Asset Metadata Service",
     description = "Pass-through to Asset Metadata Service API",
     logging = core.CRITICAL,

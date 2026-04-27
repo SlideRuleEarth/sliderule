@@ -1,11 +1,15 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local dataframe = require("dataframe")
+local json      = require("json")
+local rqst      = json.decode(arg[1])
+local channels  = 6 -- number of dataframes per resource
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local dataframe = require("dataframe")
-    local json      = require("json")
-    local rqst      = json.decode(arg[1])
-    local channels  = 6 -- number of dataframes per resource
 
     -- determine default asset
     local default_asset = "icesat2-atl24"
@@ -49,6 +53,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "ATL24 Dataframe",
     description = "Spatially and temporally subsets ATL24 granule bathemtry data with additional filters (x-series)",
     logging = core.CRITICAL,

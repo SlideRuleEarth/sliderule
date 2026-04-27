@@ -1,8 +1,13 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = nil
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
     local healthy = sys.healthy()
     return json.encode({healthy=healthy}), healthy
 end
@@ -12,6 +17,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Health",
     description = "Application health",
     logging = core.DEBUG,

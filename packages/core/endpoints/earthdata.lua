@@ -1,11 +1,15 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json      = require("json")
+local earthdata = require("earth_data_query")
+local parms     = json.decode(arg[1])
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    local json = require("json")
-    local earthdata = require("earth_data_query")
-    local parm = json.decode(arg[1])
-    local status,rsps = earthdata.search(parm)
+    local status,rsps = earthdata.search(parms)
     if status == earthdata.SUCCESS then
         return json.encode(rsps), true
     else
@@ -20,6 +24,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Earthdata",
     description = "Query earth data assets for resources to process",
     logging = core.INFO,

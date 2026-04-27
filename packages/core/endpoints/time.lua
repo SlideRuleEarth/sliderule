@@ -1,15 +1,18 @@
 -------------------------------------------------------
+-- initialization
+-------------------------------------------------------
+local json  = require("json")
+local parms = json.decode(arg[1])
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    -- imports
-    local json = require("json")
-    local parm = json.decode(arg[1])
 
     -- parse request
-    local time_value = parm["time"]
-    local input_format = parm["input"]
-    local output_format = parm["output"]
+    local time_value = parms["time"]
+    local input_format = parms["input"]
+    local output_format = parms["output"]
     local result_time = time_value
     local result_format = "\""..output_format.."\""
 
@@ -40,6 +43,7 @@ local function main()
 
     -- return response
     return string.format('{\"time\": %s, \"format\": %s}', result_time, result_format)
+
 end
 
 -------------------------------------------------------
@@ -47,6 +51,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
+    parms = parms,
     name = "Time",
     description = "Returns current and converted times in different formats support and used by SlideRule",
     logging = core.DEBUG,
