@@ -180,7 +180,7 @@ def h5p (datasets, resource, asset):
 
     # Read H5 File
     try:
-        rsps = sliderule.source("h5p", rqst, stream=True)
+        rsps = sliderule.source("h5p", rqst, stream=True, rethrow=True)
     except RuntimeError as e:
         logger.critical(e)
         rsps = []

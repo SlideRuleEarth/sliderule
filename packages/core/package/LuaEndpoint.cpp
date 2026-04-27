@@ -39,6 +39,7 @@
 #include "OsApi.h"
 #include "SystemConfig.h"
 #include "TimeLib.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -54,6 +55,7 @@ const char* LuaEndpoint::ENDPOINT_LOGGING = "logging";
 const char* LuaEndpoint::ENDPOINT_ROLES = "roles";
 const char* LuaEndpoint::ENDPOINT_SIGNED = "signed";
 const char* LuaEndpoint::ENDPOINT_OUTPUTS = "outputs";
+const char* LuaEndpoint::ENDPOINT_PARMS = "parms";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -277,6 +279,19 @@ LuaEndpoint::endpoint_t LuaEndpoint::loadLuaScript (Request* request, LuaEngine*
     }
     lua_pop(L, 1);
 
+    // get request parameters
+    lua_getfield(L, -1, ENDPOINT_PARMS);
+    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, -1));
+    if(user_data && StringLib::match(RequestFields::OBJECT_TYPE, user_data->luaObj->getType()))
+    {
+        endpoint.request_parameters = dynamic_cast<RequestFields*>(user_data->luaObj);
+    }
+    else
+    {
+        endpoint.request_parameters = NULL;
+    }
+    lua_pop(L, 1);
+
     // return
     return endpoint;
 }
@@ -284,9 +299,15 @@ LuaEndpoint::endpoint_t LuaEndpoint::loadLuaScript (Request* request, LuaEngine*
 /*----------------------------------------------------------------------------
  * logRequest
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::logRequest (Request* request, const endpoint_t& endpoint)
+void LuaEndpoint::captureRequest (Request* request, const endpoint_t& endpoint, EventLib::tlm_input_t& tlm)
 {
     mlog(endpoint.log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
+    if(endpoint.request_parameters && endpoint.request_parameters->pointsInPolygon.value > 0)
+    {
+        const MathLib::coord_t& coord = endpoint.request_parameters->polygon[0];
+        tlm.latitude = coord.lat;
+        tlm.longitude = coord.lon;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -431,10 +452,17 @@ void* LuaEndpoint::requestThread (void* parm)
 {
     EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
     const double start = TimeLib::latchtime();
-    int status_code = RTE_STATUS;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+
+    /* Initialize Telemetry */
+    EventLib::tlm_input_t tlm = {
+        .source_ip = request->getHdrSourceIp(),
+        .endpoint = request->resource,
+        .client = request->getHdrClient(),
+        .account = request->getHdrAccount()
+    };
 
     /* Initialize Lua Engine */
     LuaEngine engine(trace_id, NULL); // TODO: implement lua hook that checks for the timeout to have expired
@@ -446,7 +474,7 @@ void* LuaEndpoint::requestThread (void* parm)
     try
     {
         const endpoint_t endpoint = loadLuaScript(request, &engine, script.path); // throws on error
-        logRequest(request, endpoint); // logs request
+        captureRequest(request, endpoint, tlm); // logs request and populates additional telemetry
         checkRole(request, endpoint); // throws on error
         checkSignature(request, endpoint); // throws on error
         const content_t selected_output = selectOutput(request, endpoint, script.extension); // throws on error, returns output format
@@ -456,7 +484,7 @@ void* LuaEndpoint::requestThread (void* parm)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "%s", e.what());
-        status_code = e.code();
+        tlm.code = e.code();
     }
 
     /* End Response */
@@ -464,14 +492,7 @@ void* LuaEndpoint::requestThread (void* parm)
     if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", request->rspq.getName(), rc);
 
     /* Generate Telemetry */
-    const EventLib::tlm_input_t tlm = {
-        .code = status_code,
-        .duration = static_cast<float>(TimeLib::latchtime() - start),
-        .source_ip = request->getHdrSourceIp(),
-        .endpoint = request->resource,
-        .client = request->getHdrClient(),
-        .account = request->getHdrAccount()
-    };
+    tlm.duration = static_cast<float>(TimeLib::latchtime() - start);
     telemeter(INFO, tlm);
 
     /* Clean Up */

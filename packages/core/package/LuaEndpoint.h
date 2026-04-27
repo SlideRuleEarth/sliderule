@@ -40,6 +40,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "LuaObject.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * PISTACHE SERVER CLASS
@@ -61,6 +62,7 @@ class LuaEndpoint: public EndpointObject
         static const char* ENDPOINT_ROLES;
         static const char* ENDPOINT_SIGNED;
         static const char* ENDPOINT_OUTPUTS;
+        static const char* ENDPOINT_PARMS;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -71,6 +73,7 @@ class LuaEndpoint: public EndpointObject
             vector<string>      allowed_roles;      // ENDPOINT_ROLES
             bool                signature_required; // ENDPOINT_SIGNED
             vector<content_t>   supported_outputs;  // ENDPOINT_OUTPUTS
+            RequestFields*      request_parameters; // ENDPOINT_PARMS
         } endpoint_t;
 
          /*--------------------------------------------------------------------
@@ -92,7 +95,7 @@ class LuaEndpoint: public EndpointObject
         void                handleRequest       (Request* request) override;
 
         static endpoint_t   loadLuaScript       (Request* request, LuaEngine* engine, const string& script);
-        static void         logRequest          (Request* request, const endpoint_t& endpoint);
+        static void         captureRequest      (Request* request, const endpoint_t& endpoint, EventLib::tlm_input_t& tlm);
         static void         checkRole           (Request* request, const endpoint_t& endpoint);
         static void         checkSignature      (Request* request, const endpoint_t& endpoint);
         static content_t    selectOutput        (Request* request, const endpoint_t& endpoint, const string& extension);
