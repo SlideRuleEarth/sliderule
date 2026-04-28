@@ -70,7 +70,7 @@ int SwotFields::luaCreate (lua_State* L)
 SwotFields::SwotFields(lua_State* L, uint64_t key_space):
     RequestFields(L, key_space, NULL, NULL,
     {
-        {"variables",   &variables}
+        {"variables",   &variables,     "Variables to include in response from source granule"}
     })
 {
 }

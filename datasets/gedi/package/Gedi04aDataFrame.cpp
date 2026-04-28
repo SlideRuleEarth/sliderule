@@ -82,15 +82,15 @@ int Gedi04aDataFrame::luaCreate (lua_State* L)
 Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf04a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"shot_number",         &shot_number},
-        {"time_ns",             &time_ns},
-        {"latitude",            &latitude},
-        {"longitude",           &longitude},
-        {"agbd",                &agbd},
-        {"elevation",           &elevation},
-        {"solar_elevation",     &solar_elevation},
-        {"sensitivity",         &sensitivity},
-        {"flags",               &flags}
+        {"shot_number",         &shot_number,       "GEDI laser shot number identifier"},
+        {"time_ns",             &time_ns,           "Unix time (nanoseconds) of laser shot"},
+        {"latitude",            &latitude,          "Latitude (EPSG:7912)"},
+        {"longitude",           &longitude,         "Longitude (EPSG:7912)"},
+        {"agbd",                &agbd,              "Above ground biodensity"},
+        {"elevation",           &elevation,         "Elevation of the ground (meters)"},
+        {"solar_elevation",     &solar_elevation,   "Solar elevation (degrees)"},
+        {"sensitivity",         &sensitivity,       "Sensitivity score"},
+        {"flags",               &flags,             "Data flags"}
     },
     _parms,
     _hdf04a,

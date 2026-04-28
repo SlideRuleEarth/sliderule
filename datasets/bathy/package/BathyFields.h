@@ -59,13 +59,13 @@ struct SurfaceFields: public FieldMap<Field>
     FieldElement<bool>      modelAsPoisson      {true};
 
     SurfaceFields(void):
-        FieldMap<Field>({ {"bin_size",            &binSize},
-                          {"max_range",           &maxRange},
-                          {"max_bins",            &maxBins},
-                          {"signal_threshold",    &signalThreshold},
-                          {"min_peak_separation", &minPeakSeparation},
-                          {"highest_peak_ration", &highestPeakRatio},
-                          {"model_as_poisoon",    &modelAsPoisson} }) {
+        FieldMap<Field>({ {"bin_size",            &binSize,             "Vertical bin size to use for histogram processing to find the sea surface"},
+                          {"max_range",           &maxRange,            "Maximum vertical range of photons to histogram"},
+                          {"max_bins",            &maxBins,             "Maximum number of bins in the vertical histogram"},
+                          {"signal_threshold",    &signalThreshold,     "Number of standard deviations above the noise level to indicate signal"},
+                          {"min_peak_separation", &minPeakSeparation,   "Minimum vertical distance between sea surface and sea floor needed to distinguish them as separate signals"},
+                          {"highest_peak_ratio",  &highestPeakRatio,    "Peak ratio required to favor bottom peak as sea surface over top peak"},
+                          {"model_as_poisson",    &modelAsPoisson,      "Boolean flag for using the Poisson distribution when modeling the sea surface return"} }) {
     };
 
     virtual ~SurfaceFields(void) override = default;
@@ -81,9 +81,9 @@ struct RefractionFields: public FieldMap<Field>
     FieldElement<double>    RIWater         {1.34116};  // refraction index of water
 
     RefractionFields(void):
-        FieldMap<Field>({ {"use_water_ri_mask", &useWaterRIMask},
-                          {"ri_air",            &RIAir},
-                          {"ri_water",          &RIAir} }) {
+        FieldMap<Field>({ {"use_water_ri_mask", &useWaterRIMask,    "Name of the global water refraction index to use when refraction correcting photons"},
+                          {"ri_air",            &RIAir,             "Refraction index of the air"},
+                          {"ri_water",          &RIWater,           "Refraction index of the water"} }) {
     };
 
     virtual ~RefractionFields(void) override = default;
@@ -97,7 +97,7 @@ struct UncertaintyFields: public FieldMap<Field>
     AssetField assetKd {"viirsj1-s3"}; // global water refractive index mask downloaded in atl24 init lua routine
 
     UncertaintyFields(void):
-        FieldMap<Field>({ {"asset_kd", &assetKd} }) {
+        FieldMap<Field>({ {"asset_kd", &assetKd, "Name of the Kd asset to use to read Kd values for each photon"} }) {
     };
 
     virtual ~UncertaintyFields(void) override = default;

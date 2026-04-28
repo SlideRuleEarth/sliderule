@@ -166,8 +166,8 @@ int CasalsFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 CasalsFields::CasalsFields(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource):
     RequestFields (L, key_space, asset_name, _resource,
-        { {"anc_fields",        &anc_fields},
-          {"granule",           &granule_fields} })
+        { {"anc_fields",    &anc_fields,        "Ancillary fields from the source granules to include in response"},
+          {"granule",       &granule_fields,    "Versioning and date information pulled from the granule processed; output only"} })
 {
 }
 

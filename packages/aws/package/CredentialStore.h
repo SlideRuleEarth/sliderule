@@ -91,37 +91,37 @@ class CredentialStore
             };
 
             Credential(void): FieldMap<Field>({
-                {ACCESS_KEY_ID_STR, &accessKeyId},
-                {ACCESS_KEY_ID_STR1, &accessKeyId},
-                {ACCESS_KEY_ID_STR2, &accessKeyId},
+                {ACCESS_KEY_ID_STR,         &accessKeyId,       "AWS Access Key ID"},
+                {ACCESS_KEY_ID_STR1,        &accessKeyId,       "AWS Access Key ID; alternate format 1"},
+                {ACCESS_KEY_ID_STR2,        &accessKeyId,       "AWS Access Key ID; alternate format 2"},
 
-                {SECRET_ACCESS_KEY_STR, &secretAccessKey},
-                {SECRET_ACCESS_KEY_STR1, &secretAccessKey},
-                {SECRET_ACCESS_KEY_STR2, &secretAccessKey},
+                {SECRET_ACCESS_KEY_STR,     &secretAccessKey,   "AWS Secret Access Key"},
+                {SECRET_ACCESS_KEY_STR1,    &secretAccessKey,   "AWS Secret Access Key; alternate format 1"},
+                {SECRET_ACCESS_KEY_STR2,    &secretAccessKey,   "AWS Secret Access Key; alternate format 2"},
 
-                {SESSION_TOKEN_STR, &sessionToken},
-                {SESSION_TOKEN_STR1, &sessionToken},
-                {SESSION_TOKEN_STR2, &sessionToken},
+                {SESSION_TOKEN_STR,         &sessionToken,      "AWS Session Token"},
+                {SESSION_TOKEN_STR1,        &sessionToken,      "AWS Session Token; alternate format 1"},
+                {SESSION_TOKEN_STR2,        &sessionToken,      "AWS Session Token; alternate format 2"},
 
-                {EXPIRATION_STR, &expiration},
-                {EXPIRATION_STR1, &expiration}
+                {EXPIRATION_STR,            &expiration,        "AWS Token Expiration"},
+                {EXPIRATION_STR1,           &expiration,        "AWS Token Expiration; alternate format 1"}
             }) {};
 
             Credential(const Credential& c): FieldMap<Field>({
-                {ACCESS_KEY_ID_STR, &accessKeyId},
-                {ACCESS_KEY_ID_STR1, &accessKeyId},
-                {ACCESS_KEY_ID_STR2, &accessKeyId},
+                {ACCESS_KEY_ID_STR,         &accessKeyId,       "AWS Access Key ID"},
+                {ACCESS_KEY_ID_STR1,        &accessKeyId,       "AWS Access Key ID; alternate format 1"},
+                {ACCESS_KEY_ID_STR2,        &accessKeyId,       "AWS Access Key ID; alternate format 2"},
 
-                {SECRET_ACCESS_KEY_STR, &secretAccessKey},
-                {SECRET_ACCESS_KEY_STR1, &secretAccessKey},
-                {SECRET_ACCESS_KEY_STR2, &secretAccessKey},
+                {SECRET_ACCESS_KEY_STR,     &secretAccessKey,   "AWS Secret Access Key"},
+                {SECRET_ACCESS_KEY_STR1,    &secretAccessKey,   "AWS Secret Access Key; alternate format 1"},
+                {SECRET_ACCESS_KEY_STR2,    &secretAccessKey,   "AWS Secret Access Key; alternate format 2"},
 
-                {SESSION_TOKEN_STR, &sessionToken},
-                {SESSION_TOKEN_STR1, &sessionToken},
-                {SESSION_TOKEN_STR2, &sessionToken},
+                {SESSION_TOKEN_STR,         &sessionToken,      "AWS Session Token"},
+                {SESSION_TOKEN_STR1,        &sessionToken,      "AWS Session Token; alternate format 1"},
+                {SESSION_TOKEN_STR2,        &sessionToken,      "AWS Session Token; alternate format 2"},
 
-                {EXPIRATION_STR, &expiration},
-                {EXPIRATION_STR1, &expiration}
+                {EXPIRATION_STR,            &expiration,        "AWS Token Expiration"},
+                {EXPIRATION_STR1,           &expiration,        "AWS Token Expiration; alternate format 1"}
             }) {
                 accessKeyId = c.accessKeyId;
                 secretAccessKey = c.secretAccessKey;

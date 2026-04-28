@@ -344,8 +344,8 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     }
 
     /* add columns */
-    df.addExistingColumn("sigma_thu", sigma_thu);
-    df.addExistingColumn("sigma_tvu", sigma_tvu);
+    df.addExistingColumn("sigma_thu", sigma_thu, "Total horizontal uncertainty (in meters)");
+    df.addExistingColumn("sigma_tvu", sigma_tvu, "Total vertical uncertainty (in meters)");
 
     /* mark completion */
     return true;

@@ -295,7 +295,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
     }
 
     /* add new column */
-    df.addExistingColumn("surface_h", surface_h);
+    df.addExistingColumn("surface_h", surface_h, "Sea surface height (in meters)");
 
     /* mark completion */
     return true;

@@ -284,9 +284,9 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     }
 
     /* Add Columns */
-    df.addExistingColumn("refracted_dZ", refracted_dZ);
-    df.addExistingColumn("refracted_lat", refracted_lat);
-    df.addExistingColumn("refracted_lon", refracted_lon);
+    df.addExistingColumn("refracted_dZ", refracted_dZ, "Vertical refraction correction (in meters)");
+    df.addExistingColumn("refracted_lat", refracted_lat, "Refraction corrected latitude");
+    df.addExistingColumn("refracted_lon", refracted_lon, "Refraction corrected longitude");
 
     /* Mark Completion */
     return true;

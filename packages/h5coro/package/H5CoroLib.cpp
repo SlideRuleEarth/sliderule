@@ -449,22 +449,22 @@ const char* H5Coro::Fields::defaultCRS (void)
  *----------------------------------------------------------------------------*/
 H5Coro::Fields::Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list):
     RequestFields (L, key_space, asset_name, _resource, {
-        {"col",         &col},
-        {"startrow",    &startRow},
-        {"numrows",     &numRows},
-        {"crs",         &crs},
-        {"index",       &index_column},
-        {"time",        &time_column},
-        {"x",           &x_column},
-        {"y",           &y_column},
-        {"z",           &z_column},
-        {"groups",      &groups},
-        {"variables",   &variables}})
+        {"col",         &col,           "The column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned; if the variable has more than one column, then by default the first column is read, if all columns are wanted, then set col=-1 and the result will be a flattened array of all of the data"},
+        {"startrow",    &startRow,      "The first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)"},
+        {"numrows",     &numRows,       "The number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if ALL_ROWS selected, it will read from the startrow to the end of the dataset"},
+        {"crs",         &crs,           "Coordinate reference system to attach to the resulting dataframe when 'h5x' is used to build a dataframe from an HDF5 granule"},
+        {"index",       &index_column,  "The 'h5x' dataframe column to identify as the index"},
+        {"time",        &time_column,   "The 'h5x' dataframe column to identify as the time"},
+        {"x",           &x_column,      "The 'h5x' dataframe column to identify as the x coordinate"},
+        {"y",           &y_column,      "The 'h5x' dataframe column to identify as the y coordinate"},
+        {"z",           &z_column,      "The 'h5x' dataframe column to identify as the z coordinate"},
+        {"groups",      &groups,        "The groups to pull from when 'h5x' is reading variables to build the dataframe"},
+        {"variables",   &variables,     "The variables to read when 'h5x' is building the dataframe; each variable becomes a column in the dataframe"}})
 {
     crs.value = defaultCRS(); // initialize
     for(const FieldMap<Field>::init_entry_t elem: init_list)
     {
-        const entry_t entry = {elem.field, false};
+        const entry_t entry = {elem.field, elem.description, false};
         fields.add(elem.name, entry);
     }
 }

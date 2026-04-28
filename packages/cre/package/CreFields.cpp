@@ -83,9 +83,9 @@ void CreFields::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 CreFields::CreFields (lua_State* L):
     RequestFields(L, 0, NULL, NULL, {
-        {"container_image",   &container_image},
-        {"container_name",    &container_name},
-        {"container_command", &container_command}
+        {"container_image",   &container_image,     "Docker image to run"},
+        {"container_name",    &container_name,      "Name to apply to the container that is run"},
+        {"container_command", &container_command,   "Command to execute when starting the container"}
     })
 {
 }

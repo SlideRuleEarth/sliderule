@@ -57,8 +57,8 @@
 
         typedef struct {
             const char* name;
-            const char* description;
             T* field;
+            const char* description;
         } init_entry_t;
 
         typedef struct {
@@ -76,7 +76,7 @@
                         FieldMap    (std::initializer_list<init_entry_t> init_list);
         virtual         ~FieldMap   (void) override;
 
-        bool            add         (const char* key, T* field, bool free_on_delete=true);
+        bool            add         (const char* key, T* field, const char* description, bool free_on_delete=true);
         bool            find        (const char* key, T** data);
 
         void            clear       (void) override;
@@ -128,7 +128,7 @@ FieldMap<T>::FieldMap(std::initializer_list<init_entry_t> init_list):
 {
     for(const init_entry_t& elem: init_list)
     {
-        add(elem.name, elem.field, false);
+        add(elem.name, elem.field, elem.description, false);
     }
 };
 
@@ -145,10 +145,11 @@ FieldMap<T>::~FieldMap(void)
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
-bool FieldMap<T>::add(const char* key, T* field, bool free_on_delete)
+bool FieldMap<T>::add(const char* key, T* field, const char* description, bool free_on_delete)
 {
     entry_t entry = {
         .field = field,
+        .description = description,
         .free_on_delete = free_on_delete
     };
     return fields.add(key, entry);
@@ -163,6 +164,7 @@ bool FieldMap<T>::find (const char* key, T** data)
     assert(data);
     entry_t entry = {
         .field = NULL,
+        .description = NULL,
         .free_on_delete = false
     };
     if(fields.find(key, &entry))
@@ -298,7 +300,7 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
             lua_pushnil(L);
             while(lua_next(L, table_index) != 0)
             {
-                entry_t entry = {NULL, true};
+                entry_t entry = {NULL, NULL, true};
                 try
                 {
                     const char* key = LuaObject::getLuaString(L, -2);

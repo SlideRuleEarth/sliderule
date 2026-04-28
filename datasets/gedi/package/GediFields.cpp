@@ -208,19 +208,19 @@ int GediFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 GediFields::GediFields(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource):
     RequestFields (L, key_space, asset_name, _resource,
-        { {"beams",             &beams},
-          {"degrade_filter",    &degrade_filter},
-          {"l2_quality_filter", &l2_quality_filter},
-          {"l4_quality_filter", &l4_quality_filter},
-          {"surface_filter",    &surface_filter},
-          {"anc_fields",        &anc_fields},
-          {"granule",           &granule_fields},
+        { {"beams",             &beams,             "Laser beams to process"},
+          {"degrade_filter",    &degrade_filter,    "Filter for degraded data; when enabled, degraded returns are not included in the response"},
+          {"l2_quality_filter", &l2_quality_filter, "Filter for level 2 low quality data; when enabled, low quality returns are not included in the response"},
+          {"l4_quality_filter", &l4_quality_filter, "Filter for level 4 low quality data; when enabled, low quality returns are not included in the response"},
+          {"surface_filter",    &surface_filter,    "Filter for surface data; when enabled, only surface returns are included in the response"},
+          {"anc_fields",        &anc_fields,        "Ancillary fields from the source granules to include in the response"},
+          {"granule",           &granule_fields,    "Versioning and date information pulled from the granule processed; output only"},
           // backwards compatibility
-          {"beam",              &beams},
-          {"degrade_flag",      &degrade_flag},
-          {"l2_quality_flag",   &l2_quality_flag},
-          {"l4_quality_flag",   &l4_quality_flag},
-          {"surface_flag",      &surface_flag} })
+          {"beam",              &beams,             "Laser beams to process; deprecated, use 'beams'"},
+          {"degrade_flag",      &degrade_flag,      "Flag for filtering degraded data (only source data that matches flag value is included); deprecated, use 'degrade_filter'"},
+          {"l2_quality_flag",   &l2_quality_flag,   "Flag for level 2 low quality data (only source data that matches flag value is included); deprecated, use 'l2_quality_filter'"},
+          {"l4_quality_flag",   &l4_quality_flag,   "Flag for level 4 low quality data (only source data that matches flag value is included); deprecated, use 'l4_quality_filter'"},
+          {"surface_flag",      &surface_flag,      "Flag for surface data (only source data that matches flag value is included); deprecated, use 'surface_filter'"} })
 {
 }
 

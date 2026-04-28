@@ -180,7 +180,7 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
     // add source_id to meta data
     const string value(reinterpret_cast<const char*>(data->data), data->size);
     FieldElement<string>* source_id_field = new FieldElement<string>(value);
-    if(!dict->add(FString("%d", source_id).c_str(), source_id_field, true))
+    if(!dict->add(FString("%d", source_id).c_str(), source_id_field, NULL, true))
     {
         delete source_id_field;
         throw RunTimeException(ERROR, RTE_FAILURE, "failed to add <%s=%d> to <%s>", GeoDataFrame::SOURCE_ID, source_id, GeoDataFrame::SOURCE_TABLE);
@@ -217,7 +217,7 @@ static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t*
     if(!srcdata->find(srcid.c_str(), &srcid_field))
     {
         srcid_field = new FieldMap<Field>();
-        if(!srcdata->add(srcid.c_str(), srcid_field, true))
+        if(!srcdata->add(srcid.c_str(), srcid_field, NULL, true))
         {
             delete srcid_field;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to add srcid <%s> to srcdata", srcid.c_str());
@@ -228,7 +228,7 @@ static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t*
     FieldMap<Field>* srcid_dict = dynamic_cast<FieldMap<Field>*>(srcid_field);
     const string value(reinterpret_cast<const char*>(data->data), data->size);
     FieldElement<string>* value_field = new FieldElement<string>(value);
-    if(!srcid_dict->add(data->name, value_field, true))
+    if(!srcid_dict->add(data->name, value_field, NULL, true))
     {
         delete value_field;
         throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata field to <%s> in <%s>", srcid.c_str(), GeoDataFrame::SOURCE_DATA);
@@ -708,9 +708,9 @@ vector<string> GeoDataFrame::getColumnNames(void) const
 /*----------------------------------------------------------------------------
  * addColumn - assumes memory is properly allocated already
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addColumn (const char* name, FieldUntypedColumn* column, bool free_on_delete)
+bool GeoDataFrame::addColumn (const char* name, FieldUntypedColumn* column, const char* description, bool free_on_delete)
 {
-    return columnFields.add(name, column, free_on_delete);
+    return columnFields.add(name, column, description, free_on_delete);
 }
 
 /*----------------------------------------------------------------------------
@@ -784,9 +784,9 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t column_encoding)
 /*----------------------------------------------------------------------------
  * addExistingColumn - only allocates name
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addExistingColumn (const char* name, FieldUntypedColumn* column)
+bool GeoDataFrame::addExistingColumn (const char* name, FieldUntypedColumn* column, const char* description)
 {
-    if(addColumn(name, column, true))
+    if(addColumn(name, column, description, true))
     {
         // set number of rows if unset
         if(numRows == 0)

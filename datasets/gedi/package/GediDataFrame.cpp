@@ -51,10 +51,10 @@
                              GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name):
     GeoDataFrame(L, meta_name, meta_table, column_list,
     {
-        {"beam",    &beam},
-        {"orbit",   &orbit},
-        {"track",   &track},
-        {"granule", &granule}
+        {"beam",    &beam,      "GEDI laser beam identifier"},
+        {"orbit",   &orbit,     "GEDI orbit number"},
+        {"track",   &track,     "GEDI reference ground track"},
+        {"granule", &granule,   "GEDI SDP granule name"}
     },
     getCRS(), // crs
     beamIndexFromString(beam_str)), // dfKey

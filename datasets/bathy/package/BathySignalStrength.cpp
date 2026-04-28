@@ -258,7 +258,7 @@ bool BathySignalStrength::run(GeoDataFrame* dataframe)
     }
 
     // add new column
-    df.addExistingColumn("signal_strength", signal_strength);
+    df.addExistingColumn("signal_strength", signal_strength, "Signal strength score normalized to 8-bits");
 
     // mark completion
     return true;

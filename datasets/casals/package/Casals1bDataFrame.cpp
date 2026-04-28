@@ -89,13 +89,13 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
 Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",         &time_ns},
-        {"latitude",        &latitude},
-        {"longitude",       &longitude},
-        {"refh",            &refh},
+        {"time_ns",         &time_ns,       "Unix time (nanoseconds) of the measurement"},
+        {"latitude",        &latitude,      "Latitude (degrees)"},
+        {"longitude",       &longitude,     "Longitude (degrees)"},
+        {"refh",            &refh,          "Reference height (meters)"},
     },
     {
-        {"granule",         &granule}
+        {"granule",         &granule,       "Name of source CASALS 1B granule"}
     },
     CasalsFields::crsITRF2020(), // crs
     1), // dfKey
