@@ -105,7 +105,6 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    user_guide/icesat2.md
    user_guide/gedi.rst
    user_guide/versioning.md
-   user_guide/how_tos/how_tos.rst
 
 .. toctree::
    :hidden:
