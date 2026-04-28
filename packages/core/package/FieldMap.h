@@ -57,11 +57,13 @@
 
         typedef struct {
             const char* name;
+            const char* description;
             T* field;
         } init_entry_t;
 
         typedef struct {
             T* field;
+            const char* description; // pre-allocated, never deleted
             bool free_on_delete;
         } entry_t;
 

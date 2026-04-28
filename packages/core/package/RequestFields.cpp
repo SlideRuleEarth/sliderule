@@ -437,12 +437,6 @@ void RequestFields::fromLua (lua_State* L, int index)
 {
     FieldMap<Field>::fromLua(L, index);
 
-    // set timeouts (if necessary)
-    if(timeout == IO_INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
-    if(rqstTimeout == IO_INVALID_TIMEOUT)  rqstTimeout = timeout;
-    if(nodeTimeout == IO_INVALID_TIMEOUT)  nodeTimeout = timeout;
-    if(readTimeout == IO_INVALID_TIMEOUT)  readTimeout = timeout;
-
     // project polygon (if necessary)
     pointsInPolygon = polygon.length();
     if(pointsInPolygon.value > 0)
@@ -475,15 +469,15 @@ void RequestFields::fromLua (lua_State* L, int index)
 RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldMap<Field> ({
-        {"asset",               &asset},
-        {"resource",            &resource},
-        {"resources",           &resources},
-        {"max_resources",       &maxResources},
-        {"poly",                &polygon},
-        {"proj",                &projection},
-        {"datum",               &datum},
-        {"points_in_polygon",   &pointsInPolygon},
-        {"timeout",             &timeout},
+        {"asset",               &asset,                 "The name of a collection of resources; this rarely needs to be specified because the default value for most endpoints are sufficient."},
+        {"resource",            &resource,              "A single resource to process; 'resources' should be used instead, even when there is only one resource to process."},
+        {"resources",           &resources,             "A list of resources to process (e.g. granule names like 'ATL03_20181019065445_03150111_007_01.h5')."},
+        {"max_resources",       &maxResources,          "Maximum number of resources that can be processed in a single request; overriding this allows larger regions to be processed but risks crashing the servers."},
+        {"poly",                &polygon,               "Polygon of area of interest."},
+        {"proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing."},
+        {"datum",               &datum,                 "Vertical datum to use when returning elevation data."},
+        {"points_in_polygon",   &pointsInPolygon,       "Internal"},
+        {"timeout",             &timeout,               "Global setting for number of seconds to wait for request to finish."},
         {"rqst_timeout",        &rqstTimeout},
         {"node_timeout",        &nodeTimeout},
         {"read_timeout",        &readTimeout},

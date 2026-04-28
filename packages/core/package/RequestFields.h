@@ -45,6 +45,7 @@
 #include "RegionMask.h"
 #include "MathLib.h"
 #include "OutputFields.h"
+#include "SystemConfig.h"
 
 #ifdef __geo__
 #include "GeoFields.h"
@@ -114,10 +115,10 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};
-        FieldElement<int>               timeout             {IO_INVALID_TIMEOUT}; // global timeout
-        FieldElement<int>               rqstTimeout         {IO_INVALID_TIMEOUT};
-        FieldElement<int>               nodeTimeout         {IO_INVALID_TIMEOUT};
-        FieldElement<int>               readTimeout         {IO_INVALID_TIMEOUT};
+        FieldElement<int>               timeout             {SystemConfig::settings().requestTimeoutSec.value}; // global timeout
+        FieldElement<int>               rqstTimeout         {SystemConfig::settings().requestTimeoutSec.value};
+        FieldElement<int>               nodeTimeout         {SystemConfig::settings().requestTimeoutSec.value};
+        FieldElement<int>               readTimeout         {SystemConfig::settings().requestTimeoutSec.value};
         FieldElement<int>               clusterSizeHint     {0};
         FieldElement<uint64_t>          keySpace            {INVALID_KEY};
         RegionMask                      regionMask;
