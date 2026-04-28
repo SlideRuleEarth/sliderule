@@ -142,9 +142,6 @@ CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
 ALERT_STREAM = recorder-firehose-alerts
 TELEMETRY_STREAM = recorder-firehose-telemetry
 
-DOCUMENTATION_CONDA_ENV ?= sliderule_notebook # clients/python/examples/environment.yml
-DOCUMENTATION_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(DOCUMENTATION_CONDA_ENV)
-
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
 AFFILIATES_FILENAME = affiliates.json
 GITHUB_ORG ?= SlideRuleEarth
@@ -813,7 +810,8 @@ documentation: ## generate the static documentation (uses docs/environment.yml "
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
-	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/assets
+	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
+	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	conda run -n rtd --no-capture-output \
 	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
 	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
@@ -846,15 +844,6 @@ documentation-describe: ## status the creation/deletion of the documentation
 documentation-delete: ## deletes the documentation stack
 	aws cloudformation delete-stack --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
-
-documentation-render-notebooks: ## execute the notebooks used in the documentation
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(DOCUMENTATION_ASSET_DIR)/boulder_watershed.ipynb --debug
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(DOCUMENTATION_ASSET_DIR)/grandmesa.ipynb --debug
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(DOCUMENTATION_ASSET_DIR)/phoreal.ipynb --debug
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(DOCUMENTATION_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(DOCUMENTATION_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(DOCUMENTATION_ASSET_DIR)/atl13_access.ipynb --debug
-	$(DOCUMENTATION_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(DOCUMENTATION_ASSET_DIR)/atl24_access.ipynb --debug
 
 ########################
 # Release Target

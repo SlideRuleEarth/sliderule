@@ -59,8 +59,8 @@ The default resulting DataFrame from this endpoint contains the following column
 
 The photon-input parameters allow the user to select an area, a time range, or a specific ATL03 granule to use for input to the photon-selection algorithm.  If multiple parameters are specified, the result will be those photons that match all of the parameters.
 
-* `poly`: polygon defining region of interest (see [polygons](/user_guide/basic_usage.html#polygons))
-* `region_mask`: geojson describing region of interest which enables rasterized subsetting on servers (see [geojson](/user_guide/basic_usage.html#rasterized-area-of-interest))
+* `poly`: polygon defining region of interest (see [Polygons](/user_guide/basic_usage.md#polygons))
+* `region_mask`: geojson describing region of interest which enables rasterized subsetting on servers (see in [geojson](/user_guide/basic_usage.md#rasterized-area-of-interest))
 * `track`: reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0); note that this is combined with the beam selection as a union of the two
 * `beams`: list of beam identifiers (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all)
 * `spots`: list of spots (1, 2, 3, 4, 5, 6); this is only supporting by the _atl03x_ endpoint
@@ -176,7 +176,7 @@ This algorithm replaces the columns of the source DataFrame with the following c
 |y_atc|Fitted across track distance|meters (float)||
 |photon_start|ATL03 index (per beam) of the first photon in the segment|||
 |photon_count|Number of ATL03 photons in the segment|||
-|pflags|Processing flags|see [ICESat-2 Processing Flags](./icesat2#3-4-processing-flags)||
+|pflags|Processing flags|see [ICESat-2 Processing Flags](#icesat-2-module)||
 |h_mean|Fitted elevation of the segment|meters (float)|vertical datum controlled by parameters, default is ITRF2014|
 |dh_fit_dx|Fitted slope of the segment|||
 |window_height|Height of window used in final fit|meters||
@@ -222,7 +222,7 @@ This algorithm replaces the columns of the source DataFrame with the following c
 |y_atc|Across track distance|meters (float)|dist_ph_across|
 |photon_start|ATL03 index (per beam) of the first photon in the segment|||
 |photon_count|Number of ATL03 photons in the segment|||
-|pflags|Processing flags|see [ICESat-2 Processing Flags](./icesat2#3-4-processing-flags)||
+|pflags|Processing flags|see [ICESat-2 Processing Flags](#icesat-2-module)||
 |ground_photon_count|Number of photons classified as ground in the segment|||
 |vegetation_photon_count|Number of photons classified as canopy or top of canopy in the segment|||
 |landcover|ATL08 land cover flags|||
