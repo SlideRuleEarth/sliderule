@@ -208,7 +208,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "DOUBLE",                   RecordObject::DOUBLE);
     LuaEngine::setAttrInt   (L, "TIME8",                    RecordObject::TIME8);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
-    LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
+    LuaEngine::setAttrInt   (L, "OBJECT",                   RecordObject::OBJECT);
     LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
     LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
     LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);

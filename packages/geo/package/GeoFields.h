@@ -184,7 +184,7 @@ string convertToJson(const GeoFields::single_sample_option_t& v);
 int convertToLua(lua_State* L, const GeoFields::single_sample_option_t& v);
 void convertFromLua(lua_State* L, int index, GeoFields::single_sample_option_t& v);
 
-inline uint32_t toEncoding(GeoFields::bbox_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(GeoFields::bbox_t& v) { (void)v; return Field::OBJECT; };
 inline uint32_t toEncoding(GeoFields::sampling_algo_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(GeoFields::single_sample_option_t& v) { (void)v; return Field::INT32; };
 

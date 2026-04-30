@@ -72,7 +72,7 @@ const int RecordObject::FIELD_TYPE_BYTES[NUM_FIELD_TYPES] = {
     8, // DOUBLE
     8, // TIME8
     1, // STRING
-    0, // USER
+    0, // OBJECT
     0, // INVALID_FIELD
     1  // BOOL
 };
@@ -971,7 +971,7 @@ RecordObject::valType_t RecordObject::getValueType(const field_t& f)
         case DOUBLE:    return REAL;
         case TIME8:     return INTEGER;
         case STRING:    return TEXT;
-        case USER:      return DYNAMIC;
+        case OBJECT:    return DYNAMIC;
         default:        return DYNAMIC;
     }
 }
@@ -1269,7 +1269,7 @@ RecordObject::fieldType_t RecordObject::str2ft (const char* str)
     if(StringLib::match(str, "DOUBLE"))     return DOUBLE;
     if(StringLib::match(str, "TIME8"))      return TIME8;
     if(StringLib::match(str, "STRING"))     return STRING;
-    if(StringLib::match(str, "USER"))       return USER;
+    if(StringLib::match(str, "OBJECT"))     return OBJECT;
     if(StringLib::match(str, "INT16BE"))    return INT16;
     if(StringLib::match(str, "INT32BE"))    return INT32;
     if(StringLib::match(str, "INT64BE"))    return INT64;
@@ -1354,7 +1354,7 @@ const char* RecordObject::ft2str (fieldType_t ft)
         case DOUBLE:    return "DOUBLE";
         case TIME8:     return "TIME8";
         case STRING:    return "STRING";
-        case USER:      return "USER";
+        case OBJECT:    return "OBJECT";
         default:        return "INVALID_FIELD";
     }
 }
@@ -1647,7 +1647,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
 
         /* Look Up Field Name */
         _field = def->fields[fstr];
-        if(_field.type != USER)
+        if(_field.type != OBJECT)
         {
             /* Check Element Boundary */
             if(element >= 0 && (element < _field.elements || _field.elements <= 0))
@@ -1807,7 +1807,7 @@ void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, 
         if((_field.flags & BATCH)    && (def->meta.batch_field == NULL))  def->meta.batch_field    = field_name.c_str(true);
 
         /* Recurse for User Fields */
-        if(_field.type == USER)
+        if(_field.type == OBJECT)
         {
             scanDefinition(def, field_name.c_str(), _field.exttype);
         }

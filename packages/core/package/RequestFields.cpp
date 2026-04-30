@@ -47,6 +47,7 @@ const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"export",      luaExport},
     {"encode",      luaEncode},
+    {"describe",    luaDescribe},
     {"polygon",     luaProjectedPolygonIncludes},
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
@@ -140,7 +141,30 @@ int RequestFields::luaEncode (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        mlog(e.level(), "Error encoding %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaDescribe - decsribe() --> openapi
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaDescribe (lua_State* L)
+{
+    try
+    {
+        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* name = getLuaString(L, 2);
+        const char* description = getLuaString(L, 3, true, "");
+        const string& open_api_str = lua_obj->toOpenApi(description);
+        FString schema("{\"%s\": %s}", name, open_api_str.c_str());
+        lua_pushstring(L, schema.c_str());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error describing %s: %s", OBJECT_TYPE, e.what());
         lua_pushnil(L);
     }
 

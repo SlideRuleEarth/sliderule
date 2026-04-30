@@ -60,7 +60,7 @@ const RecordObject::fieldDef_t RasterSampler::rsGeoRecDef[] = {
     {"index",           RecordObject::UINT64,   offsetof(rs_geo_t, index),          1,  NULL, NATIVE_FLAGS},
     {"key",             RecordObject::STRING,   offsetof(rs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"num_samples",     RecordObject::UINT32,   offsetof(rs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(rs_geo_t, samples),        0,  rsSampleRecType, NATIVE_FLAGS} // variable length
+    {"samples",         RecordObject::OBJECT,   offsetof(rs_geo_t, samples),        0,  rsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* RasterSampler::zsSampleRecType = "zsrec.sample";
@@ -83,7 +83,7 @@ const RecordObject::fieldDef_t RasterSampler::zsGeoRecDef[] = {
     {"index",           RecordObject::UINT64,   offsetof(zs_geo_t, index),          1,  NULL, NATIVE_FLAGS},
     {"key",             RecordObject::STRING,   offsetof(zs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"num_samples",     RecordObject::UINT32,   offsetof(zs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(zs_geo_t, samples),        0,  zsSampleRecType, NATIVE_FLAGS} // variable length
+    {"samples",         RecordObject::OBJECT,   offsetof(zs_geo_t, samples),        0,  zsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* RasterSampler::sdSampleRecType = "sdrec.sample";
@@ -102,7 +102,7 @@ const RecordObject::fieldDef_t RasterSampler::sdGeoRecDef[] = {
     {"index",           RecordObject::UINT64,   offsetof(sd_geo_t, index),          1,  NULL, NATIVE_FLAGS},
     {"key",             RecordObject::STRING,   offsetof(sd_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"num_samples",     RecordObject::UINT32,   offsetof(sd_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(sd_geo_t, samples),        0,  sdSampleRecType, NATIVE_FLAGS} // variable length
+    {"samples",         RecordObject::OBJECT,   offsetof(sd_geo_t, samples),        0,  sdSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* RasterSampler::fileIdRecType = "fileidrec";

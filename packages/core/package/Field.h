@@ -72,7 +72,7 @@ class Field
         static const uint32_t DOUBLE        = RecordObject::DOUBLE;
         static const uint32_t TIME8         = RecordObject::TIME8;
         static const uint32_t STRING        = RecordObject::STRING;
-        static const uint32_t USER          = RecordObject::USER;
+        static const uint32_t OBJECT        = RecordObject::OBJECT;
         static const uint32_t NESTED_ARRAY  = 0x2000;
         static const uint32_t NESTED_LIST   = 0x4000;
         static const uint32_t NESTED_COLUMN = 0x8000;
@@ -135,6 +135,11 @@ class Field
 
         // conversion
 
+        virtual string toOpenApi (const char* description) const {
+            (void)description;
+            return "";
+        };
+
         virtual string toJson (void) const {
             return "";
         };
@@ -179,6 +184,29 @@ class Field
 
         int getTypeSize(void) const {
             return RecordObject::FIELD_TYPE_BYTES[getEncodedType()];
+        }
+
+        const char* getOpenApiType(void) const {
+            if(encoding & NESTED_MASK) {
+                return "array";
+            }
+            else switch(getEncodedType()) {
+                case BOOL:      return "boolean";
+                case INT8:      return "integer";
+                case INT16:     return "integer";
+                case INT32:     return "integer";
+                case INT64:     return "integer";
+                case UINT8:     return "integer";
+                case UINT16:    return "integer";
+                case UINT32:    return "integer";
+                case UINT64:    return "integer";
+                case FLOAT:     return "number";
+                case DOUBLE:    return "number";
+                case TIME8:     return "integer";
+                case STRING:    return "string";
+                case OBJECT:    return "object";
+                default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to generate Open API type for encoding: %X", getEncodedType());
+            }
         }
 
         /*--------------------------------------------------------------------
@@ -265,7 +293,7 @@ inline uint32_t toEncoding(float& v)    { (void)v; return Field::FLOAT;  };
 inline uint32_t toEncoding(double& v)   { (void)v; return Field::DOUBLE; };
 inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
 inline uint32_t toEncoding(string& v)   { (void)v; return Field::STRING; };
-inline uint32_t toEncoding(Field& v)    { (void)v; return Field::USER;   };
+inline uint32_t toEncoding(Field& v)    { (void)v; return Field::OBJECT; };
 
 // encoding
 template<class T>

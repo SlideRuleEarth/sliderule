@@ -168,6 +168,6 @@ class CredentialStore
  * FUNCTIONS
  ******************************************************************************/
 
-inline uint32_t toEncoding(CredentialStore::Credential& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(CredentialStore::Credential& v) { (void)v; return Field::OBJECT; }
 
 #endif  /* __credential_store__ */

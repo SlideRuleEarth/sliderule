@@ -53,7 +53,7 @@ RecordObject::fieldDef_t ContainerRecord::recDef[] =
 {
     {"count",       UINT32, offsetof(rec_t, rec_cnt),           1,   NULL, NATIVE_FLAGS},
     {"start",       UINT32, offsetof(rec_t, start_of_recs),     1,   NULL, NATIVE_FLAGS},
-    {"records",     USER,   offsetof(rec_t, entries),           0,   entryRecType, NATIVE_FLAGS} // variable length
+    {"records",     OBJECT, offsetof(rec_t, entries),           0,   entryRecType, NATIVE_FLAGS} // variable length
 };
 
 /*----------------------------------------------------------------------------

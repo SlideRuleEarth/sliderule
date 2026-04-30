@@ -318,7 +318,7 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
         {
             const char* flagstr = RecordObject::flags2str(fields[i]->flags);
             const char* typestr = fields[i]->exttype;
-            if(fields[i]->type != RecordObject::USER)
+            if(fields[i]->type != RecordObject::OBJECT)
             {
                 typestr = RecordObject::ft2str(fields[i]->type);
             }

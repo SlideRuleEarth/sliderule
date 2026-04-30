@@ -72,6 +72,7 @@ class FieldList: public Field
         T               operator[]  (int i) const;
         T&              operator[]  (int i);
 
+        string          toOpenApi   (const char* description) const override;
         string          toJson      (void) const override;
         int             toLua       (lua_State* L) const override;
         int             toLua       (lua_State* L, long key) const override;
@@ -278,6 +279,26 @@ template <class T>
 T& FieldList<T>::operator[](int i)
 {
     return values[i];
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object
+ *           properties:
+ *             <field>:
+ *               type: array                    <---- from here
+ *               description: <description>
+ *               items:
+ *                 type: <field type>           <---- to here
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldList<T>::toOpenApi (const char* description) const
+{
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\"}}",
+        description, this->getOpenApiType()).c_str();
 }
 
 /*----------------------------------------------------------------------------

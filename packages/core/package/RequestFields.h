@@ -78,6 +78,7 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         static int luaCreate (lua_State* L);
         static int luaExport (lua_State* L);
         static int luaEncode (lua_State* L);
+        static int luaDescribe (lua_State* L);
 
         static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);
@@ -154,10 +155,10 @@ string convertToJson(const MathLib::datum_t& v);
 int convertToLua(lua_State* L, const MathLib::datum_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::datum_t& v);
 
-inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::USER; };
-inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::USER; };
-inline uint32_t toEncoding(MathLib::datum_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::OBJECT; }
+inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::OBJECT; };
+inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::OBJECT; };
+inline uint32_t toEncoding(MathLib::datum_t& v) { (void)v; return Field::OBJECT; };
 
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<MathLib::coord_t>& v, long start_index, long num_elements) {
     (void)v;

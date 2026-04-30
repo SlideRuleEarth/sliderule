@@ -46,8 +46,8 @@
  * CLASS
  ******************************************************************************/
 
- template <class T>
- class FieldMap: public Field
+template <class T>
+class FieldMap: public Field
 {
     public:
 
@@ -84,6 +84,8 @@
 
         FieldMap<T>&    operator=   (const FieldMap<T>& other);
         const T&        operator[]  (const char* key) const;
+
+        string          toOpenApi   (const char* description) const override;
 
         string          toJson      (void) const override;
         int             toLua       (lua_State* L) const override;
@@ -227,6 +229,38 @@ const T& FieldMap<T>::operator[](const char* key) const
 }
 
 /*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object                       <---- from here
+ *           description: <decsription>
+ *           properties:                        <---- to here
+ *             <field name>:
+ *               type: object | string | number | integer | boolean | array
+ *               description: <description>
+ *               default: <value>
+ *             <field>:
+ *               type: array
+ *               description: <description>
+ *               items:
+ *                 type: <field type>
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldMap<T>::toOpenApi (const char* description) const
+{
+    typename Dictionary<entry_t>::Iterator iter(fields);
+    string str = FString("{\"type\": \"object\", \"description\": \"%s\", \"properties\": {", description).c_str();
+    for(int i = 0; i < iter.length; i++)
+    {
+        const typename Dictionary<entry_t>::kv_t kv = iter[i];
+        str += FString("\"%s\": %s%s", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str(), (i < iter.length - 1) ? "," : "").c_str();
+    }
+    str += "} }";
+    return str;
+}
+
+/*----------------------------------------------------------------------------
  * toJson
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -339,7 +373,7 @@ inline void convertFromLua(lua_State* L, int index, FieldMap<Field>& v) {
     v.fromLua(L, index);
 }
 
-inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::OBJECT; }
 
 
 #endif  /* __field_map__ */

@@ -88,7 +88,7 @@ class RecordObject
             DOUBLE          = 10,
             TIME8           = 11,   // nanoseconds from Unix epoch, no leap seconds
             STRING          = 12,
-            USER            = 13,
+            OBJECT          = 13,
             INVALID_FIELD   = 14,
             BOOL            = 15,
             NUM_FIELD_TYPES = 16
@@ -124,7 +124,7 @@ class RecordObject
             fieldType_t     type;               // predefined types
             int32_t         offset;             // offset in bits into structure
             int32_t         elements;           // number of elements in array
-            const char*     exttype;            // record type when type=USER
+            const char*     exttype;            // record type when type=OBJECT
             unsigned int    flags;              // see fieldFlags_t
         } field_t;
 

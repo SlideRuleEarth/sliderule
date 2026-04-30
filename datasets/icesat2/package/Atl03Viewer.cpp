@@ -66,7 +66,7 @@ const RecordObject::fieldDef_t Atl03Viewer::batchRecDef[] = {
     {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"segments",        RecordObject::USER,     offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
+    {"segments",        RecordObject::OBJECT,   offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
 const char* Atl03Viewer::OBJECT_TYPE = "Atl03Viewer";

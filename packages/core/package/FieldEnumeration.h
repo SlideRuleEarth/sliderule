@@ -66,6 +66,7 @@ class FieldEnumeration: public Field
         bool                    operator[]          (T i) const;
         bool&                   operator[]          (T i);
 
+        string                  toOpenApi           (const char* description) const override;
         string                  toJson              (void) const override;
         int                     toLua               (lua_State* L) const override;
         int                     toLua               (lua_State* L, long key) const override;
@@ -97,6 +98,7 @@ class FieldEnumeration: public Field
 
         bool values[N];
         bool providedAsSingle;  // provided as a single value as opposed to an array
+        bool initialized;
 
     private:
 
@@ -136,7 +138,8 @@ inline void convertFromLua(lua_State* L, int index, FieldEnumeration<T, N>& v) {
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
     Field(ENUMERATION, getImpliedEncoding<T>()),
-    providedAsSingle(false)
+    providedAsSingle(false),
+    initialized(true)
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
@@ -148,7 +151,8 @@ FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(void):
     Field(ENUMERATION, getImpliedEncoding<T>()),
-    providedAsSingle(false)
+    providedAsSingle(false),
+    initialized(false)
 {
     assert(N > 0);
 }
@@ -241,6 +245,52 @@ bool& FieldEnumeration<T,N>::operator[](T i)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "index out of bounds: %d", index);
     }
     return values[index];
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object
+ *           properties:
+ *             <field>:
+ *               type: array                    <---- from here
+ *               description: <description>
+ *               items:
+ *                 type: <field type>
+ *               default: <defaults>
+ *               enum: <enumeration>            <---- to here
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+string FieldEnumeration<T,N>::toOpenApi (const char* description) const
+{
+    // build enumeration
+    string enum_property("[");
+    bool first = true;
+    for(int i = 0; i < N; i++)
+    {
+        T selection;
+        if(!first) enum_property += ",";
+        else first = false;
+        convertFromIndex(i, selection);
+        try
+        {
+            enum_property += convertToJson(selection);
+        }
+        catch(const RunTimeException& e)
+        {
+            mlog(DEBUG, "Unable to describe enumeration [%s]: %s", description, e.what());
+        }
+    }
+    enum_property += "]";
+
+    // build default
+    FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
+
+    // return open api component schema
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d, \"enum\": %s%s}",
+        description, this->getOpenApiType(), N, N, enum_property.c_str(), default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------
@@ -374,6 +424,7 @@ void FieldEnumeration<T,N>::copy(const FieldEnumeration<T,N>& array)
         values[i] = array.values[i];
     }
     providedAsSingle = array.providedAsSingle;
+    initialized = array.initialized;
     encoding = array.encoding;
 }
 
