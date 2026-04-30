@@ -46,10 +46,10 @@
  * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
 CasalsGranuleFields::CasalsGranuleFields():
-    FieldMap<Field>({ {"year",      &year},
-                      {"month",     &month},
-                      {"day",       &day},
-                      {"version",   &version} })
+    FieldMap<Field>({ {"year",      &year,      "Year of data acquisition"},
+                      {"month",     &month,     "Month of data acquisition"},
+                      {"day",       &day,       "Day of data acquisition"},
+                      {"version",   &version,   "Data product version"} })
 {
 }
 

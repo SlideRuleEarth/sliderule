@@ -93,7 +93,7 @@ bool H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
                                   (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
                                   static_cast<uint32_t>(array->elementType());
 
-        if(!gdf->addNewColumn(dataset_name, encoding))
+        if(!gdf->addNewColumn(dataset_name, encoding, NULL))
         {
             status = false;
             if(throw_exception)

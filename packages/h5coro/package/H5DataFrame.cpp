@@ -84,7 +84,7 @@ int H5DataFrame::luaCreate(lua_State* L)
  *----------------------------------------------------------------------------*/
 H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
                           const char* time_column, const char* x_column, const char* y_column, const char* z_column):
-    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group}}, _parms->crs.value.c_str(), _df_key),
+    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group, "HDF5 subgroup variables belong to"}}, _parms->crs.value.c_str(), _df_key),
     h5obj(_h5obj),
     data(_parms->variables, _h5obj, _group, _parms->col.value, _parms->startRow.value, _parms->numRows.value),
     group(_group, Field::META_SOURCE_ID),

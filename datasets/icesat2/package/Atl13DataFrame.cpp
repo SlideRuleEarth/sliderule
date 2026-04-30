@@ -90,21 +90,21 @@ int Atl13DataFrame::luaCreate (lua_State* L)
 Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf13, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",                 &time_ns},
-        {"latitude",                &latitude},
-        {"longitude",               &longitude},
-        {"segment_id_beg",          &segment_id_beg},
-        {"ht_ortho",                &ht_ortho},
-        {"ht_water_surf",           &ht_water_surf},
-        {"stdev_water_surf",        &stdev_water_surf},
-        {"water_depth",             &water_depth},
+        {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
+        {"latitude",                &latitude,                  "Latitude (EPSG:9989)"},
+        {"longitude",               &longitude,                 "Longitude (EPSG:9989)"},
+        {"segment_id_beg",          &segment_id_beg,            "First along-track ATL03 segment_id number in ATL13 segment"},
+        {"ht_ortho",                &ht_ortho,                  "Orthometric height (in meters) EGM2008 converted from ellipsoidal height"},
+        {"ht_water_surf",           &ht_water_surf,             "Water surface height (in meters), reported for each short segment (default length = approximately 100 signal photons) with reference to WGS84 ellipsoid"},
+        {"stdev_water_surf",        &stdev_water_surf,          "Derived standard deviation of water surface, calculated over long segments (when available) with result reported at each short segment location tag contained within"},
+        {"water_depth",             &water_depth,               "Depth (in meterS) from the mean water surface to detected bottom"},
     },
     {
-        {"spot",                    &spot},
-        {"cycle",                   &cycle},
-        {"rgt",                     &rgt},
-        {"gt",                      &gt},
-        {"granule",                 &granule}
+        {"spot",                    &spot,                      "ATLAS detector spot"},
+        {"cycle",                   &cycle,                     "ICESat-2 Cycle number"},
+        {"rgt",                     &rgt,                       "ICESat-2 Reference ground track"},
+        {"gt",                      &gt,                        "Ground track; integer representation of beam"},
+        {"granule",                 &granule,                   "Name of the source ATL03 granule"}
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
     Icesat2Fields::calculateBeamKey(beam_str)), // dfKey

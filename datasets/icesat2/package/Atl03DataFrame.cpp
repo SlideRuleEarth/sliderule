@@ -147,28 +147,28 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Optional PhoREAL Columns */
     if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
     {
-        addColumn("relief",             &relief,            false);
-        addColumn("landcover",          &landcover,         false);
-        addColumn("snowcover",          &snowcover,         false);
+        addColumn("relief",             &relief,            "ATL08 relative photon height from ground",     false);
+        addColumn("landcover",          &landcover,         "ATL08 land cover flags",                       false);
+        addColumn("snowcover",          &snowcover,         "ATL08 snow cover flags",                       false);
     }
 
     /* Set Optional YAPC Columns */
     if(parms->stages[Icesat2Fields::STAGE_YAPC])
     {
-        addColumn("yapc_score",         &yapc_score,        false);
+        addColumn("yapc_score",         &yapc_score,        "YAPC density score of photon",                 false);
     }
 
     /* Set Optional ATL08 Columns */
     if(parms->stages[Icesat2Fields::STAGE_ATL08])
     {
-        addColumn("atl08_class",        &atl08_class,       false);
+        addColumn("atl08_class",        &atl08_class,       "ATL08 classification of photon",               false);
     }
 
     /* Set Optional ATL24 Columns */
     if(parms->stages[Icesat2Fields::STAGE_ATL24])
     {
-        addColumn("atl24_class",        &atl24_class,       false);
-        addColumn("atl24_confidence",   &atl24_confidence,  false);
+        addColumn("atl24_class",        &atl24_class,       "ATL24 classification of photon",               false);
+        addColumn("atl24_confidence",   &atl24_confidence,  "ATL24 classification confidence of photon",    false);
     }
 
     /* Set CRS */

@@ -90,23 +90,23 @@ int Atl24DataFrame::luaCreate (lua_State* L)
 Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"class_ph",            &class_ph},
-        {"confidence",          &confidence},
-        {"time_ns",             &time_ns},
-        {"lat_ph",              &lat_ph},
-        {"lon_ph",              &lon_ph},
-        {"ortho_h",             &ortho_h},
-        {"surface_h",           &surface_h},
-        {"x_atc",               &x_atc},
-        {"y_atc",               &y_atc},
+        {"class_ph",        &class_ph,      "Photon classification: sea_surface (41), bathymetry (40), other (1), or unclassified (0)"},
+        {"confidence",      &confidence,    "Floating point value 0-1 based on ensemble score for accuracy of predicted photon classification"},
+        {"time_ns",         &time_ns,       "Unix time (nanoseconds) of the photon measurement"},
+        {"lat_ph",          &lat_ph,        "Latitude (EPSG:9989)"},
+        {"lon_ph",          &lon_ph,        "Longitude (EPSG:9989)"},
+        {"ortho_h",         &ortho_h,       "Height (in meters) of photon as measured from geoid of Earth (EGM08)"},
+        {"surface_h",       &surface_h,     "Orthometric height (in meters) of the sea surface at the location of the photon based on the EGM08 geoid model"},
+        {"x_atc",           &x_atc,         "Along-track x-coordinate of the segment (in meters), measured parallel to the RGT, measured from the ascending node of the equatorial crossing of a given RGT"},
+        {"y_atc",           &y_atc,         "Along-track y-coordinate of the segment (in meters), relative to the RGT, measured along the perpendicular to the RGT, positive to the right of the RGT"},
     },
     {
-        {"spot",                &spot},
-        {"cycle",               &cycle},
-        {"region",              &region},
-        {"rgt",                 &rgt},
-        {"gt",                  &gt},
-        {"granule",             &granule}
+        {"spot",            &spot,          "ATLAS detector spot"},
+        {"cycle",           &cycle,         "ICESat-2 Cycle number"},
+        {"region",          &region,        "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+        {"rgt",             &rgt,           "ICESat-2 Reference ground track"},
+        {"gt",              &gt,            "Ground track; integer representation of beam"},
+        {"granule",         &granule,       "Name of the source ATL03 granule"}
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
     Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
@@ -125,14 +125,14 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Non-Compact Columns */
     if(!parms->atl24.compact.value)
     {
-        addColumn("ellipse_h",              &ellipse_h,             false);
-        addColumn("invalid_kd",             &invalid_kd,            false);
-        addColumn("invalid_wind_speed",     &invalid_wind_speed,    false);
-        addColumn("low_confidence_flag",    &low_confidence_flag,   false);
-        addColumn("night_flag",             &night_flag,            false);
-        addColumn("sensor_depth_exceeded",  &sensor_depth_exceeded, false);
-        addColumn("sigma_thu",              &sigma_thu,             false);
-        addColumn("sigma_tvu",              &sigma_tvu,             false);
+        addColumn("ellipse_h",              &ellipse_h,             "Ellipsiodal height (in meters) of photon", false);
+        addColumn("invalid_kd",             &invalid_kd,            "Photon classification performed without a valid Kd measurement", false);
+        addColumn("invalid_wind_speed",     &invalid_wind_speed,    "Photon classification performed without a valid wind speed measurement", false);
+        addColumn("low_confidence_flag",    &low_confidence_flag,   "Photon classified as bathymetry but is suspected to be a false positive", false);
+        addColumn("night_flag",             &night_flag,            "Photon collected at night", false);
+        addColumn("sensor_depth_exceeded",  &sensor_depth_exceeded, "Photon classification performed at a depth that exceeds the sensors known detection capabilities", false);
+        addColumn("sigma_thu",              &sigma_thu,             "Total horizontal uncertainty", false);
+        addColumn("sigma_tvu",              &sigma_tvu,             "Total vertical uncertainty", false);
     }
 
     /* Set MetaData from Parameters */

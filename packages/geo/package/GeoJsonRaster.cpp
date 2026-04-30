@@ -64,7 +64,7 @@ int GeoJsonRaster::luaCreate (lua_State* L)
         const double cellsize = getLuaFloat(L, 2);
         rqst_parms = new RequestFields(L, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
-        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
+        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL))
         {
             delete geo_fields;
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add default geo fields");
@@ -90,7 +90,7 @@ GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
     {
         rqst_parms = new RequestFields(NULL, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
-        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
+        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL))
         {
             delete geo_fields;
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add default geo fields");

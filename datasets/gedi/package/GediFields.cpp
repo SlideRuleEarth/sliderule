@@ -46,12 +46,12 @@
  * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
 GediGranuleFields::GediGranuleFields():
-    FieldMap<Field>({ {"year",      &year},
-                      {"doy",       &doy},
-                      {"orbit",     &orbit},
-                      {"region",    &region},
-                      {"track",     &track},
-                      {"version",   &version} })
+    FieldMap<Field>({ {"year",      &year,      "Year of data acquisition"},
+                      {"doy",       &doy,       "Day of year of data acquisition"},
+                      {"orbit",     &orbit,     "GEDI orbit number"},
+                      {"region",    &region,    "GEDI region"},
+                      {"track",     &track,     "GEDI reference ground track"},
+                      {"version",   &version,   "GEDI standard data product version"} })
 {
 }
 

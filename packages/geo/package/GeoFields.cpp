@@ -69,7 +69,7 @@ int GeoFields::luaCreate (lua_State* L)
     {
         request_fields = new RequestFields(L, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
-        request_fields->samplers.add(GeoFields::DEFAULT_KEY, geo_fields);
+        request_fields->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL);
         geo_fields->fromLua(L, 1);
         return LuaObject::createLuaObject(L, request_fields);
     }
@@ -173,28 +173,28 @@ void GeoFields::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 GeoFields::GeoFields (void):
     FieldMap<Field> ({
-        {"algorithm",           &sampling_algo},
-        {"radius",              &sampling_radius},
-        {"t0",                  &t0},
-        {"t1",                  &t1},
-        {"closest_time",        &tc},
-        {"zonal_stats",         &zonal_stats},
-        {"slope_aspect",        &slope_aspect},
-        {"slope_scale_length",  &slope_scale_length},
-        {"with_flags",          &flags_file},
-        {"substr",              &url_substring},
-        {"use_poi_time",        &use_poi_time},
-        {"doy_range",           &doy_range},
-        {"sort_by_index",       &sort_by_index},
-        {"force_single_sample", &force_single_sample},
-        {"target_crs",          &target_crs},
-        {"proj_pipeline",       &proj_pipeline},
-        {"url",                 &url},
-        {"aoi_bbox",            &aoi_bbox},
-        {"catalog",             &catalog},
-        {"bands",               &bands},
-        {"elevation_bands",     &elevation_bands},
-        {"asset",               &asset}
+        {"algorithm",           &sampling_algo,         "Algorithm to use to sample the raster"},
+        {"radius",              &sampling_radius,       "The size of the kernel (meters) when sampling a raster; the size of the region (meters) for zonal statistics"},
+        {"t0",                  &t0,                    "start time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)"},
+        {"t1",                  &t1,                    "stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)"},
+        {"closest_time",        &tc,                    "time used to filter rasters to be sampled; only the raster that is closest in time to the provided time will be sampled - can be multiple rasters if they all share the same time (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)"},
+        {"zonal_stats",         &zonal_stats,           "boolean whether to calculate and return zonal statistics for the region around the location being sampled"},
+        {"slope_aspect",        &slope_aspect,          "boolean whether to calculate slope and aspect for the region around the location being sampled"},
+        {"slope_scale_length",  &slope_scale_length,    "the size of the region (meters) to use when calculating the slope and aspect"},
+        {"with_flags",          &flags_file,            "boolean whether to include auxiliary information about the sampled pixel in the form of a 32-bit flag"},
+        {"substr",              &url_substring,         "substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)"},
+        {"use_poi_time",        &use_poi_time,          "overrides the 'closest_time' setting (or provides one if not set) with the time associated with the point of interest being sampled"},
+        {"doy_range",           &doy_range,             "day of year range to seasonally filter data"},
+        {"sort_by_index",       &sort_by_index,         ""},
+        {"force_single_sample", &force_single_sample,   "forces the sampling code to select (or generate) a single value for the returned sample values; this has the result of changing the column type of the returned dataframe from being a list to being a single double-precision element; the available options are: first, last, min, max, mean, median; note that when mean or median are selected, the only valid sampled data returned is 'value', all other sample columns should be ignored"},
+        {"target_crs",          &target_crs,            "override the CRS of the raster dataset being sampled"},
+        {"proj_pipeline",       &proj_pipeline,         "override the PROJ pipeline used to transform the source dataset into the CRS of the target dataset CRS to sample that dataset"},
+        {"url",                 &url,                   "user provided URL of a raster dataset to sample"},
+        {"aoi_bbox",            &aoi_bbox,              "area of interest bounding box to help PROJ select the best transform"},
+        {"catalog",             &catalog,               "geojson formatted stac query response (obtained through the `sliderule.earthdata.stac()` Python API)"},
+        {"bands",               &bands,                 "list of bands to read out of the raster, or a predefined algorithm that combines bands for a given dataset"},
+        {"elevation_bands",     &elevation_bands,       "list of bands that should be treated as elevation bands which allows a 3D transform to be applied"},
+        {"asset",               &asset,                 "Name of the raster asset that is being sampled"}
     }),
     filter_time(false),
     filter_doy_range(false),

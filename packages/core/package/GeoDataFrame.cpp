@@ -110,7 +110,7 @@ static void _addColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* data)
     if(!column)
     {
         column = new FieldColumn<T>(data->encoding, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        if(!dataframe->addColumn(data->name, column, true))
+        if(!dataframe->addColumn(data->name, column, NULL, true))
         {
             delete column;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", data->name);
@@ -153,7 +153,7 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
     {
         const uint32_t encoding_mask = 0;
         column = new FieldColumn<int32_t>(encoding_mask, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        if(!dataframe->addColumn(GeoDataFrame::SOURCE_ID, column, true))
+        if(!dataframe->addColumn(GeoDataFrame::SOURCE_ID, column, NULL, true))
         {
             delete column;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", GeoDataFrame::SOURCE_ID);
@@ -170,7 +170,7 @@ static void _addSourceColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* d
     if(!dict)
     {
         dict = new FieldMap<Field>();
-        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_TABLE, dict, true))
+        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_TABLE, dict, "Source ID table", true))
         {
             delete dict;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s> to dataframe", GeoDataFrame::SOURCE_TABLE);
@@ -204,7 +204,7 @@ static void _addSourceMetaData(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t*
     if(!srcdata)
     {
         srcdata = new FieldMap<Field>();
-        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_DATA, srcdata, true))
+        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_DATA, srcdata, "Source ID table", true))
         {
             delete srcdata;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s> to dataframe", GeoDataFrame::SOURCE_DATA);
@@ -248,7 +248,7 @@ static void _addListColumn(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* dat
     if(!column)
     {
         column = new FieldColumn<FieldList<T>>(data->encoding & ~Field::NESTED_MASK, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        if(!dataframe->addColumn(data->name, column, true))
+        if(!dataframe->addColumn(data->name, column, NULL, true))
         {
             delete column;
             throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%s> to dataframe", data->name);
@@ -529,7 +529,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
                     }
 
                     // add column to dataframe
-                    dataframe->columnFields.add(name, column, true);
+                    dataframe->columnFields.add(name, column, NULL, true);
                     mlog(DEBUG, "Adding column %s of length %ld", name, column->length());
                 }
                 lua_pop(L, 1); // remove the key
@@ -566,13 +566,13 @@ int GeoDataFrame::luaCreate (lua_State* L)
                     {
                         FieldElement<double>* element = new FieldElement<double>();
                         element->setEncodingFlags(META_COLUMN);
-                        dataframe->metaFields.add(key, element, true);
+                        dataframe->metaFields.add(key, element, NULL, true);
                     }
                     else if(lua_isstring(L, -1))
                     {
                         FieldElement<string>* element = new FieldElement<string>();
                         element->setEncodingFlags(META_COLUMN);
-                        dataframe->metaFields.add(key, element, true);
+                        dataframe->metaFields.add(key, element, NULL, true);
                     }
                     mlog(DEBUG, "Adding metadata %s", key);
                 }
@@ -716,7 +716,7 @@ bool GeoDataFrame::addColumn (const char* name, FieldUntypedColumn* column, cons
 /*----------------------------------------------------------------------------
  * addNewColumn - allocates name and field
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addNewColumn (const char* name, uint32_t column_encoding)
+bool GeoDataFrame::addNewColumn (const char* name, uint32_t column_encoding, const char* description)
 {
     FieldUntypedColumn* column = NULL;
     const uint32_t nested_encoding = column_encoding & Field::NESTED_MASK;
@@ -771,7 +771,7 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t column_encoding)
         }
     }
 
-    if(!addColumn(name, column, true))
+    if(!addColumn(name, column, description, true))
     {
         mlog(ERROR, "Failed to add column <%s>", name);
         delete column;
@@ -830,9 +830,9 @@ FieldUntypedColumn* GeoDataFrame::getColumn (const char* name, bool no_throw) co
 /*----------------------------------------------------------------------------
  * addMetaData
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addMetaData (const char* name, Field* meta, bool free_on_delete)
+bool GeoDataFrame::addMetaData (const char* name, Field* meta, const char* description, bool free_on_delete)
 {
-    return metaFields.add(name, meta, free_on_delete);
+    return metaFields.add(name, meta, description, free_on_delete);
 }
 
 /*----------------------------------------------------------------------------
@@ -1213,7 +1213,7 @@ void GeoDataFrame::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_colum
         const char* name = ancillary_columns->first(&entry);
         while(name)
         {
-            dataframe->addExistingColumn(name, entry.column);
+            dataframe->addExistingColumn(name, entry.column, "Ancillary column");
             name = ancillary_columns->next(&entry);
         }
     }
@@ -2052,7 +2052,7 @@ int GeoDataFrame::luaBuildIndex (lua_State* L)
             index->append(i);
         }
 
-        if(!dataframe->addColumn(index_column_name, index, true))
+        if(!dataframe->addColumn(index_column_name, index, "Dataframe index", true))
         {
             delete index;
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add index column: %s", index_column_name);
