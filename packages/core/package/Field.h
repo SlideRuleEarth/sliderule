@@ -191,7 +191,7 @@ class Field
                 return "array";
             }
             else {
-                return RecordObject::ft2str(static_cast<RecordObject::fieldType_t>(getEncodedType()));
+                return RecordObject::ft2str(static_cast<RecordObject::fieldType_t>(getEncodedType()), true);
             }
         }
 

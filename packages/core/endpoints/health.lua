@@ -28,7 +28,7 @@ return {
         request = nil,
         response = [["application/json": {
             "schema": {
-                "type": "object"
+                "type": "object",
                 "properties": {
                     "health": { "type": "boolean", "description": "health of the system" }
                 }

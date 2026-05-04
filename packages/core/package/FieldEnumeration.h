@@ -270,13 +270,14 @@ string FieldEnumeration<T,N>::toOpenApi (const char* description) const
     bool first = true;
     for(int i = 0; i < N; i++)
     {
-        T selection;
-        if(!first) enum_property += ",";
-        else first = false;
-        convertFromIndex(i, selection);
         try
         {
-            enum_property += convertToJson(selection);
+            T selection;
+            convertFromIndex(i, selection);
+            string selection_str = convertToJson(selection); // separate line here because this throws
+            if(!first) enum_property += ",";
+            else first = false;
+            enum_property += selection_str;
         }
         catch(const RunTimeException& e)
         {

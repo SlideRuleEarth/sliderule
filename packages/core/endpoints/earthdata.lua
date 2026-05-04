@@ -45,11 +45,10 @@ return {
                             "short_name": { "type": "string", "description": "CMR short name of the dataset" },
                             "version": { "type": "string", "description": "Version of the dataset" },
                             "collection": { "type": "string", "description": "Collection name of the dataset" },
-                            "max_resources": { "type": "number", "description": "Maximum number of resources allowed to be returned" },
-                            "name_filter" { "type": "string", "description": "Regular expression to match granule name" },
-                            "rgt": { "type": "number": "description": "Reference ground track" },
-                            "cycle": { "type": "number": "description": "Orbit cycle number" },
-                            "region": { "type": "number": "description": "Global region" }
+                            "name_filter": { "type": "string", "description": "Regular expression to match granule name" },
+                            "rgt": { "type": "integer", "description": "Reference ground track" },
+                            "cycle": { "type": "integer", "description": "Orbit cycle number" },
+                            "region": { "type": "integer", "description": "Global region" }
                         }
                     }
                 ]

@@ -42,7 +42,7 @@ return {
         request = nil,
         response = [[ "application/json": {
             "schema": {
-                "type": "object"
+                "type": "object",
                 "properties": {
                     "directory": {
                         "type": "object",
@@ -55,20 +55,19 @@ return {
                                 "path": { "type": "string" },
                                 "identity": { "type": "string" },
                                 "endpoint": { "type": "string" },
-                                "index": { "type": "string", "description": "Optional VRT or index file path" },
-                                required: ["name", "driver"]
+                                "index": { "type": "string", "description": "Optional VRT or index file path" }
                             }
                         }
                     },
                     "drivers": {
                         "type": "array",
                         "description": "List of available driver types",
-                        "items": { "type": "string" },
+                        "items": { "type": "string" }
                     },
                     "rasters": {
                         "type": "array",
                         "description": "List of available raster source names",
-                        "items": { "type": "string" },
+                        "items": { "type": "string" }
                     }
                 }
             }

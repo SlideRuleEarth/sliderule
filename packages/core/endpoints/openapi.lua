@@ -18,7 +18,7 @@ local function specification_template()
             }
         },
         "components": {
-            "schemas": %s%s,
+            "schemas": { %s, %s },
             "responses": {
                 "ServiceUnavailable": {
                     "description": "Insufficient resources are available on the server to process the request",
@@ -110,16 +110,7 @@ local function request_body_schema(endpoint)
     local inputs = global.set(endpoint["inputs"])
     if not inputs then return content end
     local schema = [["content": { %s }]]
-    if inputs["text"] then
-        content = string.format([[
-            "text/plain": {
-                "schema": {
-                    "type": "string",
-                    "description": "%s"
-                }
-            }
-        ]], endpoint["request"])
-    elseif inputs["json"] then
+    if inputs then
         content = endpoint["schema"]["request"]
     end
     return string.format(schema, content)
@@ -140,18 +131,7 @@ local function response_schema(endpoint)
         "401": { "$ref": "#/components/responses/Unauthorized" }
     ]]
     if outputs then
-        if outputs["text"] then
-            content = string.format([[
-                "text/plain": {
-                    "schema": {
-                        "type": "string",
-                        "description": "%s"
-                    }
-                }
-            ]], endpoint["response"])
-        elseif outputs["json"] then
-            content = endpoint["schema"]["response"]
-        end
+        content = endpoint["schema"]["response"]
     end
     return string.format(schema, content)
 end
@@ -166,7 +146,7 @@ local function path_schemas()
         local api = filepath:match("([^/]+)%.lua$")
         arg = {[[{"parms": "{}", "asset": "icesat2", "resource": "granule.h5"}]]} -- override global arguments to a representative object when loading API scripts
         local endpoint = require(api)
-        if endpoint["inputs"] then
+        if endpoint["schema"] then
             local verb = endpoint["inputs"] and "post" or "get"
             local summary = endpoint["name"]
             local description = endpoint["description"]
@@ -175,8 +155,8 @@ local function path_schemas()
             local schema = string.format([[
                 "/%s": {
                     "%s": {
-                        "summary": %s,
-                        "description": %s,
+                        "summary": "%s",
+                        "description": "%s",
                         "requestBody": { %s },
                         "responses": { %s }
                     }

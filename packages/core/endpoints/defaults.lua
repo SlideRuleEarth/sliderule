@@ -34,7 +34,7 @@ return {
         request = nil,
         response = [[ "application/json": {
             "schema": {
-                "type": "object"
+                "type": "object",
                 "properties": {
                     "core": { "$ref": "#/components/schemas/core" },
                     "cre": { "$ref": "#/components/schemas/cre" },

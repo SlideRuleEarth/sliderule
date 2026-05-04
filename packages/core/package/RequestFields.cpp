@@ -159,7 +159,7 @@ int RequestFields::luaDescribe (lua_State* L)
         const char* name = getLuaString(L, 2);
         const char* description = getLuaString(L, 3, true, "");
         const string& open_api_str = lua_obj->toOpenApi(description);
-        FString schema("{\"%s\": %s}", name, open_api_str.c_str());
+        FString schema("\"%s\": %s", name, open_api_str.c_str());
         lua_pushstring(L, schema.c_str());
     }
     catch(const RunTimeException& e)

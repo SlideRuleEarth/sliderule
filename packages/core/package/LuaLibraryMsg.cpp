@@ -370,7 +370,7 @@ int LuaLibraryMsg::lmsg_describe(lua_State* L)
         string str = FString("\"%s\": {\"type\": \"object\", \"properties\": {", rectype).c_str();
         for(int i = 0; i < numfields; i++)
         {
-            const char* type_str = RecordObject::ft2str(fields[i]->type);
+            const char* type_str = RecordObject::ft2str(fields[i]->type, true);
             const char* description = fields[i]->exttype ? fields[i]->exttype : "primitive value";
             str += FString("\"%s\": {\"type\": \"%s\", \"description\": \"%s\"}%s", fieldnames[i], type_str, description, (i < numfields - 1) ? "," : "").c_str();
             delete fields[i];

@@ -28,7 +28,7 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "type": "object"
+                "type": "object",
                 "properties": {
                     "rectype": { "type": "string" }
                 }
@@ -41,7 +41,7 @@ return {
                     "__datasize": {
                         "type": "integer",
                         "description": "Total size of the record in bytes"
-                    }
+                    },
                     "offset": {
                         "type": "integer",
                         "description": "Bit offset of the field within the record"
@@ -49,7 +49,7 @@ return {
                     "flags": {
                         "type": "string",
                         "description": "Encoding flags, e.g. endianness",
-                        "enum": ["LE" | "BE"]
+                        "enum": ["LE", "BE"]
                     },
                     "elements": {
                         "type": "integer",
@@ -60,7 +60,7 @@ return {
                         "description": "Data type of the field",
                         "enum": ["INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64", "FLOAT", "DOUBLE", "STRING"]
                     }
-                },
+                }
             }
         } ]]
     }

@@ -28,7 +28,17 @@ return {
     inputs = {"text"},
     outputs = {"text"},
     schema = {
-        request = "Lua code to execute on the server",
-        response = "Result returned by supplied lua code"
+        request = [["text/plain": {
+            "schema": {
+                "type": "string",
+                "description": "Lua code to execute on the server"
+            }
+        } ]],
+        response = [["text/plain": {
+            "schema": {
+                "type": "string",
+                "description": "Result returned by supplied lua code"
+            }
+        } ]]
     }
 }

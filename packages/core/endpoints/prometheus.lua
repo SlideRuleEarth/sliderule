@@ -29,7 +29,7 @@ return {
     outputs = {"text"},
     schema = {
         request = nil,
-        response = [[ "plain/text": {
+        response = [["text/plain": {
             "schema": {
                 "type": "string",
                 "description": "Prometheus metrics"
