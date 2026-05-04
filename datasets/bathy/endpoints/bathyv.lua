@@ -3,7 +3,7 @@
 -------------------------------------------------------
 local json  = require("json")
 local rqst  = json.decode(arg[1])
-local parms = icesat2.parms(rqst["parms"], "icesat2", rqst["resource"])
+local parms = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 
 -------------------------------------------------------
 -- main

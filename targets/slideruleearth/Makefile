@@ -107,6 +107,7 @@ BRANCH ?= main
 EMAIL_DOMAIN ?= mail.slideruleearth.io
 SUPPORT_EMAIL ?= support@$(EMAIL_DOMAIN)
 CORS_ALLOW_ORIGINS ?= "https://client.$(DOMAIN)"
+PROTOCOL = https
 
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
@@ -812,19 +813,13 @@ documentation: ## generate the static documentation (uses docs/environment.yml "
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
+	curl $(PROTOCOL)://$(DOMAIN)/source/openapi > $(DOCUMENTATION_STAGE_DIR)/openapi.json
+	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/openapi.json
+	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.html
 	conda run -n rtd --no-capture-output \
 	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
 	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
 	sphinx-build -M html "source" "build"'
-
-documentation-openapi: ## build open api documentation
-	rm -Rf $(DOCUMENTATION_STAGE_DIR)
-	mkdir -p $(DOCUMENTATION_STAGE_DIR)
-	curl http://localhost/source/openapi > $(DOCUMENTATION_STAGE_DIR)/openapi.json
-	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/openapi.json
-	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/openapi.html
-	cd $(DOCUMENTATION_STAGE_DIR) && python -m http.server
-	# open http://localhost:8000/openapi.html
 
 documentation-run: ## locally run the documentation
 	conda run -n rtd --no-capture-output \
