@@ -817,6 +817,15 @@ documentation: ## generate the static documentation (uses docs/environment.yml "
 	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
 	sphinx-build -M html "source" "build"'
 
+documentation-openapi: ## build open api documentation
+	rm -Rf $(DOCUMENTATION_STAGE_DIR)
+	mkdir -p $(DOCUMENTATION_STAGE_DIR)
+	curl http://localhost/source/openapi > $(DOCUMENTATION_STAGE_DIR)/openapi.json
+	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/openapi.json
+	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/openapi.html
+	cd $(DOCUMENTATION_STAGE_DIR) && python -m http.server
+	# open http://localhost:8000/openapi.html
+
 documentation-run: ## locally run the documentation
 	conda run -n rtd --no-capture-output \
 	sh -c 'cd $(DOCUMENTATION_STAGE_DIR)/rtd/build/html && \
@@ -904,6 +913,12 @@ init-dev-env: ## one-time setup of development environment for running locally
 	curl $(JWT_ISSUER)/auth/pem > /etc/haproxy/pem/pubkey.pem
 	mkdir -p /etc/ssl/private
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(DOMAIN).pem /etc/ssl/private/$(DOMAIN).pem
+
+install-node: ## setup node environment (needed to OpenAPI specification documentation)
+	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+	nvm install 22
+	nvm alias default 22
+	npm install -g @redocly/cli
 
 compose-%: ## (re)start a docker container in the background
 	docker compose -p cluster up -d --force-recreate $*

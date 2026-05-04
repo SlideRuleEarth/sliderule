@@ -71,45 +71,131 @@ return {
     logging = core.DEBUG,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = {"json"},
+    outputs = {"json"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "description": "Name of the asset"
+                    },
+                    "pole": {
+                        "type": "string",
+                        "enum": ["north", "south"],
+                        "description": "Polar projection to use"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "description": "Latitude, -90 to 90"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "description": "Longitude, -180 to 180"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "X coordinate in projected space"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Y coordinate in projected space"
+                    },
+                    "span": {
+                        "type": "object",
+                        "description": "Bounding box for split operation",
+                        "properties": {
+                            "lat0": { "type": "number", "description": "Latitude of first corner, -90 to 90" },
+                            "lon0": { "type": "number", "description": "Longitude of first corner, -180 to 180" },
+                            "lat1": { "type": "number", "description": "Latitude of second corner, -90 to 90" },
+                            "lon1": { "type": "number", "description": "Longitude of second corner, -180 to 180" }
+                        }
+                    },
+                    "span1": {
+                        "type": "object",
+                        "description": "First bounding box for intersect/combine operations",
+                        "properties": {
+                            "lat0": { "type": "number" },
+                            "lon0": { "type": "number" },
+                            "lat1": { "type": "number" },
+                            "lon1": { "type": "number" }
+                        }
+                    },
+                    "span2": {
+                        "type": "object",
+                        "description": "Second bounding box for intersect/combine operations",
+                        "properties": {
+                            "lat0": { "type": "number" },
+                            "lon0": { "type": "number" },
+                            "lat1": { "type": "number" },
+                            "lon1": { "type": "number" }
+                        }
+                    }
+                }
+            }
+        }]],
+        response = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "intersect": {
+                        "type": "boolean",
+                        "description": "Result of intersection test on span1 and span2"
+                    },
+                    "combine": {
+                        "type": "object",
+                        "description": "Combined bounding box of span1 and span2",
+                        "properties": {
+                            "lat0": { "type": "number", "description": "Latitude of first corner, -90 to 90" },
+                            "lon0": { "type": "number", "description": "Longitude of first corner, -180 to 180" },
+                            "lat1": { "type": "number", "description": "Latitude of second corner, -90 to 90" },
+                            "lon1": { "type": "number", "description": "Longitude of second corner, -180 to 180" }
+                        }
+                    },
+                    "split": {
+                        "type": "object",
+                        "description": "Result of splitting span into left and right halves",
+                        "properties": {
+                            "lspan": {
+                                "type": "object",
+                                "properties": {
+                                    "lat0": { "type": "number" },
+                                    "lon0": { "type": "number" },
+                                    "lat1": { "type": "number" },
+                                    "lon1": { "type": "number" }
+                                }
+                            },
+                            "rspan": {
+                                "type": "object",
+                                "properties": {
+                                    "lat0": { "type": "number" },
+                                    "lon0": { "type": "number" },
+                                    "lat1": { "type": "number" },
+                                    "lon1": { "type": "number" }
+                                }
+                            }
+                        }
+                    },
+                    "lat": {
+                        "type": "number",
+                        "description": "Latitude from x,y converted to spherical coordinates, -90 to 90"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "description": "Longitude from x,y converted to spherical coordinates, -180 to 180"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "X coordinate from lat,lon converted to projected coordinates"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Y coordinate from lat,lon converted to projected coordinates"
+                    }
+                }
+            }
+        }]]
+    }
 }
-
--- INPUT
---  {
---      "asset": <asset>
---      "pole": "north" | "south"
---      "lat": <latitude, -90 to 90>
---      "lon": <longitude, -180 to 180>
---      "x": <x coordinate>
---      "y": <y coordinate>
---      "span":
---      {
---          "lat0": <latitude, -90 to 90>
---          "lon0": <longitude, -180 to 180>
---          "lat1": <latitude, -90 to 90>
---          "lon1": <longitude, -180 to 180>
---      }
---      "span1": {..}
---      "span2": {..}
---  }
---
--- OUTPUT
---  {
---      "intersect": true|false # performed against span1 and span2
---      "combine":  # performed against span1 and span2
---      {
---          "lat0": <latitude, -90 to 90>
---          "lon0": <longitude, -180 to 180>
---          "lat1": <latitude, -90 to 90>
---          "lon1": <longitude, -180 to 180>
---      }
---      "split":
---      {
---          "lspan": {..}
---          "rspan": {..}
---      }
---      "lat": <latitude, -90 to 90> # x,y converted to spherical coordinates
---      "lon": <longitude, -180 to 180> # x,y converted to spherical coordinates
---      "x": <x coordinate> # lat,lon converted to projected coordinates
---      "y": <y coordinate> # lat,lon converted to projected coordinates
---  }

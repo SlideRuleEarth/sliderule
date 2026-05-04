@@ -131,6 +131,7 @@ class LuaLibraryMsg
         static int      lmsg_subscribe      (lua_State* L);
         static int      lmsg_create         (lua_State* L);
         static int      lmsg_definition     (lua_State* L);
+        static int      lmsg_describe       (lua_State* L);
         static int      lmsg_datatype       (lua_State* L);
 
         /* publisher meta functions */

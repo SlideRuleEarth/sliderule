@@ -74,19 +74,46 @@ return {
     logging = core.INFO,
     roles = {},
     signed = false,
-    outputs = {"json"}
-}
+    inputs = {"json"},
+    outputs = {"json"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "or": {
+                                "type": "object",
+                                "description": "Union of queries",
+                                "additionalProperties": { "type": "string", "description": "Query command keyed by index name" }
+                            }
+                        },
+                        "required": ["or"]
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "and": {
+                                "type": "object",
+                                "description": "Intersection of queries",
+                                "additionalProperties": { "type": "string", "description": "Query command keyed by index name" }
+                            }
+                        },
+                        "required": ["and"]
+                    }
+                ]
+            }
+        } ]],
+        response = [[ "application/json": {
+            "schema": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "List of resources that to process"
+            }
+        } ]]
 
--- INPUT
---  {
---      "or"|"and":
---      {
---          "<index name>": { <index parameters>... }
---          ...
---      }
---  }
---
--- OUTPUT:
---  {
---      "resources": ["<resource name>", ...]
---  }
+    }
+}

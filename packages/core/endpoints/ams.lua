@@ -1,9 +1,4 @@
 -------------------------------------------------------
--- initialization
--------------------------------------------------------
-local parms = nil
-
--------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -15,11 +10,24 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "Asset Metadata Service",
     description = "Pass-through to Asset Metadata Service API",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = {"json"},
+    outputs = {"json"},
+    schema = {
+        request = [["application/json": {
+            "schema": {
+                "type": "object"
+            }
+        }]],
+        response = [["application/json": {
+            "schema": {
+                "type": "object"
+            }
+        }]]
+    }
 }

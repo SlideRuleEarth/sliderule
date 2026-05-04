@@ -396,7 +396,11 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
     const char* pattern = NULL;
     if(lua_isstring(L, 1)) pattern = lua_tostring(L, 1);
 
-    print2term("\n%50s %24s %s\n", "Type", "Id", "Size");
+    bool verbose = true;
+    if(lua_isboolean(L, 1)) verbose = lua_toboolean(L, 1);
+
+    lua_newtable(L);
+    if(verbose) print2term("\n%50s %24s %s\n", "Type", "Id", "Size");
     char** rectypes = NULL;
     const int numrecs = RecordObject::getRecords(&rectypes);
     for(int i = 0; i < numrecs; i++)
@@ -405,12 +409,15 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
         {
             const char* id_field = RecordObject::getRecordIdField(rectypes[i]);
             const int data_size = RecordObject::getRecordDataSize(rectypes[i]);
-            print2term("%50s %24s %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size);
+            lua_pushstring(L, rectypes[i]);
+            lua_rawseti(L, -2, i+1);
+            if(verbose) print2term("%50s %24s %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size);
         }
         delete [] rectypes[i];
     }
     delete [] rectypes;
-    return 0;
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

@@ -1,9 +1,4 @@
 -------------------------------------------------------
--- initialization
--------------------------------------------------------
-local parms = nil
-
--------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -17,7 +12,7 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "List Containers",
     description = "List available docker images that can be executed by a user",
     logging = core.CRITICAL,

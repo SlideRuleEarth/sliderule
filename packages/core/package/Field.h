@@ -190,22 +190,8 @@ class Field
             if(encoding & NESTED_MASK) {
                 return "array";
             }
-            else switch(getEncodedType()) {
-                case BOOL:      return "boolean";
-                case INT8:      return "integer";
-                case INT16:     return "integer";
-                case INT32:     return "integer";
-                case INT64:     return "integer";
-                case UINT8:     return "integer";
-                case UINT16:    return "integer";
-                case UINT32:    return "integer";
-                case UINT64:    return "integer";
-                case FLOAT:     return "number";
-                case DOUBLE:    return "number";
-                case TIME8:     return "integer";
-                case STRING:    return "string";
-                case OBJECT:    return "object";
-                default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to generate Open API type for encoding: %X", getEncodedType());
+            else {
+                return RecordObject::ft2str(static_cast<RecordObject::fieldType_t>(getEncodedType()));
             }
         }
 

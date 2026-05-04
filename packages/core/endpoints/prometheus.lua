@@ -1,9 +1,4 @@
 -------------------------------------------------------
--- initialization
--------------------------------------------------------
-local parms = nil
-
--------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -24,11 +19,21 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "Prometheus",
     description = "Provides application metrics in OpenMetrics Text Format used by Prometheus",
     logging = core.DEBUG,
     roles = {},
     signed = false,
-    outputs = {"text"}
+    inputs = nil,
+    outputs = {"text"},
+    schema = {
+        request = nil,
+        response = [[ "plain/text": {
+            "schema": {
+                "type": "string",
+                "description": "Prometheus metrics"
+            }
+        } ]]
+    }
 }

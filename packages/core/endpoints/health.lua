@@ -2,7 +2,6 @@
 -- initialization
 -------------------------------------------------------
 local json  = require("json")
-local parms = nil
 
 -------------------------------------------------------
 -- main
@@ -17,11 +16,23 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "Health",
     description = "Application health",
     logging = core.DEBUG,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = nil,
+    outputs = {"json"},
+    schema = {
+        request = nil,
+        response = [["application/json": {
+            "schema": {
+                "type": "object"
+                "properties": {
+                    "health": { "type": "boolean", "description": "health of the system" }
+                }
+            }
+        }]]
+    }
 }

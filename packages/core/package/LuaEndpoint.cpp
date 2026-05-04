@@ -440,7 +440,7 @@ void LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_
     else
     {
         const FString error_msg("Unable to handle requested format: %s", content2str(selected_output));
-        sendHeader(Method_Not_Implemented, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
 }

@@ -2,7 +2,6 @@
 -- initialization
 -------------------------------------------------------
 local json  = require("json")
-local parms = nil
 
 -------------------------------------------------------
 -- main
@@ -23,11 +22,28 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "Defaults",
     description = "Dump of all system request parameters and their default values",
     logging = core.DEBUG,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = nil,
+    outputs = {"json"},
+    schema = {
+        request = nil,
+        response = [[ "application/json": {
+            "schema": {
+                "type": "object"
+                "properties": {
+                    "core": { "$ref": "#/components/schemas/core" },
+                    "cre": { "$ref": "#/components/schemas/cre" },
+                    "icesat2": { "$ref": "#/components/schemas/icesat2" },
+                    "gedi": { "$ref": "#/components/schemas/gedi" },
+                    "swot": { "$ref": "#/components/schemas/swot" },
+                    "bathy": { "$ref": "#/components/schemas/bathy" }
+                }
+            }
+        } ]]
+    }
 }

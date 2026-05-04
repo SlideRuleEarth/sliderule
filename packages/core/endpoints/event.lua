@@ -51,11 +51,32 @@ return {
     logging = core.CRITICAL,
     roles = {"member", "owner"},
     signed = false,
-    outputs = {"binary"}
+    inputs = {"json"},
+    outputs = {"binary"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "integer",
+                        "description": "Bitmask of event types to subscribe to (core.LOG=1, core.TRACE=2, core.TELEMETRY=4, core.ALERT=8)",
+                        "default": 1
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "description": "Seconds to hold connection open; max 600",
+                        "default": 600
+                    }
+                }
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "type": "string",
+                "format": "binary",
+                "description": "Stream of binary-encoded event records; ref #/components/schemas/eventrec"
+            }
+        } ]]
+    }
 }
-
--- INPUT:
---  {
---      "type":     <core.LOG | core.TRACE | core.TELEMETRY | core.ALERT>
---      "duration": <seconds to hold connection open | 0 for indefinite>
---  }

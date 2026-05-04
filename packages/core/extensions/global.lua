@@ -29,10 +29,23 @@ local function split(str, delimiter)
     return result
 end
 
+local function set(t)
+    if t then
+        local s = {}
+        for _, v in ipairs(t) do
+            s[v] = true
+        end
+        return s
+    else
+        return nil
+    end
+end
+
 local package = {
     eval = eval,
     check = check,
-    split = split
+    split = split,
+    set = set
 }
 
 return package
