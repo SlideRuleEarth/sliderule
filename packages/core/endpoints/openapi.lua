@@ -24,6 +24,30 @@ local function specification_template()
         },
         "components": {
             "schemas": { %s, %s, %s },
+            "securitySchemes": {
+                "SignatureAuth": {
+                    "type": "apiKey",
+                    "in": "header",
+                    "name": "x-sliderule-signature",
+                    "description": "Ed25519 signature of the canonical message, base64-encoded;
+                                    the canonical message is constructed as <path>:<timestamp>:<request body>,
+                                    where <path> is 'subdomain.domain/path/endpoint',
+                                    and <timestamp> is the current Unix time in seconds supplied the x-sliderule-timestamp header"
+                },
+                "OAuth2": {
+                    "type": "oauth2",
+                    "flows": {
+                        "authorizationCode": {
+                            "authorizationUrl": "https://login.slideruleearth.io/auth/github/login",
+                            "tokenUrl": "https://login.slideruleearth.io/auth/github/token",
+                            "scopes": {
+                                "sliderule:access": "Member role access",
+                                "sliderule:admin": "Owner role access"
+                            }
+                        }
+                    }
+                }
+            },
             "responses": {
                 "ServiceUnavailable": {
                     "description": "Insufficient resources are available on the server to process the request",
@@ -170,6 +194,29 @@ local function response_schema(endpoint)
 end
 
 -------------------------------------------------------
+-- security
+-------------------------------------------------------
+local function security_schema(endpoint)
+    local oauth_block = nil
+    local signature_block = nil
+    local roles = global.set(endpoint["roles"])
+    if roles then
+        if roles["member"] then oauth_block = "\"OAuth2\": [\"sliderule:access\"]" end
+        if roles["owner"] then oauth_block = "\"OAuth2\": [\"sliderule:admin\"]" end
+    end
+    if endpoint["signed"] then signature_block = "\"SignatureAuth\":[]" end
+    if oauth_block and signature_block then
+        return string.format("{%s,%s}", oauth_block, signature_block)
+    elseif oauth_block then
+        return string.format("{%s}", oauth_block)
+    elseif signature_block then
+        return string.format("{%s}", signature_block)
+    else
+        return ""
+    end
+end
+
+-------------------------------------------------------
 -- paths
 -------------------------------------------------------
 local function path_schemas()
@@ -180,6 +227,7 @@ local function path_schemas()
         local endpoint = require(api)
         if endpoint["schema"] then
             local verb = endpoint["inputs"] and "post" or "get"
+            local security = security_schema(endpoint)
             local summary = endpoint["name"]
             local description = endpoint["description"]
             local request_body = request_body_schema(endpoint)
@@ -187,13 +235,14 @@ local function path_schemas()
             local schema = string.format([[
                 "/%s": {
                     "%s": {
+                        "security": [ %s ],
                         "summary": "%s",
                         "description": "%s",
                         "requestBody": { %s },
                         "responses": { %s }
                     }
                 }
-            ]], api, verb, summary, description, request_body, response)
+            ]], api, verb, security, summary, description, request_body, response)
             table.insert(schema_list, schema)
         else
             sys.log(core.INFO, string.format("OpenAPI schema not generated for: %s", api))
