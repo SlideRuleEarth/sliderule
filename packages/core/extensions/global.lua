@@ -41,11 +41,23 @@ local function set(t)
     end
 end
 
+local function merge(t1, t2)
+    local result = {}
+    for k, v in pairs(t1) do
+        result[k] = v
+    end
+    for k, v in pairs(t2) do
+        result[k] = v
+    end
+    return result
+end
+
 local package = {
     eval = eval,
     check = check,
     split = split,
-    set = set
+    set = set,
+    merge = merge
 }
 
 return package

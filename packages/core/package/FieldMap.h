@@ -256,7 +256,7 @@ string FieldMap<T>::toOpenApi (const char* description) const
         const typename Dictionary<entry_t>::kv_t kv = iter[i];
         str += FString("\"%s\": %s%s", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str(), (i < iter.length - 1) ? "," : "").c_str();
     }
-    str += "} }";
+    str += "}}";
     return str;
 }
 

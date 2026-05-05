@@ -77,12 +77,8 @@ int BathyDataFrame::luaCreate (lua_State* L)
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
-        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
         const char* rqstq_name = getLuaString(L, 5, true, NULL);
-
-        /* Check for Null Resource and Asset */
-        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
-        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, rqstq_name, _mask));
@@ -134,16 +130,15 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(Icesat2Fields::getGroundTrack(beam_str), META_COLUMN),
-    granule(_hdf03->name, META_SOURCE_ID),
+    granule(_hdf03 ? _hdf03->name : "null", META_SOURCE_ID),
     active(false),
     pid(NULL),
-    parmsPtr(_parms),
-    parms(*_parms),
+    parms(_parms),
     bathyMask(_mask),
     hdf03(_hdf03),
     rqstQ(NULL),
     signalConfColIndex(0),
-    readTimeoutMs(parms.readTimeout.value * 1000),
+    readTimeoutMs(_parms->readTimeout.value * 1000),
     beam(StringLib::duplicate(beam_str))
 {
     /* Create Request Queue Publisher (if supplied) */
@@ -155,27 +150,34 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     try
     {
         /* Set Signal Confidence Index */
-        if(parms.surfaceType == Icesat2Fields::SRT_DYNAMIC)
+        if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
         {
             signalConfColIndex = H5Coro::ALL_COLS;
         }
         else
         {
-            signalConfColIndex = static_cast<int>(parms.surfaceType.value);
+            signalConfColIndex = static_cast<int>(parms->surfaceType.value);
         }
 
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);
 
         /* Create Reader */
-        active.store(true);
-        pid = new Thread(subsettingThread, this);
+        if(hdf03)
+        {
+            active.store(true);
+            pid = new Thread(subsettingThread, this);
+        }
+        else // nothing to do
+        {
+            signalComplete();
+        }
     }
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
 
         /* Indicate End of Data */
         signalComplete();
@@ -192,7 +194,7 @@ BathyDataFrame::~BathyDataFrame (void)
     delete rqstQ;
     delete [] beam;
     if(hdf03) hdf03->releaseLuaObject();
-    if(parmsPtr) parmsPtr->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
     if(bathyMask) bathyMask->releaseLuaObject();
 }
 
@@ -220,11 +222,11 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(dataframe.parms.regionMask.valid())
+        if(dataframe.parms->regionMask.valid())
         {
             rasterregion(dataframe);
         }
-        else if(dataframe.parms.pointsInPolygon.value > 0)
+        else if(dataframe.parms->pointsInPolygon.value > 0)
         {
             polyregion(dataframe);
         }
@@ -284,7 +286,7 @@ void BathyDataFrame::Region::polyregion (const BathyDataFrame& dataframe)
     while(segment < segment_ph_cnt.size)
     {
         /* Test Inclusion */
-        const bool inclusion = dataframe.parms.polyIncludes(segment_lon[segment], segment_lat[segment]);
+        const bool inclusion = dataframe.parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
 
         /* Check First Segment */
         if(!first_segment_found)
@@ -355,7 +357,7 @@ void BathyDataFrame::Region::rasterregion (const BathyDataFrame& dataframe)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = dataframe.parms.maskIncludes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = dataframe.parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -435,7 +437,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
     signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
-    weight_ph           (dataframe.parms.granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    weight_ph           (dataframe.parms->granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
@@ -462,7 +464,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph.join(dataframe.readTimeoutMs, true);
     signal_conf_ph.join(dataframe.readTimeoutMs, true);
     quality_ph.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.granuleFields.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
+    if(dataframe.parms->granuleFields.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
@@ -476,9 +478,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
 void* BathyDataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    BathyDataFrame* dataframe_ptr = static_cast<BathyDataFrame*>(parm);
-    BathyDataFrame& dataframe = *dataframe_ptr;
-    const BathyFields& parms = dataframe.parms;
+    BathyDataFrame& dataframe = *static_cast<BathyDataFrame*>(parm);
+    const BathyFields& parms = *(dataframe.parms);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%s}", parms.asset.getName(), parms.getResource(), dataframe.beam);

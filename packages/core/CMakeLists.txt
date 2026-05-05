@@ -181,9 +181,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/earthdata.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gsio.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/openapi.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua

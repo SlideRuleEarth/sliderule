@@ -37,7 +37,7 @@ return {
             "schema": {
                 "allOf": [
                     {
-                        "$ref": "#/components/schemas/core"
+                        "$ref": "#/components/schemas/CoreParameters"
                     },
                     {
                         "type": "object",

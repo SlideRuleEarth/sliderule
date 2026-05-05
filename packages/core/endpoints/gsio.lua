@@ -66,7 +66,7 @@ end
 return {
     main = main,
     parms = parms,
-    name = "Geospatial Index Operation",
+    name = "GeoSpatial Index Operation",
     description = "Perform intersection, combination, and split operations on geospatial indexes",
     logging = core.DEBUG,
     roles = {},

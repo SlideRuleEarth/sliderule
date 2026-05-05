@@ -39,7 +39,6 @@
 #include "OsApi.h"
 #include "Asset.h"
 #include "Icesat2Fields.h"
-#include "RecordObject.h"
 
 /******************************************************************************
  * CLASSES
@@ -149,7 +148,6 @@ class BathyFields: public Icesat2Fields
          *--------------------------------------------------------------------*/
 
         static int  luaCreate       (lua_State* L);
-        static int  luaClassifier   (lua_State* L);
         void        fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------

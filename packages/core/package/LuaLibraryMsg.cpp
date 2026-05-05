@@ -367,12 +367,14 @@ int LuaLibraryMsg::lmsg_describe(lua_State* L)
     const int numfields = RecordObject::getRecordFields(rectype, &fieldnames, &fields);
     if(numfields > 0)
     {
-        string str = FString("\"%s\": {\"type\": \"object\", \"properties\": {", rectype).c_str();
+        string str = FString("\"%s\": {\"type\": \"object\", \"format\": \"binary\", \"properties\": {", rectype).c_str();
         for(int i = 0; i < numfields; i++)
         {
-            const char* type_str = RecordObject::ft2str(fields[i]->type, true);
+            const char* type_str = RecordObject::openApiType(fields[i]->type);
+            const char* format_str = RecordObject::openApiFormat(fields[i]->type);
             const char* description = fields[i]->exttype ? fields[i]->exttype : "primitive value";
-            str += FString("\"%s\": {\"type\": \"%s\", \"description\": \"%s\"}%s", fieldnames[i], type_str, description, (i < numfields - 1) ? "," : "").c_str();
+            str += FString("\"%s\": {\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"}%s",
+                    fieldnames[i], type_str, format_str, description, (i < numfields - 1) ? "," : "").c_str();
             delete fields[i];
             delete [] fieldnames[i];
         }

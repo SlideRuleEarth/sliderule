@@ -297,8 +297,8 @@ T& FieldList<T>::operator[](int i)
 template <class T>
 string FieldList<T>::toOpenApi (const char* description) const
 {
-    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\"}}",
-        description, this->getOpenApiType()).c_str();
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}}",
+        description, this->getOpenApiType(), this->getOpenApiFormat()).c_str();
 }
 
 /*----------------------------------------------------------------------------

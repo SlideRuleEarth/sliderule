@@ -1,7 +1,12 @@
 -------------------------------------------------------
 -- initialization
 -------------------------------------------------------
+local json = require("json")
 local global = require("global")
+
+-- override global arguments to a representative object when loading API scripts
+local parms = { asset="icesat2", resource="ATL03_20190314093716_11600203_007_01.h5" }
+arg = {json.encode(global.merge({parms=parms}, parms))}
 
 -------------------------------------------------------
 -- specification
@@ -18,7 +23,7 @@ local function specification_template()
             }
         },
         "components": {
-            "schemas": { %s, %s },
+            "schemas": { %s, %s, %s },
             "responses": {
                 "ServiceUnavailable": {
                     "description": "Insufficient resources are available on the server to process the request",
@@ -81,12 +86,12 @@ end
 -------------------------------------------------------
 local function parameter_schemas()
     local parameters = {}
-    table.insert(parameters, core.parms():describe("core", "General request parameters that support all requests"))
-    table.insert(parameters, cre.parms():describe("cre", "Request parameters for executing container runtime environment processing requests"))
-    if __icesat2__ then table.insert(parameters, icesat2.parms():describe("icesat2", "Request parameters for executing ICESat-2 processing requests")) end
-    if __gedi__ then table.insert(parameters, icesat2.parms():describe("gedi", "Request parameters for executing GEDI processing requests")) end
-    if __swot__ then table.insert(parameters, icesat2.parms():describe("swot", "Request parameters for executing SWOT processing requests")) end
-    if __bathy__ then table.insert(parameters, icesat2.parms():describe("bathy", "Request parameters for executing bathymetry processing requests")) end
+    table.insert(parameters, core.parms():describe("CoreParameters", "General request parameters that support all requests"))
+    table.insert(parameters, cre.parms():describe("CreParameters", "Request parameters for executing container runtime environment processing requests"))
+    if __icesat2__ then table.insert(parameters, icesat2.parms():describe("Icesat2Parameters", "Request parameters for executing ICESat-2 processing requests")) end
+    if __gedi__ then table.insert(parameters, icesat2.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end
+    if __swot__ then table.insert(parameters, icesat2.parms():describe("SwotParameters", "Request parameters for executing SWOT processing requests")) end
+    if __bathy__ then table.insert(parameters, icesat2.parms():describe("BathyParameters", "Request parameters for executing bathymetry processing requests")) end
     return table.concat(parameters, ",")
 end
 
@@ -100,6 +105,17 @@ local function record_schemas()
         table.insert(records, msg.describe(rectype))
     end
     return table.concat(records, ",")
+end
+
+-------------------------------------------------------
+-- dataframes
+-------------------------------------------------------
+local function dataframe_schemas()
+    local dataframes = {}
+    local bathy_parms = bathy.parms()
+    local bathy_dataframe = bathy.dataframe("gt1l", bathy_parms, nil, nil, _rqst.rspq)
+    table.insert(dataframes, bathy_dataframe:describe("BathyDataFrame", "ICESat-2 photon cloud used for bathymetry processing"))
+    return table.concat(dataframes, ",")
 end
 
 -------------------------------------------------------
@@ -144,7 +160,6 @@ local function path_schemas()
     local schema_list = {}
     for _,filepath in ipairs(api_list) do
         local api = filepath:match("([^/]+)%.lua$")
-        arg = {[[{"parms": "{}", "asset": "icesat2", "resource": "granule.h5"}]]} -- override global arguments to a representative object when loading API scripts
         local endpoint = require(api)
         if endpoint["schema"] then
             local verb = endpoint["inputs"] and "post" or "get"
@@ -163,6 +178,8 @@ local function path_schemas()
                 }
             ]], api, verb, summary, description, request_body, response)
             table.insert(schema_list, schema)
+        else
+            sys.log(core.INFO, string.format("OpenAPI schema not generated for: %s", api))
         end
     end
     return table.concat(schema_list, ",")
@@ -176,8 +193,9 @@ local function main()
     local version = sys.version()
     local parameters = parameter_schemas()
     local records = record_schemas()
+    local dataframes = dataframe_schemas()
     local paths = path_schemas()
-    return string.format(spec, version, parameters, records, paths):gsub("%s+", " ")
+    return string.format(spec, version, parameters, records, dataframes, paths):gsub("%s+", " ")
 end
 
 -------------------------------------------------------

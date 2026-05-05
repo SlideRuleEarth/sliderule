@@ -76,9 +76,9 @@ class RequestFields: public LuaObject, public FieldMap<Field>
          *--------------------------------------------------------------------*/
 
         static int luaCreate (lua_State* L);
-        static int luaExport (lua_State* L);
-        static int luaEncode (lua_State* L);
-        static int luaDescribe (lua_State* L);
+        static int luaExport (lua_State* L); // to Lua
+        static int luaEncode (lua_State* L); // to JSON
+        static int luaDescribe (lua_State* L); // to OpenAPI
 
         static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);

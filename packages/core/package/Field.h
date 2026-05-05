@@ -187,12 +187,11 @@ class Field
         }
 
         const char* getOpenApiType(void) const {
-            if(encoding & NESTED_MASK) {
-                return "array";
-            }
-            else {
-                return RecordObject::ft2str(static_cast<RecordObject::fieldType_t>(getEncodedType()), true);
-            }
+            return RecordObject::openApiType(static_cast<RecordObject::fieldType_t>(getEncodedType()));
+        }
+
+        const char* getOpenApiFormat(void) const {
+            return RecordObject::openApiFormat(static_cast<RecordObject::fieldType_t>(getEncodedType()));
         }
 
         /*--------------------------------------------------------------------

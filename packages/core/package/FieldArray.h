@@ -254,8 +254,8 @@ template <class T, int N>
 string FieldArray<T,N>::toOpenApi (const char* description) const
 {
     FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
-    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
-        description, this->getOpenApiType(), N, N, default_property.c_str()).c_str();
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
+        description, this->getOpenApiType(), this->getOpenApiFormat(), N, N, default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------

@@ -870,8 +870,8 @@ typename FieldColumn<T>::unique_map_t FieldColumn<T>::unique (long start_index, 
 template <class T>
 string FieldColumn<T>::toOpenApi (const char* description) const
 {
-    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\"}}",
-        description, this->getOpenApiType()).c_str();
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}}",
+        description, this->getOpenApiType(), this->getOpenApiFormat()).c_str();
 }
 
 /*----------------------------------------------------------------------------

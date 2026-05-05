@@ -180,17 +180,16 @@ class BathyDataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        std::atomic<bool>           active;
-        Thread*                     pid;
-        BathyFields*                parmsPtr;
-        const BathyFields&          parms;
-        BathyMask*                  bathyMask;
-        H5Object*                   hdf03;      // atl03 granule
-        Publisher*                  rqstQ;
-        int                         signalConfColIndex;
-        int                         readTimeoutMs;
-        okey_t                      dfKey;
-        const char*                 beam;
+        std::atomic<bool>   active;
+        Thread*             pid;
+        BathyFields*        parms;
+        BathyMask*          bathyMask;
+        H5Object*           hdf03;      // atl03 granule
+        Publisher*          rqstQ;
+        int                 signalConfColIndex;
+        int                 readTimeoutMs;
+        okey_t              dfKey;
+        const char*         beam;
 
         /*--------------------------------------------------------------------
          * Methods

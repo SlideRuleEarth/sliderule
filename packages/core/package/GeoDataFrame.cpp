@@ -1252,6 +1252,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
     LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
     LuaEngine::setAttrFunc(L, "export",     luaExport);
+    LuaEngine::setAttrFunc(L, "describe",   luaDescribe);
     LuaEngine::setAttrFunc(L, "send",       luaSend);
     LuaEngine::setAttrFunc(L, "receive",    luaReceive);
     LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
@@ -1838,6 +1839,30 @@ int GeoDataFrame::luaExport (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaDescribe - describe() --> OpenAPI string
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaDescribe (lua_State* L)
+{
+    try
+    {
+        const GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char* name = getLuaString(L, 2);
+        const char* description = getLuaString(L, 3);
+        const string columns_open_api_str = lua_obj->columnFields.toOpenApi(description);
+        const string meta_open_api_str = lua_obj->metaFields.toOpenApi(FString("Metadata fields for %s", name).c_str());
+        FString schema("\"%s\": %s, \"%s.meta\": %s", name, columns_open_api_str.c_str(), name, meta_open_api_str.c_str());
+        lua_pushstring(L, schema.c_str());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error describing %s: %s", OBJECT_TYPE, e.what());
         lua_pushnil(L);
     }
 

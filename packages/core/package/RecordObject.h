@@ -308,8 +308,10 @@ class RecordObject
         static const char*      flags2str           (unsigned int flags);
         static fieldType_t      str2ft              (const char* str);
         static bool             str2be              (const char* str);
-        static const char*      ft2str              (fieldType_t ft, bool openapi=false);
+        static const char*      ft2str              (fieldType_t ft);
         static const char*      vt2str              (valType_t vt);
+        static const char*      openApiType         (fieldType_t ft);
+        static const char*      openApiFormat       (fieldType_t ft);
         static unsigned long    unpackBitField      (const unsigned char* buf, int bit_offset, int bit_length);
         static void             packBitField        (unsigned char* buf, int bit_offset, int bit_length, long val);
         static field_t          parseImmediateField (const char* str);

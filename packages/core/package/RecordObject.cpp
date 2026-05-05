@@ -1337,49 +1337,25 @@ bool RecordObject::str2be (const char* str)
 /*----------------------------------------------------------------------------
  * ft2str
  *----------------------------------------------------------------------------*/
-const char* RecordObject::ft2str (fieldType_t ft, bool openapi)
+const char* RecordObject::ft2str (fieldType_t ft)
 {
-    if(!openapi)
+    switch(ft)
     {
-        switch(ft)
-        {
-            case INT8:      return "INT8";
-            case INT16:     return "INT16";
-            case INT32:     return "INT32";
-            case INT64:     return "INT64";
-            case UINT8:     return "UINT8";
-            case UINT16:    return "UINT16";
-            case UINT32:    return "UINT32";
-            case UINT64:    return "UINT64";
-            case BITFIELD:  return "BITFIELD";
-            case FLOAT:     return "FLOAT";
-            case DOUBLE:    return "DOUBLE";
-            case TIME8:     return "TIME8";
-            case STRING:    return "STRING";
-            case OBJECT:    return "OBJECT";
-            default:        return "INVALID_FIELD";
-        }
-    }
-    else
-    {
-        switch(ft)
-        {
-            case BOOL:      return "boolean";
-            case INT8:      return "integer";
-            case INT16:     return "integer";
-            case INT32:     return "integer";
-            case INT64:     return "integer";
-            case UINT8:     return "integer";
-            case UINT16:    return "integer";
-            case UINT32:    return "integer";
-            case UINT64:    return "integer";
-            case FLOAT:     return "number";
-            case DOUBLE:    return "number";
-            case TIME8:     return "integer";
-            case STRING:    return "string";
-            case OBJECT:    return "object";
-            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to generate Open API type for field type: %d", ft);
-        }
+        case INT8:      return "INT8";
+        case INT16:     return "INT16";
+        case INT32:     return "INT32";
+        case INT64:     return "INT64";
+        case UINT8:     return "UINT8";
+        case UINT16:    return "UINT16";
+        case UINT32:    return "UINT32";
+        case UINT64:    return "UINT64";
+        case BITFIELD:  return "BITFIELD";
+        case FLOAT:     return "FLOAT";
+        case DOUBLE:    return "DOUBLE";
+        case TIME8:     return "TIME8";
+        case STRING:    return "STRING";
+        case OBJECT:    return "OBJECT";
+        default:        return "INVALID_FIELD";
     }
 }
 
@@ -1394,6 +1370,56 @@ const char* RecordObject::vt2str (valType_t vt)
         case REAL:      return "REAL";
         case INTEGER:   return "INTEGER";
         default:        return "DYNAMIC";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * openApiType
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::openApiType (fieldType_t ft)
+{
+    switch(ft)
+    {
+        case BOOL:      return "boolean";
+        case INT8:      return "integer";
+        case INT16:     return "integer";
+        case INT32:     return "integer";
+        case INT64:     return "integer";
+        case UINT8:     return "integer";
+        case UINT16:    return "integer";
+        case UINT32:    return "integer";
+        case UINT64:    return "integer";
+        case FLOAT:     return "number";
+        case DOUBLE:    return "number";
+        case TIME8:     return "integer";
+        case STRING:    return "string";
+        case OBJECT:    return "object";
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to generate Open API type for field type: %d", ft);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * openApiFormat
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::openApiFormat (fieldType_t ft)
+{
+    switch(ft)
+    {
+        case BOOL:      return "bool";
+        case INT8:      return "int8";
+        case INT16:     return "int16";
+        case INT32:     return "int32";
+        case INT64:     return "int64";
+        case UINT8:     return "uint8";
+        case UINT16:    return "uint16";
+        case UINT32:    return "uint32";
+        case UINT64:    return "uint64";
+        case FLOAT:     return "float";
+        case DOUBLE:    return "double";
+        case TIME8:     return "date-time";
+        case STRING:    return "binary";
+        case OBJECT:    return "x-object";
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to generate Open API format for field type: %d", ft);
     }
 }
 

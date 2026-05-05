@@ -220,8 +220,8 @@ template <class T>
 string FieldElement<T>::toOpenApi (const char* description) const
 {
     FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
-    return FString("{\"type\": \"%s\", \"description\": \"%s\"%s}",
-        this->getOpenApiType(), description, default_property.c_str()).c_str();
+    return FString("{\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"%s}",
+        this->getOpenApiType(), this->getOpenApiFormat(), description, default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------
