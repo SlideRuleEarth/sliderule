@@ -61,7 +61,7 @@
     beam(0, META_COLUMN),
     orbit(static_cast<uint32_t>(_parms->granule_fields.orbit.value), META_COLUMN),
     track(static_cast<uint16_t>(_parms->granule_fields.track.value), META_COLUMN),
-    granule(_hdf->name, META_SOURCE_ID),
+    granule(_hdf ? _hdf->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -71,9 +71,6 @@
     beamStr(StringLib::duplicate(beam_str)),
     group{0}
 {
-    assert(_parms);
-    assert(_hdf);
-
     /* Resolve Beam */
     StringLib::format(group, sizeof(group), "%s", GediFields::beam2group(static_cast<int>(dfKey)));
     GediFields::beam_t beam_id;
@@ -95,7 +92,7 @@ GediDataFrame::~GediDataFrame (void)
     delete readerPid;
     delete [] beamStr;
     delete outQ;
-    if(parms) parms->releaseLuaObject();
+    parms->releaseLuaObject();
     if(hdf) hdf->releaseLuaObject();
 }
 

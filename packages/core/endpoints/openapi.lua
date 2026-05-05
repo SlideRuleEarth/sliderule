@@ -92,6 +92,7 @@ local function parameter_schemas()
     if __gedi__ then table.insert(parameters, icesat2.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end
     if __swot__ then table.insert(parameters, icesat2.parms():describe("SwotParameters", "Request parameters for executing SWOT processing requests")) end
     if __bathy__ then table.insert(parameters, icesat2.parms():describe("BathyParameters", "Request parameters for executing bathymetry processing requests")) end
+    if __casals__ then table.insert(parameters, casals.parms():describe("CasalsParameters", "Request parameters for executing CASALS processing requests")) end
     return table.concat(parameters, ",")
 end
 
@@ -112,9 +113,20 @@ end
 -------------------------------------------------------
 local function dataframe_schemas()
     local dataframes = {}
+    -- bathy
     local bathy_parms = bathy.parms()
-    local bathy_dataframe = bathy.dataframe("gt1l", bathy_parms, nil, nil, _rqst.rspq)
-    table.insert(dataframes, bathy_dataframe:describe("BathyDataFrame", "ICESat-2 photon cloud used for bathymetry processing"))
+    table.insert(dataframes, bathy.dataframe("gt1l", bathy_parms, nil, nil, _rqst.rspq):describe("BathyDataFrame", "ICESat-2 photon cloud used for bathymetry processing"))
+    -- casals
+    local casals_parms = casals.parms()
+    table.insert(dataframes, casals.casals1bx(casals_parms, nil, _rqst.rspq):describe("Casals1bDataFrame", "CASALS 1B elevations"))
+    -- gedi
+    local gedi_parms = gedi.parms()
+    table.insert(dataframes, gedi.gedi01bx("beam0", gedi_parms, nil, _rqst.rspq):describe("Gedi01bDataFrame", "GEDI 1B waveforms"))
+    table.insert(dataframes, gedi.gedi02ax("beam0", gedi_parms, nil, _rqst.rspq):describe("Gedi02aDataFrame", "GEDI 2A elevations"))
+    table.insert(dataframes, gedi.gedi04ax("beam0", gedi_parms, nil, _rqst.rspq):describe("Gedi04aDataFrame", "GEDI 4A above ground biomass density"))
+    -- icesat2
+    local icesat2_parms = icesat2.parms({phoreal={}, fit={}, atl24={}, atl08_class={}, yapc={}})
+    table.insert(dataframes, icesat2.atl03x("gt1l", icesat2_parms, nil, nil, nil, _rqst.rspq):describe("Atl03DataFrame", "ICESat-2 photon cloud"))
     return table.concat(dataframes, ",")
 end
 
@@ -182,6 +194,7 @@ local function path_schemas()
             sys.log(core.INFO, string.format("OpenAPI schema not generated for: %s", api))
         end
     end
+    table.sort(schema_list)
     return table.concat(schema_list, ",")
 end
 

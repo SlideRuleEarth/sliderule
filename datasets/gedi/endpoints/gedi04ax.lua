@@ -36,5 +36,18 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "#/components/schemas/GediParameters"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "$ref": "#/components/schemas/Gedi04aDataFrame"
+            }
+        } ]]
+    }
 }

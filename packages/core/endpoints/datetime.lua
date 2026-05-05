@@ -52,7 +52,7 @@ end
 return {
     main = main,
     parms = parms,
-    name = "Time",
+    name = "Time Conversion",
     description = [[Returns current and converted times in different formats support and used by SlideRule;
                     NOW:    if supplied for either input or time then grab the current time
                     CDS:    CCSDS 6-byte packet timestamp represented as [<day>, <ms>]

@@ -61,7 +61,7 @@ int Gedi02aDataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
-        _hdf02a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf02a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -103,9 +103,16 @@ Gedi02aDataFrame::Gedi02aDataFrame (lua_State* L, const char* beam_str, GediFiel
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf02a)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------

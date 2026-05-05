@@ -147,39 +147,27 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
 
-    try
+    /* Set Signal Confidence Index */
+    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
     {
-        /* Set Signal Confidence Index */
-        if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
-        {
-            signalConfColIndex = H5Coro::ALL_COLS;
-        }
-        else
-        {
-            signalConfColIndex = static_cast<int>(parms->surfaceType.value);
-        }
-
-        /* Set Thread Specific Trace ID for H5Coro */
-        EventLib::stashId (traceId);
-
-        /* Create Reader */
-        if(hdf03)
-        {
-            active.store(true);
-            pid = new Thread(subsettingThread, this);
-        }
-        else // nothing to do
-        {
-            signalComplete();
-        }
+        signalConfColIndex = H5Coro::ALL_COLS;
     }
-    catch(const RunTimeException& e)
+    else
     {
-        /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
+        signalConfColIndex = static_cast<int>(parms->surfaceType.value);
+    }
 
-        /* Indicate End of Data */
+    /* Set Thread Specific Trace ID for H5Coro */
+    EventLib::stashId (traceId);
+
+    /* Create Reader */
+    if(hdf03)
+    {
+        active.store(true);
+        pid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
         signalComplete();
     }
 }

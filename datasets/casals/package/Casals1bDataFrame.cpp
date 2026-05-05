@@ -68,7 +68,7 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         _parms = dynamic_cast<CasalsFields*>(getLuaObject(L, 1, CasalsFields::OBJECT_TYPE));
-        _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
+        _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 3, true, NULL);
 
         /* Return Reader Object */
@@ -99,7 +99,7 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     },
     CasalsFields::crsITRF2020(), // crs
     1), // dfKey
-    granule(_hdf1b->name, META_SOURCE_ID),
+    granule(_hdf1b ? _hdf1b->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -107,9 +107,6 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     parms(_parms),
     hdf1b(_hdf1b)
 {
-    assert(_parms);
-    assert(_hdf1b);
-
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
@@ -119,9 +116,16 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf1b)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -133,7 +137,7 @@ Casals1bDataFrame::~Casals1bDataFrame (void)
     delete readerPid;
     delete outQ;
     parms->releaseLuaObject();
-    hdf1b->releaseLuaObject();
+    if(hdf1b) hdf1b->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

@@ -25,5 +25,22 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "#/components/schemas/Icesat2Parameters"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "#/components/schemas/atl03vrec" },
+                    { "$ref": "#/components/schemas/atl03vrec.segments" }
+                ],
+                "description": "Stream of binary-encoded ICESat-2 segment-level data"
+            }
+        } ]]
+    }
 }
