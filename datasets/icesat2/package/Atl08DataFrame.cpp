@@ -61,7 +61,7 @@ int Atl08DataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -94,7 +94,7 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"n_te_photons",            &n_te_photons,              "Number of ground photons in segment"},
         {"h_te_uncertainty",        &h_te_uncertainty,          "Uncertainty of ground height estimates (in meters); includes all known uncertainties such as geolocation, pointing angle, timing, radial orbit errors, etc."},
         {"h_te_median",             &h_te_median,               "Median terrain height for segment (in meters)"},
-        {"h_canopy",                &h_canopy,                  "98% height (in meters) of all the individual relative canopy heights (height above terrain) for segment"},
+        {"h_canopy",                &h_canopy,                  "98 percent height (in meters) of all the individual relative canopy heights (height above terrain) for segment"},
         {"h_canopy_uncertainty",    &h_canopy_uncertainty,      "Uncertainty (in meters) of the relative canopy height (h_canopy)"},
         {"segment_cover",           &segment_cover,             "Woody vegetation fractional cover"},
         {"n_ca_photons",            &n_ca_photons,              "Number of canopy photon within 100m segment"},
@@ -119,7 +119,7 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf08->name, META_SOURCE_ID),
+    granule(_hdf08 ? _hdf08->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -128,9 +128,6 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf08(_hdf08),
     beam(StringLib::duplicate(beam_str))
 {
-    assert(_parms);
-    assert(_hdf08);
-
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
@@ -150,9 +147,16 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId(traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf08)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -165,7 +169,7 @@ Atl08DataFrame::~Atl08DataFrame (void)
     delete [] beam;
     delete outQ;
     parms->releaseLuaObject();
-    hdf08->releaseLuaObject();
+    if(hdf08) hdf08->releaseLuaObject();
 }
 
 /******************************************************************************

@@ -66,5 +66,18 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "#/components/schemas/Icesat2Parameters"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "$ref": "#/components/schemas/Atl13DataFrame"
+            }
+        } ]]
+    }
 }

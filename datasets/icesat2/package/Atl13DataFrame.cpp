@@ -69,7 +69,7 @@ int Atl13DataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Reader Object */
@@ -112,7 +112,7 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf13->name, META_SOURCE_ID),
+    granule(_hdf13 ? _hdf13->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -121,9 +121,6 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     parms(_parms),
     hdf13(_hdf13)
 {
-    assert(_parms);
-    assert(_hdf13);
-
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
 
@@ -133,9 +130,16 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf13)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -148,7 +152,7 @@ Atl13DataFrame::~Atl13DataFrame (void)
     delete [] beam;
     delete outQ;
     parms->releaseLuaObject();
-    hdf13->releaseLuaObject();
+    if(hdf13) hdf13->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

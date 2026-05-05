@@ -89,9 +89,9 @@ local function parameter_schemas()
     table.insert(parameters, core.parms():describe("CoreParameters", "General request parameters that support all requests"))
     table.insert(parameters, cre.parms():describe("CreParameters", "Request parameters for executing container runtime environment processing requests"))
     if __icesat2__ then table.insert(parameters, icesat2.parms():describe("Icesat2Parameters", "Request parameters for executing ICESat-2 processing requests")) end
-    if __gedi__ then table.insert(parameters, icesat2.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end
-    if __swot__ then table.insert(parameters, icesat2.parms():describe("SwotParameters", "Request parameters for executing SWOT processing requests")) end
-    if __bathy__ then table.insert(parameters, icesat2.parms():describe("BathyParameters", "Request parameters for executing bathymetry processing requests")) end
+    if __gedi__ then table.insert(parameters, gedi.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end
+    if __swot__ then table.insert(parameters, swot.parms():describe("SwotParameters", "Request parameters for executing SWOT processing requests")) end
+    if __bathy__ then table.insert(parameters, bathy.parms():describe("BathyParameters", "Request parameters for executing bathymetry processing requests")) end
     if __casals__ then table.insert(parameters, casals.parms():describe("CasalsParameters", "Request parameters for executing CASALS processing requests")) end
     return table.concat(parameters, ",")
 end
@@ -115,18 +115,23 @@ local function dataframe_schemas()
     local dataframes = {}
     -- bathy
     local bathy_parms = bathy.parms()
-    table.insert(dataframes, bathy.dataframe("gt1l", bathy_parms, nil, nil, _rqst.rspq):describe("BathyDataFrame", "ICESat-2 photon cloud used for bathymetry processing"))
+    table.insert(dataframes, bathy.dataframe("gt1l", bathy_parms):describe("BathyDataFrame", "ICESat-2 photon cloud used for bathymetry processing"))
     -- casals
     local casals_parms = casals.parms()
-    table.insert(dataframes, casals.casals1bx(casals_parms, nil, _rqst.rspq):describe("Casals1bDataFrame", "CASALS 1B elevations"))
+    table.insert(dataframes, casals.casals1bx(casals_parms):describe("Casals1bDataFrame", "CASALS 1B elevations"))
     -- gedi
     local gedi_parms = gedi.parms()
-    table.insert(dataframes, gedi.gedi01bx("beam0", gedi_parms, nil, _rqst.rspq):describe("Gedi01bDataFrame", "GEDI 1B waveforms"))
-    table.insert(dataframes, gedi.gedi02ax("beam0", gedi_parms, nil, _rqst.rspq):describe("Gedi02aDataFrame", "GEDI 2A elevations"))
-    table.insert(dataframes, gedi.gedi04ax("beam0", gedi_parms, nil, _rqst.rspq):describe("Gedi04aDataFrame", "GEDI 4A above ground biomass density"))
+    table.insert(dataframes, gedi.gedi01bx("beam0", gedi_parms):describe("Gedi01bDataFrame", "GEDI 1B waveforms"))
+    table.insert(dataframes, gedi.gedi02ax("beam0", gedi_parms):describe("Gedi02aDataFrame", "GEDI 2A elevations"))
+    table.insert(dataframes, gedi.gedi04ax("beam0", gedi_parms):describe("Gedi04aDataFrame", "GEDI 4A above ground biomass density"))
     -- icesat2
-    local icesat2_parms = icesat2.parms({phoreal={}, fit={}, atl24={}, atl08_class={}, yapc={}})
-    table.insert(dataframes, icesat2.atl03x("gt1l", icesat2_parms, nil, nil, nil, _rqst.rspq):describe("Atl03DataFrame", "ICESat-2 photon cloud"))
+    local icesat2_parms = icesat2.parms({phoreal={}, fit={}, atl24={compact=false}, atl08_class={}, yapc={}})
+    table.insert(dataframes, icesat2.atl03x("gt1l", icesat2_parms):describe("Atl03DataFrame", "ICESat-2 photon cloud (ATL03)"))
+    table.insert(dataframes, icesat2.atl06x("gt1l", icesat2_parms):describe("Atl06DataFrame", "ICESat-2 ice-sheet elevations (ATL06)"))
+    table.insert(dataframes, icesat2.atl08x("gt1l", icesat2_parms):describe("Atl08DataFrame", "ICESat-2 vegetation metrics (ATL08)"))
+    table.insert(dataframes, icesat2.atl13x("gt1l", icesat2_parms):describe("Atl13DataFrame", "ICESat-2 in-land lake metrics (ATL13)"))
+    table.insert(dataframes, icesat2.atl24x("gt1l", icesat2_parms):describe("Atl24DataFrame", "ICESat-2 near-shore bathymetry (ATL24)"))
+    -- return list of dataframes
     return table.concat(dataframes, ",")
 end
 

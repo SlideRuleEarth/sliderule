@@ -61,7 +61,7 @@ int Atl06DataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf06 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf06 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -117,7 +117,7 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf06->name, META_SOURCE_ID),
+    granule(_hdf06 ? _hdf06->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -126,9 +126,6 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf06(_hdf06),
     beam(StringLib::duplicate(beam_str))
 {
-    assert(_parms);
-    assert(_hdf06);
-
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
@@ -138,9 +135,16 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf06)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -153,7 +157,7 @@ Atl06DataFrame::~Atl06DataFrame (void)
     delete [] beam;
     delete outQ;
     parms->releaseLuaObject();
-    hdf06->releaseLuaObject();
+    if(hdf06) hdf06->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

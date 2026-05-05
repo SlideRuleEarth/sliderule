@@ -52,17 +52,17 @@ end
 return {
     main = main,
     parms = parms,
-    name = "Time Conversion",
+    name = "Datetime Conversion",
     description = [[Returns current and converted times in different formats support and used by SlideRule;
                     NOW:    if supplied for either input or time then grab the current time
                     CDS:    CCSDS 6-byte packet timestamp represented as [<day>, <ms>]
                             days = 2 bytes of days since GPS epoch
                             ms = 4 bytes of milliseconds in the current day
                     GMT:    UTC time represented as
-                            "<year>:<day of year>:<hour in day>:<minute in hour>:<second in minute>"
-                    GPS:    milliseconds since GPS epoch "January 6, 1980"
+                            <year>:<day of year>:<hour in day>:<minute in hour>:<second in minute>
+                    GPS:    milliseconds since GPS epoch January 6, 1980
                     DATE:   UTC time represented as
-                            "<year>-<month>-<day of month>T<hour in day>:<minute in hour>:<second in minute>Z"]],
+                            <year>-<month>-<day of month>T<hour in day>:<minute in hour>:<second in minute>Z]],
     logging = core.DEBUG,
     roles = {},
     signed = false,

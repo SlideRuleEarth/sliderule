@@ -34,5 +34,22 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "#/components/schemas/Icesat2Parameters"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "#/components/schemas/atl06rec" },
+                    { "$ref": "#/components/schemas/atl06rec.elevation" }
+                ],
+                "description": "Stream of binary-encoded calculated surface elevations"
+            }
+        } ]]
+    }
 }

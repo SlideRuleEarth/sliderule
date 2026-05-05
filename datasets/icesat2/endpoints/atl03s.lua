@@ -46,7 +46,7 @@ return {
                     { "$ref": "#/components/schemas/atl03rec" },
                     { "$ref": "#/components/schemas/atl03rec.photons" }
                 ],
-                "description": "Stream of binary-encoded ICESat-2 photon measurements"
+                "description": "Stream of binary-encoded ICESat-2 photon measurements (ATL03)"
             }
         } ]]
     }
