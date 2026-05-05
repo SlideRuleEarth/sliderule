@@ -107,7 +107,6 @@ BRANCH ?= main
 EMAIL_DOMAIN ?= mail.slideruleearth.io
 SUPPORT_EMAIL ?= support@$(EMAIL_DOMAIN)
 CORS_ALLOW_ORIGINS ?= "https://client.$(DOMAIN)"
-PROTOCOL = https
 
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
@@ -806,16 +805,20 @@ certbot-delete: ## deletes the lambda certbot function
 # Website Targets
 ########################
 
-documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
+documentation-prep: ## create environment for building documentation
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
-	curl $(PROTOCOL)://$(DOMAIN)/source/openapi > $(DOCUMENTATION_STAGE_DIR)/openapi.json
-	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/openapi.json
-	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.html
+
+documentation-openapi: ## build the openapi specification for sliderule apis
+	make run RUN_CMD=openapi.lua
+#	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/openapi.json
+#	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.html
+
+documentation: documentation-prep documentation-openapi ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	conda run -n rtd --no-capture-output \
 	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
 	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
