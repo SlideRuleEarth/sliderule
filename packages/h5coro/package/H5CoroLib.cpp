@@ -418,8 +418,8 @@ int H5Coro::Fields::luaCreate (lua_State* L)
     try
     {
         const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
-        const char* asset_name = LuaObject::getLuaString(L, 3);
-        const char* resource = LuaObject::getLuaString(L, 4);
+        const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
+        const char* resource = LuaObject::getLuaString(L, 4, true, NULL);
 
         _parms = new Fields(L, key_space, asset_name, resource, {});
         _parms->fromLua(L, 1);

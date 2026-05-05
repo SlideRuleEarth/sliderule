@@ -11,17 +11,17 @@ local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", granule["year"],
 local rgps          = time.gmt2gps(rdate)
 local channels      = 6 -- number of dataframes per resource
 local resource      = parms["resource"]
-local bathymask     = bathy.mask()
-local atl03h5       = h5coro.object(parms["asset"], resource)
-local kd490         = util.get_viirs(parms, rgps)
-local seasurface    = bathy.seasurface(parms)
-local refraction    = bathy.refraction(parms)
-local uncertainty   = bathy.uncertainty(parms, kd490)
 
 -------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
+    local bathymask     = bathy.mask()
+    local atl03h5       = h5coro.object(parms["asset"], resource)
+    local kd490         = util.get_viirs(parms, rgps)
+    local seasurface    = bathy.seasurface(parms)
+    local refraction    = bathy.refraction(parms)
+    local uncertainty   = bathy.uncertainty(parms, kd490)
     dataframe.proxy("bathy", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
         local dataframes = {}
         local runners = {seasurface, refraction, uncertainty}

@@ -290,8 +290,8 @@ string FieldEnumeration<T,N>::toOpenApi (const char* description) const
     FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
 
     // return open api component schema
-    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d, \"enum\": %s%s}",
-        description, this->getOpenApiType(), this->getOpenApiFormat(), N, N, enum_property.c_str(), default_property.c_str()).c_str();
+    return FString("{\"type\": \"array\", \"description\": \"%s; possible values: %s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
+        description, enum_property.c_str(), this->getOpenApiType(), this->getOpenApiFormat(), N, N, default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------

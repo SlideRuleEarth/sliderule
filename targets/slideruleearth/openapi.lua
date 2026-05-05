@@ -120,6 +120,7 @@ local function parameter_schemas()
     local parameters = {}
     table.insert(parameters, core.parms():describe("CoreParameters", "General request parameters that support all requests"))
     table.insert(parameters, cre.parms():describe("CreParameters", "Request parameters for executing container runtime environment processing requests"))
+    if __h5coro__ then table.insert(parameters, h5coro.parms():describe("H5CoroParameters", "Request parameters for reading HDF5 files using H5Coro")) end
     if __icesat2__ then table.insert(parameters, icesat2.parms():describe("Icesat2Parameters", "Request parameters for executing ICESat-2 processing requests")) end
     if __gedi__ then table.insert(parameters, gedi.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end
     if __swot__ then table.insert(parameters, swot.parms():describe("SwotParameters", "Request parameters for executing SWOT processing requests")) end
@@ -236,9 +237,9 @@ local function path_schemas()
     local schema_list = {}
     for _,filepath in ipairs(api_list) do
         local api = filepath:match("([^/]+)%.lua$")
+        sys.log(core.INFO, string.format("Loading endpoint: %s", api))
         local endpoint = require(api)
         if endpoint["schema"] then
-            sys.log(core.INFO, string.format("OpenAPI schema generated for: %s", api))
             local verb = endpoint["inputs"] and "post" or "get"
             local security = security_schema(endpoint)
             local summary = endpoint["name"]

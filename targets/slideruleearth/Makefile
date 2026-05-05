@@ -814,9 +814,9 @@ documentation-prep: ## create environment for building documentation
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 
 documentation-openapi: ## build the openapi specification for sliderule apis
-	make run RUN_CMD=openapi.lua
-#	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/openapi.json
-#	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.html
+	make run RUN_CMD="openapi.lua $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.json"
+	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.json
+	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.html
 
 documentation: documentation-prep documentation-openapi ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	conda run -n rtd --no-capture-output \
