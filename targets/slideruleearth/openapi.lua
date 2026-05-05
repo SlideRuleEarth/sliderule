@@ -120,6 +120,7 @@ local function parameter_schemas()
     local parameters = {}
     table.insert(parameters, core.parms():describe("CoreParameters", "General request parameters that support all requests"))
     table.insert(parameters, cre.parms():describe("CreParameters", "Request parameters for executing container runtime environment processing requests"))
+    if __geo__ then table.insert(parameters, geo.parms():describe("GeoParameters", "Request parameters for sampling raster datasets using GDAL")) end
     if __h5coro__ then table.insert(parameters, h5coro.parms():describe("H5CoroParameters", "Request parameters for reading HDF5 files using H5Coro")) end
     if __icesat2__ then table.insert(parameters, icesat2.parms():describe("Icesat2Parameters", "Request parameters for executing ICESat-2 processing requests")) end
     if __gedi__ then table.insert(parameters, gedi.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end

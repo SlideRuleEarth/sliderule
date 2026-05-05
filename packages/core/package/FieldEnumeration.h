@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <algorithm>
+
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "Field.h"
@@ -275,6 +277,7 @@ string FieldEnumeration<T,N>::toOpenApi (const char* description) const
             T selection;
             convertFromIndex(i, selection);
             string selection_str = convertToJson(selection); // separate line here because this throws
+            selection_str.erase(std::remove(selection_str.begin(), selection_str.end(), '"'), selection_str.end());
             if(!first) enum_property += ",";
             else first = false;
             enum_property += selection_str;
@@ -290,7 +293,7 @@ string FieldEnumeration<T,N>::toOpenApi (const char* description) const
     FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
 
     // return open api component schema
-    return FString("{\"type\": \"array\", \"description\": \"%s; possible values: %s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
+    return FString("{\"type\": \"array\", \"description\": \"%s; %s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
         description, enum_property.c_str(), this->getOpenApiType(), this->getOpenApiFormat(), N, N, default_property.c_str()).c_str();
 }
 

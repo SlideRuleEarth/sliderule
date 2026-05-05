@@ -69,14 +69,115 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = {"json"},
+    outputs = {"json"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "#/components/schemas/GeoParameters" }
+                ],
+                "type": "object",
+                "properties": {
+                    "coordinates": {
+                        "type": "array",
+                        "description": "Array of [longitude, latitude] or [longitude, latitude, height] coordinate pairs to sample",
+                        "items": {
+                            "type": "array",
+                            "items": { "type": "number" },
+                            "minItems": 2,
+                            "maxItems": 3
+                        }
+                    }
+                },
+                "required": ["samples", "coordinates"]
+            }
+        } ]],
+        response = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "samples": {
+                        "type": "array",
+                        "description": "Sampled raster values at each coordinate",
+                        "items": {
+                            "type": "array",
+                            "description": "Array of sample objects for each coordinate",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "description": "Source raster filename"
+                                    },
+                                    "value": {
+                                        "type": "number",
+                                        "description": "Sampled raster value"
+                                    },
+                                    "time": {
+                                        "type": "number",
+                                        "description": "Time associated with the sample (GPS seconds)"
+                                    },
+                                    "band": {
+                                        "type": "string",
+                                        "description": "Name of the raster band"
+                                    },
+                                    "mad": {
+                                        "type": "number",
+                                        "description": "Median absolute deviation (zonal stats)"
+                                    },
+                                    "stdev": {
+                                        "type": "number",
+                                        "description": "Standard deviation (zonal stats)"
+                                    },
+                                    "median": {
+                                        "type": "number",
+                                        "description": "Median value (zonal stats)"
+                                    },
+                                    "mean": {
+                                        "type": "number",
+                                        "description": "Mean value (zonal stats)"
+                                    },
+                                    "max": {
+                                        "type": "number",
+                                        "description": "Maximum value (zonal stats)"
+                                    },
+                                    "min": {
+                                        "type": "number",
+                                        "description": "Minimum value (zonal stats)"
+                                    },
+                                    "count": {
+                                        "type": "number",
+                                        "description": "Number of pixels in zonal stats window"
+                                    },
+                                    "slope": {
+                                        "type": "number",
+                                        "description": "Slope in degrees (spatial derivatives)"
+                                    },
+                                    "aspect": {
+                                        "type": "number",
+                                        "description": "Aspect in degrees (spatial derivatives)"
+                                    },
+                                    "slope_count": {
+                                        "type": "number",
+                                        "description": "Number of pixels used for slope/aspect calculation"
+                                    },
+                                    "flags": {
+                                        "type": "number",
+                                        "description": "Quality flags value from flags file"
+                                    }
+                                },
+                                "required": ["file", "value", "time", "band"]
+                            }
+                        }
+                    },
+                    "errors": {
+                        "type": "array",
+                        "description": "Error codes for each coordinate (0 indicates no error)",
+                        "items": { "type": "integer" }
+                    }
+                }
+            }
+        } ]]
+    }
 }
-
--- INPUT
---  {
---      "samples": {<geoparms>}
---      "coordinates": [
---          [<longitude>, <latitude>],
---          [<longitude>, <latitude>]...
---      ]
---  }
