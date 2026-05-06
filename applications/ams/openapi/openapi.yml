@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: SlideRule AMS ATL13 API
+  description: API for querying ICESat-2 ATL13 inland water body granule metadata.
+  version: 1.0.0
+
+paths:
+  /ams/ATL13:
+    post:
+      summary: Query ATL13 granules
+      description: >
+        Query ATL13 granule metadata by lake reference ID, lake name, coordinate,
+        and/or spatial/temporal filters. Single lake queries (refid, name, coord)
+        are attempted in order; if a lake is found, its granules are intersected
+        with any general query results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ATL13Request'
+      responses:
+        '200':
+          description: Successful query response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ATL13Response'
+        '400':
+          description: Bad request or query failure
+
+components:
+  schemas:
+    Coordinate:
+      type: object
+      properties:
+        lon:
+          type: number
+          format: double
+          description: Longitude in degrees
+        lat:
+          type: number
+          format: double
+          description: Latitude in degrees
+      required:
+        - lon
+        - lat
+
+    ATL13Request:
+      type: object
+      description: >
+        All fields are optional. At least one field should be provided to get results.
+      properties:
+        refid:
+          type: integer
+          description: ATL13 lake reference ID
+        name:
+          type: string
+          description: Lake name
+        coord:
+          $ref: '#/components/schemas/Coordinate'
+        poly:
+          type: array
+          description: Polygon vertices for spatial filtering
+          items:
+            $ref: '#/components/schemas/Coordinate'
+        t0:
+          type: string
+          description: Start time filter (ISO 8601 format)
+          example: "2020-01-01T00:00:00Z"
+        t1:
+          type: string
+          description: End time filter (ISO 8601 format)
+          example: "2023-12-31T23:59:59Z"
+        name_filter:
+          type: string
+          description: Granule name filter pattern
+        rgt:
+          type: integer
+          description: Reference ground track number
+        cycle:
+          type: integer
+          description: Orbital cycle number
+        region:
+          type: integer
+          description: Region number
+
+    ATL13Response:
+      type: object
+      properties:
+        hits:
+          type: integer
+          description: Number of matching granules
+        refid:
+          type: integer
+          nullable: true
+          description: The resolved ATL13 lake reference ID, or null if no lake matched
+        granules:
+          type: array
+          description: List of matching granule names
+          items:
+            type: string
+      required:
+        - hits
+        - refid
+        - granules
