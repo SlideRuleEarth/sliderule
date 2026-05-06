@@ -806,28 +806,40 @@ certbot-delete: ## deletes the lambda certbot function
 ########################
 
 documentation-prep: ## create environment for building documentation
-	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 
-documentation-openapi: ## build the openapi specification for sliderule apis
-	mkdir -p $(OPENAPI_SPEC_DIR)/paths
-	mkdir -p $(OPENAPI_SPEC_DIR)/components/schemas
-	mkdir -p $(OPENAPI_SPEC_DIR)/components/parameters
-	mkdir -p $(OPENAPI_SPEC_DIR)/components/responses
-	make run RUN_CMD="openapi.lua $(OPENAPI_SPEC_DIR)"
-	npx @redocly/cli bundle $(OPENAPI_SPEC_DIR)/openapi.json -o $(OPENAPI_SPEC_DIR)/bundled.json
-	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/bundled.json
-	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/bundled.json --output $(OPENAPI_SPEC_DIR)/openapi.html
+documentation-openapi-sliderule: ## build the openapi specification for sliderule apis
+	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/paths
+	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/components/schemas
+	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/components/parameters
+	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/components/responses
+	make run RUN_CMD="openapi.lua $(OPENAPI_SPEC_DIR)/sliderule"
+	npx @redocly/cli bundle $(OPENAPI_SPEC_DIR)/sliderule/openapi.json -o $(OPENAPI_SPEC_DIR)/sliderule/bundled.json
+	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/sliderule/bundled.json
+	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/sliderule/bundled.json --output $(OPENAPI_SPEC_DIR)/sliderule/openapi.html
 
-documentation: documentation-prep documentation-openapi ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
+documentation-openapi-ams: ## build the openapi specification for ams apis
+	mkdir -p $(OPENAPI_SPEC_DIR)/ams
+	cp $(ROOT)/applications/ams/openapi/openapi.yml $(OPENAPI_SPEC_DIR)/ams
+	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/ams/openapi.yml
+	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/ams/openapi.yml --output $(OPENAPI_SPEC_DIR)/ams/openapi.html
+
+documentation-rtd: ## generate read-the-docs static html
 	conda run -n rtd --no-capture-output \
 	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
 	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
 	sphinx-build -M html "source" "build"'
+
+documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
+	rm -Rf $(DOCUMENTATION_STAGE_DIR)
+	make documentation-prep
+	make documentation-openapi-sliderule
+	make documentation-openapi-ami
+	make documentation-rtd
 
 documentation-run: ## locally run the documentation
 	conda run -n rtd --no-capture-output \

@@ -1,5 +1,11 @@
 # Endpoints
 
-## <a href="/_static/spec/openapi.html" target="_blank">Rendered OpenAPI Specification</a>
+Links to the HTML rendered documentation for the APIs are provided below.  The raw specifications are accessible at the root <a href="/_static/spec/" target="_blank">specification directory</a>.
 
-The html rendered version of the latest OpenAPI specification of the SlideRule APIs can be found at the link above.  The raw specification is provided at: <a href="/_static/spec/openapi.json" target="_blank">Raw OpenAPI Specification</a>
+## SlideRule APIs
+
+<a href="/_static/spec/sliderule/openapi.html" target="_blank">SlideRule OpenAPI Specification</a>
+
+## Asset Metadata Service (AMS) APIs
+
+<a href="/_static/spec/ams/openapi.html" target="_blank">Asset Metadata Service (AMS) OpenAPI Specification</a>

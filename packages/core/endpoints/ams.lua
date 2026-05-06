@@ -21,12 +21,14 @@ return {
     schema = {
         request = [["application/json": {
             "schema": {
-                "type": "object"
+                "type": "object",
+                "description": "See AMS specification for details"
             }
         }]],
         response = [["application/json": {
             "schema": {
-                "type": "object"
+                "type": "object",
+                "description": "See AMS specification for details"
             }
         }]]
     }

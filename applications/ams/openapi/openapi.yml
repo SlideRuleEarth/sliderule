@@ -1,12 +1,23 @@
 openapi: 3.0.3
+
 info:
-  title: SlideRule AMS ATL13 API
-  description: API for querying ICESat-2 ATL13 inland water body granule metadata.
+  title: SlideRule Asset Metadata Service API
+  description: Web services for querying earth science dataset resources.
   version: 1.0.0
+  license:
+      name: BSD 3-Clause
+      url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: https://slideruleearth.io/source
+    description: Asset Metadata Service (AMS)
+
+security: []
 
 paths:
   /ams/ATL13:
     post:
+      operationId: ATL13
       summary: Query ATL13 granules
       description: >
         Query ATL13 granule metadata by lake reference ID, lake name, coordinate,
@@ -67,11 +78,11 @@ components:
         t0:
           type: string
           description: Start time filter (ISO 8601 format)
-          example: "2020-01-01T00:00:00Z"
+          example: '2020-01-01T00:00:00Z'
         t1:
           type: string
           description: End time filter (ISO 8601 format)
-          example: "2023-12-31T23:59:59Z"
+          example: '2023-12-31T23:59:59Z'
         name_filter:
           type: string
           description: Granule name filter pattern
