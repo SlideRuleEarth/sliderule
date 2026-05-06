@@ -51,12 +51,12 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/BathyParameters"
+                "$ref": "../components/schemas/BathyParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
-                "$ref": "#/components/schemas/BathyDataFrame"
+                "$ref": "../components/schemas/BathyDataFrame.json"
             }
         } ]]
     }

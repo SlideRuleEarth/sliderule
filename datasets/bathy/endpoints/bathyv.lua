@@ -34,7 +34,7 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/BathyParameters"
+                "$ref": "../components/schemas/BathyParameters.json"
             }
         } ]],
         response = [[ "application/json": {

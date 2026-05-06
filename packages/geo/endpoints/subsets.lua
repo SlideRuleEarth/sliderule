@@ -50,7 +50,7 @@ return {
         request = [[ "application/json": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/GeoParameters" }
+                    { "$ref": "../components/schemas/GeoParameters.json" }
                 ],
                 "type": "object",
                 "properties": {

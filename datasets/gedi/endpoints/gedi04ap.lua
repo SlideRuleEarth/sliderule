@@ -30,14 +30,14 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/GediParameters"
+                "$ref": "../components/schemas/GediParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/gedi04arec" },
-                    { "$ref": "#/components/schemas/gedi04arec.footprint" }
+                    { "$ref": "../components/schemas/gedi04arec.json" },
+                    { "$ref": "../components/schemas/gedi04arec.footprint.json" }
                 ],
                 "description": "Stream of binary-encoded GEDI 4A footprints"
             }

@@ -60,12 +60,12 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/Icesat2Parameters"
+                "$ref": "../components/schemas/Icesat2Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
-                "$ref": "#/components/schemas/Atl24DataFrame"
+                "$ref": "../components/schemas/Atl24DataFrame.json"
             }
         } ]]
     }

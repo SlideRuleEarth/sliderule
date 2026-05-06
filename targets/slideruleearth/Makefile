@@ -84,7 +84,7 @@ AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
-WEBSITE_EXPORT_DIR = $(DOCUMENTATION_STAGE_DIR)/dist
+OPENAPI_SPEC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/spec
 DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
@@ -814,9 +814,14 @@ documentation-prep: ## create environment for building documentation
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 
 documentation-openapi: ## build the openapi specification for sliderule apis
-	make run RUN_CMD="openapi.lua $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.json"
-	- npx @redocly/cli lint $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.json
-	npx @redocly/cli build-docs $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.json --output $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi.html
+	mkdir -p $(OPENAPI_SPEC_DIR)/paths
+	mkdir -p $(OPENAPI_SPEC_DIR)/components/schemas
+	mkdir -p $(OPENAPI_SPEC_DIR)/components/parameters
+	mkdir -p $(OPENAPI_SPEC_DIR)/components/responses
+	make run RUN_CMD="openapi.lua $(OPENAPI_SPEC_DIR)"
+	npx @redocly/cli bundle $(OPENAPI_SPEC_DIR)/openapi.json -o $(OPENAPI_SPEC_DIR)/bundled.json
+	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/bundled.json
+	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/bundled.json --output $(OPENAPI_SPEC_DIR)/openapi.html
 
 documentation: documentation-prep documentation-openapi ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	conda run -n rtd --no-capture-output \

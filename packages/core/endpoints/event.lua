@@ -74,7 +74,7 @@ return {
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/eventrec" }
+                    { "$ref": "../components/schemas/eventrec.json" }
                 ],
                 "description": "Stream of binary-encoded event records"
             }

@@ -37,14 +37,14 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/SwotParameters"
+                "$ref": "../components/schemas/SwotParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/swotl2geo" },
-                    { "$ref": "#/components/schemas/swotl2geo.scan" }
+                    { "$ref": "../components/schemas/swotl2geo.json" },
+                    { "$ref": "../components/schemas/swotl2geo.scan.json" }
                 ],
                 "description": "Stream of binary-encoded SWOT L2 measurements"
             }

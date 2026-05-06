@@ -30,14 +30,14 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/Icesat2Parameters"
+                "$ref": "../components/schemas/Icesat2Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/atl06rec" },
-                    { "$ref": "#/components/schemas/atl06rec.elevation" }
+                    { "$ref": "../components/schemas/atl06rec.json" },
+                    { "$ref": "../components/schemas/atl06rec.elevation.json" }
                 ],
                 "description": "Stream of binary-encoded calculated surface elevations"
             }

@@ -38,12 +38,12 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/CasalsParameters"
+                "$ref": "../components/schemas/CasalsParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
-                "$ref": "#/components/schemas/Casals1bDataFrame"
+                "$ref": "../components/schemas/Casals1bDataFrame.json"
             }
         } ]]
     }

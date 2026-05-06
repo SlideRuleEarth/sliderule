@@ -36,12 +36,12 @@ return {
             "schema": {
                 "type": "object",
                 "properties": {
-                    "core": { "$ref": "#/components/schemas/CoreParameters" },
-                    "cre": { "$ref": "#/components/schemas/CreParameters" },
-                    "icesat2": { "$ref": "#/components/schemas/Icesat2Parameters" },
-                    "gedi": { "$ref": "#/components/schemas/GediParameters" },
-                    "swot": { "$ref": "#/components/schemas/SwotParameters" },
-                    "bathy": { "$ref": "#/components/schemas/BathyParameters" }
+                    "core": { "$ref": "../components/schemas/CoreParameters.json" },
+                    "cre": { "$ref": "../components/schemas/CreParameters.json" },
+                    "icesat2": { "$ref": "../components/schemas/Icesat2Parameters.json" },
+                    "gedi": { "$ref": "../components/schemas/GediParameters.json" },
+                    "swot": { "$ref": "../components/schemas/SwotParameters.json" },
+                    "bathy": { "$ref": "../components/schemas/BathyParameters.json" }
                 }
             }
         } ]]

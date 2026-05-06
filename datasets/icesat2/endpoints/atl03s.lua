@@ -37,14 +37,14 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/Icesat2Parameters"
+                "$ref": "../components/schemas/Icesat2Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/atl03rec" },
-                    { "$ref": "#/components/schemas/atl03rec.photons" }
+                    { "$ref": "../components/schemas/atl03rec.json" },
+                    { "$ref": "../components/schemas/atl03rec.photons.json" }
                 ],
                 "description": "Stream of binary-encoded ICESat-2 photon measurements (ATL03)"
             }

@@ -112,7 +112,7 @@ return {
         request = [[ "application/json": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/H5CoroParameters" }
+                    { "$ref": "../components/schemas/H5CoroParameters.json" }
                 ],
                 "description": "H5Coro dataframe read parameters including asset, resource, groups, and arrow output configuration"
             }

@@ -41,12 +41,12 @@ return {
     schema = {
         request = [[ "application/json": {
             "schema": {
-                "$ref": "#/components/schemas/GediParameters"
+                "$ref": "../components/schemas/GediParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
-                "$ref": "#/components/schemas/Gedi01bDataFrame"
+                "$ref": "../components/schemas/Gedi01bDataFrame.json"
             }
         } ]]
     }

@@ -4,7 +4,7 @@
 local json = require("json")
 local global = require("global")
 local earthdata = require("earth_data_query")
-local outputfile = arg[1] -- overridden below
+local outputdir = arg[1]
 
 -- monitor logs and write to stdout
 core.logmon(core.DEBUG):global("LogMonitor")
@@ -12,165 +12,131 @@ core.logmon(core.DEBUG):global("LogMonitor")
 -- load earthdata assets
 earthdata.load()
 
--- override global arguments to a representative object when loading API scripts
+-- override global arguments to a representative object for loading API scripts
 local parms = { asset="icesat2", resource="ATL03_20190314093716_11600203_007_01.h5" }
 arg = {json.encode(global.merge({parms=parms}, parms))}
 
 -------------------------------------------------------
--- specification
+-- output
 -------------------------------------------------------
-local function specification_template()
-    return [[{
-        "openapi": "3.0.3",
-        "info": {
-            "title": "SlideRule OpenAPI Specification",
-            "version": "%s",
-            "license": {
-                "name": "BSD 3-Clause",
-                "url": "https://opensource.org/licenses/BSD-3-Clause"
-            }
-        },
-        "components": {
-            "schemas": { %s, %s, %s },
-            "securitySchemes": {
-                "SignatureAuth": {
-                    "type": "apiKey",
-                    "in": "header",
-                    "name": "x-sliderule-signature",
-                    "description": "Ed25519 signature of the canonical message, base64-encoded;
-                                    the canonical message is constructed as <path>:<timestamp>:<request body>,
-                                    where <path> is 'subdomain.domain/path/endpoint',
-                                    and <timestamp> is the current Unix time in seconds supplied the x-sliderule-timestamp header"
-                },
-                "OAuth2": {
-                    "type": "oauth2",
-                    "flows": {
-                        "authorizationCode": {
-                            "authorizationUrl": "https://login.slideruleearth.io/auth/github/login",
-                            "tokenUrl": "https://login.slideruleearth.io/auth/github/token",
-                            "scopes": {
-                                "sliderule:access": "Member role access",
-                                "sliderule:admin": "Owner role access"
-                            }
-                        }
-                    }
-                }
-            },
-            "responses": {
-                "ServiceUnavailable": {
-                    "description": "Insufficient resources are available on the server to process the request",
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "InternalServerError": {
-                    "description": "Server-side error encountered while processing the request",
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "NotAcceptable": {
-                    "description": "The format of the response requested in the request is not supported by the endpoint",
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "NotFound": {
-                    "description": "Requested endpoint not found",
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "Unauthorized": {
-                    "description": "User does not have correct privileges to execute endpoint",
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "type": "string"
-                            }
-                        }
-                    }
+local function output(filename, content)
+    local file = io.open(filename, "w")
+    if file then
+        local condensed = content:gsub("%s+", " ")
+        file:write(condensed)
+        file:close()
+    else
+        sys.log(core.CRITICAL, string.format("Failed to write output: %s", filename))
+    end
+end
+
+-------------------------------------------------------
+-- errors
+-------------------------------------------------------
+local function error_responses()
+    output(outputdir.."/components/responses/ServiceUnavailable.json", [[{
+        "description": "Insufficient resources are available on the server to process the request",
+        "content": {
+            "text/plain": {
+                "schema": {
+                    "type": "string"
                 }
             }
-        },
-        "paths": { %s }
-    }]]
+        }
+    }]])
+    output(outputdir.."/components/responses/InternalServerError.json", [[{
+        "description": "Server-side error encountered while processing the request",
+        "content": {
+            "text/plain": {
+                "schema": {
+                    "type": "string"
+                }
+            }
+        }
+    }]])
+    output(outputdir.."/components/responses/NotAcceptable.json", [[{
+        "description": "The format of the response requested in the request is not supported by the endpoint",
+        "content": {
+            "text/plain": {
+                "schema": {
+                    "type": "string"
+                }
+            }
+        }
+    }]])
+    output(outputdir.."/components/responses/NotFound.json", [[{
+        "description": "Requested endpoint not found",
+        "content": {
+            "text/plain": {
+                "schema": {
+                    "type": "string"
+                }
+            }
+        }
+    }]])
+    output(outputdir.."/components/responses/Unauthorized.json", [[{
+        "description": "User does not have correct privileges to execute endpoint",
+        "content": {
+            "text/plain": {
+                "schema": {
+                    "type": "string"
+                }
+            }
+        }
+    }]])
 end
 
 -------------------------------------------------------
 -- parameters
 -------------------------------------------------------
 local function parameter_schemas()
-    local parameters = {}
-    table.insert(parameters, core.parms():describe("CoreParameters", "General request parameters that support all requests"))
-    table.insert(parameters, cre.parms():describe("CreParameters", "Request parameters for executing container runtime environment processing requests"))
-    if __geo__ then table.insert(parameters, geo.parms():describe("GeoParameters", "Request parameters for sampling raster datasets using GDAL")) end
-    if __h5coro__ then table.insert(parameters, h5coro.parms():describe("H5CoroParameters", "Request parameters for reading HDF5 files using H5Coro")) end
-    if __icesat2__ then table.insert(parameters, icesat2.parms():describe("Icesat2Parameters", "Request parameters for executing ICESat-2 processing requests")) end
-    if __gedi__ then table.insert(parameters, gedi.parms():describe("GediParameters", "Request parameters for executing GEDI processing requests")) end
-    if __swot__ then table.insert(parameters, swot.parms():describe("SwotParameters", "Request parameters for executing SWOT processing requests")) end
-    if __bathy__ then table.insert(parameters, bathy.parms():describe("BathyParameters", "Request parameters for executing bathymetry processing requests")) end
-    if __casals__ then table.insert(parameters, casals.parms():describe("CasalsParameters", "Request parameters for executing CASALS processing requests")) end
-    return table.concat(parameters, ",")
+                         output(outputdir.."/components/schemas/CoreParameters.json", core.parms():describe("General request parameters that support all requests"))
+                         output(outputdir.."/components/schemas/CreParameters.json", cre.parms():describe("Request parameters for executing container runtime environment processing requests"))
+    if __geo__      then output(outputdir.."/components/schemas/GeoParameters.json", geo.parms():describe("Request parameters for sampling raster datasets using GDAL")) end
+    if __h5coro__   then output(outputdir.."/components/schemas/H5CoroParameters.json", h5coro.parms():describe("Request parameters for reading HDF5 files using H5Coro")) end
+    if __icesat2__  then output(outputdir.."/components/schemas/Icesat2Parameters.json", icesat2.parms():describe("Request parameters for executing ICESat-2 processing requests")) end
+    if __gedi__     then output(outputdir.."/components/schemas/GediParameters.json", gedi.parms():describe("Request parameters for executing GEDI processing requests")) end
+    if __swot__     then output(outputdir.."/components/schemas/SwotParameters.json", swot.parms():describe("Request parameters for executing SWOT processing requests")) end
+    if __bathy__    then output(outputdir.."/components/schemas/BathyParameters.json", bathy.parms():describe("Request parameters for executing bathymetry processing requests")) end
+    if __casals__   then output(outputdir.."/components/schemas/CasalsParameters.json", casals.parms():describe("Request parameters for executing CASALS processing requests")) end
 end
 
 -------------------------------------------------------
 -- records
 -------------------------------------------------------
 local function record_schemas()
-    local records = {}
     local rectypes = sys.lsrec(false)
     for _,rectype in ipairs(rectypes) do
-        table.insert(records, msg.describe(rectype))
+        output(string.format(outputdir.."/components/schemas/%s.json", rectype), msg.describe(rectype))
     end
-    return table.concat(records, ",")
 end
 
 -------------------------------------------------------
 -- dataframes
 -------------------------------------------------------
 local function dataframe_schemas()
-    local dataframes = {}
     -- bathy
     sys.log(core.INFO, "Building schemas for Bathy dataframes")
     local bathy_parms = bathy.parms()
-    table.insert(dataframes, bathy.dataframe("gt1l", bathy_parms):describe("BathyDataFrame", "ICESat-2 photon cloud used for bathymetry processing"))
+    output(outputdir.."/components/schemas/BathyDataFrame.json", bathy.dataframe("gt1l", bathy_parms):describe("ICESat-2 photon cloud used for bathymetry processing"))
     -- casals
     sys.log(core.INFO, "Building schemas for CASALS dataframes")
     local casals_parms = casals.parms()
-    table.insert(dataframes, casals.casals1bx(casals_parms):describe("Casals1bDataFrame", "CASALS 1B elevations"))
+    output(outputdir.."/components/schemas/Casals1bDataFrame.json", casals.casals1bx(casals_parms):describe("CASALS 1B elevations"))
     -- gedi
     sys.log(core.INFO, "Building schemas for GEDI dataframes")
     local gedi_parms = gedi.parms()
-    table.insert(dataframes, gedi.gedi01bx("beam0", gedi_parms):describe("Gedi01bDataFrame", "GEDI 1B waveforms"))
-    table.insert(dataframes, gedi.gedi02ax("beam0", gedi_parms):describe("Gedi02aDataFrame", "GEDI 2A elevations"))
-    table.insert(dataframes, gedi.gedi04ax("beam0", gedi_parms):describe("Gedi04aDataFrame", "GEDI 4A above ground biomass density"))
+    output(outputdir.."/components/schemas/Gedi01bDataFrame.json", gedi.gedi01bx("beam0", gedi_parms):describe("GEDI 1B waveforms"))
+    output(outputdir.."/components/schemas/Gedi02aDataFrame.json", gedi.gedi02ax("beam0", gedi_parms):describe("GEDI 2A elevations"))
+    output(outputdir.."/components/schemas/Gedi04aDataFrame.json", gedi.gedi04ax("beam0", gedi_parms):describe("GEDI 4A above ground biomass density"))
     -- icesat2
     sys.log(core.INFO, "Building schemas for ICESat-2 dataframes")
     local icesat2_parms = icesat2.parms({phoreal={}, fit={}, atl24={compact=false}, atl08_class={}, yapc={}})
-    table.insert(dataframes, icesat2.atl03x("gt1l", icesat2_parms):describe("Atl03DataFrame", "ICESat-2 photon cloud (ATL03)"))
-    table.insert(dataframes, icesat2.atl06x("gt1l", icesat2_parms):describe("Atl06DataFrame", "ICESat-2 ice-sheet elevations (ATL06)"))
-    table.insert(dataframes, icesat2.atl08x("gt1l", icesat2_parms):describe("Atl08DataFrame", "ICESat-2 vegetation metrics (ATL08)"))
-    table.insert(dataframes, icesat2.atl13x("gt1l", icesat2_parms):describe("Atl13DataFrame", "ICESat-2 in-land lake metrics (ATL13)"))
-    table.insert(dataframes, icesat2.atl24x("gt1l", icesat2_parms):describe("Atl24DataFrame", "ICESat-2 near-shore bathymetry (ATL24)"))
-    -- return list of dataframes
-    return table.concat(dataframes, ",")
+    output(outputdir.."/components/schemas/Atl03DataFrame.json", icesat2.atl03x("gt1l", icesat2_parms):describe("ICESat-2 photon cloud (ATL03)"))
+    output(outputdir.."/components/schemas/Atl06DataFrame.json", icesat2.atl06x("gt1l", icesat2_parms):describe("ICESat-2 ice-sheet elevations (ATL06)"))
+    output(outputdir.."/components/schemas/Atl08DataFrame.json", icesat2.atl08x("gt1l", icesat2_parms):describe("ICESat-2 vegetation metrics (ATL08)"))
+    output(outputdir.."/components/schemas/Atl13DataFrame.json", icesat2.atl13x("gt1l", icesat2_parms):describe("ICESat-2 in-land lake metrics (ATL13)"))
+    output(outputdir.."/components/schemas/Atl24DataFrame.json", icesat2.atl24x("gt1l", icesat2_parms):describe("ICESat-2 near-shore bathymetry (ATL24)"))
 end
 
 -------------------------------------------------------
@@ -180,7 +146,7 @@ local function request_body_schema(endpoint)
     local content = ""
     local inputs = global.set(endpoint["inputs"])
     if not inputs then return content end
-    local schema = [["content": { %s }]]
+    local schema = [["requestBody": { "content": { %s } },]]
     if inputs then
         content = endpoint["schema"]["request"]
     end
@@ -195,11 +161,11 @@ local function response_schema(endpoint)
     local outputs = global.set(endpoint["outputs"])
     local schema = [[
         "200": { "description": "OK", "content": { %s } },
-        "503": { "$ref": "#/components/responses/ServiceUnavailable" },
-        "500": { "$ref": "#/components/responses/InternalServerError" },
-        "406": { "$ref": "#/components/responses/NotAcceptable" },
-        "404": { "$ref": "#/components/responses/NotFound" },
-        "401": { "$ref": "#/components/responses/Unauthorized" }
+        "503": { "$ref": "../components/responses/ServiceUnavailable.json" },
+        "500": { "$ref": "../components/responses/InternalServerError.json" },
+        "406": { "$ref": "../components/responses/NotAcceptable.json" },
+        "404": { "$ref": "../components/responses/NotFound.json" },
+        "401": { "$ref": "../components/responses/Unauthorized.json" }
     ]]
     if outputs then
         content = endpoint["schema"]["response"]
@@ -247,17 +213,22 @@ local function path_schemas()
             local description = endpoint["description"]
             local request_body = request_body_schema(endpoint)
             local response = response_schema(endpoint)
+            local contents = string.format([[{
+                "%s": {
+                    "operationId": "%s",
+                    "security": [ %s ],
+                    "summary": "%s",
+                    "description": "%s",
+                    %s
+                    "responses": { %s }
+                }
+            }]], verb, api, security, summary, description, request_body, response)
+            output(string.format("%s/paths/%s.json", outputdir, api), contents)
             local schema = string.format([[
                 "/%s": {
-                    "%s": {
-                        "security": [ %s ],
-                        "summary": "%s",
-                        "description": "%s",
-                        "requestBody": { %s },
-                        "responses": { %s }
-                    }
+                    "$ref": "./paths/%s.json"
                 }
-            ]], api, verb, security, summary, description, request_body, response)
+            ]], api, api)
             table.insert(schema_list, schema)
         else
             sys.log(core.ERROR, string.format("Failed to generate OpenAPI schema for: %s", api))
@@ -268,21 +239,62 @@ local function path_schemas()
 end
 
 -------------------------------------------------------
+-- specification
+-------------------------------------------------------
+local function specification_root()
+    local version = sys.version()
+    local paths = path_schemas()
+    local template = string.format([[{
+        "openapi": "3.0.3",
+        "info": {
+            "title": "SlideRule OpenAPI Specification",
+            "version": "%s",
+            "license": {
+                "name": "BSD 3-Clause",
+                "url": "https://opensource.org/licenses/BSD-3-Clause"
+            }
+        },
+        "servers": [
+            { "url": "https://slideruleearth.io/source", "description": "Process Earth science datasets in the cloud through API calls to SlideRule web services." }
+        ],
+        "components": {
+            "securitySchemes": {
+                "SignatureAuth": {
+                    "type": "apiKey",
+                    "in": "header",
+                    "name": "x-sliderule-signature",
+                    "description": "Ed25519 signature of the canonical message, base64-encoded;
+                                    the canonical message is constructed as <path>:<timestamp>:<request body>,
+                                    where <path> is 'subdomain.domain/path/endpoint',
+                                    and <timestamp> is the current Unix time in seconds supplied the x-sliderule-timestamp header"
+                },
+                "OAuth2": {
+                    "type": "oauth2",
+                    "flows": {
+                        "authorizationCode": {
+                            "authorizationUrl": "https://login.slideruleearth.io/auth/github/login",
+                            "tokenUrl": "https://login.slideruleearth.io/auth/github/token",
+                            "scopes": {
+                                "sliderule:access": "Member role access",
+                                "sliderule:admin": "Owner role access"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "paths": { %s }
+    }]], version, paths)
+    output(outputdir.."/openapi.json", template)
+end
+
+-------------------------------------------------------
 -- main
 -------------------------------------------------------
 sys.log(core.INFO, "Building OpenAPI specification of SlideRule API")
-local spec = specification_template()
-local version = sys.version()
-local parameters = parameter_schemas()
-local records = record_schemas()
-local dataframes = dataframe_schemas()
-local paths = path_schemas()
-local schema = string.format(spec, version, parameters, records, dataframes, paths):gsub("%s+", " ")
-local file = io.open(outputfile, "w")
-if file then
-    file:write(schema)
-    file:close()
-else
-    sys.log(core.CRITICAL, string.format("Failed to write output: %s", outputfile))
-end
+error_responses()
+parameter_schemas()
+record_schemas()
+dataframe_schemas()
+specification_root()
 sys.quit()

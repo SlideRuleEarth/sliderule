@@ -93,7 +93,7 @@ return {
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "#/components/schemas/h5dataset" },
+                    { "$ref": "../components/schemas/h5dataset.json" },
                 ],
                 "description": "Stream of binary-encoded values read from the hdf5 file"
             }
