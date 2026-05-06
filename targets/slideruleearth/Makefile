@@ -84,7 +84,7 @@ AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
 WEBSITE_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
-OPENAPI_SPEC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/spec
+OPENAPI_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi
 DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
@@ -276,6 +276,11 @@ job: ## execute the job runner locally
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 
+openapi: ## build, bundle, and lint the openapi docs for sliderule
+	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	- npx @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+
 python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \
 	sh -c 'cd $(ROOT)/clients/python && pip install .'
@@ -349,7 +354,7 @@ ams-docker: ## build ams docker image; uses VERSION
 	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) .
 
-ams-run:
+ams-run: ## run ams locally
 	cd $(ROOT)/applications/ams && \
 	conda run -n ams --no-capture-output \
 	flask --app ams run --debug --port 9082
@@ -357,6 +362,12 @@ ams-run:
 ams-test: ## run ams tests
 	conda run -n ams --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest $(ARGS) && coverage report -m'
+
+ams-openapi: ## bundle and lint openapi docs for ams
+	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/ams
+	cp -R $(ROOT)/applications/ams/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/ams
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/ams/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/ams.yml
+	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/ams/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/ams.yml
 
 ########################
 # Cluster Targets
@@ -806,28 +817,19 @@ certbot-delete: ## deletes the lambda certbot function
 ########################
 
 documentation-prep: ## create environment for building documentation
+	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
+	mkdir -p $(OPENAPI_DIR)
 	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 
-documentation-openapi-sliderule: ## build the openapi specification for sliderule apis
-	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/paths
-	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/components/schemas
-	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/components/parameters
-	mkdir -p $(OPENAPI_SPEC_DIR)/sliderule/components/responses
-	make run RUN_CMD="openapi.lua $(OPENAPI_SPEC_DIR)/sliderule"
-	npx @redocly/cli bundle $(OPENAPI_SPEC_DIR)/sliderule/openapi.json -o $(OPENAPI_SPEC_DIR)/sliderule/bundled.json
-	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/sliderule/bundled.json
-	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/sliderule/bundled.json --output $(OPENAPI_SPEC_DIR)/sliderule/openapi.html
+documentation-openapi-sliderule: openapi ## build the openapi specification for sliderule apis
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(OPENAPI_DIR)/sliderule.html
 
-documentation-openapi-ams: ## build the openapi specification for ams apis
-	mkdir -p $(OPENAPI_SPEC_DIR)/ams
-	cp -R $(ROOT)/applications/ams/openapi/* $(OPENAPI_SPEC_DIR)/ams
-	npx @redocly/cli bundle $(OPENAPI_SPEC_DIR)/ams/openapi.yml -o $(OPENAPI_SPEC_DIR)/ams/bundled.yml
-	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/ams/openapi.yml
-	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/ams/openapi.yml --output $(OPENAPI_SPEC_DIR)/ams/openapi.html
+documentation-openapi-ams: ams-openapi ## build the openapi specification for ams apis
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ams.yml --output $(OPENAPI_DIR)/ams.html
 
 documentation-rtd: ## generate read-the-docs static html
 	conda run -n rtd --no-capture-output \
@@ -836,10 +838,9 @@ documentation-rtd: ## generate read-the-docs static html
 	sphinx-build -M html "source" "build"'
 
 documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
-	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	make documentation-prep
 	make documentation-openapi-sliderule
-	make documentation-openapi-ami
+	make documentation-openapi-ams
 	make documentation-rtd
 
 documentation-run: ## locally run the documentation

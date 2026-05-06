@@ -20,6 +20,8 @@ arg = {json.encode(global.merge({parms=parms}, parms))}
 -- output
 -------------------------------------------------------
 local function output(filename, content)
+    local dir = filename:match("(.+)/[^/]+$")
+    if dir then os.execute(string.format("mkdir -p '%s'", dir)) end
     local file = io.open(filename, "w")
     if file then
         local condensed = content:gsub("%s+", " ")
