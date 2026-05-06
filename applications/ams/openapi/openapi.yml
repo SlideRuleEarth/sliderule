@@ -86,6 +86,91 @@ paths:
         '400':
           description: Bad request or query failure
 
+  /ams/CASALS1B:
+    post:
+      operationId: CASALS1B
+      summary: Query CASALS 1B granules
+      description: >
+        Query CASALS 1B granule metadata with spatial and temporal filters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CASALS1BRequest'
+      responses:
+        '200':
+          description: Successful query response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CASALS1BResponse'
+        '400':
+          description: Bad request or query failure
+
+  /ams/CASALS1B/search_mask:
+    post:
+      operationId: CASALS1BSearchMask
+      summary: Get CASALS 1B search mask
+      description: >
+        Returns the search mask file contents for CASALS 1B.
+      responses:
+        '200':
+          description: Search mask contents
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad request or query failure
+
+  /ams/3DEP1M:
+    post:
+      operationId: 3DEP1M
+      summary: Query 3DEP 1m granules
+      description: >
+        Query USGS 3DEP 1-meter elevation granule metadata with spatial and temporal filters.
+        Returns a GeoJSON FeatureCollection.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/3DEP1MRequest'
+      responses:
+        '200':
+          description: Successful query response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/3DEP1MResponse'
+        '400':
+          description: Bad request or query failure
+
+  /ams/3DEP1M/id/{id}:
+    post:
+      operationId: 3DEP1MId
+      summary: Get 3DEP 1m granule by ID
+      description: >
+        Retrieve full metadata for a specific 3DEP granule by its ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The granule ID
+      responses:
+        '200':
+          description: Successful granule detail response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Bad request or query failure
+
 components:
   schemas:
     Coordinate:
@@ -238,3 +323,107 @@ components:
           begin_time:
             type: string
             format: date-time
+
+    CASALS1BRequest:
+      type: object
+      description: >
+        All fields are optional. Filters are combined with AND logic.
+      properties:
+        poly:
+          type: array
+          description: Polygon vertices for spatial filtering
+          items:
+            $ref: '#/components/schemas/Coordinate'
+        t0:
+          type: string
+          description: Start time filter (ISO 8601 format)
+          example: '2020-01-01T00:00:00Z'
+        t1:
+          type: string
+          description: End time filter (ISO 8601 format)
+          example: '2023-12-31T23:59:59Z'
+
+    CASALS1BResponse:
+      type: object
+      properties:
+        hits:
+          type: integer
+          description: Total number of matching rows
+        granules:
+          type: array
+          description: List of unique matching granule names
+          items:
+            type: string
+      required:
+        - hits
+        - granules
+
+    3DEP1MRequest:
+      type: object
+      description: >
+        All fields are optional. Filters are combined with AND logic.
+      properties:
+        poly:
+          type: array
+          description: Polygon vertices for spatial filtering
+          items:
+            $ref: '#/components/schemas/Coordinate'
+        t0:
+          type: string
+          description: Start time filter (ISO 8601 format)
+          example: '2020-01-01T00:00:00Z'
+        t1:
+          type: string
+          description: End time filter (ISO 8601 format)
+          example: '2023-12-31T23:59:59Z'
+
+    3DEP1MResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        hits:
+          type: integer
+          description: Total number of matching features
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/3DEP1MFeature'
+      required:
+        - type
+        - hits
+        - features
+
+    3DEP1MFeature:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        id:
+          type: string
+          description: Granule ID
+        geometry:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [Polygon]
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+        properties:
+          type: object
+          properties:
+            datetime:
+              type: string
+              format: date-time
+            url:
+              type: string
+              description: URL to the elevation data asset
