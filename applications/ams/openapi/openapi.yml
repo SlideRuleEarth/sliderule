@@ -11,6 +11,8 @@ info:
 servers:
   - url: https://slideruleearth.io/source
     description: Asset Metadata Service (AMS)
+  - url: http://localhost
+    description: Local development server
 
 security: []
 

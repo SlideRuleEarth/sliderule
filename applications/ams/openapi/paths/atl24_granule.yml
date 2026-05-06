@@ -1,4 +1,4 @@
-post:
+get:
   operationId: ATL24Granule
   summary: Get ATL24 granule details
   description: >

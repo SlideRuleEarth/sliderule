@@ -87,7 +87,7 @@ for filename in filenames:
     hull = gdf.geometry.union_all().convex_hull
     poly = Polygon(hull.exterior.coords)
     collection["granule"].append(filename)
-    collection["begin_time"].append(gdf.index.min().isoformat())
+    collection["begin_time"].append(gdf.index.min().isoformat() + "Z")
     collection["geometry"].append(poly)
     display(f"{len(gdf)} rows in {time.perf_counter() - start_time:.2f} seconds\n")
 

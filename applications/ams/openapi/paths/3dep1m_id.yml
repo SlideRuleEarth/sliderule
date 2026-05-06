@@ -1,4 +1,4 @@
-post:
+get:
   operationId: 3DEP1MId
   summary: Get 3DEP 1m granule by ID
   description: >

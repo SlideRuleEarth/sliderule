@@ -5,7 +5,7 @@
 
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import dbutils
+from . import dbutils, validation
 import json
 import duckdb
 
@@ -121,6 +121,7 @@ def _query_multiple(db, data):
 # ATL13
 #
 @atl13.route('/ATL13', methods=['GET', 'POST'])
+@validation.validate
 def atl13_route():
     try:
         data = request.get_json()
