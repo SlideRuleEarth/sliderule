@@ -140,6 +140,35 @@ local function dataframe_schemas()
 end
 
 -------------------------------------------------------
+-- framerunners
+-------------------------------------------------------
+local function framerunner_schemas()
+    sys.log(core.INFO, "Building schemas for ICESat-2 framerunners")
+    local icesat2_parms = icesat2.parms({phoreal={}, fit={}, atl24={compact=false}, atl08_class={}, yapc={}, als={}})
+    -- phoreal
+    local phoreal_df = icesat2.atl03x("gt1l", icesat2_parms)
+    local phoreal = icesat2.phoreal(icesat2_parms)
+    phoreal_df:run(phoreal)
+    phoreal_df:run(core.TERMINATE)
+    phoreal_df:finished()
+    output(outputdir.."/components/schemas/PhoRealDataFrame.json", phoreal_df:describe("ICESat-2 custom vegetation metrics (PhoREAL)"))
+    -- surface fit
+    local fit_df = icesat2.atl03x("gt1l", icesat2_parms)
+    local fit = icesat2.fit(icesat2_parms)
+    fit_df:run(fit)
+    fit_df:run(core.TERMINATE)
+    fit_df:finished()
+    output(outputdir.."/components/schemas/SurfaceFitterDataFrame.json", fit_df:describe("ICESat-2 custom surface fit (ATL06-SR)"))
+    -- surface blanket
+    local blanket_df = icesat2.atl03x("gt1l", icesat2_parms)
+    local blanket = icesat2.blanket(icesat2_parms)
+    blanket_df:run(blanket)
+    blanket_df:run(core.TERMINATE)
+    blanket_df:finished()
+    output(outputdir.."/components/schemas/SurfaceBlanketDataFrame.json", blanket_df:describe("ICESat-2 custom ground and canopy heights (ALS)"))
+end
+
+-------------------------------------------------------
 -- request body
 -------------------------------------------------------
 local function request_body_schema(endpoint)
@@ -296,5 +325,6 @@ error_responses()
 parameter_schemas()
 record_schemas()
 dataframe_schemas()
+framerunner_schemas()
 specification_root()
 sys.quit()

@@ -84,7 +84,17 @@ return {
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
-                "$ref": "../components/schemas/Atl03DataFrame.json"
+                "description": "Response schema depends on the request parameters:
+                    if 'phoreal' is supplied, returns PhoRealDataFrame;
+                    if 'fit' is supplied, returns SurfaceFitterDataFrame;
+                    if 'als' is supplied, returns SurfaceBlanketDataFrame;
+                    otherwise returns Atl03DataFrame.",
+                "oneOf": [
+                    { "$ref": "../components/schemas/Atl03DataFrame.json" },
+                    { "$ref": "../components/schemas/PhoRealDataFrame.json" },
+                    { "$ref": "../components/schemas/SurfaceFitterDataFrame.json" },
+                    { "$ref": "../components/schemas/SurfaceBlanketDataFrame.json" }
+                ]
             }
         } ]]
     }
