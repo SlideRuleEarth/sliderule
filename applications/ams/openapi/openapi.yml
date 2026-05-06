@@ -40,6 +40,52 @@ paths:
         '400':
           description: Bad request or query failure
 
+  /ams/ATL24:
+    post:
+      operationId: ATL24
+      summary: Query ATL24 granules
+      description: >
+        Query ATL24 bathymetry granule metadata with spatial, temporal,
+        and attribute-based filters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ATL24Request'
+      responses:
+        '200':
+          description: Successful query response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ATL24Response'
+        '400':
+          description: Bad request or query failure
+
+  /ams/ATL24/granule/{name}:
+    post:
+      operationId: ATL24Granule
+      summary: Get ATL24 granule details
+      description: >
+        Retrieve per-beam metadata for a specific ATL24 granule.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The granule name
+      responses:
+        '200':
+          description: Successful granule detail response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ATL24GranuleResponse'
+        '400':
+          description: Bad request or query failure
+
 components:
   schemas:
     Coordinate:
@@ -57,19 +103,9 @@ components:
         - lon
         - lat
 
-    ATL13Request:
+    ICESat2QueryParams:
       type: object
-      description: >
-        All fields are optional. At least one field should be provided to get results.
       properties:
-        refid:
-          type: integer
-          description: ATL13 lake reference ID
-        name:
-          type: string
-          description: Lake name
-        coord:
-          $ref: '#/components/schemas/Coordinate'
         poly:
           type: array
           description: Polygon vertices for spatial filtering
@@ -96,6 +132,22 @@ components:
           type: integer
           description: Region number
 
+    ATL13Request:
+      allOf:
+        - $ref: '#/components/schemas/ICESat2QueryParams'
+        - type: object
+          description: >
+            All fields are optional. At least one field should be provided to get results.
+          properties:
+            refid:
+              type: integer
+              description: ATL13 lake reference ID
+            name:
+              type: string
+              description: Lake name
+            coord:
+              $ref: '#/components/schemas/Coordinate'
+
     ATL13Response:
       type: object
       properties:
@@ -115,3 +167,74 @@ components:
         - hits
         - refid
         - granules
+
+    ATL24Request:
+      allOf:
+        - $ref: '#/components/schemas/ICESat2QueryParams'
+        - type: object
+          description: >
+            All fields are optional. Filters are combined with AND logic.
+          properties:
+            season:
+              type: integer
+              description: Season value to match
+            photons0:
+              type: integer
+              description: Minimum bathy_photons range
+            photons1:
+              type: integer
+              description: Maximum bathy_photons range
+            meandepth0:
+              type: number
+              description: Minimum bathy_mean_depth range
+            meandepth1:
+              type: number
+              description: Maximum bathy_mean_depth range
+            mindepth0:
+              type: number
+              description: Minimum bathy_min_depth range
+            mindepth1:
+              type: number
+              description: Maximum bathy_min_depth range
+            maxdepth0:
+              type: number
+              description: Minimum bathy_max_depth range
+            maxdepth1:
+              type: number
+              description: Maximum bathy_max_depth range
+
+    ATL24Response:
+      type: object
+      properties:
+        hits:
+          type: integer
+          description: Total number of matching rows
+        granules:
+          type: array
+          description: List of unique matching granule names
+          items:
+            type: string
+      required:
+        - hits
+        - granules
+
+    ATL24GranuleResponse:
+      type: object
+      description: >
+        A map of beam name to beam metadata for the requested granule.
+      additionalProperties:
+        type: object
+        properties:
+          season:
+            type: integer
+          bathy_photons:
+            type: integer
+          bathy_mean_depth:
+            type: number
+          bathy_min_depth:
+            type: number
+          bathy_max_depth:
+            type: number
+          begin_time:
+            type: string
+            format: date-time
