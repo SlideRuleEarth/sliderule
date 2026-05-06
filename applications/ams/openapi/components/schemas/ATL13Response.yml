@@ -1,0 +1,18 @@
+type: object
+properties:
+  hits:
+    type: integer
+    description: Number of matching granules
+  refid:
+    type: integer
+    nullable: true
+    description: The resolved ATL13 lake reference ID, or null if no lake matched
+  granules:
+    type: array
+    description: List of matching granule names
+    items:
+      type: string
+required:
+  - hits
+  - refid
+  - granules

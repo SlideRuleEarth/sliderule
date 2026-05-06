@@ -824,7 +824,8 @@ documentation-openapi-sliderule: ## build the openapi specification for sliderul
 
 documentation-openapi-ams: ## build the openapi specification for ams apis
 	mkdir -p $(OPENAPI_SPEC_DIR)/ams
-	cp $(ROOT)/applications/ams/openapi/openapi.yml $(OPENAPI_SPEC_DIR)/ams
+	cp -R $(ROOT)/applications/ams/openapi/* $(OPENAPI_SPEC_DIR)/ams
+	npx @redocly/cli bundle $(OPENAPI_SPEC_DIR)/ams/openapi.yml -o $(OPENAPI_SPEC_DIR)/ams/bundled.yml
 	- npx @redocly/cli lint $(OPENAPI_SPEC_DIR)/ams/openapi.yml
 	npx @redocly/cli build-docs $(OPENAPI_SPEC_DIR)/ams/openapi.yml --output $(OPENAPI_SPEC_DIR)/ams/openapi.html
 

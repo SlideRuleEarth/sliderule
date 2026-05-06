@@ -1,0 +1,5 @@
+description: Successful query response
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/ATL13Response.yml'

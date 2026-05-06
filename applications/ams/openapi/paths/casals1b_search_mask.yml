@@ -1,0 +1,14 @@
+post:
+  operationId: CASALS1BSearchMask
+  summary: Get CASALS 1B search mask
+  description: >
+    Returns the search mask file contents for CASALS 1B.
+  responses:
+    '200':
+      description: Search mask contents
+      content:
+        application/json:
+          schema:
+            type: string
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

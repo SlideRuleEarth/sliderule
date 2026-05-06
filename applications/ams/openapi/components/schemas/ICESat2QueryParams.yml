@@ -1,0 +1,27 @@
+type: object
+properties:
+  poly:
+    type: array
+    description: Polygon vertices for spatial filtering
+    items:
+      $ref: './Coordinate.yml'
+  t0:
+    type: string
+    description: Start time filter (ISO 8601 format)
+    example: '2020-01-01T00:00:00Z'
+  t1:
+    type: string
+    description: End time filter (ISO 8601 format)
+    example: '2023-12-31T23:59:59Z'
+  name_filter:
+    type: string
+    description: Granule name filter pattern
+  rgt:
+    type: integer
+    description: Reference ground track number
+  cycle:
+    type: integer
+    description: Orbital cycle number
+  region:
+    type: integer
+    description: Region number

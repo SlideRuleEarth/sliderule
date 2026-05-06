@@ -1,0 +1,17 @@
+post:
+  operationId: 3DEP1MId
+  summary: Get 3DEP 1m granule by ID
+  description: >
+    Retrieve full metadata for a specific 3DEP granule by its ID.
+  parameters:
+    - $ref: '../components/parameters/GranuleId.yml'
+  responses:
+    '200':
+      description: Successful granule detail response
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

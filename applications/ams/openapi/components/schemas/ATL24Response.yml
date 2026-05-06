@@ -1,0 +1,13 @@
+type: object
+properties:
+  hits:
+    type: integer
+    description: Total number of matching rows
+  granules:
+    type: array
+    description: List of unique matching granule names
+    items:
+      type: string
+required:
+  - hits
+  - granules
