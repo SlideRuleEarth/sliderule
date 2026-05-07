@@ -10,7 +10,7 @@ install (
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/index.yml
+        ${CMAKE_CURRENT_LIST_DIR}/index.json
     DESTINATION
         ${CONFDIR}/openapi
 )

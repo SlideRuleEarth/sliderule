@@ -9,3 +9,7 @@ Links to the HTML rendered documentation for the APIs are provided below.
 ## Asset Metadata Service (AMS) APIs
 
 <a href="/_static/openapi/ams.html" target="_blank">Asset Metadata Service (AMS) OpenAPI Specification</a>
+
+## Intelligent Load Balancer (ILB) APIs
+
+<a href="/_static/openapi/ilb.html" target="_blank">Intelligent Load Balancer (ILB) OpenAPI Specification</a>

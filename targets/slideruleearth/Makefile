@@ -277,9 +277,9 @@ job: ## execute the job runner locally
 	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 
 openapi: ## build, bundle, and lint the openapi docs for sliderule
-	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
-	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
-	- npx @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	make sliderule-openapi
+	make ilb-openapi
+	make ams-openapi
 
 python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \
@@ -311,6 +311,11 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 sliderule-test: ## run python client tests
 	conda run -n ams --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
+
+sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
+	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	- npx @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -831,7 +836,7 @@ documentation-prep: ## create environment for building documentation
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 
-documentation-openapi: openapi ams-openapi ## build the openapi specification for apis
+documentation-openapi: openapi ## build the openapi specification for apis
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(OPENAPI_DIR)/sliderule.html
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ams.json --output $(OPENAPI_DIR)/ams.html
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ilb.json --output $(OPENAPI_DIR)/ilb.html
