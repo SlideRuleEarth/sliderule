@@ -134,15 +134,10 @@ int LuaObject::luaGetByName(lua_State* L)
     {
         globalMut.unlock();
         mlog(DEBUG, "Failed to get Lua object by name: %s", e.what());
-        lua_pushnil(L);
+        if(raise_error) luaL_error(L, "failed to get lua object by name"); // exits function here
+        else lua_pushnil(L);
+        return 1;
     }
-
-    if(raise_error)
-    {
-        luaL_error(L, "failed to get lua object by name"); // exits function here
-    }
-
-    return 1;
 }
 
 /*----------------------------------------------------------------------------

@@ -364,10 +364,10 @@ int UT_Field::testDictionary(lua_State* L)
             FieldColumn<FieldColumn<bool>>  cc;
 
             parms(): FieldMap<Field>({
-                {"e", &e},
-                {"a", &a},
-                {"c", &c},
-                {"cc", &cc}
+                {"e", &e, "test"},
+                {"a", &a, "test"},
+                {"c", &c, "test"},
+                {"cc", &cc, "test"}
             }) {}
         };
 

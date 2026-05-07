@@ -105,7 +105,7 @@ void FileEndpoint::handleRequest (Request* request)
     try
     {
         /* Get Sanitized File Path */
-        string file_to_send = sanitize(request->resource);
+        const string file_to_send = sanitize(request->resource);
 
         /* Open File */
         FILE* fp = fopen(file_to_send.c_str(), "rb");
@@ -182,7 +182,7 @@ string FileEndpoint::sanitize (const char* resource)
     assert(resource);
 
     /* Build path to resource */
-    string path_to_resource(resource);
+    const string path_to_resource(resource);
 
     /* Check for directory traversal */
     if(path_to_resource.find("..") != string::npos)
