@@ -46,29 +46,3 @@ components:
         description: >
           Dynamic client registration endpoint. Must be called before initiating
           the authorization code flow to obtain a client_id and client_secret.
-  schemas:
-    SubmitRequest:
-      $ref: 'components/schemas/SubmitRequest.yml'
-    SubmitResponse:
-      $ref: 'components/schemas/SubmitResponse.yml'
-    ReportJobsRequest:
-      $ref: 'components/schemas/ReportJobsRequest.yml'
-    ReportJobsResponse:
-      $ref: 'components/schemas/ReportJobsResponse.yml'
-    ReportQueueRequest:
-      $ref: 'components/schemas/ReportQueueRequest.yml'
-    ReportQueueResponse:
-      $ref: 'components/schemas/ReportQueueResponse.yml'
-    CancelRequest:
-      $ref: 'components/schemas/CancelRequest.yml'
-    CancelResponse:
-      $ref: 'components/schemas/CancelResponse.yml'
-    ErrorResponse:
-      $ref: 'components/schemas/ErrorResponse.yml'
-  responses:
-    Forbidden:
-      $ref: 'components/responses/Forbidden.yml'
-    NotFound:
-      $ref: 'components/responses/NotFound.yml'
-    InternalError:
-      $ref: 'components/responses/InternalError.yml'

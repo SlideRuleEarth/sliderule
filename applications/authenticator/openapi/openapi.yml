@@ -45,34 +45,4 @@ paths:
   /.well-known/oauth-authorization-server:
     $ref: 'paths/oauth_authorization_server.yml'
 
-components:
-  schemas:
-    RegisterRequest:
-      $ref: 'components/schemas/RegisterRequest.yml'
-    RegisterResponse:
-      $ref: 'components/schemas/RegisterResponse.yml'
-    TokenResponse:
-      $ref: 'components/schemas/TokenResponse.yml'
-    DeviceCodeResponse:
-      $ref: 'components/schemas/DeviceCodeResponse.yml'
-    DevicePollRequest:
-      $ref: 'components/schemas/DevicePollRequest.yml'
-    DevicePollResponse:
-      $ref: 'components/schemas/DevicePollResponse.yml'
-    PatRequest:
-      $ref: 'components/schemas/PatRequest.yml'
-    PatResponse:
-      $ref: 'components/schemas/PatResponse.yml'
-    JwksResponse:
-      $ref: 'components/schemas/JwksResponse.yml'
-    OpenIdConfigResponse:
-      $ref: 'components/schemas/OpenIdConfigResponse.yml'
-    OAuthServerMetadata:
-      $ref: 'components/schemas/OAuthServerMetadata.yml'
-    ErrorResponse:
-      $ref: 'components/schemas/ErrorResponse.yml'
-  responses:
-    BadRequest:
-      $ref: 'components/responses/BadRequest.yml'
-    InternalError:
-      $ref: 'components/responses/InternalError.yml'
+
