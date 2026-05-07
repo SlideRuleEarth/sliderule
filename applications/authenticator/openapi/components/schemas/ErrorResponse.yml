@@ -1,0 +1,10 @@
+type: object
+properties:
+  error:
+    type: string
+    description: Short error code.
+    example: internal_error
+  error_description:
+    type: string
+    description: Human-readable error description.
+    example: Error processing request

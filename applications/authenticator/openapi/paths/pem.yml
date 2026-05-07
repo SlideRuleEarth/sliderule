@@ -1,0 +1,16 @@
+get:
+  operationId: getPem
+  summary: Get public key in PEM format
+  description: >
+    Returns the RSA public key used for JWT verification in PEM format.
+    Used by HAProxy for token validation.
+  responses:
+    '200':
+      description: PEM-encoded public key
+      content:
+        application/json:
+          schema:
+            type: string
+            example: "-----BEGIN PUBLIC KEY-----\nMIIBI..."
+    '500':
+      $ref: '../components/responses/InternalError.yml'

@@ -1,0 +1,25 @@
+get:
+  operationId: basicLogin
+  summary: Initiate basic GitHub OAuth 2.0 flow
+  description: >
+    Simple OAuth 2.0 flow for trusted internal services (HAProxy, Grafana).
+    Redirects to GitHub for authentication and returns a JWT in a cookie.
+    Only trusted redirect hosts are allowed.
+  parameters:
+    - name: redirect_uri
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: Must point to a trusted redirect host.
+  responses:
+    '302':
+      description: Redirect to GitHub authorization page
+      headers:
+        Location:
+          schema:
+            type: string
+            format: uri
+    '500':
+      $ref: '../components/responses/InternalError.yml'

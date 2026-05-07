@@ -1,0 +1,31 @@
+type: object
+properties:
+  status:
+    type: string
+    example: success
+  token:
+    type: string
+    description: JWT access token (RS256 signed).
+  metadata:
+    type: object
+    description: JWT claims metadata.
+    properties:
+      org_roles:
+        type: array
+        items:
+          type: string
+      sub:
+        type: string
+      aud:
+        type: array
+        items:
+          type: string
+      org:
+        type: string
+      iat:
+        type: integer
+      exp:
+        type: integer
+      iss:
+        type: string
+        format: uri

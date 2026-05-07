@@ -1,0 +1,42 @@
+post:
+  operationId: devicePoll
+  summary: Poll for device authorization completion
+  description: >
+    Client polls this endpoint with the device_code to check if the user has
+    completed authorization. Returns 202 while pending, 200 on success with
+    token and metadata, or 400 on terminal failure.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/DevicePollRequest.yml'
+  responses:
+    '200':
+      description: Authorization complete, token issued
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DevicePollResponse.yml'
+    '202':
+      description: Authorization pending, continue polling
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: pending
+              error:
+                type: string
+                example: authorization_pending
+              error_description:
+                type: string
+              interval:
+                type: integer
+                description: Suggested polling interval in seconds.
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

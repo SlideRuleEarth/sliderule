@@ -1,0 +1,78 @@
+openapi: 3.0.3
+
+info:
+  title: SlideRule Authenticator API
+  description: >
+    OAuth 2.1 Authorization Server for SlideRule. Supports authorization code flow
+    with PKCE (for web clients), device flow (for CLI/Python clients), and PAT-based
+    login. Acts as an intermediary to GitHub OAuth while issuing its own JWTs.
+  version: ${VERSION}
+  license:
+    name: BSD 3-Clause
+    url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: https://login.slideruleearth.io
+    description: Production Authenticator
+
+security: []
+
+paths:
+  /auth/github/register:
+    $ref: 'paths/register.yml'
+  /auth/github/login:
+    $ref: 'paths/login.yml'
+  /auth/github/callback:
+    $ref: 'paths/callback.yml'
+  /auth/github/token:
+    $ref: 'paths/token.yml'
+  /auth/github/device:
+    $ref: 'paths/device.yml'
+  /auth/github/device/poll:
+    $ref: 'paths/device_poll.yml'
+  /auth/github/pat:
+    $ref: 'paths/pat.yml'
+  /auth/github/basic/login:
+    $ref: 'paths/basic_login.yml'
+  /auth/refresh:
+    $ref: 'paths/refresh.yml'
+  /auth/pem:
+    $ref: 'paths/pem.yml'
+  /.well-known/jwks.json:
+    $ref: 'paths/jwks.yml'
+  /.well-known/openid-configuration:
+    $ref: 'paths/openid_configuration.yml'
+  /.well-known/oauth-authorization-server:
+    $ref: 'paths/oauth_authorization_server.yml'
+
+components:
+  schemas:
+    RegisterRequest:
+      $ref: 'components/schemas/RegisterRequest.yml'
+    RegisterResponse:
+      $ref: 'components/schemas/RegisterResponse.yml'
+    TokenResponse:
+      $ref: 'components/schemas/TokenResponse.yml'
+    DeviceCodeResponse:
+      $ref: 'components/schemas/DeviceCodeResponse.yml'
+    DevicePollRequest:
+      $ref: 'components/schemas/DevicePollRequest.yml'
+    DevicePollResponse:
+      $ref: 'components/schemas/DevicePollResponse.yml'
+    PatRequest:
+      $ref: 'components/schemas/PatRequest.yml'
+    PatResponse:
+      $ref: 'components/schemas/PatResponse.yml'
+    JwksResponse:
+      $ref: 'components/schemas/JwksResponse.yml'
+    OpenIdConfigResponse:
+      $ref: 'components/schemas/OpenIdConfigResponse.yml'
+    OAuthServerMetadata:
+      $ref: 'components/schemas/OAuthServerMetadata.yml'
+    ErrorResponse:
+      $ref: 'components/schemas/ErrorResponse.yml'
+  responses:
+    BadRequest:
+      $ref: 'components/responses/BadRequest.yml'
+    InternalError:
+      $ref: 'components/responses/InternalError.yml'

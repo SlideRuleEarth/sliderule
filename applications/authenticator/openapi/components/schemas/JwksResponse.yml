@@ -1,0 +1,26 @@
+type: object
+properties:
+  keys:
+    type: array
+    items:
+      type: object
+      properties:
+        kty:
+          type: string
+          example: RSA
+        alg:
+          type: string
+          example: RS256
+        use:
+          type: string
+          example: sig
+        kid:
+          type: string
+          description: Key ID (UUID of the KMS key).
+        n:
+          type: string
+          description: RSA modulus (Base64url encoded).
+        e:
+          type: string
+          description: RSA exponent (Base64url encoded).
+          example: AQAB

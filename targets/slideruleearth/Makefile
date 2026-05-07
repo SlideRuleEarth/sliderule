@@ -82,9 +82,9 @@ PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
-WEBSITE_SOURCE_DIR = $(ROOT)/docs
+DOCUMENTATION_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
-OPENAPI_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static/openapi
+DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
@@ -288,13 +288,16 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	make ilb-openapi
 	make ams-openapi
 	make runner-openapi
+	make authenticator-openapi
 
 %-openapi: ## bundle and lint openapi docs
+	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/$*
 	cp -R $(ROOT)/applications/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
 	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
 	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/$*.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
 
 ########################
 # Docker Build Targets
@@ -321,9 +324,11 @@ sliderule-test: ## run python client tests
 	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
 
 sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
+	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
 	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
 	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	- npx @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -826,17 +831,10 @@ certbot-delete: ## deletes the lambda certbot function
 documentation-prep: ## create environment for building documentation
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
-	mkdir -p $(OPENAPI_DIR)
-	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
+	cp -R $(DOCUMENTATION_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
-	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
-	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
-
-documentation-openapi: openapi ## build the openapi specification for apis
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(OPENAPI_DIR)/sliderule.html
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ams.json --output $(OPENAPI_DIR)/ams.html
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ilb.json --output $(OPENAPI_DIR)/ilb.html
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/runner.json --output $(OPENAPI_DIR)/runner.html
+	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STATIC_DIR)
+	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STATIC_DIR)
 
 documentation-rtd: ## generate read-the-docs static html
 	conda run -n rtd --no-capture-output \
@@ -846,7 +844,7 @@ documentation-rtd: ## generate read-the-docs static html
 
 documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	make documentation-prep
-	make documentation-openapi
+	make openapi
 	make documentation-rtd
 
 documentation-run: ## locally run the documentation

@@ -1,0 +1,5 @@
+description: Invalid request parameters
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/ErrorResponse.yml'

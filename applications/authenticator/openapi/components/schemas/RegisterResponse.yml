@@ -1,0 +1,30 @@
+type: object
+properties:
+  client_id:
+    type: string
+    format: uuid
+    description: Unique client identifier.
+  client_id_issued_at:
+    type: integer
+    description: Unix timestamp of when the client_id was issued.
+  client_name:
+    type: string
+  redirect_uris:
+    type: array
+    items:
+      type: string
+      format: uri
+  grant_types:
+    type: array
+    items:
+      type: string
+  response_types:
+    type: array
+    items:
+      type: string
+  token_endpoint_auth_method:
+    type: string
+  code_challenge_method:
+    type: string
+  scope:
+    type: string

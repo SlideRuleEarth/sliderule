@@ -1,0 +1,31 @@
+type: object
+properties:
+  issuer:
+    type: string
+    format: uri
+    example: https://login.slideruleearth.io
+  jwks_uri:
+    type: string
+    format: uri
+    example: https://login.slideruleearth.io/.well-known/jwks.json
+  authorization_endpoint:
+    type: string
+    format: uri
+  token_endpoint:
+    type: string
+    format: uri
+  response_types_supported:
+    type: array
+    items:
+      type: string
+    example: [code]
+  subject_types_supported:
+    type: array
+    items:
+      type: string
+    example: [public]
+  id_token_signing_alg_values_supported:
+    type: array
+    items:
+      type: string
+    example: [RS256]

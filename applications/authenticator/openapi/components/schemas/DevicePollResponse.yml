@@ -1,0 +1,35 @@
+type: object
+properties:
+  status:
+    type: string
+    example: success
+  token:
+    type: string
+    description: JWT access token (RS256 signed).
+  metadata:
+    type: object
+    description: JWT claims metadata.
+    properties:
+      org_roles:
+        type: array
+        items:
+          type: string
+      sub:
+        type: string
+        description: GitHub username.
+      aud:
+        type: array
+        items:
+          type: string
+        description: List of services the user has access to.
+      org:
+        type: string
+      iat:
+        type: integer
+        description: Token issued at (Unix timestamp).
+      exp:
+        type: integer
+        description: Token expiration (Unix timestamp).
+      iss:
+        type: string
+        format: uri

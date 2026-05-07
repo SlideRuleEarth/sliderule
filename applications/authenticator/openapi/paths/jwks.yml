@@ -1,0 +1,15 @@
+get:
+  operationId: getJwks
+  summary: JSON Web Key Set (JWKS)
+  description: >
+    Returns the public key in JWKS format for JWT signature verification.
+    Standard endpoint for OIDC/JWT key discovery.
+  responses:
+    '200':
+      description: JWKS document
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/JwksResponse.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

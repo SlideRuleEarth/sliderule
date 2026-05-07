@@ -1,0 +1,15 @@
+get:
+  operationId: oauthAuthorizationServer
+  summary: OAuth 2.0 Authorization Server Metadata (RFC 8414)
+  description: >
+    Returns the authorization server metadata document describing endpoints,
+    supported grant types, scopes, and PKCE configuration.
+  responses:
+    '200':
+      description: Authorization server metadata
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/OAuthServerMetadata.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

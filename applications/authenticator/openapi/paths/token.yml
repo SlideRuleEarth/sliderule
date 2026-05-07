@@ -1,0 +1,45 @@
+post:
+  operationId: token
+  summary: Exchange authorization code for access token
+  description: >
+    Final stage of the OAuth 2.1 authorization code flow. Exchanges the
+    authorization code for a JWT access token. Requires PKCE code_verifier
+    to prove possession of the original code_challenge.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          required:
+            - grant_type
+            - code
+            - redirect_uri
+            - client_id
+            - code_verifier
+          properties:
+            grant_type:
+              type: string
+              enum: [authorization_code]
+            code:
+              type: string
+              description: Authorization code received from the callback.
+            redirect_uri:
+              type: string
+              format: uri
+              description: Must match the redirect_uri used in the authorization request.
+            client_id:
+              type: string
+              format: uuid
+            code_verifier:
+              type: string
+              description: PKCE code verifier (original random string).
+  responses:
+    '200':
+      description: Access token issued
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/TokenResponse.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'
