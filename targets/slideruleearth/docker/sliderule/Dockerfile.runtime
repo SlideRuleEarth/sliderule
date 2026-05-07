@@ -10,7 +10,6 @@ RUN make config-release INSTALLDIR=/usr/local && make
 
 # build and install openapi docs
 RUN make openapi INSTALLDIR=/usr/local
-RUN make ams-openapi INSTALLDIR=/usr/local
 
 # install runtime dependencies
 FROM amazonlinux:2023 AS runtime
