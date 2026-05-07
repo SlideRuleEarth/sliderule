@@ -1,11 +1,10 @@
 type: object
+description: A single-key object where the key is the member address and the value is a tuple of [service, expiration].
 additionalProperties:
   type: array
-  items:
-    oneOf:
-      - type: string
-      - type: integer
+  description: "A two-element tuple: [service_name (string), expiration (integer)]."
   minItems: 2
   maxItems: 2
+  items: {}
 example:
   "http://10.0.1.5:9081": ["my-service", 1717000000]

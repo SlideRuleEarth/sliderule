@@ -3,17 +3,17 @@
     {
       "name": "SlideRule",
       "description": "On-demand science data processing",
-      "url": "sliderule.json"
+      "urls": ["sliderule.json", "sliderule/openapi.json"]
     },
     {
       "name": "Asset Metadata Service (AMS)",
       "description": "Earth science dataset querying",
-      "url": "ams.yml"
+      "urls": ["ams.json", "ams/openapi.yml"]
     },
     {
       "name": "Intelligent Load Balancer (ILB)",
       "description": "Cluster orchestration and reverse proxy",
-      "url": "ilb.yml"
+      "url": ["ilb.json", "ilb/openapi.yml"]
     }
   ]
 }

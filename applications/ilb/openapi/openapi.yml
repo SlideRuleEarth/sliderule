@@ -7,13 +7,10 @@ info:
     name: BSD-3-Clause
 
 servers:
-  - url: http://localhost:8050
-    description: Discovery frontend (internal)
-  - url: https://{domain}
-    description: User frontend
-    variables:
-      domain:
-        default: slideruleearth.io
+  - url: https://sliderule.slideruleearth.io
+    description: Proxy frontend (user facing)
+  - url: http://10.0.128.5:8050
+    description: Discovery backend (internal)
 
 paths:
   /discovery/register:
