@@ -1,0 +1,10 @@
+type: object
+properties:
+  error:
+    type: string
+    description: Short error code.
+    example: access denied
+  error_description:
+    type: string
+    description: Human-readable error description.
+    example: invalid signature

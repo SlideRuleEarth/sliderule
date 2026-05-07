@@ -276,10 +276,11 @@ job: ## execute the job runner locally
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS) /tmp/result.json
 
-openapi: ## build, bundle, and lint the openapi docs for sliderule
+openapi: ## bundle and lint the openapi docs for sliderule
 	make sliderule-openapi
 	make ilb-openapi
 	make ams-openapi
+	make runner-openapi
 
 python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \
@@ -328,7 +329,7 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
 
-ilb-openapi: ## build, bundle, and lint the openapi docs for the intelligent load balancer
+ilb-openapi: ## bundle and lint the openapi docs for the intelligent load balancer
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/ilb
 	cp -R $(ROOT)/applications/ilb/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/ilb
 	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/ilb/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/ilb.json --ext json
@@ -785,6 +786,12 @@ runner-test: ## run runner tests
 	coverage run -m pytest $(ARGS) && \
 	coverage report -m'
 
+runner-openapi: ## bundle and lint openapi docs for ams
+	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/runner
+	cp -R $(ROOT)/applications/runner/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/runner
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/runner/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/runner.json --ext json
+	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/runner/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/runner.json
+
 ########################
 # Certbot Targets
 ########################
@@ -840,6 +847,7 @@ documentation-openapi: openapi ## build the openapi specification for apis
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(OPENAPI_DIR)/sliderule.html
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ams.json --output $(OPENAPI_DIR)/ams.html
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ilb.json --output $(OPENAPI_DIR)/ilb.html
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/runner.json --output $(OPENAPI_DIR)/runner.html
 
 documentation-rtd: ## generate read-the-docs static html
 	conda run -n rtd --no-capture-output \

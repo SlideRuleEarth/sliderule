@@ -1,0 +1,15 @@
+XSlideruleTimestamp:
+  name: X-Sliderule-Timestamp
+  in: header
+  required: true
+  description: Unix timestamp (seconds since epoch) of when the request was signed.
+  schema:
+    type: string
+
+XSlideruleSignature:
+  name: X-Sliderule-Signature
+  in: header
+  required: true
+  description: Base64-encoded signature of the canonical request string.
+  schema:
+    type: string

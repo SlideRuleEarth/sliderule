@@ -1,0 +1,13 @@
+type: object
+required:
+  - job_state
+properties:
+  job_state:
+    oneOf:
+      - type: string
+        enum: [SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED]
+      - type: array
+        items:
+          type: string
+          enum: [SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED]
+    description: One or more job states to query.

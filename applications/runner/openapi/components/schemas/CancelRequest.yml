@@ -1,0 +1,9 @@
+type: object
+properties:
+  job_list:
+    type: array
+    items:
+      type: string
+    description: >
+      List of job IDs to cancel. If omitted, all active jobs
+      (SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING) will be canceled.

@@ -1,0 +1,61 @@
+openapi: 3.0.3
+
+info:
+  title: SlideRule Runner API
+  description: >
+    API for submitting, monitoring, and canceling SlideRule batch processing jobs.
+    All endpoints require JWT authentication and request signature verification.
+  version: 1.0.0
+  license:
+    name: BSD 3-Clause
+    url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: https://runner.slideruleearth.io
+    description: Production Runner API
+
+security:
+  - BearerAuth: []
+
+paths:
+  /submit:
+    $ref: 'paths/submit.yml'
+  /report/jobs:
+    $ref: 'paths/report_jobs.yml'
+  /report/queue:
+    $ref: 'paths/report_queue.yml'
+  /cancel:
+    $ref: 'paths/cancel.yml'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    SubmitRequest:
+      $ref: 'components/schemas/SubmitRequest.yml'
+    SubmitResponse:
+      $ref: 'components/schemas/SubmitResponse.yml'
+    ReportJobsRequest:
+      $ref: 'components/schemas/ReportJobsRequest.yml'
+    ReportJobsResponse:
+      $ref: 'components/schemas/ReportJobsResponse.yml'
+    ReportQueueRequest:
+      $ref: 'components/schemas/ReportQueueRequest.yml'
+    ReportQueueResponse:
+      $ref: 'components/schemas/ReportQueueResponse.yml'
+    CancelRequest:
+      $ref: 'components/schemas/CancelRequest.yml'
+    CancelResponse:
+      $ref: 'components/schemas/CancelResponse.yml'
+    ErrorResponse:
+      $ref: 'components/schemas/ErrorResponse.yml'
+  responses:
+    Forbidden:
+      $ref: 'components/responses/Forbidden.yml'
+    NotFound:
+      $ref: 'components/responses/NotFound.yml'
+    InternalError:
+      $ref: 'components/responses/InternalError.yml'

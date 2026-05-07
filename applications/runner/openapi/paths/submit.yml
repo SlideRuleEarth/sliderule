@@ -1,0 +1,26 @@
+post:
+  operationId: submit
+  summary: Submit a batch runner job
+  description: >
+    Submits a Lua script with a list of arguments to be executed as individual
+    AWS Batch jobs. Each element of args_list becomes a separate job invocation.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/SubmitRequest.yml'
+  responses:
+    '200':
+      description: Jobs successfully submitted
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/SubmitResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'
