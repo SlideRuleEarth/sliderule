@@ -3,12 +3,12 @@
 -------------------------------------------------------
 local json  = require("json")
 local parms = json.decode(arg[1])
-local outp  = msg.publish(_rqst.rspq)
 
 -------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
+    local outp  = msg.publish(_rqst.rspq)
     print("Output Queue", _rqst.rspq)
     outp:sendstring(parms["var4"]["type"].."\n")
     outp:sendstring(parms["var4"]["files"].."\n")
@@ -26,5 +26,6 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
+    inputs = {"json"},
     outputs = {"binary"}
 }

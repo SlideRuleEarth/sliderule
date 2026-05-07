@@ -316,6 +316,7 @@ local function report ()
     local total_skipped = 0
     local total_asserts = 0
     local total_errors = 0
+    local skipped_tests = {}
     if context == "global" then --suppress report until the end
         for testname in pairs(results) do
             total_tests = total_tests + 1
@@ -323,6 +324,7 @@ local function report ()
             total_errors = total_errors + results[testname]["errors"]
             if results[testname]["skipped"] then
                 total_skipped = total_skipped + 1
+                table.insert(skipped_tests, testname)
                 print("\n---------------------------------")
                 print("Skipped test: " .. testname)
                 print("---------------------------------")
@@ -343,6 +345,9 @@ local function report ()
         for k,v in pairs(metrics) do
             local duration_str = string.format("%.6f", v["duration"])
             print(string.format("%-50s %-12s %-10s %-10s %-10s", k, duration_str, tostring(v["status"]), tostring(v["asserts"]), tostring(v["errors"])))
+        end
+        for _,testname in ipairs(skipped_tests) do
+            print(string.format("%-50s %-12s %-10s %-10s %-10s", testname, "-", "skipped", "-", "-"))
         end
         print("#################################")
         print("\n*********************************")

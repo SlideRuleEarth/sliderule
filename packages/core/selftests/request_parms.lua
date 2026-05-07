@@ -21,11 +21,12 @@ runner.unittest("Request Parameters Defaults", function()
 end)
 
 -- (2) Timeouts
-
+local p = require("prettyprint")
 runner.unittest("Request Parameters Timeouts", function()
     local parms = core.parms({timeout=400})
     local ptable = parms:export()
 
+p.display(ptable)
     runner.assert(ptable["rqst_timeout"] == 400)
     runner.assert(ptable["node_timeout"] == 400)
     runner.assert(ptable["read_timeout"] == 400)

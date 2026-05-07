@@ -62,7 +62,6 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const double RequestFields::INVALID_COORDINATE = -10000.0;
 
 /******************************************************************************
  * CLASS METHODS
@@ -457,6 +456,12 @@ const GeoFields* RequestFields::geoFields(const char* key) const
 void RequestFields::fromLua (lua_State* L, int index)
 {
     FieldMap<Field>::fromLua(L, index);
+
+    // set timeouts (if necessary)
+    if(timeout == REQUEST_INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
+    if(rqstTimeout == REQUEST_INVALID_TIMEOUT)  rqstTimeout = timeout;
+    if(nodeTimeout == REQUEST_INVALID_TIMEOUT)  nodeTimeout = timeout;
+    if(readTimeout == REQUEST_INVALID_TIMEOUT)  readTimeout = timeout;
 
     // project polygon (if necessary)
     pointsInPolygon = polygon.length();

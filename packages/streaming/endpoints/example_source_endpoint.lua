@@ -25,5 +25,6 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
+    inputs = {"json"},
     outputs = {"json"}
 }

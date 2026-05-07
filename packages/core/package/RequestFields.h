@@ -55,6 +55,12 @@
  * CLASS
  ******************************************************************************/
 
+#define REQUEST_INVALID_TIMEOUT -1
+
+/******************************************************************************
+ * CLASS
+ ******************************************************************************/
+
 class RequestFields: public LuaObject, public FieldMap<Field>
 {
     public:
@@ -68,8 +74,6 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         static const struct luaL_Reg LUA_META_TABLE[];
 
         static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
-
-        static const double INVALID_COORDINATE;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -116,10 +120,10 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};
-        FieldElement<int>               timeout             {SystemConfig::settings().requestTimeoutSec.value}; // global timeout
-        FieldElement<int>               rqstTimeout         {SystemConfig::settings().requestTimeoutSec.value};
-        FieldElement<int>               nodeTimeout         {SystemConfig::settings().requestTimeoutSec.value};
-        FieldElement<int>               readTimeout         {SystemConfig::settings().requestTimeoutSec.value};
+        FieldElement<int>               timeout             {REQUEST_INVALID_TIMEOUT}; // global timeout
+        FieldElement<int>               rqstTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>               nodeTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>               readTimeout         {REQUEST_INVALID_TIMEOUT};
         FieldElement<int>               clusterSizeHint     {0};
         FieldElement<uint64_t>          keySpace            {INVALID_KEY};
         RegionMask                      regionMask;
