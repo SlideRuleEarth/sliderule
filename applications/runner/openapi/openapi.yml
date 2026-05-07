@@ -5,7 +5,7 @@ info:
   description: >
     API for submitting, monitoring, and canceling SlideRule batch processing jobs.
     All endpoints require JWT authentication and request signature verification.
-  version: 1.0.0
+  version: ${VERSION}
   license:
     name: BSD 3-Clause
     url: https://opensource.org/licenses/BSD-3-Clause
@@ -15,7 +15,7 @@ servers:
     description: Production Runner API
 
 security:
-  - BearerAuth: []
+  - OAuth2: []
 
 paths:
   /submit:
@@ -29,10 +29,23 @@ paths:
 
 components:
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    OAuth2:
+      type: oauth2
+      description: >
+        OAuth2 authorization code flow. Clients must first register via the
+        registration endpoint to obtain client credentials before initiating
+        the authorization code flow.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://login.slideruleearth.io/auth/github/login
+          tokenUrl: https://login.slideruleearth.io/auth/github/token
+          scopes:
+            runner:access: Access to runner APIs
+      x-client-registration:
+        url: https://login.slideruleearth.io/auth/github/register
+        description: >
+          Dynamic client registration endpoint. Must be called before initiating
+          the authorization code flow to obtain a client_id and client_secret.
   schemas:
     SubmitRequest:
       $ref: 'components/schemas/SubmitRequest.yml'
