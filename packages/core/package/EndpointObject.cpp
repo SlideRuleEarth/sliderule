@@ -414,24 +414,27 @@ string EndpointObject::buildheader (code_t code, const char* content_type, int c
 /*----------------------------------------------------------------------------
  * sendHeader
  *----------------------------------------------------------------------------*/
-void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* content_type, Publisher* rspq, const char* msg, bool chunked)
+void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* content_type, Publisher* rspq, const char* msg, long msglen)
 {
     if(msg)
     {
-        const int result_length = StringLib::size(msg);
-        const string header = buildheader(http_code, content_type, result_length, NULL);
+        const string header = buildheader(http_code, content_type, msglen, NULL);
         rspq->postCopy(header.data(), header.size(), SystemConfig::settings().publishTimeoutMs.value);
-        rspq->postCopy(msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
+        rspq->postCopy(msg, msglen, SystemConfig::settings().publishTimeoutMs.value);
     }
-    else if(chunked)
+    else if(msglen == -1) // chunked response
     {
         const string header = buildheader(http_code, content_type, -1, "chunked");
         rspq->postCopy(header.data(), header.size(), SystemConfig::settings().publishTimeoutMs.value);
     }
-    else
+    else if(msglen == 0) // header-only response
     {
         const string header = buildheader(http_code, content_type, 0, NULL);
         rspq->postCopy(header.data(), header.size(), SystemConfig::settings().publishTimeoutMs.value);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid header construction");
     }
 }
 

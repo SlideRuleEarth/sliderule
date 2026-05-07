@@ -151,7 +151,7 @@ class EndpointObject: public LuaObject
         static content_t    str2content         (const char* str);
         static const char*  content2str         (content_t content);
         static string       buildheader         (code_t code, const char* content_type, int content_length, const char* transfer_encoding);
-        static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg, bool chunked=false);
+        static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg=NULL, long msglen=-1);
 
         static void         registerHandler     (content_t content, handler_f handler);
         static handler_f    retrieveHandler     (content_t content);

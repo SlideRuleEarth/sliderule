@@ -36,6 +36,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointProxy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EventLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/FileEndpoint.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.cpp
@@ -104,6 +105,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldEnumeration.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldList.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldMap.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FileEndpoint.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.h

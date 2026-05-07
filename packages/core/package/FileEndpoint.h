@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __lua_endpoint__
-#define __lua_endpoint__
+#ifndef __file_endpoint__
+#define __file_endpoint__
 
 /******************************************************************************
  * INCLUDES
@@ -46,7 +46,7 @@
  * CLASS
  ******************************************************************************/
 
-class LuaEndpoint: public EndpointObject
+class FileEndpoint: public EndpointObject
 {
     public:
 
@@ -57,31 +57,13 @@ class LuaEndpoint: public EndpointObject
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const char* ENDPOINT_MAIN;
-        static const char* ENDPOINT_LOGGING;
-        static const char* ENDPOINT_ROLES;
-        static const char* ENDPOINT_SIGNED;
-        static const char* ENDPOINT_OUTPUTS;
-        static const char* ENDPOINT_PARMS;
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            event_level_t       log_level;          // ENDPOINT_LOGGING
-            vector<string>      allowed_roles;      // ENDPOINT_ROLES
-            bool                signature_required; // ENDPOINT_SIGNED
-            vector<content_t>   supported_outputs;  // ENDPOINT_OUTPUTS
-            RequestFields*      request_parameters; // ENDPOINT_PARMS
-        } endpoint_t;
+        static const int MAX_BYTES_TO_SEND = 0x500000; // ~ 5MB
 
          /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static void         defaultHandler      (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
+        static int  luaCreate   (lua_State* L);
 
     protected:
 
@@ -89,20 +71,18 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEndpoint         (lua_State* L);
-                            ~LuaEndpoint        (void) override;
+                FileEndpoint    (lua_State* L, const char* root_directory, content_t content_type);
+                ~FileEndpoint   (void) override;
 
-        void                handleRequest       (Request* request) override;
+        void    handleRequest   (Request* request) override;
+        string  sanitize        (const char* resource);
 
-        static endpoint_t   loadLuaScript       (Request* request, LuaEngine* engine, const string& script);
-        static void         captureRequest      (Request* request, const endpoint_t& endpoint, EventLib::tlm_input_t& tlm);
-        static void         checkRole           (Request* request, const endpoint_t& endpoint);
-        static void         checkSignature      (Request* request, const endpoint_t& endpoint);
-        static content_t    selectOutput        (Request* request, const endpoint_t& endpoint, const string& extension);
-        static void         checkMemoryUsage    (Request* request);
-        static void         executeEndpoint     (Request* request, LuaEngine* engine, content_t selected_output, const string& arguments);
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
-        static void*        requestThread       (void* parm);
-};
+        string rootDirectory;
+        content_t contentType;
+    };
 
-#endif  /* __lua_endpoint__ */
+#endif  /* __file_endpoint__ */

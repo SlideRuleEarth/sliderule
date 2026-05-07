@@ -43,6 +43,7 @@
 #include "EndpointProxy.h"
 #include "EventLib.h"
 #include "PointIndex.h"
+#include "FileEndpoint.h"
 #include "FileIODriver.h"
 #include "GeoDataFrame.h"
 #include "HttpServer.h"
@@ -122,6 +123,7 @@ static int core_open (lua_State *L)
         {"logmon",          LogMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
+        {"webroot",         FileEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
         {"pointindex",      PointIndex::luaCreate},
         {"intervalindex",   IntervalIndex::luaCreate},
