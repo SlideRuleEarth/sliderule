@@ -1,0 +1,25 @@
+post:
+  operationId: reportCluster
+  summary: Get report for a specific cluster
+  description: >
+    Returns a report for a single deployed cluster. Requires member role.
+  parameters:
+    - name: cluster
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9-_]+$'
+        maxLength: 40
+      description: Cluster name.
+  responses:
+    '200':
+      description: Single cluster report
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ClusterReportResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

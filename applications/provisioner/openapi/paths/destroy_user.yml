@@ -1,0 +1,26 @@
+post:
+  operationId: destroyUser
+  summary: Destroy a user auto-scaling group
+  description: >
+    Destroys a user-specific auto-scaling group attached to a cluster.
+  parameters:
+    - $ref: '../components/parameters/Username.yml'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ClusterRequest.yml'
+  responses:
+    '200':
+      description: User ASG destroy initiated
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DestroyResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

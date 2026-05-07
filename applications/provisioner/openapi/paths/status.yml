@@ -1,0 +1,27 @@
+post:
+  operationId: status
+  summary: Get cluster deployment status
+  description: >
+    Returns the current deployment status of a cluster including CloudFormation
+    stack status, auto-shutdown time, current node count, version, and whether
+    the cluster is public.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ClusterRequest.yml'
+  responses:
+    '200':
+      description: Cluster status
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ClusterStatusResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

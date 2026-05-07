@@ -1,0 +1,24 @@
+post:
+  operationId: test
+  summary: Deploy test runner
+  description: >
+    Deploys a test runner CloudFormation stack that automatically runs tests
+    and destroys itself after completion. Only one test runner can be active
+    at a time. Requires member role.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/TestRequest.yml'
+  responses:
+    '200':
+      description: Test runner deployment initiated
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DeployResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

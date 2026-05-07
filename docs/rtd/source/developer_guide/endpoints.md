@@ -18,6 +18,10 @@ Links to the HTML rendered documentation for the APIs are provided below.
 
 <a href="/_static/openapi/authenticator.html" target="_blank">Authenticator OpenAPI Specification</a>
 
+## Provisioner APIs
+
+<a href="/_static/openapi/provisioner.html" target="_blank">Provisioner OpenAPI Specification</a>
+
 ## Runner APIs
 
 <a href="/_static/openapi/runner.html" target="_blank">Runner OpenAPI Specification</a>

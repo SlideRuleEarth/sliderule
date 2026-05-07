@@ -285,10 +285,11 @@ selftest: ## run the self test on the server code
 
 openapi: ## bundle and lint the openapi docs for sliderule
 	make sliderule-openapi
-	make ilb-openapi
 	make ams-openapi
-	make runner-openapi
+	make ilb-openapi
 	make authenticator-openapi
+	make runner-openapi
+	make provisioner-openapi
 
 %-openapi: ## bundle and lint openapi docs
 	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi

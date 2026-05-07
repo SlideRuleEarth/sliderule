@@ -1,0 +1,20 @@
+post:
+  operationId: info
+  summary: Get user info from JWT claims
+  description: >
+    Returns user information derived from the JWT claims, including username,
+    organization roles, known and deployable clusters, and resource limits.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  responses:
+    '200':
+      description: User information
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/UserInfo.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

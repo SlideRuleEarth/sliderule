@@ -1,0 +1,73 @@
+openapi: 3.0.3
+
+info:
+  title: SlideRule Provisioner API
+  description: >
+    API for deploying, managing, and monitoring SlideRule processing clusters.
+    Supports cluster lifecycle management (deploy, extend, destroy, status),
+    user auto-scaling groups, and test runner deployments.
+    All endpoints require JWT authentication; owner-level operations additionally
+    require request signature verification.
+  version: ${VERSION}
+  license:
+    name: BSD 3-Clause
+    url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: https://provisioner.slideruleearth.io
+    description: Production Provisioner API
+
+security:
+  - OAuth2: []
+
+paths:
+  /info:
+    $ref: 'paths/info.yml'
+  /deploy:
+    $ref: 'paths/deploy.yml'
+  /deploy/{username}:
+    $ref: 'paths/deploy_user.yml'
+  /extend:
+    $ref: 'paths/extend.yml'
+  /extend/{username}:
+    $ref: 'paths/extend_user.yml'
+  /destroy:
+    $ref: 'paths/destroy.yml'
+  /destroy/{username}:
+    $ref: 'paths/destroy_user.yml'
+  /status:
+    $ref: 'paths/status.yml'
+  /status/{username}:
+    $ref: 'paths/status_user.yml'
+  /events:
+    $ref: 'paths/events.yml'
+  /events/{username}:
+    $ref: 'paths/events_user.yml'
+  /report/clusters:
+    $ref: 'paths/report_clusters.yml'
+  /report/clusters/{cluster}:
+    $ref: 'paths/report_cluster.yml'
+  /report/tests:
+    $ref: 'paths/report_tests.yml'
+  /test:
+    $ref: 'paths/test.yml'
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      description: >
+        OAuth2 authorization code flow. Clients must first register via the
+        registration endpoint to obtain client credentials before initiating
+        the authorization code flow.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://login.slideruleearth.io/auth/github/login
+          tokenUrl: https://login.slideruleearth.io/auth/github/token
+          scopes:
+            provisioner:access: Access to provisioner APIs
+      x-client-registration:
+        url: https://login.slideruleearth.io/auth/github/register
+        description: >
+          Dynamic client registration endpoint. Must be called before initiating
+          the authorization code flow to obtain a client_id and client_secret.

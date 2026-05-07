@@ -1,0 +1,28 @@
+type: object
+additionalProperties:
+  type: object
+  description: Cluster report keyed by cluster name.
+  properties:
+    auto_shutdown:
+      type: string
+      nullable: true
+      description: Next auto-shutdown time or null.
+    current_nodes:
+      type: integer
+    version:
+      type: string
+    is_public:
+      type: string
+    node_capacity:
+      type: string
+    users:
+      type: object
+      additionalProperties:
+        type: object
+        properties:
+          auto_shutdown:
+            type: string
+            nullable: true
+          current_nodes:
+            type: integer
+      description: Per-user ASG details keyed by username.

@@ -3,7 +3,7 @@ openapi: 3.0.3
 info:
   title: SlideRule Asset Metadata Service API
   description: Web services for querying earth science dataset resources.
-  version: 1.0.0
+  version: ${VERSION}
   license:
       name: BSD 3-Clause
       url: https://opensource.org/licenses/BSD-3-Clause

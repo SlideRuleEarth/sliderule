@@ -1,0 +1,26 @@
+post:
+  operationId: extend
+  summary: Extend cluster TTL
+  description: >
+    Extends the auto-shutdown time of a cluster by updating the EventBridge
+    schedule rule with a new cron expression based on the requested TTL.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ExtendRequest.yml'
+  responses:
+    '200':
+      description: TTL extended
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ExtendResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

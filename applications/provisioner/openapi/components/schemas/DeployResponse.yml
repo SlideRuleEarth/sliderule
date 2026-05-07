@@ -1,0 +1,15 @@
+type: object
+properties:
+  parms:
+    type: array
+    items:
+      type: object
+      properties:
+        ParameterKey:
+          type: string
+        ParameterValue:
+          type: string
+    description: CloudFormation parameters used for stack creation.
+  response:
+    type: object
+    description: CloudFormation CreateStack API response.

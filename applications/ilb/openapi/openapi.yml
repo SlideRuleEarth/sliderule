@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Intelligent Load Balancer (ILB) API
   description: SlideRule cluster orchestration and analysis.
-  version: 1.0.0
+  version: ${VERSION}
   license:
     name: BSD-3-Clause
 

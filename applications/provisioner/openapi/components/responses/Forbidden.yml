@@ -1,0 +1,5 @@
+description: Access denied (invalid signature or insufficient permissions)
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/ErrorResponse.yml'

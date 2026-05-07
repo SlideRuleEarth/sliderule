@@ -1,0 +1,17 @@
+post:
+  operationId: reportClusters
+  summary: Get report of all deployed clusters
+  description: >
+    Returns a report of all deployed clusters including auto-shutdown time,
+    node count, version, and per-user ASG details. Requires member role.
+  responses:
+    '200':
+      description: Cluster report
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ClusterReportResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

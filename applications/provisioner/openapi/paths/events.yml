@@ -1,0 +1,25 @@
+post:
+  operationId: events
+  summary: Get cluster CloudFormation events
+  description: >
+    Returns CloudFormation stack events for a cluster deployment.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ClusterRequest.yml'
+  responses:
+    '200':
+      description: List of stack events
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/EventsResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'
