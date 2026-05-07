@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: Intelligent Load Balancer (ILB) API
+  description: SlideRule cluster orchestration and analysis.
+  version: 1.0.0
+  license:
+    name: BSD-3-Clause
+
+servers:
+  - url: http://localhost:8050
+    description: Discovery frontend (internal)
+  - url: https://{domain}
+    description: User frontend
+    variables:
+      domain:
+        default: slideruleearth.io
+
+paths:
+  /discovery/register:
+    $ref: './paths/register.yml'
+  /discovery/selflock:
+    $ref: './paths/selflock.yml'
+  /discovery/lock:
+    $ref: './paths/lock.yml'
+  /discovery/unlock:
+    $ref: './paths/unlock.yml'
+  /discovery/status:
+    $ref: './paths/status.yml'
+  /discovery/health:
+    $ref: './paths/health.yml'
+  /discovery/prometheus/orchestrator:
+    $ref: './paths/prometheus-orchestrator.yml'
+  /discovery/prometheus/analyzer:
+    $ref: './paths/prometheus-analyzer.yml'

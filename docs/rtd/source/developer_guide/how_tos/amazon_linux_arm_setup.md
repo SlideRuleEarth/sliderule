@@ -166,6 +166,15 @@ sudo dnf install gh
 sudo dnf install awscli
 ```
 
+### 13. Install Node Utilities
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+source ~/.bashrc
+nvm install 22
+nvm use 22
+```
+
 #### Single Sign On
 
 Run the following commands the first time to setup your machine:

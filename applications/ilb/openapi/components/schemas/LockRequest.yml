@@ -1,0 +1,19 @@
+type: object
+required:
+  - service
+  - nodesNeeded
+  - timeout
+properties:
+  service:
+    type: string
+    description: The service name.
+  nodesNeeded:
+    type: integer
+    description: Number of nodes requested.
+  locksPerNode:
+    type: integer
+    default: 1
+    description: Number of locks per node.
+  timeout:
+    type: integer
+    description: Timeout in seconds for the transactions (max 3600).

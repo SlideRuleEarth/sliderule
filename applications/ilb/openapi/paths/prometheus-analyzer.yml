@@ -1,0 +1,29 @@
+get:
+  summary: Analyzer Prometheus metrics
+  description: |
+    Provides metrics for Prometheus scraping including per-endpoint request counts, successful/untracked/failed request counts, unique originators, and blocked originators.
+  operationId: prometheusAnalyzer
+  tags:
+    - Metrics
+  responses:
+    '200':
+      description: Prometheus-formatted metrics.
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: |
+              # TYPE successful_request_count counter
+              successful_request_count 1000
+
+              # TYPE untracked_request_count counter
+              untracked_request_count 5
+
+              # TYPE failed_request_count counter
+              failed_request_count 10
+
+              # TYPE unique_originators counter
+              unique_originators 50
+
+              # TYPE blocked_originators counter
+              blocked_originators 2

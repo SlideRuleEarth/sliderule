@@ -1,0 +1,5 @@
+type: object
+properties:
+  service:
+    type: string
+    description: Service name to query. Defaults to CLUSTER environment variable.

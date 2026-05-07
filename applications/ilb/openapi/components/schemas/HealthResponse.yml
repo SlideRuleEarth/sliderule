@@ -1,0 +1,5 @@
+type: object
+properties:
+  health:
+    type: boolean
+    description: Always true when service is running.

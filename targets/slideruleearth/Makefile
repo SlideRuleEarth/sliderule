@@ -323,6 +323,12 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
 
+ilb-openapi: ## build, bundle, and lint the openapi docs for the intelligent load balancer
+	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/ilb
+	cp -R $(ROOT)/applications/ilb/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/ilb
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/ilb/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/ilb.json --ext json
+	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/ilb/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/ilb.json
+
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
@@ -366,8 +372,8 @@ ams-test: ## run ams tests
 ams-openapi: ## bundle and lint openapi docs for ams
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/ams
 	cp -R $(ROOT)/applications/ams/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/ams
-	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/ams/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/ams.yml
-	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/ams/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/ams.yml
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/ams/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/ams.json --ext json
+	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/ams/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/ams.json
 
 ########################
 # Cluster Targets
@@ -825,11 +831,10 @@ documentation-prep: ## create environment for building documentation
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 
-documentation-openapi-sliderule: openapi ## build the openapi specification for sliderule apis
+documentation-openapi: openapi ams-openapi ## build the openapi specification for apis
 	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(OPENAPI_DIR)/sliderule.html
-
-documentation-openapi-ams: ams-openapi ## build the openapi specification for ams apis
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ams.yml --output $(OPENAPI_DIR)/ams.html
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ams.json --output $(OPENAPI_DIR)/ams.html
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/ilb.json --output $(OPENAPI_DIR)/ilb.html
 
 documentation-rtd: ## generate read-the-docs static html
 	conda run -n rtd --no-capture-output \
@@ -839,8 +844,7 @@ documentation-rtd: ## generate read-the-docs static html
 
 documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
 	make documentation-prep
-	make documentation-openapi-sliderule
-	make documentation-openapi-ams
+	make documentation-openapi
 	make documentation-rtd
 
 documentation-run: ## locally run the documentation

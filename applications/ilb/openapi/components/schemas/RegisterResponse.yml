@@ -1,0 +1,11 @@
+type: object
+additionalProperties:
+  type: array
+  items:
+    oneOf:
+      - type: string
+      - type: integer
+  minItems: 2
+  maxItems: 2
+example:
+  "http://10.0.1.5:9081": ["my-service", 1717000000]

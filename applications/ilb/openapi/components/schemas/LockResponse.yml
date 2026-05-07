@@ -1,0 +1,12 @@
+type: object
+properties:
+  members:
+    type: array
+    items:
+      type: string
+    description: List of member addresses assigned.
+  transactions:
+    type: array
+    items:
+      type: integer
+    description: List of transaction IDs assigned.

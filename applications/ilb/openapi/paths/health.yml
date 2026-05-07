@@ -1,0 +1,13 @@
+get:
+  summary: Health check
+  description: Returns health status of the orchestrator.
+  operationId: health
+  tags:
+    - Orchestrator
+  responses:
+    '200':
+      description: Service is healthy.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/HealthResponse.yml'

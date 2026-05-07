@@ -1,0 +1,19 @@
+post:
+  summary: Get cluster status
+  description: Returns the number of registered nodes for a service.
+  operationId: status
+  tags:
+    - Orchestrator
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/StatusRequest.yml'
+  responses:
+    '200':
+      description: Cluster status.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/StatusResponse.yml'

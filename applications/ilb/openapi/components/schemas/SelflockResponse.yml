@@ -1,0 +1,5 @@
+type: object
+properties:
+  transaction:
+    type: integer
+    description: The transaction ID assigned.
