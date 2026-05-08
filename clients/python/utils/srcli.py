@@ -89,7 +89,7 @@ CommandRunner = {
     "status": lambda: display_concise(session.provisioner.status()),
     "events": session.provisioner.events,
     "report": lambda: {k[0]:display_concise(k[1]) for k in session.provisioner.report(kind=args.report).items()},
-    "test": lambda: session.provision("test", {"branch":args.branch}),
+    "test": lambda: session.gateway_request("test", subdomain="provisioner", data={"branch":args.branch}),
     "info": session.provisioner.info,
     "authenticate": lambda: session.authenticate(force_login=True),
     # Cluster

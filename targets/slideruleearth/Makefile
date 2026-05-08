@@ -508,10 +508,12 @@ testrunner-delete: ## deletes the test runner and any lingering event bridge rul
 	- aws events delete-rule --name $(TESTRUNNER_STACKNAME)-auto-delete
 
 testrunner-report: ## invokes the provisioner *report* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --report tests --asjson
+	conda run -n sliderule --no-capture-output \
+	sh -c '	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --report tests --asjson'
 
 testrunner-run: ## invokes the provisioner *report* lambda function and displays the response
-	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --branch main --commands test
+	conda run -n sliderule --no-capture-output \
+	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --branch main --commands test'
 
 ########################
 # Recorder Targets
