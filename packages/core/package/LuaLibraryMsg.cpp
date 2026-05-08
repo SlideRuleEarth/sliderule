@@ -457,7 +457,7 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
         record = rec_data->rec;
         if(record == NULL)
         {
-            return luaL_error(L, "nill record supplied.");
+            return luaL_error(L, "nil record supplied.");
         }
     }
     else // population string

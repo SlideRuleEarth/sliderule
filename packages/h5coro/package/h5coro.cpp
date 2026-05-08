@@ -39,6 +39,7 @@
 #include "H5Array.h"
 #include "H5DArray.h"
 #include "H5Element.h"
+#include "H5Fields.h"
 #include "H5File.h"
 #include "H5DataFrame.h"
 #include "H5DatasetDevice.h"
@@ -189,7 +190,7 @@ int h5_open (lua_State *L)
         {"dataframe",   H5DataFrame::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
         {"object",      H5Object::luaCreate},
-        {"parms",       H5Coro::Fields::luaCreate},
+        {"parms",       H5Fields::luaCreate},
         {"read",        h5_read},
         {NULL,          NULL}
     };

@@ -29,62 +29,58 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_dataframe__
-#define __h5_dataframe__
+#ifndef __h5_fields__
+#define __h5_fields__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "GeoDataFrame.h"
-#include "Asset.h"
 #include "H5CoroLib.h"
-#include "H5Fields.h"
-#include "H5Object.h"
-#include "H5VarSet.h"
+#include "LuaEngine.h"
+#include "FieldElement.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class H5DataFrame: public GeoDataFrame
+class H5Fields: public RequestFields
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        * Data
+        *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
+        FieldElement<long>      col {0};
+        FieldElement<long>      startRow {0};
+        FieldElement<long>      numRows {H5Coro::ALL_ROWS};
+        FieldElement<string>    crs;
+        FieldElement<string>    index_column;
+        FieldElement<string>    time_column;
+        FieldElement<string>    x_column;
+        FieldElement<string>    y_column;
+        FieldElement<string>    z_column;
+        FieldList<string>       groups;
+        FieldList<string>       variables;
+
+        /*--------------------------------------------------------------------
+        * Methods
+        *--------------------------------------------------------------------*/
+
+        static int luaCreate (lua_State* L);
+        static const char* defaultCRS (void);
 
     protected:
 
         /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        * Methods
+        *--------------------------------------------------------------------*/
 
-                            H5DataFrame         (lua_State* L, H5Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
-                                                 const char* time_column, const char* x_column, const char* y_column, const char* z_column);
-                            ~H5DataFrame        (void) override;
-        void                setGeoColumns       (void);
-        static void*        joinThread          (void* parm);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        H5Object*               h5obj;
-        H5Fields*               parms;
-        H5VarSet                data;
-        FieldElement<string>    group;
-        long                    timeout; // milliseconds
-        const char*             timeColumn;
-        const char*             xColumn;
-        const char*             yColumn;
-        const char*             zColumn;
-        Thread*                 joinPid;
+        H5Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
+        virtual ~H5Fields (void) override = default;
 };
 
-#endif  /* __h5_file__ */
+#endif  /* __h5_fields__ */

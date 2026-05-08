@@ -16,6 +16,7 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dataset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DatasetDevice.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5Fields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5File.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Object.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5VarSet.cpp
@@ -39,6 +40,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dataset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DatasetDevice.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Element.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5Fields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5File.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Object.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5VarSet.h
