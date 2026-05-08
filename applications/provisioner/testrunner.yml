@@ -243,7 +243,7 @@ Resources:
           # Install Mamba
           #
           cd /
-          wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
+          wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
           bash Miniforge3-Linux-aarch64.sh -b
           #
           # Setup and Clone SlideRule Repository
