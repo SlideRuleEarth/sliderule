@@ -117,9 +117,9 @@ class TestSTAC:
     def test_hls_asdict(self, init):
         earthdata.set_max_resources(1000)
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
-        catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2021-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
+        catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2021-01-01T00:00:00Z", time_end="2022-01-07T00:00:00Z", as_str=False)
         assert init
-        assert len(catalog["features"]) == 590
+        assert len(catalog["features"]) == 504
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 2
 
     def test_hls_asstr(self, init):

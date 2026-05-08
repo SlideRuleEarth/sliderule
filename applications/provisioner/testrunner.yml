@@ -229,10 +229,11 @@ Resources:
           mkdir -p /etc/ssl/private
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
           #
-          # AMS
+          # Data
           #
           mkdir -p /data/
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/ams/ /data/ --recursive
+          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/server/ /data/ --recursive
           #
           # Plugins
           #
