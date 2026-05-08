@@ -36,7 +36,7 @@ Version description of the v5.3.0 release of SlideRule Earth.
 
 * **v5.3.2** - [bd0e9a8](https://github.com/SlideRuleEarth/sliderule/commit/bd0e9a82f6ddceb70c5bbfdb24aa224143ebe9f8) - ATL09 sampler alignment fixes
 
-* **v5.3.21** - [#603](https://github.com/SlideRuleEarth/sliderule/issues/603) - support for trailing slashes in `h5x` group names; enhanced h5coro docs
+* **v5.3.2** - [#603](https://github.com/SlideRuleEarth/sliderule/issues/603) - support for trailing slashes in `h5x` group names; enhanced h5coro docs
 
 ## Development Updates
 
