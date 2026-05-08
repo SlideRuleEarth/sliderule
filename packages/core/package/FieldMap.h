@@ -46,8 +46,8 @@
  * CLASS
  ******************************************************************************/
 
- template <class T>
- class FieldMap: public Field
+template <class T>
+class FieldMap: public Field
 {
     public:
 
@@ -58,10 +58,12 @@
         typedef struct {
             const char* name;
             T* field;
+            const char* description;
         } init_entry_t;
 
         typedef struct {
             T* field;
+            const char* description; // pre-allocated, never deleted
             bool free_on_delete;
         } entry_t;
 
@@ -74,7 +76,7 @@
                         FieldMap    (std::initializer_list<init_entry_t> init_list);
         virtual         ~FieldMap   (void) override;
 
-        bool            add         (const char* key, T* field, bool free_on_delete=true);
+        bool            add         (const char* key, T* field, const char* description, bool free_on_delete=true);
         bool            find        (const char* key, T** data);
 
         void            clear       (void) override;
@@ -82,6 +84,8 @@
 
         FieldMap<T>&    operator=   (const FieldMap<T>& other);
         const T&        operator[]  (const char* key) const;
+
+        string          toOpenApi   (const char* description) const override;
 
         string          toJson      (void) const override;
         int             toLua       (lua_State* L) const override;
@@ -126,7 +130,7 @@ FieldMap<T>::FieldMap(std::initializer_list<init_entry_t> init_list):
 {
     for(const init_entry_t& elem: init_list)
     {
-        add(elem.name, elem.field, false);
+        add(elem.name, elem.field, elem.description, false);
     }
 };
 
@@ -143,10 +147,11 @@ FieldMap<T>::~FieldMap(void)
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
-bool FieldMap<T>::add(const char* key, T* field, bool free_on_delete)
+bool FieldMap<T>::add(const char* key, T* field, const char* description, bool free_on_delete)
 {
     entry_t entry = {
         .field = field,
+        .description = description,
         .free_on_delete = free_on_delete
     };
     return fields.add(key, entry);
@@ -161,6 +166,7 @@ bool FieldMap<T>::find (const char* key, T** data)
     assert(data);
     entry_t entry = {
         .field = NULL,
+        .description = NULL,
         .free_on_delete = false
     };
     if(fields.find(key, &entry))
@@ -220,6 +226,38 @@ template <class T>
 const T& FieldMap<T>::operator[](const char* key) const
 {
     return *fields[key].field;
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object                       <---- from here
+ *           description: <decsription>
+ *           properties:                        <---- to here
+ *             <field name>:
+ *               type: object | string | number | integer | boolean | array
+ *               description: <description>
+ *               default: <value>
+ *             <field>:
+ *               type: array
+ *               description: <description>
+ *               items:
+ *                 type: <field type>
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldMap<T>::toOpenApi (const char* description) const
+{
+    typename Dictionary<entry_t>::Iterator iter(fields);
+    string str = FString("{\"type\": \"object\", \"description\": \"%s\", \"properties\": {", description).c_str();
+    for(int i = 0; i < iter.length; i++)
+    {
+        const typename Dictionary<entry_t>::kv_t kv = iter[i];
+        str += FString("\"%s\": %s%s", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str(), (i < iter.length - 1) ? "," : "").c_str();
+    }
+    str += "}}";
+    return str;
 }
 
 /*----------------------------------------------------------------------------
@@ -296,7 +334,7 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
             lua_pushnil(L);
             while(lua_next(L, table_index) != 0)
             {
-                entry_t entry = {NULL, true};
+                entry_t entry = {NULL, NULL, true};
                 try
                 {
                     const char* key = LuaObject::getLuaString(L, -2);
@@ -335,7 +373,7 @@ inline void convertFromLua(lua_State* L, int index, FieldMap<Field>& v) {
     v.fromLua(L, index);
 }
 
-inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::OBJECT; }
 
 
 #endif  /* __field_map__ */

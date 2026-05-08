@@ -1,0 +1,43 @@
+type: object
+required:
+  - redirect_uris
+properties:
+  redirect_uris:
+    type: array
+    items:
+      type: string
+      format: uri
+    minItems: 1
+    description: Array of allowed redirect URIs. Must be https or http://localhost.
+    example: ["https://myapp.example.com/callback"]
+  client_name:
+    type: string
+    maxLength: 200
+    description: Human-readable name for the client.
+    example: My MCP Client
+  grant_types:
+    type: array
+    items:
+      type: string
+      enum: [authorization_code, refresh_token]
+    default: [authorization_code]
+  response_types:
+    type: array
+    items:
+      type: string
+      enum: [code]
+    default: [code]
+  token_endpoint_auth_method:
+    type: string
+    enum: [none]
+    default: none
+    description: Only 'none' is supported (PKCE is used instead of client_secret).
+  code_challenge_method:
+    type: string
+    enum: [S256]
+    default: S256
+    description: Only S256 is supported.
+  scope:
+    type: string
+    description: Space-separated list of requested scopes.
+    example: mcp:tools mcp:resources

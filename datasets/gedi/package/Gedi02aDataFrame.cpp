@@ -61,7 +61,7 @@ int Gedi02aDataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
-        _hdf02a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf02a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -82,15 +82,15 @@ int Gedi02aDataFrame::luaCreate (lua_State* L)
 Gedi02aDataFrame::Gedi02aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf02a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"shot_number",         &shot_number},
-        {"time_ns",             &time_ns},
-        {"latitude",            &latitude},
-        {"longitude",           &longitude},
-        {"elevation_lm",        &elevation_lm},
-        {"elevation_hr",        &elevation_hr},
-        {"solar_elevation",     &solar_elevation},
-        {"sensitivity",         &sensitivity},
-        {"flags",               &flags}
+        {"shot_number",         &shot_number,       "GEDI laser shot number identifier"},
+        {"time_ns",             &time_ns,           "Unix time (nanoseconds) of laser shot"},
+        {"latitude",            &latitude,          "Latitude (EPSG:7912)"},
+        {"longitude",           &longitude,         "Longitude (EPSG:7912)"},
+        {"elevation_lm",        &elevation_lm,      "Elevation of the lowest mode of the return waveform (meters)"},
+        {"elevation_hr",        &elevation_hr,      "Elevation of the highest mode of the return waveform (meters)"},
+        {"solar_elevation",     &solar_elevation,   "Solar elevation (degrees)"},
+        {"sensitivity",         &sensitivity,       "Sensitivity score"},
+        {"flags",               &flags,             "Data flags"}
     },
     _parms,
     _hdf02a,
@@ -103,9 +103,16 @@ Gedi02aDataFrame::Gedi02aDataFrame (lua_State* L, const char* beam_str, GediFiel
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf02a)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------

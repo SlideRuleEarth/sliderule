@@ -1,0 +1,24 @@
+post:
+  operationId: reportTests
+  summary: Get test runner report
+  description: >
+    Returns the summary report from the last test runner deployment.
+    Requires member role.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/TestRequest.yml'
+  responses:
+    '200':
+      description: Test report
+      content:
+        application/json:
+          schema:
+            type: object
+            description: Test summary results (structure varies by test run).
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

@@ -1,0 +1,20 @@
+type: object
+required:
+  - cluster
+  - ttl
+properties:
+  cluster:
+    type: string
+    pattern: '^[A-Za-z0-9-_]+$'
+    maxLength: 40
+    description: Name of the cluster to extend.
+  ttl:
+    type: integer
+    minimum: 15
+    description: New TTL in minutes from now.
+    example: 60
+  node_capacity:
+    type: integer
+    minimum: 1
+    maximum: 100
+    description: Node capacity (validated but not used for extend).

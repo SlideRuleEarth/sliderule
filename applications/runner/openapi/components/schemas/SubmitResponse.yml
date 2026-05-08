@@ -1,0 +1,14 @@
+type: object
+properties:
+  name:
+    type: string
+    description: The job name.
+  run_url:
+    type: string
+    description: S3 URL where job artifacts are stored.
+    example: s3://sliderule-public/stack-name/run-user-name-abc1234567
+  job_ids:
+    type: array
+    items:
+      type: string
+    description: List of AWS Batch job IDs that were submitted.

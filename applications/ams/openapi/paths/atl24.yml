@@ -1,0 +1,17 @@
+post:
+  operationId: ATL24
+  summary: Query ATL24 granules
+  description: >
+    Query ATL24 bathymetry granule metadata with spatial, temporal,
+    and attribute-based filters.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ATL24Request.yml'
+  responses:
+    '200':
+      $ref: '../components/responses/ATL24Response.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

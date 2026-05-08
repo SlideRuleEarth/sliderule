@@ -1,0 +1,15 @@
+get:
+  operationId: openidConfiguration
+  summary: OpenID Connect Discovery
+  description: >
+    Returns the OpenID Connect discovery document with issuer, JWKS URI,
+    and supported algorithms.
+  responses:
+    '200':
+      description: OpenID configuration
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/OpenIdConfigResponse.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

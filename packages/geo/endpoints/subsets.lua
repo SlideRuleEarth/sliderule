@@ -44,14 +44,63 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = {"json"},
+    outputs = {"json"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/GeoParameters.json" }
+                ],
+                "type": "object",
+                "properties": {
+                    "extents": {
+                        "type": "array",
+                        "description": "Array of [<xmin>, <ymin>, <xmax>, <ymax>] extents to subset",
+                        "items": {
+                            "type": "array",
+                            "items": { "type": "number" },
+                            "minItems": 4,
+                            "maxItems": 4
+                        }
+                    }
+                },
+                "required": ["samples", "extents"]
+            }
+        } ]],
+        response = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "subsets": {
+                        "type": "array",
+                        "description": "Array of subset objects for each extent",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "file": {
+                                    "type": "string",
+                                    "description": "Name of the raster file that was subset"
+                                },
+                                "size": {
+                                    "type": "integer",
+                                    "description": "Size of the subset data in bytes"
+                                },
+                                "poolsize": {
+                                    "type": "integer",
+                                    "description": "Current memory pool size in bytes"
+                                }
+                            },
+                            "required": ["file", "size", "poolsize"]
+                        }
+                    },
+                    "errors": {
+                        "type": "array",
+                        "description": "Error codes for each coordinate (0 indicates no error)",
+                        "items": { "type": "integer" }
+                    }
+                }
+            }
+        } ]]
+    }
 }
-
--- INPUT
---  {
---      "subsets": {<geoparms>}
---      "extents": [
---          [<xmin>, <ymin>, <xmax>, <ymax>],
---          [<xmin>, <ymin>, <xmax>, <ymax>]
---      ]
---  }

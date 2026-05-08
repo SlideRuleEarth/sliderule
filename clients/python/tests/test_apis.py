@@ -21,16 +21,16 @@ class TestTime:
             "time": "NOW",
             "input": "NOW",
             "output": "GPS" }
-        d = sliderule.source("time", rqst)
+        d = sliderule.source("datetime", rqst)
         now = d["time"] - (d["time"] % 1000) # gmt is in resolution of seconds, not milliseconds
         rqst["time"] = d["time"]
         rqst["input"] = "GPS"
         rqst["output"] = "GMT"
-        d = sliderule.source("time", rqst)
+        d = sliderule.source("datetime", rqst)
         rqst["time"] = d["time"]
         rqst["input"] = "GMT"
         rqst["output"] = "GPS"
-        d = sliderule.source("time", rqst)
+        d = sliderule.source("datetime", rqst)
         again = d["time"]
         assert init
         assert now == again

@@ -61,7 +61,7 @@ int Atl06DataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf06 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf06 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -82,33 +82,33 @@ int Atl06DataFrame::luaCreate (lua_State* L)
 Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",                 &time_ns},
-        {"latitude",                &latitude},
-        {"longitude",               &longitude},
-        {"x_atc",                   &x_atc},
-        {"y_atc",                   &y_atc},
-        {"h_li",                    &h_li},
-        {"h_li_sigma",              &h_li_sigma},
-        {"sigma_geo_h",             &sigma_geo_h},
-        {"atl06_quality_summary",   &atl06_quality_summary},
-        {"segment_id",              &segment_id},
-        {"seg_azimuth",             &seg_azimuth},
-        {"dh_fit_dx",               &dh_fit_dx},
-        {"h_robust_sprd",           &h_robust_sprd},
-        {"w_surface_window_final",  &w_surface_window_final},
-        {"bsnow_conf",              &bsnow_conf},
-        {"bsnow_h",                 &bsnow_h},
-        {"r_eff",                   &r_eff},
-        {"tide_ocean",              &tide_ocean},
-        {"n_fit_photons",           &n_fit_photons}
+        {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
+        {"latitude",                &latitude,                  "Latitude (EPSG:9989)"},
+        {"longitude",               &longitude,                 "Longitude (EPSG:9989)"},
+        {"x_atc",                   &x_atc,                     "Along-track x-coordinate of the segment (in meters), measured parallel to the RGT, measured from the ascending node of the equatorial crossing of a given RGT"},
+        {"y_atc",                   &y_atc,                     "Along-track y-coordinate of the segment (in meters), relative to the RGT, measured along the perpendicular to the RGT, positive to the right of the RGT"},
+        {"h_li",                    &h_li,                      "Standard land-ice segment height determined by land ice algorithm, corrected for first-photon bias, representing the median-based height of the selected PEs"},
+        {"h_li_sigma",              &h_li_sigma,                "Propagated error due to sampling error and FPB correction from the land ice algorithm"},
+        {"sigma_geo_h",             &sigma_geo_h,               "Total vertical geolocation error due to PPD and POD, including the effects of horizontal geolocation error on the segment vertical error"},
+        {"atl06_quality_summary",   &atl06_quality_summary,     "Flag; 0: No likely problems identified for the segment, 1: One or more likely problems identified for the segment"},
+        {"segment_id",              &segment_id,                "Segment number, counting from the equator; equal to the segment_id for the second of the two 20-m ATL03 segments included in the 40-m ATL06 segment"},
+        {"seg_azimuth",             &seg_azimuth,               "The azimuth of the pair track, east of local north"},
+        {"dh_fit_dx",               &dh_fit_dx,                 "Along-track slope from along-track segment fit"},
+        {"h_robust_sprd",           &h_robust_sprd,             "RDE of misfit between PE heights and the along-track segment fit"},
+        {"w_surface_window_final",  &w_surface_window_final,    "Width of the surface window (in meters), top to bottom"},
+        {"bsnow_conf",              &bsnow_conf,                "Blowing snow confidence; -3: surface not detected, -2: no surface wind, -1: no scattering layer found, 0: no top layer found, 1: none-little, 2: weak, 3: moderate, 4: moderate-high, 5: high, 6: very high"},
+        {"bsnow_h",                 &bsnow_h,                   "Blowing snow layer top height"},
+        {"r_eff",                   &r_eff,                     "Effective reflectance, uncorrected for atmospheric effects"},
+        {"tide_ocean",              &tide_ocean,                "Ocean tide"},
+        {"n_fit_photons",           &n_fit_photons,             "Number of PEs used in determining h_li after editing"}
     },
     {
-        {"spot",                    &spot},
-        {"cycle",                   &cycle},
-        {"region",                  &region},
-        {"rgt",                     &rgt},
-        {"gt",                      &gt},
-        {"granule",                 &granule}
+        {"spot",                    &spot,                      "ATLAS detector spot"},
+        {"cycle",                   &cycle,                     "ICESat-2 Cycle number"},
+        {"region",                  &region,                    "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+        {"rgt",                     &rgt,                       "ICESat-2 Reference ground track"},
+        {"gt",                      &gt,                        "Ground track; integer representation of beam"},
+        {"granule",                 &granule,                   "Name of the source ATL03 granule"}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
     Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
@@ -117,7 +117,7 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf06->name, META_SOURCE_ID),
+    granule(_hdf06 ? _hdf06->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -126,9 +126,6 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf06(_hdf06),
     beam(StringLib::duplicate(beam_str))
 {
-    assert(_parms);
-    assert(_hdf06);
-
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
@@ -138,9 +135,16 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf06)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -153,7 +157,7 @@ Atl06DataFrame::~Atl06DataFrame (void)
     delete [] beam;
     delete outQ;
     parms->releaseLuaObject();
-    hdf06->releaseLuaObject();
+    if(hdf06) hdf06->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

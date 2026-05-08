@@ -45,10 +45,17 @@
 #include "RegionMask.h"
 #include "MathLib.h"
 #include "OutputFields.h"
+#include "SystemConfig.h"
 
 #ifdef __geo__
 #include "GeoFields.h"
 #endif
+
+/******************************************************************************
+ * CLASS
+ ******************************************************************************/
+
+#define REQUEST_INVALID_TIMEOUT -1
 
 /******************************************************************************
  * CLASS
@@ -68,15 +75,14 @@ class RequestFields: public LuaObject, public FieldMap<Field>
 
         static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
 
-        static const double INVALID_COORDINATE;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int luaCreate (lua_State* L);
-        static int luaExport (lua_State* L);
-        static int luaEncode (lua_State* L);
+        static int luaExport (lua_State* L); // to Lua
+        static int luaEncode (lua_State* L); // to JSON
+        static int luaDescribe (lua_State* L); // to OpenAPI
 
         static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);
@@ -114,10 +120,10 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};
-        FieldElement<int>               timeout             {IO_INVALID_TIMEOUT}; // global timeout
-        FieldElement<int>               rqstTimeout         {IO_INVALID_TIMEOUT};
-        FieldElement<int>               nodeTimeout         {IO_INVALID_TIMEOUT};
-        FieldElement<int>               readTimeout         {IO_INVALID_TIMEOUT};
+        FieldElement<int>               timeout             {REQUEST_INVALID_TIMEOUT}; // global timeout
+        FieldElement<int>               rqstTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>               nodeTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>               readTimeout         {REQUEST_INVALID_TIMEOUT};
         FieldElement<int>               clusterSizeHint     {0};
         FieldElement<uint64_t>          keySpace            {INVALID_KEY};
         RegionMask                      regionMask;
@@ -153,10 +159,10 @@ string convertToJson(const MathLib::datum_t& v);
 int convertToLua(lua_State* L, const MathLib::datum_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::datum_t& v);
 
-inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::USER; };
-inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::USER; };
-inline uint32_t toEncoding(MathLib::datum_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::OBJECT; }
+inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::OBJECT; };
+inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::OBJECT; };
+inline uint32_t toEncoding(MathLib::datum_t& v) { (void)v; return Field::OBJECT; };
 
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<MathLib::coord_t>& v, long start_index, long num_elements) {
     (void)v;

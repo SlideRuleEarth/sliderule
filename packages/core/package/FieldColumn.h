@@ -126,6 +126,7 @@ class FieldColumn: public FieldUntypedColumn
         double          mode            (long start_index = 0, long num_elements = -1) const override;
         unique_map_t    unique          (long start_index = 0, long num_elements = -1, long scale = 1) const override;
 
+        string          toOpenApi       (const char* description) const override;
         string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
         int             toLua           (lua_State* L, long key) const override;
@@ -146,7 +147,7 @@ class FieldColumn: public FieldUntypedColumn
  * FUNCTIONS
  ******************************************************************************/
 
-inline uint32_t toEncoding(FieldUntypedColumn& v)   { (void)v; return Field::USER; };
+inline uint32_t toEncoding(FieldUntypedColumn& v)   { (void)v; return Field::OBJECT; };
 
 inline string convertToJson(const FieldUntypedColumn& v) {
     return v.toJson();
@@ -851,6 +852,26 @@ typename FieldColumn<T>::unique_map_t FieldColumn<T>::unique (long start_index, 
         delete [] column.data;
     }
     return unique_map;
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object
+ *           properties:
+ *             <field>:
+ *               type: array                    <---- from here
+ *               description: <description>
+ *               items:
+ *                 type: <field type>           <---- to here
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldColumn<T>::toOpenApi (const char* description) const
+{
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}}",
+        description, this->getOpenApiType(), this->getOpenApiFormat()).c_str();
 }
 
 /*----------------------------------------------------------------------------

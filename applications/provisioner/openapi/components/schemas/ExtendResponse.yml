@@ -1,0 +1,9 @@
+type: object
+properties:
+  cron_expression:
+    type: string
+    description: Updated EventBridge cron expression for auto-shutdown.
+    example: "cron(30 14 7 5 ? 2026)"
+  response:
+    type: object
+    description: EventBridge PutRule API response.

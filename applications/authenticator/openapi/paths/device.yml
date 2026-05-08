@@ -1,0 +1,18 @@
+post:
+  operationId: deviceCode
+  summary: Initiate device authorization flow
+  description: >
+    Initiates the OAuth device flow for CLI/Python clients. Returns a device code,
+    user code, and verification URI. The user must visit the verification URI and
+    enter the user code to authorize the device.
+  responses:
+    '200':
+      description: Device code issued
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DeviceCodeResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

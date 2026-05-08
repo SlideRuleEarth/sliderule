@@ -34,13 +34,59 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary"}
+    inputs = {"json"},
+    outputs = {"binary"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "description": "Name of the registered asset to read from"
+                    },
+                    "resource": {
+                        "type": "string",
+                        "description": "URL of HDF5 file or object"
+                    },
+                    "dataset": {
+                        "type": "string",
+                        "description": "Name of the dataset within the HDF5 file"
+                    },
+                    "datatype": {
+                        "type": "integer",
+                        "description": "Data type enumeration (RecordObject::valType_t); defaults to DYNAMIC"
+                    },
+                    "col": {
+                        "type": "integer",
+                        "description": "Column to read from a multi-dimensional dataset",
+                        "default": 0
+                    },
+                    "startrow": {
+                        "type": "integer",
+                        "description": "Starting row for the read",
+                        "default": 0
+                    },
+                    "numrows": {
+                        "type": "integer",
+                        "description": "Number of rows to read; defaults to all rows"
+                    },
+                    "id": {
+                        "type": "integer",
+                        "description": "Integer ID to attach to the returned data",
+                        "default": 0
+                    }
+                },
+                "required": ["asset", "resource", "dataset"]
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/h5dataset.json" },
+                ],
+                "description": "Stream of binary-encoded values read from the hdf5 file"
+            }
+        } ]]
+    }
 }
-
--- INPUT
---  {
---      "resource":     "<url of hdf5 file or object>"
---      "dataset":      "<name of dataset>"
---      "datatype":     <RecordObject::valType_t>
---      "id":           <integer id to attach to data>
---  }

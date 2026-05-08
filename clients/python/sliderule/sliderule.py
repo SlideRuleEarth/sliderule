@@ -197,7 +197,7 @@ def source (api, parm=None, stream=False, callbacks=None, path="/source", sessio
         ...     "input": "NOW",
         ...     "output": "GPS"
         ... }
-        >>> rsps = sliderule.source("time", rqst)
+        >>> rsps = sliderule.source("datetime", rqst)
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
@@ -382,7 +382,7 @@ def gps2utc (gps_time, as_str=True, session=None):
         '2019-02-27 19:34:03'
     '''
     session = checksession(session)
-    rsps = session.source("time", {"time": int(gps_time * 1000), "input": "GPS", "output": "DATE"})
+    rsps = session.source("datetime", {"time": int(gps_time * 1000), "input": "GPS", "output": "DATE"})
     if as_str:
         return rsps["time"]
     else:

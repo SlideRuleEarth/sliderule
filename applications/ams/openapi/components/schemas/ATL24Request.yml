@@ -1,0 +1,33 @@
+allOf:
+  - $ref: './ICESat2QueryParams.yml'
+  - type: object
+    description: >
+      All fields are optional. Filters are combined with AND logic.
+    properties:
+      season:
+        type: integer
+        description: Season value to match
+      photons0:
+        type: integer
+        description: Minimum bathy_photons range
+      photons1:
+        type: integer
+        description: Maximum bathy_photons range
+      meandepth0:
+        type: number
+        description: Minimum bathy_mean_depth range
+      meandepth1:
+        type: number
+        description: Maximum bathy_mean_depth range
+      mindepth0:
+        type: number
+        description: Minimum bathy_min_depth range
+      mindepth1:
+        type: number
+        description: Maximum bathy_min_depth range
+      maxdepth0:
+        type: number
+        description: Minimum bathy_max_depth range
+      maxdepth1:
+        type: number
+        description: Maximum bathy_max_depth range

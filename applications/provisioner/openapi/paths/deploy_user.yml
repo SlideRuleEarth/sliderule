@@ -1,0 +1,27 @@
+post:
+  operationId: deployUser
+  summary: Deploy a user auto-scaling group
+  description: >
+    Creates a user-specific auto-scaling group attached to an existing cluster.
+    The username in the path must match the authenticated user.
+  parameters:
+    - $ref: '../components/parameters/Username.yml'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/DeployRequest.yml'
+  responses:
+    '200':
+      description: User ASG deployment initiated
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DeployResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

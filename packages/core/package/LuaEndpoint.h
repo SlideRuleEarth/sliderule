@@ -43,7 +43,7 @@
 #include "RequestFields.h"
 
 /******************************************************************************
- * PISTACHE SERVER CLASS
+ * CLASS
  ******************************************************************************/
 
 class LuaEndpoint: public EndpointObject

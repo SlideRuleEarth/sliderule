@@ -31,23 +31,72 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary"}
+    inputs = {"json"},
+    outputs = {"binary"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "description": "Name of the registered asset to read from"
+                    },
+                    "resource": {
+                        "type": "string",
+                        "description": "URL of HDF5 file or object"
+                    },
+                    "datasets": {
+                        "type": "array",
+                        "description": "List of datasets to read from the HDF5 file",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "dataset": {
+                                    "type": "string",
+                                    "description": "Name of the dataset"
+                                },
+                                "valtype": {
+                                    "type": "integer",
+                                    "description": "Data type enumeration (RecordObject::valType_t)"
+                                },
+                                "col": {
+                                    "type": "integer",
+                                    "description": "Column number"
+                                },
+                                "startrow": {
+                                    "type": "integer",
+                                    "description": "Starting row number"
+                                },
+                                "numrows": {
+                                    "type": "integer",
+                                    "description": "Total number of rows to read"
+                                },
+                                "slice": {
+                                    "type": "array",
+                                    "description": "Array of [start, end] pairs for each dimension",
+                                    "items": {
+                                        "type": "array",
+                                        "items": { "type": "integer" },
+                                        "minItems": 2,
+                                        "maxItems": 2
+                                    }
+                                }
+                            },
+                            "required": ["dataset"]
+                        }
+                    }
+                },
+                "required": ["asset", "resource", "datasets"]
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/h5dataset.json" },
+                ],
+                "description": "Stream of binary-encoded values read from the hdf5 file"
+            }
+        } ]]
+    }
 }
-
--- INPUT
---  {
---      "asset":        "<name of asset>",
---      "resource":     "<url of hdf5 file or object>",
---      "datasets":
---      [
---          {
---              "dataset":  "<name of dataset>",
---              "valtype":  <RecordObject::valType_t>,
---              "col":      [<column number>],
---              "startrow": [<row number>],
---              "numrows":  [<total number of rows to read>],
---              "slice":    [ [<start dim0>, <end dim0>], [<start dim1>, <end dim1>], ... ]
---          },
---          ...
---      ]
---  }

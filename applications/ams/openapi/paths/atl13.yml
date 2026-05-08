@@ -1,0 +1,19 @@
+post:
+  operationId: ATL13
+  summary: Query ATL13 granules
+  description: >
+    Query ATL13 granule metadata by lake reference ID, lake name, coordinate,
+    and/or spatial/temporal filters. Single lake queries (refid, name, coord)
+    are attempted in order; if a lake is found, its granules are intersected
+    with any general query results.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ATL13Request.yml'
+  responses:
+    '200':
+      $ref: '../components/responses/ATL13Response.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

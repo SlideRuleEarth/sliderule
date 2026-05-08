@@ -359,21 +359,21 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     }
 
     // add new columns to dataframe
-    dataframe->addExistingColumn(FString("%s.value",    sampler->rkey).c_str(), value_column);
-    dataframe->addExistingColumn(FString("%s.time_ns",  sampler->rkey).c_str(), time_column);
-    dataframe->addExistingColumn(FString("%s.fileid",   sampler->rkey).c_str(), fileid_column);
-    if(band_column)     dataframe->addExistingColumn(FString("%s.band",         sampler->rkey).c_str(), band_column);
-    if(flags_column)    dataframe->addExistingColumn(FString("%s.flags",        sampler->rkey).c_str(), flags_column);
-    if(count_column)    dataframe->addExistingColumn(FString("%s.stats.count",  sampler->rkey).c_str(), count_column);
-    if(min_column)      dataframe->addExistingColumn(FString("%s.stats.min",    sampler->rkey).c_str(), min_column);
-    if(max_column)      dataframe->addExistingColumn(FString("%s.stats.max",    sampler->rkey).c_str(), max_column);
-    if(mean_column)     dataframe->addExistingColumn(FString("%s.stats.mean",   sampler->rkey).c_str(), mean_column);
-    if(median_column)   dataframe->addExistingColumn(FString("%s.stats.median", sampler->rkey).c_str(), median_column);
-    if(stdev_column)    dataframe->addExistingColumn(FString("%s.stats.stdev",  sampler->rkey).c_str(), stdev_column);
-    if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column);
-    if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column);
-    if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column);
-    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column);
+    dataframe->addExistingColumn(FString("%s.value",    sampler->rkey).c_str(), value_column,   "Sampled value from the raster");
+    dataframe->addExistingColumn(FString("%s.time_ns",  sampler->rkey).c_str(), time_column,    "Unix time (nanoseconds); the best time provided by the raster dataset for when the sampled value was measured");
+    dataframe->addExistingColumn(FString("%s.fileid",   sampler->rkey).c_str(), fileid_column,  "A number used to identify the name of the file the sample value came from; this is used in conjunction with the file directory provided in the metadata of a GeoDataFrame");
+    if(band_column)     dataframe->addExistingColumn(FString("%s.band",         sampler->rkey).c_str(), band_column,    "Source band of raster for the sample");
+    if(flags_column)    dataframe->addExistingColumn(FString("%s.flags",        sampler->rkey).c_str(), flags_column,   "Any flags (if requested) that accompany the sampled data in the raster it was read from");
+    if(count_column)    dataframe->addExistingColumn(FString("%s.stats.count",  sampler->rkey).c_str(), count_column,   "Number of pixels read to calculate sample value");
+    if(min_column)      dataframe->addExistingColumn(FString("%s.stats.min",    sampler->rkey).c_str(), min_column,     "minimum pixel value of pixels that contributed to sample value");
+    if(max_column)      dataframe->addExistingColumn(FString("%s.stats.max",    sampler->rkey).c_str(), max_column,     "Maximum pixel value of pixels that contributed to sample value");
+    if(mean_column)     dataframe->addExistingColumn(FString("%s.stats.mean",   sampler->rkey).c_str(), mean_column,    "Average/mean pixel value of pixels that contributed to sample value");
+    if(median_column)   dataframe->addExistingColumn(FString("%s.stats.median", sampler->rkey).c_str(), median_column,  "Average/median pixel value of pixels that contributed to sample value");
+    if(stdev_column)    dataframe->addExistingColumn(FString("%s.stats.stdev",  sampler->rkey).c_str(), stdev_column,   "Standard deviation of pixel values of pixels that contributed to sample value");
+    if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column,     "Median absolute deviation of pixel values of pixels that contributed to sample value");
+    if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column,  "Number of pixels read to calculate slope and aspect");
+    if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column,   "The calculated slope at the location being sampled");
+    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled");
 
     // success
     return true;
@@ -606,21 +606,21 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     }
 
     // add new columns to dataframe
-    dataframe->addExistingColumn(FString("%s.value",    sampler->rkey).c_str(), value_column);
-    dataframe->addExistingColumn(FString("%s.time_ns",  sampler->rkey).c_str(), time_column);
-    dataframe->addExistingColumn(FString("%s.fileid",   sampler->rkey).c_str(), fileid_column);
-    if(band_column)     dataframe->addExistingColumn(FString("%s.band",         sampler->rkey).c_str(), band_column);
-    if(flags_column)    dataframe->addExistingColumn(FString("%s.flags",        sampler->rkey).c_str(), flags_column);
-    if(count_column)    dataframe->addExistingColumn(FString("%s.stats.count",  sampler->rkey).c_str(), count_column);
-    if(min_column)      dataframe->addExistingColumn(FString("%s.stats.min",    sampler->rkey).c_str(), min_column);
-    if(max_column)      dataframe->addExistingColumn(FString("%s.stats.max",    sampler->rkey).c_str(), max_column);
-    if(mean_column)     dataframe->addExistingColumn(FString("%s.stats.mean",   sampler->rkey).c_str(), mean_column);
-    if(median_column)   dataframe->addExistingColumn(FString("%s.stats.median", sampler->rkey).c_str(), median_column);
-    if(stdev_column)    dataframe->addExistingColumn(FString("%s.stats.stdev",  sampler->rkey).c_str(), stdev_column);
-    if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column);
-    if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column);
-    if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column);
-    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column);
+    dataframe->addExistingColumn(FString("%s.value",    sampler->rkey).c_str(), value_column,   "Sampled value from the raster");
+    dataframe->addExistingColumn(FString("%s.time_ns",  sampler->rkey).c_str(), time_column,    "Unix time (nanoseconds); the best time provided by the raster dataset for when the sampled value was measured");
+    dataframe->addExistingColumn(FString("%s.fileid",   sampler->rkey).c_str(), fileid_column,  "A number used to identify the name of the file the sample value came from; this is used in conjunction with the file directory provided in the metadata of a GeoDataFrame");
+    if(band_column)     dataframe->addExistingColumn(FString("%s.band",         sampler->rkey).c_str(), band_column,    "Source band of raster for the sample");
+    if(flags_column)    dataframe->addExistingColumn(FString("%s.flags",        sampler->rkey).c_str(), flags_column,   "Any flags (if requested) that accompany the sampled data in the raster it was read from");
+    if(count_column)    dataframe->addExistingColumn(FString("%s.stats.count",  sampler->rkey).c_str(), count_column,   "Number of pixels read to calculate sample value");
+    if(min_column)      dataframe->addExistingColumn(FString("%s.stats.min",    sampler->rkey).c_str(), min_column,     "minimum pixel value of pixels that contributed to sample value");
+    if(max_column)      dataframe->addExistingColumn(FString("%s.stats.max",    sampler->rkey).c_str(), max_column,     "Maximum pixel value of pixels that contributed to sample value");
+    if(mean_column)     dataframe->addExistingColumn(FString("%s.stats.mean",   sampler->rkey).c_str(), mean_column,    "Average/mean pixel value of pixels that contributed to sample value");
+    if(median_column)   dataframe->addExistingColumn(FString("%s.stats.median", sampler->rkey).c_str(), median_column,  "Average/median pixel value of pixels that contributed to sample value");
+    if(stdev_column)    dataframe->addExistingColumn(FString("%s.stats.stdev",  sampler->rkey).c_str(), stdev_column,   "Standard deviation of pixel values of pixels that contributed to sample value");
+    if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column,     "Median absolute deviation of pixel values of pixels that contributed to sample value");
+    if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column,  "Number of pixels read to calculate slope and aspect");
+    if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column,   "The calculated slope at the location being sampled");
+    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled");
 
     // success
     return true;
@@ -644,7 +644,7 @@ bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t*
         FieldElement<string>* field = new FieldElement<string>(file_name);
 
         // build dictionary <raster>[<file_id>] = <file_name>
-        if(!file_id_table.add(key.c_str(), field, true))
+        if(!file_id_table.add(key.c_str(), field, NULL, true))
         {
             delete field;
             mlog(ERROR, "Failed to add metadata field <%s> to <%s>", key.c_str(), sampler->rkey);
@@ -658,7 +658,7 @@ bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t*
 
     // add file id table metadata entry for raster
     const FString key("%s.%s", GeoFields::PARMS, sampler->rkey);
-    if(!dataframe->addMetaData(key.c_str(), field, true))
+    if(!dataframe->addMetaData(key.c_str(), field, "File ID table", true))
     {
         delete field;
         mlog(ERROR, "Failed to file id table for <%s> to dataframe metadata", key.c_str());

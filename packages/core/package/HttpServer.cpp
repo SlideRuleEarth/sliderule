@@ -680,23 +680,9 @@ int HttpServer::onWrite(int fd)
                         if(!state->header_sent)
                         {
                             state->header_sent = true;
-                            connection->streaming = true; // default to streaming and set to false if content type is text or json
                             const char* header_ptr = reinterpret_cast<const char*>(state->ref.data);
-                            const char* content_header_ptr = StringLib::find(header_ptr, "Content-Type: ", state->ref.size);
-                            if(content_header_ptr)
-                            {
-                                const int remaining_size = state->ref.size - (content_header_ptr - header_ptr);
-                                static const FString json_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::JSON));
-                                static const FString text_content_type("Content-Type: %s", EndpointObject::content2str(EndpointObject::TEXT));
-                                if( (remaining_size >= json_content_type.size()) && (strncmp(content_header_ptr, json_content_type.c_str(), json_content_type.size()) == 0) )
-                                {
-                                    connection->streaming = false;
-                                }
-                                else if((remaining_size >= text_content_type.size()) && (strncmp(content_header_ptr, text_content_type.c_str(), text_content_type.size()) == 0) )
-                                {
-                                    connection->streaming = false;
-                                }
-                            }
+                            const char* transfer_encoding_header_ptr = StringLib::find(header_ptr, "Transfer-Encoding: chunked", state->ref.size);
+                            if(transfer_encoding_header_ptr) connection->streaming = true;
                         }
                         ref_complete = true;
                     }

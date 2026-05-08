@@ -1,0 +1,8 @@
+type: array
+items:
+  type: object
+  description: >
+    CloudFormation stack event (cleaned of binary fields). Contains keys
+    such as StackId, EventId, StackName, LogicalResourceId,
+    PhysicalResourceId, ResourceType, Timestamp, ResourceStatus, etc.
+  additionalProperties: true

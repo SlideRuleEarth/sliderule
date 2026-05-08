@@ -71,7 +71,7 @@ const RecordObject::fieldDef_t Atl13Reader::wtRecDef[] = {
 
 const char* Atl13Reader::atRecType = "atl13srec";
 const RecordObject::fieldDef_t Atl13Reader::atRecDef[] = {
-    {"water",                   RecordObject::USER,     offsetof(atl13_t, water),                   0,  wtRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"water",                   RecordObject::OBJECT,   offsetof(atl13_t, water),                   0,  wtRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl13Reader::OBJECT_TYPE = "Atl13Reader";

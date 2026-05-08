@@ -1,0 +1,31 @@
+type: object
+properties:
+  username:
+    type: string
+    description: GitHub username from JWT sub claim.
+  orgRoles:
+    type: array
+    items:
+      type: string
+      enum: [owner, member, affiliate]
+    description: Organization roles for the user.
+  knownClusters:
+    type: array
+    items:
+      type: string
+    description: Clusters the user is known to have access to.
+  deployableClusters:
+    type: array
+    items:
+      type: string
+    description: >
+      Clusters the user can deploy to. Includes '*' for owners with
+      unrestricted access.
+  maxNodes:
+    type: integer
+    description: Maximum number of nodes the user can provision.
+    example: 50
+  maxTTL:
+    type: integer
+    description: Maximum TTL in minutes the user can request.
+    example: 720

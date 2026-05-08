@@ -180,11 +180,11 @@ class GeoDataFrame: public LuaObject, public Field
         void                        setNumRows          (long rows);
         long                        appendFromBuffer    (const char* name, const uint8_t* buffer, long size, uint32_t column_encoding=0, bool nodata=false);
         vector<string>              getColumnNames      (void) const;
-        bool                        addColumn           (const char* name, FieldUntypedColumn* column, bool free_on_delete);
-        bool                        addNewColumn        (const char* name, uint32_t column_encoding);
-        bool                        addExistingColumn   (const char* name, FieldUntypedColumn* column);
+        bool                        addColumn           (const char* name, FieldUntypedColumn* column, const char* description, bool free_on_delete);
+        bool                        addNewColumn        (const char* name, uint32_t column_encoding, const char* description);
+        bool                        addExistingColumn   (const char* name, FieldUntypedColumn* column, const char* description);
         FieldUntypedColumn*         getColumn           (const char* name, bool no_throw=false) const;
-        bool                        addMetaData         (const char* name, Field* meta, bool free_on_delete);
+        bool                        addMetaData         (const char* name, Field* meta, const char* description, bool free_on_delete);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
         void                        populateGeoColumns  (void);
@@ -278,7 +278,8 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaInError          (lua_State* L);
         static int      luaNumRows          (lua_State* L);
         static int      luaNumColumns       (lua_State* L);
-        static int      luaExport           (lua_State* L);
+        static int      luaExport           (lua_State* L); // to Lua
+        static int      luaDescribe         (lua_State* L); // to OpenAPI
         static int      luaSend             (lua_State* L);
         static int      luaReceive          (lua_State* L);
         static int      luaGetRowData       (lua_State* L);

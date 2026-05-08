@@ -44,8 +44,8 @@ install (
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/bathy.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/bathyv.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/bathyx.lua
     DESTINATION
         ${CONFDIR}/api
 )

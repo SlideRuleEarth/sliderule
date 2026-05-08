@@ -1,0 +1,19 @@
+type: object
+required:
+  - service
+  - lifetime
+  - address
+properties:
+  service:
+    type: string
+    description: The service name to register under.
+  lifetime:
+    type: integer
+    description: Duration in seconds that the registration lasts.
+  address:
+    type: string
+    description: Public hostname or IP address of the member (including protocol and port).
+  reset:
+    type: boolean
+    default: false
+    description: If true, resets any pending transactions for this address.

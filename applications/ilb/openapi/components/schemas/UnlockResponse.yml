@@ -1,0 +1,8 @@
+type: object
+properties:
+  complete:
+    type: integer
+    description: Number of completed transactions from this request.
+  fail:
+    type: integer
+    description: Number of transactions that failed to be processed.

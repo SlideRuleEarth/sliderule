@@ -71,8 +71,8 @@ install (
 # Endpoints #
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_engine_endpoint.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/example_source_endpoint.lua
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/endpoints/example_engine_endpoint.lua>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/endpoints/example_source_endpoint.lua>
     DESTINATION
         ${CONFDIR}/api
 )

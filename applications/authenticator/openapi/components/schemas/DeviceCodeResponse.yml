@@ -1,0 +1,25 @@
+type: object
+properties:
+  device_code:
+    type: string
+    description: Device verification code for polling.
+  user_code:
+    type: string
+    description: Code the user must enter at the verification URI.
+    example: ABCD-1234
+  verification_uri:
+    type: string
+    format: uri
+    description: URL for the user to visit and enter the user_code.
+    example: https://github.com/login/device
+  verification_uri_complete:
+    type: string
+    format: uri
+    description: URL with user_code pre-filled.
+  expires_in:
+    type: integer
+    description: Seconds until device_code expires.
+  interval:
+    type: integer
+    description: Minimum polling interval in seconds.
+    example: 5

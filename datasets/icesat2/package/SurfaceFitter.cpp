@@ -106,18 +106,18 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
-    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;                     // first segment used in extent to calculate surface fit
-    FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
-    FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN);      // meters from ellipsoid
-    FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;                       // along track slope
-    FieldColumn<float>*     window_height   = new FieldColumn<float>;                       // height in meters of final window used in fit
-    FieldColumn<int32_t>*   n_fit_photons   = new FieldColumn<int32_t>;                     // number of photons used in final elevation calculation
+    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN);
+    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);
+    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);
+    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;
+    FieldColumn<double>*    x_atc           = new FieldColumn<double>;
+    FieldColumn<float>*     y_atc           = new FieldColumn<float>;
+    FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;
+    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;
+    FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN);
+    FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;
+    FieldColumn<float>*     window_height   = new FieldColumn<float>;
+    FieldColumn<int32_t>*   n_fit_photons   = new FieldColumn<int32_t>;
     FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
     FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
@@ -220,20 +220,20 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    dataframe->addExistingColumn("time_ns",                 time_ns);
-    dataframe->addExistingColumn("latitude",                latitude);
-    dataframe->addExistingColumn("longitude",               longitude);
-    dataframe->addExistingColumn("segment_id_beg",          segment_id_beg);
-    dataframe->addExistingColumn("x_atc",                   x_atc);
-    dataframe->addExistingColumn("y_atc",                   y_atc);
-    dataframe->addExistingColumn("photon_start",            photon_start);
-    dataframe->addExistingColumn("pflags",                  pflags);
-    dataframe->addExistingColumn("h_mean",                  h_mean);
-    dataframe->addExistingColumn("dh_fit_dx",               dh_fit_dx);
-    dataframe->addExistingColumn("w_surface_window_final",  window_height);
-    dataframe->addExistingColumn("n_fit_photons",           n_fit_photons);
-    dataframe->addExistingColumn("rms_misfit",              rms_misfit);
-    dataframe->addExistingColumn("h_sigma",                 h_sigma);
+    dataframe->addExistingColumn("time_ns",                 time_ns,            "Unix time (nanoseconds)");
+    dataframe->addExistingColumn("latitude",                latitude,           "Latitude (EPSG:9989)");
+    dataframe->addExistingColumn("longitude",               longitude,          "Longitude (EPSG:9989)");
+    dataframe->addExistingColumn("segment_id_beg",          segment_id_beg,     "First segment used in extent to calculate surface fit");
+    dataframe->addExistingColumn("x_atc",                   x_atc,              "Distance from the equator (in meters)");
+    dataframe->addExistingColumn("y_atc",                   y_atc,              "Distance from reference track (in meters)");
+    dataframe->addExistingColumn("photon_start",            photon_start,       "Photon index of start of extent");
+    dataframe->addExistingColumn("pflags",                  pflags,             "Processing flags");
+    dataframe->addExistingColumn("h_mean",                  h_mean,             "Mean elevation of segment (in meters); from ellipsoid");
+    dataframe->addExistingColumn("dh_fit_dx",               dh_fit_dx,          "Along track slope");
+    dataframe->addExistingColumn("w_surface_window_final",  window_height,      "Height (in meters) of final window used in fit");
+    dataframe->addExistingColumn("n_fit_photons",           n_fit_photons,      "Number of photons used in final elevation calculation");
+    dataframe->addExistingColumn("rms_misfit",              rms_misfit,         "RMS of the differences between the fitted line and actual photons");
+    dataframe->addExistingColumn("h_sigma",                 h_sigma,            "Uncertainty of the estimated mean height");
 
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);

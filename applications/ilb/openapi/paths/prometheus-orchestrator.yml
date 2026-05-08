@@ -1,0 +1,32 @@
+get:
+  summary: Orchestrator Prometheus metrics
+  description: |
+    Provides metrics for Prometheus scraping including request counts, completions, failures, timeouts, startups, active locks, and per-service member counts.
+  operationId: prometheusOrchestrator
+  tags:
+    - Metrics
+  responses:
+    '200':
+      description: Prometheus-formatted metrics.
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: |
+              # TYPE num_requests counter
+              num_requests 42
+
+              # TYPE num_complete counter
+              num_complete 40
+
+              # TYPE num_failures counter
+              num_failures 1
+
+              # TYPE num_timeouts counter
+              num_timeouts 1
+
+              # TYPE num_startups counter
+              num_startups 2
+
+              # TYPE num_active_locks counter
+              num_active_locks 3

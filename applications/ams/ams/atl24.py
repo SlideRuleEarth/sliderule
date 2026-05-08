@@ -4,7 +4,7 @@
 
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import dbutils
+from . import dbutils, validation
 import pyarrow.compute
 import json
 import duckdb
@@ -43,6 +43,7 @@ def init_app(app):
 # ATL24
 #
 @atl24.route('/ATL24', methods=['GET', 'POST'])
+@validation.validate
 def atl24_route():
     try:
         # execute query
@@ -75,6 +76,7 @@ def atl24_route():
 # Granule
 #
 @atl24.route('/ATL24/granule/<name>', methods=['GET', 'POST'])
+@validation.validate
 def granule_route(name):
     try:
         # execute query
@@ -95,7 +97,7 @@ def granule_route(name):
                 "bathy_mean_depth": float(row.column("bathy_mean_depth")[0]),
                 "bathy_min_depth": float(row.column("bathy_min_depth")[0]),
                 "bathy_max_depth": float(row.column("bathy_max_depth")[0]),
-                "begin_time": row.column("begin_time")[0].as_py().isoformat()
+                "begin_time": row.column("begin_time")[0].as_py().isoformat() + "Z"
             }
         # return response
         return json.dumps(response)

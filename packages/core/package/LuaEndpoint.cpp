@@ -101,14 +101,14 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
     if(!lua_isfunction(L, -1))
     {
         const FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
-        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
         throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
     /* Send Header for Binary Output */
     if(selected_output == BINARY)
     {
-        sendHeader(OK, content2str(BINARY), &request->rspq, NULL, true);
+        sendHeader(OK, content2str(BINARY), &request->rspq);
     }
 
     /* Execute Main Function */
@@ -122,22 +122,22 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
         if(lua_status != LUA_OK)
         {
             const FString error_msg("Endpoint %s encountered error: %s", request->resource, result);
-            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
         else if(!result)
         {
             const FString error_msg("Endpoint %s returned no results", request->resource);
-            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Not_Found, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_RESOURCE_DOES_NOT_EXIST, "%s", error_msg.c_str());
         }
         else if(in_error)
         {
-            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result);
+            sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, result, StringLib::size(result));
         }
         else
         {
-            sendHeader(OK, content2str(selected_output), &request->rspq, result);
+            sendHeader(OK, content2str(selected_output), &request->rspq, result, StringLib::size(result));
         }
     }
     else if(lua_status != LUA_OK)
@@ -185,14 +185,14 @@ LuaEndpoint::endpoint_t LuaEndpoint::loadLuaScript (Request* request, LuaEngine*
     if(!status) // check status of loading script
     {
         const FString error_msg("Failed to load script %s for request %s", script.c_str(), request->id);
-        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
     if(!lua_istable(engine->getLuaState(), -1)) // check script properly returned an endpoint package
     {
         const FString error_msg("Malformed endpoint in %s for request %s", script.c_str(), request->id);
-        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
@@ -337,7 +337,7 @@ void LuaEndpoint::checkRole (Request* request, const endpoint_t& endpoint)
         if(!match_found)
         {
             const FString error_msg("User must be a member to execute this endpoint");
-            sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
         }
     }
@@ -354,7 +354,7 @@ void LuaEndpoint::checkSignature (Request* request, const endpoint_t& endpoint)
         if(!is_signed)
         {
             const FString error_msg("User must use a signed request for this endpoint");
-            sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Unauthorized, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_UNAUTHORIZED, "%s", error_msg.c_str());
 
         }
@@ -374,13 +374,13 @@ EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, const end
         if(accepted_content == UNKNOWN)
         {
             const FString error_msg("Unsupported output in accept header: %s", accept_hdr->c_str());
-            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
         else if(std::find(endpoint.supported_outputs.begin(), endpoint.supported_outputs.end(), accepted_content) == endpoint.supported_outputs.end())
         {
             const FString error_msg("Endpoint %s does not support %s output", request->resource, content2str(accepted_content));
-            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
         return accepted_content; // use requested output
@@ -391,13 +391,13 @@ EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, const end
         if(extension_content == UNKNOWN)
         {
             const FString error_msg("Unsupported output in extension: %s", extension.c_str());
-            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
         else if(std::find(endpoint.supported_outputs.begin(), endpoint.supported_outputs.end(), extension_content) == endpoint.supported_outputs.end())
         {
             const FString error_msg("Endpoint %s does not support %s output", request->resource, content2str(extension_content));
-            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str());
+            sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
             throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
         }
         return extension_content; // use requested output
@@ -422,7 +422,7 @@ void LuaEndpoint::checkMemoryUsage(Request* request)
     if(memory_usage >= SystemConfig::settings().memoryThreshold.value)
     {
         const FString error_msg("Memory (%d%%) exceeded threshold, not performing request: %s", (int)(memory_usage * 100.0), request->resource);
-        sendHeader(Service_Unavailable, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Service_Unavailable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
         throw RunTimeException(ERROR, RTE_NOT_ENOUGH_MEMORY, "%s", error_msg.c_str());
     }
 }
@@ -440,7 +440,7 @@ void LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_
     else
     {
         const FString error_msg("Unable to handle requested format: %s", content2str(selected_output));
-        sendHeader(Method_Not_Implemented, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
         throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
     }
 }

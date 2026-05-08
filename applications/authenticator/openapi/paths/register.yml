@@ -1,0 +1,26 @@
+post:
+  operationId: register
+  summary: Dynamic Client Registration (RFC 7591)
+  description: >
+    Register a new OAuth client. Returns a client_id that must be used in
+    subsequent authorization requests. Supports PKCE with S256 only.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/RegisterRequest.yml'
+  responses:
+    '201':
+      description: Client successfully registered
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            example: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/RegisterResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

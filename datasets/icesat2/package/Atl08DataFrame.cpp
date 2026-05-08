@@ -61,7 +61,7 @@ int Atl08DataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -82,35 +82,35 @@ int Atl08DataFrame::luaCreate (lua_State* L)
 Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",                 &time_ns},
-        {"latitude",                &latitude},
-        {"longitude",               &longitude},
-        {"segment_id_beg",          &segment_id_beg},
-        {"segment_landcover",       &segment_landcover},
-        {"segment_snowcover",       &segment_snowcover},
-        {"n_seg_ph",                &n_seg_ph},
-        {"solar_elevation",         &solar_elevation},
-        {"terrain_slope",           &terrain_slope},
-        {"n_te_photons",            &n_te_photons},
-        {"h_te_uncertainty",        &h_te_uncertainty},
-        {"h_te_median",             &h_te_median},
-        {"h_canopy",                &h_canopy},
-        {"h_canopy_uncertainty",    &h_canopy_uncertainty},
-        {"segment_cover",           &segment_cover},
-        {"n_ca_photons",            &n_ca_photons},
-        {"h_max_canopy",            &h_max_canopy},
-        {"h_min_canopy",            &h_min_canopy},
-        {"h_mean_canopy",           &h_mean_canopy},
-        {"canopy_openness",         &canopy_openness},
-        {"canopy_h_metrics",        &canopy_h_metrics}
+        {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
+        {"latitude",                &latitude,                  "Latitude (EPSG:9989)"},
+        {"longitude",               &longitude,                 "Longitude (EPSG:9989)"},
+        {"segment_id_beg",          &segment_id_beg,            "First along-track segment_id number in 100m segment"},
+        {"segment_landcover",       &segment_landcover,         "Reference landcover for segment derived from best global landcover product available"},
+        {"segment_snowcover",       &segment_snowcover,         "Daily snow cover mask derived from best sources"},
+        {"n_seg_ph",                &n_seg_ph,                  "Number of photons within each land segment"},
+        {"solar_elevation",         &solar_elevation,           "The elevation of the sun position vector from the reference photon bounce point position in the local ENU frame; the angle is measured from the East-North plane and is positive up"},
+        {"terrain_slope",           &terrain_slope,             "Slope of terrain in segment"},
+        {"n_te_photons",            &n_te_photons,              "Number of ground photons in segment"},
+        {"h_te_uncertainty",        &h_te_uncertainty,          "Uncertainty of ground height estimates (in meters); includes all known uncertainties such as geolocation, pointing angle, timing, radial orbit errors, etc."},
+        {"h_te_median",             &h_te_median,               "Median terrain height for segment (in meters)"},
+        {"h_canopy",                &h_canopy,                  "98 percent height (in meters) of all the individual relative canopy heights (height above terrain) for segment"},
+        {"h_canopy_uncertainty",    &h_canopy_uncertainty,      "Uncertainty (in meters) of the relative canopy height (h_canopy)"},
+        {"segment_cover",           &segment_cover,             "Woody vegetation fractional cover"},
+        {"n_ca_photons",            &n_ca_photons,              "Number of canopy photon within 100m segment"},
+        {"h_max_canopy",            &h_max_canopy,              "Maximum of individual relative canopy heights (in meters) within segment; should be equivalent to H100"},
+        {"h_min_canopy",            &h_min_canopy,              "Minimum of individual relative canopy heights (in meters) within segment"},
+        {"h_mean_canopy",           &h_mean_canopy,             "Mean of individual relative canopy heights (in meters) within segment"},
+        {"canopy_openness",         &canopy_openness,           "STD of relative heights of all photons classified as top of canopy within the segment"},
+        {"canopy_h_metrics",        &canopy_h_metrics,          "Relative (RH##) canopy height metrics (in meters) calculated at the following percentiles: 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95"}
     },
     {
-        {"spot",                    &spot},
-        {"cycle",                   &cycle},
-        {"region",                  &region},
-        {"rgt",                     &rgt},
-        {"gt",                      &gt},
-        {"granule",                 &granule}
+        {"spot",                    &spot,                      "ATLAS detector spot"},
+        {"cycle",                   &cycle,                     "ICESat-2 Cycle number"},
+        {"region",                  &region,                    "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+        {"rgt",                     &rgt,                       "ICESat-2 Reference ground track"},
+        {"gt",                      &gt,                        "Ground track; integer representation of beam"},
+        {"granule",                 &granule,                   "Name of the source ATL03 granule"}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
     Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
@@ -119,7 +119,7 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf08->name, META_SOURCE_ID),
+    granule(_hdf08 ? _hdf08->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -128,20 +128,17 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf08(_hdf08),
     beam(StringLib::duplicate(beam_str))
 {
-    assert(_parms);
-    assert(_hdf08);
-
     /* Optional Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
     /* Optional Quality Score Columns */
     if(parms->phoreal.te_quality_filter_provided)
     {
-        addColumn("te_quality_score", &te_quality_score, false);
+        addColumn("te_quality_score", &te_quality_score, "Terrian quality score", false);
     }
     if(parms->phoreal.can_quality_filter_provided)
     {
-        addColumn("can_quality_score", &can_quality_score, false);
+        addColumn("can_quality_score", &can_quality_score, "Canopy quality score", false);
     }
 
     /* Call Parent Class Initialization of GeoColumns */
@@ -150,9 +147,16 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId(traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf08)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -165,7 +169,7 @@ Atl08DataFrame::~Atl08DataFrame (void)
     delete [] beam;
     delete outQ;
     parms->releaseLuaObject();
-    hdf08->releaseLuaObject();
+    if(hdf08) hdf08->releaseLuaObject();
 }
 
 /******************************************************************************

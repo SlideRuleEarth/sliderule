@@ -1,0 +1,22 @@
+type: object
+properties:
+  report:
+    type: object
+    additionalProperties:
+      type: integer
+    description: Map of job state to count of jobs in that state.
+    example:
+      RUNNING: 3
+      SUCCEEDED: 12
+  jobs:
+    type: array
+    items:
+      type: object
+      properties:
+        job_id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED]

@@ -36,6 +36,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointProxy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EventLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/FileEndpoint.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.cpp
@@ -104,6 +105,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldEnumeration.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldList.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FieldMap.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FileEndpoint.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.h
@@ -177,15 +179,14 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/ace.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/ams.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/assets.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/datetime.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/defaults.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/earthdata.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gsio.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
     DESTINATION
         ${CONFDIR}/api

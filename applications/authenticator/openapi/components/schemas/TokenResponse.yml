@@ -1,0 +1,42 @@
+type: object
+properties:
+  access_token:
+    type: string
+    description: JWT access token (RS256 signed).
+  token_type:
+    type: string
+    example: Bearer
+  expires_in:
+    type: integer
+    description: Token lifetime in seconds.
+    example: 43200
+  refresh_token:
+    type: string
+    description: Refresh token (currently empty, reserved for future use).
+  scope:
+    type: string
+    description: Space-separated list of granted scopes.
+    example: mcp:tools mcp:resources
+  info:
+    type: object
+    description: User interface hints (not for authorization decisions).
+    properties:
+      username:
+        type: string
+      isOrgMember:
+        type: string
+        enum: ['true', 'false']
+      isOrgOwner:
+        type: string
+        enum: ['true', 'false']
+      org:
+        type: string
+      orgRoles:
+        type: string
+        description: Comma-separated list of org roles.
+      tokenIssuedAt:
+        type: string
+      tokenExpiresAt:
+        type: string
+      tokenIssuer:
+        type: string

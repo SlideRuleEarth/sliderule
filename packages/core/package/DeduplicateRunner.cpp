@@ -226,7 +226,7 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
                 for(size_t col = 0; col < columns.size(); col++)
                 {
                     Field* element = columns[col]->row(row);
-                    if(!duplicate.add(column_names[col].c_str(), element, true))
+                    if(!duplicate.add(column_names[col].c_str(), element, NULL, true))
                     {
                         mlog(CRITICAL, "failed to add duplicate entry for %s row %ld", column_names[col].c_str(), row);
                         delete element;

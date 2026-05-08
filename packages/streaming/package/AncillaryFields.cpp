@@ -65,7 +65,7 @@ const char* AncillaryFields::ancFieldArrayRecType = "ancfrec";
 const RecordObject::fieldDef_t AncillaryFields::ancFieldArrayRecDef[] = {
     {"extent_id",       RecordObject::UINT64,   offsetof(field_array_t, extent_id),         1,  NULL, NATIVE_FLAGS},
     {"num_fields",      RecordObject::UINT32,   offsetof(field_array_t, num_fields),        1,  NULL, NATIVE_FLAGS},
-    {"fields",          RecordObject::USER,     offsetof(field_array_t, fields),            0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"fields",          RecordObject::OBJECT,   offsetof(field_array_t, fields),            0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 /*

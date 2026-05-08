@@ -53,19 +53,19 @@ const char* OutputFields::PARMS = "output";
  *----------------------------------------------------------------------------*/
 OutputFields::OutputFields (void):
     FieldMap<Field> ({
-        {"path",                &path},
-        {"format",              &format},
-        {"open_on_complete",    &openOnComplete},
-        {"as_geo",              &asGeo},
-        {"with_checksum",       &withChecksum},
-        {"with_validation",     &withValidation},
-        {"asset",               &assetName},
-        {"endpoint",            &endpoint},
+        {"path",                &path,              "Destination path (including filename) for file output"},
+        {"format",              &format,            "Format of output file"},
+        {"open_on_complete",    &openOnComplete,    "Boolean for clients to open the file automatically when the file is written"},
+        {"as_geo",              &asGeo,             "Boolean for writing the file as a GeoParquet; deprecated, use format='geoparquet' instead"},
+        {"with_checksum",       &withChecksum,      "Boolean to include a checksum of the file in the response"},
+        {"with_validation",     &withValidation,    "Boolean to perform extended server-side validation of the file that it meets the specified format standard"},
+        {"asset",               &assetName,         "Name of a credentialed asset to write the file to; only used if the file is not directly returned to the user"},
+        {"endpoint",            &endpoint,          "Name of the endpoint to write the file to; only used if the file is not directly returned to the user"},
         #ifdef __aws__
-        {"credentials",         &credentials},
+        {"credentials",         &credentials,       "Write credentials for writing a file to a credentialed asset; only used if the file is not directly returned to the user"},
         #endif
-        {"ancillary",           &ancillaryFields},
-        {"fields",              &finalFields}
+        {"ancillary",           &ancillaryFields,   "Ordered list of column names to use when writing a tabled structured output file that includes ancillary fields; p-series endpoints only"},
+        {"fields",              &finalFields,       "List of columns that should be included in the final output; used to limit which columns are returned"}
     })
 {
 }

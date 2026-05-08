@@ -1,0 +1,19 @@
+post:
+  summary: Register a service member
+  description: Register a node as a member of a service in the cluster.
+  operationId: register
+  tags:
+    - Orchestrator
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/RegisterRequest.yml'
+  responses:
+    '200':
+      description: Successfully registered.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/RegisterResponse.yml'

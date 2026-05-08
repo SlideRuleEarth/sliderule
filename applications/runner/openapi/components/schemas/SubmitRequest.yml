@@ -1,0 +1,30 @@
+type: object
+required:
+  - name
+  - script
+  - args_list
+properties:
+  name:
+    type: string
+    description: Human-readable name for the job.
+    example: my-processing-job
+  script:
+    type: string
+    format: byte
+    description: Base64-encoded Lua script to execute.
+  args_list:
+    type: array
+    items:
+      type: string
+    description: List of argument strings; each element becomes a separate batch job.
+    example: ["granule1.h5", "granule2.h5"]
+  vcpus:
+    type: integer
+    minimum: 1
+    maximum: 8
+    description: Optional vCPU override per job container.
+  memory:
+    type: integer
+    minimum: 8192
+    maximum: 32768
+    description: Optional memory (MB) override per job container.

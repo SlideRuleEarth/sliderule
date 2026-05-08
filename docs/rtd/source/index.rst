@@ -127,7 +127,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    developer_guide/why_sliderule.rst
    developer_guide/under_the_hood.md
    developer_guide/release_deploy.md
-   developer_guide/endpoints.rst
+   developer_guide/endpoints.md
    developer_guide/how_tos/how_tos.rst
    developer_guide/articles/articles.rst
    developer_guide/design/design.rst

@@ -77,12 +77,8 @@ int BathyDataFrame::luaCreate (lua_State* L)
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
-        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
         const char* rqstq_name = getLuaString(L, 5, true, NULL);
-
-        /* Check for Null Resource and Asset */
-        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
-        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, rqstq_name, _mask));
@@ -103,29 +99,29 @@ int BathyDataFrame::luaCreate (lua_State* L)
 BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",             &time_ns},
-        {"index_ph",            &index_ph},
-        {"index_seg",           &index_seg},
-        {"lat_ph",              &lat_ph},
-        {"lon_ph",              &lon_ph},
-        {"segment_id",          &segment_id},
-        {"x_atc",               &x_atc},
-        {"y_atc",               &y_atc},
-        {"ellipse_h",           &ellipse_h},
-        {"processing_flags",    &processing_flags},
-        {"max_signal_conf",     &max_signal_conf},
-        {"quality_ph",          &quality_ph},
-        {"geoid_corr_h",        &geoid_corr_h},
+        {"time_ns",             &time_ns,               "Unix time (nanoseconds) of the photon measurement"},
+        {"index_ph",            &index_ph,              "Index into the ATL03 heights group for the photon"},
+        {"index_seg",           &index_seg,             "Index into ATL03 geolocation group for the photon"},
+        {"lat_ph",              &lat_ph,                "Latitude (EPSG:9989)"},
+        {"lon_ph",              &lon_ph,                "Longitude (EPSG:9989)"},
+        {"segment_id",          &segment_id,            "ATL03 segment id of the photon"},
+        {"x_atc",               &x_atc,                 "Along track coordinate (in meters) representing distance from the equator along the reference ground track"},
+        {"y_atc",               &y_atc,                 "Across track coordinate (in meters) representing distance from reference ground track"},
+        {"ellipse_h",           &ellipse_h,             "Ellipsoidal height of photon"},
+        {"processing_flags",    &processing_flags,      "Processing flags indicating errors and per-photon conditions"},
+        {"max_signal_conf",     &max_signal_conf,       "Maximum ATL03 signal confidence across all surface types"},
+        {"quality_ph",          &quality_ph,            "ATL03 photon quality flags"},
+        {"geoid_corr_h",        &geoid_corr_h,          "Geoid (sea level) corrected photon height"},
     },
     {
-        {"spot",                &spot},
-        {"cycle",               &cycle},
-        {"region",              &region},
-        {"rgt",                 &rgt},
-        {"gt",                  &gt},
-        {"granule",             &granule},
-        {"bounding_polygon_lat",&bounding_polygon_lat},
-        {"bounding_polygon_lon",&bounding_polygon_lon}
+        {"spot",                &spot,                  "ATLAS detector spot"},
+        {"cycle",               &cycle,                 "ICESat-2 Cycle number"},
+        {"region",              &region,                "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+        {"rgt",                 &rgt,                   "ICESat-2 Reference ground track"},
+        {"gt",                  &gt,                    "Ground track; integer representation of beam"},
+        {"granule",             &granule,               "Name of the source ATL03 granule"},
+        {"bounding_polygon_lat",&bounding_polygon_lat,  "Minimum and maximum latitudes contained in dataframe"},
+        {"bounding_polygon_lon",&bounding_polygon_lon,  "Minimum and maximum longitudes contained in dataframe"}
     },
     Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
     Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
@@ -134,16 +130,15 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(Icesat2Fields::getGroundTrack(beam_str), META_COLUMN),
-    granule(_hdf03->name, META_SOURCE_ID),
+    granule(_hdf03 ? _hdf03->name : "null", META_SOURCE_ID),
     active(false),
     pid(NULL),
-    parmsPtr(_parms),
-    parms(*_parms),
+    parms(_parms),
     bathyMask(_mask),
     hdf03(_hdf03),
     rqstQ(NULL),
     signalConfColIndex(0),
-    readTimeoutMs(parms.readTimeout.value * 1000),
+    readTimeoutMs(_parms->readTimeout.value * 1000),
     beam(StringLib::duplicate(beam_str))
 {
     /* Create Request Queue Publisher (if supplied) */
@@ -152,32 +147,27 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
 
-    try
+    /* Set Signal Confidence Index */
+    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
     {
-        /* Set Signal Confidence Index */
-        if(parms.surfaceType == Icesat2Fields::SRT_DYNAMIC)
-        {
-            signalConfColIndex = H5Coro::ALL_COLS;
-        }
-        else
-        {
-            signalConfColIndex = static_cast<int>(parms.surfaceType.value);
-        }
+        signalConfColIndex = H5Coro::ALL_COLS;
+    }
+    else
+    {
+        signalConfColIndex = static_cast<int>(parms->surfaceType.value);
+    }
 
-        /* Set Thread Specific Trace ID for H5Coro */
-        EventLib::stashId (traceId);
+    /* Set Thread Specific Trace ID for H5Coro */
+    EventLib::stashId (traceId);
 
-        /* Create Reader */
+    /* Create Reader */
+    if(hdf03)
+    {
         active.store(true);
         pid = new Thread(subsettingThread, this);
     }
-    catch(const RunTimeException& e)
+    else // nothing to do
     {
-        /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-
-        /* Indicate End of Data */
         signalComplete();
     }
 }
@@ -192,7 +182,7 @@ BathyDataFrame::~BathyDataFrame (void)
     delete rqstQ;
     delete [] beam;
     if(hdf03) hdf03->releaseLuaObject();
-    if(parmsPtr) parmsPtr->releaseLuaObject();
+    if(parms) parms->releaseLuaObject();
     if(bathyMask) bathyMask->releaseLuaObject();
 }
 
@@ -220,11 +210,11 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(dataframe.parms.regionMask.valid())
+        if(dataframe.parms->regionMask.valid())
         {
             rasterregion(dataframe);
         }
-        else if(dataframe.parms.pointsInPolygon.value > 0)
+        else if(dataframe.parms->pointsInPolygon.value > 0)
         {
             polyregion(dataframe);
         }
@@ -284,7 +274,7 @@ void BathyDataFrame::Region::polyregion (const BathyDataFrame& dataframe)
     while(segment < segment_ph_cnt.size)
     {
         /* Test Inclusion */
-        const bool inclusion = dataframe.parms.polyIncludes(segment_lon[segment], segment_lat[segment]);
+        const bool inclusion = dataframe.parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
 
         /* Check First Segment */
         if(!first_segment_found)
@@ -355,7 +345,7 @@ void BathyDataFrame::Region::rasterregion (const BathyDataFrame& dataframe)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = dataframe.parms.maskIncludes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = dataframe.parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -435,7 +425,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
     signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
-    weight_ph           (dataframe.parms.granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    weight_ph           (dataframe.parms->granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
@@ -462,7 +452,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph.join(dataframe.readTimeoutMs, true);
     signal_conf_ph.join(dataframe.readTimeoutMs, true);
     quality_ph.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.granuleFields.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
+    if(dataframe.parms->granuleFields.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
@@ -476,9 +466,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
 void* BathyDataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    BathyDataFrame* dataframe_ptr = static_cast<BathyDataFrame*>(parm);
-    BathyDataFrame& dataframe = *dataframe_ptr;
-    const BathyFields& parms = dataframe.parms;
+    BathyDataFrame& dataframe = *static_cast<BathyDataFrame*>(parm);
+    const BathyFields& parms = *(dataframe.parms);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%s}", parms.asset.getName(), parms.getResource(), dataframe.beam);

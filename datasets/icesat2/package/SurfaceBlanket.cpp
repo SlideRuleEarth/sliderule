@@ -100,15 +100,15 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
-    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;                     // first segment used in extent to calculate surface fit
-    FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<float>*     top_of_surface  = new FieldColumn<float>(Field::Z_COLUMN);      // top of the reflective surface (max percentile of top of canopy or canopy or ground, in that order of preference)
-    FieldColumn<float>*     median_ground   = new FieldColumn<float>;                       // average ground elevation
-    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
+    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN);
+    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);
+    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);
+    FieldColumn<int32_t>*   segment_id_beg  = new FieldColumn<int32_t>;
+    FieldColumn<double>*    x_atc           = new FieldColumn<double>;
+    FieldColumn<float>*     y_atc           = new FieldColumn<float>;
+    FieldColumn<float>*     top_of_surface  = new FieldColumn<float>(Field::Z_COLUMN);
+    FieldColumn<float>*     median_ground   = new FieldColumn<float>;
+    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;
 
     // create new ancillary dataframe columns
     Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
@@ -194,15 +194,15 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
     dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    dataframe->addExistingColumn("time_ns",         time_ns);
-    dataframe->addExistingColumn("latitude",        latitude);
-    dataframe->addExistingColumn("longitude",       longitude);
-    dataframe->addExistingColumn("segment_id_beg",  segment_id_beg);
-    dataframe->addExistingColumn("x_atc",           x_atc);
-    dataframe->addExistingColumn("y_atc",           y_atc);
-    dataframe->addExistingColumn("top_of_surface",  top_of_surface);
-    dataframe->addExistingColumn("median_ground",   median_ground);
-    dataframe->addExistingColumn("pflags",          pflags);
+    dataframe->addExistingColumn("time_ns",         time_ns,            "Unix time (nanoseconds)");
+    dataframe->addExistingColumn("latitude",        latitude,           "Latitude (EPSG:9989)");
+    dataframe->addExistingColumn("longitude",       longitude,          "Longitude (EPSG:9989)");
+    dataframe->addExistingColumn("segment_id_beg",  segment_id_beg,     "First segment used in extent to calculate vegetation metrics");
+    dataframe->addExistingColumn("x_atc",           x_atc,              "Distance from the equator (in meters)");
+    dataframe->addExistingColumn("y_atc",           y_atc,              "Distance from reference track (in meters)");
+    dataframe->addExistingColumn("top_of_surface",  top_of_surface,     "Top of the reflective surface (in meters); max percentile of top of canopy or canopy or ground, in that order of preference");
+    dataframe->addExistingColumn("median_ground",   median_ground,      "Average ground elevation (in meters)");
+    dataframe->addExistingColumn("pflags",          pflags,             "Processing flags");
 
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);

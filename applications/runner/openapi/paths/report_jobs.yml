@@ -1,0 +1,25 @@
+post:
+  operationId: reportJobs
+  summary: Get status report on batch runner jobs
+  description: >
+    Returns detailed status information for a list of job IDs (up to 100).
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ReportJobsRequest.yml'
+  responses:
+    '200':
+      description: Job status report
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ReportJobsResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

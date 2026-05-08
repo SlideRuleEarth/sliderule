@@ -227,7 +227,7 @@ int UT_BathyRefractionCorrector::luaRefractionTest (lua_State* L)
             dataframe.lat_ph.append(0.0);
             dataframe.lon_ph.append(0.0);
         }
-        dataframe.addExistingColumn("surface_h", surface_h);
+        dataframe.addExistingColumn("surface_h", surface_h, "surface height");
 
         // run refraction code
         status = refraction->run(&dataframe);

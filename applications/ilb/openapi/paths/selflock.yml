@@ -1,0 +1,23 @@
+post:
+  summary: Self-lock a node
+  description: Notify orchestrator that the sending node needs the requested number of locks.
+  operationId: selflock
+  tags:
+    - Orchestrator
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/SelflockRequest.yml'
+  responses:
+    '200':
+      description: Lock acquired successfully.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/SelflockResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '503':
+      $ref: '../components/responses/ServiceUnavailable.yml'

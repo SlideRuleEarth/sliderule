@@ -83,7 +83,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
 const RecordObject::fieldDef_t Atl08Dispatch::batchRecDef[] = {
-    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"vegetation",              RecordObject::OBJECT,   offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl08Dispatch::waveRecType = "waverec";

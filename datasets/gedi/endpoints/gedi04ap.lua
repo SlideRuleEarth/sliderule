@@ -25,5 +25,22 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "../components/schemas/GediParameters.json"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/gedi04arec.json" },
+                    { "$ref": "../components/schemas/gedi04arec.footprint.json" }
+                ],
+                "description": "Stream of binary-encoded GEDI 4A footprints"
+            }
+        } ]]
+    }
 }

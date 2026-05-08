@@ -208,38 +208,6 @@ namespace H5Coro
     };
 
     /*--------------------------------------------------------------------
-    * Fields Subclass
-    *--------------------------------------------------------------------*/
-
-    struct Fields: public RequestFields
-    {
-        /***********/
-        /* Methods */
-        /***********/
-
-        static int luaCreate (lua_State* L);
-        static const char* defaultCRS (void);
-        Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
-        virtual ~Fields (void) override = default;
-
-        /********/
-        /* Data */
-        /********/
-
-        FieldElement<long>      col {0};
-        FieldElement<long>      startRow {0};
-        FieldElement<long>      numRows {ALL_ROWS};
-        FieldElement<string>    crs;
-        FieldElement<string>    index_column;
-        FieldElement<string>    time_column;
-        FieldElement<string>    x_column;
-        FieldElement<string>    y_column;
-        FieldElement<string>    z_column;
-        FieldList<string>       groups;
-        FieldList<string>       variables;
-    };
-
-    /*--------------------------------------------------------------------
      * Methods
      *--------------------------------------------------------------------*/
 

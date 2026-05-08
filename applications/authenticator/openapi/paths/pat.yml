@@ -1,0 +1,23 @@
+post:
+  operationId: patLogin
+  summary: Authenticate with GitHub Personal Access Token
+  description: >
+    Authenticate using a GitHub PAT. The PAT is verified against the GitHub API,
+    and if valid, a SlideRule JWT is issued.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/PatRequest.yml'
+  responses:
+    '200':
+      description: Authentication successful
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/PatResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

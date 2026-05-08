@@ -68,5 +68,32 @@ return {
     logging = core.CRITICAL,
     roles = {"member", "owner"},
     signed = true,
-    outputs = {"json"}
+    inputs = {"json"},
+    outputs = {"json"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "parms": {
+                        "type": "string",
+                        "description": "Parmeters to pass to the container once it is already running"
+                    },
+                    "image": {
+                        "type": "string",
+                        "description": "Name of the docker image to run"
+                    },
+                    "command": {
+                        "type": "string",
+                        "description": "Command to execute when starting container"
+                    }
+                }
+            }
+        }]],
+        response = [["application/json": {
+            "schema": {
+                "type": "object"
+            }
+        }]]
+    }
 }

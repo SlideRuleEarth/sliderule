@@ -4,7 +4,7 @@
 
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import dbutils
+from . import dbutils, validation
 import pyarrow.compute
 import json
 import duckdb
@@ -43,6 +43,7 @@ def init_app(app):
 # CASALS1B
 #
 @casals1b.route('/CASALS1B', methods=['GET', 'POST'])
+@validation.validate
 def casals1b_route():
     try:
         # execute query
@@ -68,6 +69,7 @@ def casals1b_route():
 # Search Mask
 #
 @casals1b.route('/CASALS1B/search_mask', methods=['GET', 'POST'])
+@validation.validate
 def search_mask():
     try:
         with open(current_app.config['CASALS1B_SEARCH_MASK'], "r") as file:

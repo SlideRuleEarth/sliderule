@@ -1,0 +1,5 @@
+description: Successful granule detail response
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/ATL24GranuleResponse.yml'

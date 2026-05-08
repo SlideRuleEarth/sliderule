@@ -47,6 +47,7 @@ const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"export",      luaExport},
     {"encode",      luaEncode},
+    {"describe",    luaDescribe},
     {"polygon",     luaProjectedPolygonIncludes},
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
@@ -61,7 +62,6 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const double RequestFields::INVALID_COORDINATE = -10000.0;
 
 /******************************************************************************
  * CLASS METHODS
@@ -140,7 +140,27 @@ int RequestFields::luaEncode (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        mlog(e.level(), "Error encoding %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaDescribe - decsribe() --> openapi
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaDescribe (lua_State* L)
+{
+    try
+    {
+        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* description = getLuaString(L, 2);
+        lua_pushstring(L, lua_obj->toOpenApi(description).c_str());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error describing %s: %s", OBJECT_TYPE, e.what());
         lua_pushnil(L);
     }
 
@@ -438,10 +458,10 @@ void RequestFields::fromLua (lua_State* L, int index)
     FieldMap<Field>::fromLua(L, index);
 
     // set timeouts (if necessary)
-    if(timeout == IO_INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
-    if(rqstTimeout == IO_INVALID_TIMEOUT)  rqstTimeout = timeout;
-    if(nodeTimeout == IO_INVALID_TIMEOUT)  nodeTimeout = timeout;
-    if(readTimeout == IO_INVALID_TIMEOUT)  readTimeout = timeout;
+    if(timeout == REQUEST_INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
+    if(rqstTimeout == REQUEST_INVALID_TIMEOUT)  rqstTimeout = timeout;
+    if(nodeTimeout == REQUEST_INVALID_TIMEOUT)  nodeTimeout = timeout;
+    if(readTimeout == REQUEST_INVALID_TIMEOUT)  readTimeout = timeout;
 
     // project polygon (if necessary)
     pointsInPolygon = polygon.length();
@@ -475,27 +495,27 @@ void RequestFields::fromLua (lua_State* L, int index)
 RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldMap<Field> ({
-        {"asset",               &asset},
-        {"resource",            &resource},
-        {"resources",           &resources},
-        {"max_resources",       &maxResources},
-        {"poly",                &polygon},
-        {"proj",                &projection},
-        {"datum",               &datum},
-        {"points_in_polygon",   &pointsInPolygon},
-        {"timeout",             &timeout},
-        {"rqst_timeout",        &rqstTimeout},
-        {"node_timeout",        &nodeTimeout},
-        {"read_timeout",        &readTimeout},
-        {"cluster_size_hint",   &clusterSizeHint},
-        {"key_space",           &keySpace},
-        {"region_mask",         &regionMask},
-        {"sliderule_version",   &slideruleVersion},
-        {"build_information",   &buildInformation},
-        {"environment_version", &environmentVersion},
-        {OutputFields::PARMS,   &output},
+        {"asset",               &asset,                 "The name of a collection of resources; this rarely needs to be specified because the default value for most endpoints are sufficient"},
+        {"resource",            &resource,              "A single resource to process; 'resources' should be used instead, even when there is only one resource to process"},
+        {"resources",           &resources,             "A list of resources to process (e.g. granule names like 'ATL03_20181019065445_03150111_007_01.h5')"},
+        {"max_resources",       &maxResources,          "Maximum number of resources that can be processed in a single request; overriding this allows larger regions to be processed but risks crashing the servers"},
+        {"poly",                &polygon,               "Polygon of area of interest"},
+        {"proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing"},
+        {"datum",               &datum,                 "Vertical datum to use when returning elevation data"},
+        {"points_in_polygon",   &pointsInPolygon,       "Internal"},
+        {"timeout",             &timeout,               "Global setting for maximum duration in seconds for all timeouts associated with a request"},
+        {"rqst_timeout",        &rqstTimeout,           "Maximum duration in seconds for a request to finish"},
+        {"node_timeout",        &nodeTimeout,           "Maximum duration in seconds for each distributed processing node to finish processing its portion of a request"},
+        {"read_timeout",        &readTimeout,           "Maximum duration in seconds for an individual I/O read to complete"},
+        {"cluster_size_hint",   &clusterSizeHint,       "User supplied hint as to the number of nodes in the cluster; used to influence the way the processing is distributed across the cluster"},
+        {"key_space",           &keySpace,              "Internal"},
+        {"region_mask",         &regionMask,            "GeoJSON structure describing the area of interest; this causes the server to rasterize the supplied area and subset based on the rasterized image"},
+        {"sliderule_version",   &slideruleVersion,      "Version of the SlideRule software running on the servers; output only"},
+        {"build_information",   &buildInformation,      "Version information of the environment used to build the SlideRule software running on the servers; output only"},
+        {"environment_version", &environmentVersion,    "Version of the infrastructure used to deploy the SlideRule software running ont he servers; output only"},
+        {OutputFields::PARMS,   &output,                "Configuration structure that controls how the results are returned; typically used to write the output as a GeoParquet file"},
         #ifdef __geo__
-        {GeoFields::PARMS,      &samplers},
+        {GeoFields::PARMS,      &samplers,              "Configuration structure that defines raster sampling operations the servers are to perform and append to the results"},
         #endif
     }),
     asset(asset_name)
@@ -515,7 +535,7 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
     // add additional fields to dictionary
     for(const init_entry_t elem: init_list)
     {
-        const entry_t entry = {elem.field, false};
+        const entry_t entry = {elem.field, elem.description, false};
         fields.add(elem.name, entry);
     }
 }

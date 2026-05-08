@@ -74,5 +74,28 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "../components/schemas/Icesat2Parameters.json"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "description": "Response schema depends on the request parameters:
+                    if 'phoreal' is supplied, returns PhoRealDataFrame;
+                    if 'fit' is supplied, returns SurfaceFitterDataFrame;
+                    if 'als' is supplied, returns SurfaceBlanketDataFrame;
+                    otherwise returns Atl03DataFrame.",
+                "oneOf": [
+                    { "$ref": "../components/schemas/Atl03DataFrame.json" },
+                    { "$ref": "../components/schemas/PhoRealDataFrame.json" },
+                    { "$ref": "../components/schemas/SurfaceFitterDataFrame.json" },
+                    { "$ref": "../components/schemas/SurfaceBlanketDataFrame.json" }
+                ]
+            }
+        } ]]
+    }
 }

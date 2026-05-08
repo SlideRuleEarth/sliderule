@@ -108,40 +108,50 @@ int LuaObject::getLuaNumParms (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaObject::luaGetByName(lua_State* L)
 {
-    LuaObject* lua_obj = NULL;
     bool raise_error = false;
 
     try
     {
+        /* Get Parameters */
+        raise_error = getLuaBoolean(L, 2, true, false);
+        const char* name = getLuaString(L, 1);
+
+        /* Get LuaObject (this does not throw - safe to not have unlock in catch block) */
+        LuaObject* lua_obj = NULL;
         globalMut.lock();
         {
-            /* Get Parameters */
-            raise_error = getLuaBoolean(L, 2, true, false);
-            const char* name = getLuaString(L, 1);
-
-            /* Get Self */
-            lua_obj = globalObjects.get(name).lua_obj;
-
-            /* Associate MetaTable with LuaObject */
-            associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
+            global_object_t global_object;
+            if(globalObjects.find(name, &global_object))
+            {
+                lua_obj = global_object.lua_obj;
+            }
         }
         globalMut.unlock();
 
-        /* Return Lua Object */
-        return createLuaObject(L, lua_obj);
+        /* Create Lua Object on Stack */
+        if(lua_obj)
+        {
+            associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
+            createLuaObject(L, lua_obj);
+            raise_error = false; // override to false on success
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
     }
     catch(const RunTimeException& e)
     {
-        globalMut.unlock();
-        mlog(DEBUG, "Failed to get Lua object by name: %s", e.what());
-        lua_pushnil(L);
+        mlog(ERROR, "Failed to get Lua object by name: %s", e.what());
     }
 
+    /* Handle error outside catch block so exception is destroyed before longjmp */
     if(raise_error)
     {
-        luaL_error(L, "failed to get lua object by name"); // exits function here
+        luaL_error(L, "failed to get lua object by name");
     }
 
+    /* Lua Object OR nil */
     return 1;
 }
 

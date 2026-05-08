@@ -15,10 +15,12 @@ aws_utils.config_earth_data() -- assets and credentials
 
 -- Configure Application Endpoints --
 local source_endpoint = core.endpoint():global("SourceEndpoint")
+local openapi_endpoint = core.webroot("openapi", "text"):global("OpenApiEndpoint")
 
 -- Run Application HTTP Server --
 local app_server = core.httpd({
-    ["/source"] = source_endpoint
+    ["/source"] = source_endpoint,
+    ["/openapi"] = openapi_endpoint
 }, sys.getcfg("app_port")):global("AppServer")
 
 --------------------------------------------------

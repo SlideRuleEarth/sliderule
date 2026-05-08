@@ -1,0 +1,78 @@
+openapi: 3.0.3
+
+info:
+  title: SlideRule Asset Metadata Service API
+  description: Web services for querying earth science dataset resources.
+  version: ${VERSION}
+  license:
+      name: BSD 3-Clause
+      url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: https://slideruleearth.io/source
+    description: Asset Metadata Service (AMS)
+  - url: http://localhost
+    description: Local development server
+
+security: []
+
+paths:
+  /ams/ATL13:
+    $ref: 'paths/atl13.yml'
+  /ams/ATL24:
+    $ref: 'paths/atl24.yml'
+  /ams/ATL24/granule/{name}:
+    $ref: 'paths/atl24_granule.yml'
+  /ams/CASALS1B:
+    $ref: 'paths/casals1b.yml'
+  /ams/CASALS1B/search_mask:
+    $ref: 'paths/casals1b_search_mask.yml'
+  /ams/3DEP1M:
+    $ref: 'paths/3dep1m.yml'
+  /ams/3DEP1M/id/{id}:
+    $ref: 'paths/3dep1m_id.yml'
+
+components:
+  schemas:
+    Coordinate:
+      $ref: 'components/schemas/Coordinate.yml'
+    ICESat2QueryParams:
+      $ref: 'components/schemas/ICESat2QueryParams.yml'
+    ATL13Request:
+      $ref: 'components/schemas/ATL13Request.yml'
+    ATL13Response:
+      $ref: 'components/schemas/ATL13Response.yml'
+    ATL24Request:
+      $ref: 'components/schemas/ATL24Request.yml'
+    ATL24Response:
+      $ref: 'components/schemas/ATL24Response.yml'
+    ATL24GranuleResponse:
+      $ref: 'components/schemas/ATL24GranuleResponse.yml'
+    CASALS1BRequest:
+      $ref: 'components/schemas/CASALS1BRequest.yml'
+    CASALS1BResponse:
+      $ref: 'components/schemas/CASALS1BResponse.yml'
+    3DEP1MRequest:
+      $ref: 'components/schemas/3DEP1MRequest.yml'
+    3DEP1MResponse:
+      $ref: 'components/schemas/3DEP1MResponse.yml'
+    3DEP1MFeature:
+      $ref: 'components/schemas/3DEP1MFeature.yml'
+  parameters:
+    GranuleName:
+      $ref: 'components/parameters/GranuleName.yml'
+    GranuleId:
+      $ref: 'components/parameters/GranuleId.yml'
+  responses:
+    BadRequest:
+      $ref: 'components/responses/BadRequest.yml'
+    ATL13Response:
+      $ref: 'components/responses/ATL13Response.yml'
+    ATL24Response:
+      $ref: 'components/responses/ATL24Response.yml'
+    ATL24GranuleResponse:
+      $ref: 'components/responses/ATL24GranuleResponse.yml'
+    CASALS1BResponse:
+      $ref: 'components/responses/CASALS1BResponse.yml'
+    3DEP1MResponse:
+      $ref: 'components/responses/3DEP1MResponse.yml'

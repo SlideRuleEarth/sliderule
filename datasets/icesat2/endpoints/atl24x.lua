@@ -5,21 +5,17 @@ local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
 local channels  = 6 -- number of dataframes per resource
+local default_asset = "icesat2-atl24" -- determine default asset
+local rqst_resource = rqst["resource"]
+if rqst_resource and (string.sub(rqst_resource, 38, 40) == "001") then
+    default_asset = "icesat2-atl24v1"
+end
+local parms = icesat2.parms(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
 
 -------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-
-    -- determine default asset
-    local default_asset = "icesat2-atl24"
-    local rqst_resource = rqst["resource"]
-    if rqst_resource and (string.sub(rqst_resource, 38, 40) == "001") then
-        default_asset = "icesat2-atl24v1"
-    end
-
-    -- create parameters
-    local parms = icesat2.parms(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
 
     -- proxy the request
     dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
@@ -59,5 +55,18 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "../components/schemas/Icesat2Parameters.json"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "$ref": "../components/schemas/Atl24DataFrame.json"
+            }
+        } ]]
+    }
 }

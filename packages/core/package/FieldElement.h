@@ -64,6 +64,7 @@ class FieldElement: public Field
         bool            operator==      (const T& v) const;
         bool            operator!=      (const T& v) const;
 
+        string          toOpenApi       (const char* description) const override;
         string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;
@@ -101,6 +102,7 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         T value;
+        bool initialized;
 };
 
 /******************************************************************************
@@ -133,7 +135,8 @@ inline long FieldElement<string>::serialize (uint8_t* buffer, size_t size) const
 template <class T>
 FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask):
     Field(ELEMENT, getImpliedEncoding<T>() | encoding_mask),
-    value(default_value)
+    value(default_value),
+    initialized(true)
 {
 }
 
@@ -142,7 +145,8 @@ FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask):
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement():
-    Field(ELEMENT, getImpliedEncoding<T>())
+    Field(ELEMENT, getImpliedEncoding<T>()),
+    initialized(false)
 {
 }
 
@@ -152,7 +156,8 @@ FieldElement<T>::FieldElement():
 template <class T>
 FieldElement<T>::FieldElement(const FieldElement<T>& element):
     Field(ELEMENT, getImpliedEncoding<T>()),
-    value(element.value)
+    value(element.value),
+    initialized(element.initialized)
 {
 }
 
@@ -163,6 +168,7 @@ template <class T>
 FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
 {
     value = element.value;
+    initialized = element.initialized;
     encoding = element.encoding;
     return *this;
 }
@@ -174,6 +180,7 @@ template <class T>
 FieldElement<T>& FieldElement<T>::operator=(const T& v)
 {
     value = v;
+    initialized = true;
     return *this;
 }
 
@@ -183,6 +190,7 @@ FieldElement<T>& FieldElement<T>::operator=(const T& v)
 template <class T>
 bool FieldElement<T>::operator==(const T& v) const
 {
+    assert(initialized);
     return value == v;
 }
 
@@ -192,7 +200,28 @@ bool FieldElement<T>::operator==(const T& v) const
 template <class T>
 bool FieldElement<T>::operator!=(const T& v) const
 {
+    assert(initialized);
     return value != v;
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object
+ *           properties:
+ *             <field>:
+ *               type: <type>>                    <---- from here
+ *               description: <description>
+ *               default: <defaults>              <---- to here
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldElement<T>::toOpenApi (const char* description) const
+{
+    FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
+    return FString("{\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"%s}",
+        this->getOpenApiType(), this->getOpenApiFormat(), description, default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------

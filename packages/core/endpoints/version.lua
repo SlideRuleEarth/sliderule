@@ -55,5 +55,35 @@ return {
     logging = core.DEBUG,
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = nil,
+    outputs = {"json"},
+    schema = {
+        request = nil,
+        response = [["application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "server": {
+                        "type": "object",
+                        "properties": {
+                            "version": { "type": "string", "description": "SlideRule version" },
+                            "build": { "type": "string", "description": "Build information" },
+                            "environment": { "type": "string", "description": "Infrastructure environment version" },
+                            "launch": { "type": "string", "format": "date-time", "description": "Server launch time" },
+                            "duration": { "type": "integer", "description": "Server uptime in milliseconds" },
+                            "cluster": { "type": "string", "description": "Cluster name" }
+                        }
+                    }
+                },
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "version": { "type": "string" },
+                        "build": { "type": "string" }
+                    },
+                    "description": "Package version information"
+                }
+            }
+        }]]
+    }
 }

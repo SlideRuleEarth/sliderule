@@ -72,7 +72,7 @@ class Field
         static const uint32_t DOUBLE        = RecordObject::DOUBLE;
         static const uint32_t TIME8         = RecordObject::TIME8;
         static const uint32_t STRING        = RecordObject::STRING;
-        static const uint32_t USER          = RecordObject::USER;
+        static const uint32_t OBJECT        = RecordObject::OBJECT;
         static const uint32_t NESTED_ARRAY  = 0x2000;
         static const uint32_t NESTED_LIST   = 0x4000;
         static const uint32_t NESTED_COLUMN = 0x8000;
@@ -135,6 +135,11 @@ class Field
 
         // conversion
 
+        virtual string toOpenApi (const char* description) const {
+            (void)description;
+            return "";
+        };
+
         virtual string toJson (void) const {
             return "";
         };
@@ -179,6 +184,14 @@ class Field
 
         int getTypeSize(void) const {
             return RecordObject::FIELD_TYPE_BYTES[getEncodedType()];
+        }
+
+        const char* getOpenApiType(void) const {
+            return RecordObject::openApiType(static_cast<RecordObject::fieldType_t>(getEncodedType()));
+        }
+
+        const char* getOpenApiFormat(void) const {
+            return RecordObject::openApiFormat(static_cast<RecordObject::fieldType_t>(getEncodedType()));
         }
 
         /*--------------------------------------------------------------------
@@ -265,7 +278,7 @@ inline uint32_t toEncoding(float& v)    { (void)v; return Field::FLOAT;  };
 inline uint32_t toEncoding(double& v)   { (void)v; return Field::DOUBLE; };
 inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
 inline uint32_t toEncoding(string& v)   { (void)v; return Field::STRING; };
-inline uint32_t toEncoding(Field& v)    { (void)v; return Field::USER;   };
+inline uint32_t toEncoding(Field& v)    { (void)v; return Field::OBJECT; };
 
 // encoding
 template<class T>

@@ -76,7 +76,7 @@ const FLOAT           = 9;
 const DOUBLE          = 10;
 const TIME8           = 11;
 const STRING          = 12;
-const USER            = 13;
+const OBJECT          = 13;
 
 //
 // SlideRule Field Types
@@ -95,7 +95,7 @@ const fieldtypes = {
   DOUBLE:   {code: DOUBLE,    size: 8},
   TIME8:    {code: TIME8,     size: 8},
   STRING:   {code: STRING,    size: 1},
-  USER:     {code: USER,      size: 0},
+  OBJECT:   {code: OBJECT,    size: 0},
 };
 
 //------------------------------------
@@ -156,7 +156,7 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
       case DOUBLE:    return buffer.readDoubleBE(byte_offset);
       case TIME8:     return new Date(Number(buffer.readBigInt64BE(byte_offset) / BigInt(1000000)));
       case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
-      case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
+      case OBJECT:    throw new Error(`User fields cannot be decoded as a primitive`);
       default:        throw new Error(`Invalid field type ${type_code}`);
     }
   }
@@ -175,7 +175,7 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
       case DOUBLE:    return buffer.readDoubleLE(byte_offset);
       case TIME8:     return new Date(Number(buffer.readBigInt64LE(byte_offset) / BigInt(1000000)));
       case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
-      case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
+      case OBJECT:    throw new Error(`User fields cannot be decoded as a primitive`);
       default:        throw new Error(`Invalid field type ${type_code}`);
     };
   }
@@ -194,7 +194,7 @@ async function decodeField(field_def, buffer, offset, rec_size) {
   let field_size = await getFieldSize(field_def.type);
 
   // Get type code
-  let type_code = USER;
+  let type_code = OBJECT;
   if (field_def.type in fieldtypes) {
      type_code = fieldtypes[field_def.type].code;
   }

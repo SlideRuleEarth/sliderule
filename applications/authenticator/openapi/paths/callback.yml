@@ -1,0 +1,40 @@
+get:
+  operationId: callback
+  summary: OAuth callback from GitHub
+  description: >
+    Handles the redirect from GitHub after user authorization. Validates the
+    HMAC-signed state parameter (CSRF protection), generates an authorization code,
+    and redirects back to the client's redirect_uri with the code and state.
+  parameters:
+    - name: code
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Authorization code from GitHub.
+    - name: state
+      in: query
+      required: true
+      schema:
+        type: string
+      description: HMAC-signed state parameter for CSRF validation.
+    - name: error
+      in: query
+      required: false
+      schema:
+        type: string
+    - name: error_description
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    '302':
+      description: Redirect to client redirect_uri with authorization code
+      headers:
+        Location:
+          schema:
+            type: string
+            format: uri
+    '500':
+      $ref: '../components/responses/InternalError.yml'

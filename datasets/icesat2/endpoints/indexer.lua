@@ -4,7 +4,7 @@
 local json          = require("json")
 local rqst          = json.decode(arg[1])
 local parms         = rqst["parms"]
-local atl03_asset   = rqst["asset"] or "atlas-local"
+local atl03_asset   = rqst["asset"] or "icesat2"
 local resources     = rqst["resources"]
 local timeout       = rqst["timeout"] or core.RQST_TIMEOUT
 
@@ -55,14 +55,39 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "description": "Name of the ATL03 asset to index",
+                        "default": "atlas-local"
+                    },
+                    "resources": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "List of HDF5 file or object names to index"
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Seconds to wait before timing out",
+                        "default": 600
+                    }
+                },
+                "required": ["resources"]
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/atl03rec.index.json" },
+                ],
+                "description": "Stream of binary-encoded index records"
+            }
+        } ]]
+    }
 }
-
--- INPUT
---  {
---      "resources":    ["<name of hdf5 file or object>", ...]
---      "timeout":      <seconds to wait for first response>
---  }
---
--- OUTPUT
---  Index records (atl03rec.index)

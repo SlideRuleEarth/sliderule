@@ -89,16 +89,16 @@ void BathyFields::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource):
     Icesat2Fields (L, key_space, asset_name, _resource,
-        { {"asset09",             &atl09AssetName},
-          {"max_dem_delta",       &maxDemDelta},
-          {"min_dem_delta",       &minDemDelta},
-          {"max_geoid_delta",     &maxGeoidDelta},
-          {"min_geoid_delta",     &minGeoidDelta},
-          {"ph_in_extent",        &phInExtent},
-          {"generate_ndwi",       &generateNdwi},
-          {"use_bathy_mask",      &useBathyMask},
-          {"surface",             &surface},
-          {"refraction",          &refraction},
-          {"uncertainty",         &uncertainty} })
+        { {"asset09",             &atl09AssetName,      "Asset identifier to use when reading wind speed from ATL09; when left blank the server will do the right thing"},
+          {"max_dem_delta",       &maxDemDelta,         "Maximum positive vertical distance of photon from ATL03 DEM to include in bathymetry processing"},
+          {"min_dem_delta",       &minDemDelta,         "Maximum negative vertical distance of photon from ATL03 DEM to include in bathymetry processing"},
+          {"max_geoid_delta",     &maxGeoidDelta,       "Maximum positive vertical distance of photon from ATL03 geoid (sea level) to include in bathymetry processing"},
+          {"min_geoid_delta",     &minGeoidDelta,       "Maximum negative vertical distance of photon from ATL03 geoid (sea level) to include in bathymetry processing"},
+          {"ph_in_extent",        &phInExtent,          "Hard coded number of photons to include in the variable length segment; overrides 'len' and 'res' parameters"},
+          {"generate_ndwi",       &generateNdwi,        "Boolean indicating that the server should calculate and include an NDWI value for each photon"},
+          {"use_bathy_mask",      &useBathyMask,        "Boolean controlling the use of the global bathymetry mask; if enabled all input granules will be subsetted to the bathymetry mask prior to any other subsetting"},
+          {"surface",             &surface,             "Configuration structure that controls the calculation and inclusion of the sea surface height at each photon"},
+          {"refraction",          &refraction,          "Configuration structure that controls performing refraction correction on the subaqueous bathymetry photons"},
+          {"uncertainty",         &uncertainty,         "Configuration structure that controls performing and including an uncertainty calculation for each bathymetry photon"} })
 {
 }

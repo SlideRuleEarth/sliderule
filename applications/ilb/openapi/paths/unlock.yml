@@ -1,0 +1,19 @@
+post:
+  summary: Unlock transactions
+  description: Releases locks for members associated with the provided transaction IDs.
+  operationId: unlock
+  tags:
+    - Orchestrator
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/UnlockRequest.yml'
+  responses:
+    '200':
+      description: Unlock results.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/UnlockResponse.yml'

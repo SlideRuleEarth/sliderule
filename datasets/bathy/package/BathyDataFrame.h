@@ -180,17 +180,16 @@ class BathyDataFrame: public GeoDataFrame
          * Data
          *--------------------------------------------------------------------*/
 
-        std::atomic<bool>           active;
-        Thread*                     pid;
-        BathyFields*                parmsPtr;
-        const BathyFields&          parms;
-        BathyMask*                  bathyMask;
-        H5Object*                   hdf03;      // atl03 granule
-        Publisher*                  rqstQ;
-        int                         signalConfColIndex;
-        int                         readTimeoutMs;
-        okey_t                      dfKey;
-        const char*                 beam;
+        std::atomic<bool>   active;
+        Thread*             pid;
+        BathyFields*        parms;
+        BathyMask*          bathyMask;
+        H5Object*           hdf03;      // atl03 granule
+        Publisher*          rqstQ;
+        int                 signalConfColIndex;
+        int                 readTimeoutMs;
+        okey_t              dfKey;
+        const char*         beam;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -209,8 +208,7 @@ class BathyDataFrame: public GeoDataFrame
                 GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Fields::crsITRF2014_EGM08(), 0),
                 active(false),
                 pid(NULL),
-                parmsPtr(_parms),
-                parms(*_parms),
+                parms(_parms),
                 bathyMask(NULL),
                 hdf03(NULL),
                 rqstQ(NULL),

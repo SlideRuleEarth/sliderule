@@ -1,0 +1,26 @@
+post:
+  operationId: destroy
+  summary: Destroy a cluster
+  description: >
+    Destroys a cluster and all associated user ASG stacks. Removes EventBridge
+    auto-shutdown rules and deletes CloudFormation stacks.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ClusterRequest.yml'
+  responses:
+    '200':
+      description: Destroy initiated
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DestroyResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

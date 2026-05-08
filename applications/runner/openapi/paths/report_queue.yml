@@ -1,0 +1,25 @@
+post:
+  operationId: reportQueue
+  summary: Get report on all jobs in the queue
+  description: >
+    Returns a summary count and list of jobs for the specified job state(s).
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ReportQueueRequest.yml'
+  responses:
+    '200':
+      description: Queue report
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ReportQueueResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

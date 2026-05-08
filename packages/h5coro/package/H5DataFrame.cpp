@@ -51,13 +51,13 @@
  *----------------------------------------------------------------------------*/
 int H5DataFrame::luaCreate(lua_State* L)
 {
-    H5Coro::Fields* _parms = NULL;
+    H5Fields* _parms = NULL;
     H5Object* _h5obj = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms                  = dynamic_cast<H5Coro::Fields*>(getLuaObject(L, 1, H5Coro::Fields::OBJECT_TYPE));
+        _parms                  = dynamic_cast<H5Fields*>(getLuaObject(L, 1, H5Fields::OBJECT_TYPE));
         _h5obj                  = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* _group      = getLuaString(L, 3, true, NULL);
         const okey_t _df_key    = getLuaInteger(L, 4, true, 0);
@@ -82,10 +82,11 @@ int H5DataFrame::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5DataFrame::H5DataFrame (lua_State* L, H5Coro::Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
+H5DataFrame::H5DataFrame (lua_State* L, H5Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
                           const char* time_column, const char* x_column, const char* y_column, const char* z_column):
-    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group}}, _parms->crs.value.c_str(), _df_key),
+    GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group, "HDF5 subgroup variables belong to"}}, _parms->crs.value.c_str(), _df_key),
     h5obj(_h5obj),
+    parms(_parms),
     data(_parms->variables, _h5obj, _group, _parms->col.value, _parms->startRow.value, _parms->numRows.value),
     group(_group, Field::META_SOURCE_ID),
     timeout(_timeout), // milliseconds
@@ -104,6 +105,7 @@ H5DataFrame::~H5DataFrame (void)
 {
     delete joinPid;
     h5obj->releaseLuaObject();
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

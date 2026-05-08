@@ -1,0 +1,12 @@
+post:
+  operationId: refresh
+  summary: Refresh an access token
+  description: >
+    Refresh token endpoint. Currently not supported and returns 401.
+  responses:
+    '401':
+      description: Token refresh not supported
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ErrorResponse.yml'

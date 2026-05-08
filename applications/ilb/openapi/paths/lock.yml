@@ -1,0 +1,19 @@
+post:
+  summary: Lock nodes for processing
+  description: Returns up to the requested number of nodes for processing a request, selecting nodes with the fewest active locks.
+  operationId: lock
+  tags:
+    - Orchestrator
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/LockRequest.yml'
+  responses:
+    '200':
+      description: Nodes locked successfully (may return fewer than requested if capacity is limited).
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/LockResponse.yml'

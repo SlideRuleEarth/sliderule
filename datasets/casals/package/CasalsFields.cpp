@@ -46,10 +46,10 @@
  * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
 CasalsGranuleFields::CasalsGranuleFields():
-    FieldMap<Field>({ {"year",      &year},
-                      {"month",     &month},
-                      {"day",       &day},
-                      {"version",   &version} })
+    FieldMap<Field>({ {"year",      &year,      "Year of data acquisition"},
+                      {"month",     &month,     "Month of data acquisition"},
+                      {"day",       &day,       "Day of data acquisition"},
+                      {"version",   &version,   "Data product version"} })
 {
 }
 
@@ -166,8 +166,8 @@ int CasalsFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 CasalsFields::CasalsFields(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource):
     RequestFields (L, key_space, asset_name, _resource,
-        { {"anc_fields",        &anc_fields},
-          {"granule",           &granule_fields} })
+        { {"anc_fields",    &anc_fields,        "Ancillary fields from the source granules to include in response"},
+          {"granule",       &granule_fields,    "Versioning and date information pulled from the granule processed; output only"} })
 {
 }
 

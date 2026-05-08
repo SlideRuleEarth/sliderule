@@ -214,3 +214,33 @@ from `sliderule/targets/slideruleearth/`
 ```bash
 make cluster-destroy CLUSTER=sliderule-<old-timestamp>
 ```
+
+#### (6) Update the Documentation
+
+Make sure documentation, examples, and OpenAPI specifications are up to date, and then generate and update the live documentation.
+
+* Update the local `sliderule` conda environment (which will be used to build the Python API reference)
+
+```bash
+make python
+```
+
+* Build and install a local version of the sliderule server (which will be used to build the OpenAPI specification)
+
+```bash
+make config-release
+make
+```
+
+* Build the documentation and check out a local running version
+
+```bash
+make documentation
+make documentation-run
+```
+
+* Update the documentation on the live website
+
+```bash
+make documentation-live-update
+```

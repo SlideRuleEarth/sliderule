@@ -1,0 +1,17 @@
+post:
+  operationId: 3DEP1M
+  summary: Query 3DEP 1m granules
+  description: >
+    Query USGS 3DEP 1-meter elevation granule metadata with spatial and temporal filters.
+    Returns a GeoJSON FeatureCollection.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/3DEP1MRequest.yml'
+  responses:
+    '200':
+      $ref: '../components/responses/3DEP1MResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

@@ -35,7 +35,7 @@ class TestGeo:
                 "lon1": 106.0
             }
         }
-        d = sliderule.source("geo", test)
+        d = sliderule.source("gsio", test)
         assert init
         assert d["intersect"] == True
         assert abs(d["combine"]["lat0"] - 44.4015)  < 0.001
@@ -62,7 +62,7 @@ class TestGeo:
             "x": -0.20051164424058,
             "y": 1.1371580426033,
         }
-        d = sliderule.source("geo", test)
+        d = sliderule.source("gsio", test)
         assert init
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0
 
@@ -75,7 +75,7 @@ class TestGeo:
             "x": -0.20051164424058,
             "y": -1.1371580426033,
         }
-        d = sliderule.source("geo", test)
+        d = sliderule.source("gsio", test)
         assert init
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0
 
@@ -88,6 +88,6 @@ class TestGeo:
             "x": 0.20051164424058,
             "y": -1.1371580426033,
         }
-        d = sliderule.source("geo", test)
+        d = sliderule.source("gsio", test)
         assert init
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0

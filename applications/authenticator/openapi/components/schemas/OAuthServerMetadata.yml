@@ -1,0 +1,47 @@
+type: object
+properties:
+  issuer:
+    type: string
+    format: uri
+  authorization_endpoint:
+    type: string
+    format: uri
+  token_endpoint:
+    type: string
+    format: uri
+  response_types_supported:
+    type: array
+    items:
+      type: string
+    example: [code]
+  scopes_supported:
+    type: array
+    items:
+      type: string
+    example: [mcp:tools, mcp:resources, sliderule:access, runner:access, provisioner:access, monitor:access]
+  token_endpoint_auth_methods_supported:
+    type: array
+    items:
+      type: string
+    example: [none]
+  code_challenge_methods_supported:
+    type: array
+    items:
+      type: string
+    example: [S256]
+  registration_endpoint:
+    type: string
+    format: uri
+  jwks_uri:
+    type: string
+    format: uri
+  id_token_signing_alg_values_supported:
+    type: array
+    items:
+      type: string
+    example: [RS256]
+  grant_types_supported:
+    type: array
+    items:
+      type: string
+    example: [authorization_code, refresh_token]

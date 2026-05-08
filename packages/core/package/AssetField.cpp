@@ -88,6 +88,16 @@ const char* AssetField::getName (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * toOpenApi
+ *----------------------------------------------------------------------------*/
+string AssetField::toOpenApi (const char* description) const
+{
+    const FString default_property("%s", asset ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
+    return FString("{\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"%s}",
+        this->getOpenApiType(), this->getOpenApiFormat(), description, default_property.c_str()).c_str();
+}
+
+/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 string AssetField::toJson (void) const

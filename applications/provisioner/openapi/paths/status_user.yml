@@ -1,0 +1,26 @@
+post:
+  operationId: statusUser
+  summary: Get user ASG deployment status
+  description: >
+    Returns the current deployment status of a user auto-scaling group.
+  parameters:
+    - $ref: '../components/parameters/Username.yml'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ClusterRequest.yml'
+  responses:
+    '200':
+      description: User ASG status
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/UserStatusResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

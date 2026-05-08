@@ -1,5 +1,8 @@
+import os
 import pytest
 from ams import create_app
+
+os.environ["VALIDATE_OPENAPI"] = "true"
 
 @pytest.fixture
 def app():

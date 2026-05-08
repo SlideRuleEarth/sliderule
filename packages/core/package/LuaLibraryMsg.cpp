@@ -51,6 +51,7 @@ const struct luaL_Reg LuaLibraryMsg::msgLibsF [] = {
     {"subscribe",     LuaLibraryMsg::lmsg_subscribe},
     {"create",        LuaLibraryMsg::lmsg_create},
     {"definition",    LuaLibraryMsg::lmsg_definition},
+    {"describe",      LuaLibraryMsg::lmsg_describe},
     {"datatype",      LuaLibraryMsg::lmsg_datatype},
     {NULL, NULL}
 };
@@ -318,7 +319,7 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
         {
             const char* flagstr = RecordObject::flags2str(fields[i]->flags);
             const char* typestr = fields[i]->exttype;
-            if(fields[i]->type != RecordObject::USER)
+            if(fields[i]->type != RecordObject::OBJECT)
             {
                 typestr = RecordObject::ft2str(fields[i]->type);
             }
@@ -345,6 +346,51 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
     }
 
     /* Return Table */
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_describe - msg.describe(<record type>) --> open api specification
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_describe(lua_State* L)
+{
+    /* Get Record Type */
+    const char* rectype = lua_tostring(L, 1);
+    if(rectype == NULL)
+    {
+        return luaL_error(L, "invalid record type specified");
+    }
+
+    /* Build Specification */
+    char** fieldnames = NULL;
+    RecordObject::field_t** fields = NULL;
+    const int numfields = RecordObject::getRecordFields(rectype, &fieldnames, &fields);
+    if(numfields > 0)
+    {
+        string str = FString("{\"type\": \"object\", \"format\": \"binary\", \"properties\": {").c_str();
+        for(int i = 0; i < numfields; i++)
+        {
+            const char* type_str = RecordObject::openApiType(fields[i]->type);
+            const char* format_str = RecordObject::openApiFormat(fields[i]->type);
+            const char* description = fields[i]->exttype ? fields[i]->exttype : "primitive value";
+            str += FString("\"%s\": {\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"}%s",
+                    fieldnames[i], type_str, format_str, description, (i < numfields - 1) ? "," : "").c_str();
+            delete fields[i];
+            delete [] fieldnames[i];
+        }
+        str += "}}";
+        delete [] fields;
+        delete [] fieldnames;
+
+        /* Return Specification Schema */
+        lua_pushstring(L, str.c_str());
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
+
+    /* Return */
     return 1;
 }
 
@@ -411,7 +457,7 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
         record = rec_data->rec;
         if(record == NULL)
         {
-            return luaL_error(L, "nill record supplied.");
+            return luaL_error(L, "nil record supplied.");
         }
     }
     else // population string

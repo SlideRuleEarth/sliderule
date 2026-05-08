@@ -82,9 +82,9 @@ PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
-WEBSITE_SOURCE_DIR = $(ROOT)/docs
+DOCUMENTATION_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
-WEBSITE_EXPORT_DIR = $(DOCUMENTATION_STAGE_DIR)/dist
+DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
 DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
@@ -283,6 +283,23 @@ python: ## update python client in sliderule environment
 selftest: ## run the self test on the server code
 	make run RUN_CMD=$(ROOT)/targets/slideruleearth/test_runner.lua
 
+openapi: ## bundle and lint the openapi docs for sliderule
+	make sliderule-openapi
+	make ams-openapi
+	make ilb-openapi
+	make authenticator-openapi
+	make runner-openapi
+	make provisioner-openapi
+
+%-openapi: ## bundle and lint openapi docs
+	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
+	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/$*
+	cp -R $(ROOT)/applications/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
+	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
+	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/$*.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
+
 ########################
 # Docker Build Targets
 ########################
@@ -306,6 +323,13 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 sliderule-test: ## run python client tests
 	conda run -n ams --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
+
+sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
+	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
+	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
+	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	- npx @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -349,7 +373,7 @@ ams-docker: ## build ams docker image; uses VERSION
 	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) .
 
-ams-run:
+ams-run: ## run ams locally
 	cd $(ROOT)/applications/ams && \
 	conda run -n ams --no-capture-output \
 	flask --app ams run --debug --port 9082
@@ -805,17 +829,24 @@ certbot-delete: ## deletes the lambda certbot function
 # Website Targets
 ########################
 
-documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
+documentation-prep: ## create environment for building documentation
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
 	mkdir -p $(DOCUMENTATION_STAGE_DIR)
-	cp -R $(WEBSITE_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
+	cp -R $(DOCUMENTATION_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
 	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
-	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
-	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
+	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STATIC_DIR)
+	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STATIC_DIR)
+
+documentation-rtd: ## generate read-the-docs static html
 	conda run -n rtd --no-capture-output \
 	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
 	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
 	sphinx-build -M html "source" "build"'
+
+documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
+	make documentation-prep
+	make openapi
+	make documentation-rtd
 
 documentation-run: ## locally run the documentation
 	conda run -n rtd --no-capture-output \
@@ -904,6 +935,12 @@ init-dev-env: ## one-time setup of development environment for running locally
 	curl $(JWT_ISSUER)/auth/pem > /etc/haproxy/pem/pubkey.pem
 	mkdir -p /etc/ssl/private
 	aws s3 cp s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(DOMAIN).pem /etc/ssl/private/$(DOMAIN).pem
+
+install-node: ## setup node environment (needed to OpenAPI specification documentation)
+	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+	nvm install 22
+	nvm alias default 22
+	npm install -g @redocly/cli
 
 compose-%: ## (re)start a docker container in the background
 	docker compose -p cluster up -d --force-recreate $*

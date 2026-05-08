@@ -71,7 +71,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
         _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 6, true, NULL);
@@ -96,27 +96,27 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
-        {"time_ns",             &time_ns},
-        {"latitude",            &latitude},
-        {"longitude",           &longitude},
-        {"segment_id",          &segment_id},
-        {"x_atc",               &x_atc},
-        {"y_atc",               &y_atc},
-        {"height",              &height},
-        {"solar_elevation",     &solar_elevation},
-        {"background_rate",     &background_rate},
-        {"spacecraft_velocity", &spacecraft_velocity},
-        {"atl03_cnf",           &atl03_cnf},
-        {"quality_ph",          &quality_ph},
-        {"ph_index",            &ph_index},
+        {"time_ns",             &time_ns,               "Unix time (nanoseconds) of the photon measurement"},
+        {"latitude",            &latitude,              "Latitude (EPSG:9989)"},
+        {"longitude",           &longitude,             "Longitude (EPSG:9989)"},
+        {"segment_id",          &segment_id,            "ATL03 segment id of the photon"},
+        {"x_atc",               &x_atc,                 "Along track coordinate (in meters) representing distance from the equator along the reference ground track"},
+        {"y_atc",               &y_atc,                 "Across track coordinate (in meters) representing distance from reference ground track"},
+        {"height",              &height,                "Elevation of photon (meters); reference surface dependant on datum"},
+        {"solar_elevation",     &solar_elevation,       "Solar elevation (degrees)"},
+        {"background_rate",     &background_rate,       "Background rate (photons/second) of detectors"},
+        {"spacecraft_velocity", &spacecraft_velocity,   "Along track ground speed (meters/second) of measurement profile"},
+        {"atl03_cnf",           &atl03_cnf,             "ATL03 signal confidence of photon"},
+        {"quality_ph",          &quality_ph,            "ATL03 photon quality flags"},
+        {"ph_index",            &ph_index,              "Index into the ATL03 heights group for the photon"},
     },
     {
-        {"spot",                &spot},
-        {"cycle",               &cycle},
-        {"region",              &region},
-        {"rgt",                 &rgt},
-        {"gt",                  &gt},
-        {"granule",             &granule}
+        {"spot",                &spot,                  "ATLAS detector spot"},
+        {"cycle",               &cycle,                 "ICESat-2 Cycle number"},
+        {"region",              &region,                "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+        {"rgt",                 &rgt,                   "ICESat-2 Reference ground track"},
+        {"gt",                  &gt,                    "Ground track; integer representation of beam"},
+        {"granule",             &granule,               "Name of the source ATL03 granule"}
     },
     Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
     Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
@@ -125,7 +125,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
-    granule(_hdf03->name, META_SOURCE_ID),
+    granule(_hdf03 ? _hdf03->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -141,34 +141,31 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     useYapc007(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
     useGeoid(parms->datum.value == MathLib::EGM08)
 {
-    assert(_parms);
-    assert(_hdf03);
-
     /* Set Optional PhoREAL Columns */
     if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
     {
-        addColumn("relief",             &relief,            false);
-        addColumn("landcover",          &landcover,         false);
-        addColumn("snowcover",          &snowcover,         false);
+        addColumn("relief",             &relief,            "ATL08 relative photon height from ground; included for phoreal processing",   false);
+        addColumn("landcover",          &landcover,         "ATL08 land cover flags; included for phoreal processing",                     false);
+        addColumn("snowcover",          &snowcover,         "ATL08 snow cover flags; included for phoreal processing",                     false);
     }
 
     /* Set Optional YAPC Columns */
     if(parms->stages[Icesat2Fields::STAGE_YAPC])
     {
-        addColumn("yapc_score",         &yapc_score,        false);
+        addColumn("yapc_score",         &yapc_score,        "YAPC density score of photon; included for yapc classification",               false);
     }
 
     /* Set Optional ATL08 Columns */
     if(parms->stages[Icesat2Fields::STAGE_ATL08])
     {
-        addColumn("atl08_class",        &atl08_class,       false);
+        addColumn("atl08_class",        &atl08_class,       "ATL08 classification of photon; included for atl08 classificaiton",            false);
     }
 
     /* Set Optional ATL24 Columns */
     if(parms->stages[Icesat2Fields::STAGE_ATL24])
     {
-        addColumn("atl24_class",        &atl24_class,       false);
-        addColumn("atl24_confidence",   &atl24_confidence,  false);
+        addColumn("atl24_class",        &atl24_class,       "ATL24 classification of photon; included for atl24 classification",            false);
+        addColumn("atl24_confidence",   &atl24_confidence,  "ATL24 classification confidence of photon; included for atl24 classification", false);
     }
 
     /* Set CRS */
@@ -189,9 +186,16 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Kickoff Reader Thread */
-    active.store(true);
-    readerPid = new Thread(subsettingThread, this);
+    /* Start Reader Thread */
+    if(_hdf03)
+    {
+        active.store(true);
+        readerPid = new Thread(subsettingThread, this);
+    }
+    else // nothing to do
+    {
+        signalComplete();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -204,7 +208,7 @@ Atl03DataFrame::~Atl03DataFrame (void)
     delete [] beam;
     delete outQ;
     parms->releaseLuaObject();
-    hdf03->releaseLuaObject();
+    if(hdf03) hdf03->releaseLuaObject();
     if(hdf08) hdf08->releaseLuaObject();
     if(hdf24) hdf24->releaseLuaObject();
 }

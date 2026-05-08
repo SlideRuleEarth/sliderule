@@ -1,0 +1,19 @@
+type: object
+additionalProperties:
+  type: object
+  properties:
+    status:
+      type: string
+      enum: [SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED]
+    statusReason:
+      type: string
+    createdAt:
+      type: string
+      description: UTC timestamp in YYYY-MM-DD HH:MM:SS format.
+      example: "2026-05-07 12:00:00"
+    jobDefinition:
+      type: string
+    args:
+      type: string
+description: >
+  Map of job ID to job status details. Keys are the requested job IDs.

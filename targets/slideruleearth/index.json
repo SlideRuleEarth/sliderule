@@ -1,0 +1,29 @@
+{
+  "apis": [
+    {
+      "name": "SlideRule",
+      "description": "On-demand science data processing",
+      "urls": ["sliderule.json", "sliderule/openapi.json"]
+    },
+    {
+      "name": "Asset Metadata Service (AMS)",
+      "description": "Earth science dataset querying",
+      "urls": ["ams.json", "ams/openapi.yml"]
+    },
+    {
+      "name": "Intelligent Load Balancer (ILB)",
+      "description": "Cluster orchestration and reverse proxy",
+      "url": ["ilb.json", "ilb/openapi.yml"]
+    },
+    {
+      "name": "Runner",
+      "description": "Batch job processing in SlideRule runtime environment",
+      "url": ["runner.json", "runner/openapi.yml"]
+    },
+    {
+      "name": "Authenticator",
+      "description": "OAuth 2.1 Authorization Server for SlideRule services",
+      "url": ["authenticator.json", "authenticator/openapi.yml"]
+    }
+  ]
+}

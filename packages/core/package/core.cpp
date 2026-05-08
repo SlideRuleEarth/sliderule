@@ -43,6 +43,7 @@
 #include "EndpointProxy.h"
 #include "EventLib.h"
 #include "PointIndex.h"
+#include "FileEndpoint.h"
 #include "FileIODriver.h"
 #include "GeoDataFrame.h"
 #include "HttpServer.h"
@@ -122,6 +123,7 @@ static int core_open (lua_State *L)
         {"logmon",          LogMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
+        {"webroot",         FileEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
         {"pointindex",      PointIndex::luaCreate},
         {"intervalindex",   IntervalIndex::luaCreate},
@@ -208,7 +210,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "DOUBLE",                   RecordObject::DOUBLE);
     LuaEngine::setAttrInt   (L, "TIME8",                    RecordObject::TIME8);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
-    LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
+    LuaEngine::setAttrInt   (L, "OBJECT",                   RecordObject::OBJECT);
     LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
     LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
     LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
@@ -217,7 +219,6 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);
     LuaEngine::setAttrInt   (L, "INVALID_KEY",              INVALID_KEY);
     LuaEngine::setAttrStr   (L, "TERMINATE",                GeoDataFrame::TERMINATE);
-    LuaEngine::setAttrNum   (L, "INVALID_COORDINATE",       RequestFields::INVALID_COORDINATE);
 
 #ifdef __unittesting__
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);

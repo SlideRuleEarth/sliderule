@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <algorithm>
+
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "Field.h"
@@ -66,6 +68,7 @@ class FieldEnumeration: public Field
         bool                    operator[]          (T i) const;
         bool&                   operator[]          (T i);
 
+        string                  toOpenApi           (const char* description) const override;
         string                  toJson              (void) const override;
         int                     toLua               (lua_State* L) const override;
         int                     toLua               (lua_State* L, long key) const override;
@@ -97,6 +100,7 @@ class FieldEnumeration: public Field
 
         bool values[N];
         bool providedAsSingle;  // provided as a single value as opposed to an array
+        bool initialized;
 
     private:
 
@@ -136,7 +140,8 @@ inline void convertFromLua(lua_State* L, int index, FieldEnumeration<T, N>& v) {
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
     Field(ENUMERATION, getImpliedEncoding<T>()),
-    providedAsSingle(false)
+    providedAsSingle(false),
+    initialized(true)
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
@@ -148,7 +153,8 @@ FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(void):
     Field(ENUMERATION, getImpliedEncoding<T>()),
-    providedAsSingle(false)
+    providedAsSingle(false),
+    initialized(false)
 {
     assert(N > 0);
 }
@@ -241,6 +247,54 @@ bool& FieldEnumeration<T,N>::operator[](T i)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "index out of bounds: %d", index);
     }
     return values[index];
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object
+ *           properties:
+ *             <field>:
+ *               type: array                    <---- from here
+ *               description: <description>
+ *               items:
+ *                 type: <field type>
+ *               default: <defaults>
+ *               enum: <enumeration>            <---- to here
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+string FieldEnumeration<T,N>::toOpenApi (const char* description) const
+{
+    // build enumeration
+    string enum_property("[");
+    bool first = true;
+    for(int i = 0; i < N; i++)
+    {
+        try
+        {
+            T selection;
+            convertFromIndex(i, selection);
+            string selection_str = convertToJson(selection); // separate line here because this throws
+            selection_str.erase(std::remove(selection_str.begin(), selection_str.end(), '"'), selection_str.end());
+            if(!first) enum_property += ",";
+            else first = false;
+            enum_property += selection_str;
+        }
+        catch(const RunTimeException& e)
+        {
+            mlog(DEBUG, "Unable to describe enumeration [%s]: %s", description, e.what());
+        }
+    }
+    enum_property += "]";
+
+    // build default
+    FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
+
+    // return open api component schema
+    return FString("{\"type\": \"array\", \"description\": \"%s; %s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
+        description, enum_property.c_str(), this->getOpenApiType(), this->getOpenApiFormat(), N, N, default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------
@@ -374,6 +428,7 @@ void FieldEnumeration<T,N>::copy(const FieldEnumeration<T,N>& array)
         values[i] = array.values[i];
     }
     providedAsSingle = array.providedAsSingle;
+    initialized = array.initialized;
     encoding = array.encoding;
 }
 

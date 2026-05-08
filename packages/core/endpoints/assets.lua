@@ -3,7 +3,6 @@
 -------------------------------------------------------
 local json      = require("json")
 local earthdata = require("earth_data_query")
-local parms     = nil
 
 -------------------------------------------------------
 -- main
@@ -31,11 +30,47 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "Assets",
     logging = core.DEBUG,
     description = "Lists available assets, drivers, and rasters",
     roles = {},
     signed = false,
-    outputs = {"json"}
+    inputs = nil,
+    outputs = {"json"},
+    schema = {
+        request = nil,
+        response = [[ "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "directory": {
+                        "type": "object",
+                        "description": "Map of data source name to its configuration",
+                        "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                                "name": { "type": "string" },
+                                "driver": { "type": "string" },
+                                "path": { "type": "string" },
+                                "identity": { "type": "string" },
+                                "endpoint": { "type": "string" },
+                                "index": { "type": "string", "description": "Optional VRT or index file path" }
+                            }
+                        }
+                    },
+                    "drivers": {
+                        "type": "array",
+                        "description": "List of available driver types",
+                        "items": { "type": "string" }
+                    },
+                    "rasters": {
+                        "type": "array",
+                        "description": "List of available raster source names",
+                        "items": { "type": "string" }
+                    }
+                }
+            }
+        } ]]
+    }
 }

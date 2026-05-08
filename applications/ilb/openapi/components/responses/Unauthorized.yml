@@ -1,0 +1,5 @@
+description: Invalid or missing authorization.
+content:
+  text/html:
+    schema:
+      type: string

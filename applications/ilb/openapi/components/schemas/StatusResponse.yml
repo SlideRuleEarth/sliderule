@@ -1,0 +1,5 @@
+type: object
+properties:
+  nodes:
+    type: integer
+    description: Number of registered nodes for the service.

@@ -1,0 +1,21 @@
+type: object
+properties:
+  response:
+    type: object
+    description: CloudFormation stack description (cleaned of binary fields).
+  auto_shutdown:
+    type: string
+    nullable: true
+    description: Next auto-shutdown time (ISO 8601) or null if not scheduled.
+  current_nodes:
+    type: integer
+    description: Number of currently running node instances.
+  version:
+    type: string
+    description: Deployed container image version.
+  is_public:
+    type: string
+    description: Whether the cluster is publicly accessible ("true" or "false").
+  node_capacity:
+    type: string
+    description: Configured node capacity.

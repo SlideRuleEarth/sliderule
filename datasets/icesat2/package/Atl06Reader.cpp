@@ -83,7 +83,7 @@ const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
 
 const char* Atl06Reader::atRecType = "atl06srec";
 const RecordObject::fieldDef_t Atl06Reader::atRecDef[] = {
-    {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"elevation",               RecordObject::OBJECT,   offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl06Reader::OBJECT_TYPE = "Atl06Reader";

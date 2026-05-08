@@ -1,0 +1,19 @@
+type: object
+description: >
+  A map of beam name to beam metadata for the requested granule.
+additionalProperties:
+  type: object
+  properties:
+    season:
+      type: integer
+    bathy_photons:
+      type: integer
+    bathy_mean_depth:
+      type: number
+    bathy_min_depth:
+      type: number
+    bathy_max_depth:
+      type: number
+    begin_time:
+      type: string
+      format: date-time

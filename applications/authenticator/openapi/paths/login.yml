@@ -1,0 +1,69 @@
+get:
+  operationId: login
+  summary: OAuth 2.1 Authorization endpoint
+  description: >
+    Initiates the authorization code flow with PKCE. Validates the client session,
+    stores the code challenge, and redirects the user to GitHub for authentication.
+  parameters:
+    - name: response_type
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [code]
+    - name: client_id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Client ID obtained from registration.
+    - name: redirect_uri
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: Must match one of the URIs registered during client registration.
+    - name: state
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Opaque value for CSRF protection, returned unchanged in the callback.
+    - name: scope
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Space-separated list of scopes. Must be subset of registered scopes.
+      example: mcp:tools mcp:resources
+    - name: code_challenge
+      in: query
+      required: true
+      schema:
+        type: string
+      description: PKCE code challenge (BASE64URL(SHA256(code_verifier))).
+    - name: code_challenge_method
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [S256]
+    - name: resource
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uri
+      description: Optional resource indicator (RFC 8707). Must be https and under the service domain.
+  responses:
+    '302':
+      description: Redirect to GitHub authorization page
+      headers:
+        Location:
+          schema:
+            type: string
+            format: uri
+    '500':
+      $ref: '../components/responses/InternalError.yml'

@@ -1,0 +1,12 @@
+type: object
+properties:
+  response:
+    type: object
+    description: CloudFormation stack description (cleaned of binary fields).
+  auto_shutdown:
+    type: string
+    nullable: true
+    description: Next auto-shutdown time (ISO 8601) or null if not scheduled.
+  current_nodes:
+    type: integer
+    description: Number of currently running user ASG node instances.

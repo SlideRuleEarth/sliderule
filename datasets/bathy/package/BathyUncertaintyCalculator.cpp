@@ -239,8 +239,9 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     }
 
     /* get atl09 wind speed column */
-    FieldColumn<float>* wind_v = reinterpret_cast<FieldColumn<float>*>(df.getColumn("met_v10m"));
-    if(!wind_v)
+    FieldColumn<float>* met_u10m = reinterpret_cast<FieldColumn<float>*>(df.getColumn("met_u10m"));
+    FieldColumn<float>* met_v10m = reinterpret_cast<FieldColumn<float>*>(df.getColumn("met_v10m"));
+    if(!met_u10m || !met_v10m)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find met_v10m column");
     }
@@ -275,7 +276,8 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
 
             /* get wind speed index */
-            const int wind_speed = static_cast<int>(roundf((*wind_v)[i]));
+            const float wind_v = sqrt(((*met_u10m)[i] * (*met_u10m)[i]) + ((*met_v10m)[i] * (*met_v10m)[i]));
+            const int wind_speed = static_cast<int>(roundf(wind_v));
             wind_speed_index = 0;
             while( (wind_speed_index < (NUM_WIND_SPEED_RANGES - 1)) && (wind_speed > WIND_SPEED_RANGES[wind_speed_index + 1][0]) )
             {
@@ -344,8 +346,8 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     }
 
     /* add columns */
-    df.addExistingColumn("sigma_thu", sigma_thu);
-    df.addExistingColumn("sigma_tvu", sigma_tvu);
+    df.addExistingColumn("sigma_thu", sigma_thu, "Total horizontal uncertainty (in meters)");
+    df.addExistingColumn("sigma_tvu", sigma_tvu, "Total vertical uncertainty (in meters)");
 
     /* mark completion */
     return true;

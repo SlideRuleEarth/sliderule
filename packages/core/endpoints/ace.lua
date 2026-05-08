@@ -1,9 +1,4 @@
 -------------------------------------------------------
--- initialization
--------------------------------------------------------
-local parms = nil
-
--------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
@@ -24,11 +19,26 @@ end
 -------------------------------------------------------
 return {
     main = main,
-    parms = parms,
+    parms = nil,
     name = "Arbitrary Code Execution",
     description = "Execute user supplied lua code",
     logging = core.CRITICAL,
     roles = {"member", "owner"},
     signed = true,
-    outputs = {"json"}
+    inputs = {"text"},
+    outputs = {"text"},
+    schema = {
+        request = [["text/plain": {
+            "schema": {
+                "type": "string",
+                "description": "Lua code to execute on the server"
+            }
+        } ]],
+        response = [["text/plain": {
+            "schema": {
+                "type": "string",
+                "description": "Result returned by supplied lua code"
+            }
+        } ]]
+    }
 }

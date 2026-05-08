@@ -1,0 +1,13 @@
+type: object
+properties:
+  lon:
+    type: number
+    format: double
+    description: Longitude in degrees
+  lat:
+    type: number
+    format: double
+    description: Latitude in degrees
+required:
+  - lon
+  - lat

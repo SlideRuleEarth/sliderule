@@ -106,5 +106,23 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary"}
+    inputs = {"json"},
+    outputs = {"binary"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/H5CoroParameters.json" }
+                ],
+                "description": "H5Coro dataframe read parameters including asset, resource, groups, and arrow output configuration"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "type": "string",
+                "format": "binary",
+                "description": "Apache Parquet file containing the concatenated dataframe of values read from the HDF5 file"
+            }
+        } ]]
+    }
 }

@@ -10,4 +10,6 @@ dependencies:
   - gunicorn
   - pytest
   - coverage
+  - openapi-core
+  - PyYAML
   - pip

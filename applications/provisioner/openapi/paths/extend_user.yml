@@ -1,0 +1,26 @@
+post:
+  operationId: extendUser
+  summary: Extend user ASG TTL
+  description: >
+    Extends the auto-shutdown time of a user auto-scaling group.
+  parameters:
+    - $ref: '../components/parameters/Username.yml'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/ExtendRequest.yml'
+  responses:
+    '200':
+      description: User ASG TTL extended
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/ExtendResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

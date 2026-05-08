@@ -1,0 +1,20 @@
+type: object
+properties:
+  status:
+    type: boolean
+    description: Whether the destroy operation completed successfully.
+  exception:
+    type: string
+    description: Error message if the destroy operation failed.
+additionalProperties:
+  type: object
+  description: >
+    Per-stack destroy details keyed by stack name. Each entry contains
+    EventBridge cleanup status and CloudFormation delete response.
+  properties:
+    EventBridge Target Removed:
+      type: boolean
+    EventBridge Rule Removed:
+      type: boolean
+    response:
+      type: object

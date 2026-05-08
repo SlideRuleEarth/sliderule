@@ -58,14 +58,14 @@ void RegionMask::registerRasterizer (burn_func_t func)
  * Constructor - RegionMask
  *----------------------------------------------------------------------------*/
 RegionMask::RegionMask(void):
-    FieldMap<Field> ({  {"geojson",     &geojson},
-                        {"cellsize",    &cellSize},
-                        {"cols",        &cols},
-                        {"rows",        &rows},
-                        {"lonmin",      &lonMin},
-                        {"latmin",      &latMin},
-                        {"lonmax",      &lonMax},
-                        {"latmax",      &latMax}  })
+    FieldMap<Field> ({  {"geojson",     &geojson,   "GeoJSON string defining area of interest to be rasterized"},
+                        {"cellsize",    &cellSize,  "Pixel size of rasterized area of interest"},
+                        {"cols",        &cols,      "Number of columns in the rasterized area of interest"},
+                        {"rows",        &rows,      "Number of rows in the rasterized area of interest"},
+                        {"lonmin",      &lonMin,    "Minimum longitude in the area of interest"},
+                        {"latmin",      &latMin,    "Minumum latitude in the area of interest"},
+                        {"lonmax",      &lonMax,    "Maximum longitude in the area of interest"},
+                        {"latmax",      &latMax,    "Maximum latitude in the area of interest"}  })
 {
 }
 

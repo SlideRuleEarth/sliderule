@@ -85,6 +85,7 @@ class FieldArray: public FieldUnsafeArray<T>
         T                   operator[]      (int i) const;
         T&                  operator[]      (int i);
 
+        string              toOpenApi       (const char* description) const override;
         string              toJson          (void) const override;
         int                 toLua           (lua_State* L) const override;
         int                 toLua           (lua_State* L, long key) const override;
@@ -113,6 +114,7 @@ class FieldArray: public FieldUnsafeArray<T>
          * Data
          *--------------------------------------------------------------------*/
 
+        bool initialized;
         T values[N];
 
     private:
@@ -166,7 +168,8 @@ template <int N> inline uint32_t toEncoding(FieldArray<string, N>& v)   { (void)
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
-    FieldUnsafeArray<T>(&values[0], N)
+    FieldUnsafeArray<T>(&values[0], N),
+    initialized(true)
 {
     std::copy(init_list.begin(), init_list.end(), values);
 }
@@ -176,7 +179,8 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(void):
-    FieldUnsafeArray<T>(&values[0], N)
+    FieldUnsafeArray<T>(&values[0], N),
+    initialized(false)
 {
 }
 
@@ -228,6 +232,30 @@ template <class T, int N>
 T& FieldArray<T,N>::operator[](int i)
 {
     return values[i];
+}
+
+/*----------------------------------------------------------------------------
+ * toOpenApi
+ *      components:
+ *       schemas:
+ *         <object name>:
+ *           type: object
+ *           properties:
+ *             <field>:
+ *               type: array                    <---- from here
+ *               description: <description>
+ *               items:
+ *                 type: <field type>
+ *               minItems: N
+ *               maxItems: M
+ *               default: <defaults>            <---- to here
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+string FieldArray<T,N>::toOpenApi (const char* description) const
+{
+    FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
+    return FString("{\"type\": \"array\", \"description\": \"%s\", \"items\": {\"type\": \"%s\", \"format\": \"%s\"}, \"minItems\": %d, \"maxItems\": %d%s}",
+        description, this->getOpenApiType(), this->getOpenApiFormat(), N, N, default_property.c_str()).c_str();
 }
 
 /*----------------------------------------------------------------------------
@@ -308,6 +336,7 @@ template <class T, int N>
 void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
 {
     assert(N > 0);
+    initialized = array.initialized;
     for(int i = 0; i < N; i++)
     {
         values[i] = array.values[i];

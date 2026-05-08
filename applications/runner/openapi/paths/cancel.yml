@@ -1,0 +1,25 @@
+post:
+  operationId: cancel
+  summary: Cancel submitted jobs
+  description: >
+    Cancels specific jobs by ID, or all active jobs if no job_list is provided.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/CancelRequest.yml'
+  responses:
+    '200':
+      description: List of canceled job IDs
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/CancelResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

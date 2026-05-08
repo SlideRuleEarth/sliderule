@@ -106,27 +106,27 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
     // create new dataframe columns
-    FieldColumn<time8_t>*   time_ns                 = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*    latitude                = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*    longitude               = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<int32_t>*   segment_id_beg          = new FieldColumn<int32_t>;                     // first segment used in extent to calculate vegetation metrics
-    FieldColumn<double>*    x_atc                   = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*     y_atc                   = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<uint32_t>*  photon_start            = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<uint32_t>*  photon_count            = new FieldColumn<uint32_t>;                    // number of photons used in final elevation calculation
-    FieldColumn<uint16_t>*  pflags                  = new FieldColumn<uint16_t>;                    // processing flags
-    FieldColumn<uint32_t>*  ground_photon_count     = new FieldColumn<uint32_t>;                    // number of photons labeled as ground in extent
-    FieldColumn<uint32_t>*  vegetation_photon_count = new FieldColumn<uint32_t>;                    // number of photons labeled as canopy or top of canopy in extent
-    FieldColumn<uint8_t>*   landcover               = new FieldColumn<uint8_t>;                     // atl08 land_segments/segments_landcover
-    FieldColumn<uint8_t>*   snowcover               = new FieldColumn<uint8_t>;                     // atl08 land_segments/segments_snowcover
-    FieldColumn<float>*     solar_elevation         = new FieldColumn<float>;                       // atl03 solar elevation
-    FieldColumn<float>*     h_te_median             = new FieldColumn<float>;                       // median terrain height for ground photons
-    FieldColumn<float>*     h_max_canopy            = new FieldColumn<float>;                       // maximum relief height for canopy photons
-    FieldColumn<float>*     h_min_canopy            = new FieldColumn<float>;                       // minimum relief height for canopy photons
-    FieldColumn<float>*     h_mean_canopy           = new FieldColumn<float>;                       // average relief height for canopy photons
-    FieldColumn<float>*     h_canopy                = new FieldColumn<float>(Field::Z_COLUMN);      // 98th percentile relief height for canopy photons
-    FieldColumn<float>*     canopy_openness         = new FieldColumn<float>;                       // standard deviation of relief height for canopy photons
-    FieldColumn<FieldArray<float,NUM_PERCENTILES>>* canopy_h_metrics = new FieldColumn<FieldArray<float,NUM_PERCENTILES>>;  // relief height at given percentile for canopy photons
+    FieldColumn<time8_t>*   time_ns                 = new FieldColumn<time8_t>(Field::TIME_COLUMN);
+    FieldColumn<double>*    latitude                = new FieldColumn<double>(Field::Y_COLUMN);
+    FieldColumn<double>*    longitude               = new FieldColumn<double>(Field::X_COLUMN);
+    FieldColumn<int32_t>*   segment_id_beg          = new FieldColumn<int32_t>;
+    FieldColumn<double>*    x_atc                   = new FieldColumn<double>;
+    FieldColumn<float>*     y_atc                   = new FieldColumn<float>;
+    FieldColumn<uint32_t>*  photon_start            = new FieldColumn<uint32_t>;
+    FieldColumn<uint32_t>*  photon_count            = new FieldColumn<uint32_t>;
+    FieldColumn<uint16_t>*  pflags                  = new FieldColumn<uint16_t>;
+    FieldColumn<uint32_t>*  ground_photon_count     = new FieldColumn<uint32_t>;
+    FieldColumn<uint32_t>*  vegetation_photon_count = new FieldColumn<uint32_t>;
+    FieldColumn<uint8_t>*   landcover               = new FieldColumn<uint8_t>;
+    FieldColumn<uint8_t>*   snowcover               = new FieldColumn<uint8_t>;
+    FieldColumn<float>*     solar_elevation         = new FieldColumn<float>;
+    FieldColumn<float>*     h_te_median             = new FieldColumn<float>;
+    FieldColumn<float>*     h_max_canopy            = new FieldColumn<float>;
+    FieldColumn<float>*     h_min_canopy            = new FieldColumn<float>;
+    FieldColumn<float>*     h_mean_canopy           = new FieldColumn<float>;
+    FieldColumn<float>*     h_canopy                = new FieldColumn<float>(Field::Z_COLUMN);
+    FieldColumn<float>*     canopy_openness         = new FieldColumn<float>;
+    FieldColumn<FieldArray<float,NUM_PERCENTILES>>* canopy_h_metrics = new FieldColumn<FieldArray<float,NUM_PERCENTILES>>;
 
     // create new ancillary dataframe columns
     Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
@@ -230,27 +230,27 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    dataframe->addExistingColumn("time_ns",                 time_ns);
-    dataframe->addExistingColumn("latitude",                latitude);
-    dataframe->addExistingColumn("longitude",               longitude);
-    dataframe->addExistingColumn("segment_id_beg",          segment_id_beg);
-    dataframe->addExistingColumn("x_atc",                   x_atc);
-    dataframe->addExistingColumn("y_atc",                   y_atc);
-    dataframe->addExistingColumn("photon_start",            photon_start);
-    dataframe->addExistingColumn("photon_count",            photon_count);
-    dataframe->addExistingColumn("pflags",                  pflags);
-    dataframe->addExistingColumn("ground_photon_count",     ground_photon_count);
-    dataframe->addExistingColumn("vegetation_photon_count", vegetation_photon_count);
-    dataframe->addExistingColumn("landcover",               landcover);
-    dataframe->addExistingColumn("snowcover",               snowcover);
-    dataframe->addExistingColumn("solar_elevation",         solar_elevation);
-    dataframe->addExistingColumn("h_te_median",             h_te_median);
-    dataframe->addExistingColumn("h_max_canopy",            h_max_canopy);
-    dataframe->addExistingColumn("h_min_canopy",            h_min_canopy);
-    dataframe->addExistingColumn("h_mean_canopy",           h_mean_canopy);
-    dataframe->addExistingColumn("h_canopy",                h_canopy);
-    dataframe->addExistingColumn("canopy_openness",         canopy_openness);
-    dataframe->addExistingColumn("canopy_h_metrics",        canopy_h_metrics);
+    dataframe->addExistingColumn("time_ns",                 time_ns,                    "Unix time (nanoseconds)");
+    dataframe->addExistingColumn("latitude",                latitude,                   "Latitude (EPSG:9989)");
+    dataframe->addExistingColumn("longitude",               longitude,                  "Longitude (EPSG:9989)");
+    dataframe->addExistingColumn("segment_id_beg",          segment_id_beg,             "First segment used in extent to calculate vegetation metrics");
+    dataframe->addExistingColumn("x_atc",                   x_atc,                      "Distance from the equator (in meters)");
+    dataframe->addExistingColumn("y_atc",                   y_atc,                      "distance from reference track (in meters)");
+    dataframe->addExistingColumn("photon_start",            photon_start,               "photon index of start of extent");
+    dataframe->addExistingColumn("photon_count",            photon_count,               "number of photons used in final elevation calculation");
+    dataframe->addExistingColumn("pflags",                  pflags,                     "processing flags");
+    dataframe->addExistingColumn("ground_photon_count",     ground_photon_count,        "number of photons labeled as ground in extent");
+    dataframe->addExistingColumn("vegetation_photon_count", vegetation_photon_count,    "number of photons labeled as canopy or top of canopy in extent");
+    dataframe->addExistingColumn("landcover",               landcover,                  "atl08 land_segments/segments_landcover");
+    dataframe->addExistingColumn("snowcover",               snowcover,                  "atl08 land_segments/segments_snowcover");
+    dataframe->addExistingColumn("solar_elevation",         solar_elevation,            "atl03 solar elevation");
+    dataframe->addExistingColumn("h_te_median",             h_te_median,                "median terrain height for ground photons");
+    dataframe->addExistingColumn("h_max_canopy",            h_max_canopy,               "maximum relief height for canopy photons");
+    dataframe->addExistingColumn("h_min_canopy",            h_min_canopy,               "minimum relief height for canopy photons");
+    dataframe->addExistingColumn("h_mean_canopy",           h_mean_canopy,              "average relief height for canopy photons");
+    dataframe->addExistingColumn("h_canopy",                h_canopy,                   "98th percentile relief height for canopy photons");
+    dataframe->addExistingColumn("canopy_openness",         canopy_openness,            "standard deviation of relief height for canopy photons");
+    dataframe->addExistingColumn("canopy_h_metrics",        canopy_h_metrics,           "relief height at given percentile for canopy photons");
 
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);

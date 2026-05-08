@@ -1,0 +1,6 @@
+name: username
+in: path
+required: true
+description: Username of the authenticated user (must match JWT sub claim).
+schema:
+  type: string

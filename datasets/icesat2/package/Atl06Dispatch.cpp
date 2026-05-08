@@ -112,7 +112,7 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
 
 const char* Atl06Dispatch::atRecType = "atl06rec";
 const RecordObject::fieldDef_t Atl06Dispatch::atRecDef[] = {
-    {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"elevation",               RecordObject::OBJECT,   offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 /* Lua Functions */

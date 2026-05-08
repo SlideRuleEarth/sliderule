@@ -67,7 +67,7 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     if(!lua_isfunction(L, -1))
     {
         const FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
-        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str());
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
         throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
@@ -134,7 +134,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                             if(!hdr_sent)
                             {
                                 hdr_sent = true;
-                                sendHeader(OK, content2str(ARROW), &rspq, NULL, true);
+                                sendHeader(OK, content2str(ARROW), &rspq);
                             }
 
                             /* Post Arrow Bytes */
@@ -154,7 +154,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                             if(!hdr_sent)
                             {
                                 hdr_sent = true;
-                                sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Corrupted transfer");
+                                sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Corrupted transfer", 18);
                             }
 
                             /* Mark Failure */
@@ -176,7 +176,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                     if(!hdr_sent)
                     {
                         hdr_sent = true;
-                        sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Invalid record");
+                        sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Invalid record", 14);
                     }
 
                     /* Mark Failure */
@@ -191,7 +191,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                 if(!hdr_sent)
                 {
                     hdr_sent = true;
-                    sendHeader(Service_Unavailable, content2str(TEXT), &rspq, "Failed execution");
+                    sendHeader(Service_Unavailable, content2str(TEXT), &rspq, "Failed execution", 16);
                 }
 
                 /* Mark Failure - `complete` should have been set above when all bytes received */
@@ -208,7 +208,7 @@ void* ArrowEndpoint::responseThread (void* parm)
             if(!hdr_sent)
             {
                 hdr_sent = true;
-                sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Queing failure");
+                sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Queing failure", 14);
             }
 
             /* Mark Failure */
@@ -220,7 +220,7 @@ void* ArrowEndpoint::responseThread (void* parm)
     /* (If Not Sent) Send Header */
     if(!hdr_sent)
     {
-        sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Missing data");
+        sendHeader(Internal_Server_Error, content2str(TEXT), &rspq, "Missing data", 12);
     }
 
     /* Stop Trace */

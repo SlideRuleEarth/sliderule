@@ -25,5 +25,22 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "../components/schemas/SwotParameters.json"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/swotl2geo.json" },
+                    { "$ref": "../components/schemas/swotl2geo.scan.json" }
+                ],
+                "description": "Stream of binary-encoded SWOT L2 measurements"
+            }
+        } ]]
+    }
 }

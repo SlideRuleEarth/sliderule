@@ -1,0 +1,16 @@
+post:
+  operationId: CASALS1B
+  summary: Query CASALS 1B granules
+  description: >
+    Query CASALS 1B granule metadata with spatial and temporal filters.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/CASALS1BRequest.yml'
+  responses:
+    '200':
+      $ref: '../components/responses/CASALS1BResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

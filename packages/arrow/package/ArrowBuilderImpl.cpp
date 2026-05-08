@@ -338,7 +338,7 @@ bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int fla
                 case RecordObject::TIME8:   fieldVector.push_back(arrow::field(field_name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
                 case RecordObject::STRING:  fieldVector.push_back(arrow::field(field_name, arrow::utf8()));       break;
 
-                case RecordObject::USER:    buildFieldList(field.exttype, field.offset, field.flags);
+                case RecordObject::OBJECT:  buildFieldList(field.exttype, field.offset, field.flags);
                                             add_field_to_list = false;
                                             break;
 
@@ -363,7 +363,7 @@ bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int fla
                 case RecordObject::TIME8:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
                 case RecordObject::STRING:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::utf8())));      break;
 
-                case RecordObject::USER:    if(field.flags & RecordObject::BATCH) buildFieldList(field.exttype, field.offset, field.flags);
+                case RecordObject::OBJECT:  if(field.flags & RecordObject::BATCH) buildFieldList(field.exttype, field.offset, field.flags);
                                             else mlog(CRITICAL, "User fields that are arrays must be identified as batches: %s", field.exttype);
                                             add_field_to_list = false;
                                             break;

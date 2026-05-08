@@ -1,0 +1,14 @@
+allOf:
+  - $ref: './ICESat2QueryParams.yml'
+  - type: object
+    description: >
+      All fields are optional. At least one field should be provided to get results.
+    properties:
+      refid:
+        type: integer
+        description: ATL13 lake reference ID
+      name:
+        type: string
+        description: Lake name
+      coord:
+        $ref: './Coordinate.yml'

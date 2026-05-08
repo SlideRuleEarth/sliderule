@@ -25,5 +25,22 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "../components/schemas/Icesat2Parameters.json"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "allOf": [
+                    { "$ref": "../components/schemas/atl08rec.json" },
+                    { "$ref": "../components/schemas/atl08rec.vegetation.json" }
+                ],
+                "description": "Stream of binary-encoded calculated vegetation metrics (PhoREAL)"
+            }
+        } ]]
+    }
 }

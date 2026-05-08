@@ -4,7 +4,7 @@
 
 from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
-from . import dbutils
+from . import dbutils, validation
 import datetime
 import json
 import duckdb
@@ -43,6 +43,7 @@ def init_app(app):
 # 3DEP
 #
 @usgs3dep.route('/3DEP1M', methods=['GET', 'POST'])
+@validation.validate
 def usgs3dep_route():
     try:
         # execute query
@@ -78,7 +79,7 @@ def usgs3dep_route():
                     "coordinates": [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]]
                 },
                 "properties": {
-                    "datetime": row.column("start_datetime")[0].as_py().isoformat(),
+                    "datetime": row.column("start_datetime")[0].as_py().isoformat() + "Z",
                     "url": assets["elevation"]["href"]
                 }
             }
@@ -93,6 +94,7 @@ def usgs3dep_route():
 # Id
 #
 @usgs3dep.route('/3DEP1M/id/<id>', methods=['GET', 'POST'])
+@validation.validate
 def id_route(id):
     try:
         # execute query
@@ -110,7 +112,7 @@ def id_route(id):
             if isinstance(py_val, list):
                 row[col] = py_val
             elif isinstance(py_val, (datetime.datetime, datetime.date)):
-                row[col] = py_val.isoformat()
+                row[col] = py_val.isoformat() + "Z"
             elif not isinstance(py_val, (bytes, bytearray)):
                 row[col] = py_val
         # return response

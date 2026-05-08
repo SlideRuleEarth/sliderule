@@ -5,23 +5,24 @@ local json          = require("json")
 local dataframe     = require("dataframe")
 local util          = require("bathy_utils")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"], 0)
-local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", parms["year"], parms["month"], parms["day"])
+local parms         = bathy.parms(rqst["parms"])
+local granule       = parms["granule"]
+local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", granule["year"], granule["month"], granule["day"])
 local rgps          = time.gmt2gps(rdate)
 local channels      = 6 -- number of dataframes per resource
 local resource      = parms["resource"]
-local bathymask     = bathy.mask()
-local atl03h5       = h5coro.object(parms["asset"], resource)
-local kd490         = util.get_viirs(parms, rgps)
-local seasurface    = bathy.seasurface(parms)
-local refraction    = bathy.refraction(parms)
-local uncertainty   = bathy.uncertainty(parms, kd490)
 
 -------------------------------------------------------
 -- main
 -------------------------------------------------------
 local function main()
-    dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
+    local bathymask     = bathy.mask()
+    local atl03h5       = h5coro.object(parms["asset"], resource)
+    local kd490         = util.get_viirs(parms, rgps)
+    local seasurface    = bathy.seasurface(parms)
+    local refraction    = bathy.refraction(parms)
+    local uncertainty   = bathy.uncertainty(parms, kd490)
+    dataframe.proxy("bathy", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
         local dataframes = {}
         local runners = {seasurface, refraction, uncertainty}
         for _, beam in ipairs(parms["beams"]) do
@@ -45,5 +46,18 @@ return {
     logging = core.CRITICAL,
     roles = {},
     signed = false,
-    outputs = {"binary", "arrow"}
+    inputs = {"json"},
+    outputs = {"binary", "arrow"},
+    schema = {
+        request = [[ "application/json": {
+            "schema": {
+                "$ref": "../components/schemas/BathyParameters.json"
+            }
+        } ]],
+        response = [[ "application/octet-stream": {
+            "schema": {
+                "$ref": "../components/schemas/BathyDataFrame.json"
+            }
+        } ]]
+    }
 }

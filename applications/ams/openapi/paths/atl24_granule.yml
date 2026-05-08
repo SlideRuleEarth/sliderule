@@ -1,0 +1,12 @@
+get:
+  operationId: ATL24Granule
+  summary: Get ATL24 granule details
+  description: >
+    Retrieve per-beam metadata for a specific ATL24 granule.
+  parameters:
+    - $ref: '../components/parameters/GranuleName.yml'
+  responses:
+    '200':
+      $ref: '../components/responses/ATL24GranuleResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
