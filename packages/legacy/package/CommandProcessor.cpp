@@ -1176,15 +1176,17 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
 {
     (void)argc;
 
-    const char*                 rec_type    = StringLib::StringLib::checkNullStr(argv[0]);
-    const char*                 field_name  = StringLib::StringLib::checkNullStr(argv[1]);
-    const RecordObject::fieldType_t field_type = RecordObject::str2ft(argv[2]);
-    const char*                 offset_str  = argv[3];
-    const char*                 size_str    = argv[4];
-    const char*                 flags_str   = argv[5];
+    RecordObject::fieldDef_t field_def;
+
+    const char* rec_type    = StringLib::StringLib::checkNullStr(argv[0]);
+    field_def.name          = StringLib::StringLib::checkNullStr(argv[1]);
+    field_def.type          = RecordObject::str2ft(argv[2]);
+    const char* offset_str  = argv[3];
+    const char* size_str    = argv[4];
+    const char* flags_str   = argv[5];
 
     /* Check Field Type */
-    if(field_type == RecordObject::INVALID_FIELD)
+    if(field_def.type == RecordObject::INVALID_FIELD)
     {
         mlog(CRITICAL, "Invalid field type supplied");
         return -1;
@@ -1202,6 +1204,10 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
         mlog(CRITICAL, "Invalid offset supplied: %ld", offset);
         return -1;
     }
+    else
+    {
+        field_def.offset = offset;
+    }
 
     /* Get Size */
     long size = 0;
@@ -1215,25 +1221,35 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
         mlog(CRITICAL, "Invalid size supplied: %ld", size);
         return -1;
     }
+    else
+    {
+        field_def.elements = size;
+    }
 
     /* Get Flags */
-    const unsigned int flags = RecordObject::str2flags(flags_str);
+    field_def.flags = RecordObject::str2flags(flags_str);
+
+    /* Set External Type */
+    field_def.exttype = NULL;
+
+    /* Set Description */
+    field_def.decsription = "None";
 
     /* Define Field */
-    const RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, field_name, field_type, offset, size, NULL, flags);
+    const RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, &field_def);
     if(status == RecordObject::DUPLICATE_DEF)
     {
-        mlog(WARNING, "Attempting to define field %s that is already defined for record %s", field_name, rec_type);
+        mlog(WARNING, "Attempting to define field %s that is already defined for record %s", field_def.name, rec_type);
         return 0; // this may occur as a part of normal operation and should not signal an error; directly check if field exists if that is needed
     }
     else if(status == RecordObject::NOTFOUND_DEF)
     {
-        mlog(CRITICAL, "Record type %s not found, unable to define field %s", rec_type, field_name);
+        mlog(CRITICAL, "Record type %s not found, unable to define field %s", rec_type, field_def.name);
         return -1;
     }
     else if(status != RecordObject::SUCCESS_DEF)
     {
-        mlog(CRITICAL, "Failed to add field %s to %s: %d", field_name, rec_type, (int)status);
+        mlog(CRITICAL, "Failed to add field %s to %s: %d", field_def.name, rec_type, (int)status);
         return -1;
     }
 

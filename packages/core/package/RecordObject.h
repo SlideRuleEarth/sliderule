@@ -126,6 +126,7 @@ class RecordObject
             int32_t         elements;           // number of elements in array
             const char*     exttype;            // record type when type=OBJECT
             unsigned int    flags;              // see fieldFlags_t
+            const char*     description;        // description of field
         } field_t;
 
         typedef struct {
@@ -135,6 +136,7 @@ class RecordObject
             int32_t         elements;
             const char*     exttype;
             uint64_t        flags;              // 64-bits provided here to consume padding
+            const char*     decsription;
         } fieldDef_t;
 
         typedef enum {
@@ -284,7 +286,7 @@ class RecordObject
         static field_t          getDefinedField     (const char* rec_type, const char* field_name);
         static valType_t        getValueType        (const field_t& field);
         static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
-        static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags=NATIVE_FLAGS);
+        static recordDefErr_t   defineField         (const char* rec_type, const fieldDef_t* field);
 
         /* Utility Static Methods */
         static bool             isRecord            (const char* rec_type);
@@ -375,7 +377,7 @@ class RecordObject
         field_t                 getPointedToField   (field_t field, bool allow_null, int element=0);
         static field_t          getUserField        (definition_t* def, const char* field_name, uint32_t parent_flags=NATIVE_FLAGS);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
-        static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags);
+        static recordDefErr_t   addField            (definition_t* def, const fieldDef_t* field);
         static void             scanDefinition      (definition_t* def, const char* field_prefix, const char* rec_type);
 
         /* Overloaded Methods */

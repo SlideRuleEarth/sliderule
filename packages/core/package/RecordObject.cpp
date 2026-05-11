@@ -991,12 +991,11 @@ RecordObject::recordDefErr_t RecordObject::defineRecord(const char* rec_type, co
 /*----------------------------------------------------------------------------
  * defineField
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::defineField(const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags)
+RecordObject::recordDefErr_t RecordObject::defineField(const char* rec_type, const fieldDef_t* field)
 {
     assert(rec_type);
-    assert(field_name);
 
-    return addField(getDefinition(rec_type), field_name, type, offset, size, exttype, flags);
+    return addField(getDefinition(rec_type), field);
 }
 
 /*----------------------------------------------------------------------------
@@ -1772,7 +1771,7 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
     /* Add Fields */
     for(int i = 0; status == SUCCESS_DEF && i < num_fields; i++)
     {
-        status = addField(def, fields[i].name, fields[i].type, fields[i].offset, fields[i].elements, fields[i].exttype, fields[i].flags);
+        status = addField(def, &fields[i]);
     }
 
     /* Return Definition and Status */
@@ -1787,33 +1786,32 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
  *   1. Will often fail with multiple calls to create same record definition (this is okay)
  *   2. Offset in bytes except for bit field, where it is in bits
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags)
+RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const fieldDef_t* field)
 {
-    assert(field_name);
-
     /* Check Definition */
     if(!def) return NOTFOUND_DEF;
-    if(!field_name) return FIELDERR_DEF;
+    if(!field->name) return FIELDERR_DEF;
 
     /* Initialize Parameters */
     recordDefErr_t status = FIELDERR_DEF;
     int end_of_field;
-    if(flags & POINTER) end_of_field = offset + FIELD_TYPE_BYTES[INT32];
-    else                end_of_field = type == BITFIELD ? TOBYTES(offset + elements) : offset + (elements * FIELD_TYPE_BYTES[type]);
-    const int field_offset = type == BITFIELD ? offset : TOBITS(offset);
+    if(field->flags & POINTER)  end_of_field = field->offset + FIELD_TYPE_BYTES[INT32];
+    else                        end_of_field = field->type == BITFIELD ? TOBYTES(field->offset + field->elements) : field->offset + (field->elements * FIELD_TYPE_BYTES[field->type]);
+    const int field_offset = field->type == BITFIELD ? field->offset : TOBITS(field->offset);
 
     /* Define Field */
     if(end_of_field <= def->data_size)
     {
         field_t f;
-        f.type = type;
+        f.type = field->type;
         f.offset = field_offset;
-        f.elements = elements;
-        f.exttype = exttype;
-        f.flags = flags;
+        f.elements = field->elements;
+        f.exttype = field->exttype;
+        f.flags = field->flags;
+        f.description = field->decsription;
 
         // uniquely add the field
-        if(def->fields.add(field_name, f, true))
+        if(def->fields.add(field->name, f, true))
         {
             status = SUCCESS_DEF;
         }

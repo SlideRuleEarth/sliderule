@@ -49,21 +49,21 @@
 
 const char* Gedi01bReader::fpRecType = "gedi01brec.footprint";
 const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
-    {"shot_number",     RecordObject::UINT64,   offsetof(g01b_footprint_t, shot_number),        1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"time",            RecordObject::TIME8,    offsetof(g01b_footprint_t, time_ns),            1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(g01b_footprint_t, latitude),           1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(g01b_footprint_t, longitude),          1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"elevation_stop",  RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_stop),     1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS},
-    {"orbit",           RecordObject::UINT32,   offsetof(g01b_footprint_t, orbit),              1,  NULL, NATIVE_FLAGS},
-    {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(g01b_footprint_t, flags),              1,  NULL, NATIVE_FLAGS},
-    {"track",           RecordObject::UINT16,   offsetof(g01b_footprint_t, track),              1,  NULL, NATIVE_FLAGS},
-    {"tx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, tx_size),            1,  NULL, NATIVE_FLAGS},
-    {"rx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, rx_size),            1,  NULL, NATIVE_FLAGS},
-    {"tx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, tx_waveform),        G01B_MAX_TX_SAMPLES,  NULL, NATIVE_FLAGS},
-    {"rx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, rx_waveform),        G01B_MAX_RX_SAMPLES,  NULL, NATIVE_FLAGS}
+    {"shot_number",     RecordObject::UINT64,   offsetof(g01b_footprint_t, shot_number),        1,  NULL, NATIVE_FLAGS | RecordObject::INDEX,       "GEDI laser shot number identifier"},
+    {"time",            RecordObject::TIME8,    offsetof(g01b_footprint_t, time_ns),            1,  NULL, NATIVE_FLAGS | RecordObject::TIME,        "Unix time (nanoseconds) of laser shot"},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(g01b_footprint_t, latitude),           1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD,     "Latitude (EPSG:7912)"},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(g01b_footprint_t, longitude),          1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD,     "Longitude (EPSG:7912)"},
+    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD,     "Elevation of the start of the range window (meters)"},
+    {"elevation_stop",  RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_stop),     1,  NULL, NATIVE_FLAGS,                             "Elevation of the end of the range window (meters)"},
+    {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS,                             "Solar elevation (degrees)"},
+    {"orbit",           RecordObject::UINT32,   offsetof(g01b_footprint_t, orbit),              1,  NULL, NATIVE_FLAGS,                             "GEDI orbit number"},
+    {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS,                             "GEDI laser beam identifier"},
+    {"flags",           RecordObject::UINT8,    offsetof(g01b_footprint_t, flags),              1,  NULL, NATIVE_FLAGS,                             "Data flags"},
+    {"track",           RecordObject::UINT16,   offsetof(g01b_footprint_t, track),              1,  NULL, NATIVE_FLAGS,                             "GEDI reference ground track"},
+    {"tx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, tx_size),            1,  NULL, NATIVE_FLAGS,                             "Number of bins in the transmit waveform"},
+    {"rx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, rx_size),            1,  NULL, NATIVE_FLAGS,                             "Number of bins in the return waveform"},
+    {"tx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, tx_waveform),        G01B_MAX_TX_SAMPLES,  NULL, NATIVE_FLAGS,           "Transmit waveform"},
+    {"rx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, rx_waveform),        G01B_MAX_RX_SAMPLES,  NULL, NATIVE_FLAGS,           "Return waveform"}
 };
 
 const char* Gedi01bReader::batchRecType = "gedi01brec";
