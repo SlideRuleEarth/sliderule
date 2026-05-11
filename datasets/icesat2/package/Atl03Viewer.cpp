@@ -49,24 +49,24 @@
 
 const char* Atl03Viewer::segRecType = "atl03vrec.segments";
 const RecordObject::fieldDef_t Atl03Viewer::segRecDef[] = {
-    {"time",            RecordObject::TIME8,    offsetof(segment_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"extent_id",       RecordObject::UINT64,   offsetof(segment_t, extent_id),      1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(segment_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(segment_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"segment_dist_x",  RecordObject::DOUBLE,   offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
-    {"segment_id",      RecordObject::UINT32,   offsetof(segment_t, id),             1,  NULL, NATIVE_FLAGS},
-    {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD}
+    {"time",            RecordObject::TIME8,    offsetof(segment_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME,        "Unix time (nanoseconds) of the photon measurement"},
+    {"extent_id",       RecordObject::UINT64,   offsetof(segment_t, extent_id),      1,  NULL, NATIVE_FLAGS | RecordObject::INDEX,       "Unique extent identifier"},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(segment_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD,     "Latitude (EPSG:9989)"},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(segment_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD,     "Longitude (EPSG:9989)"},
+    {"segment_dist_x",  RecordObject::DOUBLE,   offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS,                             "Distance from equator (in meters)"},
+    {"segment_id",      RecordObject::UINT32,   offsetof(segment_t, id),             1,  NULL, NATIVE_FLAGS,                             "ATL03 segment id"},
+    {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD,     "Number of photons in segment"}
 };
 
 const char* Atl03Viewer::batchRecType = "atl03vrec";
 const RecordObject::fieldDef_t Atl03Viewer::batchRecDef[] = {
-    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"segments",        RecordObject::OBJECT,   offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
+    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Track number (1, 2, or 3)"},
+    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Pair number (0: left, 1: right)"},
+    {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ATLAS detector spot"},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ICESat-2 Reference ground track"},
+    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ICESat-2 Cycle number"},
+    {"segments",        RecordObject::OBJECT,   offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH,"ATL03 segment data"} // variable length
 };
 
 const char* Atl03Viewer::OBJECT_TYPE = "Atl03Viewer";

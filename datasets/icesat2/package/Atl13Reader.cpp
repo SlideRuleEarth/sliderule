@@ -50,28 +50,28 @@ using std::numeric_limits;
 
 const char* Atl13Reader::wtRecType = "atl13srec.elevation";
 const RecordObject::fieldDef_t Atl13Reader::wtRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(water_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"rgt",                     RecordObject::UINT16,   offsetof(water_t, rgt),                     1,  NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(water_t, cycle),                   1,  NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(water_t, spot),                    1,  NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(water_t, gt),                      1,  NULL, NATIVE_FLAGS},
+    {"extent_id",               RecordObject::UINT64,   offsetof(water_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX,      "Unique extent identifier"},
+    {"rgt",                     RecordObject::UINT16,   offsetof(water_t, rgt),                     1,  NULL, NATIVE_FLAGS,                            "ICESat-2 Reference ground track"},
+    {"cycle",                   RecordObject::UINT16,   offsetof(water_t, cycle),                   1,  NULL, NATIVE_FLAGS,                            "ICESat-2 Cycle number"},
+    {"spot",                    RecordObject::UINT8,    offsetof(water_t, spot),                    1,  NULL, NATIVE_FLAGS,                            "ATLAS detector spot"},
+    {"gt",                      RecordObject::UINT8,    offsetof(water_t, gt),                      1,  NULL, NATIVE_FLAGS,                            "Ground track; integer representation of beam"},
 // beam
-    {"time",                    RecordObject::TIME8,    offsetof(water_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"snow_ice",                RecordObject::INT8,     offsetof(water_t, snow_ice_atl09),          1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"cloud",                   RecordObject::INT8,     offsetof(water_t, cloud_flag_asr_atl09),    1,  NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(water_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(water_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"ht_ortho",                RecordObject::FLOAT,    offsetof(water_t, ht_ortho),                1,  NULL, NATIVE_FLAGS},
-    {"ht_water_surf",           RecordObject::FLOAT,    offsetof(water_t, ht_water_surf),           1,  NULL, NATIVE_FLAGS},
-    {"segment_azimuth",         RecordObject::FLOAT,    offsetof(water_t, segment_azimuth),         1,  NULL, NATIVE_FLAGS},
-    {"segment_quality",         RecordObject::INT32,    offsetof(water_t, segment_quality),         1,  NULL, NATIVE_FLAGS},
-    {"segment_slope_trk_bdy",   RecordObject::FLOAT,    offsetof(water_t, segment_slope_trk_bdy),   1,  NULL, NATIVE_FLAGS},
-    {"water_depth",             RecordObject::FLOAT,    offsetof(water_t, water_depth),             1,  NULL, NATIVE_FLAGS},
+    {"time",                    RecordObject::TIME8,    offsetof(water_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME,       "Unix time (nanoseconds) of the photon measurement"},
+    {"snow_ice",                RecordObject::INT8,     offsetof(water_t, snow_ice_atl09),          1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD,    "Snow/ice flag from ATL09"},
+    {"cloud",                   RecordObject::INT8,     offsetof(water_t, cloud_flag_asr_atl09),    1,  NULL, NATIVE_FLAGS,                            "Cloud flag from ATL09"},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(water_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD,    "Latitude (EPSG:9989)"},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(water_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD,    "Longitude (EPSG:9989)"},
+    {"ht_ortho",                RecordObject::FLOAT,    offsetof(water_t, ht_ortho),                1,  NULL, NATIVE_FLAGS,                            "Orthometric height (in meters) EGM2008 converted from ellipsoidal height"},
+    {"ht_water_surf",           RecordObject::FLOAT,    offsetof(water_t, ht_water_surf),           1,  NULL, NATIVE_FLAGS,                            "Water surface height (in meters), reported for each short segment (default length = approximately 100 signal photons) with reference to WGS84 ellipsoid"},
+    {"segment_azimuth",         RecordObject::FLOAT,    offsetof(water_t, segment_azimuth),         1,  NULL, NATIVE_FLAGS,                            "Azimuth of the segment"},
+    {"segment_quality",         RecordObject::INT32,    offsetof(water_t, segment_quality),         1,  NULL, NATIVE_FLAGS,                            "Segment quality summary"},
+    {"segment_slope_trk_bdy",   RecordObject::FLOAT,    offsetof(water_t, segment_slope_trk_bdy),   1,  NULL, NATIVE_FLAGS,                            "Along-track slope of the water body"},
+    {"water_depth",             RecordObject::FLOAT,    offsetof(water_t, water_depth),             1,  NULL, NATIVE_FLAGS,                            "Depth (in meters) from the mean water surface to detected bottom"},
 };
 
 const char* Atl13Reader::atRecType = "atl13srec";
 const RecordObject::fieldDef_t Atl13Reader::atRecDef[] = {
-    {"water",                   RecordObject::OBJECT,   offsetof(atl13_t, water),                   0,  wtRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"water",                   RecordObject::OBJECT,   offsetof(atl13_t, water),                   0,  wtRecType, NATIVE_FLAGS | RecordObject::BATCH, "Inland water metrics"}
 };
 
 const char* Atl13Reader::OBJECT_TYPE = "Atl13Reader";

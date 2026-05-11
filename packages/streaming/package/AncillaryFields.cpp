@@ -47,43 +47,45 @@
 
 /*
  * Ancillary Field Records
- *
- *  This record is used to capture a set of different fields in the source granule,
- *  all associated with a single extent id.  For example, if there was an ancillary
- *  field request for fields X, Y, and Z, then this record would hold the values
- *  for X, Y, and Z all in a single record and associate it with the extent.
  */
+static const char* anc_f_rec_description =
+"This record is used to capture a set of different fields in the source granule,\
+ all associated with a single extent id.  For example, if there was an ancillary\
+ field request for fields X, Y, and Z, then this record would hold the values\
+ for X, Y, and Z all in a single record and associate it with the extent.";
+
 const char* AncillaryFields::ancFieldRecType = "ancfrec.field";
 const RecordObject::fieldDef_t AncillaryFields::ancFieldRecDef[] = {
-    {"anc_type",        RecordObject::UINT8,    offsetof(field_t, anc_type),                1,  NULL, NATIVE_FLAGS},
-    {"field_index",     RecordObject::UINT8,    offsetof(field_t, field_index),             1,  NULL, NATIVE_FLAGS},
-    {"datatype",        RecordObject::UINT8,    offsetof(field_t, data_type),               1,  NULL, NATIVE_FLAGS},
-    {"value",           RecordObject::UINT8,    offsetof(field_t, value),                   8,  NULL, NATIVE_FLAGS}
+    {"anc_type",        RecordObject::UINT8,    offsetof(field_t, anc_type),                1,  NULL, NATIVE_FLAGS, "used by packages to differentiate source of ancillary data"},
+    {"field_index",     RecordObject::UINT8,    offsetof(field_t, field_index),             1,  NULL, NATIVE_FLAGS, "index into request parameters array of ancillary fields, used to identify which ancillary field return data corresponds to"},
+    {"datatype",        RecordObject::UINT8,    offsetof(field_t, data_type),               1,  NULL, NATIVE_FLAGS, "data type"},
+    {"value",           RecordObject::UINT8,    offsetof(field_t, value),                   8,  NULL, NATIVE_FLAGS, "value of ancillary field"}
 };
 
 const char* AncillaryFields::ancFieldArrayRecType = "ancfrec";
 const RecordObject::fieldDef_t AncillaryFields::ancFieldArrayRecDef[] = {
-    {"extent_id",       RecordObject::UINT64,   offsetof(field_array_t, extent_id),         1,  NULL, NATIVE_FLAGS},
-    {"num_fields",      RecordObject::UINT32,   offsetof(field_array_t, num_fields),        1,  NULL, NATIVE_FLAGS},
-    {"fields",          RecordObject::OBJECT,   offsetof(field_array_t, fields),            0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"extent_id",       RecordObject::UINT64,   offsetof(field_array_t, extent_id),         1,  NULL, NATIVE_FLAGS, "variable length extent ID"},
+    {"num_fields",      RecordObject::UINT32,   offsetof(field_array_t, num_fields),        1,  NULL, NATIVE_FLAGS, "number of ancillary fields per extent"},
+    {"fields",          RecordObject::OBJECT,   offsetof(field_array_t, fields),            0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH, anc_f_rec_description}
 };
 
 /*
  * Ancillary Element Records
- *
- *  This record is used to capture an array of field values all associated with a single field.
- *  It is primarily used for the ATL03 photon data and things like that where there is a variable
- *  number of values associated with a given field for a given extent.  So wherease the Ancillary
- *  Field Record is multiple fields each with one value; this is multiple values for just one field.
  */
+static const char* anc_e_rec_description =
+"This record is used to capture an array of field values all associated with a single field.\
+ It is primarily used for the ATL03 photon data and things like that where there is a variable\
+ number of values associated with a given field for a given extent.  So wherease the Ancillary\
+ Field Record is multiple fields each with one value; this is multiple values for just one field.";
+
 const char* AncillaryFields::ancElementRecType = "ancerec";
 const RecordObject::fieldDef_t AncillaryFields::ancElementRecDef[] = {
-    {"extent_id",       RecordObject::UINT64,   offsetof(element_array_t, extent_id),       1,  NULL, NATIVE_FLAGS},
-    {"num_elements",    RecordObject::UINT32,   offsetof(element_array_t, num_elements),    1,  NULL, NATIVE_FLAGS},
-    {"anc_type",        RecordObject::UINT8,    offsetof(element_array_t, anc_type),        1,  NULL, NATIVE_FLAGS},
-    {"field_index",     RecordObject::UINT8,    offsetof(element_array_t, field_index),     1,  NULL, NATIVE_FLAGS},
-    {"datatype",        RecordObject::UINT8,    offsetof(element_array_t, data_type),       1,  NULL, NATIVE_FLAGS},
-    {"data",            RecordObject::UINT8,    offsetof(element_array_t, data),            0,  NULL, NATIVE_FLAGS} // variable length
+    {"extent_id",       RecordObject::UINT64,   offsetof(element_array_t, extent_id),       1,  NULL, NATIVE_FLAGS, "variable length extent ID"},
+    {"num_elements",    RecordObject::UINT32,   offsetof(element_array_t, num_elements),    1,  NULL, NATIVE_FLAGS, "number of elements of ancillary field that is read"},
+    {"anc_type",        RecordObject::UINT8,    offsetof(element_array_t, anc_type),        1,  NULL, NATIVE_FLAGS, "used by packages to differentiate source of ancillary data"},
+    {"field_index",     RecordObject::UINT8,    offsetof(element_array_t, field_index),     1,  NULL, NATIVE_FLAGS, "index into request parameters array of ancillary fields, used to identify which ancillary field return data corresponds to"},
+    {"datatype",        RecordObject::UINT8,    offsetof(element_array_t, data_type),       1,  NULL, NATIVE_FLAGS, "data type"},
+    {"data",            RecordObject::UINT8,    offsetof(element_array_t, data),            0,  NULL, NATIVE_FLAGS, anc_e_rec_description} // variable length
 };
 
 /*----------------------------------------------------------------------------

@@ -49,66 +49,66 @@ const struct luaL_Reg RasterSampler::LUA_META_TABLE[] = {
 
 const char* RasterSampler::rsSampleRecType = "rsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),          1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),           1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT64,   offsetof(sample_t, file_id),        1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),          1,  NULL, NATIVE_FLAGS}
+    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),          1,  NULL, NATIVE_FLAGS, "Sampled value from the raster"},
+    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),           1,  NULL, NATIVE_FLAGS, "Unix time (nanoseconds); the best time provided by the raster dataset for when the sampled value was measured"},
+    {"file_id",         RecordObject::UINT64,   offsetof(sample_t, file_id),        1,  NULL, NATIVE_FLAGS, "A number used to identify the name of the file the sample value came from; this is used in conjunction with the file directory provided in the metadata of a GeoDataFrame"},
+    {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),          1,  NULL, NATIVE_FLAGS, "Any flags (if requested) that accompany the sampled data in the raster it was read from"}
 };
 
 const char* RasterSampler::rsGeoRecType = "rsrec";
 const RecordObject::fieldDef_t RasterSampler::rsGeoRecDef[] = {
-    {"index",           RecordObject::UINT64,   offsetof(rs_geo_t, index),          1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(rs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(rs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::OBJECT,   offsetof(rs_geo_t, samples),        0,  rsSampleRecType, NATIVE_FLAGS} // variable length
+    {"index",           RecordObject::UINT64,   offsetof(rs_geo_t, index),          1,  NULL, NATIVE_FLAGS, "Index into the source DataFrame for which this sample was taken"},
+    {"key",             RecordObject::STRING,   offsetof(rs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS, "Raster key identifying the raster dataset sampled"},
+    {"num_samples",     RecordObject::UINT32,   offsetof(rs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS, "Number of samples in the samples array"},
+    {"samples",         RecordObject::OBJECT,   offsetof(rs_geo_t, samples),        0,  rsSampleRecType, NATIVE_FLAGS, "Array of raster samples"} // variable length
 };
 
 const char* RasterSampler::zsSampleRecType = "zsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(zonal_t, value),           1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(zonal_t, time),            1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT64,   offsetof(zonal_t, file_id),         1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT32,   offsetof(zonal_t, flags),           1,  NULL, NATIVE_FLAGS},
-    {"count",           RecordObject::UINT32,   offsetof(zonal_t, stats.count),     1,  NULL, NATIVE_FLAGS},
-    {"min",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.min),       1,  NULL, NATIVE_FLAGS},
-    {"max",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.max),       1,  NULL, NATIVE_FLAGS},
-    {"mean",            RecordObject::DOUBLE,   offsetof(zonal_t, stats.mean),      1,  NULL, NATIVE_FLAGS},
-    {"median",          RecordObject::DOUBLE,   offsetof(zonal_t, stats.median),    1,  NULL, NATIVE_FLAGS},
-    {"stdev",           RecordObject::DOUBLE,   offsetof(zonal_t, stats.stdev),     1,  NULL, NATIVE_FLAGS},
-    {"mad",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.mad),       1,  NULL, NATIVE_FLAGS}
+    {"value",           RecordObject::DOUBLE,   offsetof(zonal_t, value),           1,  NULL, NATIVE_FLAGS, "Sampled value from the raster"},
+    {"time",            RecordObject::DOUBLE,   offsetof(zonal_t, time),            1,  NULL, NATIVE_FLAGS, "Unix time (nanoseconds); the best time provided by the raster dataset for when the sampled value was measured"},
+    {"file_id",         RecordObject::UINT64,   offsetof(zonal_t, file_id),         1,  NULL, NATIVE_FLAGS, "A number used to identify the name of the file the sample value came from; this is used in conjunction with the file directory provided in the metadata of a GeoDataFrame"},
+    {"flags",           RecordObject::UINT32,   offsetof(zonal_t, flags),           1,  NULL, NATIVE_FLAGS, "Any flags (if requested) that accompany the sampled data in the raster it was read from"},
+    {"count",           RecordObject::UINT32,   offsetof(zonal_t, stats.count),     1,  NULL, NATIVE_FLAGS, "Number of pixels read to calculate sample value"},
+    {"min",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.min),       1,  NULL, NATIVE_FLAGS, "minimum pixel value of pixels that contributed to sample value"},
+    {"max",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.max),       1,  NULL, NATIVE_FLAGS, "Maximum pixel value of pixels that contributed to sample value"},
+    {"mean",            RecordObject::DOUBLE,   offsetof(zonal_t, stats.mean),      1,  NULL, NATIVE_FLAGS, "Average/mean pixel value of pixels that contributed to sample value"},
+    {"median",          RecordObject::DOUBLE,   offsetof(zonal_t, stats.median),    1,  NULL, NATIVE_FLAGS, "Average/median pixel value of pixels that contributed to sample value"},
+    {"stdev",           RecordObject::DOUBLE,   offsetof(zonal_t, stats.stdev),     1,  NULL, NATIVE_FLAGS, "Standard deviation of pixel values of pixels that contributed to sample value"},
+    {"mad",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.mad),       1,  NULL, NATIVE_FLAGS, "Median absolute deviation of pixel values of pixels that contributed to sample value"}
 };
 
 const char* RasterSampler::zsGeoRecType = "zsrec";
 const RecordObject::fieldDef_t RasterSampler::zsGeoRecDef[] = {
-    {"index",           RecordObject::UINT64,   offsetof(zs_geo_t, index),          1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(zs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(zs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::OBJECT,   offsetof(zs_geo_t, samples),        0,  zsSampleRecType, NATIVE_FLAGS} // variable length
+    {"index",           RecordObject::UINT64,   offsetof(zs_geo_t, index),          1,  NULL, NATIVE_FLAGS, "Index into the source DataFrame for which this sample was taken"},
+    {"key",             RecordObject::STRING,   offsetof(zs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS, "Raster key identifying the raster dataset sampled"},
+    {"num_samples",     RecordObject::UINT32,   offsetof(zs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS, "Number of samples in the samples array"},
+    {"samples",         RecordObject::OBJECT,   offsetof(zs_geo_t, samples),        0,  zsSampleRecType, NATIVE_FLAGS, "Array of zonal statistic samples"} // variable length
 };
 
 const char* RasterSampler::sdSampleRecType = "sdrec.sample";
 const RecordObject::fieldDef_t RasterSampler::sdSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(deriv_t, value),           1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(deriv_t, time),            1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT64,   offsetof(deriv_t, file_id),         1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT32,   offsetof(deriv_t, flags),           1,  NULL, NATIVE_FLAGS},
-    {"count",           RecordObject::UINT32,   offsetof(deriv_t, derivs.count),    1,  NULL, NATIVE_FLAGS},
-    {"slope",           RecordObject::DOUBLE,   offsetof(deriv_t, derivs.slopeDeg), 1,  NULL, NATIVE_FLAGS},
-    {"aspect",          RecordObject::DOUBLE,   offsetof(deriv_t, derivs.aspectDeg),1,  NULL, NATIVE_FLAGS}
+    {"value",           RecordObject::DOUBLE,   offsetof(deriv_t, value),           1,  NULL, NATIVE_FLAGS, "Sampled value from the raster"},
+    {"time",            RecordObject::DOUBLE,   offsetof(deriv_t, time),            1,  NULL, NATIVE_FLAGS, "Unix time (nanoseconds); the best time provided by the raster dataset for when the sampled value was measured"},
+    {"file_id",         RecordObject::UINT64,   offsetof(deriv_t, file_id),         1,  NULL, NATIVE_FLAGS, "A number used to identify the name of the file the sample value came from; this is used in conjunction with the file directory provided in the metadata of a GeoDataFrame"},
+    {"flags",           RecordObject::UINT32,   offsetof(deriv_t, flags),           1,  NULL, NATIVE_FLAGS, "Any flags (if requested) that accompany the sampled data in the raster it was read from"},
+    {"count",           RecordObject::UINT32,   offsetof(deriv_t, derivs.count),    1,  NULL, NATIVE_FLAGS, "Number of pixels read to calculate slope and aspect"},
+    {"slope",           RecordObject::DOUBLE,   offsetof(deriv_t, derivs.slopeDeg), 1,  NULL, NATIVE_FLAGS, "The calculated slope at the location being sampled"},
+    {"aspect",          RecordObject::DOUBLE,   offsetof(deriv_t, derivs.aspectDeg),1,  NULL, NATIVE_FLAGS, "The calculated aspect at the location being sampled"}
 };
 
 const char* RasterSampler::sdGeoRecType = "sdrec";
 const RecordObject::fieldDef_t RasterSampler::sdGeoRecDef[] = {
-    {"index",           RecordObject::UINT64,   offsetof(sd_geo_t, index),          1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(sd_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(sd_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::OBJECT,   offsetof(sd_geo_t, samples),        0,  sdSampleRecType, NATIVE_FLAGS} // variable length
+    {"index",           RecordObject::UINT64,   offsetof(sd_geo_t, index),          1,  NULL, NATIVE_FLAGS, "Index into the source DataFrame for which this sample was taken"},
+    {"key",             RecordObject::STRING,   offsetof(sd_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS, "Raster key identifying the raster dataset sampled"},
+    {"num_samples",     RecordObject::UINT32,   offsetof(sd_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS, "Number of samples in the samples array"},
+    {"samples",         RecordObject::OBJECT,   offsetof(sd_geo_t, samples),        0,  sdSampleRecType, NATIVE_FLAGS, "Array of slope/aspect derivative samples"} // variable length
 };
 
 const char* RasterSampler::fileIdRecType = "fileidrec";
 const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
-    {"file_id",         RecordObject::UINT64,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS},
-    {"file_name",       RecordObject::STRING,   offsetof(file_directory_entry_t, file_name),    0,  NULL, NATIVE_FLAGS} // variable length
+    {"file_id",         RecordObject::UINT64,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS, "A number used to identify the name of the file the sample value came from"},
+    {"file_name",       RecordObject::STRING,   offsetof(file_directory_entry_t, file_name),    0,  NULL, NATIVE_FLAGS, "Full path and file name of the raster file"} // variable length
 };
 
 /******************************************************************************

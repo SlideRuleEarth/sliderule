@@ -44,11 +44,11 @@
 
 const char* H5DatasetDevice::recType = "h5dataset";
 const RecordObject::fieldDef_t H5DatasetDevice::recDef[] = {
-    {"id",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS},
-    {"datatype",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS},
-    {"offset",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS},
-    {"size",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS},
-    {"data",    RecordObject::UINT8,    sizeof(h5dataset_t),            0,  NULL, NATIVE_FLAGS}
+    {"id",      RecordObject::INT64,    offsetof(h5dataset_t, id),      1,  NULL, NATIVE_FLAGS, "dataset id"},
+    {"datatype",RecordObject::UINT32,   offsetof(h5dataset_t, datatype),1,  NULL, NATIVE_FLAGS, "data type"},
+    {"offset",  RecordObject::UINT32,   offsetof(h5dataset_t, offset),  1,  NULL, NATIVE_FLAGS, "byte offset of the returned data"},
+    {"size",    RecordObject::UINT32,   offsetof(h5dataset_t, size),    1,  NULL, NATIVE_FLAGS, "total number of bytes being returned"},
+    {"data",    RecordObject::UINT8,    sizeof(h5dataset_t),            0,  NULL, NATIVE_FLAGS, "raw values"}
 };
 
 /******************************************************************************

@@ -51,39 +51,39 @@ using std::numeric_limits;
 
 const char* Atl06Reader::elRecType = "atl06srec.elevation";
 const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                     1,  NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),                   1,  NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                    1,  NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS},
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX,      "Unique extent identifier"},
+    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                     1,  NULL, NATIVE_FLAGS,                            "ICESat-2 Reference ground track"},
+    {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),                   1,  NULL, NATIVE_FLAGS,                            "ICESat-2 Cycle number"},
+    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                    1,  NULL, NATIVE_FLAGS,                            "ATLAS detector spot"},
+    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS,                            "Ground track; integer representation of beam"},
 // land_ice_segments
-    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"atl06_quality_summary",   RecordObject::INT8,     offsetof(elevation_t, atl06_quality_summary),   1,  NULL, NATIVE_FLAGS},
-    {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),              1,  NULL, NATIVE_FLAGS},
-    {"sigma_geo_h",             RecordObject::FLOAT,    offsetof(elevation_t, sigma_geo_h),             1,  NULL, NATIVE_FLAGS},
+    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME,       "Unix time (nanoseconds) of the photon measurement"},
+    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD,    "Standard land-ice segment height determined by land ice algorithm, corrected for first-photon bias, representing the median-based height of the selected PEs"},
+    {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS,                            "Propagated error due to sampling error and FPB correction from the land ice algorithm"},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD,    "Latitude (EPSG:9989)"},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD,    "Longitude (EPSG:9989)"},
+    {"atl06_quality_summary",   RecordObject::INT8,     offsetof(elevation_t, atl06_quality_summary),   1,  NULL, NATIVE_FLAGS,                            "Flag; 0: No likely problems identified for the segment, 1: One or more likely problems identified for the segment"},
+    {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),              1,  NULL, NATIVE_FLAGS,                            "Segment number, counting from the equator; equal to the segment_id for the second of the two 20-m ATL03 segments included in the 40-m ATL06 segment"},
+    {"sigma_geo_h",             RecordObject::FLOAT,    offsetof(elevation_t, sigma_geo_h),             1,  NULL, NATIVE_FLAGS,                            "Total vertical geolocation error due to PPD and POD, including the effects of horizontal geolocation error on the segment vertical error"},
 // ground track
-    {"x_atc",                   RecordObject::DOUBLE,   offsetof(elevation_t, x_atc),                   1,  NULL, NATIVE_FLAGS},
-    {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),                   1,  NULL, NATIVE_FLAGS},
-    {"seg_azimuth",             RecordObject::FLOAT,    offsetof(elevation_t, seg_azimuth),             1,  NULL, NATIVE_FLAGS},
+    {"x_atc",                   RecordObject::DOUBLE,   offsetof(elevation_t, x_atc),                   1,  NULL, NATIVE_FLAGS,                            "Along-track x-coordinate of the segment (in meters), measured parallel to the RGT, measured from the ascending node of the equatorial crossing of a given RGT"},
+    {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),                   1,  NULL, NATIVE_FLAGS,                            "Along-track y-coordinate of the segment (in meters), relative to the RGT, measured along the perpendicular to the RGT, positive to the right of the RGT"},
+    {"seg_azimuth",             RecordObject::FLOAT,    offsetof(elevation_t, seg_azimuth),             1,  NULL, NATIVE_FLAGS,                            "The azimuth of the pair track, east of local north"},
 // fit_statistics
-    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),               1,  NULL, NATIVE_FLAGS},
-    {"h_robust_sprd",           RecordObject::FLOAT,    offsetof(elevation_t, h_robust_sprd),           1,  NULL, NATIVE_FLAGS},
-    {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, n_fit_photons),           1,  NULL, NATIVE_FLAGS},
-    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, w_surface_window_final),  1,  NULL, NATIVE_FLAGS},
+    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),               1,  NULL, NATIVE_FLAGS,                            "Along-track slope from along-track segment fit"},
+    {"h_robust_sprd",           RecordObject::FLOAT,    offsetof(elevation_t, h_robust_sprd),           1,  NULL, NATIVE_FLAGS,                            "RDE of misfit between PE heights and the along-track segment fit"},
+    {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, n_fit_photons),           1,  NULL, NATIVE_FLAGS,                            "Number of PEs used in determining h_li after editing"},
+    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, w_surface_window_final),  1,  NULL, NATIVE_FLAGS,                            "Width of the surface window (in meters), top to bottom"},
 // geophysical
-    {"bsnow_conf",              RecordObject::INT8,     offsetof(elevation_t, bsnow_conf),              1,  NULL, NATIVE_FLAGS},
-    {"bsnow_h",                 RecordObject::FLOAT,    offsetof(elevation_t, bsnow_h),                 1,  NULL, NATIVE_FLAGS},
-    {"r_eff",                   RecordObject::FLOAT,    offsetof(elevation_t, r_eff),                   1,  NULL, NATIVE_FLAGS},
-    {"tide_ocean",              RecordObject::FLOAT,    offsetof(elevation_t, tide_ocean),              1,  NULL, NATIVE_FLAGS},
+    {"bsnow_conf",              RecordObject::INT8,     offsetof(elevation_t, bsnow_conf),              1,  NULL, NATIVE_FLAGS,                            "Blowing snow confidence; -3: surface not detected, -2: no surface wind, -1: no scattering layer found, 0: no top layer found, 1: none-little, 2: weak, 3: moderate, 4: moderate-high, 5: high, 6: very high"},
+    {"bsnow_h",                 RecordObject::FLOAT,    offsetof(elevation_t, bsnow_h),                 1,  NULL, NATIVE_FLAGS,                            "Blowing snow layer top height"},
+    {"r_eff",                   RecordObject::FLOAT,    offsetof(elevation_t, r_eff),                   1,  NULL, NATIVE_FLAGS,                            "Effective reflectance, uncorrected for atmospheric effects"},
+    {"tide_ocean",              RecordObject::FLOAT,    offsetof(elevation_t, tide_ocean),              1,  NULL, NATIVE_FLAGS,                            "Ocean tide"},
 };
 
 const char* Atl06Reader::atRecType = "atl06srec";
 const RecordObject::fieldDef_t Atl06Reader::atRecDef[] = {
-    {"elevation",               RecordObject::OBJECT,   offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"elevation",               RecordObject::OBJECT,   offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH,     "ATL06 elevations"}
 };
 
 const char* Atl06Reader::OBJECT_TYPE = "Atl06Reader";

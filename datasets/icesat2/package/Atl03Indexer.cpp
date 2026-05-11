@@ -45,15 +45,15 @@
 
 const char* Atl03Indexer::recType = "atl03rec.index";
 const RecordObject::fieldDef_t Atl03Indexer::recDef[] = {
-    {"name",    RecordObject::STRING,   offsetof(index_t, name),    Asset::RESOURCE_NAME_LENGTH,    NULL, NATIVE_FLAGS},
-    {"t0",      RecordObject::DOUBLE,   offsetof(index_t, t0),      1,                              NULL, NATIVE_FLAGS},
-    {"t1",      RecordObject::DOUBLE,   offsetof(index_t, t1),      1,                              NULL, NATIVE_FLAGS},
-    {"lat0",    RecordObject::DOUBLE,   offsetof(index_t, lat0),    1,                              NULL, NATIVE_FLAGS},
-    {"lon0",    RecordObject::DOUBLE,   offsetof(index_t, lon0),    1,                              NULL, NATIVE_FLAGS},
-    {"lat1",    RecordObject::DOUBLE,   offsetof(index_t, lat1),    1,                              NULL, NATIVE_FLAGS},
-    {"lon1",    RecordObject::DOUBLE,   offsetof(index_t, lon1),    1,                              NULL, NATIVE_FLAGS},
-    {"cycle",   RecordObject::UINT32,   offsetof(index_t, cycle),   1,                              NULL, NATIVE_FLAGS},
-    {"rgt",     RecordObject::UINT32,   offsetof(index_t, rgt),     1,                              NULL, NATIVE_FLAGS},
+    {"name",    RecordObject::STRING,   offsetof(index_t, name),    Asset::RESOURCE_NAME_LENGTH,    NULL, NATIVE_FLAGS,   "Name of the ATL03 resource"},
+    {"t0",      RecordObject::DOUBLE,   offsetof(index_t, t0),      1,                              NULL, NATIVE_FLAGS,   "Start time of granule"},
+    {"t1",      RecordObject::DOUBLE,   offsetof(index_t, t1),      1,                              NULL, NATIVE_FLAGS,   "End time of granule"},
+    {"lat0",    RecordObject::DOUBLE,   offsetof(index_t, lat0),    1,                              NULL, NATIVE_FLAGS,   "Start latitude of granule"},
+    {"lon0",    RecordObject::DOUBLE,   offsetof(index_t, lon0),    1,                              NULL, NATIVE_FLAGS,   "Start longitude of granule"},
+    {"lat1",    RecordObject::DOUBLE,   offsetof(index_t, lat1),    1,                              NULL, NATIVE_FLAGS,   "End latitude of granule"},
+    {"lon1",    RecordObject::DOUBLE,   offsetof(index_t, lon1),    1,                              NULL, NATIVE_FLAGS,   "End longitude of granule"},
+    {"cycle",   RecordObject::UINT32,   offsetof(index_t, cycle),   1,                              NULL, NATIVE_FLAGS,   "ICESat-2 Cycle number"},
+    {"rgt",     RecordObject::UINT32,   offsetof(index_t, rgt),     1,                              NULL, NATIVE_FLAGS,   "ICESat-2 Reference ground track"},
 };
 const char* Atl03Indexer::OBJECT_TYPE = "Atl03Indexer";
 const char* Atl03Indexer::LUA_META_NAME = "Atl03Indexer";

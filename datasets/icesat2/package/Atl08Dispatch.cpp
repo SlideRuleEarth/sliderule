@@ -56,42 +56,42 @@ using std::numeric_limits;
 
 const char* Atl08Dispatch::vegRecType = "atl08rec.vegetation";
 const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),              1, NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),             1, NULL, NATIVE_FLAGS},
-    {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),                    1, NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),                  1, NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),                   1, NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),                     1, NULL, NATIVE_FLAGS},
-    {"ph_count",                RecordObject::UINT32,   offsetof(vegetation_t, photon_count),           1, NULL, NATIVE_FLAGS},
-    {"gnd_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, ground_photon_count),    1, NULL, NATIVE_FLAGS},
-    {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS},
-    {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
-    {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
-    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"x_atc",                   RecordObject::FLOAT,    offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS},
-    {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS},
-    {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
-    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),           1, NULL, NATIVE_FLAGS},
-    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),          1, NULL, NATIVE_FLAGS},
-    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),               1, NULL, NATIVE_FLAGS},
-    {"canopy_openness",         RecordObject::FLOAT,    offsetof(vegetation_t, canopy_openness),        1, NULL, NATIVE_FLAGS},
-    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, canopy_h_metrics),       NUM_PERCENTILES, NULL, NATIVE_FLAGS}
+    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),              1, NULL, NATIVE_FLAGS | RecordObject::INDEX,     "Unique extent identifier"},
+    {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),             1, NULL, NATIVE_FLAGS,                           "ATL03 segment id of the photon"},
+    {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),                    1, NULL, NATIVE_FLAGS,                           "ICESat-2 Reference ground track"},
+    {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),                  1, NULL, NATIVE_FLAGS,                           "ICESat-2 Cycle number"},
+    {"spot",                    RecordObject::UINT8,    offsetof(vegetation_t, spot),                   1, NULL, NATIVE_FLAGS,                           "ATLAS detector spot"},
+    {"gt",                      RecordObject::UINT8,    offsetof(vegetation_t, gt),                     1, NULL, NATIVE_FLAGS,                           "Ground track; integer representation of beam"},
+    {"ph_count",                RecordObject::UINT32,   offsetof(vegetation_t, photon_count),           1, NULL, NATIVE_FLAGS,                           "Number of photons used in final elevation calculation"},
+    {"gnd_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, ground_photon_count),    1, NULL, NATIVE_FLAGS,                           "Number of photons labeled as ground in extent"},
+    {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS,                           "Number of photons labeled as canopy or top of canopy in extent"},
+    {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS,                           "ATL08 land cover flags; included for phoreal processing"},
+    {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS,                           "ATL08 snow cover flags; included for phoreal processing"},
+    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS | RecordObject::TIME,      "Unix time (nanoseconds) of the photon measurement"},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS | RecordObject::Y_COORD,   "Latitude (EPSG:9989)"},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS | RecordObject::X_COORD,   "Longitude (EPSG:9989)"},
+    {"x_atc",                   RecordObject::FLOAT,    offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS,                           "Distance from the equator (in meters)"},
+    {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS,                           "Solar elevation (degrees)"},
+    {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS | RecordObject::Z_COORD,   "Median terrain height for ground photons"},
+    {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS,                           "Maximum relief height for canopy photons"},
+    {"h_min_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_min_canopy),           1, NULL, NATIVE_FLAGS,                           "Minimum relief height for canopy photons"},
+    {"h_mean_canopy",           RecordObject::FLOAT,    offsetof(vegetation_t, h_mean_canopy),          1, NULL, NATIVE_FLAGS,                           "Average relief height for canopy photons"},
+    {"h_canopy",                RecordObject::FLOAT,    offsetof(vegetation_t, h_canopy),               1, NULL, NATIVE_FLAGS,                           "98th percentile relief height for canopy photons"},
+    {"canopy_openness",         RecordObject::FLOAT,    offsetof(vegetation_t, canopy_openness),        1, NULL, NATIVE_FLAGS,                           "Standard deviation of relief height for canopy photons"},
+    {"canopy_h_metrics",        RecordObject::FLOAT,    offsetof(vegetation_t, canopy_h_metrics),       NUM_PERCENTILES, NULL, NATIVE_FLAGS,             "Relief height at given percentile for canopy photons"}
 };
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
 const RecordObject::fieldDef_t Atl08Dispatch::batchRecDef[] = {
-    {"vegetation",              RecordObject::OBJECT,   offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"vegetation",              RecordObject::OBJECT,   offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS | RecordObject::BATCH,  "PhoREAL vegetation metrics"}
 };
 
 const char* Atl08Dispatch::waveRecType = "waverec";
 const RecordObject::fieldDef_t Atl08Dispatch::waveRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(waveform_t, extent_id),            1, NULL, NATIVE_FLAGS},
-    {"num_bins",                RecordObject::UINT16,   offsetof(waveform_t, num_bins),             1, NULL, NATIVE_FLAGS},
-    {"binsize",                 RecordObject::FLOAT,    offsetof(waveform_t, binsize),              1, NULL, NATIVE_FLAGS},
-    {"waveform",                RecordObject::FLOAT,    offsetof(waveform_t, waveform),             0, NULL, NATIVE_FLAGS}
+    {"extent_id",               RecordObject::UINT64,   offsetof(waveform_t, extent_id),            1, NULL, NATIVE_FLAGS,   "Unique extent identifier"},
+    {"num_bins",                RecordObject::UINT16,   offsetof(waveform_t, num_bins),             1, NULL, NATIVE_FLAGS,   "Number of bins in the waveform"},
+    {"binsize",                 RecordObject::FLOAT,    offsetof(waveform_t, binsize),              1, NULL, NATIVE_FLAGS,   "Size of each bin (in meters)"},
+    {"waveform",                RecordObject::FLOAT,    offsetof(waveform_t, waveform),             0, NULL, NATIVE_FLAGS,   "Waveform data"}
 };
 
 /* Lua Functions */

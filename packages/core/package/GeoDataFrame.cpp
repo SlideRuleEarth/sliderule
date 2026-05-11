@@ -78,12 +78,12 @@ const char* GeoDataFrame::FrameRunner::OBJECT_TYPE = "FrameRunner";
 
 const char* GeoDataFrame::gdfRecType = "geodataframe";
 const RecordObject::fieldDef_t GeoDataFrame::gdfRecDef[] = {
-    {"type",        RecordObject::UINT32,   offsetof(gdf_rec_t, type),       1,              NULL, NATIVE_FLAGS},
-    {"size",        RecordObject::UINT32,   offsetof(gdf_rec_t, size),       1,              NULL, NATIVE_FLAGS},
-    {"encoding",    RecordObject::UINT32,   offsetof(gdf_rec_t, encoding),   1,              NULL, NATIVE_FLAGS},
-    {"num_rows",    RecordObject::UINT32,   offsetof(gdf_rec_t, num_rows),   1,              NULL, NATIVE_FLAGS},
-    {"name",        RecordObject::STRING,   offsetof(gdf_rec_t, name),       MAX_NAME_SIZE,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(gdf_rec_t, data),       0,              NULL, NATIVE_FLAGS},
+    {"type",        RecordObject::UINT32,   offsetof(gdf_rec_t, type),       1,              NULL, NATIVE_FLAGS,    "rec_type_t: column, meta, crs, eof"},
+    {"size",        RecordObject::UINT32,   offsetof(gdf_rec_t, size),       1,              NULL, NATIVE_FLAGS,    "bytes of data"},
+    {"encoding",    RecordObject::UINT32,   offsetof(gdf_rec_t, encoding),   1,              NULL, NATIVE_FLAGS,    "field encoding of the data"},
+    {"num_rows",    RecordObject::UINT32,   offsetof(gdf_rec_t, num_rows),   1,              NULL, NATIVE_FLAGS,    "number of elements in column"},
+    {"name",        RecordObject::STRING,   offsetof(gdf_rec_t, name),       MAX_NAME_SIZE,  NULL, NATIVE_FLAGS,    "field name"},
+    {"data",        RecordObject::UINT8,    offsetof(gdf_rec_t, data),       0,              NULL, NATIVE_FLAGS,    "raw data"},
 };
 
 const char* GeoDataFrame::FrameSender::LUA_META_NAME = "FrameSender";

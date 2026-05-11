@@ -53,11 +53,11 @@ const struct luaL_Reg H5File::LUA_META_TABLE[] = {
 
 const char* H5File::recType = "h5file";
 const RecordObject::fieldDef_t H5File::recDef[] = {
-    {"dataset", RecordObject::STRING,   offsetof(h5file_t, dataset), MAX_NAME_STR,  NULL, NATIVE_FLAGS},
-    {"datatype",RecordObject::UINT32,   offsetof(h5file_t, datatype),1,             NULL, NATIVE_FLAGS},
-    {"elements",RecordObject::UINT32,   offsetof(h5file_t, elements),1,             NULL, NATIVE_FLAGS},
-    {"size",    RecordObject::UINT32,   offsetof(h5file_t, size),    1,             NULL, NATIVE_FLAGS},
-    {"data",    RecordObject::UINT8,    sizeof(h5file_t),            0,             NULL, NATIVE_FLAGS}
+    {"dataset", RecordObject::STRING,   offsetof(h5file_t, dataset), MAX_NAME_STR,  NULL, NATIVE_FLAGS, "name of dataset being read"},
+    {"datatype",RecordObject::UINT32,   offsetof(h5file_t, datatype),1,             NULL, NATIVE_FLAGS, "data type"},
+    {"elements",RecordObject::UINT32,   offsetof(h5file_t, elements),1,             NULL, NATIVE_FLAGS, "number of elements read (size / elements => bytes per element)"},
+    {"size",    RecordObject::UINT32,   offsetof(h5file_t, size),    1,             NULL, NATIVE_FLAGS, "bytes of data returned"},
+    {"data",    RecordObject::UINT8,    sizeof(h5file_t),            0,             NULL, NATIVE_FLAGS, "raw values"}
 };
 
 /******************************************************************************

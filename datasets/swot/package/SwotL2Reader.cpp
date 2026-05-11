@@ -62,26 +62,26 @@ const struct luaL_Reg SwotL2Reader::LUA_META_TABLE[] = {
 
 const char* SwotL2Reader::varRecType = "swotl2var";
 const RecordObject::fieldDef_t SwotL2Reader::varRecDef[] = {
-    {"granule",     RecordObject::STRING,   offsetof(var_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS},
-    {"variable",    RecordObject::STRING,   offsetof(var_rec_t, variable),      MAX_VARIABLE_NAME_STR,  NULL, NATIVE_FLAGS},
-    {"datatype",    RecordObject::UINT32,   offsetof(var_rec_t, datatype),      1,                      NULL, NATIVE_FLAGS},
-    {"elements",    RecordObject::UINT32,   offsetof(var_rec_t, elements),      1,                      NULL, NATIVE_FLAGS},
-    {"width",       RecordObject::UINT32,   offsetof(var_rec_t, width),         1,                      NULL, NATIVE_FLAGS},
-    {"size",        RecordObject::UINT32,   offsetof(var_rec_t, size),          1,                      NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    sizeof(var_rec_t),                  0,                      NULL, NATIVE_FLAGS}
+    {"granule",     RecordObject::STRING,   offsetof(var_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS, "SWOT L2 granule name"},
+    {"variable",    RecordObject::STRING,   offsetof(var_rec_t, variable),      MAX_VARIABLE_NAME_STR,  NULL, NATIVE_FLAGS, "Name of variable in granule being read"},
+    {"datatype",    RecordObject::UINT32,   offsetof(var_rec_t, datatype),      1,                      NULL, NATIVE_FLAGS, "Data type of variable in granule being read"},
+    {"elements",    RecordObject::UINT32,   offsetof(var_rec_t, elements),      1,                      NULL, NATIVE_FLAGS, "Number of elements read from variable (i.e. size of array)"},
+    {"width",       RecordObject::UINT32,   offsetof(var_rec_t, width),         1,                      NULL, NATIVE_FLAGS, "Swath width being read"},
+    {"size",        RecordObject::UINT32,   offsetof(var_rec_t, size),          1,                      NULL, NATIVE_FLAGS, "Number of bytes of data read"},
+    {"data",        RecordObject::UINT8,    sizeof(var_rec_t),                  0,                      NULL, NATIVE_FLAGS, "Content of variable"}
 };
 
 const char* SwotL2Reader::scanRecType = "swotl2geo.scan";
 const RecordObject::fieldDef_t SwotL2Reader::scanRecDef[] = {
-    {"scan_id",     RecordObject::UINT64,   offsetof(scan_rec_t, scan_id),      1,                      NULL, NATIVE_FLAGS},
-    {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS | RecordObject::X_COORD}
+    {"scan_id",     RecordObject::UINT64,   offsetof(scan_rec_t, scan_id),      1,                      NULL, NATIVE_FLAGS,                                 "Scan ID"},
+    {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS | RecordObject::Y_COORD,         "Longitude"},
+    {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS | RecordObject::X_COORD,         "Latitude"}
 };
 
 const char* SwotL2Reader::geoRecType = "swotl2geo";
 const RecordObject::fieldDef_t SwotL2Reader::geoRecDef[] = {
-    {"granule",     RecordObject::STRING,   offsetof(geo_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS},
-    {"scan",        RecordObject::OBJECT,   offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"granule",     RecordObject::STRING,   offsetof(geo_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS,                                 "SWOT L2 granule name"},
+    {"scan",        RecordObject::OBJECT,   offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS | RecordObject::BATCH,    "Scan"}
 };
 
 /******************************************************************************

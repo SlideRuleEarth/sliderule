@@ -44,12 +44,12 @@ const char* MetricRecord::rec_type = "Metric";
 
 RecordObject::fieldDef_t MetricRecord::rec_def[] =
 {
-    {"INDEX",       UINT64, offsetof(telemetry_t, index),          1,   NULL, NATIVE_FLAGS},
-    {"VALUE",       DOUBLE, offsetof(telemetry_t, value),          1,   NULL, NATIVE_FLAGS},
-    {"TEXT",        STRING, offsetof(telemetry_t, text_offset),    1,   NULL, NATIVE_FLAGS | RecordObject::POINTER},
-    {"NAME",        STRING, offsetof(telemetry_t, name_offset),    1,   NULL, NATIVE_FLAGS | RecordObject::POINTER},
-    {"SOURCE",      STRING, offsetof(telemetry_t, src_offset),     1,   NULL, NATIVE_FLAGS | RecordObject::POINTER},
-    {"SRC_SIZE",    INT32,  offsetof(telemetry_t, src_size),       1,   NULL, NATIVE_FLAGS}
+    {"INDEX",       UINT64, offsetof(telemetry_t, index),          1,   NULL, NATIVE_FLAGS, "ordering key"},
+    {"VALUE",       DOUBLE, offsetof(telemetry_t, value),          1,   NULL, NATIVE_FLAGS, "record value"},
+    {"TEXT",        STRING, offsetof(telemetry_t, text_offset),    1,   NULL, NATIVE_FLAGS | RecordObject::POINTER, "metric text containing value"},
+    {"NAME",        STRING, offsetof(telemetry_t, name_offset),    1,   NULL, NATIVE_FLAGS | RecordObject::POINTER, "metric name"},
+    {"SOURCE",      STRING, offsetof(telemetry_t, src_offset),     1,   NULL, NATIVE_FLAGS | RecordObject::POINTER, "record source"},
+    {"SRC_SIZE",    INT32,  offsetof(telemetry_t, src_size),       1,   NULL, NATIVE_FLAGS, "size of record source string"}
 };
 
 int MetricRecord::rec_elem = sizeof(MetricRecord::rec_def) / sizeof(RecordObject::fieldDef_t);

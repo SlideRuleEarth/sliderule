@@ -61,23 +61,23 @@ const char* OutputLib::eofRecType    = "arrowrec.eof";
 const char* OutputLib::remoteRecType = "arrowrec.remote";
 
 const RecordObject::fieldDef_t OutputLib::metaRecDef[] = {
-    {"filename",   RecordObject::STRING,   offsetof(output_file_meta_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"size",       RecordObject::INT64,    offsetof(output_file_meta_t, size),                      1,  NULL, NATIVE_FLAGS}
+    {"filename",   RecordObject::STRING,   offsetof(output_file_meta_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS, "output file name"},
+    {"size",       RecordObject::INT64,    offsetof(output_file_meta_t, size),                      1,  NULL, NATIVE_FLAGS, "size in bytes of output file"}
 };
 
 const RecordObject::fieldDef_t OutputLib::dataRecDef[] = {
-    {"filename",   RecordObject::STRING,   offsetof(output_file_data_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"data",       RecordObject::UINT8,    offsetof(output_file_data_t, data),                      0,  NULL, NATIVE_FLAGS} // variable length
+    {"filename",   RecordObject::STRING,   offsetof(output_file_data_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS, "output file name"},
+    {"data",       RecordObject::UINT8,    offsetof(output_file_data_t, data),                      0,  NULL, NATIVE_FLAGS, "transmitted data contents of file"} // variable length
 };
 
 const RecordObject::fieldDef_t OutputLib::eofRecDef[] = {
-    {"filename",   RecordObject::STRING,   offsetof(output_file_eof_t, filename),   FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"checksum",   RecordObject::UINT64,   offsetof(output_file_eof_t, checksum),                   1,  NULL, NATIVE_FLAGS}
+    {"filename",   RecordObject::STRING,   offsetof(output_file_eof_t, filename),   FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS, "output file name"},
+    {"checksum",   RecordObject::UINT64,   offsetof(output_file_eof_t, checksum),                   1,  NULL, NATIVE_FLAGS, "checksum of contents of file (64-bit byte-wise sum)"}
 };
 
 const RecordObject::fieldDef_t OutputLib::remoteRecDef[] = {
-    {"url",   RecordObject::STRING,   offsetof(output_file_remote_t, url),                URL_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"size",  RecordObject::INT64,    offsetof(output_file_remote_t, size),                         1,  NULL, NATIVE_FLAGS}
+    {"url",   RecordObject::STRING,   offsetof(output_file_remote_t, url),                URL_MAX_LEN,  NULL, NATIVE_FLAGS, "URL of output file when file is remote (e.g. s3://sliderule-public/my-data-run.parquet)"},
+    {"size",  RecordObject::INT64,    offsetof(output_file_remote_t, size),                         1,  NULL, NATIVE_FLAGS, "size in bytes of remote output file"}
 };
 
 /******************************************************************************

@@ -44,16 +44,16 @@
 const char* ContainerRecord::entryRecType = "conrec.entry";
 RecordObject::fieldDef_t ContainerRecord::entryRecDef[] =
 {
-    {"size",        UINT32, offsetof(entry_t, rec_size),        1,   NULL, NATIVE_FLAGS},
-    {"offset",      UINT32, offsetof(entry_t, rec_offset),      1,   NULL, NATIVE_FLAGS}
+    {"size",        UINT32, offsetof(entry_t, rec_size),        1,   NULL, NATIVE_FLAGS,    "number of bytes of data"},
+    {"offset",      UINT32, offsetof(entry_t, rec_offset),      1,   NULL, NATIVE_FLAGS,    "offset of bytes into data"}
 };
 
 const char* ContainerRecord::recType = "conrec";
 RecordObject::fieldDef_t ContainerRecord::recDef[] =
 {
-    {"count",       UINT32, offsetof(rec_t, rec_cnt),           1,   NULL, NATIVE_FLAGS},
-    {"start",       UINT32, offsetof(rec_t, start_of_recs),     1,   NULL, NATIVE_FLAGS},
-    {"records",     OBJECT, offsetof(rec_t, entries),           0,   entryRecType, NATIVE_FLAGS} // variable length
+    {"count",       UINT32, offsetof(rec_t, rec_cnt),           1,   NULL, NATIVE_FLAGS, "number of records inside container"},
+    {"start",       UINT32, offsetof(rec_t, start_of_recs),     1,   NULL, NATIVE_FLAGS, "offset in bytes into parent record for start of contained records"},
+    {"records",     OBJECT, offsetof(rec_t, entries),           0,   entryRecType, NATIVE_FLAGS, "contained records"} // variable length
 };
 
 /*----------------------------------------------------------------------------

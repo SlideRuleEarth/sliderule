@@ -1487,8 +1487,8 @@ void RecordObject::packBitField (unsigned char* buf, int bit_offset, int bit_len
  *----------------------------------------------------------------------------*/
 RecordObject::field_t RecordObject::parseImmediateField(const char* str)
 {
-    field_t retfield = {INVALID_FIELD, 0, 0, NULL, 0};
-    field_t f = {INVALID_FIELD, 0, 0, NULL, 0};
+    field_t retfield = {INVALID_FIELD, 0, 0, NULL, 0, NULL};
+    field_t f = {INVALID_FIELD, 0, 0, NULL, 0, NULL};
 
     /* Make Copy of String */
     char pstr[MAX_VAL_STR_SIZE];
@@ -1634,7 +1634,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
 {
     assert(field_name);
 
-    field_t _field = { INVALID_FIELD, 0, 0, NULL, parent_flags };
+    field_t _field = { INVALID_FIELD, 0, 0, NULL, parent_flags, NULL };
     long element = -1;
 
     /* Sanity Check Def */

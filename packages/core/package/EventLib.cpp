@@ -58,44 +58,44 @@ static Publisher* outq = NULL;
 
 static RecordObject::fieldDef_t logRecDef[] =
 {
-    {"time",    RecordObject::INT64,    offsetof(EventLib::log_t, time),        1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::UINT32,   offsetof(EventLib::log_t, level),       1,                        NULL, NATIVE_FLAGS},
-    {"ipv4",    RecordObject::STRING,   offsetof(EventLib::log_t, ipv4),        EventLib::MAX_IPV4_STR,   NULL, NATIVE_FLAGS},
-    {"source",  RecordObject::STRING,   offsetof(EventLib::log_t, source),      EventLib::MAX_SRC_STR,    NULL, NATIVE_FLAGS},
-    {"message", RecordObject::STRING,   offsetof(EventLib::log_t, message),     0,                        NULL, NATIVE_FLAGS}
+    {"time",    RecordObject::INT64,    offsetof(EventLib::log_t, time),        1,                        NULL, NATIVE_FLAGS,   "gps time"},
+    {"level",   RecordObject::UINT32,   offsetof(EventLib::log_t, level),       1,                        NULL, NATIVE_FLAGS,   "verbosity level"},
+    {"ipv4",    RecordObject::STRING,   offsetof(EventLib::log_t, ipv4),        EventLib::MAX_IPV4_STR,   NULL, NATIVE_FLAGS,   "ip address of originating node"},
+    {"source",  RecordObject::STRING,   offsetof(EventLib::log_t, source),      EventLib::MAX_SRC_STR,    NULL, NATIVE_FLAGS,   "code module source"},
+    {"message", RecordObject::STRING,   offsetof(EventLib::log_t, message),     0,                        NULL, NATIVE_FLAGS,   "log message content"}
 };
 
 static RecordObject::fieldDef_t traceRecDef[] =
 {
-    {"time",    RecordObject::INT64,    offsetof(EventLib::trace_t, time),      1,                        NULL, NATIVE_FLAGS},
-    {"tid",     RecordObject::INT64,    offsetof(EventLib::trace_t, tid),       1,                        NULL, NATIVE_FLAGS},
-    {"id",      RecordObject::UINT32,   offsetof(EventLib::trace_t, id),        1,                        NULL, NATIVE_FLAGS},
-    {"parent",  RecordObject::UINT32,   offsetof(EventLib::trace_t, parent),    1,                        NULL, NATIVE_FLAGS},
-    {"flags",   RecordObject::UINT32,   offsetof(EventLib::trace_t, flags),     1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::UINT32,   offsetof(EventLib::trace_t, level),     1,                        NULL, NATIVE_FLAGS},
-    {"ipv4",    RecordObject::STRING,   offsetof(EventLib::trace_t, ipv4),      EventLib::MAX_IPV4_STR,   NULL, NATIVE_FLAGS},
-    {"name",    RecordObject::STRING,   offsetof(EventLib::trace_t, name),      EventLib::MAX_NAME_STR,   NULL, NATIVE_FLAGS},
-    {"attr",    RecordObject::STRING,   offsetof(EventLib::trace_t, attr),      0,                        NULL, NATIVE_FLAGS}
+    {"time",    RecordObject::INT64,    offsetof(EventLib::trace_t, time),      1,                        NULL, NATIVE_FLAGS,   "gps time"},
+    {"tid",     RecordObject::INT64,    offsetof(EventLib::trace_t, tid),       1,                        NULL, NATIVE_FLAGS,   "task id"},
+    {"id",      RecordObject::UINT32,   offsetof(EventLib::trace_t, id),        1,                        NULL, NATIVE_FLAGS,   "trace id"},
+    {"parent",  RecordObject::UINT32,   offsetof(EventLib::trace_t, parent),    1,                        NULL, NATIVE_FLAGS,   "trace id of parent trace"},
+    {"flags",   RecordObject::UINT32,   offsetof(EventLib::trace_t, flags),     1,                        NULL, NATIVE_FLAGS,   "flags"},
+    {"level",   RecordObject::UINT32,   offsetof(EventLib::trace_t, level),     1,                        NULL, NATIVE_FLAGS,   "verbosity level"},
+    {"ipv4",    RecordObject::STRING,   offsetof(EventLib::trace_t, ipv4),      EventLib::MAX_IPV4_STR,   NULL, NATIVE_FLAGS,   "ip address of originating node"},
+    {"name",    RecordObject::STRING,   offsetof(EventLib::trace_t, name),      EventLib::MAX_NAME_STR,   NULL, NATIVE_FLAGS,   "name of trace"},
+    {"attr",    RecordObject::STRING,   offsetof(EventLib::trace_t, attr),      0,                        NULL, NATIVE_FLAGS,   "attributes of trace"}
 };
 
 static RecordObject::fieldDef_t telemetryRecDef[] =
 {
-    {"time",        RecordObject::INT64,    offsetof(EventLib::telemetry_t, time),      1,                          NULL, NATIVE_FLAGS},
-    {"code",        RecordObject::INT32,    offsetof(EventLib::telemetry_t, code),      1,                          NULL, NATIVE_FLAGS},
-    {"duration",    RecordObject::FLOAT,    offsetof(EventLib::telemetry_t, duration),  1,                          NULL, NATIVE_FLAGS},
-    {"latitude",    RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, latitude),  1,                          NULL, NATIVE_FLAGS},
-    {"longitude",   RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, longitude), 1,                          NULL, NATIVE_FLAGS},
-    {"level",       RecordObject::UINT16,   offsetof(EventLib::telemetry_t, level),     1,                          NULL, NATIVE_FLAGS},
-    {"ip",          RecordObject::STRING,   offsetof(EventLib::telemetry_t, source_ip), EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
-    {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),    EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
-    {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),   EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
+    {"time",        RecordObject::INT64,    offsetof(EventLib::telemetry_t, time),      1,                     NULL, NATIVE_FLAGS, "gps time"},
+    {"code",        RecordObject::INT32,    offsetof(EventLib::telemetry_t, code),      1,                     NULL, NATIVE_FLAGS, "status code"},
+    {"duration",    RecordObject::FLOAT,    offsetof(EventLib::telemetry_t, duration),  1,                     NULL, NATIVE_FLAGS, "execution duration in seconds"},
+    {"latitude",    RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, latitude),  1,                     NULL, NATIVE_FLAGS, "point in area of interest (latitude)"},
+    {"longitude",   RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, longitude), 1,                     NULL, NATIVE_FLAGS, "point in area of interest (longitude)"},
+    {"level",       RecordObject::UINT16,   offsetof(EventLib::telemetry_t, level),     1,                     NULL, NATIVE_FLAGS, "verbosity level"},
+    {"ip",          RecordObject::STRING,   offsetof(EventLib::telemetry_t, source_ip), EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS, "ip address of originating node"},
+    {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),    EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS, "client id that made request"},
+    {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),   EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS, "account name (user) that made request"},
 };
 
 static RecordObject::fieldDef_t alertRecDef[] =
 {
-    {"code",    RecordObject::INT32,    offsetof(EventLib::alert_t, code),      1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::UINT32,   offsetof(EventLib::alert_t, level),     1,                        NULL, NATIVE_FLAGS},
-    {"text",    RecordObject::STRING,   offsetof(EventLib::alert_t, text),      EventLib::MAX_ALERT_STR,  NULL, NATIVE_FLAGS}
+    {"code",    RecordObject::INT32,    offsetof(EventLib::alert_t, code),      1,                        NULL, NATIVE_FLAGS, "status code"},
+    {"level",   RecordObject::UINT32,   offsetof(EventLib::alert_t, level),     1,                        NULL, NATIVE_FLAGS, "verbosity level"},
+    {"text",    RecordObject::STRING,   offsetof(EventLib::alert_t, text),      EventLib::MAX_ALERT_STR,  NULL, NATIVE_FLAGS, "alert content"}
 };
 
 /******************************************************************************

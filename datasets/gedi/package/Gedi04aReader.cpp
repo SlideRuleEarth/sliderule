@@ -65,7 +65,7 @@ const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
 
 const char* Gedi04aReader::batchRecType = "gedi04arec";
 const RecordObject::fieldDef_t Gedi04aReader::batchRecDef[] = {
-    {"footprint",       RecordObject::OBJECT,   offsetof(batch_t, footprint),         0,  fpRecType, NATIVE_FLAGS | RecordObject::BATCH}
+    {"footprint",       RecordObject::OBJECT,   offsetof(batch_t, footprint),         0,  fpRecType, NATIVE_FLAGS | RecordObject::BATCH, "GEDI footprints"}
 };
 
 /******************************************************************************

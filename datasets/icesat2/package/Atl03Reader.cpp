@@ -49,35 +49,35 @@
 
 const char* Atl03Reader::phRecType = "atl03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
-    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"x_atc",           RecordObject::FLOAT,    offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
-    {"y_atc",           RecordObject::FLOAT,    offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
-    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"snowcover",       RecordObject::UINT8,    offsetof(photon_t, snowcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"atl08_class",     RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"atl03_cnf",       RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"yapc_score",      RecordObject::UINT16,   offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX}
+    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME,        "Unix time (nanoseconds) of the photon measurement"},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD,     "Latitude (EPSG:9989)"},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD,     "Longitude (EPSG:9989)"},
+    {"x_atc",           RecordObject::FLOAT,    offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS,                             "Along track coordinate (in meters) representing distance from the equator along the reference ground track"},
+    {"y_atc",           RecordObject::FLOAT,    offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS,                             "Across track coordinate (in meters) representing distance from reference ground track"},
+    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD,     "Elevation of photon (meters); reference surface dependant on datum"},
+    {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "ATL08 relative photon height from ground; included for phoreal processing"},
+    {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "ATL08 land cover flags; included for phoreal processing"},
+    {"snowcover",       RecordObject::UINT8,    offsetof(photon_t, snowcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "ATL08 snow cover flags; included for phoreal processing"},
+    {"atl08_class",     RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "ATL08 classification of photon; included for atl08 classification"},
+    {"atl03_cnf",       RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "ATL03 signal confidence of photon"},
+    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "ATL03 photon quality flags"},
+    {"yapc_score",      RecordObject::UINT16,   offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX,         "YAPC density score of photon; included for yapc classification"}
 };
 
 const char* Atl03Reader::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
-    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id),             1,  NULL, NATIVE_FLAGS},
-    {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance),       1,  NULL, NATIVE_FLAGS}, // distance from equator
-    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"photons",         RecordObject::OBJECT,   offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
+    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Track number (1, 2, or 3)"},
+    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Pair number (0: left, 1: right)"},
+    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Spacecraft orientation (0: backwards, 1: forwards)"},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ICESat-2 Reference ground track"},
+    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "ICESat-2 Cycle number"},
+    {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id),             1,  NULL, NATIVE_FLAGS,                            "ATL03 segment id of the photon"},
+    {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance),       1,  NULL, NATIVE_FLAGS,                            "Distance from equator (in meters)"}, // distance from equator
+    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Background rate (photons/second) of detectors"},
+    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX,        "Solar elevation (degrees)"},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX,      "Unique extent identifier"},
+    {"photons",         RecordObject::OBJECT,   offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH, "Photon data"} // variable length
 };
 
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
