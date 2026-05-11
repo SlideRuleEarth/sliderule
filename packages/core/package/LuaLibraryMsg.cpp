@@ -372,7 +372,7 @@ int LuaLibraryMsg::lmsg_describe(lua_State* L)
         {
             const char* type_str = RecordObject::openApiType(fields[i]->type);
             const char* format_str = RecordObject::openApiFormat(fields[i]->type);
-            const char* description = fields[i]->exttype ? fields[i]->exttype : "primitive value";
+            const char* description = fields[i]->exttype ? fields[i]->exttype : fields[i]->description;
             str += FString("\"%s\": {\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"}%s",
                     fieldnames[i], type_str, format_str, description, (i < numfields - 1) ? "," : "").c_str();
             delete fields[i];
