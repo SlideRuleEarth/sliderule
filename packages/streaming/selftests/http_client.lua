@@ -3,6 +3,10 @@ local json = require("json")
 
 -- Setup --
 
+if not core.UNITTEST then
+    return runner.skip()
+end
+
 local endpoint  = core.endpoint()
 local server    = core.httpd({["/source"]=endpoint},10081):untilup()
 local client    = streaming.http("127.0.0.1", 10081)

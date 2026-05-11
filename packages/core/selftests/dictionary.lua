@@ -4,8 +4,7 @@ local srcfile, dirpath = runner.srcscript()
 -- Check Required Packages --
 
 if not core.UNITTEST then
-    print("Skipping dictionary self test")
-    return
+    return runner.skip()
 end
 
 -- Dictionary Unit Test --

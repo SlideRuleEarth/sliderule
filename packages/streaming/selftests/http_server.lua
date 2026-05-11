@@ -3,8 +3,7 @@ local runner = require("test_executive")
 -- Setup --
 
 if not core.UNITTEST then
-    print("Skipping server example endpoint test")
-    return
+    return runner.skip()
 end
 
 local json_object = '{ \
