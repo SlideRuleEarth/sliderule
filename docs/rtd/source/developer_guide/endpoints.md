@@ -1,6 +1,6 @@
 # Endpoints
 
-Links to the HTML rendered documentation for the APIs are provided below.
+Links to the HTML rendered documentation for the APIs are provided below.  The source OpenAPI specification is accessible at [https://sliderule.slideruleearth.io/openapi/index.json](https://sliderule.slideruleearth.io/openapi/index.json).
 
 ## SlideRule APIs
 
