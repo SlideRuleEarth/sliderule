@@ -10,7 +10,7 @@ local rqst_resource = rqst["resource"]
 if rqst_resource and (string.sub(rqst_resource, 38, 40) == "001") then
     default_asset = "icesat2-atl24v1"
 end
-local parms = icesat2.parms(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
+local parms = icesat2.parms03(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
 
 -------------------------------------------------------
 -- main
@@ -61,7 +61,7 @@ return {
         tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl03Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

@@ -96,8 +96,18 @@ local function parameter_schemas()
                          output(outputdir.."/components/schemas/CreParameters.json", cre.parms():describe("Request parameters for executing container runtime environment processing requests"))
     if __geo__      then output(outputdir.."/components/schemas/GeoParameters.json", geo.parms():describe("Request parameters for sampling raster datasets using GDAL")) end
     if __h5coro__   then output(outputdir.."/components/schemas/H5CoroParameters.json", h5coro.parms():describe("Request parameters for reading HDF5 files using H5Coro")) end
-    if __icesat2__  then output(outputdir.."/components/schemas/Icesat2Parameters.json", icesat2.parms():describe("Request parameters for executing ICESat-2 processing requests")) end
-    if __gedi__     then output(outputdir.."/components/schemas/GediParameters.json", gedi.parms():describe("Request parameters for executing GEDI processing requests")) end
+    if __icesat2__  then
+                        output(outputdir.."/components/schemas/Icesat2Parameters.json", icesat2.parms():describe("Request parameters for executing ICESat-2 processing requests"))
+                        output(outputdir.."/components/schemas/Atl03Parameters.json", icesat2.parms03():describe("Request parameters for executing ICESat-2 processing requests"))
+                        output(outputdir.."/components/schemas/Atl06Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 processing requests"))
+                        output(outputdir.."/components/schemas/Atl06DispatchParameters.json", icesat2.parms06d():describe("Request parameters for executing ICESat-2 processing requests"))
+                        output(outputdir.."/components/schemas/Atl13Parameters.json", icesat2.parms13():describe("Request parameters for executing ICESat-2 processing requests"))
+    end
+    if __gedi__     then
+                        output(outputdir.."/components/schemas/GediParameters.json", gedi.parms():describe("Request parameters for executing GEDI processing requests"))
+                        output(outputdir.."/components/schemas/GediL2Parameters.json", gedi.parmsl2():describe("Request parameters for executing GEDI processing requests"))
+                        output(outputdir.."/components/schemas/GediL4Parameters.json", gedi.parmsl4():describe("Request parameters for executing GEDI processing requests"))
+    end
     if __swot__     then output(outputdir.."/components/schemas/SwotParameters.json", swot.parms():describe("Request parameters for executing SWOT processing requests")) end
     if __bathy__    then output(outputdir.."/components/schemas/BathyParameters.json", bathy.parms():describe("Request parameters for executing bathymetry processing requests")) end
     if __casals__   then output(outputdir.."/components/schemas/CasalsParameters.json", casals.parms():describe("Request parameters for executing CASALS processing requests")) end

@@ -4,7 +4,7 @@
 local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
-local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl08", rqst["resource"])
+local parms     = icesat2.parms03(rqst["parms"], rqst["key_space"], "icesat2-atl08", rqst["resource"])
 local resource  = parms["resource"]
 local channels  = 6 -- number of dataframes per resource (one per beam)
 
@@ -55,7 +55,7 @@ return {
         tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl03Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

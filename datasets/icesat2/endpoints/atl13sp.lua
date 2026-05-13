@@ -31,14 +31,14 @@ return {
         tags = "s-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl13Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "../components/schemas/atl06srec.json" },
-                    { "$ref": "../components/schemas/atl06srec.elevation.json" }
+                    { "$ref": "../components/schemas/atl13srec.json" },
+                    { "$ref": "../components/schemas/atl13srec.elevation.json" }
                 ],
                 "description": "Stream of binary-encoded ICESat-2 inland lake measurements (ATL13)"
             }

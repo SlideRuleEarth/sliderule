@@ -4,7 +4,7 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms         = icesat2.parms03(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 
 -------------------------------------------------------
 -- main
@@ -28,7 +28,7 @@ return {
     main = main,
     parms = parms,
     name = "ATL03 Viewer",
-    description = "Spatially and temporally subsets single ATL03 granule segments with additional filters (s-series)",
+    description = "Spatially and temporally subsets single ATL03 granule segments with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
@@ -38,7 +38,7 @@ return {
         tags = "v-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl03Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

@@ -7,18 +7,22 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest03.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03DataFrame.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Parameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Parameters.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DispatchParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Parameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Granule.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24IODriver.cpp
@@ -45,17 +49,21 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest03.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Parameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Parameters.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DispatchParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Parameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Granule.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24IODriver.h

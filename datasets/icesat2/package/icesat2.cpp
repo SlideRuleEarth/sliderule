@@ -39,17 +39,21 @@
 #include "Icesat2Parameters.h"
 #include "Atl03DataFrame.h"
 #include "Atl03Reader.h"
+#include "Atl03Parameters.h"
 #include "Atl03Viewer.h"
 #include "Atl03Indexer.h"
 #include "Atl06DataFrame.h"
-#include "Atl06Reader.h"
 #include "Atl06Dispatch.h"
+#include "Atl06Reader.h"
+#include "Atl06Parameters.h"
+#include "Atl06DispatchParameters.h"
 #include "Atl08DataFrame.h"
 #include "Atl08Dispatch.h"
 #include "Atl09Sampler.h"
 #include "Atl13DataFrame.h"
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
+#include "Atl13Parameters.h"
 #include "Atl24DataFrame.h"
 #include "Atl24Granule.h"
 #include "Atl24IODriver.h"
@@ -79,6 +83,10 @@ int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
         {"parms",               luaCreateParameters<Icesat2Parameters>},
+        {"parms03",             luaCreateParameters<Atl03Parameters>},
+        {"parms06",             luaCreateParameters<Atl06Parameters>},
+        {"parms06d",            luaCreateParameters<Atl06DispatchParameters>},
+        {"parms13",             luaCreateParameters<Atl13Parameters>},
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},

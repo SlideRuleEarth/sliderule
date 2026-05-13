@@ -4,7 +4,7 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms         = icesat2.parms06d(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 
 -------------------------------------------------------
 -- main
@@ -40,7 +40,7 @@ return {
         tags = "p-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl06DispatchParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

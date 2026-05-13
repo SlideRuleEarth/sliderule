@@ -31,7 +31,7 @@ return {
         tags = "p-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl06DispatchParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
