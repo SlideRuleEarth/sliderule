@@ -45,7 +45,7 @@
 #include "H5Array.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "AreaOfInterest.h"
 
 /******************************************************************************
@@ -91,7 +91,7 @@ class Atl24DataFrame: public GeoDataFrame
         FieldElement<uint8_t>       cycle {0, Field::META_COLUMN};
         FieldElement<uint8_t>       region {0, Field::META_COLUMN};
         FieldElement<uint16_t>      rgt {0, Field::META_COLUMN};
-        FieldElement<uint8_t>       gt {0, Field::META_COLUMN};     // Icesat2Fields::gt_t
+        FieldElement<uint8_t>       gt {0, Field::META_COLUMN};     // Icesat2Parameters::gt_t
         FieldElement<string>        granule;                        // name of the ATL24 granule
 
         /*--------------------------------------------------------------------
@@ -146,14 +146,14 @@ class Atl24DataFrame: public GeoDataFrame
         const int           readTimeoutMs;
         const char*         beam;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
+        Icesat2Parameters*      parms;
         H5Object*           hdf24;  // atl24 granule
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl24DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name);
+                        Atl24DataFrame      (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf24, const char* outq_name);
                         ~Atl24DataFrame     (void) override;
         static void*    subsettingThread    (void* parm);
 };

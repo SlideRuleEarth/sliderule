@@ -46,7 +46,7 @@
 #include "OsApi.h"
 #include "StringLib.h"
 #include "AreaOfInterest.h"
-#include "GediFields.h"
+#include "GediParameters.h"
 
 /******************************************************************************
  * GEDI DATAFRAME BASE
@@ -62,7 +62,7 @@ class GediDataFrame: public GeoDataFrame
 
         GediDataFrame  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[],
                         const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                        GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name);
+                        GediParameters* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name);
 
         ~GediDataFrame (void) override;
 
@@ -81,7 +81,7 @@ class GediDataFrame: public GeoDataFrame
         Thread*           readerPid;
         int               readTimeoutMs;
         Publisher*        outQ;
-        GediFields*       parms;
+        GediParameters*       parms;
         H5Object*         hdf;
         const char*       beamStr;
         char              group[9];

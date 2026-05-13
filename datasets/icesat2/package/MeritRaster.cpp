@@ -65,7 +65,7 @@ void MeritRaster::init(void)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-RasterObject* MeritRaster::create(lua_State* L, RequestFields* rqst_parms, const char* key)
+RasterObject* MeritRaster::create(lua_State* L, RequestParameters* rqst_parms, const char* key)
 {
     return new MeritRaster(L, rqst_parms, key);
 }
@@ -86,7 +86,7 @@ MeritRaster::~MeritRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-MeritRaster::MeritRaster(lua_State *L, RequestFields* rqst_parms, const char* key):
+MeritRaster::MeritRaster(lua_State *L, RequestParameters* rqst_parms, const char* key):
     RasterObject(L, rqst_parms, key),
     cacheLat(0),
     cacheLon(0),

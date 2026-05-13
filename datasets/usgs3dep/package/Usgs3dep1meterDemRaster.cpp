@@ -57,7 +57,7 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, RequestParameters* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key, NULL, &overrideTargetCRS),
  filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")

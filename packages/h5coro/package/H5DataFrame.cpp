@@ -51,13 +51,13 @@
  *----------------------------------------------------------------------------*/
 int H5DataFrame::luaCreate(lua_State* L)
 {
-    H5Fields* _parms = NULL;
+    H5Parameters* _parms = NULL;
     H5Object* _h5obj = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms                  = dynamic_cast<H5Fields*>(getLuaObject(L, 1, H5Fields::OBJECT_TYPE));
+        _parms                  = dynamic_cast<H5Parameters*>(getLuaObject(L, 1, H5Parameters::OBJECT_TYPE));
         _h5obj                  = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* _group      = getLuaString(L, 3, true, NULL);
         const okey_t _df_key    = getLuaInteger(L, 4, true, 0);
@@ -82,7 +82,7 @@ int H5DataFrame::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5DataFrame::H5DataFrame (lua_State* L, H5Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
+H5DataFrame::H5DataFrame (lua_State* L, H5Parameters* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
                           const char* time_column, const char* x_column, const char* y_column, const char* z_column):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {{"group", &group, "HDF5 subgroup variables belong to"}}, _parms->crs.value.c_str(), _df_key),
     h5obj(_h5obj),

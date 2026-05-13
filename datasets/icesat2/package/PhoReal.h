@@ -34,7 +34,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "Atl03DataFrame.h"
 #include "FieldColumn.h"
 #include "FieldArray.h"
@@ -94,7 +94,7 @@ class PhoReal: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-                        PhoReal             (lua_State* L, Icesat2Fields* _parms);
+                        PhoReal             (lua_State* L, Icesat2Parameters* _parms);
                         ~PhoReal            (void) override;
 
         void            geolocate           (const Atl03DataFrame& df, uint32_t start_photon, uint32_t num_photons, result_t& result);
@@ -108,19 +108,19 @@ class PhoReal: public GeoDataFrame::FrameRunner
 
         static bool isVegetation (uint8_t atl08_class)
         {
-            return (atl08_class == Icesat2Fields::ATL08_CANOPY || atl08_class == Icesat2Fields::ATL08_TOP_OF_CANOPY);
+            return (atl08_class == Icesat2Parameters::ATL08_CANOPY || atl08_class == Icesat2Parameters::ATL08_TOP_OF_CANOPY);
         }
 
         static bool isGround (uint8_t atl08_class)
         {
-            return (atl08_class == Icesat2Fields::ATL08_GROUND);
+            return (atl08_class == Icesat2Parameters::ATL08_GROUND);
         }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Icesat2Fields*  parms;
+        Icesat2Parameters*  parms;
 };
 
 /******************************************************************************

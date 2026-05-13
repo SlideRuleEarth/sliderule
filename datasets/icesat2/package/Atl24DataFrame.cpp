@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "Atl24DataFrame.h"
 
 /******************************************************************************
@@ -61,14 +61,14 @@ const struct luaL_Reg Atl24DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl24DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
     H5Object* _hdf24 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
         _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 5, true, NULL);
 
@@ -87,7 +87,7 @@ int Atl24DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf24, const char* outq_name):
+Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"class_ph",        &class_ph,      "Photon classification: sea_surface (41), bathymetry (40), other (1), or unclassified (0)"},
@@ -108,8 +108,8 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",              &gt,            "Ground track; integer representation of beam"},
         {"granule",         &granule,       "Name of the source ATL03 granule"}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
+    Icesat2Parameters::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Parameters::calculateBeamKey(beam_str)), // dfKey
     granule(_hdf24 ? _hdf24->name : "null", META_SOURCE_ID),
     active(false),
     readerPid(NULL),
@@ -223,7 +223,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl24DataFrame* df = static_cast<Atl24DataFrame*>(parm);
-    const Icesat2Fields& parms = *df->parms;
+    const Icesat2Parameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf24->name, df->beam);
@@ -238,8 +238,8 @@ void* Atl24DataFrame::subsettingThread (void* parm)
         const Atl24Data atl24(df, aoi);
 
         /* Set MetaData */
-        df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl24.sc_orient[0], df->beam);
-        df->gt = Icesat2Fields::getGroundTrack(df->beam);
+        df->spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl24.sc_orient[0], df->beam);
+        df->gt = Icesat2Parameters::getGroundTrack(df->beam);
 
         /* Traverse All Photons In Dataset */
         int32_t current_photon = -1;
@@ -288,7 +288,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
             df->addRow();
             df->class_ph.append(atl24.class_ph[current_photon]);
             df->confidence.append(atl24.confidence[current_photon]);
-            df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl24.delta_time[current_photon]));
+            df->time_ns.append(Icesat2Parameters::deltatime2timestamp(atl24.delta_time[current_photon]));
             df->lat_ph.append(aoi.latitude[current_photon]);
             df->lon_ph.append(aoi.longitude[current_photon]);
             df->ortho_h.append(atl24.ortho_h[current_photon]);

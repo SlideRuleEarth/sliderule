@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -61,7 +61,7 @@ const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
     H5Object* _hdf03 = NULL;
     H5Object* _hdf08 = NULL;
     H5Object* _hdf24 = NULL;
@@ -70,7 +70,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
         _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
@@ -93,7 +93,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
+Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns,               "Unix time (nanoseconds) of the photon measurement"},
@@ -118,8 +118,8 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt,                    "Ground track; integer representation of beam"},
         {"granule",             &granule,               "Name of the source ATL03 granule"}
     },
-    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
+    Icesat2Parameters::defaultITRF(_parms->granuleFields.version.value), // crs
+    Icesat2Parameters::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -137,12 +137,12 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     hdf08(_hdf08),
     hdf24(_hdf24),
     usePodppd(parms->podppdMask.value != 0x00),
-    useYapc006(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)),
-    useYapc007(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
+    useYapc006(parms->stages[Icesat2Parameters::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)),
+    useYapc007(parms->stages[Icesat2Parameters::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
     useGeoid(parms->datum.value == MathLib::EGM08)
 {
     /* Set Optional PhoREAL Columns */
-    if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
+    if(parms->stages[Icesat2Parameters::STAGE_PHOREAL])
     {
         addColumn("relief",             &relief,            "ATL08 relative photon height from ground; included for phoreal processing",   false);
         addColumn("landcover",          &landcover,         "ATL08 land cover flags; included for phoreal processing",                     false);
@@ -150,32 +150,32 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     }
 
     /* Set Optional YAPC Columns */
-    if(parms->stages[Icesat2Fields::STAGE_YAPC])
+    if(parms->stages[Icesat2Parameters::STAGE_YAPC])
     {
         addColumn("yapc_score",         &yapc_score,        "YAPC density score of photon; included for yapc classification",               false);
     }
 
     /* Set Optional ATL08 Columns */
-    if(parms->stages[Icesat2Fields::STAGE_ATL08])
+    if(parms->stages[Icesat2Parameters::STAGE_ATL08])
     {
         addColumn("atl08_class",        &atl08_class,       "ATL08 classification of photon; included for atl08 classificaiton",            false);
     }
 
     /* Set Optional ATL24 Columns */
-    if(parms->stages[Icesat2Fields::STAGE_ATL24])
+    if(parms->stages[Icesat2Parameters::STAGE_ATL24])
     {
         addColumn("atl24_class",        &atl24_class,       "ATL24 classification of photon; included for atl24 classification",            false);
         addColumn("atl24_confidence",   &atl24_confidence,  "ATL24 classification confidence of photon; included for atl24 classification", false);
     }
 
     /* Set CRS */
-    if(useGeoid) crs = Icesat2Fields::defaultEGM(_parms->granuleFields.version.value);
+    if(useGeoid) crs = Icesat2Parameters::defaultEGM(_parms->granuleFields.version.value);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
 
     /* Set Signal Confidence Index */
-    if(parms->surfaceType != Icesat2Fields::SRT_DYNAMIC)
+    if(parms->surfaceType != Icesat2Parameters::SRT_DYNAMIC)
     {
         signalConfColIndex = static_cast<int>(parms->surfaceType.value);
     }
@@ -275,8 +275,8 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl08Class::Atl08Class (Atl03DataFrame* df):
-    enabled             (df->parms->stages[Icesat2Fields::STAGE_ATL08]),
-    phoreal             (df->parms->stages[Icesat2Fields::STAGE_PHOREAL]),
+    enabled             (df->parms->stages[Icesat2Parameters::STAGE_ATL08]),
+    phoreal             (df->parms->stages[Icesat2Parameters::STAGE_PHOREAL]),
     ancillary           (df->parms->atl08Fields.length() > 0),
     classification      {NULL},
     relief              {NULL},
@@ -402,16 +402,16 @@ void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const AreaO
                     snowcover[atl03_photon] = (uint8_t)segment_snowcover[atl08_segment_index];
 
                     /* Run ABoVE Classifier (if specified) */
-                    if(df->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Fields::ATL08_TOP_OF_CANOPY))
+                    if(df->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Parameters::ATL08_TOP_OF_CANOPY))
                     {
                         if( (atl03.solar_elevation[atl03_segment_index] <= 5.0) &&
                             ((df->spot.value == 1) || (df->spot.value == 3) || (df->spot.value == 5)) &&
-                            (atl03.signal_conf_ph[atl03_photon] == Icesat2Fields::CNF_SURFACE_HIGH) &&
+                            (atl03.signal_conf_ph[atl03_photon] == Icesat2Parameters::CNF_SURFACE_HIGH) &&
                             ((relief[atl03_photon] >= 0.0) && (relief[atl03_photon] < 35.0)) )
                             /* TODO: check for valid ground photons in ATL08 segment */
                         {
                             /* Reassign Classification */
-                            classification[atl03_photon] = Icesat2Fields::ATL08_TOP_OF_CANOPY;
+                            classification[atl03_photon] = Icesat2Parameters::ATL08_TOP_OF_CANOPY;
                         }
                     }
                 }
@@ -428,7 +428,7 @@ void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const AreaO
             else
             {
                 /* Unclassified */
-                classification[atl03_photon] = Icesat2Fields::ATL08_UNCLASSIFIED;
+                classification[atl03_photon] = Icesat2Parameters::ATL08_UNCLASSIFIED;
 
                 /* Set PhoREAL Fields to Invalid */
                 if(phoreal)
@@ -468,7 +468,7 @@ uint8_t Atl03DataFrame::Atl08Class::operator[] (int index) const
  * Atl24Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl24Class::Atl24Class (Atl03DataFrame* df):
-    enabled             (df->parms->stages[Icesat2Fields::STAGE_ATL24]),
+    enabled             (df->parms->stages[Icesat2Parameters::STAGE_ATL24]),
     classification      {NULL},
     confidence          {NULL},
     atl24_index_ph      (enabled ? df->hdf24 : NULL, FString("%s/%s", df->beam, "index_ph").c_str()),
@@ -531,7 +531,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl03DataFrame* df = static_cast<Atl03DataFrame*>(parm);
-    const Icesat2Fields& parms = *df->parms;
+    const Icesat2Parameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf03->name, df->beam);
@@ -552,11 +552,11 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         const Atl03Data atl03(df, aoi);
 
         /* Set MetaData */
-        df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
-        df->gt = Icesat2Fields::getGroundTrack(df->beam);
+        df->spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl03.sc_orient[0], df->beam);
+        df->gt = Icesat2Parameters::getGroundTrack(df->beam);
 
         /* Check Spot Filter */
-        if(!parms.spots[static_cast<Icesat2Fields::spot_t>(df->spot.value)])
+        if(!parms.spots[static_cast<Icesat2Parameters::spot_t>(df->spot.value)])
         {
             throw RunTimeException(DEBUG, RTE_STATUS, "spot %d filtered out", df->spot.value);
         }
@@ -602,14 +602,14 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
             /* Set Signal Confidence Level */
             int8_t atl03_cnf;
-            if(parms.surfaceType == Icesat2Fields::SRT_DYNAMIC)
+            if(parms.surfaceType == Icesat2Parameters::SRT_DYNAMIC)
             {
                 /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                 * code below chooses the signal confidence that is the highest
                 * value of the five */
-                const int32_t conf_index = current_photon * Icesat2Fields::NUM_SURFACE_TYPES;
+                const int32_t conf_index = current_photon * Icesat2Parameters::NUM_SURFACE_TYPES;
                 atl03_cnf = atl03.signal_conf_ph[conf_index];
-                for(int i = 1; i < Icesat2Fields::NUM_SURFACE_TYPES; i++)
+                for(int i = 1; i < Icesat2Parameters::NUM_SURFACE_TYPES; i++)
                 {
                     if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
                     {
@@ -623,18 +623,18 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Check Signal Confidence Level */
-            if(atl03_cnf < Icesat2Fields::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Fields::CNF_SURFACE_HIGH)
+            if(atl03_cnf < Icesat2Parameters::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parameters::CNF_SURFACE_HIGH)
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal confidence: %d", atl03_cnf);
             }
-            else if(!parms.atl03Cnf[static_cast<Icesat2Fields::signal_conf_t>(atl03_cnf)])
+            else if(!parms.atl03Cnf[static_cast<Icesat2Parameters::signal_conf_t>(atl03_cnf)])
             {
                 continue;
             }
 
             /* Set and Check ATL03 Photon Quality Level */
-            const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
-            if(quality_ph < Icesat2Fields::QUALITY_NOMINAL || quality_ph >= Icesat2Fields::NUM_PHOTON_QUALITY)
+            const Icesat2Parameters::quality_ph_t quality_ph = static_cast<Icesat2Parameters::quality_ph_t>(atl03.quality_ph[current_photon]);
+            if(quality_ph < Icesat2Parameters::QUALITY_NOMINAL || quality_ph >= Icesat2Parameters::NUM_PHOTON_QUALITY)
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 photon quality: %d", quality_ph);
             }
@@ -659,11 +659,11 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Set and Check ATL08 Classification */
-            Icesat2Fields::atl08_class_t atl08_class = Icesat2Fields::ATL08_UNCLASSIFIED;
+            Icesat2Parameters::atl08_class_t atl08_class = Icesat2Parameters::ATL08_UNCLASSIFIED;
             if(atl08.classification)
             {
-                atl08_class = static_cast<Icesat2Fields::atl08_class_t>(atl08[current_photon]);
-                if(atl08_class < 0 || atl08_class >= Icesat2Fields::NUM_ATL08_CLASSES)
+                atl08_class = static_cast<Icesat2Parameters::atl08_class_t>(atl08[current_photon]);
+                if(atl08_class < 0 || atl08_class >= Icesat2Parameters::NUM_ATL08_CLASSES)
                 {
                     throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl08 classification: %d", atl08_class);
                 }
@@ -757,7 +757,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
             /* Add Photon to DataFrame */
             df->addRow();
-            df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl03.delta_time[current_photon]));
+            df->time_ns.append(Icesat2Parameters::deltatime2timestamp(atl03.delta_time[current_photon]));
             df->latitude.append(atl03.lat_ph[current_photon]);
             df->longitude.append(atl03.lon_ph[current_photon]);
             df->segment_id.append(atl03.segment_id[current_segment]);
@@ -780,7 +780,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Add Optional YAPC Data */
-            if(parms.stages[Icesat2Fields::STAGE_YAPC])
+            if(parms.stages[Icesat2Parameters::STAGE_YAPC])
             {
                 df->yapc_score.append(yapc_score);
             }

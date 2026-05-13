@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, University of Washington
+ * Copyright (c) 2021, University of Washington
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,57 +29,52 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __areaofinterest03__
-#define __areaofinterest03__
+#ifndef __h5_fields__
+#define __h5_fields__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "H5Array.h"
-#include "H5Object.h"
-#include "Icesat2Parameters.h"
+#include "OsApi.h"
+#include "H5CoroLib.h"
+#include "LuaEngine.h"
+#include "FieldElement.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
- * CLASS DEFINITION
+ * CLASS
  ******************************************************************************/
-/* Spatial subset for ATL03 beams and segments */
-class AreaOfInterest03
+
+class H5Parameters: public RequestParameters
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        * Data
+        *--------------------------------------------------------------------*/
 
-        AreaOfInterest03 (H5Object* hdf, const char* beam, const Icesat2Parameters* parms, int readTimeoutMs);
-        ~AreaOfInterest03(void);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        H5Array<double>         segment_lat;
-        H5Array<double>         segment_lon;
-        H5Array<int32_t>        segment_ph_cnt;
-
-        bool*                   inclusion_mask;
-        bool*                   inclusion_ptr;
-
-        long                    first_segment;
-        long                    num_segments;
-        long                    first_photon;
-        long                    num_photons;
-
-    private:
+        FieldElement<long>      col {0};
+        FieldElement<long>      startRow {0};
+        FieldElement<long>      numRows {H5Coro::ALL_ROWS};
+        FieldElement<string>    crs;
+        FieldElement<string>    index_column;
+        FieldElement<string>    time_column;
+        FieldElement<string>    x_column;
+        FieldElement<string>    y_column;
+        FieldElement<string>    z_column;
+        FieldList<string>       groups;
+        FieldList<string>       variables;
 
         /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        * Methods
+        *--------------------------------------------------------------------*/
 
-        void cleanup            (void);
-        void polyregion         (const Icesat2Parameters* parms);
-        void rasterregion       (const Icesat2Parameters* parms);
+        static const char* defaultCRS (void);
+
+
+        H5Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        virtual ~H5Parameters (void) override = default;
 };
 
-#endif  /* __areaofinterest03__ */
+#endif  /* __h5_fields__ */

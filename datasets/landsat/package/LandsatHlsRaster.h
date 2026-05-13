@@ -70,7 +70,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new LandsatHlsRaster(L, rqst_parms, key); }
 
     protected:
@@ -79,7 +79,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                 LandsatHlsRaster    (lua_State* L, RequestFields* rqst_parms, const char* key);
+                 LandsatHlsRaster    (lua_State* L, RequestParameters* rqst_parms, const char* key);
                 ~LandsatHlsRaster    (void) override;
 
         void     getIndexFile        (const std::vector<point_info_t>* points, string& file) final;

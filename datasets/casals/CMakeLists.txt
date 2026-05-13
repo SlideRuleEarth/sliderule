@@ -6,7 +6,7 @@ target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/casals.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Casals1bDataFrame.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/CasalsFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/CasalsParameters.cpp
 )
 
 target_include_directories (slideruleLib
@@ -19,7 +19,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/casals.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Casals1bDataFrame.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/CasalsFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/CasalsParameters.h
     DESTINATION
         ${INCDIR}
 )

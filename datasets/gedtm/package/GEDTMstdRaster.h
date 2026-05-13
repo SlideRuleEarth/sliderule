@@ -51,7 +51,7 @@ class GEDTMstdRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new GEDTMstdRaster(L, rqst_parms, key); }
 
 
@@ -61,7 +61,7 @@ class GEDTMstdRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GEDTMstdRaster(lua_State* L, RequestFields* rqst_parms, const char* key) :
+        GEDTMstdRaster(lua_State* L, RequestParameters* rqst_parms, const char* key) :
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getPath(),
                   extractGPSTime(rqst_parms->geoFields(key)->asset.asset->getPath()) / 1000) {}

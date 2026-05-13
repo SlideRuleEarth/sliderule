@@ -59,7 +59,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
 {
     const int index = 1;
     const int stackTop = lua_gettop(L);
-    RequestFields* rqst_parms = NULL;
+    RequestParameters* rqst_parms = NULL;
     try
     {
         /* Get raster */
@@ -79,7 +79,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
         if(!lua_istable(L, samplesIndex))
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Missing required samples table");
 
-        rqst_parms = new RequestFields(L, 0, NULL, NULL, {});
+        rqst_parms = new RequestParameters(L, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL))
         {
@@ -125,7 +125,7 @@ GeoUserRaster::~GeoUserRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char *file, long filelength) :
+GeoUserRaster::GeoUserRaster(lua_State *L, RequestParameters* rqst_parms, const char* key, const char *file, long filelength) :
     GeoRaster(L, rqst_parms, key, string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif")),
     data(NULL)
 {

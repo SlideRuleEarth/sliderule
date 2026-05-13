@@ -55,7 +55,7 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
         { return new RemaDemStripsRaster(L, rqst_parms, key); }
 
     protected:
@@ -64,7 +64,7 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        RemaDemStripsRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+        RemaDemStripsRaster(lua_State* L, RequestParameters* rqst_parms, const char* key):
           PgcDemStripsRaster(L, rqst_parms, key, "rema", &overrideTargetCRS) {}
 
         static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)

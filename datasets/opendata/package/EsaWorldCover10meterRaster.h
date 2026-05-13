@@ -50,7 +50,7 @@ class EsaWorldCover10meterRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new EsaWorldCover10meterRaster(L, rqst_parms, key); }
 
 
@@ -60,7 +60,7 @@ class EsaWorldCover10meterRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        EsaWorldCover10meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
+        EsaWorldCover10meterRaster (lua_State* L, RequestParameters* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getIndex(),
                   TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0) / 1000 /* Mid point for year data was collected */) {}

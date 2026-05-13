@@ -40,7 +40,7 @@
 #include "LuaEngine.h"
 #include "GdalRaster.h"
 #include "RasterObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "MathLib.h"
 #include "RasterSubset.h"
 
@@ -63,7 +63,7 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                      GeoRaster  (lua_State* L, RequestFields* rqst_parms, const char* key, const string& _fileName,
+                      GeoRaster  (lua_State* L, RequestParameters* rqst_parms, const char* key, const string& _fileName,
                                   double _gpsTime=0.0, uint32_t elevationBandsMask=0u,
                                   GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
 
@@ -103,7 +103,7 @@ class GeoRaster: public RasterObject
         typedef struct Reader
         {
             GeoRaster*                        owner;
-            RequestFields*                    rqstParms;
+            RequestParameters*                    rqstParms;
             const char*                       samplerKey;
             string                       crs;
             RasterObject*                     robj;
@@ -113,7 +113,7 @@ class GeoRaster: public RasterObject
             uint32_t                          ssErrors;
             RasterFileDictionary*             fileDict;
 
-            explicit Reader (GeoRaster* _owner, RequestFields* _rqstParms, const char* _samplerKey, const string& _crs,
+            explicit Reader (GeoRaster* _owner, RequestParameters* _rqstParms, const char* _samplerKey, const string& _crs,
                              const std::vector<point_info_t>& _points);
                     ~Reader (void);
         } reader_t;

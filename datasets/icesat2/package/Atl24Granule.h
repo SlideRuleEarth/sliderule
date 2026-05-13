@@ -106,8 +106,8 @@ class Atl24Granule: public LuaObject, public FieldMap<Field>
          *--------------------------------------------------------------------*/
 
         Thread*                     pid;
-        Icesat2Fields*              parmsPtr;
-        const Icesat2Fields&        parms;
+        Icesat2Parameters*              parmsPtr;
+        const Icesat2Parameters&        parms;
         Publisher                   rqstQ;
         int                         readTimeoutMs;
         H5Object*                   hdf24; // ATL24 file
@@ -116,7 +116,7 @@ class Atl24Granule: public LuaObject, public FieldMap<Field>
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl24Granule    (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf24, const char* rqstq_name);
+                        Atl24Granule    (lua_State* L, Icesat2Parameters* _parms, H5Object* _hdf24, const char* rqstq_name);
         virtual         ~Atl24Granule   (void) override;
 
         static void*    readingThread   (void* parm);

@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * CLASS

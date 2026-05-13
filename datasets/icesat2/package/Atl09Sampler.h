@@ -35,7 +35,7 @@
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 
 /******************************************************************************
  * CLASS
@@ -68,14 +68,14 @@ class Atl09Sampler: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        Atl09Sampler  (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf09);
+        Atl09Sampler  (lua_State* L, Icesat2Parameters* _parms, H5Object* _hdf09);
         ~Atl09Sampler (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Icesat2Fields*  parms;
+        Icesat2Parameters*  parms;
         H5Object*       hdf09;
 };
 

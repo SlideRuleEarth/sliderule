@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
+#ifndef __casals_parms__
+#define __casals_parms__
 
 /******************************************************************************
  * INCLUDES
@@ -38,15 +38,37 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
 #include "AssetField.h"
-#include "FieldList.h"
+#include "FieldEnumeration.h"
+#include "FieldElement.h"
+#include "RequestParameters.h"
+#include "GeoDataFrame.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class SwotFields: public RequestFields
+/******************/
+/* Granule Fields */
+/******************/
+struct CasalsGranuleFields: public FieldMap<Field>
+{
+
+    FieldElement<int>   year {-1};      // CASALS granule observation date - year
+    FieldElement<int>   month {-1};     // CASALS granule observation date - month
+    FieldElement<int>   day {-1};       // CASALS granule observation date - day
+    FieldElement<int>   version {-1};   // CASALS granule version
+
+    CasalsGranuleFields(void);
+    ~CasalsGranuleFields(void) override = default;
+
+    void parseResource (const char* resource);
+};
+
+/***************/
+/* Casals Fields */
+/***************/
+class CasalsParameters: public RequestParameters
 {
     public:
 
@@ -54,37 +76,38 @@ class SwotFields: public RequestFields
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
+        static const int64_t CASALS_SDP_EPOCH_GPS = 1198800018; // seconds to add to CASALS delta times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
+        CasalsParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        virtual ~CasalsParameters (void) override = default;
+        void fromLua (lua_State* L, int index) override;
+
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
 
         // returns nanoseconds since Unix epoch, no leap seconds
-        inline time8_t deltatime2timestamp (double delta_time)
+        static time8_t deltatime2timestamp (double delta_time)
         {
-            return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
+            return TimeLib::gps2systimeex(delta_time + (double)CASALS_SDP_EPOCH_GPS);
         }
 
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
+        // CRS support
+        static const char* crsITRF2020() { static string crs = GeoDataFrame::loadCRSFile("EPSG9989.projjson"); return crs.c_str(); }
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldList<string> variables;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        SwotFields  (lua_State* L, uint64_t key_space);
-        ~SwotFields (void) override = default;
+        FieldList<string>       anc_fields; // list of fields to associate with an Casals subsetting request
+        CasalsGranuleFields     granule_fields;  // Casals granule attributes
 };
 
-#endif  /* __swot_parms__ */
+#endif  /* __casals_parms__ */

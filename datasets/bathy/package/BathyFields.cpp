@@ -59,7 +59,7 @@ int BathyFields::luaCreate (lua_State* L)
 
     try
     {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, INVALID_KEY);
         const char* asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
         const char* _resource = LuaObject::getLuaString(L, 4, true, NULL);
 
@@ -81,14 +81,14 @@ int BathyFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void BathyFields::fromLua (lua_State* L, int index)
 {
-    Icesat2Fields::fromLua(L, index);
+    Icesat2Parameters::fromLua(L, index);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource):
-    Icesat2Fields (L, key_space, asset_name, _resource,
+    Icesat2Parameters (L, key_space, asset_name, _resource,
         { {"asset09",             &atl09AssetName,      "Asset identifier to use when reading wind speed from ATL09; when left blank the server will do the right thing"},
           {"max_dem_delta",       &maxDemDelta,         "Maximum positive vertical distance of photon from ATL03 DEM to include in bathymetry processing"},
           {"min_dem_delta",       &minDemDelta,         "Maximum negative vertical distance of photon from ATL03 DEM to include in bathymetry processing"},

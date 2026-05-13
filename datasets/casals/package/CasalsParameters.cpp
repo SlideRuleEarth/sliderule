@@ -35,8 +35,8 @@
 
 #include "OsApi.h"
 #include "FieldEnumeration.h"
-#include "RequestFields.h"
-#include "CasalsFields.h"
+#include "RequestParameters.h"
+#include "CasalsParameters.h"
 
 /******************************************************************************
  * CLASS METHODS
@@ -136,47 +136,22 @@ void CasalsGranuleFields::parseResource (const char* resource)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>, <key_space>, [<default asset>], [<default resource>])
- *----------------------------------------------------------------------------*/
-int CasalsFields::luaCreate (lua_State* L)
-{
-    CasalsFields* casals_fields = NULL;
-
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
-        const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
-        const char* _resource = LuaObject::getLuaString(L, 4, true, NULL);
-
-        casals_fields = new CasalsFields(L, key_space, asset_name, _resource);
-        casals_fields->fromLua(L, 1);
-
-        return createLuaObject(L, casals_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete casals_fields;
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CasalsFields::CasalsFields(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource):
-    RequestFields (L, key_space, asset_name, _resource,
+CasalsParameters::CasalsParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
+    RequestParameters (L, key_space, asset_name, _resource,
         { {"anc_fields",    &anc_fields,        "Ancillary fields from the source granules to include in response"},
           {"granule",       &granule_fields,    "Versioning and date information pulled from the granule processed; output only"} })
 {
+    (void)init_list;
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void CasalsFields::fromLua (lua_State* L, int index)
+void CasalsParameters::fromLua (lua_State* L, int index)
 {
-    RequestFields::fromLua(L, index);
+    RequestParameters::fromLua(L, index);
 
     // parse resource name
     if(!resource.value.empty())

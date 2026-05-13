@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "GeoDataFrame.h"
 #include "FieldElement.h"
 #include "FieldEnumeration.h"
@@ -238,7 +238,7 @@ struct Atl24Fields: public FieldMap<Field>
 /*******************/
 /* ICESat-2 Fields */
 /*******************/
-class Icesat2Fields: public RequestFields
+class Icesat2Parameters: public RequestParameters
 {
     public:
 
@@ -390,8 +390,12 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-        virtual void fromLua (lua_State* L, int index) override;
+        virtual void    fromLua             (lua_State* L, int index) override;
+
+                        Icesat2Parameters   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        virtual         ~Icesat2Parameters  (void) override = default;
+
+        static int      luaStage            (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -456,8 +460,8 @@ class Icesat2Fields: public RequestFields
             else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
 
             int pair;
-            if(beam[3] == 'l') pair = Icesat2Fields::RPT_L;
-            else if(beam[3] == 'r') pair = Icesat2Fields::RPT_R;
+            if(beam[3] == 'l') pair = Icesat2Parameters::RPT_L;
+            else if(beam[3] == 'r') pair = Icesat2Parameters::RPT_R;
             else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
 
             return getSpotNumber(sc_orient, track, pair);
@@ -468,20 +472,20 @@ class Icesat2Fields: public RequestFields
         {
             if(beam[2] == '1')
             {
-                if(beam[3] == 'l') return Icesat2Fields::GT1L;
-                else if(beam[3] == 'r') return Icesat2Fields::GT1R;
+                if(beam[3] == 'l') return Icesat2Parameters::GT1L;
+                else if(beam[3] == 'r') return Icesat2Parameters::GT1R;
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             else if(beam[2] == '2')
             {
-                if(beam[3] == 'l') return Icesat2Fields::GT2L;
-                else if(beam[3] == 'r') return Icesat2Fields::GT2R;
+                if(beam[3] == 'l') return Icesat2Parameters::GT2L;
+                else if(beam[3] == 'r') return Icesat2Parameters::GT2R;
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             else if(beam[2] == '3')
             {
-                if(beam[3] == 'l') return Icesat2Fields::GT3L;
-                else if(beam[3] == 'r') return Icesat2Fields::GT3R;
+                if(beam[3] == 'l') return Icesat2Parameters::GT3L;
+                else if(beam[3] == 'r') return Icesat2Parameters::GT3R;
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
@@ -589,17 +593,6 @@ class Icesat2Fields: public RequestFields
         Atl03GranuleFields                                  granuleFields;                                          // ATL03 granule attributes
 
         bool stages[NUM_STAGES] = {false, false, false, false, false};
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
-        virtual ~Icesat2Fields  (void) override = default;
-
-        static int luaStage (lua_State* L);
 };
 
 /******************************************************************************
@@ -610,39 +603,39 @@ string convertToJson(const PhorealFields::phoreal_geoloc_t& v);
 int convertToLua(lua_State* L, const PhorealFields::phoreal_geoloc_t& v);
 void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v);
 
-string convertToJson(const Icesat2Fields::signal_conf_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::signal_conf_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::signal_conf_t& v);
-int convertToIndex(const Icesat2Fields::signal_conf_t& v);
-void convertFromIndex(int index, Icesat2Fields::signal_conf_t& v);
+string convertToJson(const Icesat2Parameters::signal_conf_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::signal_conf_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::signal_conf_t& v);
+int convertToIndex(const Icesat2Parameters::signal_conf_t& v);
+void convertFromIndex(int index, Icesat2Parameters::signal_conf_t& v);
 
-string convertToJson(const Icesat2Fields::quality_ph_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v);
-int convertToIndex(const Icesat2Fields::quality_ph_t& v);
-void convertFromIndex(int index, Icesat2Fields::quality_ph_t& v);
+string convertToJson(const Icesat2Parameters::quality_ph_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::quality_ph_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::quality_ph_t& v);
+int convertToIndex(const Icesat2Parameters::quality_ph_t& v);
+void convertFromIndex(int index, Icesat2Parameters::quality_ph_t& v);
 
-string convertToJson(const Icesat2Fields::atl08_class_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::atl08_class_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::atl08_class_t& v);
-int convertToIndex(const Icesat2Fields::atl08_class_t& v);
-void convertFromIndex(int index, Icesat2Fields::atl08_class_t& v);
+string convertToJson(const Icesat2Parameters::atl08_class_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::atl08_class_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::atl08_class_t& v);
+int convertToIndex(const Icesat2Parameters::atl08_class_t& v);
+void convertFromIndex(int index, Icesat2Parameters::atl08_class_t& v);
 
-string convertToJson(const Icesat2Fields::gt_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::gt_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v);
-int convertToIndex(const Icesat2Fields::gt_t& v);
-void convertFromIndex(int index, Icesat2Fields::gt_t& v);
+string convertToJson(const Icesat2Parameters::gt_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::gt_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::gt_t& v);
+int convertToIndex(const Icesat2Parameters::gt_t& v);
+void convertFromIndex(int index, Icesat2Parameters::gt_t& v);
 
-string convertToJson(const Icesat2Fields::spot_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v);
-int convertToIndex(const Icesat2Fields::spot_t& v);
-void convertFromIndex(int index, Icesat2Fields::spot_t& v);
+string convertToJson(const Icesat2Parameters::spot_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::spot_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::spot_t& v);
+int convertToIndex(const Icesat2Parameters::spot_t& v);
+void convertFromIndex(int index, Icesat2Parameters::spot_t& v);
 
-string convertToJson(const Icesat2Fields::surface_type_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);
+string convertToJson(const Icesat2Parameters::surface_type_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::surface_type_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::surface_type_t& v);
 
 string convertToJson(const Atl24Fields::class_t& v);
 int convertToLua(lua_State* L, const Atl24Fields::class_t& v);
@@ -656,12 +649,12 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v);
 int convertToIndex(const Atl24Fields::flag_t& v);
 void convertFromIndex(int index, Atl24Fields::flag_t& v);
 
-inline uint32_t toEncoding(Icesat2Fields::surface_type_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::spot_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::gt_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::atl08_class_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::quality_ph_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::signal_conf_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::surface_type_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::spot_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::gt_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::atl08_class_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::quality_ph_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::signal_conf_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Atl24Fields::class_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Atl24Fields::flag_t& v) { (void)v; return Field::INT32; }

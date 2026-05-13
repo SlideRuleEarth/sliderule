@@ -53,14 +53,14 @@ const struct luaL_Reg Gedi04aDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Gedi04aDataFrame::luaCreate (lua_State* L)
 {
-    GediFields* _parms = NULL;
+    GediParameters* _parms = NULL;
     H5Object* _hdf04a = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
+        _parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE));
         _hdf04a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
@@ -79,7 +79,7 @@ int Gedi04aDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf04a, const char* outq_name):
+Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediParameters* _parms, H5Object* _hdf04a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"shot_number",         &shot_number,       "GEDI laser shot number identifier"},
@@ -153,7 +153,7 @@ Gedi04aDataFrame::Gedi04aData::Gedi04aData (Gedi04aDataFrame* df, const AreaOfIn
 void* Gedi04aDataFrame::subsettingThread (void* parm)
 {
     Gedi04aDataFrame* df = static_cast<Gedi04aDataFrame*>(parm);
-    const GediFields& parms = *df->parms;
+    const GediParameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi04a_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf->name, df->beamStr);
@@ -220,7 +220,7 @@ void* Gedi04aDataFrame::subsettingThread (void* parm)
 
             /* Populate Columns */
             df->shot_number.append(gedi04a.shot_number[footprint]);
-            df->time_ns.append(GediFields::deltatime2timestamp(gedi04a.delta_time[footprint]));
+            df->time_ns.append(GediParameters::deltatime2timestamp(gedi04a.delta_time[footprint]));
             df->latitude.append(aoi.latitude[footprint]);
             df->longitude.append(aoi.longitude[footprint]);
             df->agbd.append(gedi04a.agbd[footprint]);
@@ -229,10 +229,10 @@ void* Gedi04aDataFrame::subsettingThread (void* parm)
             df->sensitivity.append(gedi04a.sensitivity[footprint]);
 
             uint8_t row_flags = 0;
-            if(gedi04a.degrade_flag[footprint]) row_flags |= GediFields::DEGRADE_FLAG_MASK;
-            if(gedi04a.l2_quality_flag[footprint]) row_flags |= GediFields::L2_QUALITY_FLAG_MASK;
-            if(gedi04a.l4_quality_flag[footprint]) row_flags |= GediFields::L4_QUALITY_FLAG_MASK;
-            if(gedi04a.surface_flag[footprint]) row_flags |= GediFields::SURFACE_FLAG_MASK;
+            if(gedi04a.degrade_flag[footprint]) row_flags |= GediParameters::DEGRADE_FLAG_MASK;
+            if(gedi04a.l2_quality_flag[footprint]) row_flags |= GediParameters::L2_QUALITY_FLAG_MASK;
+            if(gedi04a.l4_quality_flag[footprint]) row_flags |= GediParameters::L4_QUALITY_FLAG_MASK;
+            if(gedi04a.surface_flag[footprint]) row_flags |= GediParameters::SURFACE_FLAG_MASK;
             df->flags.append(row_flags);
 
             /* Ancillary Data */

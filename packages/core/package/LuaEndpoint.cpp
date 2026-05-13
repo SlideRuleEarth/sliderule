@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "SystemConfig.h"
 #include "TimeLib.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -282,9 +282,9 @@ LuaEndpoint::endpoint_t LuaEndpoint::loadLuaScript (Request* request, LuaEngine*
     // get request parameters
     lua_getfield(L, -1, ENDPOINT_PARMS);
     luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, -1));
-    if(user_data && StringLib::match(RequestFields::OBJECT_TYPE, user_data->luaObj->getType()))
+    if(user_data && StringLib::match(RequestParameters::OBJECT_TYPE, user_data->luaObj->getType()))
     {
-        endpoint.request_parameters = dynamic_cast<RequestFields*>(user_data->luaObj);
+        endpoint.request_parameters = dynamic_cast<RequestParameters*>(user_data->luaObj);
     }
     else
     {

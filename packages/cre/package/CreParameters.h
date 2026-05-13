@@ -29,24 +29,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_fields__
-#define __h5_fields__
+#ifndef __cre_fields__
+#define __cre_fields__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "H5CoroLib.h"
 #include "LuaEngine.h"
 #include "FieldElement.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class H5Fields: public RequestFields
+class CreParameters: public RequestParameters
 {
     public:
 
@@ -54,33 +53,18 @@ class H5Fields: public RequestFields
         * Data
         *--------------------------------------------------------------------*/
 
-        FieldElement<long>      col {0};
-        FieldElement<long>      startRow {0};
-        FieldElement<long>      numRows {H5Coro::ALL_ROWS};
-        FieldElement<string>    crs;
-        FieldElement<string>    index_column;
-        FieldElement<string>    time_column;
-        FieldElement<string>    x_column;
-        FieldElement<string>    y_column;
-        FieldElement<string>    z_column;
-        FieldList<string>       groups;
-        FieldList<string>       variables;
+        FieldElement<string>    container_image;
+        FieldElement<string>    container_name;
+        FieldElement<string>    container_command;
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-        static const char* defaultCRS (void);
+        virtual void fromLua    (lua_State* L, int index) override;
 
-    protected:
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        H5Fields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
-        virtual ~H5Fields (void) override = default;
+        CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        virtual ~CreParameters (void) override = default;
 };
 
-#endif  /* __h5_fields__ */
+#endif  /* __cre_fields__ */

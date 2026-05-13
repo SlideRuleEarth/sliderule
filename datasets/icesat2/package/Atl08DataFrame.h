@@ -39,7 +39,7 @@
 #include "GeoDataFrame.h"
 #include "H5VarSet.h"
 #include "AreaOfInterest.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "FieldArray.h"
 
 /******************************************************************************
@@ -150,7 +150,7 @@ class Atl08DataFrame: public GeoDataFrame
         Thread*             readerPid;
         int                 readTimeoutMs;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
+        Icesat2Parameters*      parms;
         H5Object*           hdf08;
         const char*         beam;
 
@@ -158,7 +158,7 @@ class Atl08DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl08DataFrame  (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name);
+                        Atl08DataFrame  (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf08, const char* outq_name);
                         ~Atl08DataFrame (void) override;
         static void*    subsettingThread(void* parm);
 };

@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "PhoReal.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "Atl03DataFrame.h"
 #include "FieldColumn.h"
 #include "FieldArray.h"
@@ -66,11 +66,11 @@ const struct luaL_Reg PhoReal::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int PhoReal::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
 
     try
     {
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 1, Icesat2Parameters::OBJECT_TYPE));
         return createLuaObject(L, new PhoReal(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -84,7 +84,7 @@ int PhoReal::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PhoReal::PhoReal (lua_State* L, Icesat2Fields* _parms):
+PhoReal::PhoReal (lua_State* L, Icesat2Parameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
@@ -166,13 +166,13 @@ bool PhoReal::run (GeoDataFrame* dataframe)
         // check minimum extent length
         if((df.x_atc[i1] - df.x_atc[i0]) < parms->minAlongTrackSpread)
         {
-            _pflags |= Icesat2Fields::PFLAG_SPREAD_TOO_SHORT;
+            _pflags |= Icesat2Parameters::PFLAG_SPREAD_TOO_SHORT;
         }
 
         // check minimum number of photons
         if(num_photons < parms->minPhotonCount)
         {
-            _pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
+            _pflags |= Icesat2Parameters::PFLAG_TOO_FEW_PHOTONS;
         }
 
         // run phoreal algorithm
@@ -453,12 +453,12 @@ void PhoReal::algorithm (const Atl03DataFrame& df, uint32_t start_photon, uint32
     if(num_bins > MAX_BINS)
     {
         mlog(WARNING, "Maximum number of bins truncated from %d to maximum allowed of %d", num_bins, MAX_BINS);
-        result.pflags |= Icesat2Fields::PFLAG_BIN_OVERFLOW;
+        result.pflags |= Icesat2Parameters::PFLAG_BIN_OVERFLOW;
         num_bins = MAX_BINS;
     }
     else if(num_bins <= 0)
     {
-        result.pflags |= Icesat2Fields::PFLAG_BIN_UNDERFLOW;
+        result.pflags |= Icesat2Parameters::PFLAG_BIN_UNDERFLOW;
         num_bins = 1;
     }
 

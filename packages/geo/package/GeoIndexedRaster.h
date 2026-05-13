@@ -193,7 +193,7 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                         GeoIndexedRaster      (lua_State* L, RequestFields* _parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
+                         GeoIndexedRaster      (lua_State* L, RequestParameters* _parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
         virtual uint32_t getBatchGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx);
         static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
 

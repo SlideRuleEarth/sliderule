@@ -39,7 +39,7 @@
 #include "GeoDataFrame.h"
 #include "H5VarSet.h"
 #include "AreaOfInterest.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -133,7 +133,7 @@ class Atl06DataFrame: public GeoDataFrame
         Thread*             readerPid;
         int                 readTimeoutMs;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
+        Icesat2Parameters*      parms;
         H5Object*           hdf06;
         const char*         beam;
 
@@ -141,7 +141,7 @@ class Atl06DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06DataFrame  (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name);
+                        Atl06DataFrame  (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf06, const char* outq_name);
                         ~Atl06DataFrame (void) override;
         static void*    subsettingThread(void* parm);
 };

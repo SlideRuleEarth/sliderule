@@ -43,7 +43,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "H5Array.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 
 /******************************************************************************
  * ATL03 VIEWER
@@ -173,14 +173,14 @@ class Atl03Viewer: public LuaObject
          *--------------------------------------------------------------------*/
 
         std::atomic<bool>   active;
-        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
+        Thread*             readerPid[Icesat2Parameters::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
+        Icesat2Parameters*      parms;
         stats_t             stats;
 
         H5Coro::Context*    context; // for ATL03 file
@@ -189,7 +189,7 @@ class Atl03Viewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Viewer                 (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
+                            Atl03Viewer                 (lua_State* L, const char* outq_name, Icesat2Parameters* _parms, bool _send_terminator=true);
                             ~Atl03Viewer                (void) override;
 
         static void*        subsettingThread            (void* parm);

@@ -35,42 +35,16 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
-#include "H5Fields.h"
+#include "H5Parameters.h"
 
 /******************************************************************************
  * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int H5Fields::luaCreate (lua_State* L)
-{
-    H5Fields* _parms = NULL;
-
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
-        const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
-        const char* resource = LuaObject::getLuaString(L, 4, true, NULL);
-
-        _parms = new H5Fields(L, key_space, asset_name, resource, {});
-        _parms->fromLua(L, 1);
-
-        return createLuaObject(L, _parms);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete _parms;
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * defaultCRS
  *----------------------------------------------------------------------------*/
-const char* H5Fields::defaultCRS (void)
+const char* H5Parameters::defaultCRS (void)
 {
     /* Load and cache the CRS once; returned value is compact PROJJSON. */
     const static string crs = GeoDataFrame::loadCRSFile("EPSG7912.projjson");
@@ -80,8 +54,8 @@ const char* H5Fields::defaultCRS (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Fields::H5Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list):
-    RequestFields (L, key_space, asset_name, _resource, {
+H5Parameters::H5Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
+    RequestParameters (L, key_space, asset_name, _resource, {
         {"col",         &col,           "The column to read from the dataset for a multi-dimensional dataset; if there are more than two dimensions, all remaining dimensions are flattened out when returned; if the variable has more than one column, then by default the first column is read, if all columns are wanted, then set col=-1 and the result will be a flattened array of all of the data"},
         {"startrow",    &startRow,      "The first row to start reading from in a multi-dimensional dataset (or starting element if there is only one dimension)"},
         {"numrows",     &numRows,       "The number of rows to read when reading from a multi-dimensional dataset (or number of elements if there is only one dimension); if ALL_ROWS selected, it will read from the startrow to the end of the dataset"},
@@ -95,7 +69,7 @@ H5Fields::H5Fields(lua_State* L, uint64_t key_space, const char* asset_name, con
         {"variables",   &variables,     "The variables to read when 'h5x' is building the dataframe; each variable becomes a column in the dataframe"}})
 {
     crs.value = defaultCRS(); // initialize
-    for(const FieldMap<Field>::init_entry_t elem: init_list)
+    for(const init_entry_t elem: init_list)
     {
         const entry_t entry = {elem.field, elem.description, false};
         fields.add(elem.name, entry);

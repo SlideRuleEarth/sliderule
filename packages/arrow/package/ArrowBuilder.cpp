@@ -62,12 +62,12 @@ const struct luaL_Reg ArrowBuilder::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int ArrowBuilder::luaCreate (lua_State* L)
 {
-    RequestFields* rqst_parms = NULL;
+    RequestParameters* rqst_parms = NULL;
 
     try
     {
         /* Get Parameters */
-        rqst_parms                  = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
+        rqst_parms                  = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
         const char* outq_name       = getLuaString(L, 2);
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
@@ -222,7 +222,7 @@ const char* ArrowBuilder::getEndpoint (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
+ArrowBuilder::ArrowBuilder (lua_State* L, RequestParameters* rqst_parms,
                             const char* outq_name, const char* inq_name,
                             const char* rec_type, const char* id,
                             const char* _endpoint, const bool keep_local):

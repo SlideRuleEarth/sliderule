@@ -59,7 +59,7 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new BlueTopoBathyRaster(L, rqst_parms, key); }
 
 
@@ -70,7 +70,7 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
         double  getGmtDate (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate) final;
 
-                BlueTopoBathyRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
+                BlueTopoBathyRaster (lua_State* L, RequestParameters* rqst_parms, const char* key);
                ~BlueTopoBathyRaster (void) override;
 
         void    getIndexFile (const std::vector<point_info_t>* points, string& file) final;

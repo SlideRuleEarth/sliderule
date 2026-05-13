@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -73,7 +73,7 @@ class LuaEndpoint: public EndpointObject
             vector<string>      allowed_roles;      // ENDPOINT_ROLES
             bool                signature_required; // ENDPOINT_SIGNED
             vector<content_t>   supported_outputs;  // ENDPOINT_OUTPUTS
-            RequestFields*      request_parameters; // ENDPOINT_PARMS
+            RequestParameters*      request_parameters; // ENDPOINT_PARMS
         } endpoint_t;
 
          /*--------------------------------------------------------------------

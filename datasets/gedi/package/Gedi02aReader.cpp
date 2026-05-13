@@ -77,13 +77,13 @@ const RecordObject::fieldDef_t Gedi02aReader::batchRecDef[] = {
  *----------------------------------------------------------------------------*/
 int Gedi02aReader::luaCreate (lua_State* L)
 {
-    GediFields* parms = NULL;
+    GediParameters* parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
+        parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -113,7 +113,7 @@ void Gedi02aReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi02aReader::Gedi02aReader (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator):
+Gedi02aReader::Gedi02aReader (lua_State* L, const char* outq_name, GediParameters* _parms, bool _send_terminator):
     FootprintReader<g02a_footprint_t>(L, outq_name, _parms, _send_terminator,
                                       batchRecType, "lat_lowestmode", "lon_lowestmode",
                                       Gedi02aReader::subsettingThread)
@@ -165,7 +165,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Gedi02aReader* reader = reinterpret_cast<Gedi02aReader*>(info->reader); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-    const GediFields* parms = reader->parms;
+    const GediParameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
@@ -236,7 +236,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                     /* Populate Entry in Batch Structure */
                     g02a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
                     fp->shot_number             = gedi02a.shot_number[footprint];
-                    fp->time_ns                 = GediFields::deltatime2timestamp(gedi02a.delta_time[footprint]);
+                    fp->time_ns                 = GediParameters::deltatime2timestamp(gedi02a.delta_time[footprint]);
                     fp->latitude                = region.lat[footprint];
                     fp->longitude               = region.lon[footprint];
                     fp->elevation_lowestmode    = gedi02a.elev_lowestmode[footprint];
@@ -247,9 +247,9 @@ void* Gedi02aReader::subsettingThread (void* parm)
                     fp->beam                    = static_cast<uint8_t>(info->beam);
                     fp->flags                   = 0;
                     fp->track                   = parms->granule_fields.track.value;
-                    if(gedi02a.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
-                    if(gedi02a.quality_flag[footprint]) fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
-                    if(gedi02a.surface_flag[footprint]) fp->flags |= GediFields::SURFACE_FLAG_MASK;
+                    if(gedi02a.degrade_flag[footprint]) fp->flags |= GediParameters::DEGRADE_FLAG_MASK;
+                    if(gedi02a.quality_flag[footprint]) fp->flags |= GediParameters::L2_QUALITY_FLAG_MASK;
+                    if(gedi02a.surface_flag[footprint]) fp->flags |= GediParameters::SURFACE_FLAG_MASK;
 
                     /* Populate Ancillary Fields */
                     reader->populateAncillaryFields(info, footprint, fp->shot_number);

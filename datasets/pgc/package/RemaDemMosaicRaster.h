@@ -51,7 +51,7 @@ class RemaDemMosaicRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
         { return new RemaDemMosaicRaster(L, rqst_parms, key); }
 
 
@@ -61,7 +61,7 @@ class RemaDemMosaicRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        RemaDemMosaicRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+        RemaDemMosaicRaster(lua_State* L, RequestParameters* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   string(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                   TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44) / 1000,

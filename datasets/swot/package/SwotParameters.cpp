@@ -30,62 +30,24 @@
  */
 
 /******************************************************************************
- * INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "CreFields.h"
+#include "SwotParameters.h"
 
 /******************************************************************************
- * PUBLIC METHODS
+ * CLASS METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int CreFields::luaCreate (lua_State* L)
-{
-    CreFields* cre_fields = NULL;
-    try
-    {
-        cre_fields = new CreFields(L);
-        cre_fields->fromLua(L, 1);
-        return createLuaObject(L, cre_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete cre_fields;
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * fromLua
- *----------------------------------------------------------------------------*/
-void CreFields::fromLua (lua_State* L, int index)
-{
-    RequestFields::fromLua(L, index);
-
-    // check image for ONLY legal characters
-    for (auto c_iter = container_image.value.begin(); c_iter < container_image.value.end(); ++c_iter)
-    {
-        const int c = *c_iter;
-        if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid character found in image name: %c", c);
-        }
-    }
-}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CreFields::CreFields (lua_State* L):
-    RequestFields(L, 0, NULL, NULL, {
-        {"container_image",   &container_image,     "Docker image to run"},
-        {"container_name",    &container_name,      "Name to apply to the container that is run"},
-        {"container_command", &container_command,   "Command to execute when starting the container"}
+SwotParameters::SwotParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
+    RequestParameters(L, key_space, asset_name, _resource,
+    {
+        {"variables",   &variables,     "Variables to include in response from source granule"}
     })
 {
+    (void)init_list;
 }

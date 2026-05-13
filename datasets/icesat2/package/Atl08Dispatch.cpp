@@ -43,7 +43,7 @@
 #include "Atl08Dispatch.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "AncillaryFields.h"
 
 using std::numeric_limits;
@@ -116,12 +116,12 @@ const double Atl08Dispatch::PercentileInterval[NUM_PERCENTILES] = {
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl08Dispatch(L, outq_name, _parms));
@@ -157,7 +157,7 @@ void Atl08Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Fields* _parms):
+Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parameters* _parms):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     batchData(NULL),
     batchIndex(0),
@@ -204,7 +204,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     geolocateResult(extent, result);
 
     /* Execute Algorithm Stages */
-    if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
+    if(parms->stages[Icesat2Parameters::STAGE_PHOREAL])
     {
         phorealAlgorithm(extent, result);
     }
@@ -358,7 +358,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
     }
 
     /* Return Ancillary Record */
-    return AncillaryFields::createFieldArrayRecord(extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION, field_vec);
+    return AncillaryFields::createFieldArrayRecord(extent->extent_id | Icesat2Parameters::EXTENT_ID_ELEVATION, field_vec);
 }
 
 /*----------------------------------------------------------------------------
@@ -367,16 +367,16 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
 void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
-    const Icesat2Fields::sc_orient_t sc_orient = (Icesat2Fields::sc_orient_t)extent->spacecraft_orientation;
-    const Icesat2Fields::track_t track = (Icesat2Fields::track_t)extent->track;
+    const Icesat2Parameters::sc_orient_t sc_orient = (Icesat2Parameters::sc_orient_t)extent->spacecraft_orientation;
+    const Icesat2Parameters::track_t track = (Icesat2Parameters::track_t)extent->track;
 
     /* Extent Attributes */
-    result.extent_id = extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION;
+    result.extent_id = extent->extent_id | Icesat2Parameters::EXTENT_ID_ELEVATION;
     result.segment_id = extent->segment_id;
     result.rgt = extent->reference_ground_track;
     result.cycle = extent->cycle;
-    result.spot = Icesat2Fields::getSpotNumber(sc_orient, track, extent->pair);
-    result.gt = Icesat2Fields::getGroundTrack(sc_orient, track, extent->pair);
+    result.spot = Icesat2Parameters::getSpotNumber(sc_orient, track, extent->pair);
+    result.gt = Icesat2Parameters::getGroundTrack(sc_orient, track, extent->pair);
     result.photon_count = extent->photon_count;
     result.solar_elevation = extent->solar_elevation;
 
@@ -472,8 +472,8 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
     {
-        result.landcover = Icesat2Fields::INVALID_FLAG;
-        result.snowcover = Icesat2Fields::INVALID_FLAG;
+        result.landcover = Icesat2Parameters::INVALID_FLAG;
+        result.snowcover = Icesat2Parameters::INVALID_FLAG;
     }
     else
     {
@@ -609,7 +609,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
         const int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = reinterpret_cast<waveform_t*>(waverec.getRecordData());
-        data->extent_id = extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION;
+        data->extent_id = extent->extent_id | Icesat2Parameters::EXTENT_ID_ELEVATION;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
         for(int b = 0; b < num_bins; b++)

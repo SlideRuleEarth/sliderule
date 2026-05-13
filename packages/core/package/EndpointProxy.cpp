@@ -39,7 +39,7 @@
 
 #include "OsApi.h"
 #include "CurlLib.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "EndpointProxy.h"
 #include "SystemConfig.h"
 

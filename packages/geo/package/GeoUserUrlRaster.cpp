@@ -43,7 +43,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoUserUrlRaster::GeoUserUrlRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+GeoUserUrlRaster::GeoUserUrlRaster(lua_State* L, RequestParameters* rqst_parms, const char* key):
     GeoRaster(L, rqst_parms, key, getNormalizedUrl(rqst_parms, key))
 {
 }
@@ -51,7 +51,7 @@ GeoUserUrlRaster::GeoUserUrlRaster(lua_State* L, RequestFields* rqst_parms, cons
 /*----------------------------------------------------------------------------
  * getNormalizedUrl
  *----------------------------------------------------------------------------*/
-string GeoUserUrlRaster::getNormalizedUrl(RequestFields* rqst_parms, const char* key)
+string GeoUserUrlRaster::getNormalizedUrl(RequestParameters* rqst_parms, const char* key)
 {
     if(rqst_parms == NULL)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create GeoUserUrlRaster, request parameters are NULL");

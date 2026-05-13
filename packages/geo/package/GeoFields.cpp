@@ -36,7 +36,7 @@
 #include <gdal.h>
 
 #include "OsApi.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "GeoFields.h"
 
 /******************************************************************************
@@ -64,10 +64,10 @@ const char* GeoFields::GAUSS_ALGO_STR            = "Gauss";
  *----------------------------------------------------------------------------*/
 int GeoFields::luaCreate (lua_State* L)
 {
-    RequestFields* request_fields = NULL;
+    RequestParameters* request_fields = NULL;
     try
     {
-        request_fields = new RequestFields(L, 0, NULL, NULL, {});
+        request_fields = new RequestParameters(L, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         request_fields->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL);
         geo_fields->fromLua(L, 1);

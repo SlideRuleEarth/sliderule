@@ -42,7 +42,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestParameters* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key),
  filePath(string(parms->asset.asset->getPath())),
  indexFile(parms->asset.asset->getIndex())

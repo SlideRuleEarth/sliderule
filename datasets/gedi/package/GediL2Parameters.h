@@ -29,48 +29,54 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __gedi_l2_parms__
+#define __gedi_l2_parms__
+
 /******************************************************************************
- * INCLUDE
+ * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "SwotFields.h"
+#include "LuaObject.h"
+#include "AssetField.h"
+#include "FieldEnumeration.h"
+#include "FieldElement.h"
+#include "GediParameters.h"
 
 /******************************************************************************
- * CLASS METHODS
+ * CLASS
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int SwotFields::luaCreate (lua_State* L)
+class GediL2Parameters: public GediParameters
 {
-    SwotFields* swot_fields = NULL;
+    public:
 
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        swot_fields = new SwotFields(L, key_space);
-        swot_fields->fromLua(L, 1);
+        static int luaCreate (lua_State* L);
 
-        return createLuaObject(L, swot_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete swot_fields;
-        return returnLuaStatus(L, false);
-    }
-}
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-SwotFields::SwotFields(lua_State* L, uint64_t key_space):
-    RequestFields(L, key_space, NULL, NULL,
-    {
-        {"variables",   &variables,     "Variables to include in response from source granule"}
-    })
-{
-}
+        FieldElement<bool>                      l2_quality_filter {false};
+        FieldElement<bool>                      surface_filter {false};
+
+        // backwards compatibility
+        FieldElement<int>                       l2_quality_flag {0};
+        FieldElement<int>                       surface_flag {0};
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        GediL2Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
+        virtual ~GediL2Parameters (void) override = default;
+        void fromLua (lua_State* L, int index) override;
+};
+
+#endif  /* __gedi_l2_parms__ */

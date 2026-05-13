@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "H5DArray.h"
 #include "H5CoroLib.h"
 #include "OsApi.h"
@@ -53,8 +53,8 @@ class GTDArray
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const long DefaultStartRow[Icesat2Fields::NUM_PAIR_TRACKS];
-        static const long DefaultNumRows[Icesat2Fields::NUM_PAIR_TRACKS];
+        static const long DefaultStartRow[Icesat2Parameters::NUM_PAIR_TRACKS];
+        static const long DefaultNumRows[Icesat2Parameters::NUM_PAIR_TRACKS];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -70,7 +70,7 @@ class GTDArray
          * Data
          *--------------------------------------------------------------------*/
 
-        H5DArray gt[Icesat2Fields::NUM_PAIR_TRACKS];
+        H5DArray gt[Icesat2Parameters::NUM_PAIR_TRACKS];
 };
 
 #endif  /* __gt_dynamic_array__ */

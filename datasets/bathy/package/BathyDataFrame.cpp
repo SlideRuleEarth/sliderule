@@ -123,13 +123,13 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"bounding_polygon_lat",&bounding_polygon_lat,  "Minimum and maximum latitudes contained in dataframe"},
         {"bounding_polygon_lon",&bounding_polygon_lon,  "Minimum and maximum longitudes contained in dataframe"}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
+    Icesat2Parameters::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Parameters::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
-    gt(Icesat2Fields::getGroundTrack(beam_str), META_COLUMN),
+    gt(Icesat2Parameters::getGroundTrack(beam_str), META_COLUMN),
     granule(_hdf03 ? _hdf03->name : "null", META_SOURCE_ID),
     active(false),
     pid(NULL),
@@ -148,7 +148,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     populateGeoColumns();
 
     /* Set Signal Confidence Index */
-    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
+    if(parms->surfaceType == Icesat2Parameters::SRT_DYNAMIC)
     {
         signalConfColIndex = H5Coro::ALL_COLS;
     }
@@ -489,7 +489,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         bool on_boundary = true; // true when a spatial subsetting boundary is encountered
 
         /* Set Spot*/
-        dataframe.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], dataframe.beam);
+        dataframe.spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl03.sc_orient[0], dataframe.beam);
 
         /* Set Bounding Polygon */
         for(int i = 0; i < atl03.bounding_polygon_lat.size; i++)
@@ -540,25 +540,25 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Set Signal Confidence Level */
-                Icesat2Fields::signal_conf_t atl03_cnf;
-                if(parms.surfaceType == Icesat2Fields::SRT_DYNAMIC)
+                Icesat2Parameters::signal_conf_t atl03_cnf;
+                if(parms.surfaceType == Icesat2Parameters::SRT_DYNAMIC)
                 {
                     /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                      * code below chooses the signal confidence that is the highest
                      * value of the five */
-                    const int32_t conf_index = current_photon * Icesat2Fields::NUM_SURFACE_TYPES;
-                    atl03_cnf = Icesat2Fields::CNF_POSSIBLE_TEP;
-                    for(int i = 0; i < Icesat2Fields::NUM_SURFACE_TYPES; i++)
+                    const int32_t conf_index = current_photon * Icesat2Parameters::NUM_SURFACE_TYPES;
+                    atl03_cnf = Icesat2Parameters::CNF_POSSIBLE_TEP;
+                    for(int i = 0; i < Icesat2Parameters::NUM_SURFACE_TYPES; i++)
                     {
                         if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
                         {
-                            atl03_cnf = static_cast<Icesat2Fields::signal_conf_t>(atl03.signal_conf_ph[conf_index + i]);
+                            atl03_cnf = static_cast<Icesat2Parameters::signal_conf_t>(atl03.signal_conf_ph[conf_index + i]);
                         }
                     }
                 }
                 else
                 {
-                    atl03_cnf = static_cast<Icesat2Fields::signal_conf_t>(atl03.signal_conf_ph[current_photon]);
+                    atl03_cnf = static_cast<Icesat2Parameters::signal_conf_t>(atl03.signal_conf_ph[current_photon]);
                 }
 
                 /* Check Signal Confidence Level */
@@ -568,7 +568,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Set and Check ATL03 Photon Quality Level */
-                const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
+                const Icesat2Parameters::quality_ph_t quality_ph = static_cast<Icesat2Parameters::quality_ph_t>(atl03.quality_ph[current_photon]);
                 if(!parms.qualityPh[quality_ph])
                 {
                     break;
@@ -610,7 +610,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
                 /* Add Photon to DataFrame */
                 dataframe.addRow(); // start new row in dataframe
-                dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
+                dataframe.time_ns.append(Icesat2Parameters::deltatime2timestamp(current_delta_time));
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
                 dataframe.lat_ph.append(atl03.lat_ph[current_photon]);  // corrected by refraction correction

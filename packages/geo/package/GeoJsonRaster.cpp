@@ -57,12 +57,12 @@ const char* GeoJsonRaster::CELLSIZE_KEY   = "cellsize";
  *----------------------------------------------------------------------------*/
 int GeoJsonRaster::luaCreate (lua_State* L)
 {
-    RequestFields* rqst_parms = NULL;
+    RequestParameters* rqst_parms = NULL;
     try
     {
         const char* geojstr = getLuaString(L, 1);
         const double cellsize = getLuaFloat(L, 2);
-        rqst_parms = new RequestFields(L, 0, NULL, NULL, {});
+        rqst_parms = new RequestParameters(L, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL))
         {
@@ -85,10 +85,10 @@ int GeoJsonRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
 {
-    RequestFields* rqst_parms = NULL;
+    RequestParameters* rqst_parms = NULL;
     try
     {
-        rqst_parms = new RequestFields(NULL, 0, NULL, NULL, {});
+        rqst_parms = new RequestParameters(NULL, 0, NULL, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL))
         {
@@ -154,7 +154,7 @@ GeoJsonRaster::~GeoJsonRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double _cellsize):
+GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestParameters* rqst_parms, const char* key, const char* _geojstr, double _cellsize):
  GeoRaster(L, rqst_parms, key, string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime()),
  data(NULL),
  cellsize(_cellsize),

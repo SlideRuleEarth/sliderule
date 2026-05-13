@@ -41,7 +41,7 @@
 #include "LuaEngine.h"
 #include "MathLib.h"
 #include "OsApi.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "Asset.h"
 
 /******************************************************************************
@@ -72,7 +72,7 @@ class MeritRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         static void             init            (void);
-        static RasterObject*    create          (lua_State* L, RequestFields* rqst_parms, const char* key);
+        static RasterObject*    create          (lua_State* L, RequestParameters* rqst_parms, const char* key);
                                 ~MeritRaster    (void) override;
 
     protected:
@@ -81,7 +81,7 @@ class MeritRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                 MeritRaster (lua_State *L, RequestFields* rqst_parms, const char* key);
+                 MeritRaster (lua_State *L, RequestParameters* rqst_parms, const char* key);
 
         /* import getSamples with single point */
         using RasterObject::getSamples;

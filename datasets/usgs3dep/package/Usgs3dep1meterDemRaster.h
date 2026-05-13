@@ -56,7 +56,7 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new Usgs3dep1meterDemRaster(L, rqst_parms, key); }
 
 
@@ -66,7 +66,7 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                Usgs3dep1meterDemRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
+                Usgs3dep1meterDemRaster (lua_State* L, RequestParameters* rqst_parms, const char* key);
                ~Usgs3dep1meterDemRaster (void) override;
 
         void    getIndexFile     (const std::vector<point_info_t>* points, string& file) final;

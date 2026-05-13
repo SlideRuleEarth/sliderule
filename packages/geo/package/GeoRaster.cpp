@@ -42,7 +42,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const string& _fileName, double _gpsTime,
+GeoRaster::GeoRaster(lua_State *L, RequestParameters* rqst_parms, const char* key, const string& _fileName, double _gpsTime,
                      uint32_t elevationBandsMask, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject(L, rqst_parms, key),
     raster(this, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandsMask, gtf_cb, crs_cb)
@@ -249,7 +249,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
                                              raster.getOverrideCRS());
                 slist.add(subset);
 
-                /* RequestFields are shared with subsseted raster */
+                /* RequestParameters are shared with subsseted raster */
                 referenceLuaObject(rqstParms);
             }
         }
@@ -318,7 +318,7 @@ void GeoRaster::onStopSampling(void)
 /*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::Reader::Reader(GeoRaster* _owner, RequestFields* _rqstParms, const char* _samplerKey, const string& _crs,
+GeoRaster::Reader::Reader(GeoRaster* _owner, RequestParameters* _rqstParms, const char* _samplerKey, const string& _crs,
                            const std::vector<RasterObject::point_info_t>& _points) :
     owner(_owner),
     rqstParms(_rqstParms),

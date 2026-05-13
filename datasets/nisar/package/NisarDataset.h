@@ -62,7 +62,7 @@ class NisarDataset: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new NisarDataset(L, rqst_parms, key); }
 
 
@@ -71,7 +71,7 @@ class NisarDataset: public GeoIndexedRaster
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-                NisarDataset (lua_State* L, RequestFields* rqst_parms, const char* key);
+                NisarDataset (lua_State* L, RequestParameters* rqst_parms, const char* key);
                ~NisarDataset (void) override;
 
         void    getIndexFile (const std::vector<point_info_t>* points, string& file) final;

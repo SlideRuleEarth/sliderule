@@ -50,7 +50,7 @@ class GeoUserUrlRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new GeoUserUrlRaster(L, rqst_parms, key); }
 
     protected:
@@ -59,12 +59,12 @@ class GeoUserUrlRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-         GeoUserUrlRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
+         GeoUserUrlRaster (lua_State* L, RequestParameters* rqst_parms, const char* key);
          void resolveBands(std::vector<string>& bands) override
                           { resolveBandsStrict(bands); }
 
     private:
-        static string getNormalizedUrl(RequestFields* rqst_parms, const char* key);
+        static string getNormalizedUrl(RequestParameters* rqst_parms, const char* key);
 };
 
 #endif  /* __geouser_url_raster__ */

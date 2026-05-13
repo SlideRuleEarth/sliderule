@@ -35,7 +35,7 @@
 
 #include "OsApi.h"
 #include "ContainerRunner.h"
-#include "CreFields.h"
+#include "CreParameters.h"
 
 /******************************************************************************
  * DEFINES
@@ -57,7 +57,7 @@ int cre_open (lua_State* L)
         {"list",        ContainerRunner::luaList},
         {"createunique",ContainerRunner::luaCreateUnique},
         {"deleteunique",ContainerRunner::luaDeleteUnique},
-        {"parms",       CreFields::luaCreate},
+        {"parms",       luaCreateParameters<CreParameters>},
         {NULL,          NULL}
     };
 

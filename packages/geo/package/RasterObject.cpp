@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "RasterObject.h"
 #include "GdalRaster.h"
 #include "GeoIndexedRaster.h"
@@ -64,11 +64,11 @@ Dictionary<RasterObject::factory_t> RasterObject::factories;
  *----------------------------------------------------------------------------*/
 int RasterObject::luaCreate( lua_State* L )
 {
-    RequestFields* rqst_parms = NULL;
+    RequestParameters* rqst_parms = NULL;
     try
     {
         /* Get Parameters */
-        rqst_parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
+        rqst_parms = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
         if(rqst_parms == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get request parameters");
 
         const char* key = getLuaString(L, 2, true, GeoFields::DEFAULT_KEY);
@@ -104,7 +104,7 @@ int RasterObject::luaCreate( lua_State* L )
 /*----------------------------------------------------------------------------
  * cppCreate
  *----------------------------------------------------------------------------*/
-RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key)
+RasterObject* RasterObject::cppCreate(RequestParameters* rqst_parms, const char* key)
 {
     /* Check Parameters */
     if(!rqst_parms) return NULL;
@@ -347,7 +347,7 @@ void RasterObject::resolveBands(void* rptr, std::vector<int>& bands)
  *----------------------------------------------------------------------------*/
 RasterObject::~RasterObject(void)
 {
-    /* Release RequestFields LuaObject */
+    /* Release RequestParameters LuaObject */
     rqstParms->releaseLuaObject();
 
     /* Delete Key */
@@ -370,7 +370,7 @@ void RasterObject::stopSampling(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterObject::RasterObject(lua_State *L, RequestFields* rqst_parms, const char* key):
+RasterObject::RasterObject(lua_State *L, RequestParameters* rqst_parms, const char* key):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     rqstParms(rqst_parms),
     parms(&rqstParms->samplers[key]),

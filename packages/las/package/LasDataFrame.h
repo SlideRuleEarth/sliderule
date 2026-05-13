@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "GeoDataFrame.h"
 
 /******************************************************************************
@@ -54,11 +54,11 @@ class LasDataFrame final: public LuaObject
         static int luaCreate(lua_State* L);
         static int luaExport(lua_State* L);
 
-        LasDataFrame(lua_State* L, RequestFields* parms, GeoDataFrame* dataframe);
+        LasDataFrame(lua_State* L, RequestParameters* parms, GeoDataFrame* dataframe);
         ~LasDataFrame() override;
 
     private:
-        RequestFields* parms;
+        RequestParameters* parms;
         GeoDataFrame* dataframe;
 };
 

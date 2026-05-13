@@ -131,12 +131,12 @@ const struct luaL_Reg Atl06Dispatch::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, _parms));
@@ -170,7 +170,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Fields* _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parameters* _parms):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     elevationRecord(atRecType, sizeof(atl06_t))
 {
@@ -250,7 +250,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Elevation Attributes */
-    result.elevation.extent_id = extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION;
+    result.elevation.extent_id = extent->extent_id | Icesat2Parameters::EXTENT_ID_ELEVATION;
     result.elevation.segment_id = extent->segment_id;
     result.elevation.rgt = extent->reference_ground_track;
     result.elevation.cycle = extent->cycle;
@@ -270,8 +270,8 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Calcualte Beam Numbers */
-    result.elevation.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)extent->spacecraft_orientation, (Icesat2Fields::track_t)extent->track, extent->pair);
-    result.elevation.gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)extent->spacecraft_orientation, (Icesat2Fields::track_t)extent->track, extent->pair);
+    result.elevation.spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)extent->spacecraft_orientation, (Icesat2Parameters::track_t)extent->track, extent->pair);
+    result.elevation.gt = Icesat2Parameters::getGroundTrack((Icesat2Parameters::sc_orient_t)extent->spacecraft_orientation, (Icesat2Parameters::track_t)extent->track, extent->pair);
 
     /* Execute Least Squares Fit Algorithm */
     iterativeFitStage(extent, result);

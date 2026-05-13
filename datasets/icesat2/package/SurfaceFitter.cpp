@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "SurfaceFitter.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -66,11 +66,11 @@ const struct luaL_Reg SurfaceFitter::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int SurfaceFitter::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
 
     try
     {
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 1, Icesat2Parameters::OBJECT_TYPE));
         return createLuaObject(L, new SurfaceFitter(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -84,7 +84,7 @@ int SurfaceFitter::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SurfaceFitter::SurfaceFitter (lua_State* L, Icesat2Fields* _parms):
+SurfaceFitter::SurfaceFitter (lua_State* L, Icesat2Parameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
@@ -156,13 +156,13 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         // check minimum extent length
         if((df.x_atc[i1] - df.x_atc[i0]) < parms->minAlongTrackSpread)
         {
-            _pflags |= Icesat2Fields::PFLAG_SPREAD_TOO_SHORT;
+            _pflags |= Icesat2Parameters::PFLAG_SPREAD_TOO_SHORT;
         }
 
         // check minimum number of photons
         if(num_photons < parms->minPhotonCount)
         {
-            _pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
+            _pflags |= Icesat2Parameters::PFLAG_TOO_FEW_PHOTONS;
         }
 
         // add result row to surface fitter dataframe
@@ -352,7 +352,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
             else
             {
                 mlog(CRITICAL, "Out of bounds condition caught: %d, %d, %d", i0, i1, photons_in_window);
-                result.pflags |= Icesat2Fields::PFLAG_OUT_OF_BOUNDS;
+                result.pflags |= Icesat2Parameters::PFLAG_OUT_OF_BOUNDS;
             }
         }
 
@@ -385,13 +385,13 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
         /* Check Photon Count */
         if(next_num_photons < parms->minPhotonCount.value)
         {
-            result.pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
+            result.pflags |= Icesat2Parameters::PFLAG_TOO_FEW_PHOTONS;
             done = true;
         }
         /* Check Spread */
         else if((x_max - x_min) < parms->minAlongTrackSpread.value)
         {
-            result.pflags |= Icesat2Fields::PFLAG_SPREAD_TOO_SHORT;
+            result.pflags |= Icesat2Parameters::PFLAG_SPREAD_TOO_SHORT;
             done = true;
         }
         /* Check Change in Number of Photons */
@@ -402,7 +402,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
         /* Check Iterations */
         else if(++iteration >= parms->fit.maxIterations.value)
         {
-            result.pflags |= Icesat2Fields::PFLAG_MAX_ITERATIONS_REACHED;
+            result.pflags |= Icesat2Parameters::PFLAG_MAX_ITERATIONS_REACHED;
             done = true;
         }
         /* Filtered Out Photons in Results and Iterate Again (section 5.5, procedure 4f) */

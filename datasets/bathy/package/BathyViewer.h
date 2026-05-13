@@ -43,7 +43,7 @@
 #include "RasterObject.h"
 #include "H5Array.h"
 #include "GeoLib.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 
 /******************************************************************************
  * ATL03 TABLE BUILDER
@@ -112,12 +112,12 @@ class BathyViewer: public LuaObject
          *--------------------------------------------------------------------*/
 
         std::atomic<bool>   active;
-        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
+        Thread*             readerPid[Icesat2Parameters::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
         const int           read_timeout_ms;
-        Icesat2Fields*      parms;
+        Icesat2Parameters*      parms;
 
         H5Coro::Context*    context; // for ATL03 file
 
@@ -133,7 +133,7 @@ class BathyViewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyViewer            (lua_State* L, Icesat2Fields* _parms);
+                            BathyViewer            (lua_State* L, Icesat2Parameters* _parms);
                             ~BathyViewer           (void) override;
 
         static void*        subsettingThread        (void* parm);

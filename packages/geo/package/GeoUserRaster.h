@@ -40,7 +40,7 @@
 #include "LuaEngine.h"
 #include "GeoRaster.h"
 #include "GeoFields.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * GEOUSER RASTER CLASS
@@ -72,7 +72,7 @@ class GeoUserRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* file, long filelength);
+        GeoUserRaster(lua_State* L, RequestParameters* rqst_parms, const char* key, const char* file, long filelength);
         void resolveBands(std::vector<string>& bands) override
                          { resolveBandsStrict(bands); }
 

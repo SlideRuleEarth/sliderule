@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "OutputLib.h"
 #include "SystemConfig.h"
 
@@ -42,9 +42,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* RequestFields::OBJECT_TYPE = "RequestFields";
-const char* RequestFields::LUA_META_NAME = "RequestFields";
-const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
+const char* RequestParameters::OBJECT_TYPE = "RequestParameters";
+const char* RequestParameters::LUA_META_NAME = "RequestParameters";
+const struct luaL_Reg RequestParameters::LUA_META_TABLE[] = {
     {"export",      luaExport},
     {"encode",      luaEncode},
     {"describe",    luaDescribe},
@@ -62,41 +62,20 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int RequestFields::luaCreate (lua_State* L)
-{
-    RequestFields* request_fields = NULL;
-    try
-    {
-        request_fields = new RequestFields(L, 0, NULL, NULL, {});
-        request_fields->fromLua(L, 1);
-        return createLuaObject(L, request_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete request_fields;
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * luaExport - export() --> lua table
  *----------------------------------------------------------------------------*/
-int RequestFields::luaExport (lua_State* L)
+int RequestParameters::luaExport (lua_State* L)
 {
     int num_rets = 1;
 
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* sampler = getLuaString(L, 2, true, NULL);
 
         if(!sampler)
@@ -120,11 +99,11 @@ int RequestFields::luaExport (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaEncode - encode() --> json
  *----------------------------------------------------------------------------*/
-int RequestFields::luaEncode (lua_State* L)
+int RequestParameters::luaEncode (lua_State* L)
 {
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* sampler = getLuaString(L, 2, true, NULL);
 
         if(!sampler)
@@ -150,11 +129,11 @@ int RequestFields::luaEncode (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaDescribe - decsribe() --> openapi
  *----------------------------------------------------------------------------*/
-int RequestFields::luaDescribe (lua_State* L)
+int RequestParameters::luaDescribe (lua_State* L)
 {
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* description = getLuaString(L, 2);
         lua_pushstring(L, lua_obj->toOpenApi(description).c_str());
     }
@@ -170,11 +149,11 @@ int RequestFields::luaDescribe (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaProjectedPolygonIncludes - poly(lon, lat)
  *----------------------------------------------------------------------------*/
-int RequestFields::luaProjectedPolygonIncludes (lua_State* L)
+int RequestParameters::luaProjectedPolygonIncludes (lua_State* L)
 {
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const double lon = getLuaFloat(L, 2);
         const double lat = getLuaFloat(L, 3);
         const bool includes = lua_obj->polyIncludes(lon, lat);
@@ -192,11 +171,11 @@ int RequestFields::luaProjectedPolygonIncludes (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaRegionMaskIncludes - mask(lon, lat)
  *----------------------------------------------------------------------------*/
-int RequestFields::luaRegionMaskIncludes (lua_State* L)
+int RequestParameters::luaRegionMaskIncludes (lua_State* L)
 {
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const double lon = getLuaFloat(L, 2);
         const double lat = getLuaFloat(L, 3);
         const bool includes = lua_obj->maskIncludes(lon, lat);
@@ -214,11 +193,11 @@ int RequestFields::luaRegionMaskIncludes (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaGetField - [<field_name>]
  *----------------------------------------------------------------------------*/
-int RequestFields::luaGetField (lua_State* L)
+int RequestParameters::luaGetField (lua_State* L)
 {
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* field_name = getLuaString(L, 2);
 
         // check the metatable for the key (to support functions)
@@ -243,11 +222,11 @@ int RequestFields::luaGetField (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaSetField - [<field_name>]
  *----------------------------------------------------------------------------*/
-int RequestFields::luaSetField (lua_State* L)
+int RequestParameters::luaSetField (lua_State* L)
 {
     try
     {
-        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* field_name = getLuaString(L, 2);
         lua_obj->fields[field_name].field->fromLua(L, 3);
     }
@@ -262,11 +241,11 @@ int RequestFields::luaSetField (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaGetLength
  *----------------------------------------------------------------------------*/
-int RequestFields::luaGetLength (lua_State* L)
+int RequestParameters::luaGetLength (lua_State* L)
 {
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* field_name = getLuaString(L, 2);
         const long len = (*lua_obj)[field_name].length();
         lua_pushinteger(L, len);
@@ -283,11 +262,11 @@ int RequestFields::luaGetLength (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaHasOutput
  *----------------------------------------------------------------------------*/
-int RequestFields::luaHasOutput (lua_State* L)
+int RequestParameters::luaHasOutput (lua_State* L)
 {
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         lua_pushboolean(L, !lua_obj->output.path.value.empty());
     }
     catch(const RunTimeException& e)
@@ -302,11 +281,11 @@ int RequestFields::luaHasOutput (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaHasArrowOutput
  *----------------------------------------------------------------------------*/
-int RequestFields::luaHasArrowOutput (lua_State* L)
+int RequestParameters::luaHasArrowOutput (lua_State* L)
 {
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         lua_pushboolean(L, OutputLib::isArrow(lua_obj->output.format.value));
     }
     catch(const RunTimeException& e)
@@ -321,11 +300,11 @@ int RequestFields::luaHasArrowOutput (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaHasLasOutput
  *----------------------------------------------------------------------------*/
-int RequestFields::luaHasLasOutput (lua_State* L)
+int RequestParameters::luaHasLasOutput (lua_State* L)
 {
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         lua_pushboolean(L, OutputLib::isLas(lua_obj->output.format.value));
     }
     catch(const RunTimeException& e)
@@ -340,11 +319,11 @@ int RequestFields::luaHasLasOutput (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaGetSamplers
  *----------------------------------------------------------------------------*/
-int RequestFields::luaGetSamplers (lua_State* L)
+int RequestParameters::luaGetSamplers (lua_State* L)
 {
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
 
         // create table of GeoFields
         lua_newtable(L);
@@ -376,12 +355,12 @@ int RequestFields::luaGetSamplers (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaWithSamplers
  *----------------------------------------------------------------------------*/
-int RequestFields::luaWithSamplers (lua_State* L)
+int RequestParameters::luaWithSamplers (lua_State* L)
 {
     bool status = false;
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         status = lua_obj->samplers.length() > 0;
     }
     catch(const RunTimeException& e)
@@ -394,12 +373,12 @@ int RequestFields::luaWithSamplers (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaSetCatalog
  *----------------------------------------------------------------------------*/
-int RequestFields::luaSetCatalog (lua_State* L)
+int RequestParameters::luaSetCatalog (lua_State* L)
 {
     const bool status = false;
     try
     {
-        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestParameters* lua_obj = dynamic_cast<RequestParameters*>(getLuaSelf(L, 1));
         const char* key = getLuaString(L, 2);
         const char* catalog = getLuaString(L, 3);
 
@@ -416,7 +395,7 @@ int RequestFields::luaSetCatalog (lua_State* L)
 /*----------------------------------------------------------------------------
  * polyIncludes
  *----------------------------------------------------------------------------*/
-bool RequestFields::polyIncludes (double lon, double lat) const
+bool RequestParameters::polyIncludes (double lon, double lat) const
 {
     // project coordinate
     const MathLib::coord_t coord = {lon, lat};
@@ -435,7 +414,7 @@ bool RequestFields::polyIncludes (double lon, double lat) const
 /*----------------------------------------------------------------------------
  * maskIncludes
  *----------------------------------------------------------------------------*/
-bool RequestFields::maskIncludes (double lon, double lat) const
+bool RequestParameters::maskIncludes (double lon, double lat) const
 {
     return regionMask.includes(lon, lat);
 }
@@ -444,7 +423,7 @@ bool RequestFields::maskIncludes (double lon, double lat) const
  * geoFields
  *----------------------------------------------------------------------------*/
 #ifdef __geo__
-const GeoFields* RequestFields::geoFields(const char* key) const
+const GeoFields* RequestParameters::geoFields(const char* key) const
 {
     return &samplers[key];
 }
@@ -453,7 +432,7 @@ const GeoFields* RequestFields::geoFields(const char* key) const
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void RequestFields::fromLua (lua_State* L, int index)
+void RequestParameters::fromLua (lua_State* L, int index)
 {
     FieldMap<Field>::fromLua(L, index);
 
@@ -492,7 +471,7 @@ void RequestFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
+RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldMap<Field> ({
         {"asset",               &asset,                 "The name of a collection of resources; this rarely needs to be specified because the default value for most endpoints are sufficient"},
@@ -529,9 +508,6 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
         resource = _resource;
     }
 
-    // set maximum resources
-    maxResources = SystemConfig::settings().requestMaxResources.value;
-
     // add additional fields to dictionary
     for(const init_entry_t elem: init_list)
     {
@@ -543,7 +519,7 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-RequestFields::~RequestFields(void)
+RequestParameters::~RequestParameters(void)
 {
     delete [] projectedPolygon;
 }

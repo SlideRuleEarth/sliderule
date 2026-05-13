@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "CasalsFields.h"
+#include "CasalsParameters.h"
 #include "Casals1bDataFrame.h"
 
 /******************************************************************************
@@ -61,13 +61,13 @@ const struct luaL_Reg Casals1bDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Casals1bDataFrame::luaCreate (lua_State* L)
 {
-    CasalsFields* _parms = NULL;
+    CasalsParameters* _parms = NULL;
     H5Object* _hdf1b = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<CasalsFields*>(getLuaObject(L, 1, CasalsFields::OBJECT_TYPE));
+        _parms = dynamic_cast<CasalsParameters*>(getLuaObject(L, 1, CasalsParameters::OBJECT_TYPE));
         _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 3, true, NULL);
 
@@ -86,7 +86,7 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name):
+Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsParameters* _parms, H5Object* _hdf1b, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",         &time_ns,       "Unix time (nanoseconds) of the measurement"},
@@ -97,7 +97,7 @@ Casals1bDataFrame::Casals1bDataFrame (lua_State* L, CasalsFields* _parms, H5Obje
     {
         {"granule",         &granule,       "Name of source CASALS 1B granule"}
     },
-    CasalsFields::crsITRF2020(), // crs
+    CasalsParameters::crsITRF2020(), // crs
     1), // dfKey
     granule(_hdf1b ? _hdf1b->name : "null", META_SOURCE_ID),
     active(false),
@@ -191,7 +191,7 @@ void* Casals1bDataFrame::subsettingThread (void* parm)
 
             /* Add Element to DataFrame */
             df->addRow();
-            df->time_ns.append(CasalsFields::deltatime2timestamp(casals1b.delta_time[current_element]));
+            df->time_ns.append(CasalsParameters::deltatime2timestamp(casals1b.delta_time[current_element]));
             df->latitude.append(aoi.latitude[current_element]);
             df->longitude.append(aoi.longitude[current_element]);
             df->refh.append(static_cast<float>(casals1b.refh[current_element]));
