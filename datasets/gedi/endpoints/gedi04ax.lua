@@ -39,6 +39,7 @@ return {
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, gedi",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/GediParameters.json"

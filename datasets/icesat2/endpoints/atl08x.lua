@@ -45,13 +45,14 @@ return {
     main = main,
     parms = parms,
     name = "ATL08 Dataframe",
-    description = "Spatially and temporally subsets ATL08 granules vegetation metrics with additional filters (x-series)",
+    description = "Spatially and temporally subsets ATL08 granules vegetation metrics with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/Icesat2Parameters.json"

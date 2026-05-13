@@ -72,6 +72,7 @@ return {
     inputs = {"json"},
     outputs = {"json"},
     schema = {
+        tags = "a-series, geo",
         request = [[ "application/json": {
             "schema": {
                 "allOf": [

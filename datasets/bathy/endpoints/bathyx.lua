@@ -49,6 +49,7 @@ return {
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, bathy",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/BathyParameters.json"

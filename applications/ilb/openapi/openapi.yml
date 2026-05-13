@@ -9,8 +9,6 @@ info:
 servers:
   - url: https://sliderule.slideruleearth.io
     description: Proxy frontend (user facing)
-  - url: http://10.0.128.5:8050
-    description: Discovery backend (internal)
 
 paths:
   /discovery/register:

@@ -21,13 +21,14 @@ return {
     main = main,
     parms = parms,
     name = "ATL13 Parallel Subsetter",
-    description = "Spatially and temporally subsets multiple ATL13 granule lake metrics with additional filters (s-series)",
+    description = "Spatially and temporally subsets multiple ATL13 granule lake metrics with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "s-series, icesat2",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/Icesat2Parameters.json"

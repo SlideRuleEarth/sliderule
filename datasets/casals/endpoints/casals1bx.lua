@@ -36,6 +36,7 @@ return {
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, casals",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/CasalsParameters.json"

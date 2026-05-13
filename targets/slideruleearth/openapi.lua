@@ -239,6 +239,7 @@ local function path_schemas()
         local endpoint = require(api)
         if endpoint["schema"] then
             local verb = endpoint["inputs"] and "post" or "get"
+            local tags = endpoint["tags"] or ""
             local security = security_schema(endpoint)
             local summary = endpoint["name"]
             local description = endpoint["description"]
@@ -247,13 +248,14 @@ local function path_schemas()
             local contents = string.format([[{
                 "%s": {
                     "operationId": "%s",
+                    "tags": [ %s ],
                     "security": [ %s ],
                     "summary": "%s",
                     "description": "%s",
                     %s
                     "responses": { %s }
                 }
-            }]], verb, api, security, summary, description, request_body, response)
+            }]], verb, api, tags, security, summary, description, request_body, response)
             output(string.format("%s/paths/%s.json", outputdir, api), contents)
             local schema = string.format([[
                 "/%s": {
@@ -283,10 +285,16 @@ local function specification_root()
             "license": {
                 "name": "BSD 3-Clause",
                 "url": "https://opensource.org/licenses/BSD-3-Clause"
-            }
+            },
+            "description": "APIs to process Earth science datasets in the cloud.  Most endpoints are public though some require authorization and payload signing.
+                            Endpoints are grouped two different ways: by series and by package.  The _series_ indentifies the endpoint's underlying implementation:
+                            x-series endpoints are based on dataframe construction and manipulation; p-series endpoints are based on custom stream processing;
+                            s-series endpoints stream standard data products; v-series endpoints stream summary statistics of standard data products;
+                            and a-series endpoints return an immediate ASCII text response typically formatted as json.  The _package_ indentifies the application
+                            grouping the endpoint belongs to; for example, the icesat2 package provides endpoints to process ICESat-2 data."
         },
         "servers": [
-            { "url": "https://slideruleearth.io/source", "description": "Process Earth science datasets in the cloud through API calls to SlideRule web services." }
+            { "url": "https://sliderule.slideruleearth.io/source", "description": "User facing web services" }
         ],
         "components": {
             "securitySchemes": {

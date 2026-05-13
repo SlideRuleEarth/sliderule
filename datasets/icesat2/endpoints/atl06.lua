@@ -30,13 +30,14 @@ return {
     main = main,
     parms = parms,
     name = "ATL06-SR",
-    description = "Generates ATL06 elevations using user supplied processing parameters (p-series)",
+    description = "Generates ATL06 elevations using user supplied processing parameters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "p-series, icesat2",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/Icesat2Parameters.json"

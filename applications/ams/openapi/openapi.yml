@@ -9,7 +9,7 @@ info:
       url: https://opensource.org/licenses/BSD-3-Clause
 
 servers:
-  - url: https://slideruleearth.io/source
+  - url: https://sliderule.slideruleearth.io/source
     description: Asset Metadata Service (AMS)
   - url: http://localhost
     description: Local development server

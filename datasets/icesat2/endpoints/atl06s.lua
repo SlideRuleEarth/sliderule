@@ -28,13 +28,14 @@ return {
     main = main,
     parms = parms,
     name = "ATL06 Subsetter",
-    description = "Spatially and temporally subsets single ATL06 granule elevations with additional filters (s-series)",
+    description = "Spatially and temporally subsets single ATL06 granule elevations with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "s-series, icesat2",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/Icesat2Parameters.json"

@@ -27,13 +27,14 @@ return {
     main = main,
     parms = parms,
     name = "H5Coro File Read",
-    description = "Read values from an HDF5 object using an H5Coro file reader (p-series)",
+    description = "Read values from an HDF5 object using an H5Coro file reader",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary"},
     schema = {
+        tags = "p-series, h5coro",
         request = [[ "application/json": {
             "schema": {
                 "type": "object",
