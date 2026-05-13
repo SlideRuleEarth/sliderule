@@ -77,6 +77,7 @@ return {
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/Icesat2Parameters.json"
