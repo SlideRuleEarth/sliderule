@@ -41,7 +41,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GediL2Parameters::OBJECT_TYPE = "GediL2Parameters";
+const char* GediL2Parameters::LUA_META_NAME = "GediL2Parameters";
 
  /******************************************************************************
  * CLASS METHODS
@@ -50,8 +50,8 @@ const char* GediL2Parameters::OBJECT_TYPE = "GediL2Parameters";
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GediL2Parameters::GediL2Parameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    GediParameters (L, key_space, asset_name, _resource, object_type)
+GediL2Parameters::GediL2Parameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    GediParameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("l2_quality_filter", &l2_quality_filter, "Filter for level 2 low quality data; when enabled, low quality returns are not included in the response");
     addParameter("surface_filter",    &surface_filter,    "Filter for surface data; when enabled, only surface returns are included in the response");

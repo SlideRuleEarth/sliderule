@@ -42,7 +42,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GediParameters::OBJECT_TYPE = "GediParameters";
+const char* GediParameters::LUA_META_NAME = "GediParameters";
 
  /******************************************************************************
  * CLASS METHODS
@@ -186,8 +186,8 @@ void GediGranuleFields::parseResource (const char* resource)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GediParameters::GediParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    RequestParameters (L, key_space, asset_name, _resource, object_type)
+GediParameters::GediParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("beams",             &beams,             "Laser beams to process");
     addParameter("degrade_filter",    &degrade_filter,    "Filter for degraded data; when enabled, degraded returns are not included in the response");

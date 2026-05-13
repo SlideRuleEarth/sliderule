@@ -54,14 +54,14 @@ class SwotParameters: public RequestParameters
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
         static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        SwotParameters  (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        SwotParameters  (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         ~SwotParameters (void) override = default;
 
         // returns nanoseconds since Unix epoch, no leap seconds

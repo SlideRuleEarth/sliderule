@@ -135,7 +135,7 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
 
         virtual void fromLua (lua_State* L, int index) override;
 
-        RequestParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        RequestParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual ~RequestParameters  (void) override;
 
         /*--------------------------------------------------------------------

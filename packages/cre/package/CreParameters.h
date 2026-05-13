@@ -53,7 +53,7 @@ class CreParameters: public RequestParameters
         * Constants
         *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
 
         /*--------------------------------------------------------------------
         * Data
@@ -69,7 +69,7 @@ class CreParameters: public RequestParameters
 
         virtual void fromLua    (lua_State* L, int index) override;
 
-        CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual ~CreParameters (void) override = default;
 };
 

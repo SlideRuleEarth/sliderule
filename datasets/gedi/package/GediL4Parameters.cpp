@@ -41,7 +41,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GediL4Parameters::OBJECT_TYPE = "GediL4Parameters";
+const char* GediL4Parameters::LUA_META_NAME = "GediL4Parameters";
 
 /******************************************************************************
  * CLASS METHODS
@@ -50,8 +50,8 @@ const char* GediL4Parameters::OBJECT_TYPE = "GediL4Parameters";
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GediL4Parameters::GediL4Parameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    GediL2Parameters (L, key_space, asset_name, _resource, object_type)
+GediL4Parameters::GediL4Parameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    GediL2Parameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("l4_quality_filter", &l4_quality_filter, "Filter for level 4 low quality data; when enabled, low quality returns are not included in the response");
 

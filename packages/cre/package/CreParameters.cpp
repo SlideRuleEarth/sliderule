@@ -40,7 +40,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CreParameters::OBJECT_TYPE = "CreParameters";
+const char* CreParameters::LUA_META_NAME = "CreParameters";
 
  /******************************************************************************
  * PUBLIC METHODS
@@ -67,8 +67,8 @@ void CreParameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CreParameters::CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    RequestParameters(L, key_space, asset_name, _resource, object_type)
+CreParameters::CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters(L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("container_image",   &container_image,     "Docker image to run");
     addParameter("container_name",    &container_name,      "Name to apply to the container that is run");

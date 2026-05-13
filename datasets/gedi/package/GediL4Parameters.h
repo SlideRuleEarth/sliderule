@@ -53,13 +53,13 @@ class GediL4Parameters: public GediL2Parameters
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediL4Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        GediL4Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual ~GediL4Parameters (void) override = default;
         void fromLua (lua_State* L, int index) override;
 

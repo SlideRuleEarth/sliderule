@@ -246,7 +246,7 @@ class Icesat2Parameters: public RequestParameters
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
 
         static const int NUM_SPOTS                          = 6;
 
@@ -394,7 +394,7 @@ class Icesat2Parameters: public RequestParameters
 
         virtual void    fromLua             (lua_State* L, int index) override;
 
-                        Icesat2Parameters   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+                        Icesat2Parameters   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual         ~Icesat2Parameters  (void) override = default;
 
         static int      luaStage            (lua_State* L);

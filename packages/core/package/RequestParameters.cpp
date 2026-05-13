@@ -480,8 +480,8 @@ void RequestParameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    LuaObject (L, object_type, LUA_META_NAME, LUA_META_TABLE),
+RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    LuaObject (L, OBJECT_TYPE, lua_meta_name, LUA_META_TABLE),
     asset(asset_name),
     keySpace(key_space)
 {

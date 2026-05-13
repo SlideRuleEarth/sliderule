@@ -41,7 +41,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* H5Parameters::OBJECT_TYPE = "H5Parameters";
+const char* H5Parameters::LUA_META_NAME = "H5Parameters";
 
  /******************************************************************************
  * METHODS
@@ -60,8 +60,8 @@ const char* H5Parameters::defaultCRS (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Parameters::H5Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    RequestParameters (L, key_space, asset_name, _resource, object_type)
+H5Parameters::H5Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     crs.value = defaultCRS(); // initialize
 

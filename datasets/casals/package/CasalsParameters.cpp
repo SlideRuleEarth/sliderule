@@ -42,7 +42,7 @@
  * STATIC DATA
  ******************************************************************************/
 
- const char* CasalsParameters::OBJECT_TYPE = "CasalsParameters";
+ const char* CasalsParameters::LUA_META_NAME = "CasalsParameters";
 
 /******************************************************************************
  * CLASS METHODS
@@ -144,8 +144,8 @@ void CasalsGranuleFields::parseResource (const char* resource)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CasalsParameters::CasalsParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    RequestParameters (L, key_space, asset_name, _resource, object_type)
+CasalsParameters::CasalsParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("anc_fields",  &anc_fields,        "Ancillary fields from the source granules to include in response");
     addParameter("granule",     &granule_fields,    "Versioning and date information pulled from the granule processed; output only");

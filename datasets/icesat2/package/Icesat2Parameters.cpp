@@ -42,7 +42,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Icesat2Parameters::OBJECT_TYPE = "Icesat2Parameters";
+const char* Icesat2Parameters::LUA_META_NAME = "Icesat2Parameters";
 
  /******************************************************************************
  * METHODS
@@ -524,8 +524,8 @@ void Icesat2Parameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    RequestParameters (L, key_space, asset_name, _resource, object_type)
+Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("srt",                 &surfaceType,           "Surface reference type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water");
     addParameter("pass_invalid",        &passInvalid,           "Boolean flag indicating whether or not extents that fail validation checks are still used and returned in the results");

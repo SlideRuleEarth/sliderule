@@ -113,7 +113,7 @@ class BathyParameters: public Icesat2Parameters
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
 
         static const double NIGHT_SOLAR_ELEVATION_THRESHOLD;
         static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
@@ -150,7 +150,7 @@ class BathyParameters: public Icesat2Parameters
          *--------------------------------------------------------------------*/
 
         void    fromLua             (lua_State* L, int index) override;
-                BathyParameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+                BathyParameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual ~BathyParameters    (void) override = default;
 
         /*--------------------------------------------------------------------

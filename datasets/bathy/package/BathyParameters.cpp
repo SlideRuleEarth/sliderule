@@ -41,7 +41,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyParameters::OBJECT_TYPE = "BathyParameters";
+const char* BathyParameters::LUA_META_NAME = "BathyParameters";
 
 const double BathyParameters::NIGHT_SOLAR_ELEVATION_THRESHOLD = 5.0; // degrees
 const double BathyParameters::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY = 0.0; // meters
@@ -63,8 +63,8 @@ void BathyParameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyParameters::BathyParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    Icesat2Parameters (L, key_space, asset_name, _resource, object_type)
+BathyParameters::BathyParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    Icesat2Parameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("asset09",             &atl09AssetName,      "Asset identifier to use when reading wind speed from ATL09; when left blank the server will do the right thing");
     addParameter("max_dem_delta",       &maxDemDelta,         "Maximum positive vertical distance of photon from ATL03 DEM to include in bathymetry processing");

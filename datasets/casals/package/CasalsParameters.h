@@ -76,14 +76,14 @@ class CasalsParameters: public RequestParameters
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
         static const int64_t CASALS_SDP_EPOCH_GPS = 1198800018; // seconds to add to CASALS delta times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        CasalsParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        CasalsParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual ~CasalsParameters (void) override = default;
         void fromLua (lua_State* L, int index) override;
 

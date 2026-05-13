@@ -40,7 +40,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* SwotParameters::OBJECT_TYPE = "SwotParameters";
+const char* SwotParameters::LUA_META_NAME = "SwotParameters";
 
  /******************************************************************************
  * CLASS METHODS
@@ -49,8 +49,8 @@ const char* SwotParameters::OBJECT_TYPE = "SwotParameters";
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotParameters::SwotParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
-    RequestParameters(L, key_space, asset_name, _resource, object_type)
+SwotParameters::SwotParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters(L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("variables",   &variables,     "Variables to include in response from source granule");
 }
