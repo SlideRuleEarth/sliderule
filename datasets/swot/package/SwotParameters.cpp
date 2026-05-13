@@ -37,17 +37,20 @@
 #include "SwotParameters.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* SwotParameters::OBJECT_TYPE = "SwotParameters";
+
+ /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotParameters::SwotParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
-    RequestParameters(L, key_space, asset_name, _resource,
-    {
-        {"variables",   &variables,     "Variables to include in response from source granule"}
-    })
+SwotParameters::SwotParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
+    RequestParameters(L, key_space, asset_name, _resource, object_type)
 {
-    (void)init_list;
+    addParameter("variables",   &variables,     "Variables to include in response from source granule");
 }

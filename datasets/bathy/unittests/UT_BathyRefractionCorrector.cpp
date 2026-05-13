@@ -39,7 +39,7 @@
 #include "UT_BathyRefractionCorrector.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 
 /******************************************************************************
  * FILE DATA
@@ -205,13 +205,13 @@ int UT_BathyRefractionCorrector::luaRefractionTest (lua_State* L)
 {
     // test variables
     bool status = true;
-    BathyFields* parms = NULL;
+    BathyParameters* parms = NULL;
     BathyRefractionCorrector* refraction = NULL;
 
     try
     {
         // get refraction object
-        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
+        parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 2, BathyParameters::OBJECT_TYPE));
         refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 3, BathyRefractionCorrector::OBJECT_TYPE));
         FieldColumn<float>* surface_h = new FieldColumn<float>;
 

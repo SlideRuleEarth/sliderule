@@ -6,7 +6,7 @@ target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/bathy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyDataFrame.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.cpp
@@ -29,7 +29,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/bathy.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyDataFrame.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h

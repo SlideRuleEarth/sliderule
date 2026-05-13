@@ -41,7 +41,7 @@
 #include "OsApi.h"
 #include "H5CoroLib.h"
 #include "H5Object.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -101,8 +101,8 @@ class BathyGranule: public LuaObject, public FieldMap<Field>
          *--------------------------------------------------------------------*/
 
         Thread*                     pid;
-        BathyFields*                parmsPtr;
-        const BathyFields&          parms;
+        BathyParameters*                parmsPtr;
+        const BathyParameters&          parms;
         Publisher                   rqstQ;
         int                         readTimeoutMs;
         H5Object*                   hdf03; // ATL03 file
@@ -111,7 +111,7 @@ class BathyGranule: public LuaObject, public FieldMap<Field>
          * Methods
          *--------------------------------------------------------------------*/
 
-                        BathyGranule    (lua_State* L, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name);
+                        BathyGranule    (lua_State* L, BathyParameters* _parms, H5Object* _hdf03, const char* rqstq_name);
         virtual         ~BathyGranule   (void) override;
 
         static void*    readingThread   (void* parm);

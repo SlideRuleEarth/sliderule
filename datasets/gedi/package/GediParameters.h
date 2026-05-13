@@ -102,13 +102,14 @@ class GediParameters: public RequestParameters
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* OBJECT_TYPE;
         static const int64_t GEDI_SDP_EPOCH_GPS = 1198800018; // seconds to add to GEDI delta times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        GediParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
         virtual ~GediParameters (void) override = default;
         void fromLua (lua_State* L, int index) override;
 
@@ -148,17 +149,11 @@ class GediParameters: public RequestParameters
 
         FieldEnumeration<beam_t, NUM_BEAMS>     beams {true, true, true, true, true, true, true, true};
         FieldElement<bool>                      degrade_filter {false};
-        FieldElement<bool>                      l2_quality_filter {false};
-        FieldElement<bool>                      l4_quality_filter {false};
-        FieldElement<bool>                      surface_filter {false};
         FieldList<string>                       anc_fields; // list of fields to associate with an GEDI subsetting request
         GediGranuleFields                       granule_fields;  // GEDI granule attributes
 
         // backwards compatibility
         FieldElement<int>                       degrade_flag {0};
-        FieldElement<int>                       l2_quality_flag {0};
-        FieldElement<int>                       l4_quality_flag {0};
-        FieldElement<int>                       surface_flag {0};
 };
 
 /******************************************************************************

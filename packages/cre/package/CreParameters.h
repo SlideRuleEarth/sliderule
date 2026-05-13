@@ -50,6 +50,12 @@ class CreParameters: public RequestParameters
     public:
 
         /*--------------------------------------------------------------------
+        * Constants
+        *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+
+        /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
@@ -63,7 +69,7 @@ class CreParameters: public RequestParameters
 
         virtual void fromLua    (lua_State* L, int index) override;
 
-        CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
         virtual ~CreParameters (void) override = default;
 };
 

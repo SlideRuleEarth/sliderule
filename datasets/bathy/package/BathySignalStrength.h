@@ -35,7 +35,7 @@
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -65,14 +65,14 @@ class BathySignalStrength: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathySignalStrength    (lua_State* L, BathyFields* _parms);
+        BathySignalStrength    (lua_State* L, BathyParameters* _parms);
         ~BathySignalStrength   (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields*        parms;
+        BathyParameters*        parms;
 };
 
 #endif

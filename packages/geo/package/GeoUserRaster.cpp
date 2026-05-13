@@ -79,7 +79,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
         if(!lua_istable(L, samplesIndex))
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Missing required samples table");
 
-        rqst_parms = new RequestParameters(L, 0, NULL, NULL, {});
+        rqst_parms = new RequestParameters(L, 0, NULL, NULL);
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL))
         {

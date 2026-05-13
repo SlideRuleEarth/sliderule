@@ -39,7 +39,7 @@
 #include <algorithm>
 
 #include "OsApi.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathySeaSurfaceFinder.h"
 
 /******************************************************************************
@@ -56,10 +56,10 @@ const struct luaL_Reg BathySeaSurfaceFinder::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathySeaSurfaceFinder::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
     try
     {
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE));
         return createLuaObject(L, new BathySeaSurfaceFinder(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -73,7 +73,7 @@ int BathySeaSurfaceFinder::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathySeaSurfaceFinder::BathySeaSurfaceFinder (lua_State* L, BathyFields* _parms):
+BathySeaSurfaceFinder::BathySeaSurfaceFinder (lua_State* L, BathyParameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
@@ -283,7 +283,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             mlog(e.level(), "Failed to find sea surface for beam %d at photon %ld: %s", gt ? gt->value : 0, p0, e.what());
             for(long i = p0; i < p1; i++)
             {
-                df.processing_flags[i] = df.processing_flags[i] | BathyFields::SEA_SURFACE_UNDETECTED;
+                df.processing_flags[i] = df.processing_flags[i] | BathyParameters::SEA_SURFACE_UNDETECTED;
             }
         }
 

@@ -39,6 +39,12 @@
 #include "CasalsParameters.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+ const char* CasalsParameters::OBJECT_TYPE = "CasalsParameters";
+
+/******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
@@ -138,12 +144,11 @@ void CasalsGranuleFields::parseResource (const char* resource)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CasalsParameters::CasalsParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
-    RequestParameters (L, key_space, asset_name, _resource,
-        { {"anc_fields",    &anc_fields,        "Ancillary fields from the source granules to include in response"},
-          {"granule",       &granule_fields,    "Versioning and date information pulled from the granule processed; output only"} })
+CasalsParameters::CasalsParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
+    RequestParameters (L, key_space, asset_name, _resource, object_type)
 {
-    (void)init_list;
+    addParameter("anc_fields",  &anc_fields,        "Ancillary fields from the source granules to include in response");
+    addParameter("granule",     &granule_fields,    "Versioning and date information pulled from the granule processed; output only");
 }
 
 /*----------------------------------------------------------------------------

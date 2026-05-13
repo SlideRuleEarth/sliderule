@@ -94,8 +94,8 @@ class FootprintReader: public LuaObject
 
         /* Thread Information */
         typedef struct {
-            FootprintReader*    reader;
-            char                group[9];
+            FootprintReader*        reader;
+            char                    group[9];
             GediParameters::beam_t  beam;
         } info_t;
 
@@ -133,7 +133,7 @@ class FootprintReader: public LuaObject
         bool                    sendTerminator;
         const int               read_timeout_ms;
         Publisher*              outQ;
-        GediParameters*             parms;
+        GediParameters*         parms;
         stats_t                 stats;
         H5Coro::Context*        context;
         RecordObject            batchRecord;

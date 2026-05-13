@@ -49,7 +49,7 @@
 #include "GediParameters.h"
 
 /******************************************************************************
- * GEDI DATAFRAME BASE
+ * CLASS
  ******************************************************************************/
 
 class GediDataFrame: public GeoDataFrame
@@ -81,7 +81,7 @@ class GediDataFrame: public GeoDataFrame
         Thread*           readerPid;
         int               readTimeoutMs;
         Publisher*        outQ;
-        GediParameters*       parms;
+        GediParameters*   parms;
         H5Object*         hdf;
         const char*       beamStr;
         char              group[9];

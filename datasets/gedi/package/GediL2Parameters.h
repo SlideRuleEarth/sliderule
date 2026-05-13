@@ -38,8 +38,6 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "AssetField.h"
-#include "FieldEnumeration.h"
 #include "FieldElement.h"
 #include "GediParameters.h"
 
@@ -52,10 +50,18 @@ class GediL2Parameters: public GediParameters
     public:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+
+         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
+        GediL2Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        virtual ~GediL2Parameters (void) override = default;
+        void fromLua (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -67,16 +73,6 @@ class GediL2Parameters: public GediParameters
         // backwards compatibility
         FieldElement<int>                       l2_quality_flag {0};
         FieldElement<int>                       surface_flag {0};
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        GediL2Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
-        virtual ~GediL2Parameters (void) override = default;
-        void fromLua (lua_State* L, int index) override;
 };
 
 #endif  /* __gedi_l2_parms__ */

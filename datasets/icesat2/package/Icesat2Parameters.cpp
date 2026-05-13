@@ -39,6 +39,12 @@
 #include "LuaObject.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* Icesat2Parameters::OBJECT_TYPE = "Icesat2Parameters";
+
+ /******************************************************************************
  * METHODS
  ******************************************************************************/
 
@@ -518,47 +524,41 @@ void Icesat2Parameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
-    RequestParameters (L, key_space, asset_name, _resource, {
-        {"srt",                 &surfaceType,           "Surface reference type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water"},
-        {"pass_invalid",        &passInvalid,           "Boolean flag indicating whether or not extents that fail validation checks are still used and returned in the results"},
-        {"dist_in_seg",         &distInSeg,             "Boolean flag indicating that the units of the len and res are in ATL03 segments (e.g. if true then len=2 is exactly two ATL03 segments which is approximately 40 meters)"},
-        {"cnf",                 &atl03Cnf,              "Confidence level for photon selection, can be supplied as a single value (which means the confidence must be at least that), or a list (which means the confidence must be in the list); note - the confidence can be supplied as strings or as numbers {-2, -1, 0, 1, 2, 3, 4}"},
-        {"quality_ph",          &qualityPh,             "Quality classification based on an ATL03 algorithms that attempt to identify instrumental artifacts, can be supplied as a single value (which means the classification must be exactly that), or a list (which means the classification must be in the list)"},
-        {"atl08_class",         &atl08Class,            "List of ATL08 classifications used to select which photons are used in the processing"},
-        {"spots",               &spots,                 "List of spots (1, 2, 3, 4, 5, 6) to process; this is only supported by the atl03x endpoint"},
-        {"beams",               &beams,                 "List of beams (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all) to process"},
-        {"track",               &track,                 "Reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0) to process; note that when provided, this is combined with the beam selection as a union of the two"},
-        {"cnt",                 &minPhotonCount,        "Minimum photon count in the variable length segment for the segment to be processed"},
-        {"ats",                 &minAlongTrackSpread,   "Minimum along track spread of the photons (in meters) in the variable length segment for the segment to be processed"},
-        {"len",                 &extentLength,          "Size (in meters) of the variable length segment"},
-        {"res",                 &extentStep,            "Step (in meters) of the variable length segments; could also be thought of as the spacing of the segments or the resolution of the segments"},
-        {"podppd",              &podppdMask,            "Pointing/geolocation degradation mask; each bit in the mask represents a pointing/geolocation solution quality assessment to be included; the bits are 0: nominal, 1: pod_degrade, 2: ppd_degrade, 3: podppd_degrade, 4: cal_nominal, 5: cal_pod_degrade, 6: cal_ppd_degrade, 7: cal_podppd_degrade"},
-        {"fit",                 &fit,                   "Configuration structure for the 'Surface Fitting' algorithm; when provided the servers will fit a surface to the source photon cloud and return an elevation dataset similar to ATL06"},
-        {"yapc",                &yapc,                  "Configuration structure for the 'Yet Another Photon Classifier' algorithm; when provided the servers will calculate a density score for each photon and include that score in the response data"},
-        {"phoreal",             &phoreal,               "Configuration structure for the 'PhoREAL' algorithm; when provided the servers will calculate canopy metrics on the source photon cloud and return those metrics as a dataset similar to ATL08"},
-        {"als",                 &blanket,               "Configuration structure for the 'Surface Blanket' algorithm; when provided the servers will calculate a canopy top and ground using the source photon cloud and return those values in the response"},
-        {"atl13",               &atl13,                 "Configuration structure for the 'atl13x' dataset construction"},
-        {"atl24",               &atl24,                 "Configuration structure for the 'atl24x' dataset construction"},
-        {"maxi",                &maxIterations,         "Maximum number of iterations for the Surface Fitting algorithm to run when fitting a line to the photons in a segment; deprecated, use the fit.maxi field"},
-        {"H_min_win",           &minWindow,             "Minimum vertical window used by the Surface Fitting algorithm when fitting a line to the photons in a segment; deprecated, use fit.H_min_win"},
-        {"sigma_r_max",         &maxRobustDispersion,   "Maximum robust dispersion used by the Surface Fitting algorithm when fitting a line to the photons in a segment; deprecated, use fit.sigma_r_max"},
-        {"atl03_bckgrd_fields", &atl03BckgrdFields,     "Ancillary fields in the 'bckgrd_atlas' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x"},
-        {"atl03_geo_fields",    &atl03GeoFields,        "Ancillary fields in the 'geolocation' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x"},
-        {"atl03_corr_fields",   &atl03CorrFields,       "Ancillary fields in the 'geophys_corr' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x"},
-        {"atl03_ph_fields",     &atl03PhFields,         "Ancillary fields in the 'heights' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x"},
-        {"atl06_fields",        &atl06Fields,           "Ancillary fields in the 'land_ice_segments' group of the ATL06 granule to include in the response; supported by atl06x"},
-        {"atl08_fields",        &atl08Fields,           "Ancillary fields in the 'land_segments' group of the ATL08 granule to include in the response; supported by atl08x"},
-        {"atl09_fields",        &atl09Fields,           "Ancillary fields in the ATL09 granule to include in the response (e.g. low_rate/cal_c); supported by all x-series endpoints"},
-        {"atl13_fields",        &atl13Fields,           "Ancillary fields in the ATL13 granule to include in the response (e.g. ice_flag); supported by atl13x"},
-        {"granule",             &granuleFields,         "Versioning, ground track, and date information pulled from the granule processed; output only"} })
+Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
+    RequestParameters (L, key_space, asset_name, _resource, object_type)
 {
-    // add additional fields to dictionary
-    for(const init_entry_t elem: init_list)
-    {
-        const entry_t entry = {elem.field, elem.description, false};
-        fields.add(elem.name, entry);
-    }
+    addParameter("srt",                 &surfaceType,           "Surface reference type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water");
+    addParameter("pass_invalid",        &passInvalid,           "Boolean flag indicating whether or not extents that fail validation checks are still used and returned in the results");
+    addParameter("dist_in_seg",         &distInSeg,             "Boolean flag indicating that the units of the len and res are in ATL03 segments (e.g. if true then len=2 is exactly two ATL03 segments which is approximately 40 meters)");
+    addParameter("cnf",                 &atl03Cnf,              "Confidence level for photon selection, can be supplied as a single value (which means the confidence must be at least that), or a list (which means the confidence must be in the list); note - the confidence can be supplied as strings or as numbers {-2, -1, 0, 1, 2, 3, 4}");
+    addParameter("quality_ph",          &qualityPh,             "Quality classification based on an ATL03 algorithms that attempt to identify instrumental artifacts, can be supplied as a single value (which means the classification must be exactly that), or a list (which means the classification must be in the list)");
+    addParameter("atl08_class",         &atl08Class,            "List of ATL08 classifications used to select which photons are used in the processing");
+    addParameter("spots",               &spots,                 "List of spots (1, 2, 3, 4, 5, 6) to process; this is only supported by the atl03x endpoint");
+    addParameter("beams",               &beams,                 "List of beams (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all) to process");
+    addParameter("track",               &track,                 "Reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0) to process; note that when provided, this is combined with the beam selection as a union of the two");
+    addParameter("cnt",                 &minPhotonCount,        "Minimum photon count in the variable length segment for the segment to be processed");
+    addParameter("ats",                 &minAlongTrackSpread,   "Minimum along track spread of the photons (in meters) in the variable length segment for the segment to be processed");
+    addParameter("len",                 &extentLength,          "Size (in meters) of the variable length segment");
+    addParameter("res",                 &extentStep,            "Step (in meters) of the variable length segments; could also be thought of as the spacing of the segments or the resolution of the segments");
+    addParameter("podppd",              &podppdMask,            "Pointing/geolocation degradation mask; each bit in the mask represents a pointing/geolocation solution quality assessment to be included; the bits are 0: nominal, 1: pod_degrade, 2: ppd_degrade, 3: podppd_degrade, 4: cal_nominal, 5: cal_pod_degrade, 6: cal_ppd_degrade, 7: cal_podppd_degrade");
+    addParameter("fit",                 &fit,                   "Configuration structure for the 'Surface Fitting' algorithm; when provided the servers will fit a surface to the source photon cloud and return an elevation dataset similar to ATL06");
+    addParameter("yapc",                &yapc,                  "Configuration structure for the 'Yet Another Photon Classifier' algorithm; when provided the servers will calculate a density score for each photon and include that score in the response data");
+    addParameter("phoreal",             &phoreal,               "Configuration structure for the 'PhoREAL' algorithm; when provided the servers will calculate canopy metrics on the source photon cloud and return those metrics as a dataset similar to ATL08");
+    addParameter("als",                 &blanket,               "Configuration structure for the 'Surface Blanket' algorithm; when provided the servers will calculate a canopy top and ground using the source photon cloud and return those values in the response");
+    addParameter("atl13",               &atl13,                 "Configuration structure for the 'atl13x' dataset construction");
+    addParameter("atl24",               &atl24,                 "Configuration structure for the 'atl24x' dataset construction");
+    addParameter("maxi",                &maxIterations,         "Maximum number of iterations for the Surface Fitting algorithm to run when fitting a line to the photons in a segment; deprecated, use the fit.maxi field");
+    addParameter("H_min_win",           &minWindow,             "Minimum vertical window used by the Surface Fitting algorithm when fitting a line to the photons in a segment; deprecated, use fit.H_min_win");
+    addParameter("sigma_r_max",         &maxRobustDispersion,   "Maximum robust dispersion used by the Surface Fitting algorithm when fitting a line to the photons in a segment; deprecated, use fit.sigma_r_max");
+    addParameter("atl03_bckgrd_fields", &atl03BckgrdFields,     "Ancillary fields in the 'bckgrd_atlas' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
+    addParameter("atl03_geo_fields",    &atl03GeoFields,        "Ancillary fields in the 'geolocation' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
+    addParameter("atl03_corr_fields",   &atl03CorrFields,       "Ancillary fields in the 'geophys_corr' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
+    addParameter("atl03_ph_fields",     &atl03PhFields,         "Ancillary fields in the 'heights' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
+    addParameter("atl06_fields",        &atl06Fields,           "Ancillary fields in the 'land_ice_segments' group of the ATL06 granule to include in the response; supported by atl06x");
+    addParameter("atl08_fields",        &atl08Fields,           "Ancillary fields in the 'land_segments' group of the ATL08 granule to include in the response; supported by atl08x");
+    addParameter("atl09_fields",        &atl09Fields,           "Ancillary fields in the ATL09 granule to include in the response (e.g. low_rate/cal_c); supported by all x-series endpoints");
+    addParameter("atl13_fields",        &atl13Fields,           "Ancillary fields in the ATL13 granule to include in the response (e.g. ice_flag); supported by atl13x");
+    addParameter("granule",             &granuleFields,         "Versioning, ground track, and date information pulled from the granule processed; output only");
 
     // add additional functions
     LuaEngine::setAttrFunc(L, "stage", luaStage);

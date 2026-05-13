@@ -35,7 +35,7 @@
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -74,14 +74,14 @@ class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms);
+        BathyRefractionCorrector    (lua_State* L, BathyParameters* _parms);
         ~BathyRefractionCorrector   (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields*        parms;
+        BathyParameters*        parms;
         GeoLib::TIFFImage*  waterRiMask;
         uint64_t            subaqueousPhotons;
 

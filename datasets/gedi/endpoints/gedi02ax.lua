@@ -32,7 +32,7 @@ return {
     main = main,
     parms = parms,
     name = "GEDI 2A Dataframe",
-    description = "Spatially and temporally subsets elevations from multiple GEDI 2A granules with additional filters (x-series)",
+    description = "Spatially and temporally subsets elevations from multiple GEDI 2A granules with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
@@ -42,7 +42,7 @@ return {
         tags = "x-series, gedi",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/GediParameters.json"
+                "$ref": "../components/schemas/GediL2Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "GediDataFrame.h"
+#include "GediL2Parameters.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -101,7 +102,7 @@ class Gedi02aDataFrame: public GediDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Gedi02aDataFrame  (lua_State* L, const char* beam_str, GediParameters* _parms, H5Object* _hdf02a, const char* outq_name);
+                        Gedi02aDataFrame  (lua_State* L, const char* beam_str, GediL2Parameters* _parms, H5Object* _hdf02a, const char* outq_name);
                         ~Gedi02aDataFrame (void) override = default;
         static void*    subsettingThread  (void* parm);
 };

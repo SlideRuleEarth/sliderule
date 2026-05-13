@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "Gedi04aDataFrame.h"
+#include "GediL4Parameters.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -53,14 +54,14 @@ const struct luaL_Reg Gedi04aDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Gedi04aDataFrame::luaCreate (lua_State* L)
 {
-    GediParameters* _parms = NULL;
+    GediL4Parameters* _parms = NULL;
     H5Object* _hdf04a = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE));
+        _parms = dynamic_cast<GediL4Parameters*>(getLuaObject(L, 2, GediL4Parameters::OBJECT_TYPE));
         _hdf04a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
@@ -79,7 +80,7 @@ int Gedi04aDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediParameters* _parms, H5Object* _hdf04a, const char* outq_name):
+Gedi04aDataFrame::Gedi04aDataFrame (lua_State* L, const char* beam_str, GediL4Parameters* _parms, H5Object* _hdf04a, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"shot_number",         &shot_number,       "GEDI laser shot number identifier"},
@@ -153,7 +154,7 @@ Gedi04aDataFrame::Gedi04aData::Gedi04aData (Gedi04aDataFrame* df, const AreaOfIn
 void* Gedi04aDataFrame::subsettingThread (void* parm)
 {
     Gedi04aDataFrame* df = static_cast<Gedi04aDataFrame*>(parm);
-    const GediParameters& parms = *df->parms;
+    const GediL4Parameters& parms = *reinterpret_cast<GediL4Parameters*>(df->parms);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi04a_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf->name, df->beamStr);

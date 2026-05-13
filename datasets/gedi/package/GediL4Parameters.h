@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
+#ifndef __gedi_l4_parms__
+#define __gedi_l4_parms__
 
 /******************************************************************************
  * INCLUDES
@@ -38,15 +38,14 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RequestParameters.h"
-#include "AssetField.h"
-#include "FieldList.h"
+#include "FieldElement.h"
+#include "GediL2Parameters.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class SwotParameters: public RequestParameters
+class GediL4Parameters: public GediL2Parameters
 {
     public:
 
@@ -55,29 +54,23 @@ class SwotParameters: public RequestParameters
          *--------------------------------------------------------------------*/
 
         static const char* OBJECT_TYPE;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        SwotParameters  (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
-        ~SwotParameters (void) override = default;
-
-        // returns nanoseconds since Unix epoch, no leap seconds
-        inline time8_t deltatime2timestamp (double delta_time)
-        {
-            return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
-        }
-
-        // returns resource as a string
-        const char* getResource (void) const { return resource.value.c_str(); }
+        GediL4Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
+        virtual ~GediL4Parameters (void) override = default;
+        void fromLua (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldList<string> variables;
+        FieldElement<bool>                      l4_quality_filter {false};
+
+        // backwards compatibility
+        FieldElement<int>                       l4_quality_flag {0};
 };
 
-#endif  /* __swot_parms__ */
+#endif  /* __gedi_l2_parms__ */

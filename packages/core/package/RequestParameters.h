@@ -75,7 +75,7 @@ int luaCreateParameters (lua_State* L)
         const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
         const char* _resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        parms = new T(L, key_space, asset_name, _resource, {});
+        parms = new T(L, key_space, asset_name, _resource);
         parms->fromLua(L, 1);
 
         return LuaObject::createLuaObject(L, parms);
@@ -125,6 +125,7 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
         static int luaWithSamplers (lua_State* L);
         static int luaSetCatalog (lua_State* L);
 
+        bool addParameter (const char* name, Field* field, const char* description);
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;
 
@@ -134,7 +135,7 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
 
         virtual void fromLua (lua_State* L, int index) override;
 
-        RequestParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        RequestParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
         virtual ~RequestParameters  (void) override;
 
         /*--------------------------------------------------------------------

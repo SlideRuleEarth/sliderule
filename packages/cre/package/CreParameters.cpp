@@ -37,6 +37,12 @@
 #include "CreParameters.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* CreParameters::OBJECT_TYPE = "CreParameters";
+
+ /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
@@ -61,12 +67,10 @@ void CreParameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CreParameters::CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
-    RequestParameters(L, key_space, asset_name, _resource, {
-        {"container_image",   &container_image,     "Docker image to run"},
-        {"container_name",    &container_name,      "Name to apply to the container that is run"},
-        {"container_command", &container_command,   "Command to execute when starting the container"}
-    })
+CreParameters::CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
+    RequestParameters(L, key_space, asset_name, _resource, object_type)
 {
-    (void)init_list;
+    addParameter("container_image",   &container_image,     "Docker image to run");
+    addParameter("container_name",    &container_name,      "Name to apply to the container that is run");
+    addParameter("container_command", &container_command,   "Command to execute when starting the container");
 }

@@ -67,7 +67,7 @@ int GeoFields::luaCreate (lua_State* L)
     RequestParameters* request_fields = NULL;
     try
     {
-        request_fields = new RequestParameters(L, 0, NULL, NULL, {});
+        request_fields = new RequestParameters(L, 0, NULL, NULL);
         GeoFields* geo_fields = new GeoFields();
         request_fields->samplers.add(GeoFields::DEFAULT_KEY, geo_fields, NULL);
         geo_fields->fromLua(L, 1);

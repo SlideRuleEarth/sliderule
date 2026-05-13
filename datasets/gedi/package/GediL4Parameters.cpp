@@ -29,55 +29,43 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
-
 /******************************************************************************
- * INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "RequestParameters.h"
-#include "AssetField.h"
-#include "FieldList.h"
+#include "FieldEnumeration.h"
+#include "GediL4Parameters.h"
 
 /******************************************************************************
- * CLASS
+ * STATIC DATA
  ******************************************************************************/
 
-class SwotParameters: public RequestParameters
+const char* GediL4Parameters::OBJECT_TYPE = "GediL4Parameters";
+
+/******************************************************************************
+ * CLASS METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GediL4Parameters::GediL4Parameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
+    GediL2Parameters (L, key_space, asset_name, _resource, object_type)
 {
-    public:
+    addParameter("l4_quality_filter", &l4_quality_filter, "Filter for level 4 low quality data; when enabled, low quality returns are not included in the response");
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+    // backwards compatibility
+    addParameter("l4_quality_flag",   &l4_quality_flag,   "Flag for level 4 low quality data (only source data that matches flag value is included); deprecated, use 'l4_quality_filter'");
+}
 
-        static const char* OBJECT_TYPE;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void GediL4Parameters::fromLua (lua_State* L, int index)
+{
+    GediL2Parameters::fromLua(L, index);
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        SwotParameters  (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
-        ~SwotParameters (void) override = default;
-
-        // returns nanoseconds since Unix epoch, no leap seconds
-        inline time8_t deltatime2timestamp (double delta_time)
-        {
-            return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
-        }
-
-        // returns resource as a string
-        const char* getResource (void) const { return resource.value.c_str(); }
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        FieldList<string> variables;
-};
-
-#endif  /* __swot_parms__ */
+    // set filters
+    if(l4_quality_flag == 1) l4_quality_filter = true;
+}

@@ -29,55 +29,46 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
-
 /******************************************************************************
- * INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "RequestParameters.h"
-#include "AssetField.h"
-#include "FieldList.h"
+#include "FieldEnumeration.h"
+#include "GediL2Parameters.h"
 
 /******************************************************************************
- * CLASS
+ * STATIC DATA
  ******************************************************************************/
 
-class SwotParameters: public RequestParameters
+const char* GediL2Parameters::OBJECT_TYPE = "GediL2Parameters";
+
+ /******************************************************************************
+ * CLASS METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GediL2Parameters::GediL2Parameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type):
+    GediParameters (L, key_space, asset_name, _resource, object_type)
 {
-    public:
+    addParameter("l2_quality_filter", &l2_quality_filter, "Filter for level 2 low quality data; when enabled, low quality returns are not included in the response");
+    addParameter("surface_filter",    &surface_filter,    "Filter for surface data; when enabled, only surface returns are included in the response");
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+    // backwards compatibility
+    addParameter("l2_quality_flag",   &l2_quality_flag,   "Flag for level 2 low quality data (only source data that matches flag value is included); deprecated, use 'l2_quality_filter'");
+    addParameter("surface_flag",      &surface_flag,      "Flag for surface data (only source data that matches flag value is included); deprecated, use 'surface_filter'");
+}
 
-        static const char* OBJECT_TYPE;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void GediL2Parameters::fromLua (lua_State* L, int index)
+{
+    GediParameters::fromLua(L, index);
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        SwotParameters  (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
-        ~SwotParameters (void) override = default;
-
-        // returns nanoseconds since Unix epoch, no leap seconds
-        inline time8_t deltatime2timestamp (double delta_time)
-        {
-            return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
-        }
-
-        // returns resource as a string
-        const char* getResource (void) const { return resource.value.c_str(); }
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        FieldList<string> variables;
-};
-
-#endif  /* __swot_parms__ */
+    // set filters
+    if(l2_quality_flag == 1) l2_quality_filter = true;
+    if(surface_flag == 1) surface_filter = true;
+}

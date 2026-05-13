@@ -42,6 +42,7 @@
 #include "RecordObject.h"
 #include "FootprintReader.h"
 #include "Gedi04aReader.h"
+#include "GediL4Parameters.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -77,13 +78,13 @@ const RecordObject::fieldDef_t Gedi04aReader::batchRecDef[] = {
  *----------------------------------------------------------------------------*/
 int Gedi04aReader::luaCreate (lua_State* L)
 {
-    GediParameters* parms = NULL;
+    GediL4Parameters* parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE));
+        parms = dynamic_cast<GediL4Parameters*>(getLuaObject(L, 2, GediL4Parameters::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -113,7 +114,7 @@ void Gedi04aReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Gedi04aReader (lua_State* L, const char* outq_name, GediParameters* _parms, bool _send_terminator):
+Gedi04aReader::Gedi04aReader (lua_State* L, const char* outq_name, GediL4Parameters* _parms, bool _send_terminator):
     FootprintReader<g04a_footprint_t>(L, outq_name, _parms, _send_terminator,
                                       batchRecType, "lat_lowestmode", "lon_lowestmode",
                                       Gedi04aReader::subsettingThread)
@@ -166,7 +167,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Gedi04aReader* reader = reinterpret_cast<Gedi04aReader*>(info->reader);
-    const GediParameters* parms = reader->parms;
+    const GediL4Parameters* parms = reinterpret_cast<GediL4Parameters*>(reader->parms);
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */

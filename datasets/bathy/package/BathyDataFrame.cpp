@@ -45,7 +45,7 @@
 #include "H5Object.h"
 #include "BathyDataFrame.h"
 #include "GeoLib.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyMask.h"
 
 /******************************************************************************
@@ -67,7 +67,7 @@ const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyDataFrame::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
     BathyMask* _mask = NULL;
     H5Object* _hdf03 = NULL;
 
@@ -75,7 +75,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 2, BathyParameters::OBJECT_TYPE));
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
         const char* rqstq_name = getLuaString(L, 5, true, NULL);
@@ -96,7 +96,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask):
+BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyParameters* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns,               "Unix time (nanoseconds) of the photon measurement"},
@@ -467,7 +467,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     BathyDataFrame& dataframe = *static_cast<BathyDataFrame*>(parm);
-    const BathyFields& parms = *(dataframe.parms);
+    const BathyParameters& parms = *(dataframe.parms);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%s}", parms.asset.getName(), parms.getResource(), dataframe.beam);
@@ -603,10 +603,10 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 const double current_delta_time = atl03.delta_time[current_photon];
 
                 /* Set Initial Processing Flags */
-                uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
+                uint32_t processing_flags = BathyParameters::FLAGS_CLEAR;
                 processing_flags |= static_cast<uint32_t>(yapc_score) << 24;
-                if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
-                if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
+                if(on_boundary) processing_flags |= BathyParameters::ON_BOUNDARY;
+                if(atl03.solar_elevation[current_segment] < BathyParameters::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyParameters::NIGHT_FLAG;
 
                 /* Add Photon to DataFrame */
                 dataframe.addRow(); // start new row in dataframe

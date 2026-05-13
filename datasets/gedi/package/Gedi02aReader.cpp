@@ -77,13 +77,13 @@ const RecordObject::fieldDef_t Gedi02aReader::batchRecDef[] = {
  *----------------------------------------------------------------------------*/
 int Gedi02aReader::luaCreate (lua_State* L)
 {
-    GediParameters* parms = NULL;
+    GediL2Parameters* parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE));
+        parms = dynamic_cast<GediL2Parameters*>(getLuaObject(L, 2, GediL2Parameters::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -113,7 +113,7 @@ void Gedi02aReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi02aReader::Gedi02aReader (lua_State* L, const char* outq_name, GediParameters* _parms, bool _send_terminator):
+Gedi02aReader::Gedi02aReader (lua_State* L, const char* outq_name, GediL2Parameters* _parms, bool _send_terminator):
     FootprintReader<g02a_footprint_t>(L, outq_name, _parms, _send_terminator,
                                       batchRecType, "lat_lowestmode", "lon_lowestmode",
                                       Gedi02aReader::subsettingThread)
@@ -165,7 +165,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Gedi02aReader* reader = reinterpret_cast<Gedi02aReader*>(info->reader); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-    const GediParameters* parms = reader->parms;
+    const GediL2Parameters* parms = reinterpret_cast<GediL2Parameters*>(reader->parms);
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */

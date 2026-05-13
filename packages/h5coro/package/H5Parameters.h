@@ -51,6 +51,12 @@ class H5Parameters: public RequestParameters
     public:
 
         /*--------------------------------------------------------------------
+        * Constants
+        *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+
+        /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
@@ -73,7 +79,7 @@ class H5Parameters: public RequestParameters
         static const char* defaultCRS (void);
 
 
-        H5Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
+        H5Parameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* object_type = OBJECT_TYPE);
         virtual ~H5Parameters (void) override = default;
 };
 
