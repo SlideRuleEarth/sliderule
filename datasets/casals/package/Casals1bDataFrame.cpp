@@ -67,8 +67,8 @@ int Casals1bDataFrame::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<CasalsParameters*>(getLuaObject(L, 1, CasalsParameters::OBJECT_TYPE));
-        _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<CasalsParameters*>(getLuaObject(L, 1, CasalsParameters::OBJECT_TYPE, CasalsParameters::LUA_META_NAME));
+        _hdf1b = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 3, true, NULL);
 
         /* Return Reader Object */

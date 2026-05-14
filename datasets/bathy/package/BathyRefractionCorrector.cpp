@@ -73,7 +73,7 @@ int BathyRefractionCorrector::luaCreate (lua_State* L)
 
     try
     {
-        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         return createLuaObject(L, new BathyRefractionCorrector(L, _parms));
     }
     catch(const RunTimeException& e)

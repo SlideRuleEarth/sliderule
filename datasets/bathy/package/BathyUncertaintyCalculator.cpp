@@ -97,7 +97,7 @@ int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 
     try
     {
-        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         _kd = dynamic_cast<BathyKd*>(getLuaObject(L, 2, BathyKd::OBJECT_TYPE));
         return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms, _kd));
     }

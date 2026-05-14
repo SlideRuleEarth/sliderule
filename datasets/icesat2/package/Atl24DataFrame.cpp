@@ -68,8 +68,8 @@ int Atl24DataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Atl24Parameters*>(getLuaObject(L, 2, Atl24Parameters::OBJECT_TYPE));
-        _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<Atl24Parameters*>(getLuaObject(L, 2, Atl24Parameters::OBJECT_TYPE, Atl24Parameters::LUA_META_NAME));
+        _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 5, true, NULL);
 
         /* Return Reader Object */

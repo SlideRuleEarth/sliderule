@@ -70,7 +70,7 @@ int PhoReal::luaCreate (lua_State* L)
 
     try
     {
-        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 1, Atl03Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 1, Atl03Parameters::OBJECT_TYPE, Atl03Parameters::LUA_META_NAME));
         return createLuaObject(L, new PhoReal(L, _parms));
     }
     catch(const RunTimeException& e)

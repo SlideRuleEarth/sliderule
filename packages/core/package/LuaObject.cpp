@@ -242,20 +242,24 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
 /*----------------------------------------------------------------------------
  * getLuaObject
  *----------------------------------------------------------------------------*/
-LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
+LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, const char* lua_meta_name, bool optional, LuaObject* dfltval)
 {
     LuaObject* lua_obj = NULL;
     luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
     if(user_data)
     {
-        if(StringLib::match(object_type, user_data->luaObj->ObjectType))
+        if(!StringLib::match(object_type, user_data->luaObj->ObjectType))
         {
-            lua_obj = user_data->luaObj;
-            user_data->luaObj->referenceCount.fetch_add(1, std::memory_order_relaxed);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s returned incorrect object type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
+        }
+        else if(lua_meta_name && !StringLib::match(lua_meta_name, user_data->luaObj->LuaMetaName))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s returned incorrect lua meta table <%s.%s>", lua_meta_name, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
+            lua_obj = user_data->luaObj;
+            user_data->luaObj->referenceCount.fetch_add(1, std::memory_order_relaxed);
         }
     }
     else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))

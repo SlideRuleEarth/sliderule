@@ -57,7 +57,7 @@ int H5DataFrame::luaCreate(lua_State* L)
     try
     {
         /* Get Parameters */
-        _parms                  = dynamic_cast<H5Parameters*>(getLuaObject(L, 1, H5Parameters::OBJECT_TYPE));
+        _parms                  = dynamic_cast<H5Parameters*>(getLuaObject(L, 1, H5Parameters::OBJECT_TYPE, H5Parameters::LUA_META_NAME));
         _h5obj                  = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* _group      = getLuaString(L, 3, true, NULL);
         const okey_t _df_key    = getLuaInteger(L, 4, true, 0);

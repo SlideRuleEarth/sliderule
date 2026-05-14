@@ -68,8 +68,8 @@ int Atl13DataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Atl13Parameters*>(getLuaObject(L, 2, Atl13Parameters::OBJECT_TYPE));
-        _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<Atl13Parameters*>(getLuaObject(L, 2, Atl13Parameters::OBJECT_TYPE, Atl13Parameters::LUA_META_NAME));
+        _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Reader Object */

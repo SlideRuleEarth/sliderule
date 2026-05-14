@@ -76,8 +76,8 @@ int BathyDataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 2, BathyParameters::OBJECT_TYPE));
-        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
-        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
+        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, NULL, true, NULL));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* rqstq_name = getLuaString(L, 5, true, NULL);
 
         /* Return Reader Object */

@@ -86,7 +86,7 @@ int Gedi01bReader::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE));
+        parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE, GediParameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */

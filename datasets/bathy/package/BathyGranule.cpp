@@ -72,7 +72,7 @@ int BathyGranule::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* rqstq_name = getLuaString(L, 3);
 

@@ -99,7 +99,7 @@ int SwotL2Reader::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<SwotParameters*>(getLuaObject(L, 2, SwotParameters::OBJECT_TYPE));
+        parms = dynamic_cast<SwotParameters*>(getLuaObject(L, 2, SwotParameters::OBJECT_TYPE, SwotParameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Reader Object */

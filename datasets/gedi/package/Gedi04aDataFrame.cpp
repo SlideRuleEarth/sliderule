@@ -61,8 +61,8 @@ int Gedi04aDataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<GediL4Parameters*>(getLuaObject(L, 2, GediL4Parameters::OBJECT_TYPE));
-        _hdf04a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<GediL4Parameters*>(getLuaObject(L, 2, GediL4Parameters::OBJECT_TYPE, GediL4Parameters::LUA_META_NAME));
+        _hdf04a = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */

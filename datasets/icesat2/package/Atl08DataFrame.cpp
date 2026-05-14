@@ -60,8 +60,8 @@ int Atl08DataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE));
-        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE, Atl03Parameters::LUA_META_NAME));
+        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
