@@ -44,7 +44,7 @@
 #include "OsApi.h"
 #include "H5Array.h"
 #include "H5DArray.h"
-#include "Atl13Parameters.h"
+#include "Atl13sParameters.h"
 
 /******************************************************************************
  * ATL06 READER
@@ -190,7 +190,7 @@ class Atl13Reader: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Atl13Parameters*    parms;
+        Atl13sParameters*   parms;
         stats_t             stats;
 
         H5Coro::Context*    context; // for ATL13 file
@@ -199,7 +199,7 @@ class Atl13Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl13Reader                 (lua_State* L, const char* outq_name, Atl13Parameters* _parms, bool _send_terminator=true);
+                            Atl13Reader                 (lua_State* L, const char* outq_name, Atl13sParameters* _parms, bool _send_terminator=true);
                             ~Atl13Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);

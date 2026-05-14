@@ -23,6 +23,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Parameters.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13sParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Granule.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24IODriver.cpp
@@ -65,6 +66,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Parameters.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13sParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Granule.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24IODriver.h

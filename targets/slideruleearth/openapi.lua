@@ -99,9 +99,10 @@ local function parameter_schemas()
     if __icesat2__  then
                         output(outputdir.."/components/schemas/Icesat2Parameters.json", icesat2.parms():describe("Request parameters for executing ICESat-2 processing requests"))
                         output(outputdir.."/components/schemas/Atl03Parameters.json", icesat2.parms03():describe("Request parameters for executing ICESat-2 photon cloud processing requests"))
-                        output(outputdir.."/components/schemas/Atl06Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 ATL06 subsetting requests"))
+                        output(outputdir.."/components/schemas/Atl06Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 ATL06 subsetting and dataframe requests"))
                         output(outputdir.."/components/schemas/Atl06DispatchParameters.json", icesat2.parms06d():describe("Request parameters for executing ICESat-2 ATL06-SR processing requests"))
-                        output(outputdir.."/components/schemas/Atl13Parameters.json", icesat2.parms13():describe("Request parameters for executing ICESat-2 ATL13 subsetting requests"))
+                        output(outputdir.."/components/schemas/Atl13Parameters.json", icesat2.parms13():describe("Request parameters for executing ICESat-2 ATL13 dataframe requests"))
+                        output(outputdir.."/components/schemas/Atl13sParameters.json", icesat2.parms13s():describe("Request parameters for executing ICESat-2 ATL13 subsetting requests"))
                         output(outputdir.."/components/schemas/Atl24Parameters.json", icesat2.parms24():describe("Request parameters for executing ICESat-2 ATL24 subsetting requests"))
     end
     if __gedi__     then
@@ -246,7 +247,8 @@ local function path_schemas()
         local endpoint = require(api)
         if endpoint["schema"] then
             local verb = endpoint["inputs"] and "post" or "get"
-            local tags = endpoint["tags"] or ""
+            local tags = endpoint["schema"]["tags"] or ""
+            local first_tag = tags:match("^%s*(.-)%s*,") or tags:match("^%s*(.-)%s*$") or ""
             local security = security_schema(endpoint)
             local summary = endpoint["name"]
             local description = endpoint["description"]
@@ -262,7 +264,7 @@ local function path_schemas()
                     %s
                     "responses": { %s }
                 }
-            }]], verb, api, tags, security, summary, description, request_body, response)
+            }]], verb, api, first_tag, security, summary, description, request_body, response)
             output(string.format("%s/paths/%s.json", outputdir, api), contents)
             local schema = string.format([[
                 "/%s": {

@@ -54,6 +54,7 @@
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
 #include "Atl13Parameters.h"
+#include "Atl13sParameters.h"
 #include "Atl24DataFrame.h"
 #include "Atl24Granule.h"
 #include "Atl24IODriver.h"
@@ -88,6 +89,7 @@ int icesat2_open (lua_State *L)
         {"parms06",             luaCreateParameters<Atl06Parameters>},
         {"parms06d",            luaCreateParameters<Atl06DispatchParameters>},
         {"parms13",             luaCreateParameters<Atl13Parameters>},
+        {"parms13s",            luaCreateParameters<Atl13sParameters>},
         {"parms24",             luaCreateParameters<Atl24Parameters>},
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},

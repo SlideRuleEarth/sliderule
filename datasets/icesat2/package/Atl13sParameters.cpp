@@ -34,47 +34,23 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "Atl13Parameters.h"
+#include "Atl13sParameters.h"
 #include "LuaObject.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl13Parameters::LUA_META_NAME = "Atl13Parameters";
+const char* Atl13sParameters::LUA_META_NAME = "Atl13sParameters";
 
  /******************************************************************************
  * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor - Atl13Fields
- *----------------------------------------------------------------------------*/
-Atl13Fields::Atl13Fields():
-    FieldMap<Field>({ {"refid",         &reference_id,      "Selects data associated only with this ATL13 Reference ID of the inland body of water"},
-                      {"name",          &name,              "Selects data associated only with this inland body of water name"},
-                      {"coord",         &coordinate,        "Selects data associated only with the inland body of water that contains this coordinate"},
-                      {"anc_fields",    &anc_fields,        "Ancillary fields from the source granules to include in the response"} }),
-    provided(false)
-{
-}
-
-/*----------------------------------------------------------------------------
- * fromLua - Atl13Fields
- *----------------------------------------------------------------------------*/
-void Atl13Fields::fromLua (lua_State* L, int index)
-{
-    if(lua_istable(L, index))
-    {
-        FieldMap<Field>::fromLua(L, index);
-        provided = true;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void Atl13Parameters::fromLua (lua_State* L, int index)
+void Atl13sParameters::fromLua (lua_State* L, int index)
 {
     Icesat2Parameters::fromLua(L, index);
 }
@@ -82,8 +58,8 @@ void Atl13Parameters::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13Parameters::Atl13Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+Atl13sParameters::Atl13sParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
     Icesat2Parameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
-    addParameter("atl13", &atl13, "Configuration structure for the 'atl13x' dataset construction");
+    addParameter("atl13_fields", &atl13Fields, "Ancillary fields in the ATL13 granule to include in the response (e.g. ice_flag); supported by atl13x");
 }

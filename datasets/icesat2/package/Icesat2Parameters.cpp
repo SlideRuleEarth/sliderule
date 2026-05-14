@@ -194,30 +194,6 @@ void Atl03GranuleFields::parseResource (const char* resource)
 }
 
 /*----------------------------------------------------------------------------
- * Constructor - Atl13Fields
- *----------------------------------------------------------------------------*/
-Atl13Fields::Atl13Fields():
-    FieldMap<Field>({ {"refid",         &reference_id,      "Selects data associated only with this ATL13 Reference ID of the inland body of water"},
-                      {"name",          &name,              "Selects data associated only with this inland body of water name"},
-                      {"coord",         &coordinate,        "Selects data associated only with the inland body of water that contains this coordinate"},
-                      {"anc_fields",    &anc_fields,        "Ancillary fields from the source granules to include in the response"} }),
-    provided(false)
-{
-}
-
-/*----------------------------------------------------------------------------
- * fromLua - Atl13Fields
- *----------------------------------------------------------------------------*/
-void Atl13Fields::fromLua (lua_State* L, int index)
-{
-    if(lua_istable(L, index))
-    {
-        FieldMap<Field>::fromLua(L, index);
-        provided = true;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void Icesat2Parameters::fromLua (lua_State* L, int index)

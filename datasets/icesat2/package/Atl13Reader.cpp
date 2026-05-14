@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "ContainerRecord.h"
 #include "Atl13Reader.h"
-#include "Atl13Parameters.h"
+#include "Atl13sParameters.h"
 #include "AncillaryFields.h"
 
 using std::numeric_limits;
@@ -90,13 +90,13 @@ const struct luaL_Reg Atl13Reader::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl13Reader::luaCreate (lua_State* L)
 {
-    Atl13Parameters* _parms = NULL;
+    Atl13sParameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Atl13Parameters*>(getLuaObject(L, 2, Atl13Parameters::OBJECT_TYPE, Atl13Parameters::LUA_META_NAME));
+        _parms = dynamic_cast<Atl13sParameters*>(getLuaObject(L, 2, Atl13sParameters::OBJECT_TYPE, Atl13sParameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -126,7 +126,7 @@ void Atl13Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Atl13Parameters* _parms, bool _send_terminator):
+Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Atl13sParameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     parms(_parms),
@@ -448,7 +448,7 @@ void* Atl13Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl13Reader* reader = info->reader;
-    const Atl13Parameters* parms = reader->parms;
+    const Atl13sParameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 
