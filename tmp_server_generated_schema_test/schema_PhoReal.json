@@ -1,0 +1,153 @@
+{
+    "description": "PhoReal",
+    "columns": [
+        {
+            "type": "string",
+            "name": "time_ns",
+            "format": "timestamp-ns",
+            "role": "column",
+            "description": "GPS nanoseconds"
+        },
+        {
+            "type": "number",
+            "name": "latitude",
+            "format": "double",
+            "role": "column",
+            "description": "latitude (EPSG:7912)"
+        },
+        {
+            "type": "number",
+            "name": "longitude",
+            "format": "double",
+            "role": "column",
+            "description": "longitude (EPSG:7912)"
+        },
+        {
+            "type": "integer",
+            "name": "segment_id_beg",
+            "format": "int32",
+            "role": "column",
+            "description": "first segment in extent"
+        },
+        {
+            "type": "number",
+            "name": "x_atc",
+            "format": "double",
+            "role": "column",
+            "description": "along-track distance (m)"
+        },
+        {
+            "type": "number",
+            "name": "y_atc",
+            "format": "float",
+            "role": "column",
+            "description": "across-track distance (m)"
+        },
+        {
+            "type": "integer",
+            "name": "photon_start",
+            "format": "uint32",
+            "role": "column",
+            "description": "photon index of start of extent"
+        },
+        {
+            "type": "integer",
+            "name": "photon_count",
+            "format": "uint32",
+            "role": "column",
+            "description": "number of photons in extent"
+        },
+        {
+            "type": "integer",
+            "name": "pflags",
+            "format": "uint16",
+            "role": "column",
+            "description": "processing flags"
+        },
+        {
+            "type": "integer",
+            "name": "ground_photon_count",
+            "format": "uint32",
+            "role": "column",
+            "description": "number of ground photons"
+        },
+        {
+            "type": "integer",
+            "name": "vegetation_photon_count",
+            "format": "uint32",
+            "role": "column",
+            "description": "number of vegetation photons"
+        },
+        {
+            "type": "integer",
+            "name": "landcover",
+            "format": "uint8",
+            "role": "column",
+            "description": "land cover classification"
+        },
+        {
+            "type": "integer",
+            "name": "snowcover",
+            "format": "uint8",
+            "role": "column",
+            "description": "snow cover classification"
+        },
+        {
+            "type": "number",
+            "name": "solar_elevation",
+            "format": "float",
+            "role": "column",
+            "description": "solar elevation angle (deg)"
+        },
+        {
+            "type": "number",
+            "name": "h_te_median",
+            "format": "float",
+            "role": "column",
+            "description": "median terrain height (m)"
+        },
+        {
+            "type": "number",
+            "name": "h_max_canopy",
+            "format": "float",
+            "role": "column",
+            "description": "maximum canopy height (m)"
+        },
+        {
+            "type": "number",
+            "name": "h_min_canopy",
+            "format": "float",
+            "role": "column",
+            "description": "minimum canopy height (m)"
+        },
+        {
+            "type": "number",
+            "name": "h_mean_canopy",
+            "format": "float",
+            "role": "column",
+            "description": "mean canopy height (m)"
+        },
+        {
+            "type": "number",
+            "name": "h_canopy",
+            "format": "float",
+            "role": "column",
+            "description": "98th percentile canopy height (m)"
+        },
+        {
+            "type": "number",
+            "name": "canopy_openness",
+            "format": "float",
+            "role": "column",
+            "description": "canopy openness (std dev of relief)"
+        },
+        {
+            "type": "array",
+            "items_format": "float",
+            "name": "canopy_h_metrics",
+            "items_type": "number",
+            "role": "column",
+            "description": "canopy height percentile metrics"
+        }
+    ]
+}

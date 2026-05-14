@@ -1,0 +1,68 @@
+{
+    "columns": [
+        {
+            "format": "timestamp-ns",
+            "description": "GPS nanoseconds",
+            "type": "string",
+            "name": "time_ns",
+            "role": "column"
+        },
+        {
+            "format": "double",
+            "description": "latitude (EPSG:7912)",
+            "type": "number",
+            "name": "latitude",
+            "role": "column"
+        },
+        {
+            "format": "double",
+            "description": "longitude (EPSG:7912)",
+            "type": "number",
+            "name": "longitude",
+            "role": "column"
+        },
+        {
+            "format": "int32",
+            "description": "first segment in extent",
+            "type": "integer",
+            "name": "segment_id_beg",
+            "role": "column"
+        },
+        {
+            "format": "double",
+            "description": "along-track distance (m)",
+            "type": "number",
+            "name": "x_atc",
+            "role": "column"
+        },
+        {
+            "format": "float",
+            "description": "across-track distance (m)",
+            "type": "number",
+            "name": "y_atc",
+            "role": "column"
+        },
+        {
+            "format": "float",
+            "description": "top of reflective surface (m)",
+            "type": "number",
+            "name": "top_of_surface",
+            "role": "column"
+        },
+        {
+            "format": "float",
+            "description": "median ground elevation (m)",
+            "type": "number",
+            "name": "median_ground",
+            "role": "column"
+        },
+        {
+            "format": "uint16",
+            "description": "processing flags",
+            "type": "integer",
+            "name": "pflags",
+            "role": "column"
+        }
+    ],
+    "description": "SurfaceBlanket"
+}

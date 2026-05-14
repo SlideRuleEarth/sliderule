@@ -1,0 +1,772 @@
+{
+  "selector": "atl13",
+  "hdf5_subgroup": "gtxx",
+  "description": "Inland water surface fields from ATL13.",
+  "field_count": 79,
+  "fields": [
+    {
+      "name": "alpha_mle",
+      "hdf5_path": "/gt1l/alpha_mle",
+      "type": "float32",
+      "shape": null,
+      "description": "Maximum likelihood alpha",
+      "unit": "m^-1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Section 5.3.4 (A)"
+    },
+    {
+      "name": "atl13refid",
+      "hdf5_path": "/gt1l/atl13refid",
+      "type": "int64",
+      "shape": null,
+      "description": "ATL13 Reference ID",
+      "fill_value": 0,
+      "source": "ATL13 ATBD, Section 5.3.1 (C)"
+    },
+    {
+      "name": "bottom_lat",
+      "hdf5_path": "/gt1l/bottom_lat",
+      "type": "float64",
+      "shape": null,
+      "description": "Bottom latitude",
+      "standard_name": "latitude",
+      "unit": "degrees",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "bottom_lon",
+      "hdf5_path": "/gt1l/bottom_lon",
+      "type": "float64",
+      "shape": null,
+      "description": "Mean longitude",
+      "standard_name": "longitude",
+      "unit": "degrees",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "cloud_flag_asr_atl09",
+      "hdf5_path": "/gt1l/cloud_flag_asr_atl09",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Flag ASR",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "cloud_flag_atm_atl09",
+      "hdf5_path": "/gt1l/cloud_flag_atm_atl09",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Flag Atm",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "cycle_number",
+      "hdf5_path": "/gt1l/cycle_number",
+      "type": "int8",
+      "shape": null,
+      "description": "Cycle Number",
+      "source": "ATL03"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Delta Time",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL03"
+    },
+    {
+      "name": "err_ht_water_surf",
+      "hdf5_path": "/gt1l/err_ht_water_surf",
+      "type": "float32",
+      "shape": null,
+      "description": "Height Error",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "section 5.3.3 (C)"
+    },
+    {
+      "name": "err_slope_trk",
+      "hdf5_path": "/gt1l/err_slope_trk",
+      "type": "float32",
+      "shape": null,
+      "description": "Slope Error",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "section 5.3.3 (C)"
+    },
+    {
+      "name": "ht_ortho",
+      "hdf5_path": "/gt1l/ht_ortho",
+      "type": "float32",
+      "shape": null,
+      "description": "Orthometric Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "ht_water_surf",
+      "hdf5_path": "/gt1l/ht_water_surf",
+      "type": "float32",
+      "shape": null,
+      "description": "Water surface height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "ice_flag",
+      "hdf5_path": "/gt1l/ice_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "Ice Flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, section 5.2"
+    },
+    {
+      "name": "inland_water_body_id",
+      "hdf5_path": "/gt1l/inland_water_body_id",
+      "type": "int32",
+      "shape": null,
+      "description": "Body ID",
+      "fill_value": 2147483647,
+      "source": "ATL13 ATBD, Section 5.3.1 (C)"
+    },
+    {
+      "name": "inland_water_body_region",
+      "hdf5_path": "/gt1l/inland_water_body_region",
+      "type": "int32",
+      "shape": null,
+      "description": "Body region",
+      "fill_value": 2147483647,
+      "source": "ATL13 ATBD, Section 5.3.1 (A)"
+    },
+    {
+      "name": "inland_water_body_size",
+      "hdf5_path": "/gt1l/inland_water_body_size",
+      "type": "int8",
+      "shape": null,
+      "description": "Body size",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.1 (C)"
+    },
+    {
+      "name": "inland_water_body_source",
+      "hdf5_path": "/gt1l/inland_water_body_source",
+      "type": "int8",
+      "shape": null,
+      "description": "Body source",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.1 (C)"
+    },
+    {
+      "name": "inland_water_body_type",
+      "hdf5_path": "/gt1l/inland_water_body_type",
+      "type": "int8",
+      "shape": null,
+      "description": "Body type",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.1 (C)"
+    },
+    {
+      "name": "layer_flag_atl09",
+      "hdf5_path": "/gt1l/layer_flag_atl09",
+      "type": "int8",
+      "shape": null,
+      "description": "Consolidated cloud flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "met_ts_atl09",
+      "hdf5_path": "/gt1l/met_ts_atl09",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface temperature",
+      "standard_name": "temperature",
+      "unit": "K",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "met_wind10_atl09",
+      "hdf5_path": "/gt1l/met_wind10_atl09",
+      "type": "float32",
+      "shape": null,
+      "description": "Wind speed magnitude at 10m",
+      "standard_name": "Wind speed",
+      "unit": "m/s",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "met_wind10_atl13",
+      "hdf5_path": "/gt1l/met_wind10_atl13",
+      "type": "float32",
+      "shape": null,
+      "description": "Wind speed magnitude at 10m",
+      "standard_name": "Wind speed",
+      "unit": "m/s",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "qf_bckgrd",
+      "hdf5_path": "/gt1l/qf_bckgrd",
+      "type": "int8",
+      "shape": null,
+      "description": "Background Quality Flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_bias_em",
+      "hdf5_path": "/gt1l/qf_bias_em",
+      "type": "int8",
+      "shape": null,
+      "description": "EM Bias Quality Flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_bias_fit",
+      "hdf5_path": "/gt1l/qf_bias_fit",
+      "type": "int8",
+      "shape": null,
+      "description": "Height Bias Fit Quality Flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_cloud",
+      "hdf5_path": "/gt1l/qf_cloud",
+      "type": "int8",
+      "shape": null,
+      "description": "Consolidated cloud flag",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "qf_ht_adj",
+      "hdf5_path": "/gt1l/qf_ht_adj",
+      "type": "int8",
+      "shape": null,
+      "description": "Height adjustment Quality Flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.5 (C)"
+    },
+    {
+      "name": "qf_ice",
+      "hdf5_path": "/gt1l/qf_ice",
+      "type": "int8",
+      "shape": null,
+      "description": "Ice Quality Flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_iwp",
+      "hdf5_path": "/gt1l/qf_iwp",
+      "type": "int8",
+      "shape": null,
+      "description": "Inland Water Segment Processing Flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_lseg_length",
+      "hdf5_path": "/gt1l/qf_lseg_length",
+      "type": "int8",
+      "shape": null,
+      "description": "Long Segment Length flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_spec_width",
+      "hdf5_path": "/gt1l/qf_spec_width",
+      "type": "int8",
+      "shape": null,
+      "description": "Spectral width Flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 4.8.8"
+    },
+    {
+      "name": "qf_sseg_length",
+      "hdf5_path": "/gt1l/qf_sseg_length",
+      "type": "int8",
+      "shape": null,
+      "description": "Short Segment Length flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD"
+    },
+    {
+      "name": "qf_stdev_lseg",
+      "hdf5_path": "/gt1l/qf_stdev_lseg",
+      "type": "int8",
+      "shape": null,
+      "description": "observed standard deviation quality flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.5"
+    },
+    {
+      "name": "qf_stdev_vlseg",
+      "hdf5_path": "/gt1l/qf_stdev_vlseg",
+      "type": "int8",
+      "shape": null,
+      "description": "observed standard deviation quality flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.5"
+    },
+    {
+      "name": "qf_subsurf_anomaly",
+      "hdf5_path": "/gt1l/qf_subsurf_anomaly",
+      "type": "int8",
+      "shape": null,
+      "description": "Subsurface Anomaly Quality Flag",
+      "fill_value": 127,
+      "source": "Inland Water ATBD 5.3.4(A)"
+    },
+    {
+      "name": "qf_subsurface_attenuation",
+      "hdf5_path": "/gt1l/qf_subsurface_attenuation",
+      "type": "int8",
+      "shape": null,
+      "description": "Subsurface attenuation quality flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.4 (A)"
+    },
+    {
+      "name": "qf_subsurface_backscat_ampltd",
+      "hdf5_path": "/gt1l/qf_subsurface_backscat_ampltd",
+      "type": "int8",
+      "shape": null,
+      "description": "Subsurface backscatter amplitude quality flag",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.4 (A)"
+    },
+    {
+      "name": "rgt",
+      "hdf5_path": "/gt1l/rgt",
+      "type": "int16",
+      "shape": null,
+      "description": "Reference Ground track",
+      "source": "ATL03"
+    },
+    {
+      "name": "segment_apparent_ht",
+      "hdf5_path": "/gt1l/segment_apparent_ht",
+      "type": "float32",
+      "shape": null,
+      "description": "Apparent height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_apparent_stdev",
+      "hdf5_path": "/gt1l/segment_apparent_stdev",
+      "type": "float32",
+      "shape": null,
+      "description": "Apparent StDev",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "section 5.3.2 (C)"
+    },
+    {
+      "name": "segment_azimuth",
+      "hdf5_path": "/gt1l/segment_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "Azimuth",
+      "standard_name": "azimuth",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_bias_em",
+      "hdf5_path": "/gt1l/segment_bias_em",
+      "type": "float64",
+      "shape": null,
+      "description": "Electromagnetic bias",
+      "unit": "meters",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_bias_fit",
+      "hdf5_path": "/gt1l/segment_bias_fit",
+      "type": "float32",
+      "shape": null,
+      "description": "Goodness of fit bias",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_dac",
+      "hdf5_path": "/gt1l/segment_dac",
+      "type": "float32",
+      "shape": null,
+      "description": "Segment DAC",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATBD Section 5.3.5A"
+    },
+    {
+      "name": "segment_dem_ht",
+      "hdf5_path": "/gt1l/segment_dem_ht",
+      "type": "float32",
+      "shape": null,
+      "description": "DEM Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5"
+    },
+    {
+      "name": "segment_dem_source",
+      "hdf5_path": "/gt1l/segment_dem_source",
+      "type": "int32",
+      "shape": null,
+      "description": "dem source flag",
+      "fill_value": 2147483647,
+      "source": "ATL13 ATBD, Section 5.3.5"
+    },
+    {
+      "name": "segment_fpb_correction",
+      "hdf5_path": "/gt1l/segment_fpb_correction",
+      "type": "float64",
+      "shape": null,
+      "description": "First photon bias correction",
+      "unit": "meters",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_full_sat_fract",
+      "hdf5_path": "/gt1l/segment_full_sat_fract",
+      "type": "float32",
+      "shape": null,
+      "description": "Full Saturation Fraction",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.2"
+    },
+    {
+      "name": "segment_geoid",
+      "hdf5_path": "/gt1l/segment_geoid",
+      "type": "float32",
+      "shape": null,
+      "description": "Segment Geoid",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD, Section 6.3.8"
+    },
+    {
+      "name": "segment_geoid_free2mean",
+      "hdf5_path": "/gt1l/segment_geoid_free2mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Geoid Free-to-Mean conversion",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD, Section 6.3.8"
+    },
+    {
+      "name": "segment_id_beg",
+      "hdf5_path": "/gt1l/segment_id_beg",
+      "type": "int32",
+      "shape": null,
+      "description": "First ATL03 Segment ID",
+      "source": "ATL03"
+    },
+    {
+      "name": "segment_id_end",
+      "hdf5_path": "/gt1l/segment_id_end",
+      "type": "int32",
+      "shape": null,
+      "description": "Last ATL03 Segment ID",
+      "source": "ATL03"
+    },
+    {
+      "name": "segment_lat",
+      "hdf5_path": "/gt1l/segment_lat",
+      "type": "float64",
+      "shape": null,
+      "description": "Latitude",
+      "standard_name": "latitude",
+      "unit": "degrees",
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_lon",
+      "hdf5_path": "/gt1l/segment_lon",
+      "type": "float64",
+      "shape": null,
+      "description": "Longitude",
+      "standard_name": "longitude",
+      "unit": "degrees",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_near_sat_fract",
+      "hdf5_path": "/gt1l/segment_near_sat_fract",
+      "type": "float32",
+      "shape": null,
+      "description": "Near Saturation Fraction",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.2"
+    },
+    {
+      "name": "segment_podppd_flag",
+      "hdf5_path": "/gt1l/segment_podppd_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "POD_PPD Flag",
+      "fill_value": 0,
+      "source": "ATL02, ANC04, ANC05"
+    },
+    {
+      "name": "segment_quality",
+      "hdf5_path": "/gt1l/segment_quality",
+      "type": "int32",
+      "shape": [
+        null,
+        4
+      ],
+      "description": "Segment quality group count",
+      "fill_value": 2147483647,
+      "source": "ATL13 ATBD, Table 5-4b",
+      "note": "Array field with 4 elements per record"
+    },
+    {
+      "name": "segment_ref_elev",
+      "hdf5_path": "/gt1l/segment_ref_elev",
+      "type": "float32",
+      "shape": null,
+      "description": "elevation",
+      "standard_name": "elevation",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_slope_trk_bdy",
+      "hdf5_path": "/gt1l/segment_slope_trk_bdy",
+      "type": "float32",
+      "shape": null,
+      "description": "Water Body Slope",
+      "unit": "m/m",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "segment_tide_earth_free2mean",
+      "hdf5_path": "/gt1l/segment_tide_earth_free2mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Earth Tide Free-to-Mean conversion",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD, Section 6.3.8"
+    },
+    {
+      "name": "segment_tide_equilibrium",
+      "hdf5_path": "/gt1l/segment_tide_equilibrium",
+      "type": "float32",
+      "shape": null,
+      "description": "Segment Tide Equilibrium",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "segment_tide_ocean",
+      "hdf5_path": "/gt1l/segment_tide_ocean",
+      "type": "float32",
+      "shape": null,
+      "description": "Segment Tide Ocean",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "significant_wave_ht",
+      "hdf5_path": "/gt1l/significant_wave_ht",
+      "type": "float32",
+      "shape": null,
+      "description": "SWH",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "section 5.3.3 (C)"
+    },
+    {
+      "name": "snow_ice_atl09",
+      "hdf5_path": "/gt1l/snow_ice_atl09",
+      "type": "int32",
+      "shape": null,
+      "description": "Snow Ice Flag",
+      "fill_value": 2147483647,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "sseg_dist_from_eq",
+      "hdf5_path": "/gt1l/sseg_dist_from_eq",
+      "type": "float64",
+      "shape": null,
+      "description": "Distance from equator to segment start",
+      "standard_name": "Along-track distance",
+      "unit": "meters",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "sseg_end_lat",
+      "hdf5_path": "/gt1l/sseg_end_lat",
+      "type": "float64",
+      "shape": null,
+      "description": "End latitude",
+      "standard_name": "latitude",
+      "unit": "degrees",
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "sseg_end_lon",
+      "hdf5_path": "/gt1l/sseg_end_lon",
+      "type": "float64",
+      "shape": null,
+      "description": "End longitude",
+      "standard_name": "longitude",
+      "unit": "degrees",
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "sseg_length",
+      "hdf5_path": "/gt1l/sseg_length",
+      "type": "float64",
+      "shape": null,
+      "description": "Segment length",
+      "standard_name": "Length",
+      "unit": "meters",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "sseg_mean_lat",
+      "hdf5_path": "/gt1l/sseg_mean_lat",
+      "type": "float64",
+      "shape": null,
+      "description": "Mean latitude",
+      "standard_name": "latitude",
+      "unit": "degrees",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "sseg_mean_lon",
+      "hdf5_path": "/gt1l/sseg_mean_lon",
+      "type": "float64",
+      "shape": null,
+      "description": "Mean longitude",
+      "standard_name": "longitude",
+      "unit": "degrees",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "sseg_mean_time",
+      "hdf5_path": "/gt1l/sseg_mean_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Mean time",
+      "standard_name": "time",
+      "unit": "Seconds since 2018-01-01",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL13 ATBD, Section 5.3.5 (A)"
+    },
+    {
+      "name": "sseg_sig_ph_cnt",
+      "hdf5_path": "/gt1l/sseg_sig_ph_cnt",
+      "type": "int64",
+      "shape": null,
+      "description": "Signal photon count",
+      "fill_value": 9223372036854775807,
+      "source": "ATL13 ATBD, Section 5"
+    },
+    {
+      "name": "sseg_start_lat",
+      "hdf5_path": "/gt1l/sseg_start_lat",
+      "type": "float64",
+      "shape": null,
+      "description": "Start latitude",
+      "standard_name": "latitude",
+      "unit": "degrees",
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "sseg_start_lon",
+      "hdf5_path": "/gt1l/sseg_start_lon",
+      "type": "float64",
+      "shape": null,
+      "description": "Start longitude",
+      "standard_name": "longitude",
+      "unit": "degrees",
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "stdev_water_surf",
+      "hdf5_path": "/gt1l/stdev_water_surf",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface StDev",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "section 5.3.3 (C)"
+    },
+    {
+      "name": "subsurface_attenuation",
+      "hdf5_path": "/gt1l/subsurface_attenuation",
+      "type": "float32",
+      "shape": null,
+      "description": "Subsurface Attenuation",
+      "unit": "m^-1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Section 5.3.4 (A)"
+    },
+    {
+      "name": "subsurface_backscat_ampltd",
+      "hdf5_path": "/gt1l/subsurface_backscat_ampltd",
+      "type": "float32",
+      "shape": null,
+      "description": "Subsurface backscatter amplitude",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Section 5.3.4 (A)"
+    },
+    {
+      "name": "transect_id",
+      "hdf5_path": "/gt1l/transect_id",
+      "type": "int8",
+      "shape": null,
+      "description": "Transect ID",
+      "fill_value": 127,
+      "source": "ATL13 ATBD, Section 5.3.2 (C)"
+    },
+    {
+      "name": "water_depth",
+      "hdf5_path": "/gt1l/water_depth",
+      "type": "float32",
+      "shape": null,
+      "description": "Water depth",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL13 ATBD, Section 5.3.4 (A)"
+    }
+  ],
+  "source_granule": "ATL13_20220608223353_11891501_007_01.h5"
+}

@@ -1,0 +1,103 @@
+{
+    "description": "SurfaceFitter",
+    "columns": [
+        {
+            "description": "GPS nanoseconds",
+            "name": "time_ns",
+            "role": "column",
+            "type": "string",
+            "format": "timestamp-ns"
+        },
+        {
+            "description": "latitude (EPSG:7912)",
+            "name": "latitude",
+            "role": "column",
+            "type": "number",
+            "format": "double"
+        },
+        {
+            "description": "longitude (EPSG:7912)",
+            "name": "longitude",
+            "role": "column",
+            "type": "number",
+            "format": "double"
+        },
+        {
+            "description": "first segment in extent",
+            "name": "segment_id_beg",
+            "role": "column",
+            "type": "integer",
+            "format": "int32"
+        },
+        {
+            "description": "along-track distance (m)",
+            "name": "x_atc",
+            "role": "column",
+            "type": "number",
+            "format": "double"
+        },
+        {
+            "description": "across-track distance (m)",
+            "name": "y_atc",
+            "role": "column",
+            "type": "number",
+            "format": "float"
+        },
+        {
+            "description": "photon index of start of extent",
+            "name": "photon_start",
+            "role": "column",
+            "type": "integer",
+            "format": "uint32"
+        },
+        {
+            "description": "processing flags",
+            "name": "pflags",
+            "role": "column",
+            "type": "integer",
+            "format": "uint16"
+        },
+        {
+            "description": "mean height from ellipsoid (m)",
+            "name": "h_mean",
+            "role": "column",
+            "type": "number",
+            "format": "float"
+        },
+        {
+            "description": "along-track slope",
+            "name": "dh_fit_dx",
+            "role": "column",
+            "type": "number",
+            "format": "float"
+        },
+        {
+            "description": "final surface window height (m)",
+            "name": "w_surface_window_final",
+            "role": "column",
+            "type": "number",
+            "format": "float"
+        },
+        {
+            "description": "number of photons in fit",
+            "name": "n_fit_photons",
+            "role": "column",
+            "type": "integer",
+            "format": "int32"
+        },
+        {
+            "description": "root-mean-square misfit (m)",
+            "name": "rms_misfit",
+            "role": "column",
+            "type": "number",
+            "format": "float"
+        },
+        {
+            "description": "height uncertainty (m)",
+            "name": "h_sigma",
+            "role": "column",
+            "type": "number",
+            "format": "float"
+        }
+    ]
+}

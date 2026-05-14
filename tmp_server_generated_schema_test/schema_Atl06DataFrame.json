@@ -1,0 +1,179 @@
+{
+    "description": "Atl06DataFrame",
+    "columns": [
+        {
+            "type": "string",
+            "name": "time_ns",
+            "format": "timestamp-ns",
+            "description": "GPS nanoseconds",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "latitude",
+            "format": "double",
+            "description": "latitude (EPSG:7912)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "longitude",
+            "format": "double",
+            "description": "longitude (EPSG:7912)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "x_atc",
+            "format": "double",
+            "description": "along-track distance (m)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "y_atc",
+            "format": "float",
+            "description": "across-track distance (m)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "h_li",
+            "format": "float",
+            "description": "land ice height (m)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "h_li_sigma",
+            "format": "float",
+            "description": "land ice height uncertainty (m)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "sigma_geo_h",
+            "format": "float",
+            "description": "total geolocation uncertainty (m)",
+            "role": "column"
+        },
+        {
+            "type": "integer",
+            "name": "atl06_quality_summary",
+            "format": "int8",
+            "description": "quality summary flag",
+            "role": "column"
+        },
+        {
+            "type": "integer",
+            "name": "segment_id",
+            "format": "uint32",
+            "description": "segment identifier",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "seg_azimuth",
+            "format": "float",
+            "description": "segment azimuth (deg)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "dh_fit_dx",
+            "format": "float",
+            "description": "along-track slope",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "h_robust_sprd",
+            "format": "float",
+            "description": "robust spread of heights (m)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "w_surface_window_final",
+            "format": "float",
+            "description": "final surface window width (m)",
+            "role": "column"
+        },
+        {
+            "type": "integer",
+            "name": "bsnow_conf",
+            "format": "int8",
+            "description": "blowing snow confidence",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "bsnow_h",
+            "format": "float",
+            "description": "blowing snow layer height (m)",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "r_eff",
+            "format": "float",
+            "description": "effective reflectance",
+            "role": "column"
+        },
+        {
+            "type": "number",
+            "name": "tide_ocean",
+            "format": "float",
+            "description": "ocean tide correction (m)",
+            "role": "column"
+        },
+        {
+            "type": "integer",
+            "name": "n_fit_photons",
+            "format": "int32",
+            "description": "number of fit photons",
+            "role": "column"
+        },
+        {
+            "type": "integer",
+            "name": "spot",
+            "format": "uint8",
+            "description": "spot number (1-6)",
+            "role": "element"
+        },
+        {
+            "type": "integer",
+            "name": "cycle",
+            "format": "uint8",
+            "description": "orbital cycle",
+            "role": "element"
+        },
+        {
+            "type": "integer",
+            "name": "region",
+            "format": "uint8",
+            "description": "region number",
+            "role": "element"
+        },
+        {
+            "type": "integer",
+            "name": "rgt",
+            "format": "uint16",
+            "description": "reference ground track",
+            "role": "element"
+        },
+        {
+            "type": "integer",
+            "name": "gt",
+            "format": "uint8",
+            "description": "ground track",
+            "role": "element"
+        },
+        {
+            "role": "element",
+            "type": "string",
+            "description": "source granule name",
+            "name": "granule"
+        }
+    ]
+}

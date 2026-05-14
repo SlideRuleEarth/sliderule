@@ -1,0 +1,95 @@
+{
+    "description": "Atl13DataFrame",
+    "columns": [
+        {
+            "format": "timestamp-ns",
+            "type": "string",
+            "name": "time_ns",
+            "role": "column",
+            "description": "GPS nanoseconds"
+        },
+        {
+            "format": "double",
+            "type": "number",
+            "name": "latitude",
+            "role": "column",
+            "description": "latitude (EPSG:7912)"
+        },
+        {
+            "format": "double",
+            "type": "number",
+            "name": "longitude",
+            "role": "column",
+            "description": "longitude (EPSG:7912)"
+        },
+        {
+            "format": "int32",
+            "type": "integer",
+            "name": "segment_id_beg",
+            "role": "column",
+            "description": "beginning segment identifier"
+        },
+        {
+            "format": "float",
+            "type": "number",
+            "name": "ht_ortho",
+            "role": "column",
+            "description": "orthometric height (m)"
+        },
+        {
+            "format": "float",
+            "type": "number",
+            "name": "ht_water_surf",
+            "role": "column",
+            "description": "water surface height (m)"
+        },
+        {
+            "format": "float",
+            "type": "number",
+            "name": "stdev_water_surf",
+            "role": "column",
+            "description": "water surface height std dev (m)"
+        },
+        {
+            "format": "float",
+            "type": "number",
+            "name": "water_depth",
+            "role": "column",
+            "description": "water depth (m)"
+        },
+        {
+            "format": "uint8",
+            "type": "integer",
+            "name": "spot",
+            "role": "element",
+            "description": "spot number (1-6)"
+        },
+        {
+            "format": "uint8",
+            "type": "integer",
+            "name": "cycle",
+            "role": "element",
+            "description": "orbital cycle"
+        },
+        {
+            "format": "uint16",
+            "type": "integer",
+            "name": "rgt",
+            "role": "element",
+            "description": "reference ground track"
+        },
+        {
+            "format": "uint8",
+            "type": "integer",
+            "name": "gt",
+            "role": "element",
+            "description": "ground track"
+        },
+        {
+            "description": "source granule name",
+            "type": "string",
+            "role": "element",
+            "name": "granule"
+        }
+    ]
+}

@@ -1,0 +1,138 @@
+{
+  "selector": "atl03_corr",
+  "hdf5_subgroup": "gtxx/geophys_corr",
+  "description": "Geophysical correction fields from ATL03 (per-segment, ~20m rate).",
+  "field_count": 13,
+  "fields": [
+    {
+      "name": "dac",
+      "hdf5_path": "/gt1l/geophys_corr/dac",
+      "type": "float32",
+      "shape": null,
+      "description": "Dynamic Atmosphere Correction",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/geophys_corr/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Elapsed GPS seconds",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "dem_flag",
+      "hdf5_path": "/gt1l/geophys_corr/dem_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "dem source flag",
+      "fill_value": 127,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "dem_h",
+      "hdf5_path": "/gt1l/geophys_corr/dem_h",
+      "type": "float32",
+      "shape": null,
+      "description": "DEM Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "geoid",
+      "hdf5_path": "/gt1l/geophys_corr/geoid",
+      "type": "float32",
+      "shape": null,
+      "description": "Geoid",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "geoid_free2mean",
+      "hdf5_path": "/gt1l/geophys_corr/geoid_free2mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Geoid Free-to-Mean conversion",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_earth",
+      "hdf5_path": "/gt1l/geophys_corr/tide_earth",
+      "type": "float32",
+      "shape": null,
+      "description": "Earth Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_earth_free2mean",
+      "hdf5_path": "/gt1l/geophys_corr/tide_earth_free2mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Earth Tide Free-to-Mean conversion",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_equilibrium",
+      "hdf5_path": "/gt1l/geophys_corr/tide_equilibrium",
+      "type": "float32",
+      "shape": null,
+      "description": "Long Period Equilibrium Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_load",
+      "hdf5_path": "/gt1l/geophys_corr/tide_load",
+      "type": "float32",
+      "shape": null,
+      "description": "Load Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_oc_pole",
+      "hdf5_path": "/gt1l/geophys_corr/tide_oc_pole",
+      "type": "float32",
+      "shape": null,
+      "description": "Ocean Pole Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_ocean",
+      "hdf5_path": "/gt1l/geophys_corr/tide_ocean",
+      "type": "float32",
+      "shape": null,
+      "description": "Ocean Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "tide_pole",
+      "hdf5_path": "/gt1l/geophys_corr/tide_pole",
+      "type": "float32",
+      "shape": null,
+      "description": "Solid Earth Pole Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    }
+  ],
+  "source_granule": "ATL03_20220601014607_10681513_007_01.h5"
+}

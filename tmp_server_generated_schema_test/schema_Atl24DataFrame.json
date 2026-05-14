@@ -1,0 +1,173 @@
+{
+    "columns": [
+        {
+            "role": "column",
+            "type": "integer",
+            "format": "int8",
+            "name": "class_ph",
+            "description": "photon classification"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "confidence",
+            "description": "classification confidence"
+        },
+        {
+            "role": "column",
+            "type": "string",
+            "format": "timestamp-ns",
+            "name": "time_ns",
+            "description": "GPS nanoseconds"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "lat_ph",
+            "description": "photon latitude"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "lon_ph",
+            "description": "photon longitude"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "float",
+            "name": "ortho_h",
+            "description": "orthometric height (m)"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "float",
+            "name": "surface_h",
+            "description": "surface height (m)"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "x_atc",
+            "description": "along-track distance (m)"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "float",
+            "name": "y_atc",
+            "description": "across-track distance (m)"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint8",
+            "name": "spot",
+            "description": "spot number (1-6)"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint8",
+            "name": "cycle",
+            "description": "orbital cycle"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint8",
+            "name": "region",
+            "description": "region number"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint16",
+            "name": "rgt",
+            "description": "reference ground track"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint8",
+            "name": "gt",
+            "description": "ground track"
+        },
+        {
+            "type": "string",
+            "role": "element",
+            "name": "granule",
+            "description": "source granule name"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "condition": "!atl24.compact",
+            "format": "float",
+            "name": "ellipse_h",
+            "description": "ellipsoidal height (m)"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "!atl24.compact",
+            "format": "uint8",
+            "name": "invalid_kd",
+            "description": "invalid Kd flag"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "!atl24.compact",
+            "format": "uint8",
+            "name": "invalid_wind_speed",
+            "description": "invalid wind speed flag"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "!atl24.compact",
+            "format": "uint8",
+            "name": "low_confidence_flag",
+            "description": "low confidence flag"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "!atl24.compact",
+            "format": "uint8",
+            "name": "night_flag",
+            "description": "night flag"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "!atl24.compact",
+            "format": "uint8",
+            "name": "sensor_depth_exceeded",
+            "description": "sensor depth exceeded flag"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "condition": "!atl24.compact",
+            "format": "float",
+            "name": "sigma_thu",
+            "description": "total horizontal uncertainty (m)"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "condition": "!atl24.compact",
+            "format": "float",
+            "name": "sigma_tvu",
+            "description": "total vertical uncertainty (m)"
+        }
+    ],
+    "description": "Atl24DataFrame"
+}

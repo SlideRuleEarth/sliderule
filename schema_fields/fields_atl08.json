@@ -1,0 +1,897 @@
+{
+  "selector": "atl08",
+  "hdf5_subgroup": "gtxx/land_segments",
+  "description": "Land/vegetation segment fields from ATL08, including sub-groups.",
+  "field_count": 92,
+  "fields": [
+    {
+      "name": "asr",
+      "hdf5_path": "/gt1l/land_segments/asr",
+      "type": "float32",
+      "shape": null,
+      "description": "apparent surface reflectance",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL09"
+    },
+    {
+      "name": "atlas_pa",
+      "hdf5_path": "/gt1l/land_segments/atlas_pa",
+      "type": "float32",
+      "shape": null,
+      "description": "atlas pointing angle",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "beam_azimuth",
+      "hdf5_path": "/gt1l/land_segments/beam_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "beam azimuth",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "beam_coelev",
+      "hdf5_path": "/gt1l/land_segments/beam_coelev",
+      "type": "float32",
+      "shape": null,
+      "description": "beam co-elevation",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "brightness_flag",
+      "hdf5_path": "/gt1l/land_segments/brightness_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "brightness flag",
+      "source": "Land ATBD Brightness_flag"
+    },
+    {
+      "name": "canopy/can_noise",
+      "hdf5_path": "/gt1l/land_segments/canopy/can_noise",
+      "type": "float32",
+      "shape": null,
+      "description": "canopy noise rate",
+      "unit": "count/meter",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/can_quality_score",
+      "hdf5_path": "/gt1l/land_segments/canopy/can_quality_score",
+      "type": "int8",
+      "shape": null,
+      "description": "canopy quality score",
+      "fill_value": 127,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/canopy_h_metrics",
+      "hdf5_path": "/gt1l/land_segments/canopy/canopy_h_metrics",
+      "type": "float32",
+      "shape": [
+        null,
+        18
+      ],
+      "description": "canopy height metrics",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters",
+      "note": "Array field with 18 elements per record"
+    },
+    {
+      "name": "canopy/canopy_h_metrics_abs",
+      "hdf5_path": "/gt1l/land_segments/canopy/canopy_h_metrics_abs",
+      "type": "float32",
+      "shape": [
+        null,
+        18
+      ],
+      "description": "canopy absolute height metrics",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters",
+      "note": "Array field with 18 elements per record"
+    },
+    {
+      "name": "canopy/canopy_openness",
+      "hdf5_path": "/gt1l/land_segments/canopy/canopy_openness",
+      "type": "float32",
+      "shape": null,
+      "description": "canopy openness",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/canopy_rh_conf",
+      "hdf5_path": "/gt1l/land_segments/canopy/canopy_rh_conf",
+      "type": "int8",
+      "shape": null,
+      "description": "canopy relative height confidence",
+      "source": "Land/Veg ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/centroid_height",
+      "hdf5_path": "/gt1l/land_segments/canopy/centroid_height",
+      "type": "float32",
+      "shape": null,
+      "description": "centroid height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_canopy",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_canopy",
+      "type": "float32",
+      "shape": null,
+      "description": "height canopy",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_canopy_20m",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_canopy_20m",
+      "type": "float32",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "canopy height 20m",
+      "unit": "m",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATBD Vegetation Parameters",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "canopy/h_canopy_abs",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_canopy_abs",
+      "type": "float32",
+      "shape": null,
+      "description": "absolute segment canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_canopy_quad",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_canopy_quad",
+      "type": "float32",
+      "shape": null,
+      "description": "canopy quadratic mean",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_canopy_uncertainty",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_canopy_uncertainty",
+      "type": "float32",
+      "shape": null,
+      "description": "segment canopy height uncertainty",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_dif_canopy",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_dif_canopy",
+      "type": "float32",
+      "shape": null,
+      "description": "canopy diff to median height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_max_canopy",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_max_canopy",
+      "type": "float32",
+      "shape": null,
+      "description": "maximum canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_max_canopy_abs",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_max_canopy_abs",
+      "type": "float32",
+      "shape": null,
+      "description": "absolute maximum canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_mean_canopy",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_mean_canopy",
+      "type": "float32",
+      "shape": null,
+      "description": "mean canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_mean_canopy_abs",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_mean_canopy_abs",
+      "type": "float32",
+      "shape": null,
+      "description": "absolute mean canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_median_canopy",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_median_canopy",
+      "type": "float32",
+      "shape": null,
+      "description": "median canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_median_canopy_abs",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_median_canopy_abs",
+      "type": "float32",
+      "shape": null,
+      "description": "absolute segment median canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_min_canopy",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_min_canopy",
+      "type": "float32",
+      "shape": null,
+      "description": "minimum canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/h_min_canopy_abs",
+      "hdf5_path": "/gt1l/land_segments/canopy/h_min_canopy_abs",
+      "type": "float32",
+      "shape": null,
+      "description": "absolute minimum canopy height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/n_ca_photons",
+      "hdf5_path": "/gt1l/land_segments/canopy/n_ca_photons",
+      "type": "int32",
+      "shape": null,
+      "description": "number canopy photons",
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/n_toc_photons",
+      "hdf5_path": "/gt1l/land_segments/canopy/n_toc_photons",
+      "type": "int32",
+      "shape": null,
+      "description": "number top of canopy photons",
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/photon_rate_can",
+      "hdf5_path": "/gt1l/land_segments/canopy/photon_rate_can",
+      "type": "float32",
+      "shape": null,
+      "description": "Canopy photon rate",
+      "unit": "s^-1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/photon_rate_can_nr",
+      "hdf5_path": "/gt1l/land_segments/canopy/photon_rate_can_nr",
+      "type": "float32",
+      "shape": null,
+      "description": "noise reduced number of canopy photons",
+      "unit": "s^-1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/segment_cover",
+      "hdf5_path": "/gt1l/land_segments/canopy/segment_cover",
+      "type": "int16",
+      "shape": null,
+      "description": "canopy cover percentage",
+      "fill_value": 32767,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "canopy/subset_can_flag",
+      "hdf5_path": "/gt1l/land_segments/canopy/subset_can_flag",
+      "type": "int8",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "subset canopy flag",
+      "fill_value": 127,
+      "source": "Land ATBD Vegetation Parameters",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "canopy/toc_roughness",
+      "hdf5_path": "/gt1l/land_segments/canopy/toc_roughness",
+      "type": "float32",
+      "shape": null,
+      "description": "top of canopy roughness",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Vegetation Parameters"
+    },
+    {
+      "name": "cloud_flag_atm",
+      "hdf5_path": "/gt1l/land_segments/cloud_flag_atm",
+      "type": "int8",
+      "shape": null,
+      "description": "cloud flag atm",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "cloud_fold_flag",
+      "hdf5_path": "/gt1l/land_segments/cloud_fold_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "cloud folding flag",
+      "source": "ATL09"
+    },
+    {
+      "name": "column_od_asr",
+      "hdf5_path": "/gt1l/land_segments/column_od_asr",
+      "type": "float32",
+      "shape": null,
+      "description": "Column optical depth from ASR",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL09"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/land_segments/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "mean_pass_time",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "Land ATBD segment parameters for Land Products"
+    },
+    {
+      "name": "delta_time_beg",
+      "hdf5_path": "/gt1l/land_segments/delta_time_beg",
+      "type": "float64",
+      "shape": null,
+      "description": "delta time begin",
+      "unit": "seconds since 2018-01-01",
+      "source": "Derived (gps_seconds-gps_sec_offset)"
+    },
+    {
+      "name": "delta_time_end",
+      "hdf5_path": "/gt1l/land_segments/delta_time_end",
+      "type": "float64",
+      "shape": null,
+      "description": "delta time end",
+      "unit": "seconds since 2018-01-01",
+      "source": "Derived (gps_seconds-gps_sec_offset)"
+    },
+    {
+      "name": "dem_flag",
+      "hdf5_path": "/gt1l/land_segments/dem_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "dem source flag",
+      "source": "Atmosphere ATBD"
+    },
+    {
+      "name": "dem_h",
+      "hdf5_path": "/gt1l/land_segments/dem_h",
+      "type": "float32",
+      "shape": null,
+      "description": "dem height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Arctic, Antarctic, Global, MSS DEM"
+    },
+    {
+      "name": "dem_removal_flag",
+      "hdf5_path": "/gt1l/land_segments/dem_removal_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "dem removal flag",
+      "source": "ATBD Segment reference DEM removal flag"
+    },
+    {
+      "name": "h_dif_ref",
+      "hdf5_path": "/gt1l/land_segments/h_dif_ref",
+      "type": "float32",
+      "shape": null,
+      "description": "h dif from reference",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD segment parameters for Land Products"
+    },
+    {
+      "name": "last_seg_extend",
+      "hdf5_path": "/gt1l/land_segments/last_seg_extend",
+      "type": "float32",
+      "shape": null,
+      "description": "last segment extended",
+      "standard_name": "last_seg_extend",
+      "unit": "kilometers",
+      "source": "Land ATBD Preparing ATL03 data for input"
+    },
+    {
+      "name": "latitude",
+      "hdf5_path": "/gt1l/land_segments/latitude",
+      "type": "float32",
+      "shape": null,
+      "description": "latitude",
+      "standard_name": "latitude",
+      "unit": "degrees",
+      "source": "Land ATBD segment parameters for Land Products"
+    },
+    {
+      "name": "latitude_20m",
+      "hdf5_path": "/gt1l/land_segments/latitude_20m",
+      "type": "float32",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "latitude of 20m segments",
+      "unit": "degree",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATBD Geosegment latitude",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "layer_flag",
+      "hdf5_path": "/gt1l/land_segments/layer_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "consolidated cloud flag",
+      "source": "ATL09"
+    },
+    {
+      "name": "longitude",
+      "hdf5_path": "/gt1l/land_segments/longitude",
+      "type": "float32",
+      "shape": null,
+      "description": "longitude",
+      "standard_name": "longitude",
+      "unit": "degrees",
+      "source": "Land ATBD segment parameters for Land Products"
+    },
+    {
+      "name": "longitude_20m",
+      "hdf5_path": "/gt1l/land_segments/longitude_20m",
+      "type": "float32",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "longitude of 20m segments",
+      "unit": "degree",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATBD Geosegment longitude",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "msw_flag",
+      "hdf5_path": "/gt1l/land_segments/msw_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "multiple scattering warning flag",
+      "source": "ATL09"
+    },
+    {
+      "name": "n_seg_ph",
+      "hdf5_path": "/gt1l/land_segments/n_seg_ph",
+      "type": "int32",
+      "shape": null,
+      "description": "number of photons",
+      "source": "Derived"
+    },
+    {
+      "name": "night_flag",
+      "hdf5_path": "/gt1l/land_segments/night_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "night flag",
+      "source": "Land ATBD Night_Flag"
+    },
+    {
+      "name": "permafrost_alt",
+      "hdf5_path": "/gt1l/land_segments/permafrost_alt",
+      "type": "float32",
+      "shape": null,
+      "description": "permafrost active layer thickness",
+      "standard_name": "permafrost_alt",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ESA CCI, ANC47"
+    },
+    {
+      "name": "permafrost_prob",
+      "hdf5_path": "/gt1l/land_segments/permafrost_prob",
+      "type": "int8",
+      "shape": null,
+      "description": "permafrost probaility",
+      "standard_name": "permafrost_prob",
+      "unit": "percent",
+      "fill_value": 127,
+      "source": "ESA CCI, ANC47"
+    },
+    {
+      "name": "ph_ndx_beg",
+      "hdf5_path": "/gt1l/land_segments/ph_ndx_beg",
+      "type": "int64",
+      "shape": null,
+      "description": "photon index begin",
+      "source": "Derived"
+    },
+    {
+      "name": "ph_removal_flag",
+      "hdf5_path": "/gt1l/land_segments/ph_removal_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "ph removal flag",
+      "source": "ATBD Final photon classification QA"
+    },
+    {
+      "name": "psf_flag",
+      "hdf5_path": "/gt1l/land_segments/psf_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "point spread function flag",
+      "source": "Land/Veg ATBD Refine Ground Estimates"
+    },
+    {
+      "name": "rgt",
+      "hdf5_path": "/gt1l/land_segments/rgt",
+      "type": "int16",
+      "shape": null,
+      "description": "reference ground track",
+      "source": "Operations"
+    },
+    {
+      "name": "sat_flag",
+      "hdf5_path": "/gt1l/land_segments/sat_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "saturation flag",
+      "source": "ATL03, Land ATBD Saturation Flag"
+    },
+    {
+      "name": "segment_id_beg",
+      "hdf5_path": "/gt1l/land_segments/segment_id_beg",
+      "type": "int32",
+      "shape": null,
+      "description": "begin geolocation segment bin",
+      "source": "ATL03"
+    },
+    {
+      "name": "segment_id_end",
+      "hdf5_path": "/gt1l/land_segments/segment_id_end",
+      "type": "int32",
+      "shape": null,
+      "description": "end geolocation segment bin",
+      "source": "ATL03"
+    },
+    {
+      "name": "segment_landcover",
+      "hdf5_path": "/gt1l/land_segments/segment_landcover",
+      "type": "uint8",
+      "shape": null,
+      "description": "segment landcover",
+      "source": "ATL08 ATBD segment_landcover"
+    },
+    {
+      "name": "segment_snowcover",
+      "hdf5_path": "/gt1l/land_segments/segment_snowcover",
+      "type": "uint8",
+      "shape": null,
+      "description": "segment snowcover",
+      "source": "ATL08 ATBD segment_snowcover"
+    },
+    {
+      "name": "segment_watermask",
+      "hdf5_path": "/gt1l/land_segments/segment_watermask",
+      "type": "uint8",
+      "shape": null,
+      "description": "segment watermask",
+      "source": "ATL08 ATBD segment_watermask"
+    },
+    {
+      "name": "sigma_across",
+      "hdf5_path": "/gt1l/land_segments/sigma_across",
+      "type": "float32",
+      "shape": null,
+      "description": "sigma atlas y",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "sigma_along",
+      "hdf5_path": "/gt1l/land_segments/sigma_along",
+      "type": "float32",
+      "shape": null,
+      "description": "sigma atlas x",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "sigma_atlas_land",
+      "hdf5_path": "/gt1l/land_segments/sigma_atlas_land",
+      "type": "float32",
+      "shape": null,
+      "description": "sigma atlas land",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Refine Ground Estimates"
+    },
+    {
+      "name": "sigma_h",
+      "hdf5_path": "/gt1l/land_segments/sigma_h",
+      "type": "float32",
+      "shape": null,
+      "description": "height uncertainty",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "sigma_topo",
+      "hdf5_path": "/gt1l/land_segments/sigma_topo",
+      "type": "float32",
+      "shape": null,
+      "description": "sigma atlas topo",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Refine Ground Estimates"
+    },
+    {
+      "name": "snr",
+      "hdf5_path": "/gt1l/land_segments/snr",
+      "type": "float32",
+      "shape": null,
+      "description": "signal to noise ratio",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATBD Noise filtering via DRAGANN"
+    },
+    {
+      "name": "solar_azimuth",
+      "hdf5_path": "/gt1l/land_segments/solar_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "solar azimuth",
+      "unit": "degrees_east",
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "solar_elevation",
+      "hdf5_path": "/gt1l/land_segments/solar_elevation",
+      "type": "float32",
+      "shape": null,
+      "description": "solar elevation",
+      "unit": "degrees",
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "surf_type",
+      "hdf5_path": "/gt1l/land_segments/surf_type",
+      "type": "int8",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "surface type",
+      "source": "ATL03 ATBD",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "terrain/h_te_best_fit",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_best_fit",
+      "type": "float32",
+      "shape": null,
+      "description": "segment terrain height best fit",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_best_fit_20m",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_best_fit_20m",
+      "type": "float32",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "best fit 20m",
+      "unit": "m",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "terrain/h_te_interp",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_interp",
+      "type": "float32",
+      "shape": null,
+      "description": "interpolated terrain surface height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_max",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_max",
+      "type": "float32",
+      "shape": null,
+      "description": "maximum terrain height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_mean",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_mean",
+      "type": "float32",
+      "shape": null,
+      "description": "mean terrain height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_median",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_median",
+      "type": "float32",
+      "shape": null,
+      "description": "median terrain height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_min",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_min",
+      "type": "float32",
+      "shape": null,
+      "description": "minimum terrain height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_mode",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_mode",
+      "type": "float32",
+      "shape": null,
+      "description": "mode of terrain heights",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_rh25",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_rh25",
+      "type": "float32",
+      "shape": null,
+      "description": "Terrain height 25% percentile",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_skew",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_skew",
+      "type": "float32",
+      "shape": null,
+      "description": "skew of terrain heights",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_std",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_std",
+      "type": "float32",
+      "shape": null,
+      "description": "segment terrain roughness",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/h_te_uncertainty",
+      "hdf5_path": "/gt1l/land_segments/terrain/h_te_uncertainty",
+      "type": "float32",
+      "shape": null,
+      "description": "uncertainty of h_te_mean",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/n_te_photons",
+      "hdf5_path": "/gt1l/land_segments/terrain/n_te_photons",
+      "type": "int32",
+      "shape": null,
+      "description": "number of ground photons",
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/photon_rate_te",
+      "hdf5_path": "/gt1l/land_segments/terrain/photon_rate_te",
+      "type": "float32",
+      "shape": null,
+      "description": "Terrain photon rate",
+      "unit": "s^-1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/subset_te_flag",
+      "hdf5_path": "/gt1l/land_segments/terrain/subset_te_flag",
+      "type": "int8",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "subset terrain flag",
+      "fill_value": 127,
+      "source": "Land ATBD Land Parameters",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "terrain/te_quality_score",
+      "hdf5_path": "/gt1l/land_segments/terrain/te_quality_score",
+      "type": "int8",
+      "shape": null,
+      "description": "terrain quality score",
+      "fill_value": 127,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain/terrain_slope",
+      "hdf5_path": "/gt1l/land_segments/terrain/terrain_slope",
+      "type": "float32",
+      "shape": null,
+      "description": "segment terrain slope",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Land ATBD Land Parameters"
+    },
+    {
+      "name": "terrain_flg",
+      "hdf5_path": "/gt1l/land_segments/terrain_flg",
+      "type": "uint8",
+      "shape": null,
+      "description": "terrain flag",
+      "source": "Land ATBD Segment_terrain flag"
+    },
+    {
+      "name": "urban_flag",
+      "hdf5_path": "/gt1l/land_segments/urban_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "segment urban flag",
+      "source": "Land ATBD Urban_flag"
+    }
+  ],
+  "source_granule": "ATL08_20220601004026_10681503_007_01.h5"
+}

@@ -1,0 +1,135 @@
+{
+  "selector": "atl03_ph",
+  "hdf5_subgroup": "gtxx/heights",
+  "description": "Per-photon fields from ATL03 heights group.",
+  "field_count": 14,
+  "fields": [
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/heights/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Elapsed GPS seconds",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL03 ATBD: The ICESat-2 Geolocation Along-Track Segments"
+    },
+    {
+      "name": "dist_ph_across",
+      "hdf5_path": "/gt1l/heights/dist_ph_across",
+      "type": "float32",
+      "shape": null,
+      "description": "Distance off RGT.",
+      "unit": "meters",
+      "source": "ATL03 ATBD: The ICESat-2 Geolocation Along-Track Segments"
+    },
+    {
+      "name": "dist_ph_along",
+      "hdf5_path": "/gt1l/heights/dist_ph_along",
+      "type": "float32",
+      "shape": null,
+      "description": "Distance from equator crossing.",
+      "unit": "meters",
+      "source": "ATL03 ATBD: The ICESat-2 Geolocation Along-Track Segments"
+    },
+    {
+      "name": "h_ph",
+      "hdf5_path": "/gt1l/heights/h_ph",
+      "type": "float32",
+      "shape": null,
+      "description": "Photon WGS84 Height",
+      "standard_name": "height",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Geophysical Corrections"
+    },
+    {
+      "name": "lat_ph",
+      "hdf5_path": "/gt1l/heights/lat_ph",
+      "type": "float64",
+      "shape": null,
+      "description": "Latitude",
+      "standard_name": "latitude",
+      "unit": "degrees_north",
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "lon_ph",
+      "hdf5_path": "/gt1l/heights/lon_ph",
+      "type": "float64",
+      "shape": null,
+      "description": "Longitude",
+      "standard_name": "longitude",
+      "unit": "degrees_east",
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "pce_mframe_cnt",
+      "hdf5_path": "/gt1l/heights/pce_mframe_cnt",
+      "type": "uint32",
+      "shape": null,
+      "description": "PCE Major frame counter",
+      "source": "ATL03_ATBD: The Photon Identification Parameter"
+    },
+    {
+      "name": "ph_id_channel",
+      "hdf5_path": "/gt1l/heights/ph_id_channel",
+      "type": "uint8",
+      "shape": null,
+      "description": "Receive channel id",
+      "source": "ATL03_ATBD: The Photon Identification Parameter"
+    },
+    {
+      "name": "ph_id_count",
+      "hdf5_path": "/gt1l/heights/ph_id_count",
+      "type": "uint8",
+      "shape": null,
+      "description": "photon event counter",
+      "source": "ATL03_ATBD: The Photon Identification Parameter"
+    },
+    {
+      "name": "ph_id_pulse",
+      "hdf5_path": "/gt1l/heights/ph_id_pulse",
+      "type": "uint8",
+      "shape": null,
+      "description": "laser pulse counter",
+      "source": "ATL03_ATBD: The Photon Identification Parameter"
+    },
+    {
+      "name": "quality_ph",
+      "hdf5_path": "/gt1l/heights/quality_ph",
+      "type": "int8",
+      "shape": null,
+      "description": "Photon Quality",
+      "source": "ATL03 ATBD: ATLAS Saturation"
+    },
+    {
+      "name": "signal_class_ph",
+      "hdf5_path": "/gt1l/heights/signal_class_ph",
+      "type": "int8",
+      "shape": null,
+      "description": "Signal classification  flag.",
+      "source": "ATL03 ATBD: Photon Weights"
+    },
+    {
+      "name": "signal_conf_ph",
+      "hdf5_path": "/gt1l/heights/signal_conf_ph",
+      "type": "int8",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "Photon Signal Confidence",
+      "source": "ATL03 ATBD: Photon Signal Confidence",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "weight_ph",
+      "hdf5_path": "/gt1l/heights/weight_ph",
+      "type": "uint16",
+      "shape": null,
+      "description": "Photon weight",
+      "source": "ATL03 ATBD: Photon Weights"
+    }
+  ],
+  "source_granule": "ATL03_20220601014607_10681513_007_01.h5"
+}

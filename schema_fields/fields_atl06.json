@@ -1,0 +1,626 @@
+{
+  "selector": "atl06",
+  "hdf5_subgroup": "gtxx/land_ice_segments",
+  "description": "Land ice segment fields from ATL06, including sub-groups.",
+  "field_count": 64,
+  "fields": [
+    {
+      "name": "atl06_quality_summary",
+      "hdf5_path": "/gt1l/land_ice_segments/atl06_quality_summary",
+      "type": "int8",
+      "shape": null,
+      "description": "ATL06_Quality_Summary",
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "bias_correction/fpb_mean_corr",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/fpb_mean_corr",
+      "type": "float32",
+      "shape": null,
+      "description": "first photon bias mean correction",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - First-Photon Bias Correction"
+    },
+    {
+      "name": "bias_correction/fpb_mean_corr_sigma",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/fpb_mean_corr_sigma",
+      "type": "float32",
+      "shape": null,
+      "description": "fpb mean corr sigma",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - First-Photon Bias Correction"
+    },
+    {
+      "name": "bias_correction/fpb_med_corr",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/fpb_med_corr",
+      "type": "float32",
+      "shape": null,
+      "description": "fpb median corr",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - First-Photon Bias Correction"
+    },
+    {
+      "name": "bias_correction/fpb_med_corr_sigma",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/fpb_med_corr_sigma",
+      "type": "float32",
+      "shape": null,
+      "description": "fpb median corr sigma",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - First-Photon Bias Correction"
+    },
+    {
+      "name": "bias_correction/fpb_n_corr",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/fpb_n_corr",
+      "type": "float32",
+      "shape": null,
+      "description": "fpb number photons corr",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - First-Photon Bias Correction"
+    },
+    {
+      "name": "bias_correction/med_r_fit",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/med_r_fit",
+      "type": "float32",
+      "shape": null,
+      "description": "mean median residual",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top-Level Fitting Routine"
+    },
+    {
+      "name": "bias_correction/tx_mean_corr",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/tx_mean_corr",
+      "type": "float32",
+      "shape": null,
+      "description": "tx shape mean correction",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Transmit-pulse shape correction"
+    },
+    {
+      "name": "bias_correction/tx_med_corr",
+      "hdf5_path": "/gt1l/land_ice_segments/bias_correction/tx_med_corr",
+      "type": "float32",
+      "shape": null,
+      "description": "tx shape median correction",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Transmit-pulse shape correction"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/land_ice_segments/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Elapsed GPS seconds",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "dem/dem_flag",
+      "hdf5_path": "/gt1l/land_ice_segments/dem/dem_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "DEM Source Flag",
+      "source": "ATL03"
+    },
+    {
+      "name": "dem/dem_h",
+      "hdf5_path": "/gt1l/land_ice_segments/dem/dem_h",
+      "type": "float32",
+      "shape": null,
+      "description": "DEM Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "dem/geoid_free2mean",
+      "hdf5_path": "/gt1l/land_ice_segments/dem/geoid_free2mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Geoid Free-to-Mean conversion",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "dem/geoid_h",
+      "hdf5_path": "/gt1l/land_ice_segments/dem/geoid_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Geoid Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "fit_statistics/dh_fit_dx",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/dh_fit_dx",
+      "type": "float32",
+      "shape": null,
+      "description": "Along Track Slope",
+      "unit": "meters/meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Iterative Least-Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/dh_fit_dx_sigma",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/dh_fit_dx_sigma",
+      "type": "float32",
+      "shape": null,
+      "description": "Sigma of Along Track Slope",
+      "unit": "meters/meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Iterative Least-Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/dh_fit_dy",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/dh_fit_dy",
+      "type": "float32",
+      "shape": null,
+      "description": "Across Track Slope",
+      "unit": "meters/meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top-Level Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/h_expected_rms",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/h_expected_rms",
+      "type": "float32",
+      "shape": null,
+      "description": "Expected RMS misfit",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Iterative ground-window refinement"
+    },
+    {
+      "name": "fit_statistics/h_mean",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/h_mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Height Mean",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Iterative Least-Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/h_rms_misfit",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/h_rms_misfit",
+      "type": "float32",
+      "shape": null,
+      "description": "RMS Misfit",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD -Iterative Least-Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/h_robust_sprd",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/h_robust_sprd",
+      "type": "float32",
+      "shape": null,
+      "description": "Robust Spread",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Iterative Least-Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/n_fit_photons",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/n_fit_photons",
+      "type": "int32",
+      "shape": null,
+      "description": "Number of Photons in Fit",
+      "fill_value": 2147483647,
+      "source": "ATL06 ATBD - Iterative Least-Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/n_seg_pulses",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/n_seg_pulses",
+      "type": "float32",
+      "shape": null,
+      "description": "Number potential segment pulses",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top-Level Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/sigma_h_mean",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/sigma_h_mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Height Error",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Propagated Height Errors"
+    },
+    {
+      "name": "fit_statistics/signal_selection_source",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/signal_selection_source",
+      "type": "int8",
+      "shape": null,
+      "description": "Signal Selection Source",
+      "source": "ATL06 ATBD - Signal Selection based on ATL03 flags"
+    },
+    {
+      "name": "fit_statistics/signal_selection_source_status",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/signal_selection_source_status",
+      "type": "int8",
+      "shape": null,
+      "description": "Signal Selection Source Status",
+      "source": "ATL06 ATBD - Signal Selection based on ATL03 flags"
+    },
+    {
+      "name": "fit_statistics/snr",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/snr",
+      "type": "float32",
+      "shape": null,
+      "description": "SNR",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Iterative Least Squares Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/snr_significance",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/snr_significance",
+      "type": "float32",
+      "shape": null,
+      "description": "SNR Significance",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top-Level Fitting Routine"
+    },
+    {
+      "name": "fit_statistics/w_surface_window_final",
+      "hdf5_path": "/gt1l/land_ice_segments/fit_statistics/w_surface_window_final",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface Window Width",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top-Level Fitting Routine"
+    },
+    {
+      "name": "fpb_warning_flag",
+      "hdf5_path": "/gt1l/land_ice_segments/fpb_warning_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "fpb_warning_flag",
+      "source": "ATL06 ATBD - FPB Corrections"
+    },
+    {
+      "name": "geophysical/bckgrd",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/bckgrd",
+      "type": "float32",
+      "shape": null,
+      "description": "Background count rate",
+      "unit": "hz",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/bsnow_conf",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/bsnow_conf",
+      "type": "int8",
+      "shape": null,
+      "description": "Blowing Snow confidence",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/bsnow_h",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/bsnow_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing Snow Layer Top Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/bsnow_od",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/bsnow_od",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing snow OD",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/cloud_flg_asr",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/cloud_flg_asr",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Flag ASR",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/cloud_flg_atm",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/cloud_flg_atm",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Flag ATM",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/dac",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/dac",
+      "type": "float32",
+      "shape": null,
+      "description": "Dynamic Atmosphere Correction",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/e_bckgrd",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/e_bckgrd",
+      "type": "float32",
+      "shape": null,
+      "description": "Expected background count rate",
+      "unit": "hz",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Background PE Rate"
+    },
+    {
+      "name": "geophysical/layer_flag",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/layer_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "Consolidated cloud flag",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/msw_flag",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/msw_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "Multiple Scattering Warning Flag",
+      "fill_value": 127,
+      "source": "ATL09"
+    },
+    {
+      "name": "geophysical/neutat_delay_total",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/neutat_delay_total",
+      "type": "float32",
+      "shape": null,
+      "description": "Total Neutral Atmospheric Delay",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/r_eff",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/r_eff",
+      "type": "float32",
+      "shape": null,
+      "description": "Effective uncorrected reflectance",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top-Level Fitting Routine"
+    },
+    {
+      "name": "geophysical/solar_azimuth",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/solar_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "solar azimuth",
+      "unit": "degrees_east",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/solar_elevation",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/solar_elevation",
+      "type": "float32",
+      "shape": null,
+      "description": "solar elevation",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/tide_earth",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/tide_earth",
+      "type": "float32",
+      "shape": null,
+      "description": "Earth Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/tide_earth_free2mean",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/tide_earth_free2mean",
+      "type": "float32",
+      "shape": null,
+      "description": "Earth Tide Free-to-Mean conversion",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/tide_equilibrium",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/tide_equilibrium",
+      "type": "float32",
+      "shape": null,
+      "description": "Equilibrium Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/tide_load",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/tide_load",
+      "type": "float32",
+      "shape": null,
+      "description": "Load Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/tide_ocean",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/tide_ocean",
+      "type": "float32",
+      "shape": null,
+      "description": "Ocean Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "geophysical/tide_pole",
+      "hdf5_path": "/gt1l/land_ice_segments/geophysical/tide_pole",
+      "type": "float32",
+      "shape": null,
+      "description": "Solid Earth Pole Tide",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "ground_track/ref_azimuth",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/ref_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "Azimuth",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "ground_track/ref_coelv",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/ref_coelv",
+      "type": "float32",
+      "shape": null,
+      "description": "Co-elevation",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "ground_track/seg_azimuth",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/seg_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "Segment Azimuth",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03"
+    },
+    {
+      "name": "ground_track/sigma_geo_at",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/sigma_geo_at",
+      "type": "float32",
+      "shape": null,
+      "description": "Along Track Geolocation Error",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Segment Geolocation"
+    },
+    {
+      "name": "ground_track/sigma_geo_r",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/sigma_geo_r",
+      "type": "float32",
+      "shape": null,
+      "description": "Radial Orbit Error",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Segment Geolocation"
+    },
+    {
+      "name": "ground_track/sigma_geo_xt",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/sigma_geo_xt",
+      "type": "float32",
+      "shape": null,
+      "description": "Across Track Geolocation Error",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Segment Geolocation"
+    },
+    {
+      "name": "ground_track/x_atc",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/x_atc",
+      "type": "float64",
+      "shape": null,
+      "description": "X Along Track",
+      "unit": "meters",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL06 ATBD - Local Coordinate Systems"
+    },
+    {
+      "name": "ground_track/y_atc",
+      "hdf5_path": "/gt1l/land_ice_segments/ground_track/y_atc",
+      "type": "float32",
+      "shape": null,
+      "description": "Y Along Track",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Local Coordinate Systems"
+    },
+    {
+      "name": "h_li",
+      "hdf5_path": "/gt1l/land_ice_segments/h_li",
+      "type": "float32",
+      "shape": null,
+      "description": "Land Ice height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "h_li_sigma",
+      "hdf5_path": "/gt1l/land_ice_segments/h_li_sigma",
+      "type": "float32",
+      "shape": null,
+      "description": "Expected RMS segment misfit",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "latitude",
+      "hdf5_path": "/gt1l/land_ice_segments/latitude",
+      "type": "float64",
+      "shape": null,
+      "description": "Latitude",
+      "standard_name": "latitude",
+      "unit": "degrees_north",
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "longitude",
+      "hdf5_path": "/gt1l/land_ice_segments/longitude",
+      "type": "float64",
+      "shape": null,
+      "description": "Longitude",
+      "standard_name": "longitude",
+      "unit": "degrees_east",
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "segment_id",
+      "hdf5_path": "/gt1l/land_ice_segments/segment_id",
+      "type": "int32",
+      "shape": null,
+      "description": "Reference Point, m",
+      "fill_value": 0,
+      "source": "ATL06 ATBD - Top Level Fitting Routine"
+    },
+    {
+      "name": "sigma_geo_h",
+      "hdf5_path": "/gt1l/land_ice_segments/sigma_geo_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Vertical Geolocation Error",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL06 ATBD - Segment Geolocation"
+    }
+  ],
+  "source_granule": "ATL06_20220601004026_10681503_007_01.h5"
+}

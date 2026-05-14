@@ -1,0 +1,210 @@
+{
+    "description": "Atl08DataFrame",
+    "columns": [
+        {
+            "type": "string",
+            "role": "column",
+            "format": "timestamp-ns",
+            "description": "GPS nanoseconds",
+            "name": "time_ns"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "double",
+            "description": "latitude (EPSG:7912)",
+            "name": "latitude"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "double",
+            "description": "longitude (EPSG:7912)",
+            "name": "longitude"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "int32",
+            "description": "beginning segment identifier",
+            "name": "segment_id_beg"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "uint8",
+            "description": "land cover classification",
+            "name": "segment_landcover"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "uint8",
+            "description": "snow cover classification",
+            "name": "segment_snowcover"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "int32",
+            "description": "number of photons in segment",
+            "name": "n_seg_ph"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "solar elevation angle (deg)",
+            "name": "solar_elevation"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "terrain slope (deg)",
+            "name": "terrain_slope"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "int32",
+            "description": "number of terrain photons",
+            "name": "n_te_photons"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "terrain height uncertainty (m)",
+            "name": "h_te_uncertainty"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "median terrain height (m)",
+            "name": "h_te_median"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "canopy height (m)",
+            "name": "h_canopy"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "canopy height uncertainty (m)",
+            "name": "h_canopy_uncertainty"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "int16",
+            "description": "canopy cover fraction",
+            "name": "segment_cover"
+        },
+        {
+            "type": "integer",
+            "role": "column",
+            "format": "int32",
+            "description": "number of canopy photons",
+            "name": "n_ca_photons"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "maximum canopy height (m)",
+            "name": "h_max_canopy"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "minimum canopy height (m)",
+            "name": "h_min_canopy"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "mean canopy height (m)",
+            "name": "h_mean_canopy"
+        },
+        {
+            "type": "number",
+            "role": "column",
+            "format": "float",
+            "description": "canopy openness",
+            "name": "canopy_openness"
+        },
+        {
+            "items_format": "float",
+            "type": "array",
+            "role": "column",
+            "items_type": "number",
+            "description": "canopy height percentile metrics",
+            "name": "canopy_h_metrics"
+        },
+        {
+            "type": "integer",
+            "role": "element",
+            "format": "uint8",
+            "description": "spot number (1-6)",
+            "name": "spot"
+        },
+        {
+            "type": "integer",
+            "role": "element",
+            "format": "uint8",
+            "description": "orbital cycle",
+            "name": "cycle"
+        },
+        {
+            "type": "integer",
+            "role": "element",
+            "format": "uint8",
+            "description": "region number",
+            "name": "region"
+        },
+        {
+            "type": "integer",
+            "role": "element",
+            "format": "uint16",
+            "description": "reference ground track",
+            "name": "rgt"
+        },
+        {
+            "type": "integer",
+            "role": "element",
+            "format": "uint8",
+            "description": "ground track",
+            "name": "gt"
+        },
+        {
+            "role": "element",
+            "name": "granule",
+            "description": "source granule name",
+            "type": "string"
+        },
+        {
+            "condition": "phoreal.te_quality_filter",
+            "type": "integer",
+            "role": "column",
+            "format": "int8",
+            "description": "terrain quality score",
+            "name": "te_quality_score"
+        },
+        {
+            "condition": "phoreal.can_quality_filter",
+            "type": "integer",
+            "role": "column",
+            "format": "int8",
+            "description": "canopy quality score",
+            "name": "can_quality_score"
+        }
+    ]
+}

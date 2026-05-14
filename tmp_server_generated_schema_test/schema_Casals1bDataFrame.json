@@ -1,0 +1,39 @@
+{
+    "columns": [
+        {
+            "role": "column",
+            "description": "GPS nanoseconds",
+            "type": "string",
+            "format": "timestamp-ns",
+            "name": "time_ns"
+        },
+        {
+            "role": "column",
+            "description": "latitude",
+            "type": "number",
+            "format": "double",
+            "name": "latitude"
+        },
+        {
+            "role": "column",
+            "description": "longitude",
+            "type": "number",
+            "format": "double",
+            "name": "longitude"
+        },
+        {
+            "role": "column",
+            "description": "reference height (m)",
+            "type": "number",
+            "format": "float",
+            "name": "refh"
+        },
+        {
+            "type": "string",
+            "role": "element",
+            "description": "source granule name",
+            "name": "granule"
+        }
+    ],
+    "description": "Casals1bDataFrame"
+}

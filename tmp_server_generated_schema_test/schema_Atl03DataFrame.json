@@ -1,0 +1,193 @@
+{
+    "columns": [
+        {
+            "role": "column",
+            "type": "string",
+            "description": "GPS nanoseconds",
+            "format": "timestamp-ns",
+            "name": "time_ns"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "latitude (EPSG:7912)",
+            "format": "double",
+            "name": "latitude"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "longitude (EPSG:7912)",
+            "format": "double",
+            "name": "longitude"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "description": "segment identifier",
+            "format": "int32",
+            "name": "segment_id"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "along-track distance (m)",
+            "format": "double",
+            "name": "x_atc"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "across-track distance (m)",
+            "format": "float",
+            "name": "y_atc"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "photon height (m)",
+            "format": "float",
+            "name": "height"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "solar elevation angle (deg)",
+            "format": "float",
+            "name": "solar_elevation"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "background photon rate (MHz)",
+            "format": "float",
+            "name": "background_rate"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "description": "spacecraft velocity (m/s)",
+            "format": "float",
+            "name": "spacecraft_velocity"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "description": "ATL03 signal confidence",
+            "format": "int8",
+            "name": "atl03_cnf"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "description": "photon quality flag",
+            "format": "int8",
+            "name": "quality_ph"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "description": "photon index within segment",
+            "format": "uint32",
+            "name": "ph_index"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "description": "spot number (1-6)",
+            "format": "uint8",
+            "name": "spot"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "description": "orbital cycle",
+            "format": "uint8",
+            "name": "cycle"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "description": "region number",
+            "format": "uint8",
+            "name": "region"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "description": "reference ground track",
+            "format": "uint16",
+            "name": "rgt"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "description": "ground track",
+            "format": "uint8",
+            "name": "gt"
+        },
+        {
+            "role": "element",
+            "description": "source granule name",
+            "name": "granule",
+            "type": "string"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "condition": "stages.phoreal",
+            "description": "PhoREAL relief",
+            "format": "float",
+            "name": "relief"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "stages.phoreal",
+            "description": "land cover classification",
+            "format": "uint8",
+            "name": "landcover"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "stages.phoreal",
+            "description": "snow cover classification",
+            "format": "uint8",
+            "name": "snowcover"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "stages.yapc",
+            "description": "YAPC score",
+            "format": "uint16",
+            "name": "yapc_score"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "stages.atl08",
+            "description": "ATL08 photon classification",
+            "format": "uint8",
+            "name": "atl08_class"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "condition": "stages.atl24",
+            "description": "ATL24 photon classification",
+            "format": "uint8",
+            "name": "atl24_class"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "condition": "stages.atl24",
+            "description": "ATL24 classification confidence",
+            "format": "float",
+            "name": "atl24_confidence"
+        }
+    ],
+    "description": "Atl03DataFrame"
+}

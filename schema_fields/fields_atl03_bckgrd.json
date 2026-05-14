@@ -1,0 +1,115 @@
+{
+  "selector": "atl03_bckgrd",
+  "hdf5_subgroup": "gtxx/bckgrd_atlas",
+  "description": "Background photon rate fields from ATL03.",
+  "field_count": 12,
+  "fields": [
+    {
+      "name": "bckgrd_counts",
+      "hdf5_path": "/gt1l/bckgrd_atlas/bckgrd_counts",
+      "type": "int32",
+      "shape": null,
+      "description": "ATLAS 50-shot background count",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "bckgrd_counts_reduced",
+      "hdf5_path": "/gt1l/bckgrd_atlas/bckgrd_counts_reduced",
+      "type": "int32",
+      "shape": null,
+      "description": "ATLAS 50-shot background count - reduced",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "bckgrd_hist_top",
+      "hdf5_path": "/gt1l/bckgrd_atlas/bckgrd_hist_top",
+      "type": "float32",
+      "shape": null,
+      "description": "Top of the altimetric range window",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "bckgrd_int_height",
+      "hdf5_path": "/gt1l/bckgrd_atlas/bckgrd_int_height",
+      "type": "float32",
+      "shape": null,
+      "description": "Altimetric range window width",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "bckgrd_int_height_reduced",
+      "hdf5_path": "/gt1l/bckgrd_atlas/bckgrd_int_height_reduced",
+      "type": "float32",
+      "shape": null,
+      "description": "Altimetric range window height - reduced",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "bckgrd_rate",
+      "hdf5_path": "/gt1l/bckgrd_atlas/bckgrd_rate",
+      "type": "float32",
+      "shape": null,
+      "description": "Background count rate based on the ATLAS 50-shot sum",
+      "unit": "counts / second",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/bckgrd_atlas/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Time at the start of ATLAS 50-shot sum",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "pce_mframe_cnt",
+      "hdf5_path": "/gt1l/bckgrd_atlas/pce_mframe_cnt",
+      "type": "int64",
+      "shape": null,
+      "description": "PCE Major frame counter",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "tlm_height_band1",
+      "hdf5_path": "/gt1l/bckgrd_atlas/tlm_height_band1",
+      "type": "float32",
+      "shape": null,
+      "description": "Height of the telemetry band 1",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "tlm_height_band2",
+      "hdf5_path": "/gt1l/bckgrd_atlas/tlm_height_band2",
+      "type": "float32",
+      "shape": null,
+      "description": "Height of the telemetry band 2",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "tlm_top_band1",
+      "hdf5_path": "/gt1l/bckgrd_atlas/tlm_top_band1",
+      "type": "float32",
+      "shape": null,
+      "description": "Ellipsoidal height of the top of the telemetry band 1.",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    },
+    {
+      "name": "tlm_top_band2",
+      "hdf5_path": "/gt1l/bckgrd_atlas/tlm_top_band2",
+      "type": "float32",
+      "shape": null,
+      "description": "Ellipsoidal height of the top of the telemetry band 2.",
+      "unit": "meters",
+      "source": "ATL03 ATBD: Background Count Parameters"
+    }
+  ],
+  "source_granule": "ATL03_20220601014607_10681513_007_01.h5"
+}

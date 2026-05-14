@@ -1,0 +1,1857 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "license": {
+            "name": "BSD-3-Clause",
+            "url": "https://github.com/SlideRuleEarth/sliderule/blob/main/LICENSE"
+        },
+        "description": "Server-side processing of NASA ICESat-2, GEDI, and other Earth science datasets. Returns subsetted, filtered, and algorithmically processed data as Parquet files.",
+        "contact": {
+            "name": "SlideRule Earth",
+            "url": "https://slideruleearth.io"
+        },
+        "version": "v5.3.1",
+        "title": "SlideRule Earth API"
+    },
+    "servers": [
+        {
+            "description": "Production cluster",
+            "url": "https://slideruleearth.io"
+        }
+    ],
+    "paths": {
+        "/arrow/atl13x": {
+            "post": {
+                "summary": "ICESat-2 ATL13 inland water surface heights",
+                "tags": [
+                    "ICESat-2"
+                ],
+                "operationId": "atl13x",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Atl13DataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns inland water body surface height measurements from ICESat-2 ATL13 granules as an Apache Parquet file. Each row is a water surface segment with orthometric height, water surface height, and depth. Request parameters are documented at /source/defaults under the icesat2 key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name (e.g. ATL13_20181019065445_03150111_006_02.h5)",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/arrow/gedi01bx": {
+            "post": {
+                "summary": "GEDI L1B geolocated waveforms",
+                "tags": [
+                    "GEDI"
+                ],
+                "operationId": "gedi01bx",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Gedi01bDataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns geolocated waveform data from GEDI L1B granules as an Apache Parquet file. Each row is a shot with transmit and receive waveforms, geolocation, and quality flags. Request parameters are documented at /source/defaults under the gedi key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name (e.g. GEDI01_B_2019108002012_O01959_01_T03909_02_005_02_V002.h5)",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/arrow/atl24x": {
+            "post": {
+                "summary": "ICESat-2 ATL24 bathymetry photon classification",
+                "tags": [
+                    "ICESat-2"
+                ],
+                "operationId": "atl24x",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Atl24DataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns bathymetry-classified photons from ICESat-2 ATL24 granules as an Apache Parquet file. Each row is a photon with classification (sea surface, seafloor, water column, etc.), heights, and uncertainty estimates. Request parameters are documented at /source/defaults under the icesat2 key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name (e.g. ATL24_20181019065445_03150111_002_01.h5)",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/arrow/atl08x": {
+            "post": {
+                "summary": "ICESat-2 ATL08 vegetation and canopy heights",
+                "tags": [
+                    "ICESat-2"
+                ],
+                "operationId": "atl08x",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Atl08DataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns vegetation and terrain segment data from ICESat-2 ATL08 granules as an Apache Parquet file. Each row is a 100m along-track segment with canopy height, terrain height, and land cover classification. Request parameters are documented at /source/defaults under the icesat2 key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name (e.g. ATL08_20181019065445_03150111_006_02.h5)",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/source/schema": {
+            "get": {
+                "summary": "Column schemas for current product APIs",
+                "tags": [
+                    "Discovery"
+                ],
+                "operationId": "getSchema",
+                "parameters": [
+                    {
+                        "name": "api",
+                        "required": false,
+                        "description": "API name (e.g. Atl06DataFrame, SurfaceFitter). Omit to return the full schema map for all current APIs.",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Column schema or API listing",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns the column schema (names, types, formats, descriptions) for the current product APIs \u2014 the x endpoints and their processing runners. Deprecated/legacy interfaces are intentionally excluded. Without the `api` parameter, returns all schemas as a map keyed by API name."
+            }
+        },
+        "/arrow/atl03x": {
+            "post": {
+                "summary": "ICESat-2 ATL03 photon-level data",
+                "tags": [
+                    "ICESat-2"
+                ],
+                "operationId": "atl03x",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata. Schema varies by processing stage.",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "oneOf": [
+                                        {
+                                            "$ref": "#/components/schemas/Atl03DataFrame"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/SurfaceFitter"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/PhoReal"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/SurfaceBlanket"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns geolocated photons from ICESat-2 ATL03 granules as an Apache Parquet file. The response schema depends on which processing stage is active: default returns Atl03DataFrame columns; with stages.fitter enabled, returns SurfaceFitter columns (fitted surface elevations); with stages.phoreal enabled, returns PhoReal columns (vegetation canopy metrics); with stages.blanket enabled, returns SurfaceBlanket columns (top-of-surface elevations). Also supports YAPC photon weighting (stages.yapc) and ATL08/ATL24 classification as additional columns on the default schema. Request parameters are documented at /source/defaults under the icesat2 key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name (e.g. ATL03_20181019065445_03150111_006_02.h5)",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/source/health": {
+            "get": {
+                "operationId": "getHealth",
+                "tags": [
+                    "Discovery"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Health status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "healthy": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Health check"
+            }
+        },
+        "/arrow/gedi04ax": {
+            "post": {
+                "summary": "GEDI L4A above-ground biomass density",
+                "tags": [
+                    "GEDI"
+                ],
+                "operationId": "gedi04ax",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Gedi04aDataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns above-ground biomass density estimates from GEDI L4A granules as an Apache Parquet file. Each row is a footprint with biomass density (Mg/ha), elevation, sensitivity, and quality flags. Request parameters are documented at /source/defaults under the gedi key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/arrow/gedi02ax": {
+            "post": {
+                "summary": "GEDI L2A footprint elevations",
+                "tags": [
+                    "GEDI"
+                ],
+                "operationId": "gedi02ax",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Gedi02aDataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns ground elevation and canopy top height from GEDI L2A granules as an Apache Parquet file. Each row is a footprint with elevation from the lowest detected mode, highest return, sensitivity, and quality flags. Request parameters are documented at /source/defaults under the gedi key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/source/openapi": {
+            "get": {
+                "summary": "OpenAPI specification",
+                "tags": [
+                    "Discovery"
+                ],
+                "operationId": "getOpenAPI",
+                "responses": {
+                    "200": {
+                        "description": "OpenAPI 3.1 specification",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns the complete OpenAPI 3.1 specification with column schemas injected from the live schema registry."
+            }
+        },
+        "/source/version": {
+            "get": {
+                "operationId": "getVersion",
+                "tags": [
+                    "Discovery"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Version information",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Server version"
+            }
+        },
+        "/arrow/casals1bx": {
+            "post": {
+                "summary": "CASALS L1B geolocated photons",
+                "tags": [
+                    "CASALS"
+                ],
+                "operationId": "casals1bx",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Casals1bDataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns geolocated photons from CASALS L1B granules as an Apache Parquet file. Each row is a photon with latitude, longitude, reference height, and timestamp. Request parameters are documented at /source/defaults under the casals key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/arrow/atl06x": {
+            "post": {
+                "summary": "ICESat-2 ATL06 land ice heights",
+                "tags": [
+                    "ICESat-2"
+                ],
+                "operationId": "atl06x",
+                "responses": {
+                    "200": {
+                        "description": "Apache Parquet file with GeoParquet metadata",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Atl06DataFrame"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "Returns land ice segment heights from ICESat-2 ATL06 granules as an Apache Parquet file. Each row is a 40m along-track segment with fitted surface elevation. Request parameters are documented at /source/defaults under the icesat2 key.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parms": {
+                                        "description": "Processing parameters (see /source/defaults for structure and defaults)",
+                                        "type": "object"
+                                    },
+                                    "resource": {
+                                        "description": "Granule name (e.g. ATL06_20181019065445_03150111_006_02.h5)",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "parms",
+                                    "resource"
+                                ],
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Casals1bDataFrame": {
+                "properties": {
+                    "refh": {
+                        "description": "reference height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "longitude": {
+                        "description": "longitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "latitude": {
+                        "description": "latitude",
+                        "format": "double",
+                        "type": "number"
+                    }
+                },
+                "type": "object",
+                "description": "Casals1bDataFrame",
+                "x-metadata": {
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "refh"
+                ]
+            },
+            "Gedi02aDataFrame": {
+                "properties": {
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "flags": {
+                        "description": "quality flags",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "shot_number": {
+                        "description": "unique shot identifier",
+                        "format": "uint64",
+                        "type": "integer"
+                    },
+                    "longitude": {
+                        "description": "longitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "latitude": {
+                        "description": "latitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "elevation_lm": {
+                        "description": "elevation lowest mode (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "elevation_hr": {
+                        "description": "elevation highest return (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "solar_elevation": {
+                        "description": "solar elevation angle (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "sensitivity": {
+                        "description": "beam sensitivity",
+                        "format": "float",
+                        "type": "number"
+                    }
+                },
+                "type": "object",
+                "description": "Gedi02aDataFrame",
+                "x-metadata": {
+                    "track": {
+                        "description": "track number (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "orbit": {
+                        "description": "orbit number (per-file metadata, not a row column)",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "beam": {
+                        "description": "beam number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "shot_number",
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "elevation_lm",
+                    "elevation_hr",
+                    "solar_elevation",
+                    "sensitivity",
+                    "flags"
+                ]
+            },
+            "Atl06DataFrame": {
+                "properties": {
+                    "x_atc": {
+                        "description": "along-track distance (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "y_atc": {
+                        "description": "across-track distance (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_robust_sprd": {
+                        "description": "robust spread of heights (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "h_li_sigma": {
+                        "description": "land ice height uncertainty (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "atl06_quality_summary": {
+                        "description": "quality summary flag",
+                        "format": "int8",
+                        "type": "integer"
+                    },
+                    "bsnow_h": {
+                        "description": "blowing snow layer height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "w_surface_window_final": {
+                        "description": "final surface window width (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "tide_ocean": {
+                        "description": "ocean tide correction (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "h_li": {
+                        "description": "land ice height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "n_fit_photons": {
+                        "description": "number of fit photons",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "segment_id": {
+                        "description": "segment identifier",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "r_eff": {
+                        "description": "effective reflectance",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "sigma_geo_h": {
+                        "description": "total geolocation uncertainty (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "seg_azimuth": {
+                        "description": "segment azimuth (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "dh_fit_dx": {
+                        "description": "along-track slope",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "bsnow_conf": {
+                        "description": "blowing snow confidence",
+                        "format": "int8",
+                        "type": "integer"
+                    }
+                },
+                "type": "object",
+                "description": "Atl06DataFrame",
+                "x-metadata": {
+                    "rgt": {
+                        "description": "reference ground track (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "spot": {
+                        "description": "spot number (1-6) (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "cycle": {
+                        "description": "orbital cycle (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    },
+                    "gt": {
+                        "description": "ground track (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "region": {
+                        "description": "region number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "x_atc",
+                    "y_atc",
+                    "h_li",
+                    "h_li_sigma",
+                    "sigma_geo_h",
+                    "atl06_quality_summary",
+                    "segment_id",
+                    "seg_azimuth",
+                    "dh_fit_dx",
+                    "h_robust_sprd",
+                    "w_surface_window_final",
+                    "bsnow_conf",
+                    "bsnow_h",
+                    "r_eff",
+                    "tide_ocean",
+                    "n_fit_photons"
+                ]
+            },
+            "Atl03DataFrame": {
+                "properties": {
+                    "atl03_cnf": {
+                        "description": "ATL03 signal confidence",
+                        "format": "int8",
+                        "type": "integer"
+                    },
+                    "x_atc": {
+                        "description": "along-track distance (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "y_atc": {
+                        "description": "across-track distance (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "spacecraft_velocity": {
+                        "description": "spacecraft velocity (m/s)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "quality_ph": {
+                        "description": "photon quality flag",
+                        "format": "int8",
+                        "type": "integer"
+                    },
+                    "atl24_confidence": {
+                        "description": "ATL24 classification confidence (condition: stages.atl24)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "background_rate": {
+                        "description": "background photon rate (MHz)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "height": {
+                        "description": "photon height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "yapc_score": {
+                        "description": "YAPC score (condition: stages.yapc)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "atl24_class": {
+                        "description": "ATL24 photon classification (condition: stages.atl24)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "atl08_class": {
+                        "description": "ATL08 photon classification (condition: stages.atl08)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "segment_id": {
+                        "description": "segment identifier",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "ph_index": {
+                        "description": "photon index within segment",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "landcover": {
+                        "description": "land cover classification (condition: stages.phoreal)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "relief": {
+                        "description": "PhoREAL relief (condition: stages.phoreal)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "solar_elevation": {
+                        "description": "solar elevation angle (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "snowcover": {
+                        "description": "snow cover classification (condition: stages.phoreal)",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "type": "object",
+                "description": "Atl03DataFrame",
+                "x-metadata": {
+                    "rgt": {
+                        "description": "reference ground track (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "spot": {
+                        "description": "spot number (1-6) (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "cycle": {
+                        "description": "orbital cycle (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    },
+                    "gt": {
+                        "description": "ground track (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "region": {
+                        "description": "region number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "segment_id",
+                    "x_atc",
+                    "y_atc",
+                    "height",
+                    "solar_elevation",
+                    "background_rate",
+                    "spacecraft_velocity",
+                    "atl03_cnf",
+                    "quality_ph",
+                    "ph_index"
+                ]
+            },
+            "Atl24DataFrame": {
+                "properties": {
+                    "x_atc": {
+                        "description": "along-track distance (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "class_ph": {
+                        "description": "photon classification",
+                        "format": "int8",
+                        "type": "integer"
+                    },
+                    "sensor_depth_exceeded": {
+                        "description": "sensor depth exceeded flag (condition: !atl24.compact)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "invalid_kd": {
+                        "description": "invalid Kd flag (condition: !atl24.compact)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "invalid_wind_speed": {
+                        "description": "invalid wind speed flag (condition: !atl24.compact)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "sigma_thu": {
+                        "description": "total horizontal uncertainty (m) (condition: !atl24.compact)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "night_flag": {
+                        "description": "night flag (condition: !atl24.compact)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "sigma_tvu": {
+                        "description": "total vertical uncertainty (m) (condition: !atl24.compact)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "lon_ph": {
+                        "description": "photon longitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "confidence": {
+                        "description": "classification confidence",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "ellipse_h": {
+                        "description": "ellipsoidal height (m) (condition: !atl24.compact)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "surface_h": {
+                        "description": "surface height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "ortho_h": {
+                        "description": "orthometric height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "low_confidence_flag": {
+                        "description": "low confidence flag (condition: !atl24.compact)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "y_atc": {
+                        "description": "across-track distance (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "lat_ph": {
+                        "description": "photon latitude",
+                        "format": "double",
+                        "type": "number"
+                    }
+                },
+                "type": "object",
+                "description": "Atl24DataFrame",
+                "x-metadata": {
+                    "rgt": {
+                        "description": "reference ground track (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "spot": {
+                        "description": "spot number (1-6) (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "cycle": {
+                        "description": "orbital cycle (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    },
+                    "gt": {
+                        "description": "ground track (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "region": {
+                        "description": "region number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "class_ph",
+                    "confidence",
+                    "time_ns",
+                    "lat_ph",
+                    "lon_ph",
+                    "ortho_h",
+                    "surface_h",
+                    "x_atc",
+                    "y_atc"
+                ]
+            },
+            "Atl13DataFrame": {
+                "properties": {
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "water_depth": {
+                        "description": "water depth (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "segment_id_beg": {
+                        "description": "beginning segment identifier",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "ht_water_surf": {
+                        "description": "water surface height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "ht_ortho": {
+                        "description": "orthometric height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "stdev_water_surf": {
+                        "description": "water surface height std dev (m)",
+                        "format": "float",
+                        "type": "number"
+                    }
+                },
+                "type": "object",
+                "description": "Atl13DataFrame",
+                "x-metadata": {
+                    "rgt": {
+                        "description": "reference ground track (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "gt": {
+                        "description": "ground track (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "cycle": {
+                        "description": "orbital cycle (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    },
+                    "spot": {
+                        "description": "spot number (1-6) (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "segment_id_beg",
+                    "ht_ortho",
+                    "ht_water_surf",
+                    "stdev_water_surf",
+                    "water_depth"
+                ]
+            },
+            "Gedi04aDataFrame": {
+                "properties": {
+                    "agbd": {
+                        "description": "above ground biomass density (Mg/ha)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "flags": {
+                        "description": "quality flags",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "longitude": {
+                        "description": "longitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "latitude": {
+                        "description": "latitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "shot_number": {
+                        "description": "unique shot identifier",
+                        "format": "uint64",
+                        "type": "integer"
+                    },
+                    "elevation": {
+                        "description": "elevation (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "solar_elevation": {
+                        "description": "solar elevation angle (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "sensitivity": {
+                        "description": "beam sensitivity",
+                        "format": "float",
+                        "type": "number"
+                    }
+                },
+                "type": "object",
+                "description": "Gedi04aDataFrame",
+                "x-metadata": {
+                    "track": {
+                        "description": "track number (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "orbit": {
+                        "description": "orbit number (per-file metadata, not a row column)",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "beam": {
+                        "description": "beam number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "shot_number",
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "agbd",
+                    "elevation",
+                    "solar_elevation",
+                    "sensitivity",
+                    "flags"
+                ]
+            },
+            "SurfaceFitter": {
+                "description": "SurfaceFitter",
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "segment_id_beg",
+                    "x_atc",
+                    "y_atc",
+                    "photon_start",
+                    "pflags",
+                    "h_mean",
+                    "dh_fit_dx",
+                    "w_surface_window_final",
+                    "n_fit_photons",
+                    "rms_misfit",
+                    "h_sigma"
+                ],
+                "properties": {
+                    "x_atc": {
+                        "description": "along-track distance (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "y_atc": {
+                        "description": "across-track distance (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_sigma": {
+                        "description": "height uncertainty (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "rms_misfit": {
+                        "description": "root-mean-square misfit (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "w_surface_window_final": {
+                        "description": "final surface window height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "n_fit_photons": {
+                        "description": "number of photons in fit",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "pflags": {
+                        "description": "processing flags",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "segment_id_beg": {
+                        "description": "first segment in extent",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "photon_start": {
+                        "description": "photon index of start of extent",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "h_mean": {
+                        "description": "mean height from ellipsoid (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "dh_fit_dx": {
+                        "description": "along-track slope",
+                        "format": "float",
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
+            "Gedi01bDataFrame": {
+                "properties": {
+                    "rx_waveform": {
+                        "description": "receive waveform",
+                        "type": "array",
+                        "items": {
+                            "format": "float",
+                            "type": "number"
+                        }
+                    },
+                    "tx_waveform": {
+                        "description": "transmit waveform",
+                        "type": "array",
+                        "items": {
+                            "format": "float",
+                            "type": "number"
+                        }
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "flags": {
+                        "description": "quality flags",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "longitude": {
+                        "description": "longitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "rx_size": {
+                        "description": "receive waveform sample count",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "elevation_start": {
+                        "description": "waveform start elevation (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "latitude": {
+                        "description": "latitude",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "shot_number": {
+                        "description": "unique shot identifier",
+                        "format": "uint64",
+                        "type": "integer"
+                    },
+                    "elevation_stop": {
+                        "description": "waveform stop elevation (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "solar_elevation": {
+                        "description": "solar elevation angle (deg)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "tx_size": {
+                        "description": "transmit waveform sample count",
+                        "format": "uint16",
+                        "type": "integer"
+                    }
+                },
+                "type": "object",
+                "description": "Gedi01bDataFrame",
+                "x-metadata": {
+                    "track": {
+                        "description": "track number (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "orbit": {
+                        "description": "orbit number (per-file metadata, not a row column)",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "beam": {
+                        "description": "beam number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "shot_number",
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "elevation_start",
+                    "elevation_stop",
+                    "solar_elevation",
+                    "tx_size",
+                    "rx_size",
+                    "flags",
+                    "tx_waveform",
+                    "rx_waveform"
+                ]
+            },
+            "Atl08DataFrame": {
+                "properties": {
+                    "h_min_canopy": {
+                        "description": "minimum canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_max_canopy": {
+                        "description": "maximum canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_mean_canopy": {
+                        "description": "mean canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "te_quality_score": {
+                        "description": "terrain quality score (condition: phoreal.te_quality_filter)",
+                        "format": "int8",
+                        "type": "integer"
+                    },
+                    "n_seg_ph": {
+                        "description": "number of photons in segment",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "h_te_median": {
+                        "description": "median terrain height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "segment_cover": {
+                        "description": "canopy cover fraction",
+                        "format": "int16",
+                        "type": "integer"
+                    },
+                    "segment_id_beg": {
+                        "description": "beginning segment identifier",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "can_quality_score": {
+                        "description": "canopy quality score (condition: phoreal.can_quality_filter)",
+                        "format": "int8",
+                        "type": "integer"
+                    },
+                    "canopy_h_metrics": {
+                        "description": "canopy height percentile metrics",
+                        "type": "array",
+                        "items": {
+                            "format": "float",
+                            "type": "number"
+                        }
+                    },
+                    "terrain_slope": {
+                        "description": "terrain slope (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_canopy_uncertainty": {
+                        "description": "canopy height uncertainty (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_te_uncertainty": {
+                        "description": "terrain height uncertainty (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "canopy_openness": {
+                        "description": "canopy openness",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_canopy": {
+                        "description": "canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "solar_elevation": {
+                        "description": "solar elevation angle (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "segment_landcover": {
+                        "description": "land cover classification",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "n_te_photons": {
+                        "description": "number of terrain photons",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "n_ca_photons": {
+                        "description": "number of canopy photons",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "segment_snowcover": {
+                        "description": "snow cover classification",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "type": "object",
+                "description": "Atl08DataFrame",
+                "x-metadata": {
+                    "rgt": {
+                        "description": "reference ground track (per-file metadata, not a row column)",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "spot": {
+                        "description": "spot number (1-6) (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "cycle": {
+                        "description": "orbital cycle (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "granule": {
+                        "description": "source granule name (per-file metadata, not a row column)",
+                        "type": "string"
+                    },
+                    "gt": {
+                        "description": "ground track (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "region": {
+                        "description": "region number (per-file metadata, not a row column)",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "segment_id_beg",
+                    "segment_landcover",
+                    "segment_snowcover",
+                    "n_seg_ph",
+                    "solar_elevation",
+                    "terrain_slope",
+                    "n_te_photons",
+                    "h_te_uncertainty",
+                    "h_te_median",
+                    "h_canopy",
+                    "h_canopy_uncertainty",
+                    "segment_cover",
+                    "n_ca_photons",
+                    "h_max_canopy",
+                    "h_min_canopy",
+                    "h_mean_canopy",
+                    "canopy_openness",
+                    "canopy_h_metrics"
+                ]
+            },
+            "PhoReal": {
+                "description": "PhoReal",
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "segment_id_beg",
+                    "x_atc",
+                    "y_atc",
+                    "photon_start",
+                    "photon_count",
+                    "pflags",
+                    "ground_photon_count",
+                    "vegetation_photon_count",
+                    "landcover",
+                    "snowcover",
+                    "solar_elevation",
+                    "h_te_median",
+                    "h_max_canopy",
+                    "h_min_canopy",
+                    "h_mean_canopy",
+                    "h_canopy",
+                    "canopy_openness",
+                    "canopy_h_metrics"
+                ],
+                "properties": {
+                    "h_min_canopy": {
+                        "description": "minimum canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "x_atc": {
+                        "description": "along-track distance (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "h_max_canopy": {
+                        "description": "maximum canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_mean_canopy": {
+                        "description": "mean canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "photon_count": {
+                        "description": "number of photons in extent",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "h_te_median": {
+                        "description": "median terrain height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "segment_id_beg": {
+                        "description": "first segment in extent",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "ground_photon_count": {
+                        "description": "number of ground photons",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "vegetation_photon_count": {
+                        "description": "number of vegetation photons",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "canopy_h_metrics": {
+                        "description": "canopy height percentile metrics",
+                        "type": "array",
+                        "items": {
+                            "format": "float",
+                            "type": "number"
+                        }
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "canopy_openness": {
+                        "description": "canopy openness (std dev of relief)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "h_canopy": {
+                        "description": "98th percentile canopy height (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "pflags": {
+                        "description": "processing flags",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "y_atc": {
+                        "description": "across-track distance (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "photon_start": {
+                        "description": "photon index of start of extent",
+                        "format": "uint32",
+                        "type": "integer"
+                    },
+                    "snowcover": {
+                        "description": "snow cover classification",
+                        "format": "uint8",
+                        "type": "integer"
+                    },
+                    "solar_elevation": {
+                        "description": "solar elevation angle (deg)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "landcover": {
+                        "description": "land cover classification",
+                        "format": "uint8",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "SurfaceBlanket": {
+                "description": "SurfaceBlanket",
+                "required": [
+                    "time_ns",
+                    "latitude",
+                    "longitude",
+                    "segment_id_beg",
+                    "x_atc",
+                    "y_atc",
+                    "top_of_surface",
+                    "median_ground",
+                    "pflags"
+                ],
+                "properties": {
+                    "x_atc": {
+                        "description": "along-track distance (m)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "top_of_surface": {
+                        "description": "top of reflective surface (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "median_ground": {
+                        "description": "median ground elevation (m)",
+                        "format": "float",
+                        "type": "number"
+                    },
+                    "time_ns": {
+                        "description": "GPS nanoseconds",
+                        "format": "timestamp-ns",
+                        "type": "string"
+                    },
+                    "pflags": {
+                        "description": "processing flags",
+                        "format": "uint16",
+                        "type": "integer"
+                    },
+                    "longitude": {
+                        "description": "longitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "segment_id_beg": {
+                        "description": "first segment in extent",
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "latitude": {
+                        "description": "latitude (EPSG:7912)",
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "y_atc": {
+                        "description": "across-track distance (m)",
+                        "format": "float",
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    }
+}

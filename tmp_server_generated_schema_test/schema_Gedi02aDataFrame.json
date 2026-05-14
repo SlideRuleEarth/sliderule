@@ -1,0 +1,95 @@
+{
+    "description": "Gedi02aDataFrame",
+    "columns": [
+        {
+            "description": "unique shot identifier",
+            "type": "integer",
+            "format": "uint64",
+            "name": "shot_number",
+            "role": "column"
+        },
+        {
+            "description": "GPS nanoseconds",
+            "type": "string",
+            "format": "timestamp-ns",
+            "name": "time_ns",
+            "role": "column"
+        },
+        {
+            "description": "latitude",
+            "type": "number",
+            "format": "double",
+            "name": "latitude",
+            "role": "column"
+        },
+        {
+            "description": "longitude",
+            "type": "number",
+            "format": "double",
+            "name": "longitude",
+            "role": "column"
+        },
+        {
+            "description": "elevation lowest mode (m)",
+            "type": "number",
+            "format": "float",
+            "name": "elevation_lm",
+            "role": "column"
+        },
+        {
+            "description": "elevation highest return (m)",
+            "type": "number",
+            "format": "float",
+            "name": "elevation_hr",
+            "role": "column"
+        },
+        {
+            "description": "solar elevation angle (deg)",
+            "type": "number",
+            "format": "float",
+            "name": "solar_elevation",
+            "role": "column"
+        },
+        {
+            "description": "beam sensitivity",
+            "type": "number",
+            "format": "float",
+            "name": "sensitivity",
+            "role": "column"
+        },
+        {
+            "description": "quality flags",
+            "type": "integer",
+            "format": "uint8",
+            "name": "flags",
+            "role": "column"
+        },
+        {
+            "description": "beam number",
+            "type": "integer",
+            "format": "uint8",
+            "name": "beam",
+            "role": "element"
+        },
+        {
+            "description": "orbit number",
+            "type": "integer",
+            "format": "uint32",
+            "name": "orbit",
+            "role": "element"
+        },
+        {
+            "description": "track number",
+            "type": "integer",
+            "format": "uint16",
+            "name": "track",
+            "role": "element"
+        },
+        {
+            "type": "string",
+            "role": "element",
+            "name": "granule",
+            "description": "source granule name"
+        }
+    ]
+}

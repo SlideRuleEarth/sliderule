@@ -1,0 +1,386 @@
+{
+  "selector": "atl03_geo",
+  "hdf5_subgroup": "gtxx/geolocation",
+  "description": "Geolocation fields from ATL03 (per-segment, ~20m rate).",
+  "field_count": 38,
+  "fields": [
+    {
+      "name": "altitude_sc",
+      "hdf5_path": "/gt1l/geolocation/altitude_sc",
+      "type": "float64",
+      "shape": null,
+      "description": "Altitude",
+      "unit": "meters",
+      "fill_value": 1.7976931348623157e+308,
+      "source": "ATL03g ATBD: General Photon Event Geolocation Algorithm"
+    },
+    {
+      "name": "beta_angle",
+      "hdf5_path": "/gt1l/geolocation/beta_angle",
+      "type": "float32",
+      "shape": null,
+      "description": "beta_angle",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03g ATBD: General Photon Event Geolocation Algorithm"
+    },
+    {
+      "name": "bounce_time_offset",
+      "hdf5_path": "/gt1l/geolocation/bounce_time_offset",
+      "type": "float32",
+      "shape": null,
+      "description": "ground bounce time offset",
+      "unit": "seconds",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/geolocation/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Delta Time",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL03 ATBD: ATL03 Data Structure for Each Ground Track"
+    },
+    {
+      "name": "full_sat_fract",
+      "hdf5_path": "/gt1l/geolocation/full_sat_fract",
+      "type": "float32",
+      "shape": null,
+      "description": "Full Saturation Fraction",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: ATLAS Saturation"
+    },
+    {
+      "name": "near_sat_fract",
+      "hdf5_path": "/gt1l/geolocation/near_sat_fract",
+      "type": "float32",
+      "shape": null,
+      "description": "Near Saturation Fraction",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: ATLAS Saturation"
+    },
+    {
+      "name": "neutat_delay_derivative",
+      "hdf5_path": "/gt1l/geolocation/neutat_delay_derivative",
+      "type": "float32",
+      "shape": null,
+      "description": "(Neutral Atmosphere delay)/dh",
+      "unit": "meters/meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Atmospheric Delay Correction"
+    },
+    {
+      "name": "neutat_delay_total",
+      "hdf5_path": "/gt1l/geolocation/neutat_delay_total",
+      "type": "float32",
+      "shape": null,
+      "description": "Total Neutral Atmospheric Delay",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Atmospheric Delay Correction"
+    },
+    {
+      "name": "neutat_ht",
+      "hdf5_path": "/gt1l/geolocation/neutat_ht",
+      "type": "float32",
+      "shape": null,
+      "description": "Neutral atmosphere ref height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Atmospheric Delay Correction"
+    },
+    {
+      "name": "orbit_angle",
+      "hdf5_path": "/gt1l/geolocation/orbit_angle",
+      "type": "float32",
+      "shape": null,
+      "description": "orbit_angle",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03g ATBD: General Photon Event Geolocation Algorithm"
+    },
+    {
+      "name": "ph_index_beg",
+      "hdf5_path": "/gt1l/geolocation/ph_index_beg",
+      "type": "int64",
+      "shape": null,
+      "description": "Photon Index Begin",
+      "fill_value": 0,
+      "source": "ATL03 ATBD: Selecting the Reference Photon"
+    },
+    {
+      "name": "pitch",
+      "hdf5_path": "/gt1l/geolocation/pitch",
+      "type": "float32",
+      "shape": null,
+      "description": "Pitch",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Spacecraft Attitude Parameters"
+    },
+    {
+      "name": "podppd_flag",
+      "hdf5_path": "/gt1l/geolocation/podppd_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "POD_PPD Flag",
+      "source": "ATL03 ATBD: Geolocation and Calibration Data Quality Flag"
+    },
+    {
+      "name": "range_bias_corr",
+      "hdf5_path": "/gt1l/geolocation/range_bias_corr",
+      "type": "float32",
+      "shape": null,
+      "description": "range bias correction",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: ATLAS Range Bias and Uncertainty"
+    },
+    {
+      "name": "ref_azimuth",
+      "hdf5_path": "/gt1l/geolocation/ref_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "Azimuth",
+      "standard_name": "azimuth",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "ref_elev",
+      "hdf5_path": "/gt1l/geolocation/ref_elev",
+      "type": "float32",
+      "shape": null,
+      "description": "elevation",
+      "standard_name": "elevation",
+      "unit": "radians",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "reference_photon_index",
+      "hdf5_path": "/gt1l/geolocation/reference_photon_index",
+      "type": "int32",
+      "shape": null,
+      "description": "Reference Photon Index",
+      "fill_value": 0,
+      "source": "ATL03 ATBD, Selecting the Reference Photon"
+    },
+    {
+      "name": "reference_photon_lat",
+      "hdf5_path": "/gt1l/geolocation/reference_photon_lat",
+      "type": "float64",
+      "shape": null,
+      "description": "Segment Latitude",
+      "standard_name": "latitude",
+      "unit": "degrees_north",
+      "source": "ATL03 ATBD, Selecting the Reference Photon"
+    },
+    {
+      "name": "reference_photon_lon",
+      "hdf5_path": "/gt1l/geolocation/reference_photon_lon",
+      "type": "float64",
+      "shape": null,
+      "description": "Segment Longitude",
+      "standard_name": "longitude",
+      "unit": "degrees_east",
+      "source": "ATL03 ATBD, Selecting the Reference Photon"
+    },
+    {
+      "name": "roll",
+      "hdf5_path": "/gt1l/geolocation/roll",
+      "type": "float32",
+      "shape": null,
+      "description": "roll",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Spacecraft Attitude Parameters"
+    },
+    {
+      "name": "segment_dist_x",
+      "hdf5_path": "/gt1l/geolocation/segment_dist_x",
+      "type": "float64",
+      "shape": null,
+      "description": "Segment Distance from EQC",
+      "unit": "meters",
+      "source": "ATL03 ATBD: The ICESat-2 Geolocation Along-Track Segments"
+    },
+    {
+      "name": "segment_id",
+      "hdf5_path": "/gt1l/geolocation/segment_id",
+      "type": "int32",
+      "shape": null,
+      "description": "along-track segment ID number.",
+      "source": "ATL03 ATBD: The ICESat-2 Geolocation Along-Track Segments"
+    },
+    {
+      "name": "segment_length",
+      "hdf5_path": "/gt1l/geolocation/segment_length",
+      "type": "float64",
+      "shape": null,
+      "description": "along-track segment length",
+      "unit": "meters",
+      "source": "ATL03 ATBD: The ICESat-2 Geolocation Along-Track Segments"
+    },
+    {
+      "name": "segment_ph_cnt",
+      "hdf5_path": "/gt1l/geolocation/segment_ph_cnt",
+      "type": "int32",
+      "shape": null,
+      "description": "Number of photons",
+      "fill_value": 0,
+      "source": "ATL03 ATBD: ATL03 Output Parameter Table"
+    },
+    {
+      "name": "sigma_across",
+      "hdf5_path": "/gt1l/geolocation/sigma_across",
+      "type": "float32",
+      "shape": null,
+      "description": "across-track geolocation uncertainty",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Other Geolocated Parameters"
+    },
+    {
+      "name": "sigma_along",
+      "hdf5_path": "/gt1l/geolocation/sigma_along",
+      "type": "float32",
+      "shape": null,
+      "description": "along-track geolocation uncertainity",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Other Geolocated Parameters"
+    },
+    {
+      "name": "sigma_h",
+      "hdf5_path": "/gt1l/geolocation/sigma_h",
+      "type": "float32",
+      "shape": null,
+      "description": "height uncertainty",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Other Geolocated Parameters"
+    },
+    {
+      "name": "sigma_lat",
+      "hdf5_path": "/gt1l/geolocation/sigma_lat",
+      "type": "float32",
+      "shape": null,
+      "description": "latitude uncertainty",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Other Geolocated Parameters"
+    },
+    {
+      "name": "sigma_lon",
+      "hdf5_path": "/gt1l/geolocation/sigma_lon",
+      "type": "float32",
+      "shape": null,
+      "description": "longitude uncertainty",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Other Geolocated Parameters"
+    },
+    {
+      "name": "solar_azimuth",
+      "hdf5_path": "/gt1l/geolocation/solar_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "solar azimuth",
+      "unit": "degrees_east",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "solar_elevation",
+      "hdf5_path": "/gt1l/geolocation/solar_elevation",
+      "type": "float32",
+      "shape": null,
+      "description": "solar elevation",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03G ATBD: ICESat-2 Implementation"
+    },
+    {
+      "name": "surf_type",
+      "hdf5_path": "/gt1l/geolocation/surf_type",
+      "type": "int8",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "Surface Type",
+      "source": "ATL03 ATBD: Surface Masks",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "tx_pulse_energy",
+      "hdf5_path": "/gt1l/geolocation/tx_pulse_energy",
+      "type": "float32",
+      "shape": null,
+      "description": "Transmit Pulse Energy",
+      "unit": "Joules",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Start Pulse Detector"
+    },
+    {
+      "name": "tx_pulse_skew_est",
+      "hdf5_path": "/gt1l/geolocation/tx_pulse_skew_est",
+      "type": "float32",
+      "shape": null,
+      "description": "Transmit Pulse Skew Estimate",
+      "unit": "seconds",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Start Pulse Detector"
+    },
+    {
+      "name": "tx_pulse_width_lower",
+      "hdf5_path": "/gt1l/geolocation/tx_pulse_width_lower",
+      "type": "float32",
+      "shape": null,
+      "description": "Transmit Pulse Energy Lower Width",
+      "unit": "seconds",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Start Pulse Detector"
+    },
+    {
+      "name": "tx_pulse_width_upper",
+      "hdf5_path": "/gt1l/geolocation/tx_pulse_width_upper",
+      "type": "float32",
+      "shape": null,
+      "description": "Transmit Pulse Energy Upper Width",
+      "unit": "seconds",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Start Pulse Detector"
+    },
+    {
+      "name": "velocity_sc",
+      "hdf5_path": "/gt1l/geolocation/velocity_sc",
+      "type": "float32",
+      "shape": [
+        null,
+        3
+      ],
+      "description": "spacecraft velocity",
+      "unit": "meters/second",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03G ATBD: ICESat-2 Implementation",
+      "note": "Array field with 3 elements per record"
+    },
+    {
+      "name": "yaw",
+      "hdf5_path": "/gt1l/geolocation/yaw",
+      "type": "float32",
+      "shape": null,
+      "description": "Yaw",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD: Spacecraft Attitude Parameters"
+    }
+  ],
+  "source_granule": "ATL03_20220601014607_10681513_007_01.h5"
+}

@@ -1,0 +1,732 @@
+{
+  "selector": "atl09",
+  "hdf5_subgroup": "profile_1/high_rate",
+  "description": "Atmospheric fields from ATL09 calibrated backscatter profiles.",
+  "field_count": 75,
+  "fields": [
+    {
+      "name": "aclr_true",
+      "hdf5_path": "/profile_1/high_rate/aclr_true",
+      "type": "float32",
+      "shape": null,
+      "description": "Clear Sky ASR",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Cloud Detection Using Apparent Surface Reflectance\""
+    },
+    {
+      "name": "apparent_surf_reflec",
+      "hdf5_path": "/profile_1/high_rate/apparent_surf_reflec",
+      "type": "float32",
+      "shape": null,
+      "description": "Apparent Surface Reflectance",
+      "source": "Atmosphere ATBD Part 1, section \"Apparent Surface Reflectance\""
+    },
+    {
+      "name": "asr_cloud_probability",
+      "hdf5_path": "/profile_1/high_rate/asr_cloud_probability",
+      "type": "int32",
+      "shape": null,
+      "description": "ASR Cloud Probablity",
+      "source": "Atmosphere ATBD Part 1, section \"Cloud Detection Using Apparent Surface Reflectance\""
+    },
+    {
+      "name": "backg_c",
+      "hdf5_path": "/profile_1/high_rate/backg_c",
+      "type": "float32",
+      "shape": null,
+      "description": "Background",
+      "unit": "photons/bin",
+      "source": "Atmosphere ATBD Part 1, section \"Background Computation\""
+    },
+    {
+      "name": "backg_theoret",
+      "hdf5_path": "/profile_1/high_rate/backg_theoret",
+      "type": "float32",
+      "shape": null,
+      "description": "Theoretical Background",
+      "unit": "photons/bin",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Theoretical Background\""
+    },
+    {
+      "name": "beam_azimuth",
+      "hdf5_path": "/profile_1/high_rate/beam_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "Beam Azimuth",
+      "unit": "degrees_east",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "beam_elevation",
+      "hdf5_path": "/profile_1/high_rate/beam_elevation",
+      "type": "float32",
+      "shape": null,
+      "description": "Beam Elevation",
+      "unit": "degrees",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "bsnow_con",
+      "hdf5_path": "/profile_1/high_rate/bsnow_con",
+      "type": "int16",
+      "shape": null,
+      "description": "Blowing Snow Confidence",
+      "fill_value": 32767,
+      "source": "Atmosphere ATBD Part 1, section \"Blowing Snow\""
+    },
+    {
+      "name": "bsnow_dens",
+      "hdf5_path": "/profile_1/high_rate/bsnow_dens",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing Snow Density",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Classification and Height Determination of Blowing Snow and Diamond Dust\""
+    },
+    {
+      "name": "bsnow_dens_flag",
+      "hdf5_path": "/profile_1/high_rate/bsnow_dens_flag",
+      "type": "int32",
+      "shape": null,
+      "description": "Blowing Snow from Density Flag",
+      "fill_value": 2147483647,
+      "source": "Atmosphere ATBD Part 2, section \"Classification and Height Determination of Blowing Snow and Diamond Dust\""
+    },
+    {
+      "name": "bsnow_h",
+      "hdf5_path": "/profile_1/high_rate/bsnow_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing Snow Layer Thickness",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Blowing Snow\""
+    },
+    {
+      "name": "bsnow_h_dens",
+      "hdf5_path": "/profile_1/high_rate/bsnow_h_dens",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing Snow from Density Layer Thickness",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Classification and Height Determination of Blowing Snow and Diamond Dust\""
+    },
+    {
+      "name": "bsnow_intensity",
+      "hdf5_path": "/profile_1/high_rate/bsnow_intensity",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing Snow Intensity",
+      "unit": "meters/second",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Blowing Snow\""
+    },
+    {
+      "name": "bsnow_od",
+      "hdf5_path": "/profile_1/high_rate/bsnow_od",
+      "type": "float32",
+      "shape": null,
+      "description": "Blowing Snow Optical Depth",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Blowing Snow\""
+    },
+    {
+      "name": "bsnow_psc",
+      "hdf5_path": "/profile_1/high_rate/bsnow_psc",
+      "type": "int8",
+      "shape": null,
+      "description": "Blowing Snow PSC Flag",
+      "source": "Atmosphere ATBD Part 1, section \"Blowing Snow\""
+    },
+    {
+      "name": "cab_prof",
+      "hdf5_path": "/profile_1/high_rate/cab_prof",
+      "type": "float32",
+      "shape": [
+        null,
+        700
+      ],
+      "description": "Calibrated Attenuated Backscatter Profile",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Calibrated, Attenuated Backscatter Profiles\"",
+      "note": "Array field with 700 elements per record"
+    },
+    {
+      "name": "cap_h",
+      "hdf5_path": "/profile_1/high_rate/cap_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Clear Air Precipitation Top Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Blowing Snow\""
+    },
+    {
+      "name": "cloud_flag_asr",
+      "hdf5_path": "/profile_1/high_rate/cloud_flag_asr",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Flag using ASR",
+      "fill_value": 127,
+      "source": "Atmosphere ATBD Part 1, section \"Cloud Detection Using Apparent Surface Reflectance\""
+    },
+    {
+      "name": "cloud_flag_atm",
+      "hdf5_path": "/profile_1/high_rate/cloud_flag_atm",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Flag using Atmosphere",
+      "source": "Atmosphere ATBD Part 1, section \"Layer Heights and Flags from Backscatter Profiles\""
+    },
+    {
+      "name": "cloud_fold_flag",
+      "hdf5_path": "/profile_1/high_rate/cloud_fold_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "Cloud Folding Flag",
+      "source": "Atmosphere ATBD Part 1, section \"Cloud Folding Flag\""
+    },
+    {
+      "name": "column_dens",
+      "hdf5_path": "/profile_1/high_rate/column_dens",
+      "type": "float32",
+      "shape": null,
+      "description": "Column Density",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Layer Density\""
+    },
+    {
+      "name": "column_od_asr",
+      "hdf5_path": "/profile_1/high_rate/column_od_asr",
+      "type": "float32",
+      "shape": null,
+      "description": "Optical Depth from ASR",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Total Column Optical Depth Using ASR\""
+    },
+    {
+      "name": "column_od_asr_qf",
+      "hdf5_path": "/profile_1/high_rate/column_od_asr_qf",
+      "type": "int8",
+      "shape": null,
+      "description": "Optical Depth from ASR Quality Flag",
+      "source": "Atmosphere ATBD Part 1, section \"Total Column Optical Depth Using ASR\""
+    },
+    {
+      "name": "ddust_hbot_dens",
+      "hdf5_path": "/profile_1/high_rate/ddust_hbot_dens",
+      "type": "float32",
+      "shape": null,
+      "description": "Diamond Dust from Density Layer Bottom Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Classification and Height Determination of Blowing Snow and Diamond Dust\""
+    },
+    {
+      "name": "ddust_htop_dens",
+      "hdf5_path": "/profile_1/high_rate/ddust_htop_dens",
+      "type": "float32",
+      "shape": null,
+      "description": "Diamond Dust from Density Layer Top Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Classification and Height Determination of Blowing Snow and Diamond Dust\""
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/profile_1/high_rate/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Elapsed GPS seconds",
+      "standard_name": "time",
+      "unit": "seconds since 2018-01-01",
+      "source": "Derived via Time Tagging"
+    },
+    {
+      "name": "dem_flag",
+      "hdf5_path": "/profile_1/high_rate/dem_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "DEM Source Flag",
+      "fill_value": 127,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "dem_h",
+      "hdf5_path": "/profile_1/high_rate/dem_h",
+      "type": "float32",
+      "shape": null,
+      "description": "DEM Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "density_pass1",
+      "hdf5_path": "/profile_1/high_rate/density_pass1",
+      "type": "float32",
+      "shape": [
+        null,
+        700
+      ],
+      "description": "Density Profile for Pass 1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Calculate Density\"",
+      "note": "Array field with 700 elements per record"
+    },
+    {
+      "name": "density_pass2",
+      "hdf5_path": "/profile_1/high_rate/density_pass2",
+      "type": "float32",
+      "shape": [
+        null,
+        700
+      ],
+      "description": "Density Profile for Pass 2",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Calculate Density\"",
+      "note": "Array field with 700 elements per record"
+    },
+    {
+      "name": "ds_layers",
+      "hdf5_path": "/profile_1/high_rate/ds_layers",
+      "type": "int32",
+      "shape": null,
+      "description": "Cloud Layers Dimension Scale",
+      "source": "Derived"
+    },
+    {
+      "name": "ds_va_bin_h",
+      "hdf5_path": "/profile_1/high_rate/ds_va_bin_h",
+      "type": "float32",
+      "shape": null,
+      "description": "VA Bin Height Dimension Scale",
+      "unit": "meters",
+      "source": "Derived"
+    },
+    {
+      "name": "dtime_fac1",
+      "hdf5_path": "/profile_1/high_rate/dtime_fac1",
+      "type": "float32",
+      "shape": null,
+      "description": "Dead Time Factor 1",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Dead Time Correction\""
+    },
+    {
+      "name": "dtime_fac2",
+      "hdf5_path": "/profile_1/high_rate/dtime_fac2",
+      "type": "float32",
+      "shape": null,
+      "description": "Dead Time Factor 2",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Dead Time Correction\""
+    },
+    {
+      "name": "latitude",
+      "hdf5_path": "/profile_1/high_rate/latitude",
+      "type": "float64",
+      "shape": null,
+      "description": "Latitude of the Atmosphere Histogram",
+      "standard_name": "latitude",
+      "unit": "degrees_north",
+      "source": "ATL03g ATBD"
+    },
+    {
+      "name": "layer_attr",
+      "hdf5_path": "/profile_1/high_rate/layer_attr",
+      "type": "int8",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Attribute Flag",
+      "source": "Atmosphere ATBD Part 1, section \"Layer Heights and Flags from Backscatter Profiles\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "layer_bot",
+      "hdf5_path": "/profile_1/high_rate/layer_bot",
+      "type": "float32",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Bottom Heights",
+      "unit": "meter",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Layer Boundaries\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "layer_con",
+      "hdf5_path": "/profile_1/high_rate/layer_con",
+      "type": "int32",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Confidence Flag",
+      "fill_value": 2147483647,
+      "source": "Atmosphere ATBD Part 1, section \"Layer Heights and Flags from Backscatter Profiles\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "layer_conf_dens",
+      "hdf5_path": "/profile_1/high_rate/layer_conf_dens",
+      "type": "float32",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Confidence from Density",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Quality Assessment\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "layer_dens",
+      "hdf5_path": "/profile_1/high_rate/layer_dens",
+      "type": "float32",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Density",
+      "source": "Atmosphere ATBD Part 2, section \"Layer Density\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "layer_flag",
+      "hdf5_path": "/profile_1/high_rate/layer_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "Consolidated Cloud Flag",
+      "source": "Atmosphere ATBD Part 1, section \"Consolidated Cloud Flag\""
+    },
+    {
+      "name": "layer_ib",
+      "hdf5_path": "/profile_1/high_rate/layer_ib",
+      "type": "float32",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Integrated Backscatter",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Layer Integrated Attenuated Backscatter\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "layer_top",
+      "hdf5_path": "/profile_1/high_rate/layer_top",
+      "type": "float32",
+      "shape": [
+        null,
+        10
+      ],
+      "description": "Layer Top Heights",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Layer Boundaries\"",
+      "note": "Array field with 10 elements per record"
+    },
+    {
+      "name": "longitude",
+      "hdf5_path": "/profile_1/high_rate/longitude",
+      "type": "float64",
+      "shape": null,
+      "description": "Longitude of the Atmosphere Histogram",
+      "standard_name": "longitude",
+      "unit": "degrees_east",
+      "source": "ATL03g ATBD"
+    },
+    {
+      "name": "msw_flag",
+      "hdf5_path": "/profile_1/high_rate/msw_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "Multiple Scattering Warning Flag",
+      "source": "Atmosphere ATBD Part 1, section \"Layer Heights and Flags from Backscatter Profiles\""
+    },
+    {
+      "name": "ocean_surf_reflec",
+      "hdf5_path": "/profile_1/high_rate/ocean_surf_reflec",
+      "type": "float32",
+      "shape": null,
+      "description": "Ocean Surface Reflectance",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Ocean Surface Reflectivity\""
+    },
+    {
+      "name": "pce_mframe_cnt",
+      "hdf5_path": "/profile_1/high_rate/pce_mframe_cnt",
+      "type": "uint32",
+      "shape": null,
+      "description": "PCE Major Frame Counter",
+      "source": "ATL02"
+    },
+    {
+      "name": "podppd_flag",
+      "hdf5_path": "/profile_1/high_rate/podppd_flag",
+      "type": "int8",
+      "shape": null,
+      "description": "POD/PPD Flag",
+      "fill_value": 0,
+      "source": "ANC04, ANC05"
+    },
+    {
+      "name": "prof_dist_x",
+      "hdf5_path": "/profile_1/high_rate/prof_dist_x",
+      "type": "float64",
+      "shape": null,
+      "description": "Along Track Distance",
+      "unit": "meters",
+      "source": "ATL03g ATBD"
+    },
+    {
+      "name": "prof_dist_y",
+      "hdf5_path": "/profile_1/high_rate/prof_dist_y",
+      "type": "float32",
+      "shape": null,
+      "description": "Across Track Distance",
+      "unit": "meters",
+      "source": "ATL03g ATBD"
+    },
+    {
+      "name": "range_to_top",
+      "hdf5_path": "/profile_1/high_rate/range_to_top",
+      "type": "float32",
+      "shape": null,
+      "description": "Range",
+      "unit": "meters",
+      "source": "Atmosphere ATBD Part 1"
+    },
+    {
+      "name": "segment_id",
+      "hdf5_path": "/profile_1/high_rate/segment_id",
+      "type": "int32",
+      "shape": null,
+      "description": "Segment ID Number",
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_count_hi",
+      "hdf5_path": "/profile_1/high_rate/sig_count_hi",
+      "type": "int32",
+      "shape": null,
+      "description": "Count of Signal Heights - High",
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_count_low",
+      "hdf5_path": "/profile_1/high_rate/sig_count_low",
+      "type": "int32",
+      "shape": null,
+      "description": "Count of Signal Heights - Low",
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_count_med",
+      "hdf5_path": "/profile_1/high_rate/sig_count_med",
+      "type": "int32",
+      "shape": null,
+      "description": "Count of Signal Heights - Medium",
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_h_mean_hi",
+      "hdf5_path": "/profile_1/high_rate/sig_h_mean_hi",
+      "type": "float32",
+      "shape": null,
+      "description": "Mean of Signal Heights - High",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_h_mean_low",
+      "hdf5_path": "/profile_1/high_rate/sig_h_mean_low",
+      "type": "float32",
+      "shape": null,
+      "description": "Mean of Signal Heights - Low",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_h_mean_med",
+      "hdf5_path": "/profile_1/high_rate/sig_h_mean_med",
+      "type": "float32",
+      "shape": null,
+      "description": "Mean of Signal Heights - Medium",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_h_sdev_hi",
+      "hdf5_path": "/profile_1/high_rate/sig_h_sdev_hi",
+      "type": "float32",
+      "shape": null,
+      "description": "Standard Deviation of Signal Heights - High",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_h_sdev_low",
+      "hdf5_path": "/profile_1/high_rate/sig_h_sdev_low",
+      "type": "float32",
+      "shape": null,
+      "description": "Standard Deviation of Signal Heights - Low",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "sig_h_sdev_med",
+      "hdf5_path": "/profile_1/high_rate/sig_h_sdev_med",
+      "type": "float32",
+      "shape": null,
+      "description": "Standard Deviation of Signal Heights - Medium",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL03 ATBD"
+    },
+    {
+      "name": "snow_ice",
+      "hdf5_path": "/profile_1/high_rate/snow_ice",
+      "type": "int32",
+      "shape": null,
+      "description": "Snow Ice Flag",
+      "fill_value": 127,
+      "source": "Atmosphere ATBD Part 2, section \"Classification and Height Determination of Blowing Snow and Diamond Dust\""
+    },
+    {
+      "name": "solar_azimuth",
+      "hdf5_path": "/profile_1/high_rate/solar_azimuth",
+      "type": "float32",
+      "shape": null,
+      "description": "Solar Azimuth",
+      "unit": "degrees_east",
+      "source": "ATL03g ATBD"
+    },
+    {
+      "name": "solar_elevation",
+      "hdf5_path": "/profile_1/high_rate/solar_elevation",
+      "type": "float32",
+      "shape": null,
+      "description": "Solar Elevation",
+      "unit": "degrees",
+      "source": "ATL03g ATBD"
+    },
+    {
+      "name": "surf_refl_true",
+      "hdf5_path": "/profile_1/high_rate/surf_refl_true",
+      "type": "float32",
+      "shape": null,
+      "description": "Estimated Surface Reflectance",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Cloud Detection Using Apparent Surface Reflectance\""
+    },
+    {
+      "name": "surf_type",
+      "hdf5_path": "/profile_1/high_rate/surf_type",
+      "type": "int8",
+      "shape": [
+        null,
+        5
+      ],
+      "description": "Surface Type",
+      "source": "ATL03 ATBD",
+      "note": "Array field with 5 elements per record"
+    },
+    {
+      "name": "surf_type_igbp",
+      "hdf5_path": "/profile_1/high_rate/surf_type_igbp",
+      "type": "int8",
+      "shape": null,
+      "description": "IGBP Surface Type",
+      "source": "Atmosphere ATBD Part 1"
+    },
+    {
+      "name": "surface_bin",
+      "hdf5_path": "/profile_1/high_rate/surface_bin",
+      "type": "int32",
+      "shape": null,
+      "description": "Surface Bin",
+      "fill_value": 2147483647,
+      "source": "Atmosphere ATBD Part 1, section \"Surface Signal\""
+    },
+    {
+      "name": "surface_conf",
+      "hdf5_path": "/profile_1/high_rate/surface_conf",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface Signal Confidence",
+      "source": "Atmosphere ATBD Part 1, section \"Surface Signal\""
+    },
+    {
+      "name": "surface_h_dens",
+      "hdf5_path": "/profile_1/high_rate/surface_h_dens",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface Height from Density",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 2, section \"Algorithm for Determination of Ground Surface from Atmospheric Data\""
+    },
+    {
+      "name": "surface_height",
+      "hdf5_path": "/profile_1/high_rate/surface_height",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface Height",
+      "unit": "meters",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "Atmosphere ATBD Part 1, section \"Surface Signal\""
+    },
+    {
+      "name": "surface_sig",
+      "hdf5_path": "/profile_1/high_rate/surface_sig",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface Signal Count",
+      "source": "Atmosphere ATBD Part 1, section \"Surface Signal\""
+    },
+    {
+      "name": "surface_thresh",
+      "hdf5_path": "/profile_1/high_rate/surface_thresh",
+      "type": "float32",
+      "shape": null,
+      "description": "Surface Signal Threshold",
+      "unit": "photons",
+      "source": "Atmosphere ATBD Part 1, section \"Surface Signal\""
+    },
+    {
+      "name": "surface_width",
+      "hdf5_path": "/profile_1/high_rate/surface_width",
+      "type": "int32",
+      "shape": null,
+      "description": "Surface Signal Width",
+      "unit": "bins",
+      "source": "Atmosphere ATBD Part 1, section \"Surface Signal\""
+    },
+    {
+      "name": "tx_pulse_energy",
+      "hdf5_path": "/profile_1/high_rate/tx_pulse_energy",
+      "type": "float32",
+      "shape": null,
+      "description": "Transmit Pulse Energy",
+      "unit": "Joules",
+      "fill_value": 3.4028234663852886e+38,
+      "source": "ATL02 ATBD"
+    }
+  ],
+  "source_granule": "ATL09_20220602171625_10941501_007_01.h5"
+}

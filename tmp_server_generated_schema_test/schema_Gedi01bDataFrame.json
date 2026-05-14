@@ -1,0 +1,118 @@
+{
+    "columns": [
+        {
+            "role": "column",
+            "type": "integer",
+            "format": "uint64",
+            "name": "shot_number",
+            "description": "unique shot identifier"
+        },
+        {
+            "role": "column",
+            "type": "string",
+            "format": "timestamp-ns",
+            "name": "time_ns",
+            "description": "GPS nanoseconds"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "latitude",
+            "description": "latitude"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "longitude",
+            "description": "longitude"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "float",
+            "name": "elevation_start",
+            "description": "waveform start elevation (m)"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "elevation_stop",
+            "description": "waveform stop elevation (m)"
+        },
+        {
+            "role": "column",
+            "type": "number",
+            "format": "double",
+            "name": "solar_elevation",
+            "description": "solar elevation angle (deg)"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "format": "uint16",
+            "name": "tx_size",
+            "description": "transmit waveform sample count"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "format": "uint16",
+            "name": "rx_size",
+            "description": "receive waveform sample count"
+        },
+        {
+            "role": "column",
+            "type": "integer",
+            "format": "uint8",
+            "name": "flags",
+            "description": "quality flags"
+        },
+        {
+            "role": "column",
+            "description": "transmit waveform",
+            "name": "tx_waveform",
+            "type": "array",
+            "items_type": "number",
+            "items_format": "float"
+        },
+        {
+            "role": "column",
+            "description": "receive waveform",
+            "name": "rx_waveform",
+            "type": "array",
+            "items_type": "number",
+            "items_format": "float"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint8",
+            "name": "beam",
+            "description": "beam number"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint32",
+            "name": "orbit",
+            "description": "orbit number"
+        },
+        {
+            "role": "element",
+            "type": "integer",
+            "format": "uint16",
+            "name": "track",
+            "description": "track number"
+        },
+        {
+            "role": "element",
+            "type": "string",
+            "name": "granule",
+            "description": "source granule name"
+        }
+    ],
+    "description": "Gedi01bDataFrame"
+}
