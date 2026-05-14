@@ -296,9 +296,9 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/$*
 	cp -R $(ROOT)/applications/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
 	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
-	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
-	- npx @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/$*.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
+	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
+	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
+	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/$*.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
 
 ########################
 # Docker Build Targets
@@ -327,9 +327,9 @@ sliderule-test: ## run python client tests
 sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
 	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
 	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
-	npx @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
-	- npx @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
-	npx @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
+	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)

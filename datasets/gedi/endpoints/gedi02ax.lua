@@ -4,7 +4,7 @@
 local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
-local parms     = gedi.parms(rqst["parms"], rqst["key_space"], "gedil2a", rqst["resource"])
+local parms     = gedi.parmsl2(rqst["parms"], rqst["key_space"], "gedil2a", rqst["resource"])
 local resource  = parms["resource"]
 local channels  = 8 -- number of dataframes per resource (one per beam)
 
