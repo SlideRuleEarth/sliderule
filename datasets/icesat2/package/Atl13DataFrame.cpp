@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "Icesat2Parameters.h"
+#include "Atl13Parameters.h"
 #include "Atl13DataFrame.h"
 
 /******************************************************************************
@@ -61,14 +61,14 @@ const struct luaL_Reg Atl13DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl13DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl13Parameters* _parms = NULL;
     H5Object* _hdf13 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl13Parameters*>(getLuaObject(L, 2, Atl13Parameters::OBJECT_TYPE));
         _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
@@ -87,7 +87,7 @@ int Atl13DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf13, const char* outq_name):
+Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Atl13Parameters* _parms, H5Object* _hdf13, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
@@ -188,7 +188,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl13DataFrame* df = static_cast<Atl13DataFrame*>(parm);
-    const Icesat2Parameters& parms = *df->parms;
+    const Atl13Parameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl13_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf13->name, df->beam);

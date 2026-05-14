@@ -98,13 +98,13 @@ const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Reader::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -134,7 +134,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Icesat2Parameters* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Atl03Parameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     parms(_parms),
@@ -1208,7 +1208,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl03Reader* reader = info->reader;
-    const Icesat2Parameters* parms = reader->parms;
+    const Atl03Parameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     List<int32_t>* segment_indices = NULL;    // used for ancillary data
     List<int32_t>* photon_indices = NULL;     // used for ancillary data

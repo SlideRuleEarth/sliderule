@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "ContainerRecord.h"
 #include "Atl06Reader.h"
-#include "Icesat2Parameters.h"
+#include "Atl06Parameters.h"
 #include "AncillaryFields.h"
 #include "FieldList.h"
 
@@ -102,13 +102,13 @@ const struct luaL_Reg Atl06Reader::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl06Reader::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl06Parameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl06Parameters*>(getLuaObject(L, 2, Atl06Parameters::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -138,7 +138,7 @@ void Atl06Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Atl06Reader (lua_State* L, const char* outq_name, Icesat2Parameters* _parms, bool _send_terminator):
+Atl06Reader::Atl06Reader (lua_State* L, const char* outq_name, Atl06Parameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     context(NULL)
@@ -469,7 +469,7 @@ void* Atl06Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl06Reader* reader = info->reader;
-    const Icesat2Parameters* parms = reader->parms;
+    const Atl06Parameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 

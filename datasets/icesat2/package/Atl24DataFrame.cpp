@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "Icesat2Parameters.h"
+#include "Atl24Parameters.h"
 #include "Atl24DataFrame.h"
 
 /******************************************************************************
@@ -61,14 +61,14 @@ const struct luaL_Reg Atl24DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl24DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl24Parameters* _parms = NULL;
     H5Object* _hdf24 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl24Parameters*>(getLuaObject(L, 2, Atl24Parameters::OBJECT_TYPE));
         _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 5, true, NULL);
 
@@ -87,7 +87,7 @@ int Atl24DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf24, const char* outq_name):
+Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Atl24Parameters* _parms, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"class_ph",        &class_ph,      "Photon classification: sea_surface (41), bathymetry (40), other (1), or unclassified (0)"},
@@ -223,7 +223,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl24DataFrame* df = static_cast<Atl24DataFrame*>(parm);
-    const Icesat2Parameters& parms = *df->parms;
+    const Atl24Parameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf24->name, df->beam);

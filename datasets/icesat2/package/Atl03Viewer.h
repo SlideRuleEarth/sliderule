@@ -43,7 +43,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "H5Array.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 
 /******************************************************************************
  * ATL03 VIEWER
@@ -180,7 +180,7 @@ class Atl03Viewer: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Parameters*      parms;
+        Atl03Parameters*    parms;
         stats_t             stats;
 
         H5Coro::Context*    context; // for ATL03 file
@@ -189,7 +189,7 @@ class Atl03Viewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Viewer                 (lua_State* L, const char* outq_name, Icesat2Parameters* _parms, bool _send_terminator=true);
+                            Atl03Viewer                 (lua_State* L, const char* outq_name, Atl03Parameters* _parms, bool _send_terminator=true);
                             ~Atl03Viewer                (void) override;
 
         static void*        subsettingThread            (void* parm);

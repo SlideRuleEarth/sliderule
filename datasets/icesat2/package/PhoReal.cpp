@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "PhoReal.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 #include "Atl03DataFrame.h"
 #include "FieldColumn.h"
 #include "FieldArray.h"
@@ -66,11 +66,11 @@ const struct luaL_Reg PhoReal::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int PhoReal::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
 
     try
     {
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 1, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 1, Atl03Parameters::OBJECT_TYPE));
         return createLuaObject(L, new PhoReal(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -84,7 +84,7 @@ int PhoReal::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PhoReal::PhoReal (lua_State* L, Icesat2Parameters* _parms):
+PhoReal::PhoReal (lua_State* L, Atl03Parameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {

@@ -131,12 +131,12 @@ const struct luaL_Reg Atl06Dispatch::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl06DispatchParameters* _parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl06DispatchParameters*>(getLuaObject(L, 2, Atl06DispatchParameters::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, _parms));
@@ -170,7 +170,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parameters* _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Atl06DispatchParameters* _parms):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     elevationRecord(atRecType, sizeof(atl06_t))
 {

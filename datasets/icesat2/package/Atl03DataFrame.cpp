@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -61,7 +61,7 @@ const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
     H5Object* _hdf03 = NULL;
     H5Object* _hdf08 = NULL;
     H5Object* _hdf24 = NULL;
@@ -70,7 +70,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
         _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
@@ -93,7 +93,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
+Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Atl03Parameters* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns,               "Unix time (nanoseconds) of the photon measurement"},
@@ -531,7 +531,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl03DataFrame* df = static_cast<Atl03DataFrame*>(parm);
-    const Icesat2Parameters& parms = *df->parms;
+    const Atl03Parameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf03->name, df->beam);

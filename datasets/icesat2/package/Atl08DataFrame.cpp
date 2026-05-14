@@ -53,14 +53,14 @@ const struct luaL_Reg Atl08DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl08DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
     H5Object* _hdf08 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE));
         _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
@@ -79,7 +79,7 @@ int Atl08DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf08, const char* outq_name):
+Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Atl03Parameters* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
@@ -241,7 +241,7 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest<f
 void* Atl08DataFrame::subsettingThread (void* parm)
 {
     Atl08DataFrame* df = static_cast<Atl08DataFrame*>(parm);
-    const Icesat2Parameters& parms = *df->parms;
+    const Atl03Parameters& parms = *df->parms;
     using std::numeric_limits;
 
     /* Start Trace */

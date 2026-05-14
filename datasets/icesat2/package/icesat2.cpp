@@ -57,6 +57,7 @@
 #include "Atl24DataFrame.h"
 #include "Atl24Granule.h"
 #include "Atl24IODriver.h"
+#include "Atl24Parameters.h"
 #include "CumulusIODriver.h"
 #include "MeritRaster.h"
 #include "PhoReal.h"
@@ -87,6 +88,7 @@ int icesat2_open (lua_State *L)
         {"parms06",             luaCreateParameters<Atl06Parameters>},
         {"parms06d",            luaCreateParameters<Atl06DispatchParameters>},
         {"parms13",             luaCreateParameters<Atl13Parameters>},
+        {"parms24",             luaCreateParameters<Atl24Parameters>},
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},

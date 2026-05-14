@@ -44,7 +44,7 @@
 #include "H5Array.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 #include "AreaOfInterest03.h"
 
 /******************************************************************************
@@ -224,7 +224,7 @@ class Atl03DataFrame: public GeoDataFrame
         int                 signalConfColIndex;
         const char*         beam;
         Publisher*          outQ;
-        Icesat2Parameters*      parms;
+        Atl03Parameters*    parms;
         H5Object*           hdf03;  // atl03 granule
         H5Object*           hdf08;  // atl08 granule
         H5Object*           hdf24;  // atl24 granule
@@ -237,7 +237,7 @@ class Atl03DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl03DataFrame      (lua_State* L, const char* beam_str, Icesat2Parameters* _parms,
+                        Atl03DataFrame      (lua_State* L, const char* beam_str, Atl03Parameters* _parms,
                                              H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24,
                                              const char* outq_name);
                         ~Atl03DataFrame     (void) override;

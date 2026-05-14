@@ -45,7 +45,7 @@
 #include "H5Array.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
-#include "Icesat2Parameters.h"
+#include "Atl24Parameters.h"
 #include "AreaOfInterest.h"
 
 /******************************************************************************
@@ -146,14 +146,14 @@ class Atl24DataFrame: public GeoDataFrame
         const int           readTimeoutMs;
         const char*         beam;
         Publisher*          outQ;
-        Icesat2Parameters*      parms;
+        Atl24Parameters*    parms;
         H5Object*           hdf24;  // atl24 granule
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl24DataFrame      (lua_State* L, const char* beam_str, Icesat2Parameters* _parms, H5Object* _hdf24, const char* outq_name);
+                        Atl24DataFrame      (lua_State* L, const char* beam_str, Atl24Parameters* _parms, H5Object* _hdf24, const char* outq_name);
                         ~Atl24DataFrame     (void) override;
         static void*    subsettingThread    (void* parm);
 };

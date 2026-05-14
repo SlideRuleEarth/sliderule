@@ -312,15 +312,12 @@ Atl03Parameters::Atl03Parameters(lua_State* L, uint64_t key_space, const char* a
     addParameter("yapc",                &yapc,                  "Configuration structure for the 'Yet Another Photon Classifier' algorithm; when provided the servers will calculate a density score for each photon and include that score in the response data");
     addParameter("phoreal",             &phoreal,               "Configuration structure for the 'PhoREAL' algorithm; when provided the servers will calculate canopy metrics on the source photon cloud and return those metrics as a dataset similar to ATL08");
     addParameter("als",                 &blanket,               "Configuration structure for the 'Surface Blanket' algorithm; when provided the servers will calculate a canopy top and ground using the source photon cloud and return those values in the response");
-    addParameter("atl13",               &atl13,                 "Configuration structure for the 'atl13x' dataset construction");
-    addParameter("atl24",               &atl24,                 "Configuration structure for the 'atl24x' dataset construction");
+    addParameter("atl24",               &atl24,                 "Configuration for classifying bathymetry photons");
     addParameter("atl03_bckgrd_fields", &atl03BckgrdFields,     "Ancillary fields in the 'bckgrd_atlas' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
     addParameter("atl03_geo_fields",    &atl03GeoFields,        "Ancillary fields in the 'geolocation' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
     addParameter("atl03_corr_fields",   &atl03CorrFields,       "Ancillary fields in the 'geophys_corr' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
     addParameter("atl03_ph_fields",     &atl03PhFields,         "Ancillary fields in the 'heights' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
     addParameter("atl08_fields",        &atl08Fields,           "Ancillary fields in the 'land_segments' group of the ATL08 granule to include in the response; supported by atl08x");
-    addParameter("atl09_fields",        &atl09Fields,           "Ancillary fields in the ATL09 granule to include in the response (e.g. low_rate/cal_c); supported by all x-series endpoints");
-
 }
 
 /******************************************************************************

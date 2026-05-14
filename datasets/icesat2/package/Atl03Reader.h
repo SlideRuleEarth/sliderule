@@ -46,7 +46,7 @@
 #include "FieldList.h"
 #include "H5Array.h"
 #include "H5DArray.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 
 /******************************************************************************
  * ATL03 READER
@@ -306,7 +306,7 @@ class Atl03Reader: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Parameters*      parms;
+        Atl03Parameters*    parms;
         int                 signalConfColIndex;
         stats_t             stats;
 
@@ -317,7 +317,7 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader                 (lua_State* L, const char* outq_name, Icesat2Parameters* _parms, bool _send_terminator=true);
+                            Atl03Reader                 (lua_State* L, const char* outq_name, Atl03Parameters* _parms, bool _send_terminator=true);
                             ~Atl03Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);

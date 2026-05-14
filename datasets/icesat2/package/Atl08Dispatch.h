@@ -42,7 +42,7 @@
 #include "DispatchObject.h"
 #include "OsApi.h"
 #include "Atl03Reader.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 
 /******************************************************************************
  * ATL08 DISPATCH CLASS
@@ -143,13 +143,13 @@ class Atl08Dispatch: public DispatchObject
 
         Publisher*              outQ;
 
-        Icesat2Parameters*          parms;
+        Atl03Parameters*        parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl08Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parameters* _parms);
+                        Atl08Dispatch                   (lua_State* L, const char* outq_name, Atl03Parameters* _parms);
                         ~Atl08Dispatch                  (void) override;
 
         bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;

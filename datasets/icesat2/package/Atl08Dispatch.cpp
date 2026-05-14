@@ -43,7 +43,7 @@
 #include "Atl08Dispatch.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 #include "AncillaryFields.h"
 
 using std::numeric_limits;
@@ -116,12 +116,12 @@ const double Atl08Dispatch::PercentileInterval[NUM_PERCENTILES] = {
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl08Dispatch(L, outq_name, _parms));
@@ -157,7 +157,7 @@ void Atl08Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parameters* _parms):
+Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Atl03Parameters* _parms):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     batchData(NULL),
     batchIndex(0),

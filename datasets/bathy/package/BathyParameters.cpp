@@ -57,14 +57,14 @@ const double BathyParameters::DEFAULT_WIND_SPEED = 3.3; // meters
  *----------------------------------------------------------------------------*/
 void BathyParameters::fromLua (lua_State* L, int index)
 {
-    Icesat2Parameters::fromLua(L, index);
+    Atl03Parameters::fromLua(L, index);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyParameters::BathyParameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
-    Icesat2Parameters (L, key_space, asset_name, _resource, lua_meta_name)
+    Atl03Parameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("asset09",             &atl09AssetName,      "Asset identifier to use when reading wind speed from ATL09; when left blank the server will do the right thing");
     addParameter("max_dem_delta",       &maxDemDelta,         "Maximum positive vertical distance of photon from ATL03 DEM to include in bathymetry processing");

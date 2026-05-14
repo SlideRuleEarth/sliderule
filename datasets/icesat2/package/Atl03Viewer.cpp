@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 #include "Atl03Viewer.h"
 
 /******************************************************************************
@@ -85,13 +85,13 @@ const struct luaL_Reg Atl03Viewer::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Viewer::luaCreate (lua_State* L)
 {
-    Icesat2Parameters* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 2, Icesat2Parameters::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -121,7 +121,7 @@ void Atl03Viewer::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Viewer::Atl03Viewer (lua_State* L, const char* outq_name, Icesat2Parameters* _parms, bool _send_terminator):
+Atl03Viewer::Atl03Viewer (lua_State* L, const char* outq_name, Atl03Parameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     context(NULL)
@@ -412,7 +412,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl03Viewer* reader = info->reader;
-    Icesat2Parameters* parms = info->reader->parms;
+    Atl03Parameters* parms = info->reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */

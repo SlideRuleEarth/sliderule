@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "Asset.h"
-#include "Icesat2Parameters.h"
+#include "Atl03Parameters.h"
 
 /******************************************************************************
  * CLASSES
@@ -105,7 +105,7 @@ struct UncertaintyFields: public FieldMap<Field>
 /****************/
 /* Bathy Fields */
 /****************/
-class BathyParameters: public Icesat2Parameters
+class BathyParameters: public Atl03Parameters
 {
     public:
 
