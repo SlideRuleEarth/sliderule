@@ -46,7 +46,7 @@ const char* BlueTopoBathyRaster::validBands[] = {"Elevation", "Uncertainty", "Co
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestParameters* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key),
  filePath(parms->asset.asset->getPath()),
  indexBucket(parms->asset.asset->getIndex())

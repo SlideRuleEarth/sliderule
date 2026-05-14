@@ -46,7 +46,7 @@ static const std::vector<const char*> dates = {"start_datetime", "end_datetime"}
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char* dem_name, GdalRaster::overrideCRS_t cb):
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, RequestParameters* rqst_parms, const char* key, const char* dem_name, GdalRaster::overrideCRS_t cb):
     GeoIndexedRaster(L, rqst_parms, key, NULL, cb),
     filePath(parms->asset.asset->getPath()),
     indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson"),

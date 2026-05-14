@@ -39,7 +39,7 @@
 #include "GeoDataFrame.h"
 #include "H5VarSet.h"
 #include "AreaOfInterest.h"
-#include "Icesat2Fields.h"
+#include "Atl03Parameters.h"
 #include "FieldArray.h"
 
 /******************************************************************************
@@ -114,53 +114,53 @@ class Atl08DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<time8_t>     time_ns            {Field::TIME_COLUMN};
-        FieldColumn<double>      latitude           {Field::Y_COLUMN};
-        FieldColumn<double>      longitude          {Field::X_COLUMN};
-        FieldColumn<int32_t>     segment_id_beg;
-        FieldColumn<int32_t>     n_seg_ph;
-        FieldColumn<float>       solar_elevation;
-        FieldColumn<float>       terrain_slope;
-        FieldColumn<int32_t>     n_te_photons;
-        FieldColumn<int8_t>      te_quality_score;
-        FieldColumn<float>       h_te_uncertainty;
-        FieldColumn<float>       h_canopy;
-        FieldColumn<float>       h_canopy_uncertainty;
-        FieldColumn<int16_t>     segment_cover;
-        FieldColumn<int32_t>     n_ca_photons;
-        FieldColumn<int8_t>      can_quality_score;
-        FieldColumn<uint8_t>     segment_landcover;
-        FieldColumn<uint8_t>     segment_snowcover;
-        FieldColumn<float>       h_te_median        {Field::Z_COLUMN};
-        FieldColumn<float>       h_max_canopy;
-        FieldColumn<float>       h_min_canopy;
-        FieldColumn<float>       h_mean_canopy;
-        FieldColumn<float>       canopy_openness;
+        FieldColumn<time8_t>    time_ns {Field::TIME_COLUMN};
+        FieldColumn<double>     latitude {Field::Y_COLUMN};
+        FieldColumn<double>     longitude {Field::X_COLUMN};
+        FieldColumn<int32_t>    segment_id_beg;
+        FieldColumn<int32_t>    n_seg_ph;
+        FieldColumn<float>      solar_elevation;
+        FieldColumn<float>      terrain_slope;
+        FieldColumn<int32_t>    n_te_photons;
+        FieldColumn<int8_t>     te_quality_score;
+        FieldColumn<float>      h_te_uncertainty;
+        FieldColumn<float>      h_canopy;
+        FieldColumn<float>      h_canopy_uncertainty;
+        FieldColumn<int16_t>    segment_cover;
+        FieldColumn<int32_t>    n_ca_photons;
+        FieldColumn<int8_t>     can_quality_score;
+        FieldColumn<uint8_t>    segment_landcover;
+        FieldColumn<uint8_t>    segment_snowcover;
+        FieldColumn<float>      h_te_median {Field::Z_COLUMN};
+        FieldColumn<float>      h_max_canopy;
+        FieldColumn<float>      h_min_canopy;
+        FieldColumn<float>      h_mean_canopy;
+        FieldColumn<float>      canopy_openness;
         FieldColumn<FieldArray<float,NUM_CANOPY_METRICS>> canopy_h_metrics;
 
         /* DataFrame MetaData */
-        FieldElement<uint8_t>    spot;
-        FieldElement<uint8_t>    cycle;
-        FieldElement<uint8_t>    region;
-        FieldElement<uint16_t>   rgt;
-        FieldElement<uint8_t>    gt;
-        FieldElement<string>     granule;
+        FieldElement<uint8_t>   spot;
+        FieldElement<uint8_t>   cycle;
+        FieldElement<uint8_t>   region;
+        FieldElement<uint16_t>  rgt;
+        FieldElement<uint8_t>   gt;
+        FieldElement<string>    granule;
 
-        std::atomic<bool>   active;
-        Thread*             readerPid;
-        int                 readTimeoutMs;
-        Publisher*          outQ;
-        Icesat2Fields*      parms;
-        H5Object*           hdf08;
-        const char*         beam;
+        std::atomic<bool>       active;
+        Thread*                 readerPid;
+        int                     readTimeoutMs;
+        Publisher*              outQ;
+        Atl03Parameters*        parms;
+        H5Object*               hdf08;
+        const char*             beam;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl08DataFrame  (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf08, const char* outq_name);
-                        ~Atl08DataFrame (void) override;
-        static void*    subsettingThread(void* parm);
+                        Atl08DataFrame      (lua_State* L, const char* beam_str, Atl03Parameters* _parms, H5Object* _hdf08, const char* outq_name);
+                        ~Atl08DataFrame     (void) override;
+        static void*    subsettingThread    (void* parm);
 };
 
 #endif  /* __atl08_dataframe__ */

@@ -529,11 +529,11 @@ const struct luaL_Reg ArrowDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int ArrowDataFrame::luaCreate (lua_State* L)
 {
-    RequestFields* _parms = NULL;
+    RequestParameters* _parms = NULL;
     GeoDataFrame* _dataframe = NULL;
     try
     {
-        _parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
+        _parms = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
         _dataframe = dynamic_cast<GeoDataFrame*>(getLuaObject(L, 2, GeoDataFrame::OBJECT_TYPE));
         const char* index_column_name = getLuaString(L, 3, true, _dataframe->getTimeColumnName().c_str());
         return createLuaObject(L, new ArrowDataFrame(L, _parms, _dataframe, index_column_name));
@@ -564,7 +564,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
         const OutputFields::format_t format = static_cast<OutputFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.format.value));
 
         // get references
-        const RequestFields& parms = *lua_obj->parms;
+        const RequestParameters& parms = *lua_obj->parms;
         const GeoDataFrame& dataframe = *lua_obj->dataframe;
         const OutputFields& arrow_parms = parms.output;
 
@@ -754,7 +754,7 @@ int ArrowDataFrame::luaImport (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe, const char* index_column_name):
+ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestParameters* _parms, GeoDataFrame* _dataframe, const char* index_column_name):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     dataframe(_dataframe),

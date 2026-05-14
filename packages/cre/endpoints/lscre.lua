@@ -21,6 +21,7 @@ return {
     inputs = nil,
     outputs = {"json"},
     schema = {
+        tags = "a-series, cre",
         request = nil,
         response = [["application/json": {
             "schema": {

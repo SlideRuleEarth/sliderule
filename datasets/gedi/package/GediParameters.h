@@ -41,7 +41,7 @@
 #include "AssetField.h"
 #include "FieldEnumeration.h"
 #include "FieldElement.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -69,7 +69,7 @@ struct GediGranuleFields: public FieldMap<Field>
 /***************/
 /* GEDI Fields */
 /***************/
-class GediFields: public RequestFields
+class GediParameters: public RequestParameters
 {
     public:
 
@@ -102,13 +102,16 @@ class GediFields: public RequestFields
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* LUA_META_NAME;
         static const int64_t GEDI_SDP_EPOCH_GPS = 1198800018; // seconds to add to GEDI delta times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
+        GediParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual ~GediParameters (void) override = default;
+        void fromLua (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -146,40 +149,24 @@ class GediFields: public RequestFields
 
         FieldEnumeration<beam_t, NUM_BEAMS>     beams {true, true, true, true, true, true, true, true};
         FieldElement<bool>                      degrade_filter {false};
-        FieldElement<bool>                      l2_quality_filter {false};
-        FieldElement<bool>                      l4_quality_filter {false};
-        FieldElement<bool>                      surface_filter {false};
         FieldList<string>                       anc_fields; // list of fields to associate with an GEDI subsetting request
         GediGranuleFields                       granule_fields;  // GEDI granule attributes
 
         // backwards compatibility
         FieldElement<int>                       degrade_flag {0};
-        FieldElement<int>                       l2_quality_flag {0};
-        FieldElement<int>                       l4_quality_flag {0};
-        FieldElement<int>                       surface_flag {0};
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        GediFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
-        virtual ~GediFields (void) override = default;
-        void fromLua (lua_State* L, int index) override;
 };
 
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
 
-string convertToJson(const GediFields::beam_t& v);
-int convertToLua(lua_State* L, const GediFields::beam_t& v);
-void convertFromLua(lua_State* L, int index, GediFields::beam_t& v);
-int convertToIndex(const GediFields::beam_t& v);
-void convertFromIndex(int index, GediFields::beam_t& v);
+string convertToJson(const GediParameters::beam_t& v);
+int convertToLua(lua_State* L, const GediParameters::beam_t& v);
+void convertFromLua(lua_State* L, int index, GediParameters::beam_t& v);
+int convertToIndex(const GediParameters::beam_t& v);
+void convertFromIndex(int index, GediParameters::beam_t& v);
 int beamIndexFromString(const char* beam_str);
 
-inline uint32_t toEncoding(GediFields::beam_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(GediParameters::beam_t& v) { (void)v; return Field::INT32; }
 
 #endif  /* __gedi_parms__ */

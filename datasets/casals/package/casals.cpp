@@ -35,7 +35,7 @@
 
 #include "OsApi.h"
 #include "Casals1bDataFrame.h"
-#include "CasalsFields.h"
+#include "CasalsParameters.h"
 
 /******************************************************************************
  * DEFINES
@@ -53,7 +53,7 @@
 int casals_open (lua_State *L)
 {
     static const struct luaL_Reg casals_functions[] = {
-        {"parms",       CasalsFields::luaCreate},
+        {"parms",       luaCreateParameters<CasalsParameters>},
         {"casals1bx",   Casals1bDataFrame::luaCreate},
         {NULL,          NULL}
     };

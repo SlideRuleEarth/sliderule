@@ -42,7 +42,7 @@
 #include "DispatchObject.h"
 #include "OsApi.h"
 #include "Atl03Reader.h"
-#include "Icesat2Fields.h"
+#include "Atl03Parameters.h"
 
 /******************************************************************************
  * ATL08 DISPATCH CLASS
@@ -143,13 +143,13 @@ class Atl08Dispatch: public DispatchObject
 
         Publisher*              outQ;
 
-        Icesat2Fields*          parms;
+        Atl03Parameters*        parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl08Dispatch                   (lua_State* L, const char* outq_name, Icesat2Fields* _parms);
+                        Atl08Dispatch                   (lua_State* L, const char* outq_name, Atl03Parameters* _parms);
                         ~Atl08Dispatch                  (void) override;
 
         bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;
@@ -169,12 +169,12 @@ class Atl08Dispatch: public DispatchObject
 
         static bool isVegetation (const Atl03Reader::photon_t* ph)
         {
-            return (ph->atl08_class == Icesat2Fields::ATL08_CANOPY || ph->atl08_class == Icesat2Fields::ATL08_TOP_OF_CANOPY);
+            return (ph->atl08_class == Icesat2Parameters::ATL08_CANOPY || ph->atl08_class == Icesat2Parameters::ATL08_TOP_OF_CANOPY);
         }
 
         static bool isGround (const Atl03Reader::photon_t* ph)
         {
-            return (ph->atl08_class == Icesat2Fields::ATL08_GROUND);
+            return (ph->atl08_class == Icesat2Parameters::ATL08_GROUND);
         }
 };
 

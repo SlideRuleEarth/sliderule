@@ -36,7 +36,7 @@
 #include "GeoDataFrame.h"
 #include "H5CoroLib.h"
 #include "H5Array.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyDataFrame.h"
 #include "BathyKd.h"
 
@@ -87,7 +87,7 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyUncertaintyCalculator  (lua_State* L, BathyFields* _parms, BathyKd* _kd);
+        BathyUncertaintyCalculator  (lua_State* L, BathyParameters* _parms, BathyKd* _kd);
         ~BathyUncertaintyCalculator (void) override;
 
         /*--------------------------------------------------------------------
@@ -109,7 +109,7 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
 
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEED_RANGES][NUM_KD_RANGES];
 
-        BathyFields*                parms;
+        BathyParameters*                parms;
         BathyKd*                    kd490;
 };
 

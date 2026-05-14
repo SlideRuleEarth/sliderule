@@ -42,7 +42,9 @@
 #include "Gedi04aReader.h"
 #include "Gedi04aDataFrame.h"
 #include "GediRaster.h"
-#include "GediFields.h"
+#include "GediParameters.h"
+#include "GediL2Parameters.h"
+#include "GediL4Parameters.h"
 #include "GediIODriver.h"
 
 /******************************************************************************
@@ -67,7 +69,9 @@
 int gedi_open (lua_State *L)
 {
     static const struct luaL_Reg gedi_functions[] = {
-        {"parms",               GediFields::luaCreate},
+        {"parms",               luaCreateParameters<GediParameters>},
+        {"parmsl2",             luaCreateParameters<GediL2Parameters>},
+        {"parmsl4",             luaCreateParameters<GediL4Parameters>},
         {"gedi01b",             Gedi01bReader::luaCreate},
         {"gedi01bx",            Gedi01bDataFrame::luaCreate},
         {"gedi02a",             Gedi02aReader::luaCreate},

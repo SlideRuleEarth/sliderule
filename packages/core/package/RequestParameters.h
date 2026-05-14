@@ -52,16 +52,48 @@
 #endif
 
 /******************************************************************************
- * CLASS
+ * DEFINES
  ******************************************************************************/
 
 #define REQUEST_INVALID_TIMEOUT -1
 
 /******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreateParameters - parms(<parameter table>)
+ *----------------------------------------------------------------------------*/
+template <class T>
+int luaCreateParameters (lua_State* L)
+{
+    T* parms = NULL;
+
+    try
+    {
+        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, INVALID_KEY);
+        const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
+        const char* _resource = LuaObject::getLuaString(L, 4, true, NULL);
+
+        parms = new T(L, key_space, asset_name, _resource);
+        parms->fromLua(L, 1);
+
+        return LuaObject::createLuaObject(L, parms);
+    }
+    catch(const RunTimeException& e)
+    {
+        delete parms;
+        mlog(e.level(), "Error creating parameters: %s", e.what());
+        return LuaObject::returnLuaStatus(L, false);
+    }
+}
+
+
+ /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class RequestFields: public LuaObject, public FieldMap<Field>
+class RequestParameters: public LuaObject, public FieldMap<Field>
 {
     public:
 
@@ -73,13 +105,10 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
         static int luaExport (lua_State* L); // to Lua
         static int luaEncode (lua_State* L); // to JSON
         static int luaDescribe (lua_State* L); // to OpenAPI
@@ -96,6 +125,7 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         static int luaWithSamplers (lua_State* L);
         static int luaSetCatalog (lua_State* L);
 
+        bool addParameter (const char* name, Field* field, const char* description);
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;
 
@@ -105,8 +135,8 @@ class RequestFields: public LuaObject, public FieldMap<Field>
 
         virtual void fromLua (lua_State* L, int index) override;
 
-        RequestFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list);
-        virtual ~RequestFields  (void) override;
+        RequestParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual ~RequestParameters  (void) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -116,7 +146,7 @@ class RequestFields: public LuaObject, public FieldMap<Field>
         FieldElement<string>            resource;           // granule name (including file extension)
         FieldList<string>               resources;          // list of granule names
         FieldColumn<MathLib::coord_t>   polygon;
-        FieldElement<int>               maxResources;       // set in constructor using SystemConfig
+        FieldElement<int>               maxResources        {SystemConfig::settings().requestMaxResources.value};
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};

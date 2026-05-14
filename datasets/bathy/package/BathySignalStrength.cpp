@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "List.h"
 #include "GeoLib.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathySignalStrength.h"
 
 
@@ -62,11 +62,11 @@ const struct luaL_Reg BathySignalStrength::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathySignalStrength::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
 
     try
     {
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         return createLuaObject(L, new BathySignalStrength(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -80,7 +80,7 @@ int BathySignalStrength::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathySignalStrength::BathySignalStrength (lua_State* L, BathyFields* _parms):
+BathySignalStrength::BathySignalStrength (lua_State* L, BathyParameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {

@@ -38,7 +38,7 @@
 
 #include "H5Array.h"
 #include "H5Object.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include <functional>
 
 /******************************************************************************
@@ -54,7 +54,7 @@ class AreaOfInterest
          * Methods
          *--------------------------------------------------------------------*/
 
-         AreaOfInterest (H5Object* hdf, const char* group, const char* latitude_name, const char* longitude_name, const RequestFields* parms,
+         AreaOfInterest (H5Object* hdf, const char* group, const char* latitude_name, const char* longitude_name, const RequestParameters* parms,
                           int readTimeoutMs, const std::function<void(long&, long&)>& prefilter = std::function<void(long&, long&)>());
          ~AreaOfInterest(void);
 
@@ -78,8 +78,8 @@ class AreaOfInterest
          *--------------------------------------------------------------------*/
 
         void cleanup            (void);
-        void polyregion         (const RequestFields* parms);
-        void rasterregion       (const RequestFields* parms);
+        void polyregion         (const RequestParameters* parms);
+        void rasterregion       (const RequestParameters* parms);
 };
 
 #endif  /* __area_of_interest__ */

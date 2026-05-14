@@ -39,7 +39,7 @@
 /*----------------------------------------------------------------------------
  * AreaOfInterest03::Constructor
  *----------------------------------------------------------------------------*/
-AreaOfInterest03::AreaOfInterest03 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs):
+AreaOfInterest03::AreaOfInterest03 (H5Object* hdf, const char* beam, const Icesat2Parameters* parms, int readTimeoutMs):
     segment_lat    (hdf, FString("/%s/%s", beam, "geolocation/reference_photon_lat").c_str()),
     segment_lon    (hdf, FString("/%s/%s", beam, "geolocation/reference_photon_lon").c_str()),
     segment_ph_cnt (hdf, FString("/%s/%s", beam, "geolocation/segment_ph_cnt").c_str()),
@@ -116,7 +116,7 @@ void AreaOfInterest03::cleanup (void)
 /*----------------------------------------------------------------------------
  * AreaOfInterest03::polyregion
  *----------------------------------------------------------------------------*/
-void AreaOfInterest03::polyregion (const Icesat2Fields* parms)
+void AreaOfInterest03::polyregion (const Icesat2Parameters* parms)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -174,7 +174,7 @@ void AreaOfInterest03::polyregion (const Icesat2Fields* parms)
 /*----------------------------------------------------------------------------
  * AreaOfInterest03::rasterregion
  *----------------------------------------------------------------------------*/
-void AreaOfInterest03::rasterregion (const Icesat2Fields* parms)
+void AreaOfInterest03::rasterregion (const Icesat2Parameters* parms)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;

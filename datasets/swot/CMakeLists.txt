@@ -5,7 +5,7 @@ target_compile_definitions (slideruleLib PUBLIC __swot__)
 target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/swot.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/SwotFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SwotParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SwotL2Reader.cpp
 )
 
@@ -18,7 +18,7 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/swot.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/SwotFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SwotParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SwotL2Reader.h
     DESTINATION
         ${INCDIR}

@@ -37,7 +37,7 @@
 
 template<typename CoordT>
 AreaOfInterest<CoordT>::AreaOfInterest (H5Object* hdf, const char* group, const char* latitude_name, const char* longitude_name,
-                                          const RequestFields* parms, int readTimeoutMs, const std::function<void(long&, long&)>& prefilter):
+                                          const RequestParameters* parms, int readTimeoutMs, const std::function<void(long&, long&)>& prefilter):
     latitude        (hdf, FString("%s/%s", group, latitude_name).c_str()),
     longitude       (hdf, FString("%s/%s", group, longitude_name).c_str()),
     inclusion_mask  {NULL},
@@ -123,7 +123,7 @@ void AreaOfInterest<CoordT>::cleanup (void)
  * AreaOfInterest::polyregion
  *----------------------------------------------------------------------------*/
 template<typename CoordT>
-void AreaOfInterest<CoordT>::polyregion (const RequestFields* parms)
+void AreaOfInterest<CoordT>::polyregion (const RequestParameters* parms)
 {
     bool first_index_found = false;
     int index = first_index;
@@ -159,7 +159,7 @@ void AreaOfInterest<CoordT>::polyregion (const RequestFields* parms)
  * AreaOfInterest::rasterregion
  *----------------------------------------------------------------------------*/
 template<typename CoordT>
-void AreaOfInterest<CoordT>::rasterregion (const RequestFields* parms)
+void AreaOfInterest<CoordT>::rasterregion (const RequestParameters* parms)
 {
     bool first_index_found = false;
 

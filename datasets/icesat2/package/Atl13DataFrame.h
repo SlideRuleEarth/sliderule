@@ -44,7 +44,7 @@
 #include "H5Array.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Atl13Parameters.h"
 #include "AreaOfInterest.h"
 
 /******************************************************************************
@@ -80,7 +80,7 @@ class Atl13DataFrame: public GeoDataFrame
         FieldElement<uint8_t>       spot;                           // 1, 2, 3, 4, 5, 6
         FieldElement<uint8_t>       cycle;
         FieldElement<uint16_t>      rgt;
-        FieldElement<uint8_t>       gt;                             // Icesat2Fields::gt_t
+        FieldElement<uint8_t>       gt;                             // Icesat2Parameters::gt_t
         FieldElement<string>        granule;                        // name of the ATL13 granule
 
         /*--------------------------------------------------------------------
@@ -123,14 +123,14 @@ class Atl13DataFrame: public GeoDataFrame
         const int           readTimeoutMs;
         const char*         beam;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
+        Atl13Parameters*    parms;
         H5Object*           hdf13;  // atl13 granule
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl13DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms,
+                        Atl13DataFrame      (lua_State* L, const char* beam_str, Atl13Parameters* _parms,
                                              H5Object* _hdf13, const char* outq_name);
                         ~Atl13DataFrame     (void) override;
         static void*    subsettingThread    (void* parm);

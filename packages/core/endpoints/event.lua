@@ -54,6 +54,7 @@ return {
     inputs = {"json"},
     outputs = {"binary"},
     schema = {
+        tags = "p-series, core",
         request = [[ "application/json": {
             "schema": {
                 "type": "object",

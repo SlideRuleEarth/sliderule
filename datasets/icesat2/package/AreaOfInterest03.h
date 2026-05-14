@@ -38,7 +38,7 @@
 
 #include "H5Array.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 
 /******************************************************************************
  * CLASS DEFINITION
@@ -52,7 +52,7 @@ class AreaOfInterest03
          * Methods
          *--------------------------------------------------------------------*/
 
-        AreaOfInterest03 (H5Object* hdf, const char* beam, const Icesat2Fields* parms, int readTimeoutMs);
+        AreaOfInterest03 (H5Object* hdf, const char* beam, const Icesat2Parameters* parms, int readTimeoutMs);
         ~AreaOfInterest03(void);
 
         /*--------------------------------------------------------------------
@@ -78,8 +78,8 @@ class AreaOfInterest03
          *--------------------------------------------------------------------*/
 
         void cleanup            (void);
-        void polyregion         (const Icesat2Fields* parms);
-        void rasterregion       (const Icesat2Fields* parms);
+        void polyregion         (const Icesat2Parameters* parms);
+        void rasterregion       (const Icesat2Parameters* parms);
 };
 
 #endif  /* __areaofinterest03__ */

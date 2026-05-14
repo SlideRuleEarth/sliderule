@@ -39,7 +39,7 @@
 #include "LuaObject.h"
 #include "MathLib.h"
 #include "List.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "GeoFields.h"
 #include "RasterSample.h"
 #include "RasterSubset.h"
@@ -65,7 +65,7 @@ class RasterObject: public LuaObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef RasterObject* (*factory_f) (lua_State* L, RequestFields* rqst_parms, const char* key);
+        typedef RasterObject* (*factory_f) (lua_State* L, RequestParameters* rqst_parms, const char* key);
 
         typedef struct
         {
@@ -90,7 +90,7 @@ class RasterObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int           luaCreate       (lua_State* L);
-        static RasterObject* cppCreate       (RequestFields* rqst_parms, const char* key);
+        static RasterObject* cppCreate       (RequestParameters* rqst_parms, const char* key);
         static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         static int           luaFatories     (lua_State* L);
@@ -194,7 +194,7 @@ class RasterObject: public LuaObject
             if(robj) robj->samplingEnabled.store(false);
         }
 
-                    RasterObject    (lua_State* L, RequestFields* rqst_parms, const char* key);
+                    RasterObject    (lua_State* L, RequestParameters* rqst_parms, const char* key);
         static int  luaBatchSamples (lua_State* L);
         static int  luaSamples      (lua_State* L);
         static int  luaSubsets      (lua_State* L);
@@ -211,7 +211,7 @@ class RasterObject: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        RequestFields* rqstParms;
+        RequestParameters* rqstParms;
         const GeoFields* parms;
         const char* samplerKey;
         RasterFileDictionary fileDict;

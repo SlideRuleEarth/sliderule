@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "LuaObject.h"
-#include "CreFields.h"
+#include "CreParameters.h"
 
 /******************************************************************************
  * CONTAINER RUNNER CLASS
@@ -82,13 +82,13 @@ class ContainerRunner: public LuaObject
         Publisher*          outQ;
         const char*         hostSandboxDirectory;
         Cond                resultLock;
-        CreFields*          parms;
+        CreParameters*          parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ContainerRunner         (lua_State* L, CreFields* _parms, const char* host_shared_directory, const char* outq_name);
+                        ContainerRunner         (lua_State* L, CreParameters* _parms, const char* host_shared_directory, const char* outq_name);
                         ~ContainerRunner        (void) override;
         static void*    controlThread           (void* parm);
         static void     processContainerLogs    (const char* buffer, int buffer_size, const char* id);

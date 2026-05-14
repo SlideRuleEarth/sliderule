@@ -64,7 +64,7 @@ class EsaCopernicus30meterRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new EsaCopernicus30meterRaster(L, rqst_parms, key); }
 
 
@@ -74,7 +74,7 @@ class EsaCopernicus30meterRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        EsaCopernicus30meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
+        EsaCopernicus30meterRaster (lua_State* L, RequestParameters* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getIndex(),
                   TimeLib::datetime2gps(2023, 12, 15, 0, 0, 0) / 1000, /* Copernicus DEM Release 2023_1 (Dec 2023) */

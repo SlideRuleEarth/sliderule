@@ -10,7 +10,7 @@ local rqst_resource = rqst["resource"]
 if rqst_resource and (string.sub(rqst_resource, 38, 40) == "001") then
     default_asset = "icesat2-atl24v1"
 end
-local parms = icesat2.parms(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
+local parms = icesat2.parms24(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
 
 -------------------------------------------------------
 -- main
@@ -51,16 +51,17 @@ return {
     main = main,
     parms = parms,
     name = "ATL24 Dataframe",
-    description = "Spatially and temporally subsets ATL24 granule bathemtry data with additional filters (x-series)",
+    description = "Spatially and temporally subsets ATL24 granule bathemtry data with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl24Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

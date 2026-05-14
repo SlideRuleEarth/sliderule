@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "GeoDataFrame.h"
 
 /******************************************************************************
@@ -71,14 +71,14 @@ class ArrowDataFrame: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArrowDataFrame  (lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe, const char* index_column_name);
+        ArrowDataFrame  (lua_State* L, RequestParameters* _parms, GeoDataFrame* _dataframe, const char* index_column_name);
         ~ArrowDataFrame (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        RequestFields* parms;
+        RequestParameters* parms;
         GeoDataFrame* dataframe;
         string indexColumnName;
 };

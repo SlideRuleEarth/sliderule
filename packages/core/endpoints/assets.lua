@@ -39,6 +39,7 @@ return {
     inputs = nil,
     outputs = {"json"},
     schema = {
+        tags = "a-series, core",
         request = nil,
         response = [[ "application/json": {
             "schema": {

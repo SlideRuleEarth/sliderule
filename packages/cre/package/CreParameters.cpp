@@ -29,49 +29,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __cre_fields__
-#define __cre_fields__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaEngine.h"
-#include "FieldElement.h"
-#include "RequestFields.h"
+#include "CreParameters.h"
 
 /******************************************************************************
- * CLASS
+ * STATIC DATA
  ******************************************************************************/
 
-class CreFields: public RequestFields
+const char* CreParameters::LUA_META_NAME = "CreParameters";
+
+ /******************************************************************************
+ * PUBLIC METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void CreParameters::fromLua (lua_State* L, int index)
 {
-    public:
+    RequestParameters::fromLua(L, index);
 
-        /*--------------------------------------------------------------------
-        * Data
-        *--------------------------------------------------------------------*/
+    // check image for ONLY legal characters
+    for (auto c_iter = container_image.value.begin(); c_iter < container_image.value.end(); ++c_iter)
+    {
+        const int c = *c_iter;
+        if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid character found in image name: %c", c);
+        }
+    }
+}
 
-        FieldElement<string>    container_image;
-        FieldElement<string>    container_name;
-        FieldElement<string>    container_command;
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        static int  luaCreate   (lua_State* L);
-        virtual void fromLua    (lua_State* L, int index) override;
-
-    protected:
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        CreFields (lua_State* L);
-        virtual ~CreFields (void) override = default;
-};
-
-#endif  /* __cre_fields__ */
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+CreParameters::CreParameters (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters(L, key_space, asset_name, _resource, lua_meta_name)
+{
+    addParameter("container_image",   &container_image,     "Docker image to run");
+    addParameter("container_name",    &container_name,      "Name to apply to the container that is run");
+    addParameter("container_command", &container_command,   "Command to execute when starting the container");
+}

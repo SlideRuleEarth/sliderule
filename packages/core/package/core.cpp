@@ -66,7 +66,7 @@
 #include "OutputLib.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "RequestMetrics.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
@@ -145,7 +145,7 @@ static int core_open (lua_State *L)
         {"orchhealth",      OrchestratorLib::luaHealth},
         {"orchnodes",       OrchestratorLib::luaGetNodes},
         {"ams",             AmsLib::luaRequest},
-        {"parms",           RequestFields::luaCreate},
+        {"parms",           luaCreateParameters<RequestParameters>},
         {"send2user",       OutputLib::luaSend2User},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},

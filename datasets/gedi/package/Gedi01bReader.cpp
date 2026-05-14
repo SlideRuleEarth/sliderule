@@ -80,13 +80,13 @@ const RecordObject::fieldDef_t Gedi01bReader::batchRecDef[] = {
  *----------------------------------------------------------------------------*/
 int Gedi01bReader::luaCreate (lua_State* L)
 {
-    GediFields* parms = NULL;
+    GediParameters* parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
+        parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE, GediParameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -116,7 +116,7 @@ void Gedi01bReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi01bReader::Gedi01bReader (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator):
+Gedi01bReader::Gedi01bReader (lua_State* L, const char* outq_name, GediParameters* _parms, bool _send_terminator):
     FootprintReader<g01b_footprint_t>(L, outq_name, _parms, _send_terminator,
                                       batchRecType, "geolocation/latitude_bin0", "geolocation/longitude_bin0",
                                       Gedi01bReader::subsettingThread)
@@ -169,7 +169,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Gedi01bReader* reader = reinterpret_cast<Gedi01bReader*>(info->reader);
-    const GediFields* parms = reader->parms;
+    const GediParameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
@@ -228,7 +228,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 /* Populate Entry in Batch Structure */
                 g01b_footprint_t* fp        = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number             = gedi01b.shot_number[footprint];
-                fp->time_ns                 = GediFields::deltatime2timestamp(gedi01b.delta_time[footprint]);
+                fp->time_ns                 = GediParameters::deltatime2timestamp(gedi01b.delta_time[footprint]);
                 fp->latitude                = region.lat[footprint];
                 fp->longitude               = region.lon[footprint];
                 fp->elevation_start         = gedi01b.elev_bin0[footprint];
@@ -242,7 +242,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 fp->rx_size                 = gedi01b.rx_sample_count[footprint];
 
                 /* Set Flags */
-                if(gedi01b.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
+                if(gedi01b.degrade_flag[footprint]) fp->flags |= GediParameters::DEGRADE_FLAG_MASK;
 
                 /* Populate Tx Waveform */
                 const long tx_start_index = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];

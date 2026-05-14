@@ -71,6 +71,7 @@ return {
     inputs = {"json"},
     outputs = {"json"},
     schema = {
+        tags = "a-series, cre",
         request = [[ "application/json": {
             "schema": {
                 "type": "object",

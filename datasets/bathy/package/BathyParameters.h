@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "Asset.h"
-#include "Icesat2Fields.h"
+#include "Atl03Parameters.h"
 
 /******************************************************************************
  * CLASSES
@@ -105,13 +105,15 @@ struct UncertaintyFields: public FieldMap<Field>
 /****************/
 /* Bathy Fields */
 /****************/
-class BathyFields: public Icesat2Fields
+class BathyParameters: public Atl03Parameters
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+
+        static const char* LUA_META_NAME;
 
         static const double NIGHT_SOLAR_ELEVATION_THRESHOLD;
         static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
@@ -147,8 +149,9 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate       (lua_State* L);
-        void        fromLua         (lua_State* L, int index) override;
+        void    fromLua             (lua_State* L, int index) override;
+                BathyParameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual ~BathyParameters    (void) override = default;
 
         /*--------------------------------------------------------------------
          * Data
@@ -165,15 +168,6 @@ class BathyFields: public Icesat2Fields
         SurfaceFields                                   surface;                    // surface finding fields
         RefractionFields                                refraction;                 // refraction correction fields
         UncertaintyFields                               uncertainty;                // uncertaintly calculation fields
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                BathyFields     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
-        virtual ~BathyFields    (void) override = default;
 };
 
 #endif  /* __bathy_fields__ */

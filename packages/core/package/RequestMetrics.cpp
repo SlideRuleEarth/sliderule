@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "RequestMetrics.h"
 
 /******************************************************************************
@@ -288,7 +288,7 @@ bool RequestMetrics::init (void)
 /*----------------------------------------------------------------------------
  * getRegion
  *----------------------------------------------------------------------------*/
-RequestMetrics::regions_t RequestMetrics::getRegion (RequestFields* parms)
+RequestMetrics::regions_t RequestMetrics::getRegion (RequestParameters* parms)
 {
     regions_t region_found = REGION_UNKNOWN;
     if(parms->pointsInPolygon.value > 0)

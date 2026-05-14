@@ -61,10 +61,10 @@ const struct luaL_Reg DataFrameSampler::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int DataFrameSampler::luaCreate(lua_State* L)
 {
-    RequestFields* _parms = NULL;
+    RequestParameters* _parms = NULL;
     try
     {
-        _parms  = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
+        _parms  = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
         return createLuaObject(L, new DataFrameSampler(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -78,7 +78,7 @@ int DataFrameSampler::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-DataFrameSampler::DataFrameSampler(lua_State* L, RequestFields* _parms):
+DataFrameSampler::DataFrameSampler(lua_State* L, RequestParameters* _parms):
     FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {

@@ -4,7 +4,7 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms         = icesat2.parms03(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 
 -------------------------------------------------------
 -- main
@@ -30,16 +30,17 @@ return {
     main = main,
     parms = parms,
     name = "ATL08 PhoReal Vegetation Metrics",
-    description = "Generates ATL08-like vegetation metrics using user supplied processing parameters (p-series)",
+    description = "Generates ATL08-like vegetation metrics using user supplied processing parameters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "p-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl03Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

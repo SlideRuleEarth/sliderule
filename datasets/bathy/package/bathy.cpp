@@ -36,7 +36,7 @@
 #include "bathy.h"
 #include "BathyViewer.h"
 #include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyMask.h"
 #include "BathyGranule.h"
 #include "BathyKd.h"
@@ -64,7 +64,7 @@
 int bathy_open (lua_State *L)
 {
     static const struct luaL_Reg bathy_functions[] = {
-        {"parms",               BathyFields::luaCreate},
+        {"parms",               luaCreateParameters<BathyParameters>},
         {"dataframe",           BathyDataFrame::luaCreate},
         {"mask",                BathyMask::luaCreate},
         {"kd",                  BathyKd::luaCreate},

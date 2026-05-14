@@ -29,63 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __atl13s_fields__
+#define __atl13s_fields__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "CreFields.h"
+#include "LuaObject.h"
+#include "Icesat2Parameters.h"
+#include "FieldElement.h"
 
 /******************************************************************************
- * PUBLIC METHODS
+ * CLASSES
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int CreFields::luaCreate (lua_State* L)
+class Atl13sParameters: public Icesat2Parameters
 {
-    CreFields* cre_fields = NULL;
-    try
-    {
-        cre_fields = new CreFields(L);
-        cre_fields->fromLua(L, 1);
-        return createLuaObject(L, cre_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete cre_fields;
-        return returnLuaStatus(L, false);
-    }
-}
+    public:
 
-/*----------------------------------------------------------------------------
- * fromLua
- *----------------------------------------------------------------------------*/
-void CreFields::fromLua (lua_State* L, int index)
-{
-    RequestFields::fromLua(L, index);
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-    // check image for ONLY legal characters
-    for (auto c_iter = container_image.value.begin(); c_iter < container_image.value.end(); ++c_iter)
-    {
-        const int c = *c_iter;
-        if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid character found in image name: %c", c);
-        }
-    }
-}
+        static const char* LUA_META_NAME;
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-CreFields::CreFields (lua_State* L):
-    RequestFields(L, 0, NULL, NULL, {
-        {"container_image",   &container_image,     "Docker image to run"},
-        {"container_name",    &container_name,      "Name to apply to the container that is run"},
-        {"container_command", &container_command,   "Command to execute when starting the container"}
-    })
-{
-}
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        virtual void    fromLua             (lua_State* L, int index) override;
+                        Atl13sParameters    (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual         ~Atl13sParameters   (void) override = default;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        FieldList<string>   atl13Fields;    // list of ATL13 fields to associate with an extent
+};
+
+#endif  /* __atl13s_fields__ */

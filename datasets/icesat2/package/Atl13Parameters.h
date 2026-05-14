@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __casals_parms__
-#define __casals_parms__
+#ifndef __atl13_fields__
+#define __atl13_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -38,37 +38,63 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "AssetField.h"
-#include "FieldEnumeration.h"
+#include "Icesat2Parameters.h"
 #include "FieldElement.h"
-#include "RequestFields.h"
-#include "GeoDataFrame.h"
 
 /******************************************************************************
- * CLASS
+ * CLASSES
  ******************************************************************************/
 
-/******************/
-/* Granule Fields */
-/******************/
-struct CasalsGranuleFields: public FieldMap<Field>
+/****************/
+/* Atl13 Fields */
+/****************/
+struct Atl13Fields: public FieldMap<Field>
 {
+    typedef enum {
+        LAKE                = 1,
+        KNOWN_RESERVOIR     = 2,
+        EPHEMERAL_WATER     = 4,
+        RIVER               = 5,
+        ESTUARY_BAY         = 6,
+        COASTAL_WATER       = 7
+    } body_type_t;
 
-    FieldElement<int>   year {-1};      // CASALS granule observation date - year
-    FieldElement<int>   month {-1};     // CASALS granule observation date - month
-    FieldElement<int>   day {-1};       // CASALS granule observation date - day
-    FieldElement<int>   version {-1};   // CASALS granule version
+    typedef enum {
+        GT_10000_KM2        = 1,
+        GT_1000_KM2         = 2,
+        GT_100_KM2          = 3,
+        GT_10_KM2           = 4,
+        GT_1_KM2            = 5,
+        GT_01_KM2           = 6,
+        GT_001_KM2          = 7,
+        NOT_ASSIGNED        = 9
+    } body_size_t;
 
-    CasalsGranuleFields(void);
-    ~CasalsGranuleFields(void) override = default;
+    typedef enum {
+        HYDRO_LAKES                         = 1,
+        GLOBAL_LAKES_AND_WETLANDS_DATABASE  = 2,
+        NAMED_MARINE_WATER_BODIES           = 3,
+        GSHHG_SHORELINE                     = 4,
+        GLOBAL_RIVER_WIDTHS_FROM_LANDSAT    = 5
+    } body_source_t;
 
-    void parseResource (const char* resource);
+    FieldElement<int64_t>           reference_id {0};       // atl13refid
+    FieldElement<string>            name;                   // lake name
+    FieldElement<MathLib::coord_t>  coordinate {{0.0, 0.0}};// lake coordinate (contains)
+    FieldList<string>               anc_fields;             // list of additional ATL13 fields
+
+    Atl13Fields(void);
+    ~Atl13Fields(void) override = default;
+
+    virtual void fromLua (lua_State* L, int index) override;
+
+    bool provided;
 };
 
-/***************/
-/* Casals Fields */
-/***************/
-class CasalsFields: public RequestFields
+/********************/
+/* Atl13 Parameters */
+/********************/
+class Atl13Parameters: public Icesat2Parameters
 {
     public:
 
@@ -76,46 +102,21 @@ class CasalsFields: public RequestFields
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int64_t CASALS_SDP_EPOCH_GPS = 1198800018; // seconds to add to CASALS delta times to get GPS times
+        static const char* LUA_META_NAME;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Inline Methods
-         *--------------------------------------------------------------------*/
-
-        // returns nanoseconds since Unix epoch, no leap seconds
-        static time8_t deltatime2timestamp (double delta_time)
-        {
-            return TimeLib::gps2systimeex(delta_time + (double)CASALS_SDP_EPOCH_GPS);
-        }
-
-        // returns resource as a string
-        const char* getResource (void) const { return resource.value.c_str(); }
-
-        // CRS support
-        static const char* crsITRF2020() { static string crs = GeoDataFrame::loadCRSFile("EPSG9989.projjson"); return crs.c_str(); }
+        virtual void    fromLua             (lua_State* L, int index) override;
+                        Atl13Parameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual         ~Atl13Parameters    (void) override = default;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldList<string>       anc_fields; // list of fields to associate with an Casals subsetting request
-        CasalsGranuleFields     granule_fields;  // Casals granule attributes
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        CasalsFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
-        virtual ~CasalsFields (void) override = default;
-        void fromLua (lua_State* L, int index) override;
+        Atl13Fields     atl13;  // atl13 subsetter parameters
 };
 
-#endif  /* __casals_parms__ */
+#endif  /* __atl13_fields__ */

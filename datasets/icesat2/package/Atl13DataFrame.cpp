@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "H5Object.h"
-#include "Icesat2Fields.h"
+#include "Atl13Parameters.h"
 #include "Atl13DataFrame.h"
 
 /******************************************************************************
@@ -61,15 +61,15 @@ const struct luaL_Reg Atl13DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl13DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Atl13Parameters* _parms = NULL;
     H5Object* _hdf13 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<Atl13Parameters*>(getLuaObject(L, 2, Atl13Parameters::OBJECT_TYPE, Atl13Parameters::LUA_META_NAME));
+        _hdf13 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Reader Object */
@@ -87,7 +87,7 @@ int Atl13DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf13, const char* outq_name):
+Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Atl13Parameters* _parms, H5Object* _hdf13, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
@@ -106,8 +106,8 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt,                        "Ground track; integer representation of beam"},
         {"granule",                 &granule,                   "Name of the source ATL03 granule"}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
+    Icesat2Parameters::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Parameters::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
@@ -188,7 +188,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     Atl13DataFrame* df = static_cast<Atl13DataFrame*>(parm);
-    const Icesat2Fields& parms = *df->parms;
+    const Atl13Parameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "atl13_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf13->name, df->beam);
@@ -231,8 +231,8 @@ void* Atl13DataFrame::subsettingThread (void* parm)
         const Atl13Data atl13(df, aoi);
 
         /* Set MetaData */
-        df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], df->beam);
-        df->gt = Icesat2Fields::getGroundTrack(df->beam);
+        df->spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl13.sc_orient[0], df->beam);
+        df->gt = Icesat2Parameters::getGroundTrack(df->beam);
 
         /* Traverse All Photons In Dataset */
         int32_t current_segment = -1;
@@ -252,7 +252,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
             df->segment_id_beg.append(atl13.segment_id_beg[current_segment]);
             df->ht_ortho.append(atl13.ht_ortho[current_segment]);
             df->ht_water_surf.append(atl13.ht_water_surf[current_segment]);
-            df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl13.delta_time[current_segment]));
+            df->time_ns.append(Icesat2Parameters::deltatime2timestamp(atl13.delta_time[current_segment]));
             df->latitude.append(aoi.latitude[current_segment]);
             df->longitude.append(aoi.longitude[current_segment]);
             df->stdev_water_surf.append(atl13.stdev_water_surf[current_segment]);

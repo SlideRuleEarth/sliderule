@@ -40,7 +40,7 @@
 
 #include "OsApi.h"
 #include "GeoLib.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyRefractionCorrector.h"
 
 /******************************************************************************
@@ -69,11 +69,11 @@ const struct luaL_Reg BathyRefractionCorrector::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyRefractionCorrector::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
 
     try
     {
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         return createLuaObject(L, new BathyRefractionCorrector(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -123,7 +123,7 @@ double BathyRefractionCorrector::sampleWaterMask (GeoLib::TIFFImage* mask, doubl
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _parms):
+BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyParameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     waterRiMask(NULL),
@@ -252,7 +252,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
                     first_transform_error = false;
                     mlog(CRITICAL, "Unable to convert %lf,%lf to UTM zone %d", df.lat_ph[i], df.lon_ph[i], utm_transform.zone);
                 }
-                df.processing_flags[i] |= BathyFields::TRANSFORM_ERROR_FLAG;
+                df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
             }
 
             /* Correct Latitude and Longitude */
@@ -266,7 +266,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
                     first_transform_error = false;
                     mlog(CRITICAL, "Unable to convert %lf,%lf to WSG84 coordinates", corr_x_ph, corr_y_ph);
                 }
-                df.processing_flags[i] |= BathyFields::TRANSFORM_ERROR_FLAG;
+                df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
             }
 
             /* Apply Refraction Correction */

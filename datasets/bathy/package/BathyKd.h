@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "H5Array.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -51,7 +51,7 @@ class BathyKd: public LuaObject
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        
+
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];

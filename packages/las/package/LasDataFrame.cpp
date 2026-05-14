@@ -149,12 +149,12 @@ namespace
  *----------------------------------------------------------------------------*/
 int LasDataFrame::luaCreate (lua_State* L)
 {
-    RequestFields* parms = NULL;
+    RequestParameters* parms = NULL;
     GeoDataFrame* dataframe = NULL;
 
     try
     {
-        parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
+        parms = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
         dataframe = dynamic_cast<GeoDataFrame*>(getLuaObject(L, 2, GeoDataFrame::OBJECT_TYPE));
         return createLuaObject(L, new LasDataFrame(L, parms, dataframe));
     }
@@ -319,7 +319,7 @@ int LasDataFrame::luaExport (lua_State* L)
  * CONSTRUCTORS / DESTRUCTORS
  ******************************************************************************/
 
-LasDataFrame::LasDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe):
+LasDataFrame::LasDataFrame(lua_State* L, RequestParameters* _parms, GeoDataFrame* _dataframe):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     dataframe(_dataframe)

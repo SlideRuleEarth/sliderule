@@ -50,7 +50,7 @@ class MetaGlobalCanopy1meterRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new MetaGlobalCanopy1meterRaster(L, rqst_parms, key); }
 
 
@@ -60,7 +60,7 @@ class MetaGlobalCanopy1meterRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        MetaGlobalCanopy1meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
+        MetaGlobalCanopy1meterRaster (lua_State* L, RequestParameters* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getIndex(),
                   TimeLib::datetime2gps(2024, 4, 7, 0, 0, 0) / 1000) {}

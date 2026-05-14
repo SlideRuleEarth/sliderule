@@ -35,10 +35,16 @@
 
 #include "OsApi.h"
 #include "FieldEnumeration.h"
-#include "RequestFields.h"
-#include "GediFields.h"
+#include "RequestParameters.h"
+#include "GediParameters.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* GediParameters::LUA_META_NAME = "GediParameters";
+
+ /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
@@ -178,64 +184,30 @@ void GediGranuleFields::parseResource (const char* resource)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>, <key_space>, [<default asset>], [<default resource>])
- *----------------------------------------------------------------------------*/
-int GediFields::luaCreate (lua_State* L)
-{
-    GediFields* gedi_fields = NULL;
-
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
-        const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
-        const char* _resource = LuaObject::getLuaString(L, 4, true, NULL);
-
-        gedi_fields = new GediFields(L, key_space, asset_name, _resource);
-        gedi_fields->fromLua(L, 1);
-
-        return createLuaObject(L, gedi_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete gedi_fields;
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GediFields::GediFields(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource):
-    RequestFields (L, key_space, asset_name, _resource,
-        { {"beams",             &beams,             "Laser beams to process"},
-          {"degrade_filter",    &degrade_filter,    "Filter for degraded data; when enabled, degraded returns are not included in the response"},
-          {"l2_quality_filter", &l2_quality_filter, "Filter for level 2 low quality data; when enabled, low quality returns are not included in the response"},
-          {"l4_quality_filter", &l4_quality_filter, "Filter for level 4 low quality data; when enabled, low quality returns are not included in the response"},
-          {"surface_filter",    &surface_filter,    "Filter for surface data; when enabled, only surface returns are included in the response"},
-          {"anc_fields",        &anc_fields,        "Ancillary fields from the source granules to include in the response"},
-          {"granule",           &granule_fields,    "Versioning and date information pulled from the granule processed; output only"},
-          // backwards compatibility
-          {"beam",              &beams,             "Laser beams to process; deprecated, use 'beams'"},
-          {"degrade_flag",      &degrade_flag,      "Flag for filtering degraded data (only source data that matches flag value is included); deprecated, use 'degrade_filter'"},
-          {"l2_quality_flag",   &l2_quality_flag,   "Flag for level 2 low quality data (only source data that matches flag value is included); deprecated, use 'l2_quality_filter'"},
-          {"l4_quality_flag",   &l4_quality_flag,   "Flag for level 4 low quality data (only source data that matches flag value is included); deprecated, use 'l4_quality_filter'"},
-          {"surface_flag",      &surface_flag,      "Flag for surface data (only source data that matches flag value is included); deprecated, use 'surface_filter'"} })
+GediParameters::GediParameters(lua_State* L , uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    RequestParameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
+    addParameter("beams",             &beams,             "Laser beams to process");
+    addParameter("degrade_filter",    &degrade_filter,    "Filter for degraded data; when enabled, degraded returns are not included in the response");
+    addParameter("anc_fields",        &anc_fields,        "Ancillary fields from the source granules to include in the response");
+    addParameter("granule",           &granule_fields,    "Versioning and date information pulled from the granule processed; output only");
+
+    // backwards compatibility
+    addParameter("beam",              &beams,             "Laser beams to process; deprecated, use 'beams'");
+    addParameter("degrade_flag",      &degrade_flag,      "Flag for filtering degraded data (only source data that matches flag value is included); deprecated, use 'degrade_filter'");
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void GediFields::fromLua (lua_State* L, int index)
+void GediParameters::fromLua (lua_State* L, int index)
 {
-    RequestFields::fromLua(L, index);
+    RequestParameters::fromLua(L, index);
 
     // set filters
     if(degrade_flag == 1) degrade_filter = true;
-    if(l2_quality_flag == 1) l2_quality_filter = true;
-    if(l4_quality_flag == 1) l4_quality_filter = true;
-    if(surface_flag == 1) surface_filter = true;
 
     // parse resource name
     if(!resource.value.empty())
@@ -251,18 +223,18 @@ void GediFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * convertToJson - beam_t
  *----------------------------------------------------------------------------*/
-string convertToJson(const GediFields::beam_t& v)
+string convertToJson(const GediParameters::beam_t& v)
 {
     switch(v)
     {
-        case GediFields::BEAM0000:  return "\"beam0\"";
-        case GediFields::BEAM0001:  return "\"beam1\"";
-        case GediFields::BEAM0010:  return "\"beam2\"";
-        case GediFields::BEAM0011:  return "\"beam3\"";
-        case GediFields::BEAM0101:  return "\"beam5\"";
-        case GediFields::BEAM0110:  return "\"beam6\"";
-        case GediFields::BEAM1000:  return "\"beam8\"";
-        case GediFields::BEAM1011:  return "\"beam11\"";
+        case GediParameters::BEAM0000:  return "\"beam0\"";
+        case GediParameters::BEAM0001:  return "\"beam1\"";
+        case GediParameters::BEAM0010:  return "\"beam2\"";
+        case GediParameters::BEAM0011:  return "\"beam3\"";
+        case GediParameters::BEAM0101:  return "\"beam5\"";
+        case GediParameters::BEAM0110:  return "\"beam6\"";
+        case GediParameters::BEAM1000:  return "\"beam8\"";
+        case GediParameters::BEAM1011:  return "\"beam11\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam number: %d", static_cast<int>(v));
     }
 }
@@ -270,18 +242,18 @@ string convertToJson(const GediFields::beam_t& v)
 /*----------------------------------------------------------------------------
  * convertToLua - beam_t
  *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const GediFields::beam_t& v)
+int convertToLua(lua_State* L, const GediParameters::beam_t& v)
 {
     switch(v)
     {
-        case GediFields::BEAM0000:  lua_pushstring(L, "beam0"); break;
-        case GediFields::BEAM0001:  lua_pushstring(L, "beam1"); break;
-        case GediFields::BEAM0010:  lua_pushstring(L, "beam2"); break;
-        case GediFields::BEAM0011:  lua_pushstring(L, "beam3"); break;
-        case GediFields::BEAM0101:  lua_pushstring(L, "beam5"); break;
-        case GediFields::BEAM0110:  lua_pushstring(L, "beam6"); break;
-        case GediFields::BEAM1000:  lua_pushstring(L, "beam8"); break;
-        case GediFields::BEAM1011:  lua_pushstring(L, "beam11"); break;
+        case GediParameters::BEAM0000:  lua_pushstring(L, "beam0"); break;
+        case GediParameters::BEAM0001:  lua_pushstring(L, "beam1"); break;
+        case GediParameters::BEAM0010:  lua_pushstring(L, "beam2"); break;
+        case GediParameters::BEAM0011:  lua_pushstring(L, "beam3"); break;
+        case GediParameters::BEAM0101:  lua_pushstring(L, "beam5"); break;
+        case GediParameters::BEAM0110:  lua_pushstring(L, "beam6"); break;
+        case GediParameters::BEAM1000:  lua_pushstring(L, "beam8"); break;
+        case GediParameters::BEAM1011:  lua_pushstring(L, "beam11"); break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam number: %d", static_cast<int>(v));
     }
 
@@ -291,23 +263,23 @@ int convertToLua(lua_State* L, const GediFields::beam_t& v)
 /*----------------------------------------------------------------------------
  * convertFromLua - beam_t
  *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, GediFields::beam_t& v)
+void convertFromLua(lua_State* L, int index, GediParameters::beam_t& v)
 {
     if(lua_isinteger(L, index))
     {
-        v = static_cast<GediFields::beam_t>(LuaObject::getLuaInteger(L, index));
+        v = static_cast<GediParameters::beam_t>(LuaObject::getLuaInteger(L, index));
     }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if     (StringLib::match(str, "beam0"))     v = GediFields::BEAM0000;
-        else if(StringLib::match(str, "beam1"))     v = GediFields::BEAM0001;
-        else if(StringLib::match(str, "beam2"))     v = GediFields::BEAM0010;
-        else if(StringLib::match(str, "beam3"))     v = GediFields::BEAM0011;
-        else if(StringLib::match(str, "beam5"))     v = GediFields::BEAM0101;
-        else if(StringLib::match(str, "beam6"))     v = GediFields::BEAM0110;
-        else if(StringLib::match(str, "beam8"))     v = GediFields::BEAM1000;
-        else if(StringLib::match(str, "beam11"))    v = GediFields::BEAM1011;
+        if     (StringLib::match(str, "beam0"))     v = GediParameters::BEAM0000;
+        else if(StringLib::match(str, "beam1"))     v = GediParameters::BEAM0001;
+        else if(StringLib::match(str, "beam2"))     v = GediParameters::BEAM0010;
+        else if(StringLib::match(str, "beam3"))     v = GediParameters::BEAM0011;
+        else if(StringLib::match(str, "beam5"))     v = GediParameters::BEAM0101;
+        else if(StringLib::match(str, "beam6"))     v = GediParameters::BEAM0110;
+        else if(StringLib::match(str, "beam8"))     v = GediParameters::BEAM1000;
+        else if(StringLib::match(str, "beam11"))    v = GediParameters::BEAM1011;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "beam number is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
@@ -319,18 +291,18 @@ void convertFromLua(lua_State* L, int index, GediFields::beam_t& v)
 /*----------------------------------------------------------------------------
  * convertToIndex - beam_t
  *----------------------------------------------------------------------------*/
-int convertToIndex(const GediFields::beam_t& v)
+int convertToIndex(const GediParameters::beam_t& v)
 {
     switch(v)
     {
-        case GediFields::BEAM0000:  return 0;
-        case GediFields::BEAM0001:  return 1;
-        case GediFields::BEAM0010:  return 2;
-        case GediFields::BEAM0011:  return 3;
-        case GediFields::BEAM0101:  return 4;
-        case GediFields::BEAM0110:  return 5;
-        case GediFields::BEAM1000:  return 6;
-        case GediFields::BEAM1011:  return 7;
+        case GediParameters::BEAM0000:  return 0;
+        case GediParameters::BEAM0001:  return 1;
+        case GediParameters::BEAM0010:  return 2;
+        case GediParameters::BEAM0011:  return 3;
+        case GediParameters::BEAM0101:  return 4;
+        case GediParameters::BEAM0110:  return 5;
+        case GediParameters::BEAM1000:  return 6;
+        case GediParameters::BEAM1011:  return 7;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam number: %d", static_cast<int>(v));
     }
 }
@@ -338,18 +310,18 @@ int convertToIndex(const GediFields::beam_t& v)
 /*----------------------------------------------------------------------------
  * convertFromIndex - beam_t
  *----------------------------------------------------------------------------*/
-void convertFromIndex(int index, GediFields::beam_t& v)
+void convertFromIndex(int index, GediParameters::beam_t& v)
 {
     switch(index)
     {
-        case 0:  v = GediFields::BEAM0000; break;
-        case 1:  v = GediFields::BEAM0001; break;
-        case 2:  v = GediFields::BEAM0010; break;
-        case 3:  v = GediFields::BEAM0011; break;
-        case 4:  v = GediFields::BEAM0101; break;
-        case 5:  v = GediFields::BEAM0110; break;
-        case 6:  v = GediFields::BEAM1000; break;
-        case 7:  v = GediFields::BEAM1011; break;
+        case 0:  v = GediParameters::BEAM0000; break;
+        case 1:  v = GediParameters::BEAM0001; break;
+        case 2:  v = GediParameters::BEAM0010; break;
+        case 3:  v = GediParameters::BEAM0011; break;
+        case 4:  v = GediParameters::BEAM0101; break;
+        case 5:  v = GediParameters::BEAM0110; break;
+        case 6:  v = GediParameters::BEAM1000; break;
+        case 7:  v = GediParameters::BEAM1011; break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam index: %d", index);
     }
 }

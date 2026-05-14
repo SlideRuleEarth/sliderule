@@ -37,7 +37,7 @@
 #include <uuid/uuid.h>
 
 #include "OsApi.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "OutputLib.h"
 #include "RecordObject.h"
 
@@ -422,7 +422,7 @@ bool OutputLib::isLas (OutputFields::format_t fmt)
 int OutputLib::luaSend2User (lua_State* L)
 {
     bool status = false;
-    RequestFields* _parms = NULL;
+    RequestParameters* _parms = NULL;
     Publisher* outq = NULL;
     const char* outputpath = NULL;
 
@@ -430,7 +430,7 @@ int OutputLib::luaSend2User (lua_State* L)
     {
         /* Get Parameters */
         const char* filename = LuaObject::getLuaString(L, 1);
-        _parms = dynamic_cast<RequestFields*>(LuaObject::getLuaObject(L, 2, RequestFields::OBJECT_TYPE));
+        _parms = dynamic_cast<RequestParameters*>(LuaObject::getLuaObject(L, 2, RequestParameters::OBJECT_TYPE));
         const char* outq_name = LuaObject::getLuaString(L, 3);
 
         /* Get Trace from Lua Engine */

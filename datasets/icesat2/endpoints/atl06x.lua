@@ -4,7 +4,7 @@
 local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
-local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl06", rqst["resource"])
+local parms     = icesat2.parms06(rqst["parms"], rqst["key_space"], "icesat2-atl06", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource (one per beam)
 
 -------------------------------------------------------
@@ -45,16 +45,17 @@ return {
     main = main,
     parms = parms,
     name = "ATL06 Dataframe",
-    description = "Spatially and temporally subsets ATL06 granules elevations with additional filters (x-series)",
+    description = "Spatially and temporally subsets ATL06 granules elevations with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl06Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

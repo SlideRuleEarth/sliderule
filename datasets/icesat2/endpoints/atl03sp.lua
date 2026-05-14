@@ -30,16 +30,17 @@ return {
     main = main,
     parms = parms,
     name = "ATL03 Parallel Subsetter",
-    description = "Spatially and temporally subsets multiple ATL03 photon clouds with additional filters (p-series)",
+    description = "Spatially and temporally subsets multiple ATL03 photon clouds with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "s-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl03Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

@@ -44,7 +44,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "MsgQ.h"
 #include "Table.h"
 #include "EventLib.h"
@@ -412,7 +412,7 @@ int GeoDataFrame::FrameSender::luaCreate(lua_State* L)
     try
     {
         const char*     rspq        = getLuaString(L, 1);
-        const uint64_t  key_space   = getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        const uint64_t  key_space   = getLuaInteger(L, 2, true, INVALID_KEY);
         const int       timeout     = getLuaInteger(L, 3, true, SYS_TIMEOUT);
 
         return createLuaObject(L, new FrameSender(L, rspq, key_space, timeout));
@@ -1906,7 +1906,7 @@ int GeoDataFrame::luaSend(lua_State* L)
         // get parameters
         GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char*     rspq        = getLuaString(L, 2);
-        const uint64_t  key_space   = getLuaInteger(L, 3, true, RequestFields::DEFAULT_KEY_SPACE);
+        const uint64_t  key_space   = getLuaInteger(L, 3, true, INVALID_KEY);
         const int       timeout     = getLuaInteger(L, 4, true, SYS_TIMEOUT);
 
         // send dataframe

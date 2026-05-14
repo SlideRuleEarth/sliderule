@@ -41,7 +41,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "Table.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * DEFINES

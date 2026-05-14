@@ -35,7 +35,7 @@
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -64,7 +64,7 @@ class BathySeaSurfaceFinder: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathySeaSurfaceFinder    (lua_State* L, BathyFields* _parms);
+        BathySeaSurfaceFinder    (lua_State* L, BathyParameters* _parms);
         ~BathySeaSurfaceFinder   (void) override;
 
         bool run (GeoDataFrame* dataframe) override;
@@ -73,7 +73,7 @@ class BathySeaSurfaceFinder: public GeoDataFrame::FrameRunner
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields*    parms;
+        BathyParameters*    parms;
 };
 
 #endif

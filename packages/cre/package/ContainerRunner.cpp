@@ -71,12 +71,12 @@ const char* ContainerRunner::HOST_DIRECTORY = "/data";
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaCreate (lua_State* L)
 {
-    CreFields* _parms = NULL;
+    CreParameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<CreFields*>(getLuaObject(L, 1, CreFields::OBJECT_TYPE));
+        _parms = dynamic_cast<CreParameters*>(getLuaObject(L, 1, CreParameters::OBJECT_TYPE));
         const char* host_shared_directory = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3, true, NULL);
 
@@ -185,7 +185,7 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ContainerRunner::ContainerRunner (lua_State* L, CreFields* _parms, const char* host_shared_directory, const char* outq_name):
+ContainerRunner::ContainerRunner (lua_State* L, CreParameters* _parms, const char* host_shared_directory, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     outQ(NULL),
     hostSandboxDirectory(StringLib::duplicate(host_shared_directory))

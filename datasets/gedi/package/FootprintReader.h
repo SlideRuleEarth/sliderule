@@ -49,7 +49,7 @@
 #include "AncillaryFields.h"
 #include "ContainerRecord.h"
 
-#include "GediFields.h"
+#include "GediParameters.h"
 
 /******************************************************************************
  * FOOTPRINT READER
@@ -94,9 +94,9 @@ class FootprintReader: public LuaObject
 
         /* Thread Information */
         typedef struct {
-            FootprintReader*    reader;
-            char                group[9];
-            GediFields::beam_t  beam;
+            FootprintReader*        reader;
+            char                    group[9];
+            GediParameters::beam_t  beam;
         } info_t;
 
         /* Region Subclass */
@@ -126,14 +126,14 @@ class FootprintReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         std::atomic<bool>       active;
-        Thread*                 readerPid[GediFields::NUM_BEAMS];
+        Thread*                 readerPid[GediParameters::NUM_BEAMS];
         Mutex                   threadMut;
         int                     threadCount;
         int                     numComplete;
         bool                    sendTerminator;
         const int               read_timeout_ms;
         Publisher*              outQ;
-        GediFields*             parms;
+        GediParameters*         parms;
         stats_t                 stats;
         H5Coro::Context*        context;
         RecordObject            batchRecord;
@@ -148,7 +148,7 @@ class FootprintReader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            FootprintReader         (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator,
+                            FootprintReader         (lua_State* L, const char* outq_name, GediParameters* _parms, bool _send_terminator,
                                                      const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                      subset_func_t subsetter);
                             ~FootprintReader        (void) override;
@@ -182,7 +182,7 @@ const struct luaL_Reg FootprintReader<footprint_t>::LUA_META_TABLE[] = {
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
-FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator,
+FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_name, GediParameters* _parms, bool _send_terminator,
                                                 const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                 subset_func_t subsetter ):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
@@ -226,13 +226,13 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
         /* Read Beam Data */
         threadMut.lock();
         {
-            for(int i = 0; i < GediFields::NUM_BEAMS; i++)
+            for(int i = 0; i < GediParameters::NUM_BEAMS; i++)
             {
                 if(parms->beams.enabled(i))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
-                    StringLib::format(info->group, 9, "%s", GediFields::beam2group(i));
+                    StringLib::format(info->group, 9, "%s", GediParameters::beam2group(i));
                     convertFromIndex(i, info->beam);
                     readerPid[threadCount++] = new Thread(subsetter, info);
                 }
@@ -265,7 +265,7 @@ FootprintReader<footprint_t>::~FootprintReader (void)
 {
     active.store(false, std::memory_order_relaxed);
 
-    for(int i = 0; i < GediFields::NUM_BEAMS; i++)
+    for(int i = 0; i < GediParameters::NUM_BEAMS; i++)
     {
         if(readerPid[i]) delete readerPid[i];
     }

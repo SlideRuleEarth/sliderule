@@ -98,13 +98,13 @@ const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Reader::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE, Atl03Parameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -134,7 +134,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Atl03Parameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     parms(_parms),
@@ -148,7 +148,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
     threadCount = 0;
 
     /* Set Signal Confidence Index */
-    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
+    if(parms->surfaceType == Icesat2Parameters::SRT_DYNAMIC)
     {
         signalConfColIndex = H5Coro::ALL_COLS;
     }
@@ -190,12 +190,12 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
         /* Create Readers */
         threadMut.lock();
         {
-            for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
+            for(int track = 1; track <= Icesat2Parameters::NUM_TRACKS; track++)
             {
-                for(int pair = 0; pair < Icesat2Fields::NUM_PAIR_TRACKS; pair++)
+                for(int pair = 0; pair < Icesat2Parameters::NUM_PAIR_TRACKS; pair++)
                 {
                     const int gt_index = (2 * (track - 1)) + pair;
-                    if(parms->beams.values[gt_index] && (parms->track == Icesat2Fields::ALL_TRACKS || track == parms->track))
+                    if(parms->beams.values[gt_index] && (parms->track == Icesat2Parameters::ALL_TRACKS || track == parms->track))
                     {
                         info_t* info = new info_t;
                         info->reader = this;
@@ -472,8 +472,8 @@ void Atl03Reader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    read_yapc006        (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value == 6)),
-    read_yapc007        (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value >= 7)),
+    read_yapc006        (info->reader->parms->stages[Icesat2Parameters::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value == 6)),
+    read_yapc007        (info->reader->parms->stages[Icesat2Parameters::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value >= 7)),
     sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
     velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
@@ -503,7 +503,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         /* Read Ancillary Geolocation Fields */
         if(geo_fields.length() > 0)
         {
-            anc_geo_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
+            anc_geo_data = new H5DArrayDictionary(Icesat2Parameters::EXPECTED_NUM_FIELDS);
             for(int i = 0; i < geo_fields.length(); i++)
             {
                 const string& field_name = geo_fields[i];
@@ -526,7 +526,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         /* Read Ancillary Photon Fields */
         if(photon_fields.length() > 0)
         {
-            anc_ph_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
+            anc_ph_data = new H5DArrayDictionary(Icesat2Parameters::EXPECTED_NUM_FIELDS);
             for(int i = 0; i < photon_fields.length(); i++)
             {
                 const string& field_name = photon_fields[i];
@@ -605,8 +605,8 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
-    enabled             (info->reader->parms->stages[Icesat2Fields::STAGE_ATL08]),
-    phoreal             (info->reader->parms->stages[Icesat2Fields::STAGE_PHOREAL]),
+    enabled             (info->reader->parms->stages[Icesat2Parameters::STAGE_ATL08]),
+    phoreal             (info->reader->parms->stages[Icesat2Parameters::STAGE_PHOREAL]),
     ancillary           (info->reader->parms->atl08Fields.length() > 0),
     classification      {NULL},
     relief              {NULL},
@@ -627,7 +627,7 @@ Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
         try
         {
             /* Allocate Ancillary Data Dictionary */
-            anc_seg_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
+            anc_seg_data = new H5DArrayDictionary(Icesat2Parameters::EXPECTED_NUM_FIELDS);
 
             /* Read Ancillary Fields */
             FieldList<string>& atl08_fields = info->reader->parms->atl08Fields;
@@ -768,17 +768,17 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
                     snowcover[atl03_photon] = (uint8_t)segment_snowcover[atl08_segment_index];
 
                     /* Run ABoVE Classifier (if specified) */
-                    if(info->reader->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Fields::ATL08_TOP_OF_CANOPY))
+                    if(info->reader->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Parameters::ATL08_TOP_OF_CANOPY))
                     {
-                        const uint8_t spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
+                        const uint8_t spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl03.sc_orient[0], (Icesat2Parameters::track_t)info->track, info->pair);
                         if( (atl03.solar_elevation[atl03_segment_index] <= 5.0) &&
                             ((spot == 1) || (spot == 3) || (spot == 5)) &&
-                            (atl03.signal_conf_ph[atl03_photon] == Icesat2Fields::CNF_SURFACE_HIGH) &&
+                            (atl03.signal_conf_ph[atl03_photon] == Icesat2Parameters::CNF_SURFACE_HIGH) &&
                             ((relief[atl03_photon] >= 0.0) && (relief[atl03_photon] < 35.0)) )
                             /* TODO: check for valid ground photons in ATL08 segment */
                         {
                             /* Reassign Classification */
-                            classification[atl03_photon] = Icesat2Fields::ATL08_TOP_OF_CANOPY;
+                            classification[atl03_photon] = Icesat2Parameters::ATL08_TOP_OF_CANOPY;
                         }
                     }
                 }
@@ -795,7 +795,7 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
             else
             {
                 /* Unclassified */
-                classification[atl03_photon] = Icesat2Fields::ATL08_UNCLASSIFIED;
+                classification[atl03_photon] = Icesat2Parameters::ATL08_UNCLASSIFIED;
 
                 /* Set PhoREAL Fields to Invalid */
                 if(phoreal)
@@ -835,7 +835,7 @@ uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, const Atl03Data& atl03):
-    enabled {info->reader->parms->stages[Icesat2Fields::STAGE_YAPC]},
+    enabled {info->reader->parms->stages[Icesat2Parameters::STAGE_YAPC]},
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
@@ -1208,7 +1208,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl03Reader* reader = info->reader;
-    const Icesat2Fields* parms = reader->parms;
+    const Atl03Parameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     List<int32_t>* segment_indices = NULL;    // used for ancillary data
     List<int32_t>* photon_indices = NULL;     // used for ancillary data
@@ -1329,14 +1329,14 @@ void* Atl03Reader::subsettingThread (void* parm)
                     {
                         /* Set Signal Confidence Level */
                         int8_t atl03_cnf;
-                        if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
+                        if(parms->surfaceType == Icesat2Parameters::SRT_DYNAMIC)
                         {
                             /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                             * code below chooses the signal confidence that is the highest
                             * value of the five */
-                            const int32_t conf_index = current_photon * Icesat2Fields::NUM_SURFACE_TYPES;
+                            const int32_t conf_index = current_photon * Icesat2Parameters::NUM_SURFACE_TYPES;
                             atl03_cnf = -128;
-                            for(int i = 0; i < Icesat2Fields::NUM_SURFACE_TYPES; i++)
+                            for(int i = 0; i < Icesat2Parameters::NUM_SURFACE_TYPES; i++)
                             {
                                 if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
                                 {
@@ -1350,18 +1350,18 @@ void* Atl03Reader::subsettingThread (void* parm)
                         }
 
                         /* Check Signal Confidence Level */
-                        if(atl03_cnf < Icesat2Fields::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Fields::CNF_SURFACE_HIGH)
+                        if(atl03_cnf < Icesat2Parameters::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parameters::CNF_SURFACE_HIGH)
                         {
                             throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal confidence: %d", atl03_cnf);
                         }
-                        if(!parms->atl03Cnf[static_cast<Icesat2Fields::signal_conf_t>(atl03_cnf)])
+                        if(!parms->atl03Cnf[static_cast<Icesat2Parameters::signal_conf_t>(atl03_cnf)])
                         {
                             break;
                         }
 
                         /* Set and Check ATL03 Photon Quality Level */
-                        const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
-                        if(quality_ph < Icesat2Fields::QUALITY_NOMINAL || quality_ph >= Icesat2Fields::NUM_PHOTON_QUALITY)
+                        const Icesat2Parameters::quality_ph_t quality_ph = static_cast<Icesat2Parameters::quality_ph_t>(atl03.quality_ph[current_photon]);
+                        if(quality_ph < Icesat2Parameters::QUALITY_NOMINAL || quality_ph >= Icesat2Parameters::NUM_PHOTON_QUALITY)
                         {
                             throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 photon quality: %d", quality_ph);
                         }
@@ -1371,11 +1371,11 @@ void* Atl03Reader::subsettingThread (void* parm)
                         }
 
                         /* Set and Check ATL08 Classification */
-                        Icesat2Fields::atl08_class_t atl08_class = Icesat2Fields::ATL08_UNCLASSIFIED;
+                        Icesat2Parameters::atl08_class_t atl08_class = Icesat2Parameters::ATL08_UNCLASSIFIED;
                         if(atl08.classification)
                         {
-                            atl08_class = static_cast<Icesat2Fields::atl08_class_t>(atl08[current_photon]);
-                            if(atl08_class < 0 || atl08_class >= Icesat2Fields::NUM_ATL08_CLASSES)
+                            atl08_class = static_cast<Icesat2Parameters::atl08_class_t>(atl08[current_photon]);
+                            if(atl08_class < 0 || atl08_class >= Icesat2Parameters::NUM_ATL08_CLASSES)
                             {
                                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl08 classification: %d", atl08_class);
                             }
@@ -1444,7 +1444,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                         /* Add Photon to Extent */
                         const photon_t ph = {
-                            .time_ns = Icesat2Fields::deltatime2timestamp(atl03.delta_time[current_photon]),
+                            .time_ns = Icesat2Parameters::deltatime2timestamp(atl03.delta_time[current_photon]),
                             .latitude = atl03.lat_ph[current_photon],
                             .longitude = atl03.lon_ph[current_photon],
                             .x_atc = static_cast<float>(x_atc - (state.extent_length / 2.0)),
@@ -1542,7 +1542,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             if(state.extent_valid || parms->passInvalid)
             {
                 /* Generate Extent ID */
-                const uint64_t extent_id = Icesat2Fields::generateExtentId(parms->granuleFields.rgt.value, parms->granuleFields.cycle.value, parms->granuleFields.region.value, info->track, info->pair, extent_counter);
+                const uint64_t extent_id = Icesat2Parameters::generateExtentId(parms->granuleFields.rgt.value, parms->granuleFields.cycle.value, parms->granuleFields.region.value, info->track, info->pair, extent_counter);
 
                 /* Build Extent and Ancillary Records */
                 vector<RecordObject*> rec_list;
@@ -1550,9 +1550,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     int rec_total_size = 0;
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03PhFields, atl03.anc_ph_data, Icesat2Fields::PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03GeoFields, atl03.anc_geo_data, Icesat2Fields::EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08Fields, atl08.anc_seg_data, Icesat2Fields::ATL08_ANC_TYPE, atl08_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03PhFields, atl03.anc_ph_data, Icesat2Parameters::PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03GeoFields, atl03.anc_geo_data, Icesat2Parameters::EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08Fields, atl08.anc_seg_data, Icesat2Parameters::ATL08_ANC_TYPE, atl08_indices, rec_list, rec_total_size);
 
                     /* Send Records */
                     if(rec_list.size() == 1)
@@ -1757,7 +1757,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, const info_t* info, 
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, const FieldList<string>& field_list, H5DArrayDictionary* field_dict, Icesat2Fields::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, const FieldList<string>& field_list, H5DArrayDictionary* field_dict, Icesat2Parameters::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
     if((field_list.length() > 0) && field_dict && indices)
     {

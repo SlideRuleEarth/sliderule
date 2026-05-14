@@ -41,7 +41,7 @@
 #include "GeoDataFrame.h"
 #include "Asset.h"
 #include "H5CoroLib.h"
-#include "H5Fields.h"
+#include "H5Parameters.h"
 #include "H5Object.h"
 #include "H5VarSet.h"
 
@@ -65,7 +65,7 @@ class H5DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5DataFrame         (lua_State* L, H5Fields* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
+                            H5DataFrame         (lua_State* L, H5Parameters* _parms, H5Object* _h5obj, const char* _group, okey_t _df_key, long _timeout,
                                                  const char* time_column, const char* x_column, const char* y_column, const char* z_column);
                             ~H5DataFrame        (void) override;
         void                setGeoColumns       (void);
@@ -76,7 +76,7 @@ class H5DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         H5Object*               h5obj;
-        H5Fields*               parms;
+        H5Parameters*               parms;
         H5VarSet                data;
         FieldElement<string>    group;
         long                    timeout; // milliseconds

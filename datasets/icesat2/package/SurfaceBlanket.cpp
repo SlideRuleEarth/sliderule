@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "SurfaceBlanket.h"
-#include "Icesat2Fields.h"
+#include "Atl03Parameters.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -60,11 +60,11 @@ const struct luaL_Reg SurfaceBlanket::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int SurfaceBlanket::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Atl03Parameters* _parms = NULL;
 
     try
     {
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 1, Atl03Parameters::OBJECT_TYPE, Atl03Parameters::LUA_META_NAME));
         return createLuaObject(L, new SurfaceBlanket(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -78,7 +78,7 @@ int SurfaceBlanket::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SurfaceBlanket::SurfaceBlanket (lua_State* L, Icesat2Fields* _parms):
+SurfaceBlanket::SurfaceBlanket (lua_State* L, Atl03Parameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
@@ -146,7 +146,7 @@ bool SurfaceBlanket::run (GeoDataFrame* dataframe)
         // check minimum number of photons
         if(num_photons < parms->minPhotonCount)
         {
-            result.pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
+            result.pflags |= Icesat2Parameters::PFLAG_TOO_FEW_PHOTONS;
         }
 
         // add row to surface blanket dataframe
@@ -228,15 +228,15 @@ void SurfaceBlanket::algorithm (const Atl03DataFrame& df, uint32_t start_photon,
     {
         const uint32_t i = start_photon + p;
 
-        if(df.atl08_class[i] == Icesat2Fields::ATL08_GROUND)
+        if(df.atl08_class[i] == Icesat2Parameters::ATL08_GROUND)
         {
             ground_heights.push_back(df.height[i]);
         }
-        else if(df.atl08_class[i] == Icesat2Fields::ATL08_CANOPY)
+        else if(df.atl08_class[i] == Icesat2Parameters::ATL08_CANOPY)
         {
             canopy_heights.push_back(df.height[i]);
         }
-        else if(df.atl08_class[i] == Icesat2Fields::ATL08_TOP_OF_CANOPY)
+        else if(df.atl08_class[i] == Icesat2Parameters::ATL08_TOP_OF_CANOPY)
         {
             canopy_heights.push_back(df.height[i]); // include top of canopy in canopy
             topcan_heights.push_back(df.height[i]);
@@ -259,7 +259,7 @@ void SurfaceBlanket::algorithm (const Atl03DataFrame& df, uint32_t start_photon,
     }
     else
     {
-        result.pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
+        result.pflags |= Icesat2Parameters::PFLAG_TOO_FEW_PHOTONS;
     }
 
     // calculate median ground height
@@ -270,7 +270,7 @@ void SurfaceBlanket::algorithm (const Atl03DataFrame& df, uint32_t start_photon,
     }
     else
     {
-        result.pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
+        result.pflags |= Icesat2Parameters::PFLAG_TOO_FEW_PHOTONS;
     }
 }
 

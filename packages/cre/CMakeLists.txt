@@ -12,7 +12,7 @@ target_include_directories (slideruleLib PUBLIC ${RapidJSON_INCLUDE_DIR})
 target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/cre.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/CreFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/CreParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/ContainerRunner.cpp
 )
 
@@ -25,7 +25,7 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/cre.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/CreFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/CreParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ContainerRunner.h
     DESTINATION
         ${INCDIR}

@@ -68,7 +68,7 @@ GeoIndexedRaster::RasterFinder::RasterFinder (const OGRGeometry* _geo,
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
+GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestParameters* rqst_parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject    (L, rqst_parms, key),
     ssErrors        (SS_NO_ERRORS),
     readerDone      (NUM_SYNC_SIGNALS),

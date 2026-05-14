@@ -40,7 +40,7 @@
 #include "H5Object.h"
 #include "H5Array.h"
 #include "Atl09Sampler.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 
 /******************************************************************************
  * DATA
@@ -81,7 +81,7 @@ static range_to_sample_t get_time_range(H5Array<double>& atl09_delta_time, const
         // find the start and end rows
         for(long i = 0; i < atl09_delta_time.size; i++)
         {
-            const time8_t t = Icesat2Fields::deltatime2timestamp(atl09_delta_time[i]);
+            const time8_t t = Icesat2Parameters::deltatime2timestamp(atl09_delta_time[i]);
             if(t.nanoseconds < min_time.nanoseconds)
             {
                 range_to_sample.startrow = i;
@@ -124,7 +124,7 @@ static void sample_data_using_time(GeoDataFrame* dataframe, H5Array<double>& atl
         {
             const time8_t dataframe_time = time_column[dataframe_index];
             while((row < (range_to_sample.numrows - 1)) &&
-                  (Icesat2Fields::deltatime2timestamp(atl09_delta_time[row + range_to_sample.startrow + 1]).nanoseconds <= dataframe_time.nanoseconds))
+                  (Icesat2Parameters::deltatime2timestamp(atl09_delta_time[row + range_to_sample.startrow + 1]).nanoseconds <= dataframe_time.nanoseconds))
                 row++;
             atl09_data.addToGDF(dataframe, row);
         }
@@ -206,12 +206,12 @@ static void sample_data_using_segments(GeoDataFrame* dataframe, H5Array<int32_t>
  *----------------------------------------------------------------------------*/
 int Atl09Sampler::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
     H5Object* _hdf09 = NULL;
 
     try
     {
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 1, Icesat2Parameters::OBJECT_TYPE));
         _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         return createLuaObject(L, new Atl09Sampler(L, _parms, _hdf09));
     }
@@ -226,7 +226,7 @@ int Atl09Sampler::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl09Sampler::Atl09Sampler (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf09):
+Atl09Sampler::Atl09Sampler (lua_State* L, Icesat2Parameters* _parms, H5Object* _hdf09):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     hdf09(_hdf09)
@@ -258,14 +258,14 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         // get profile to read
         FieldElement<uint8_t>* gt = reinterpret_cast<FieldElement<uint8_t>*>(dataframe->getMetaData("gt"));
         int profile_num = 0; // invalid value
-        switch(static_cast<Icesat2Fields::gt_t>(gt->value))
+        switch(static_cast<Icesat2Parameters::gt_t>(gt->value))
         {
-            case Icesat2Fields::GT1L: profile_num = 1; break;
-            case Icesat2Fields::GT1R: profile_num = 1; break;
-            case Icesat2Fields::GT2L: profile_num = 2; break;
-            case Icesat2Fields::GT2R: profile_num = 2; break;
-            case Icesat2Fields::GT3L: profile_num = 3; break;
-            case Icesat2Fields::GT3R: profile_num = 3; break;
+            case Icesat2Parameters::GT1L: profile_num = 1; break;
+            case Icesat2Parameters::GT1R: profile_num = 1; break;
+            case Icesat2Parameters::GT2L: profile_num = 2; break;
+            case Icesat2Parameters::GT2R: profile_num = 2; break;
+            case Icesat2Parameters::GT3L: profile_num = 3; break;
+            case Icesat2Parameters::GT3R: profile_num = 3; break;
             default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid ground track: %d", gt->value);
         }
         const string profile = FString("profile_%d", profile_num).c_str();

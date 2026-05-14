@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "ContainerRecord.h"
 #include "Atl13Reader.h"
-#include "Icesat2Fields.h"
+#include "Atl13sParameters.h"
 #include "AncillaryFields.h"
 
 using std::numeric_limits;
@@ -90,13 +90,13 @@ const struct luaL_Reg Atl13Reader::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl13Reader::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Atl13sParameters* _parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Atl13sParameters*>(getLuaObject(L, 2, Atl13sParameters::OBJECT_TYPE, Atl13sParameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
@@ -126,7 +126,7 @@ void Atl13Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
+Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Atl13sParameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     parms(_parms),
@@ -164,12 +164,12 @@ Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
         context = new H5Coro::Context(parms->asset.asset, parms->resource.value.c_str());
 
         /* Create Readers */
-        for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
+        for(int track = 1; track <= Icesat2Parameters::NUM_TRACKS; track++)
         {
-            for(int pair = 0; pair < Icesat2Fields::NUM_PAIR_TRACKS; pair++)
+            for(int pair = 0; pair < Icesat2Parameters::NUM_PAIR_TRACKS; pair++)
             {
                 const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->beams.values[gt_index] && (parms->track == Icesat2Fields::ALL_TRACKS || track == parms->track))
+                if(parms->beams.values[gt_index] && (parms->track == Icesat2Parameters::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
@@ -448,7 +448,7 @@ void* Atl13Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl13Reader* reader = info->reader;
-    const Icesat2Fields* parms = reader->parms;
+    const Atl13sParameters* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 
@@ -498,13 +498,13 @@ void* Atl13Reader::subsettingThread (void* parm)
 
             /* Populate Elevation */
             water_t* entry = &atl13_data->water[batch_index++];
-            entry->extent_id                = Icesat2Fields::generateExtentId(reader->parms->granuleFields.rgt.value, reader->parms->granuleFields.cycle.value, reader->parms->granuleFields.region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
-            entry->time_ns                  = Icesat2Fields::deltatime2timestamp(atl13.delta_time[segment]);
+            entry->extent_id                = Icesat2Parameters::generateExtentId(reader->parms->granuleFields.rgt.value, reader->parms->granuleFields.cycle.value, reader->parms->granuleFields.region.value, info->track, info->pair, extent_counter) | Icesat2Parameters::EXTENT_ID_ELEVATION;
+            entry->time_ns                  = Icesat2Parameters::deltatime2timestamp(atl13.delta_time[segment]);
             entry->segment_id               = atl13.segment_id_beg[segment];
             entry->rgt                      = reader->parms->granuleFields.rgt.value;
             entry->cycle                    = reader->parms->granuleFields.cycle.value;
-            entry->spot                     = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
-            entry->gt                       = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
+            entry->spot                     = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl13.sc_orient[0], (Icesat2Parameters::track_t)info->track, info->pair);
+            entry->gt                       = Icesat2Parameters::getGroundTrack((Icesat2Parameters::sc_orient_t)atl13.sc_orient[0], (Icesat2Parameters::track_t)info->track, info->pair);
             entry->latitude                 = region.latitude[segment];
             entry->longitude                = region.longitude[segment];
             entry->snow_ice_atl09           = atl13.snow_ice_atl09[segment];
@@ -526,7 +526,7 @@ void* Atl13Reader::subsettingThread (void* parm)
                     const string& field_name = parms->atl13Fields[i];
 
                     AncillaryFields::field_t field;
-                    field.anc_type = Icesat2Fields::ATL06_ANC_TYPE;
+                    field.anc_type = Icesat2Parameters::ATL06_ANC_TYPE;
                     field.field_index = i;
                     field.data_type = atl13.anc_data[field_name.c_str()]->elementType();
                     atl13.anc_data[field_name.c_str()]->serialize(&field.value[0], segment, 1);

@@ -34,7 +34,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
-#include "Icesat2Fields.h"
+#include "Atl03Parameters.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -99,7 +99,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        SurfaceFitter  (lua_State* L, Icesat2Fields* _parms);
+        SurfaceFitter  (lua_State* L, Atl03Parameters* _parms);
         ~SurfaceFitter (void) override;
 
         result_t        iterativeFitStage       (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photon, double center_of_extent);
@@ -111,7 +111,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
          * Data
          *--------------------------------------------------------------------*/
 
-        Icesat2Fields*  parms;
+        Atl03Parameters*  parms;
 };
 
 #endif

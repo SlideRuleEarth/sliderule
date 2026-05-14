@@ -57,15 +57,15 @@ const struct luaL_Reg Gedi01bDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Gedi01bDataFrame::luaCreate (lua_State* L)
 {
-    GediFields* _parms = NULL;
+    GediParameters* _parms = NULL;
     H5Object* _hdf01b = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
-        _hdf01b = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<GediParameters*>(getLuaObject(L, 2, GediParameters::OBJECT_TYPE, GediParameters::LUA_META_NAME));
+        _hdf01b = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -83,7 +83,7 @@ int Gedi01bDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name):
+Gedi01bDataFrame::Gedi01bDataFrame (lua_State* L, const char* beam_str, GediParameters* _parms, H5Object* _hdf01b, const char* outq_name):
     GediDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"shot_number",         &shot_number,       "GEDI laser shot number identifier"},
@@ -160,7 +160,7 @@ Gedi01bDataFrame::Gedi01bData::Gedi01bData (Gedi01bDataFrame* df, const AreaOfIn
 void* Gedi01bDataFrame::subsettingThread (void* parm)
 {
     Gedi01bDataFrame* df = static_cast<Gedi01bDataFrame*>(parm);
-    const GediFields& parms = *df->parms;
+    const GediParameters& parms = *df->parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, df->traceId, "gedi01b_dataframe", "{\"context\":\"%s\", \"beam\":%s}", df->hdf->name, df->beamStr);
@@ -210,7 +210,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
 
             /* Populate Columns */
             df->shot_number.append(gedi01b.shot_number[footprint]);
-            df->time_ns.append(GediFields::deltatime2timestamp(gedi01b.delta_time[footprint]));
+            df->time_ns.append(GediParameters::deltatime2timestamp(gedi01b.delta_time[footprint]));
             df->latitude.append(aoi.latitude[footprint]);
             df->longitude.append(aoi.longitude[footprint]);
             df->elevation_start.append(static_cast<float>(gedi01b.elev_bin0[footprint]));
@@ -220,7 +220,7 @@ void* Gedi01bDataFrame::subsettingThread (void* parm)
             df->rx_size.append(gedi01b.rx_sample_count[footprint]);
 
             uint8_t row_flags = 0;
-            if(gedi01b.degrade_flag[footprint]) row_flags |= GediFields::DEGRADE_FLAG_MASK;
+            if(gedi01b.degrade_flag[footprint]) row_flags |= GediParameters::DEGRADE_FLAG_MASK;
             df->flags.append(row_flags);
 
             /* Populate Tx Waveform */

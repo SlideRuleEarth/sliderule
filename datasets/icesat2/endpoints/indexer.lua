@@ -58,6 +58,7 @@ return {
     inputs = {"json"},
     outputs = {"binary"},
     schema = {
+        tags = "p-series, icesat2",
         request = [[ "application/json": {
             "schema": {
                 "type": "object",

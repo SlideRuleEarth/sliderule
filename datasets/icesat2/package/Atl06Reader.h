@@ -44,7 +44,7 @@
 #include "OsApi.h"
 #include "H5Array.h"
 #include "H5DArray.h"
-#include "Icesat2Fields.h"
+#include "Atl06Parameters.h"
 
 /******************************************************************************
  * ATL06 READER
@@ -197,14 +197,14 @@ class Atl06Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
         std::atomic<bool>   active;
-        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
+        Thread*             readerPid[Icesat2Parameters::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Fields*      parms;
+        Atl06Parameters*    parms;
         stats_t             stats;
 
         H5Coro::Context*    context; // for ATL06 file
@@ -213,7 +213,7 @@ class Atl06Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl06Reader                 (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
+                            Atl06Reader                 (lua_State* L, const char* outq_name, Atl06Parameters* _parms, bool _send_terminator=true);
                             ~Atl06Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);

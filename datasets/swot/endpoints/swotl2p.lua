@@ -21,13 +21,14 @@ return {
     main = main,
     parms = parms,
     name = "SWOT L2 Parallel Subsetter",
-    description = "Spatially and temporally subsets multiple SWOT L2 granules with additional filters (s-series)",
+    description = "Spatially and temporally subsets multiple SWOT L2 granules with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "s-series, swot",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/SwotParameters.json"

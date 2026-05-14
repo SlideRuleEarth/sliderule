@@ -5,7 +5,7 @@ local json          = require("json")
 local dataframe     = require("dataframe")
 local util          = require("bathy_utils")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"])
+local parms         = bathy.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 local granule       = parms["granule"]
 local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", granule["year"], granule["month"], granule["day"])
 local rgps          = time.gmt2gps(rdate)
@@ -49,6 +49,7 @@ return {
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, bathy",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/BathyParameters.json"

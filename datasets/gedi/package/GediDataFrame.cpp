@@ -36,11 +36,7 @@
 #include "GediDataFrame.h"
 
 /******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-/******************************************************************************
- * GEDI DATAFRAME BASE
+ * CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -48,7 +44,7 @@
  *----------------------------------------------------------------------------*/
  GediDataFrame::GediDataFrame(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[],
                              const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                             GediFields* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name):
+                             GediParameters* _parms, H5Object* _hdf, const char* beam_str, const char* outq_name):
     GeoDataFrame(L, meta_name, meta_table, column_list,
     {
         {"beam",    &beam,      "GEDI laser beam identifier"},
@@ -72,8 +68,8 @@
     group{0}
 {
     /* Resolve Beam */
-    StringLib::format(group, sizeof(group), "%s", GediFields::beam2group(static_cast<int>(dfKey)));
-    GediFields::beam_t beam_id;
+    StringLib::format(group, sizeof(group), "%s", GediParameters::beam2group(static_cast<int>(dfKey)));
+    GediParameters::beam_t beam_id;
     convertFromIndex(static_cast<int>(dfKey), beam_id);
     beam = static_cast<uint8_t>(beam_id);
 

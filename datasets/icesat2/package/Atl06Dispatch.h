@@ -43,7 +43,7 @@
 #include "OsApi.h"
 #include "Atl03Reader.h"
 #include "AncillaryFields.h"
-#include "Icesat2Fields.h"
+#include "Atl06DispatchParameters.h"
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -155,24 +155,24 @@ class Atl06Dispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject        elevationRecord;
-        atl06_t*            elevationRecordData;
-        RecordObject*       ancillaryRecords[BATCH_SIZE]; // because there are variable number of fields, this cannot be predefined
-        int                 ancillaryTotalSize;
-        Publisher*          outQ;
+        RecordObject                elevationRecord;
+        atl06_t*                    elevationRecordData;
+        RecordObject*               ancillaryRecords[BATCH_SIZE]; // because there are variable number of fields, this cannot be predefined
+        int                         ancillaryTotalSize;
+        Publisher*                  outQ;
 
-        Mutex               postingMutex;
-        int                 elevationIndex;
-        int                 ancillaryIndex;
+        Mutex                       postingMutex;
+        int                         elevationIndex;
+        int                         ancillaryIndex;
 
-        Icesat2Fields*      parms;
-        stats_t             stats;
+        Atl06DispatchParameters*    parms;
+        stats_t                     stats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* outq_name, Icesat2Fields* _parms);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, Atl06DispatchParameters* _parms);
                         ~Atl06Dispatch                  (void) override;
 
         bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;

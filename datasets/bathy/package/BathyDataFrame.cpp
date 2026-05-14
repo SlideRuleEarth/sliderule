@@ -45,7 +45,7 @@
 #include "H5Object.h"
 #include "BathyDataFrame.h"
 #include "GeoLib.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyMask.h"
 
 /******************************************************************************
@@ -67,7 +67,7 @@ const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyDataFrame::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
     BathyMask* _mask = NULL;
     H5Object* _hdf03 = NULL;
 
@@ -75,9 +75,9 @@ int BathyDataFrame::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
-        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
-        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 2, BathyParameters::OBJECT_TYPE));
+        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, NULL, true, NULL));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* rqstq_name = getLuaString(L, 5, true, NULL);
 
         /* Return Reader Object */
@@ -96,7 +96,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask):
+BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyParameters* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns,               "Unix time (nanoseconds) of the photon measurement"},
@@ -123,13 +123,13 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"bounding_polygon_lat",&bounding_polygon_lat,  "Minimum and maximum latitudes contained in dataframe"},
         {"bounding_polygon_lon",&bounding_polygon_lon,  "Minimum and maximum longitudes contained in dataframe"}
     },
-    Icesat2Fields::defaultEGM(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
+    Icesat2Parameters::defaultEGM(_parms->granuleFields.version.value), // crs
+    Icesat2Parameters::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
     rgt(_parms->granuleFields.rgt.value, META_COLUMN),
-    gt(Icesat2Fields::getGroundTrack(beam_str), META_COLUMN),
+    gt(Icesat2Parameters::getGroundTrack(beam_str), META_COLUMN),
     granule(_hdf03 ? _hdf03->name : "null", META_SOURCE_ID),
     active(false),
     pid(NULL),
@@ -148,7 +148,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     populateGeoColumns();
 
     /* Set Signal Confidence Index */
-    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
+    if(parms->surfaceType == Icesat2Parameters::SRT_DYNAMIC)
     {
         signalConfColIndex = H5Coro::ALL_COLS;
     }
@@ -467,7 +467,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     BathyDataFrame& dataframe = *static_cast<BathyDataFrame*>(parm);
-    const BathyFields& parms = *(dataframe.parms);
+    const BathyParameters& parms = *(dataframe.parms);
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%s}", parms.asset.getName(), parms.getResource(), dataframe.beam);
@@ -489,7 +489,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         bool on_boundary = true; // true when a spatial subsetting boundary is encountered
 
         /* Set Spot*/
-        dataframe.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], dataframe.beam);
+        dataframe.spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl03.sc_orient[0], dataframe.beam);
 
         /* Set Bounding Polygon */
         for(int i = 0; i < atl03.bounding_polygon_lat.size; i++)
@@ -540,25 +540,25 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Set Signal Confidence Level */
-                Icesat2Fields::signal_conf_t atl03_cnf;
-                if(parms.surfaceType == Icesat2Fields::SRT_DYNAMIC)
+                Icesat2Parameters::signal_conf_t atl03_cnf;
+                if(parms.surfaceType == Icesat2Parameters::SRT_DYNAMIC)
                 {
                     /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                      * code below chooses the signal confidence that is the highest
                      * value of the five */
-                    const int32_t conf_index = current_photon * Icesat2Fields::NUM_SURFACE_TYPES;
-                    atl03_cnf = Icesat2Fields::CNF_POSSIBLE_TEP;
-                    for(int i = 0; i < Icesat2Fields::NUM_SURFACE_TYPES; i++)
+                    const int32_t conf_index = current_photon * Icesat2Parameters::NUM_SURFACE_TYPES;
+                    atl03_cnf = Icesat2Parameters::CNF_POSSIBLE_TEP;
+                    for(int i = 0; i < Icesat2Parameters::NUM_SURFACE_TYPES; i++)
                     {
                         if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
                         {
-                            atl03_cnf = static_cast<Icesat2Fields::signal_conf_t>(atl03.signal_conf_ph[conf_index + i]);
+                            atl03_cnf = static_cast<Icesat2Parameters::signal_conf_t>(atl03.signal_conf_ph[conf_index + i]);
                         }
                     }
                 }
                 else
                 {
-                    atl03_cnf = static_cast<Icesat2Fields::signal_conf_t>(atl03.signal_conf_ph[current_photon]);
+                    atl03_cnf = static_cast<Icesat2Parameters::signal_conf_t>(atl03.signal_conf_ph[current_photon]);
                 }
 
                 /* Check Signal Confidence Level */
@@ -568,7 +568,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Set and Check ATL03 Photon Quality Level */
-                const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
+                const Icesat2Parameters::quality_ph_t quality_ph = static_cast<Icesat2Parameters::quality_ph_t>(atl03.quality_ph[current_photon]);
                 if(!parms.qualityPh[quality_ph])
                 {
                     break;
@@ -603,14 +603,14 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 const double current_delta_time = atl03.delta_time[current_photon];
 
                 /* Set Initial Processing Flags */
-                uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
+                uint32_t processing_flags = BathyParameters::FLAGS_CLEAR;
                 processing_flags |= static_cast<uint32_t>(yapc_score) << 24;
-                if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
-                if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
+                if(on_boundary) processing_flags |= BathyParameters::ON_BOUNDARY;
+                if(atl03.solar_elevation[current_segment] < BathyParameters::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyParameters::NIGHT_FLAG;
 
                 /* Add Photon to DataFrame */
                 dataframe.addRow(); // start new row in dataframe
-                dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
+                dataframe.time_ns.append(Icesat2Parameters::deltatime2timestamp(current_delta_time));
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
                 dataframe.lat_ph.append(atl03.lat_ph[current_photon]);  // corrected by refraction correction

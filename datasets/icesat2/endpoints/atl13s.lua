@@ -4,7 +4,7 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms         = icesat2.parms13s(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 
 -------------------------------------------------------
 -- main
@@ -28,23 +28,24 @@ return {
     main = main,
     parms = parms,
     name = "ATL13 Subsetter",
-    description = "Spatially and temporally subsets single ATL13 granule lake metrics with additional filters (s-series)",
+    description = "Spatially and temporally subsets single ATL13 granule lake metrics with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "s-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl13sParameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "../components/schemas/atl06srec.json" },
-                    { "$ref": "../components/schemas/atl06srec.elevation.json" }
+                    { "$ref": "../components/schemas/atl13srec.json" },
+                    { "$ref": "../components/schemas/atl13srec.elevation.json" }
                 ],
                 "description": "Stream of binary-encoded ICESat-2 inland lake measurements (ATL13)"
             }

@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "SystemConfig.h"
 #include "TimeLib.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * STATIC DATA

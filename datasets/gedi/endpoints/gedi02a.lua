@@ -4,7 +4,7 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = gedi.parms(rqst["parms"], rqst["key_space"], "gedil2a", rqst["resource"])
+local parms         = gedi.parmsl2(rqst["parms"], rqst["key_space"], "gedil2a", rqst["resource"])
 
 -------------------------------------------------------
 -- main
@@ -28,16 +28,17 @@ return {
     main = main,
     parms = parms,
     name = "GEDI 2A Subsetter",
-    description = "Spatially and temporally subsets single GEDI 2A granule elevations with additional filters (s-series)",
+    description = "Spatially and temporally subsets single GEDI 2A granule elevations with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "p-series, gedi",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/GediParameters.json"
+                "$ref": "../components/schemas/GediL2Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

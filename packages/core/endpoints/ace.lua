@@ -28,6 +28,7 @@ return {
     inputs = {"text"},
     outputs = {"text"},
     schema = {
+        tags = "a-series, core",
         request = [["text/plain": {
             "schema": {
                 "type": "string",

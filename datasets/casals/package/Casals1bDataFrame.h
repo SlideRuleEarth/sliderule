@@ -45,7 +45,7 @@
 #include "H5Array.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
-#include "CasalsFields.h"
+#include "CasalsParameters.h"
 #include "AreaOfInterest.h"
 
 /******************************************************************************
@@ -110,14 +110,14 @@ class Casals1bDataFrame: public GeoDataFrame
         Thread*             readerPid;
         const int           readTimeoutMs;
         Publisher*          outQ;
-        CasalsFields*       parms;
+        CasalsParameters*       parms;
         H5Object*           hdf1b;  // casals granule
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Casals1bDataFrame   (lua_State* L, CasalsFields* _parms, H5Object* _hdf1b, const char* outq_name);
+                        Casals1bDataFrame   (lua_State* L, CasalsParameters* _parms, H5Object* _hdf1b, const char* outq_name);
                         ~Casals1bDataFrame  (void) override;
         static void*    subsettingThread    (void* parm);
 };

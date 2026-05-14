@@ -71,7 +71,7 @@ const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, const char* key):
+LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestParameters* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key),
  filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")

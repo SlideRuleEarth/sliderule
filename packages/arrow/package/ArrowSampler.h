@@ -48,7 +48,7 @@
 
 #include "LuaObject.h"
 #include "OutputFields.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "RasterObject.h"
 #include "OsApi.h"
 #include "ArrowTypes.h"
@@ -123,7 +123,7 @@ class ArrowSampler: public LuaObject
 
         std::atomic<bool>             active;
         Thread*                       mainPid;
-        RequestFields*                rqstParms;
+        RequestParameters*                rqstParms;
         const OutputFields&           parms;
         Publisher*                    outQ;
         std::vector<point_info_t>     points;
@@ -138,7 +138,7 @@ class ArrowSampler: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ArrowSampler     (lua_State* L, RequestFields* rqst_parms, const char* input_file,
+                        ArrowSampler     (lua_State* L, RequestParameters* rqst_parms, const char* input_file,
                                           const char* outq_name, const std::vector<raster_info_t>& rasters);
                         ~ArrowSampler    (void) override;
         void            Delete           (void);

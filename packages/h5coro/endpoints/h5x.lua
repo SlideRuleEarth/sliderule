@@ -102,13 +102,14 @@ return {
     main = main,
     parms = parms,
     name = "H5Coro Dataframe",
-    description = "Read values from an HDF5 object using an H5Coro dataframe reader (x-series)",
+    description = "Read values from an HDF5 object using an H5Coro dataframe reader",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary"},
     schema = {
+        tags = "x-series, h5coro",
         request = [[ "application/json": {
             "schema": {
                 "allOf": [

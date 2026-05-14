@@ -39,7 +39,7 @@
 
 #include "OsApi.h"
 #include "H5CoroLib.h"
-#include "SwotFields.h"
+#include "SwotParameters.h"
 #include "SwotL2Reader.h"
 
 /******************************************************************************
@@ -93,13 +93,13 @@ const RecordObject::fieldDef_t SwotL2Reader::geoRecDef[] = {
  *----------------------------------------------------------------------------*/
 int SwotL2Reader::luaCreate (lua_State* L)
 {
-    SwotFields* parms = NULL;
+    SwotParameters* parms = NULL;
 
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<SwotFields*>(getLuaObject(L, 2, SwotFields::OBJECT_TYPE));
+        parms = dynamic_cast<SwotParameters*>(getLuaObject(L, 2, SwotParameters::OBJECT_TYPE, SwotParameters::LUA_META_NAME));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Reader Object */
@@ -126,7 +126,7 @@ void SwotL2Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _parms, bool _send_terminator):
+SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotParameters* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     context(NULL),
     region(NULL),
@@ -225,7 +225,7 @@ SwotL2Reader::~SwotL2Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::Region::Region (H5Coro::Context* context, const SwotFields* _parms):
+SwotL2Reader::Region::Region (H5Coro::Context* context, const SwotParameters* _parms):
     lat             (context, "latitude_nadir"),
     lon             (context, "longitude_nadir"),
     inclusion_mask  (NULL),
@@ -277,7 +277,7 @@ void SwotL2Reader::Region::cleanup (void) const
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::polyregion (const SwotFields* _parms)
+void SwotL2Reader::Region::polyregion (const SwotParameters* _parms)
 {
     /* Find First and Last Lines in Polygon */
     bool first_line_found = false;
@@ -315,7 +315,7 @@ void SwotL2Reader::Region::polyregion (const SwotFields* _parms)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::rasterregion (const SwotFields* _parms)
+void SwotL2Reader::Region::rasterregion (const SwotParameters* _parms)
 {
     /* Allocate Inclusion Mask */
     if(lat.size <= 0) return;

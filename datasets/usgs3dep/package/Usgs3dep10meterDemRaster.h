@@ -54,7 +54,7 @@ class Usgs3dep10meterDemRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+        static RasterObject* create(lua_State* L, RequestParameters* rqst_parms, const char* key)
                           { return new Usgs3dep10meterDemRaster(L, rqst_parms, key); }
 
 
@@ -64,7 +64,7 @@ class Usgs3dep10meterDemRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        Usgs3dep10meterDemRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
+        Usgs3dep10meterDemRaster (lua_State* L, RequestParameters* rqst_parms, const char* key):
             GeoRaster(L, rqst_parms, key,
                     string(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                     TimeLib::datetime2gps(2022, 12, 03, 18, 59, 03) / 1000,

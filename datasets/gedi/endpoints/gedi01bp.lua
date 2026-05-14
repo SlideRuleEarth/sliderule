@@ -21,13 +21,14 @@ return {
     main = main,
     parms = parms,
     name = "GEDI 1B Parallel Subsetter",
-    description = "Spatially and temporally subsets waveforms from multiple GEDI 1B granules with additional filters (s-series)",
+    description = "Spatially and temporally subsets waveforms from multiple GEDI 1B granules with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "p-series, gedi",
         request = [[ "application/json": {
             "schema": {
                 "$ref": "../components/schemas/GediParameters.json"

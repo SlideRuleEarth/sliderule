@@ -28,6 +28,7 @@ return {
     inputs = nil,
     outputs = {"text"},
     schema = {
+        tags = "a-series, core",
         request = nil,
         response = [["text/plain": {
             "schema": {

@@ -40,7 +40,7 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "BathyUncertaintyCalculator.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyDataFrame.h"
 
 /******************************************************************************
@@ -92,12 +92,12 @@ BathyUncertaintyCalculator::uncertainty_coeff_t BathyUncertaintyCalculator::UNCE
  *----------------------------------------------------------------------------*/
 int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
     BathyKd* _kd = NULL;
 
     try
     {
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         _kd = dynamic_cast<BathyKd*>(getLuaObject(L, 2, BathyKd::OBJECT_TYPE));
         return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms, _kd));
     }
@@ -208,7 +208,7 @@ int BathyUncertaintyCalculator::luaInit (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyFields* _parms, BathyKd* _kd):
+BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParameters* _parms, BathyKd* _kd):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     kd490(_kd)
@@ -258,7 +258,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     int pointing_angle_index = 0;
     int wind_speed_index = 0;
     int kd_range_index = 0;
-    uint32_t processing_flags = BathyFields::INVALID_KD;
+    uint32_t processing_flags = BathyParameters::INVALID_KD;
     double max_sensor_depth = fabs(parms->minDemDelta.value);
 
     /* for each photon in extent */
@@ -289,7 +289,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             if(kd > 0) // check if valid
             {
                 /* start with no flags set */
-                processing_flags = BathyFields::FLAGS_CLEAR;
+                processing_flags = BathyParameters::FLAGS_CLEAR;
 
                 /* calculate max sensor depth */
                 max_sensor_depth = 1.8 / kd;
@@ -304,7 +304,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             else
             {
                 /* set invalid kd flag and max kd and turbidity */
-                processing_flags = BathyFields::INVALID_KD;
+                processing_flags = BathyParameters::INVALID_KD;
                 kd_range_index = NUM_KD_RANGES - 1;
             }
         }
@@ -327,13 +327,13 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             subaqueous_vertical_uncertainty += (vertical_coeff.b * depth) + vertical_coeff.c;
 
             /* check against minimum uncertainties */
-            subaqueous_horizontal_uncertainty = MAX(subaqueous_horizontal_uncertainty, BathyFields::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY);
-            subaqueous_vertical_uncertainty = MAX(subaqueous_vertical_uncertainty, BathyFields::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY);
+            subaqueous_horizontal_uncertainty = MAX(subaqueous_horizontal_uncertainty, BathyParameters::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY);
+            subaqueous_vertical_uncertainty = MAX(subaqueous_vertical_uncertainty, BathyParameters::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY);
 
             /* set maximum sensor depth processing flag */
             if(depth > max_sensor_depth)
             {
-                df.processing_flags[i] = df.processing_flags[i] | BathyFields::SENSOR_DEPTH_EXCEEDED;
+                df.processing_flags[i] = df.processing_flags[i] | BathyParameters::SENSOR_DEPTH_EXCEEDED;
             }
         }
 

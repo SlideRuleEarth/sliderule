@@ -43,7 +43,7 @@
 #include "MsgQ.h"
 #include "H5CoroLib.h"
 #include "H5Element.h"
-#include "Icesat2Fields.h"
+#include "Icesat2Parameters.h"
 #include "Atl24Granule.h"
 
 /******************************************************************************
@@ -66,13 +66,13 @@ const struct luaL_Reg Atl24Granule::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl24Granule::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Icesat2Parameters* _parms = NULL;
     H5Object* _hdf24 = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Parameters*>(getLuaObject(L, 1, Icesat2Parameters::OBJECT_TYPE));
         _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* rqstq_name = getLuaString(L, 3);
 
@@ -110,7 +110,7 @@ int Atl24Granule::luaExport (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl24Granule::Atl24Granule (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf24, const char* rqstq_name):
+Atl24Granule::Atl24Granule (lua_State* L, Icesat2Parameters* _parms, H5Object* _hdf24, const char* rqstq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldMap<Field>({
         {"atlas_sdp_gps_epoch", &atlas_sdp_gps_epoch,   "Epoch used by ATLAS for internal time calculations"},
@@ -170,7 +170,7 @@ void* Atl24Granule::readingThread (void* parm)
 {
     /* Get Thread Info */
     Atl24Granule& granule = *static_cast<Atl24Granule*>(parm);
-    const Icesat2Fields& parms = granule.parms;
+    const Icesat2Parameters& parms = granule.parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());

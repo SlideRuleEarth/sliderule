@@ -48,7 +48,7 @@
 
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "OsApi.h"
 #include "MsgQ.h"
 
@@ -148,7 +148,7 @@ class ArrowBuilder: public LuaObject
          *--------------------------------------------------------------------*/
 
         Thread*             builderPid;
-        RequestFields*      rqstParms;
+        RequestParameters*      rqstParms;
         const OutputFields&  parms;
         std::atomic<bool>   active;
         Subscriber*         inQ;
@@ -177,7 +177,7 @@ class ArrowBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ArrowBuilder            (lua_State* L, RequestFields* parms,
+                        ArrowBuilder            (lua_State* L, RequestParameters* parms,
                                                  const char* outq_name, const char* inq_name,
                                                  const char* rec_type, const char* id,
                                                  const char* _endpoint, const bool keep_local);

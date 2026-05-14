@@ -53,15 +53,15 @@ const struct luaL_Reg Atl06DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl06DataFrame::luaCreate (lua_State* L)
 {
-    Icesat2Fields* _parms = NULL;
+    Atl06Parameters* _parms = NULL;
     H5Object* _hdf06 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
-        _hdf06 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, true, NULL));
+        _parms = dynamic_cast<Atl06Parameters*>(getLuaObject(L, 2, Atl06Parameters::OBJECT_TYPE, Atl06Parameters::LUA_META_NAME));
+        _hdf06 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return DataFrame Object */
@@ -79,7 +79,7 @@ int Atl06DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf06, const char* outq_name):
+Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Atl06Parameters* _parms, H5Object* _hdf06, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
@@ -110,8 +110,8 @@ Atl06DataFrame::Atl06DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                      &gt,                        "Ground track; integer representation of beam"},
         {"granule",                 &granule,                   "Name of the source ATL03 granule"}
     },
-    Icesat2Fields::defaultITRF(_parms->granuleFields.version.value), // crs
-    Icesat2Fields::calculateBeamKey(beam_str)), // dfKey
+    Icesat2Parameters::defaultITRF(_parms->granuleFields.version.value), // crs
+    Icesat2Parameters::calculateBeamKey(beam_str)), // dfKey
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -214,7 +214,7 @@ Atl06DataFrame::Atl06Data::Atl06Data (Atl06DataFrame* df, const AreaOfInterest<d
 void* Atl06DataFrame::subsettingThread (void* parm)
 {
     Atl06DataFrame* df = static_cast<Atl06DataFrame*>(parm);
-    const Icesat2Fields& parms = *df->parms;
+    const Atl06Parameters& parms = *df->parms;
     using std::numeric_limits;
 
     /* Start Trace */
@@ -230,28 +230,28 @@ void* Atl06DataFrame::subsettingThread (void* parm)
         const Atl06Data atl06(df, aoi);
 
         /* Set MetaData */
-        df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], df->beam);
+        df->spot = Icesat2Parameters::getSpotNumber((Icesat2Parameters::sc_orient_t)atl06.sc_orient[0], df->beam);
 
         /* Check Spot Filter */
-        if(!parms.spots[static_cast<Icesat2Fields::spot_t>(df->spot.value)])
+        if(!parms.spots[static_cast<Icesat2Parameters::spot_t>(df->spot.value)])
         {
             throw RunTimeException(DEBUG, RTE_STATUS, "spot %d filtered out", df->spot.value);
         }
 
         /* Track/Pair for ground track */
-        Icesat2Fields::track_t track;
+        Icesat2Parameters::track_t track;
         int pair;
-        if     (df->beam[2] == '1') track = Icesat2Fields::RPT_1;
-        else if(df->beam[2] == '2') track = Icesat2Fields::RPT_2;
-        else if(df->beam[2] == '3') track = Icesat2Fields::RPT_3;
+        if     (df->beam[2] == '1') track = Icesat2Parameters::RPT_1;
+        else if(df->beam[2] == '2') track = Icesat2Parameters::RPT_2;
+        else if(df->beam[2] == '3') track = Icesat2Parameters::RPT_3;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", df->beam);
 
-        if     (df->beam[3] == 'l') pair = Icesat2Fields::RPT_L;
-        else if(df->beam[3] == 'r') pair = Icesat2Fields::RPT_R;
+        if     (df->beam[3] == 'l') pair = Icesat2Parameters::RPT_L;
+        else if(df->beam[3] == 'r') pair = Icesat2Parameters::RPT_R;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", df->beam);
 
         /* Ground track depends on spacecraft orientation and track/pair */
-        df->gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], track, pair);
+        df->gt = Icesat2Parameters::getGroundTrack((Icesat2Parameters::sc_orient_t)atl06.sc_orient[0], track, pair);
 
         /* Loop Through Each Segment */
         for(long segment = 0; df->active.load() && segment < aoi.count; segment++)
@@ -266,7 +266,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
             df->addRow();
 
             /* Populate Columns */
-            df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl06.delta_time[segment]));
+            df->time_ns.append(Icesat2Parameters::deltatime2timestamp(atl06.delta_time[segment]));
             df->latitude.append(aoi.latitude[segment]);
             df->longitude.append(aoi.longitude[segment]);
             df->segment_id.append(atl06.segment_id[segment]);

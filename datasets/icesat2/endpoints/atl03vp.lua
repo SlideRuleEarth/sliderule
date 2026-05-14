@@ -21,16 +21,17 @@ return {
     main = main,
     parms = parms,
     name = "ATL03 Parallel Viewer",
-    description = "Spatially and temporally subsets segments from multiple ATL03 granules with additional filters (s-series)",
+    description = "Spatially and temporally subsets segments from multiple ATL03 granules with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "v-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl03Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

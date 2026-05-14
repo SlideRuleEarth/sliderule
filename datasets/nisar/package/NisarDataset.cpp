@@ -65,7 +65,7 @@ std::unordered_map<string, int>                   NisarDataset::crsCache;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-NisarDataset::NisarDataset(lua_State* L, RequestFields* rqst_parms, const char* key):
+NisarDataset::NisarDataset(lua_State* L, RequestParameters* rqst_parms, const char* key):
  GeoIndexedRaster(L, rqst_parms, key, overrideGeoTransform, overrideTargetCRS),
  filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")

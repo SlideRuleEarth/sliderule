@@ -112,7 +112,7 @@ class Gedi01bDataFrame: public GediDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Gedi01bDataFrame  (lua_State* L, const char* beam_str, GediFields* _parms, H5Object* _hdf01b, const char* outq_name);
+                        Gedi01bDataFrame  (lua_State* L, const char* beam_str, GediParameters* _parms, H5Object* _hdf01b, const char* outq_name);
                         ~Gedi01bDataFrame (void) override = default;
         static void*    subsettingThread  (void* parm);
 };

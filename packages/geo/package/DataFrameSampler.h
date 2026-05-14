@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "GeoDataFrame.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "RasterObject.h"
 #include "OsApi.h"
 
@@ -98,7 +98,7 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-                    DataFrameSampler        (lua_State* L, RequestFields* _parms);
+                    DataFrameSampler        (lua_State* L, RequestParameters* _parms);
                     ~DataFrameSampler       (void) override;
 
         bool        run                     (GeoDataFrame* dataframe) override;
@@ -111,7 +111,7 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
          * Data
          *--------------------------------------------------------------------*/
 
-         RequestFields*             parms;
+         RequestParameters*             parms;
          vector<point_info_t>       points;
          vector<sampler_info_t*>    samplers;
          Dictionary<uint16_t>       bandIndex;

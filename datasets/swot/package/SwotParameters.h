@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "AssetField.h"
 #include "FieldList.h"
 
@@ -46,7 +46,7 @@
  * CLASS
  ******************************************************************************/
 
-class SwotFields: public RequestFields
+class SwotParameters: public RequestParameters
 {
     public:
 
@@ -54,13 +54,15 @@ class SwotFields: public RequestFields
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* LUA_META_NAME;
         static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
+        SwotParameters  (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        ~SwotParameters (void) override = default;
 
         // returns nanoseconds since Unix epoch, no leap seconds
         inline time8_t deltatime2timestamp (double delta_time)
@@ -76,15 +78,6 @@ class SwotFields: public RequestFields
          *--------------------------------------------------------------------*/
 
         FieldList<string> variables;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        SwotFields  (lua_State* L, uint64_t key_space);
-        ~SwotFields (void) override = default;
 };
 
 #endif  /* __swot_parms__ */

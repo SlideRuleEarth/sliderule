@@ -99,7 +99,7 @@ class GeoJsonRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double cellsize);
+        GeoJsonRaster(lua_State* L, RequestParameters* rqst_parms, const char* key, const char* _geojstr, double cellsize);
 
     private:
 

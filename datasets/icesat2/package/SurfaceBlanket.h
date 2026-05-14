@@ -36,7 +36,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
-#include "Icesat2Fields.h"
+#include "Atl03Parameters.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -82,7 +82,7 @@ class SurfaceBlanket: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        SurfaceBlanket  (lua_State* L, Icesat2Fields* _parms);
+        SurfaceBlanket  (lua_State* L, Atl03Parameters* _parms);
         ~SurfaceBlanket (void) override;
         void algorithm (const Atl03DataFrame& df, uint32_t start_photon, uint32_t num_photons, result_t& result);
         static double percentile(vector<float>& data, double p);
@@ -91,7 +91,7 @@ class SurfaceBlanket: public GeoDataFrame::FrameRunner
          * Data
          *--------------------------------------------------------------------*/
 
-        Icesat2Fields*  parms;
+        Atl03Parameters*  parms;
 };
 
 #endif

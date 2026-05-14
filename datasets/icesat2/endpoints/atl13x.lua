@@ -5,7 +5,7 @@ local dataframe = require("dataframe")
 local json      = require("json")
 local earthdata = require("earth_data_query")
 local rqst      = json.decode(arg[1])
-local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2-atl13", rqst["resource"])
+local parms     = icesat2.parms13(rqst["parms"], rqst["key_space"], "icesat2-atl13", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
 
 -------------------------------------------------------
@@ -62,16 +62,17 @@ return {
     main = main,
     parms = parms,
     name = "ATL13 Dataframe",
-    description = "Spatially and temporally subsets ATL13 granule lake metrics with additional filters (x-series)",
+    description = "Spatially and temporally subsets ATL13 granule lake metrics with additional filters",
     logging = core.CRITICAL,
     roles = {},
     signed = false,
     inputs = {"json"},
     outputs = {"binary", "arrow"},
     schema = {
+        tags = "x-series, icesat2",
         request = [[ "application/json": {
             "schema": {
-                "$ref": "../components/schemas/Icesat2Parameters.json"
+                "$ref": "../components/schemas/Atl13Parameters.json"
             }
         } ]],
         response = [[ "application/octet-stream": {

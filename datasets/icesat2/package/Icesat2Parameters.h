@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "RequestFields.h"
+#include "RequestParameters.h"
 #include "GeoDataFrame.h"
 #include "FieldElement.h"
 #include "FieldEnumeration.h"
@@ -70,181 +70,18 @@ struct Atl03GranuleFields: public FieldMap<Field>
     void parseResource (const char* resource);
 };
 
-/**************/
-/* Fit Fields */
-/**************/
-struct FitFields: public FieldMap<Field>
-{
-
-    FieldElement<int>       maxIterations {5};          // least squares fit iterations
-    FieldElement<double>    minWindow {3.0};            // H_win minimum
-    FieldElement<double>    maxRobustDispersion {5.0};  // sigma_r
-
-    FitFields(void);
-    ~FitFields(void) override = default;
-
-    virtual void fromLua (lua_State* L, int index) override;
-
-    bool provided;
-};
-
-/***************/
-/* YAPC Fields */
-/***************/
-struct YapcFields: public FieldMap<Field>
-{
-    FieldElement<uint16_t>  score {0};      // minimum allowed weight of photon using yapc algorithm
-    FieldElement<int>       version {0};    // version of the yapc algorithm to run
-    FieldElement<int>       knn {0};        // (version 2 only) k-nearest neighbors
-    FieldElement<int>       min_knn {5};    // (version 3 only) minimum number of k-nearest neighbors
-    FieldElement<double>    win_h {6.0};    // window height (overrides calculated value if non-zero)
-    FieldElement<double>    win_x {15.0};   // window width
-
-    YapcFields(void);
-    ~YapcFields(void) override = default;
-
-    virtual void fromLua (lua_State* L, int index) override;
-
-    bool provided;
-};
-
-/******************/
-/* PhoREAL Fields */
-/******************/
-struct PhorealFields: public FieldMap<Field>
-{
-    typedef enum {
-        MEAN = 0,
-        MEDIAN = 1,
-        CENTER = 2
-    } phoreal_geoloc_t;
-
-    FieldElement<double>            binsize {1.0};              // size of photon height bin
-    FieldElement<phoreal_geoloc_t>  geoloc {MEDIAN};            // how are geolocation stats calculated
-    FieldElement<bool>              use_abs_h {false};          // use absolute heights
-    FieldElement<bool>              send_waveform {false};      // include the waveform in the results
-    FieldElement<bool>              above_classifier {false};   // use the ABoVE classification algorithm
-    FieldElement<int8_t>            te_quality_filter {0};      // minimum allowed terrain quality score
-    FieldElement<int8_t>            can_quality_filter {0};     // minimum allowed canopy quality score
-
-    PhorealFields(void);
-    ~PhorealFields(void) override = default;
-
-    virtual void fromLua (lua_State* L, int index) override;
-
-    bool te_quality_filter_provided;
-    bool can_quality_filter_provided;
-    bool provided;
-};
-
-/******************/
-/* Blanket Fields */
-/******************/
-struct BlanketFields: public FieldMap<Field>
-{
-    FieldElement<double>    max_top_of_surface_percentile {0.98};
-    FieldElement<double>    median_ground_percentile {0.50};
-
-    BlanketFields(void);
-    ~BlanketFields(void) override = default;
-
-    virtual void fromLua (lua_State* L, int index) override;
-
-    bool provided;
-};
-
-/****************/
-/* Atl13 Fields */
-/****************/
-struct Atl13Fields: public FieldMap<Field>
-{
-    typedef enum {
-        LAKE                = 1,
-        KNOWN_RESERVOIR     = 2,
-        EPHEMERAL_WATER     = 4,
-        RIVER               = 5,
-        ESTUARY_BAY         = 6,
-        COASTAL_WATER       = 7
-    } body_type_t;
-
-    typedef enum {
-        GT_10000_KM2        = 1,
-        GT_1000_KM2         = 2,
-        GT_100_KM2          = 3,
-        GT_10_KM2           = 4,
-        GT_1_KM2            = 5,
-        GT_01_KM2           = 6,
-        GT_001_KM2          = 7,
-        NOT_ASSIGNED        = 9
-    } body_size_t;
-
-    typedef enum {
-        HYDRO_LAKES                         = 1,
-        GLOBAL_LAKES_AND_WETLANDS_DATABASE  = 2,
-        NAMED_MARINE_WATER_BODIES           = 3,
-        GSHHG_SHORELINE                     = 4,
-        GLOBAL_RIVER_WIDTHS_FROM_LANDSAT    = 5
-    } body_source_t;
-
-    FieldElement<int64_t>           reference_id {0};       // atl13refid
-    FieldElement<string>            name;                   // lake name
-    FieldElement<MathLib::coord_t>  coordinate {{0.0, 0.0}};// lake coordinate (contains)
-    FieldList<string>               anc_fields;             // list of additional ATL13 fields
-
-    Atl13Fields(void);
-    ~Atl13Fields(void) override = default;
-
-    virtual void fromLua (lua_State* L, int index) override;
-
-    bool provided;
-};
-
-/****************/
-/* Atl24 Fields */
-/****************/
-struct Atl24Fields: public FieldMap<Field>
-{
-    typedef enum {
-        UNCLASSIFIED        = 0,
-        BATHYMETRY          = 40,
-        SEA_SURFACE         = 41,
-        NUM_CLASSES         = 3
-    } class_t;
-
-    typedef enum {
-        FLAG_OFF = 0,
-        FLAG_ON = 1,
-        NUM_FLAGS = 2
-    } flag_t;
-
-    FieldElement<bool>                      compact {true};                     // reduce number of fields from atl24
-    FieldEnumeration<class_t,NUM_CLASSES>   class_ph {false, true, false};      // list of desired bathymetry classes of photons
-    FieldElement<double>                    confidence_threshold {0.0};         // filter based on confidence
-    FieldEnumeration<flag_t,NUM_FLAGS>      invalid_kd {true, true};            // filter on invalid kd flag
-    FieldEnumeration<flag_t,NUM_FLAGS>      invalid_wind_speed {true, true};    // filter on invalid wind speed
-    FieldEnumeration<flag_t,NUM_FLAGS>      low_confidence {true, true};        // filter on low confidence flag
-    FieldEnumeration<flag_t,NUM_FLAGS>      night {true, true};                 // filter based on night flag
-    FieldEnumeration<flag_t,NUM_FLAGS>      sensor_depth_exceeded {true, true}; // filter based on sensor depth exceeded flag
-    FieldList<string>                       anc_fields;                         // list of additional ATL24 fields
-
-    Atl24Fields(void);
-    ~Atl24Fields(void) override = default;
-
-    virtual void fromLua (lua_State* L, int index) override;
-
-    bool provided;
-};
-
-/*******************/
-/* ICESat-2 Fields */
-/*******************/
-class Icesat2Fields: public RequestFields
+/***********************/
+/* ICESat-2 Parameters */
+/***********************/
+class Icesat2Parameters: public RequestParameters
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+
+        static const char* LUA_META_NAME;
 
         static const int NUM_SPOTS                          = 6;
 
@@ -390,8 +227,12 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-        virtual void fromLua (lua_State* L, int index) override;
+        virtual void    fromLua             (lua_State* L, int index) override;
+
+                        Icesat2Parameters   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual         ~Icesat2Parameters  (void) override = default;
+
+        static int      luaStage            (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -456,8 +297,8 @@ class Icesat2Fields: public RequestFields
             else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
 
             int pair;
-            if(beam[3] == 'l') pair = Icesat2Fields::RPT_L;
-            else if(beam[3] == 'r') pair = Icesat2Fields::RPT_R;
+            if(beam[3] == 'l') pair = Icesat2Parameters::RPT_L;
+            else if(beam[3] == 'r') pair = Icesat2Parameters::RPT_R;
             else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
 
             return getSpotNumber(sc_orient, track, pair);
@@ -468,20 +309,20 @@ class Icesat2Fields: public RequestFields
         {
             if(beam[2] == '1')
             {
-                if(beam[3] == 'l') return Icesat2Fields::GT1L;
-                else if(beam[3] == 'r') return Icesat2Fields::GT1R;
+                if(beam[3] == 'l') return Icesat2Parameters::GT1L;
+                else if(beam[3] == 'r') return Icesat2Parameters::GT1R;
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             else if(beam[2] == '2')
             {
-                if(beam[3] == 'l') return Icesat2Fields::GT2L;
-                else if(beam[3] == 'r') return Icesat2Fields::GT2R;
+                if(beam[3] == 'l') return Icesat2Parameters::GT2L;
+                else if(beam[3] == 'r') return Icesat2Parameters::GT2R;
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             else if(beam[2] == '3')
             {
-                if(beam[3] == 'l') return Icesat2Fields::GT3L;
-                else if(beam[3] == 'r') return Icesat2Fields::GT3R;
+                if(beam[3] == 'l') return Icesat2Parameters::GT3L;
+                else if(beam[3] == 'r') return Icesat2Parameters::GT3R;
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
@@ -551,119 +392,58 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldElement<surface_type_t>                        surfaceType {SRT_DYNAMIC};                              // surface reference type (used to select signal confidence column)
-        FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
-        FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
-        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification
-        FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh { true,  false, false, false, false, false,   // list of desired photon quality levels from atl03
-                                                                        false, false, false, false, false, false,
-                                                                        false, false, false, false, false, false,
-                                                                        false, false, false, false, false, false,
-                                                                        false, false };
-        FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
         FieldEnumeration<spot_t, NUM_SPOTS>                 spots = {true, true, true, true, true, true};           // list of which spots (1,2,3,4,5,6)
         FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])
         FieldElement<int>                                   track {ALL_TRACKS};                                     // reference pair track number (1, 2, 3, or 0 for all tracks)
-        FieldElement<int>                                   minPhotonCount {10};                                    // PE
-        FieldElement<double>                                minAlongTrackSpread {20.0};                             // meters
-        FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
-        FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-        FieldElement<uint8_t>                               podppdMask {0x01};                                      // 0: nominal, 1: pod_degrade, 2: ppd_degrade, 3: podppd_degrade, 4: cal_nominal, 5: cal_pod_degrade, 6: cal_ppd_degrade, 7: cal_podppd_degrade
-        FitFields                                           fit;                                                    // settings used in the surface fitter algorithm
-        YapcFields                                          yapc;                                                   // settings used in YAPC algorithm
-        PhorealFields                                       phoreal;                                                // phoreal algorithm settings
-        BlanketFields                                       blanket;                                                // blanket algorithm settings
-        Atl13Fields                                         atl13;                                                  // atl13 subsetter parameters
-        Atl24Fields                                         atl24;                                                  // atl24 algorithm settings
-        FieldElement<int>                                   maxIterations {5};                                      // DEPRECATED (use FitFields)
-        FieldElement<double>                                minWindow {3.0};                                        // DEPRECATED (use FitFields)
-        FieldElement<double>                                maxRobustDispersion {5.0};                              // DEPRECATED (use FitFields)
-        FieldList<string>                                   atl03BckgrdFields;                                      // list of background fields to associate with an extent
-        FieldList<string>                                   atl03GeoFields;                                         // list of geolocation fields to associate with an extent
-        FieldList<string>                                   atl03CorrFields;                                        // list of geophys_corr fields to associate with an extent
-        FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent
-        FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
-        FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
         FieldList<string>                                   atl09Fields;                                            // list of ATL09 fields used by Atl09Sampler
-        FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
         Atl03GranuleFields                                  granuleFields;                                          // ATL03 granule attributes
 
         bool stages[NUM_STAGES] = {false, false, false, false, false};
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldMap<Field>::init_entry_t>& init_list);
-        virtual ~Icesat2Fields  (void) override = default;
-
-        static int luaStage (lua_State* L);
 };
 
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
 
-string convertToJson(const PhorealFields::phoreal_geoloc_t& v);
-int convertToLua(lua_State* L, const PhorealFields::phoreal_geoloc_t& v);
-void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v);
+string convertToJson(const Icesat2Parameters::signal_conf_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::signal_conf_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::signal_conf_t& v);
+int convertToIndex(const Icesat2Parameters::signal_conf_t& v);
+void convertFromIndex(int index, Icesat2Parameters::signal_conf_t& v);
 
-string convertToJson(const Icesat2Fields::signal_conf_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::signal_conf_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::signal_conf_t& v);
-int convertToIndex(const Icesat2Fields::signal_conf_t& v);
-void convertFromIndex(int index, Icesat2Fields::signal_conf_t& v);
+string convertToJson(const Icesat2Parameters::quality_ph_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::quality_ph_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::quality_ph_t& v);
+int convertToIndex(const Icesat2Parameters::quality_ph_t& v);
+void convertFromIndex(int index, Icesat2Parameters::quality_ph_t& v);
 
-string convertToJson(const Icesat2Fields::quality_ph_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v);
-int convertToIndex(const Icesat2Fields::quality_ph_t& v);
-void convertFromIndex(int index, Icesat2Fields::quality_ph_t& v);
+string convertToJson(const Icesat2Parameters::atl08_class_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::atl08_class_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::atl08_class_t& v);
+int convertToIndex(const Icesat2Parameters::atl08_class_t& v);
+void convertFromIndex(int index, Icesat2Parameters::atl08_class_t& v);
 
-string convertToJson(const Icesat2Fields::atl08_class_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::atl08_class_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::atl08_class_t& v);
-int convertToIndex(const Icesat2Fields::atl08_class_t& v);
-void convertFromIndex(int index, Icesat2Fields::atl08_class_t& v);
+string convertToJson(const Icesat2Parameters::gt_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::gt_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::gt_t& v);
+int convertToIndex(const Icesat2Parameters::gt_t& v);
+void convertFromIndex(int index, Icesat2Parameters::gt_t& v);
 
-string convertToJson(const Icesat2Fields::gt_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::gt_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v);
-int convertToIndex(const Icesat2Fields::gt_t& v);
-void convertFromIndex(int index, Icesat2Fields::gt_t& v);
+string convertToJson(const Icesat2Parameters::spot_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::spot_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::spot_t& v);
+int convertToIndex(const Icesat2Parameters::spot_t& v);
+void convertFromIndex(int index, Icesat2Parameters::spot_t& v);
 
-string convertToJson(const Icesat2Fields::spot_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v);
-int convertToIndex(const Icesat2Fields::spot_t& v);
-void convertFromIndex(int index, Icesat2Fields::spot_t& v);
+string convertToJson(const Icesat2Parameters::surface_type_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::surface_type_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::surface_type_t& v);
 
-string convertToJson(const Icesat2Fields::surface_type_t& v);
-int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
-void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);
-
-string convertToJson(const Atl24Fields::class_t& v);
-int convertToLua(lua_State* L, const Atl24Fields::class_t& v);
-void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v);
-int convertToIndex(const Atl24Fields::class_t& v);
-void convertFromIndex(int index, Atl24Fields::class_t& v);
-
-string convertToJson(const Atl24Fields::flag_t& v);
-int convertToLua(lua_State* L, const Atl24Fields::flag_t& v);
-void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v);
-int convertToIndex(const Atl24Fields::flag_t& v);
-void convertFromIndex(int index, Atl24Fields::flag_t& v);
-
-inline uint32_t toEncoding(Icesat2Fields::surface_type_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::spot_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::gt_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::atl08_class_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::quality_ph_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Icesat2Fields::signal_conf_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Atl24Fields::class_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(Atl24Fields::flag_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::surface_type_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::spot_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::gt_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::atl08_class_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::quality_ph_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::signal_conf_t& v) { (void)v; return Field::INT32; }
 
 #endif  /* __icesat2_fields__ */

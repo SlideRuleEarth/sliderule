@@ -29,48 +29,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __atl06_fields__
+#define __atl06_fields__
+
 /******************************************************************************
- * INCLUDE
+ * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "SwotFields.h"
+#include "LuaObject.h"
+#include "Icesat2Parameters.h"
+#include "FieldElement.h"
 
 /******************************************************************************
- * CLASS METHODS
+ * CLASSES
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int SwotFields::luaCreate (lua_State* L)
+/****************/
+/* ATL06 Fields */
+/****************/
+class Atl06Parameters: public Icesat2Parameters
 {
-    SwotFields* swot_fields = NULL;
+    public:
 
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-        swot_fields = new SwotFields(L, key_space);
-        swot_fields->fromLua(L, 1);
+        static const char* LUA_META_NAME;
 
-        return createLuaObject(L, swot_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete swot_fields;
-        return returnLuaStatus(L, false);
-    }
-}
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-SwotFields::SwotFields(lua_State* L, uint64_t key_space):
-    RequestFields(L, key_space, NULL, NULL,
-    {
-        {"variables",   &variables,     "Variables to include in response from source granule"}
-    })
-{
-}
+        virtual void    fromLua             (lua_State* L, int index) override;
+                        Atl06Parameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual         ~Atl06Parameters    (void) override = default;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        FieldList<string> atl06Fields; // list of ATL06 fields to associate with an ATL06 subsetting request
+};
+
+#endif  /* __atl06_fields__ */

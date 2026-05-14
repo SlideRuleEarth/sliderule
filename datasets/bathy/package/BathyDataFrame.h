@@ -43,7 +43,7 @@
 #include "H5Array.h"
 #include "H5Element.h"
 #include "H5Object.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "FieldElement.h"
 #include "FieldArray.h"
 #include "FieldColumn.h"
@@ -182,7 +182,7 @@ class BathyDataFrame: public GeoDataFrame
 
         std::atomic<bool>   active;
         Thread*             pid;
-        BathyFields*        parms;
+        BathyParameters*        parms;
         BathyMask*          bathyMask;
         H5Object*           hdf03;      // atl03 granule
         Publisher*          rqstQ;
@@ -195,7 +195,7 @@ class BathyDataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyDataFrame              (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask);
+                            BathyDataFrame              (lua_State* L, const char* beam_str, BathyParameters* _parms, H5Object* _hdf03, const char* rqstq_name, BathyMask* _mask);
                             ~BathyDataFrame             (void) override;
 
         static void*        subsettingThread            (void* parm);
@@ -204,8 +204,8 @@ class BathyDataFrame: public GeoDataFrame
         static int          luaLength                   (lua_State* L);
 
         #ifdef __unittesting__
-            BathyDataFrame(BathyFields* _parms):
-                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Fields::crsITRF2014_EGM08(), 0),
+            BathyDataFrame(BathyParameters* _parms):
+                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Parameters::crsITRF2014_EGM08(), 0),
                 active(false),
                 pid(NULL),
                 parms(_parms),

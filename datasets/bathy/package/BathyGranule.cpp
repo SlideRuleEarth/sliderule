@@ -43,7 +43,7 @@
 #include "MsgQ.h"
 #include "H5CoroLib.h"
 #include "H5Element.h"
-#include "BathyFields.h"
+#include "BathyParameters.h"
 #include "BathyGranule.h"
 
 /******************************************************************************
@@ -66,13 +66,13 @@ const struct luaL_Reg BathyGranule::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyGranule::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyParameters* _parms = NULL;
     H5Object* _hdf03 = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
         const char* rqstq_name = getLuaString(L, 3);
 
@@ -110,7 +110,7 @@ int BathyGranule::luaExport (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name):
+BathyGranule::BathyGranule (lua_State* L, BathyParameters* _parms, H5Object* _hdf03, const char* rqstq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldMap<Field>({
         {"atlas_sdp_gps_epoch", &atlas_sdp_gps_epoch,   "Epoch used by ATLAS for internal time calculations"},
@@ -167,7 +167,7 @@ void* BathyGranule::readingThread (void* parm)
 {
     /* Get Thread Info */
     BathyGranule& granule = *static_cast<BathyGranule*>(parm);
-    const BathyFields& parms = granule.parms;
+    const BathyParameters& parms = granule.parms;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
