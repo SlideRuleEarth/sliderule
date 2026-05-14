@@ -751,7 +751,7 @@ class Session:
             with open(cache_file, "r") as file:
                 return json.loads(file.read())
         except Exception as e:
-            self.logger.error(f'Failed load data from {filename}: {e}')
+            self.logger.info(f'Unable to load data from {filename}: {e}')
             return None
 
     #
