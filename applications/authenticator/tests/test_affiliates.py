@@ -75,7 +75,13 @@ def test_nominal(username):
     rqst = build_query_request('/auth/github/token', session)
     rsps = lambda_gateway(rqst, None)
     token_parms = json.loads(rsps['body'])
-    print(token_parms)
+    def decode_part(part):
+        padded = part + "=" * (-len(part) % 4)
+        return json.loads(base64.urlsafe_b64decode(padded))
+    header_b64, payload_b64, signature_b64 = token_parms["access_token"].split(".")
+    print("Info:", token_parms)
+    print("Header:", decode_part(header_b64))
+    print("Claims:", decode_part(payload_b64))
     assert rsps['statusCode'] == 200, "make sure to run stub server"
     assert "access_token" in token_parms
     assert len(token_parms["access_token"]) > 0

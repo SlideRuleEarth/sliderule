@@ -3,7 +3,7 @@ post:
   description: Register a node as a member of a service in the cluster.
   operationId: register
   tags:
-    - Orchestrator
+    - Internal
   requestBody:
     required: true
     content:

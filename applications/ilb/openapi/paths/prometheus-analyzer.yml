@@ -4,7 +4,7 @@ get:
     Provides metrics for Prometheus scraping including per-endpoint request counts, successful/untracked/failed request counts, unique originators, and blocked originators.
   operationId: prometheusAnalyzer
   tags:
-    - Metrics
+    - Internal
   responses:
     '200':
       description: Prometheus-formatted metrics.

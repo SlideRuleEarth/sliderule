@@ -3,7 +3,7 @@ post:
   description: Returns up to the requested number of nodes for processing a request, selecting nodes with the fewest active locks.
   operationId: lock
   tags:
-    - Orchestrator
+    - Internal
   requestBody:
     required: true
     content:

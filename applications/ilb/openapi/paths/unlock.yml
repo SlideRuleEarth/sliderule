@@ -3,7 +3,7 @@ post:
   description: Releases locks for members associated with the provided transaction IDs.
   operationId: unlock
   tags:
-    - Orchestrator
+    - Internal
   requestBody:
     required: true
     content:

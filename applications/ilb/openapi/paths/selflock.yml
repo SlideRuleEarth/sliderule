@@ -3,7 +3,7 @@ post:
   description: Notify orchestrator that the sending node needs the requested number of locks.
   operationId: selflock
   tags:
-    - Orchestrator
+    - Internal
   requestBody:
     required: true
     content:

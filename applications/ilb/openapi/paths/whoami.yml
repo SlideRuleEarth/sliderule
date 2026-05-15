@@ -3,7 +3,7 @@ post:
   description: Returns the name of the cluster
   operationId: whoami
   tags:
-    - Orchestrator
+    - Public
   responses:
     '200':
       description: Cluster name.

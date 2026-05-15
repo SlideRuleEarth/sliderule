@@ -4,7 +4,7 @@ get:
     Provides metrics for Prometheus scraping including request counts, completions, failures, timeouts, startups, active locks, and per-service member counts.
   operationId: prometheusOrchestrator
   tags:
-    - Metrics
+    - Internal
   responses:
     '200':
       description: Prometheus-formatted metrics.

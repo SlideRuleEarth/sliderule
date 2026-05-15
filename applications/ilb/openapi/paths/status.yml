@@ -3,7 +3,7 @@ post:
   description: Returns the number of registered nodes for a service.
   operationId: status
   tags:
-    - Orchestrator
+    - Public
   requestBody:
     required: false
     content:

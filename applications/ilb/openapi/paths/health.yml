@@ -3,7 +3,7 @@ get:
   description: Returns health status of the orchestrator.
   operationId: health
   tags:
-    - Orchestrator
+    - Internal
   responses:
     '200':
       description: Service is healthy.
