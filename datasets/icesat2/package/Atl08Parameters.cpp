@@ -55,15 +55,18 @@ void Atl08Parameters::fromLua (lua_State* L, int index)
 {
     Icesat2Parameters::fromLua(L, index);
 
-    // check for te quality filter
-    lua_getfield(L, index, "te_quality_filter");
-    te_quality_filter_provided = !lua_isnil(L, -1);
-    lua_pop(L, 1);
+    if(lua_istable(L, index))
+    {
+        // check for te quality filter
+        lua_getfield(L, index, "te_quality_filter");
+        te_quality_filter_provided = !lua_isnil(L, -1);
+        lua_pop(L, 1);
 
-    // check for can quality filter
-    lua_getfield(L, index, "can_quality_filter");
-    can_quality_filter_provided = !lua_isnil(L, -1);
-    lua_pop(L, 1);
+        // check for can quality filter
+        lua_getfield(L, index, "can_quality_filter");
+        can_quality_filter_provided = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+    }
 }
 
 /*----------------------------------------------------------------------------

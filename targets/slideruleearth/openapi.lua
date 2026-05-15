@@ -92,7 +92,7 @@ end
 -- parameters
 -------------------------------------------------------
 local function parameter_schemas()
-                         output(outputdir.."/components/schemas/CoreParameters.json", core.parms():describe("General request parameters that support all requests"))
+                         output(outputdir.."/components/schemas/RequestParameters.json", core.parms():describe("General request parameters that support all requests"))
                          output(outputdir.."/components/schemas/CreParameters.json", cre.parms():describe("Request parameters for executing container runtime environment processing requests"))
     if __geo__      then output(outputdir.."/components/schemas/GeoParameters.json", geo.parms():describe("Request parameters for sampling raster datasets using GDAL")) end
     if __h5coro__   then output(outputdir.."/components/schemas/H5CoroParameters.json", h5coro.parms():describe("Request parameters for reading HDF5 files using H5Coro")) end
@@ -101,7 +101,7 @@ local function parameter_schemas()
                         output(outputdir.."/components/schemas/Atl03Parameters.json", icesat2.parms03():describe("Request parameters for executing ICESat-2 photon cloud processing requests"))
                         output(outputdir.."/components/schemas/Atl06Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 ATL06 subsetting and dataframe requests"))
                         output(outputdir.."/components/schemas/Atl06DispatchParameters.json", icesat2.parms06d():describe("Request parameters for executing ICESat-2 ATL06-SR processing requests"))
-                        output(outputdir.."/components/schemas/Atl08Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 ATL08 dataframe requests"))
+                        output(outputdir.."/components/schemas/Atl08Parameters.json", icesat2.parms08():describe("Request parameters for executing ICESat-2 ATL08 dataframe requests"))
                         output(outputdir.."/components/schemas/Atl13Parameters.json", icesat2.parms13():describe("Request parameters for executing ICESat-2 ATL13 dataframe requests"))
                         output(outputdir.."/components/schemas/Atl13sParameters.json", icesat2.parms13s():describe("Request parameters for executing ICESat-2 ATL13 subsetting requests"))
                         output(outputdir.."/components/schemas/Atl24Parameters.json", icesat2.parms24():describe("Request parameters for executing ICESat-2 ATL24 dataframe requests"))
@@ -145,7 +145,7 @@ local function dataframe_schemas()
     sys.log(core.INFO, "Building schemas for ICESat-2 dataframes")
     output(outputdir.."/components/schemas/Atl03DataFrame.json", icesat2.atl03x("gt1l", icesat2.parms03({phoreal={}, fit={}, atl24={compact=false}, atl08_class={}, yapc={}})):describe("ICESat-2 photon cloud (ATL03)"))
     output(outputdir.."/components/schemas/Atl06DataFrame.json", icesat2.atl06x("gt1l", icesat2.parms06()):describe("ICESat-2 ice-sheet elevations (ATL06)"))
-    output(outputdir.."/components/schemas/Atl08DataFrame.json", icesat2.atl08x("gt1l", icesat2.parms03()):describe("ICESat-2 vegetation metrics (ATL08)"))
+    output(outputdir.."/components/schemas/Atl08DataFrame.json", icesat2.atl08x("gt1l", icesat2.parms08()):describe("ICESat-2 vegetation metrics (ATL08)"))
     output(outputdir.."/components/schemas/Atl13DataFrame.json", icesat2.atl13x("gt1l", icesat2.parms13()):describe("ICESat-2 in-land lake metrics (ATL13)"))
     output(outputdir.."/components/schemas/Atl24DataFrame.json", icesat2.atl24x("gt1l", icesat2.parms24({atl24={compact=false}})):describe("ICESat-2 near-shore bathymetry (ATL24)"))
 end

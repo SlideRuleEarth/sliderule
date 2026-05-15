@@ -42,6 +42,8 @@
 #include "Field.h"
 #include "EventLib.h"
 
+#include <type_traits>
+
 /******************************************************************************
  * CLASS
  ******************************************************************************/
@@ -249,18 +251,32 @@ const T& FieldMap<T>::operator[](const char* key) const
 template <class T>
 string FieldMap<T>::toOpenApi (const char* description) const
 {
-    typename Dictionary<entry_t>::Iterator iter(fields);
-    string str = FString("{\"type\": \"object\", \"description\": \"%s\", \"properties\": {", description).c_str();
-    for(int i = 0; i < iter.length; i++)
+    if(this->encoding & Field::NESTED_OBJECT)
     {
-        const typename Dictionary<entry_t>::kv_t kv = iter[i];
-        if(!(kv.value.field->encoding & Field::READ_ONLY))
-        {
-            str += FString("\"%s\": %s%s", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str(), (i < iter.length - 1) ? "," : "").c_str();
-        }
+        T object;
+        string additional_properities = object.toOpenApi(NULL);
+        string str = FString("{\"type\": \"object\", \"description\": \"%s\", \"additionalProperties\": %s}",
+            description ? description : "none", additional_properities.c_str()).c_str();
+        return str;
     }
-    str += "}}";
-    return str;
+    else
+    {
+        bool first = true;
+        typename Dictionary<entry_t>::Iterator iter(fields);
+        string desc = FString("\"description\": \"%s\",", description ? description : "").c_str();
+        string str = FString("{\"type\": \"object\", %s \"properties\": {", description ? desc.c_str() : "").c_str();
+        for(int i = 0; i < iter.length; i++)
+        {
+            const typename Dictionary<entry_t>::kv_t kv = iter[i];
+            if(!(kv.value.field->encoding & Field::READ_ONLY))
+            {
+                str += FString("%s\"%s\": %s", first ? "" : ",", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str()).c_str();
+                first = false;
+            }
+        }
+        str += "}, \"additionalProperties\": false }";
+        return str;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -383,7 +399,7 @@ inline void convertFromLua(lua_State* L, int index, FieldMap<Field>& v) {
     v.fromLua(L, index);
 }
 
-inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::OBJECT; }
+inline uint32_t toEncoding(FieldMap<Field>& v) { (void)v; return Field::OBJECT | Field::NESTED_OBJECT; }
 
 
 #endif  /* __field_map__ */

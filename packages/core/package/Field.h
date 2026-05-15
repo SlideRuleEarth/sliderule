@@ -73,6 +73,7 @@ class Field
         static const uint32_t TIME8         = RecordObject::TIME8;
         static const uint32_t STRING        = RecordObject::STRING;
         static const uint32_t OBJECT        = RecordObject::OBJECT;
+        static const uint32_t NESTED_OBJECT = 0x1000;
         static const uint32_t NESTED_ARRAY  = 0x2000;
         static const uint32_t NESTED_LIST   = 0x4000;
         static const uint32_t NESTED_COLUMN = 0x8000;

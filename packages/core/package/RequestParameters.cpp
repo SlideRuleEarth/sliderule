@@ -489,8 +489,8 @@ RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const cha
     addParameter("resources",           &resources,             "A list of resources to process (e.g. granule names like 'ATL03_20181019065445_03150111_007_01.h5')");
     addParameter("max_resources",       &maxResources,          "Maximum number of resources that can be processed in a single request; overriding this allows larger regions to be processed but risks crashing the servers");
     addParameter("poly",                &polygon,               "Polygon of area of interest, defined as a closed set of lat,lon pairs with counter-clockwise winding; in the form of [{'lat': <lat>, 'lon': <lon>}, ...]");
-    addParameter("proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing");
-    addParameter("datum",               &datum,                 "Vertical datum to use when returning elevation data");
+    addParameter("proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing; options are ['auto', 'plate_carree', 'north_polar', 'south_polar']");
+    addParameter("datum",               &datum,                 "Vertical datum to use when returning elevation data; not all endpoints support all datums; options are ['ITRF2014', 'ITRF2020', 'EGM08', 'NAVD88']");
     addParameter("points_in_polygon",   &pointsInPolygon,       "The number of coordinates in the polygon");
     addParameter("timeout",             &timeout,               "Global setting for maximum duration in seconds for all timeouts associated with a request");
     addParameter("rqst_timeout",        &rqstTimeout,           "Maximum duration in seconds for a request to finish");
@@ -670,6 +670,7 @@ string convertToJson(const MathLib::datum_t& v)
     switch(v)
     {
         case MathLib::ITRF2014: return "\"ITRF2014\"";
+        case MathLib::ITRF2020: return "\"ITRF2020\"";
         case MathLib::EGM08:    return "\"EGM08\"";
         case MathLib::NAVD88:   return "\"NAVD88\"";
         default:                return "\"unspecified\"";
@@ -684,6 +685,7 @@ int convertToLua(lua_State* L, const MathLib::datum_t& v)
     switch(v)
     {
         case MathLib::ITRF2014: lua_pushstring(L, "ITRF2014");      break;
+        case MathLib::ITRF2020: lua_pushstring(L, "ITRF2020");      break;
         case MathLib::EGM08:    lua_pushstring(L, "EGM08");         break;
         case MathLib::NAVD88:   lua_pushstring(L, "NAVD88");        break;
         default:                lua_pushstring(L, "unspecified");   break;
@@ -704,6 +706,7 @@ void convertFromLua(lua_State* L, int index, MathLib::datum_t& v)
     {
         const char* proj_str = LuaObject::getLuaString(L, index);
         if     (StringLib::match(proj_str, "ITRF2014")) v = MathLib::ITRF2014;
+        else if(StringLib::match(proj_str, "ITRF2020")) v = MathLib::ITRF2020;
         else if(StringLib::match(proj_str, "EGM08"))    v = MathLib::EGM08;
         else if(StringLib::match(proj_str, "NAVD88"))   v = MathLib::NAVD88;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid datum: %s", proj_str);

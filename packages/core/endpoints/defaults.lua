@@ -42,7 +42,7 @@ return {
             "schema": {
                 "type": "object",
                 "properties": {
-                    "core": { "$ref": "../components/schemas/CoreParameters.json" },
+                    "core": { "$ref": "../components/schemas/RequestParameters.json" },
                     "cre": { "$ref": "../components/schemas/CreParameters.json" },
                     "icesat2": { "$ref": "../components/schemas/Icesat2Parameters.json" },
                     "gedi": { "$ref": "../components/schemas/GediParameters.json" },

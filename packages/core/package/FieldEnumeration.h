@@ -284,7 +284,7 @@ string FieldEnumeration<T,N>::toOpenApi (const char* description) const
         }
         catch(const RunTimeException& e)
         {
-            mlog(CRITICAL, "Unable to describe enumeration [%s]: %s", description, e.what());
+            mlog(DEBUG, "Unable to describe enumeration [%s]: %s", description, e.what());
         }
     }
     enum_property += "]";
