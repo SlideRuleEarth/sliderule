@@ -85,7 +85,7 @@ return {
         response = [[ "application/octet-stream": {
             "schema": {
                 "allOf": [
-                    { "$ref": "../components/schemas/atl03rec.index.json" },
+                    { "$ref": "../components/schemas/atl03rec.index.json" }
                 ],
                 "description": "Stream of binary-encoded index records"
             }

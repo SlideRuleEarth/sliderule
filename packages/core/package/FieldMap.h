@@ -309,7 +309,7 @@ template <class T>
 void FieldMap<T>::fromLua (lua_State* L, int index)
 {
     // check read-only
-    if(!(encoding & READ_ONLY))
+    if(encoding & READ_ONLY)
     {
         return; // do not populate field
     }

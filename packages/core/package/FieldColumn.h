@@ -929,7 +929,7 @@ template<class T>
 void FieldColumn<T>::fromLua (lua_State* L, int index)
 {
     // check read-only
-    if(!(this->encoding & Field::READ_ONLY))
+    if(this->encoding & Field::READ_ONLY)
     {
         return; // do not populate field
     }

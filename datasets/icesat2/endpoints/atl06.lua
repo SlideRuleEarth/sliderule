@@ -4,7 +4,8 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms06d(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms         = icesat2.parms03(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parmsd        = icesat2.parms06d(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 
 -------------------------------------------------------
 -- main
@@ -15,7 +16,7 @@ local function main()
         source_rec      = "atl03rec",
         result_rec      = "atl06rec",
     }
-    local algo          = icesat2.atl06(args.result_q, parms)
+    local algo          = icesat2.atl06(args.result_q, parmsd)
     local proc          = georesource.initialize(parms, algo, args)
     if proc then
         local reader    = icesat2.atl03s(proc.source_q, parms, true)

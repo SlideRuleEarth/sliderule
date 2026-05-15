@@ -359,7 +359,7 @@ void FieldList<T>::fromLua (lua_State* L, int index)
     T value;
 
     // check read-only
-    if(!(this->encoding & Field::READ_ONLY))
+    if(this->encoding & Field::READ_ONLY)
     {
         return; // do not populate field
     }

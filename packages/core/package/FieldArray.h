@@ -313,7 +313,7 @@ template <class T, int N>
 void FieldArray<T,N>::fromLua (lua_State* L, int index)
 {
     // check read-only
-    if(!(this->encoding & Field::READ_ONLY))
+    if(this->encoding & Field::READ_ONLY)
     {
         return; // do not populate field
     }

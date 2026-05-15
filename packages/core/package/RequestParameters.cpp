@@ -201,7 +201,7 @@ int RequestParameters::luaGetField (lua_State* L)
         const char* field_name = getLuaString(L, 2);
 
         // check the metatable for the key (to support functions)
-        luaL_getmetatable(L, LUA_META_NAME);
+        luaL_getmetatable(L, lua_obj->LuaMetaName);
         lua_pushstring(L, field_name);
         lua_rawget(L, -2);
         if (!lua_isnil(L, -1))  return 1;
