@@ -287,7 +287,7 @@ local function specification_root()
     local version = sys.version()
     local paths = path_schemas()
     local template = string.format([[{
-        "openapi": "3.0.3",
+        "openapi": "3.1.2",
         "info": {
             "title": "SlideRule OpenAPI Specification",
             "version": "%s",

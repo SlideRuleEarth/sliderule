@@ -491,13 +491,13 @@ RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const cha
     addParameter("poly",                &polygon,               "Polygon of area of interest");
     addParameter("proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing");
     addParameter("datum",               &datum,                 "Vertical datum to use when returning elevation data");
-    addParameter("points_in_polygon",   &pointsInPolygon,       "Internal");
+    addParameter("points_in_polygon",   &pointsInPolygon,       "The number of coordinates in the polygon");
     addParameter("timeout",             &timeout,               "Global setting for maximum duration in seconds for all timeouts associated with a request");
     addParameter("rqst_timeout",        &rqstTimeout,           "Maximum duration in seconds for a request to finish");
     addParameter("node_timeout",        &nodeTimeout,           "Maximum duration in seconds for each distributed processing node to finish processing its portion of a request");
     addParameter("read_timeout",        &readTimeout,           "Maximum duration in seconds for an individual I/O read to complete");
     addParameter("cluster_size_hint",   &clusterSizeHint,       "User supplied hint as to the number of nodes in the cluster; used to influence the way the processing is distributed across the cluster");
-    addParameter("key_space",           &keySpace,              "Internal");
+    addParameter("key_space",           &keySpace,              "Partitions a key space to a processing node; in general a user should not supply this value but rather let the system choose a value (which is the default)");
     addParameter("region_mask",         &regionMask,            "GeoJSON structure describing the area of interest; this causes the server to rasterize the supplied area and subset based on the rasterized image");
     addParameter("sliderule_version",   &slideruleVersion,      "Version of the SlideRule software running on the servers; output only");
     addParameter("build_information",   &buildInformation,      "Version information of the environment used to build the SlideRule software running on the servers; output only");
