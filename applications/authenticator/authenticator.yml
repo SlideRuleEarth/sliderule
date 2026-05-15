@@ -4,6 +4,8 @@ Description: 'GitHub OAuth Lambda for SlideRule Login'
 Parameters:
   Domain:
     Type: String
+  PublicCluster:
+    Type: String
   AuthenticatorHostname:
     Type: String
   GitHubOrg:
@@ -136,6 +138,7 @@ Resources:
       Environment:
         Variables:
           DOMAIN: !Ref Domain
+          PUBLIC_CLUSTER: !Ref PublicCluster
           AUTHENTICATOR_HOSTNAME: !Ref AuthenticatorHostname
           GITHUB_ORG: !Ref GitHubOrg
           GITHUB_CLIENT_SECRET_NAME: !Ref GitHubClientSecretName

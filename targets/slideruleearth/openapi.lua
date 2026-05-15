@@ -257,7 +257,7 @@ local function path_schemas()
             local contents = string.format([[{
                 "%s": {
                     "operationId": "%s",
-                    "tags": [ %s ],
+                    "tags": [ "%s" ],
                     "security": [ %s ],
                     "summary": "%s",
                     "description": "%s",
@@ -296,14 +296,17 @@ local function specification_root()
                 "url": "https://opensource.org/licenses/BSD-3-Clause"
             },
             "description": "APIs to process Earth science datasets in the cloud.  Most endpoints are public though some require authorization and payload signing.
-                            Endpoints are grouped two different ways: by series and by package.  The _series_ indentifies the endpoint's underlying implementation:
-                            x-series endpoints are based on dataframe construction and manipulation; p-series endpoints are based on custom stream processing;
-                            s-series endpoints stream standard data products; v-series endpoints stream summary statistics of standard data products;
-                            and a-series endpoints return an immediate ASCII text response typically formatted as json.  The _package_ indentifies the application
-                            grouping the endpoint belongs to; for example, the icesat2 package provides endpoints to process ICESat-2 data."
+                            Endpoints are grouped by series, which indentifies the endpoint's underlying implementation."
         },
         "servers": [
             { "url": "https://sliderule.slideruleearth.io/source", "description": "User facing web services" }
+        ],
+        "tags": [
+            {"name": "a-series", "description": "immediate ASCII text response typically formatted as json"},
+            {"name": "x-series", "description": "dataframe construction and manipulation"},
+            {"name": "p-series", "description": "custom stream processing"},
+            {"name": "s-series", "description": "subsetting standard data products"},
+            {"name": "v-series", "description": "summary statistics of standard data products"}
         ],
         "components": {
             "securitySchemes": {

@@ -928,6 +928,12 @@ int FieldColumn<T>::toLua (lua_State* L, long key) const
 template<class T>
 void FieldColumn<T>::fromLua (lua_State* L, int index)
 {
+    // check read-only
+    if(!(this->encoding & Field::READ_ONLY))
+    {
+        return; // do not populate field
+    }
+
     // clear out existing elements
     clear();
 

@@ -1,0 +1,13 @@
+post:
+  summary: Get cluster name
+  description: Returns the name of the cluster
+  operationId: whoami
+  tags:
+    - Orchestrator
+  responses:
+    '200':
+      description: Cluster name.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/WhoamiResponse.yml'

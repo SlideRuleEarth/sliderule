@@ -563,6 +563,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=PublicCluster,ParameterValue=$(PUBLIC_CLUSTER) \
 						ParameterKey=AuthenticatorHostname,ParameterValue=$(AUTHENTICATOR_HOSTNAME) \
 						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
 						ParameterKey=GitHubClientSecretName,ParameterValue=$(GITHUB_CLIENT_SECRET_NAME) \
@@ -594,6 +595,7 @@ authenticator-test: ## run authenticator tests
 	conda run -n authenticator --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/authenticator && \
 	DOMAIN=localhost \
+	PUBLIC_CLUSTER=localhost \
 	AUTHENTICATOR_HOSTNAME=localhost \
 	GITHUB_ORG=myorg \
 	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \

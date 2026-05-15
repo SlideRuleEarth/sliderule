@@ -149,7 +149,7 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
         FieldElement<int>               maxResources        {SystemConfig::settings().requestMaxResources.value};
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
-        FieldElement<int>               pointsInPolygon     {0};
+        FieldElement<int>               pointsInPolygon     {0, Field::READ_ONLY};
         FieldElement<int>               timeout             {REQUEST_INVALID_TIMEOUT}; // global timeout
         FieldElement<int>               rqstTimeout         {REQUEST_INVALID_TIMEOUT};
         FieldElement<int>               nodeTimeout         {REQUEST_INVALID_TIMEOUT};
@@ -157,9 +157,9 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
         FieldElement<int>               clusterSizeHint     {0};
         FieldElement<uint64_t>          keySpace            {INVALID_KEY};
         RegionMask                      regionMask;
-        FieldElement<string>            slideruleVersion;
-        FieldElement<string>            buildInformation;
-        FieldElement<string>            environmentVersion;
+        FieldElement<string>            slideruleVersion    {LIBID, Field::READ_ONLY};
+        FieldElement<string>            buildInformation    {BUILDINFO, Field::READ_ONLY};
+        FieldElement<string>            environmentVersion  {SystemConfig::settings().environmentVersion.value, Field::READ_ONLY};
         OutputFields                    output;
 
         #ifdef __geo__

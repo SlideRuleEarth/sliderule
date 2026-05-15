@@ -248,7 +248,10 @@ int FieldElement<T>::toLua (lua_State* L) const
 template <class T>
 void FieldElement<T>::fromLua (lua_State* L, int index)
 {
-    convertFromLua(L, index, value);
+    if(!(this->encoding & Field::READ_ONLY))
+    {
+        convertFromLua(L, index, value);
+    }
 }
 
 #endif  /* __field_element__ */

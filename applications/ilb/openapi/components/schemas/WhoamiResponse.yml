@@ -1,0 +1,5 @@
+type: object
+properties:
+  cluster:
+    type: string
+    description: Name of the cluster.

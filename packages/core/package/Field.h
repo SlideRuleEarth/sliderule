@@ -84,6 +84,7 @@ class Field
         static const uint32_t Z_COLUMN          = 0x10000000;
         static const uint32_t META_COLUMN       = 0x08000000; // used for metadata elements that are exported as dataframe columns
         static const uint32_t META_SOURCE_ID    = 0x04000000; // tags entries with a source id traceable back to a string
+        static const uint32_t READ_ONLY         = 0x02000000; // calculated fields not to be overwritten by user request parameters
 
         /*--------------------------------------------------------------------
          * Types

@@ -597,7 +597,7 @@ end
 --
 --  OUTPUT:
 --  {
---      "nodes": <number of registered nodes>,
+--      "nodes": <number of registered nodes>
 --  }
 --
 local function api_status(applet)
@@ -626,6 +626,28 @@ local function api_status(applet)
 
     -- send response
     local response = string.format([[{"nodes": %d}]], num_addresses)
+    applet:set_status(200)
+    applet:add_header("content-length", string.len(response))
+    applet:add_header("content-type", "application/json")
+    applet:start_response()
+    applet:send(response)
+
+end
+
+--
+-- API: /discovery/whoami
+--
+--  Returns name of cluster
+--
+--  OUTPUT:
+--  {
+--      "cluster": <name of cluster>
+--  }
+--
+local function api_whoami(applet)
+
+    -- send response
+    local response = string.format([[{"cluster": "%s"}]], Cluster)
     applet:set_status(200)
     applet:add_header("content-length", string.len(response))
     applet:add_header("content-type", "application/json")
@@ -785,6 +807,7 @@ core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_service("orchestrator_status", "http", api_status)
+core.register_service("orchestrator_whoami", "http", api_whoami)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
 core.register_converters("extract_ip", orchestrator_extract_ip)

@@ -254,7 +254,10 @@ string FieldMap<T>::toOpenApi (const char* description) const
     for(int i = 0; i < iter.length; i++)
     {
         const typename Dictionary<entry_t>::kv_t kv = iter[i];
-        str += FString("\"%s\": %s%s", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str(), (i < iter.length - 1) ? "," : "").c_str();
+        if(!(kv.value.field->encoding & Field::READ_ONLY))
+        {
+            str += FString("\"%s\": %s%s", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str(), (i < iter.length - 1) ? "," : "").c_str();
+        }
     }
     str += "}}";
     return str;
@@ -305,6 +308,13 @@ int FieldMap<T>::toLua (lua_State* L) const
 template <class T>
 void FieldMap<T>::fromLua (lua_State* L, int index)
 {
+    // check read-only
+    if(!(encoding & READ_ONLY))
+    {
+        return; // do not populate field
+    }
+
+    // populate map
     if(lua_istable(L, index))
     {
         if(fields.length() > 0) // prepopulated map of fields

@@ -470,11 +470,6 @@ void RequestParameters::fromLua (lua_State* L, int index)
             projectedPolygon[i] = MathLib::coord2point(polygon[i], projection.value);
         }
     }
-
-    // version info
-    slideruleVersion = LIBID;
-    buildInformation = BUILDINFO;
-    environmentVersion = SystemConfig::settings().environmentVersion.value;
 }
 
 /*----------------------------------------------------------------------------

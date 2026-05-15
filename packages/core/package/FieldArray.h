@@ -312,9 +312,14 @@ int FieldArray<T,N>::toLua (lua_State* L, long key) const
 template <class T, int N>
 void FieldArray<T,N>::fromLua (lua_State* L, int index)
 {
-    const int num_elements = lua_rawlen(L, index);
+    // check read-only
+    if(!(this->encoding & Field::READ_ONLY))
+    {
+        return; // do not populate field
+    }
 
     // check size
+    const int num_elements = lua_rawlen(L, index);
     if(num_elements != N)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "mismatch in array size, expected %d, got %d", N, num_elements);

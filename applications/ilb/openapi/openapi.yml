@@ -21,6 +21,8 @@ paths:
     $ref: './paths/unlock.yml'
   /discovery/status:
     $ref: './paths/status.yml'
+  /discovery/whoami:
+    $ref: './paths/whoami.yml'
   /discovery/health:
     $ref: './paths/health.yml'
   /discovery/prometheus/orchestrator:

@@ -375,6 +375,13 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 {
     T selection;
 
+    // check read-only
+    if(!(this->encoding & Field::READ_ONLY))
+    {
+        return; // do not populate field
+    }
+
+    // populate enumeration
     if(lua_istable(L, index)) // provided as a table
     {
         memset(values, 0, sizeof(values)); // set all to false
@@ -398,7 +405,7 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 
         providedAsSingle = false;
     }
-    else if(!lua_isnil(L, index))// provided as a single selection
+    else if(!lua_isnil(L, index)) // provided as a single selection
     {
         convertFromLua(L, index, selection); // throws on error
         memset(values, 0, sizeof(values)); // set all to false

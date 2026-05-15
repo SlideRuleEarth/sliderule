@@ -24,6 +24,7 @@ import requests
 
 # Configuration from environment variables
 DOMAIN = os.environ.get('DOMAIN')
+PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
@@ -65,7 +66,7 @@ ALLOWED_SCOPES              = MCP_SCOPES | TRUSTED_SCOPES
 HTTP_TIMEOUT_SECONDS = 15 # seconds
 
 # Token time to live (hours) - token invalid after this much time past issuance
-JWT_EXPIRATION_HOURS = 12 # hours
+JWT_EXPIRATION_HOURS = 24 # hours
 
 # Session time to live (hours) - database entries automatically deleted after this time
 SESSION_EXPIRATION_HOURS = 12 # hours
@@ -597,6 +598,22 @@ def get_user_teams(authorization_str, org_roles):
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
 
+def get_public_cluster():
+    """
+    Returns the name of the public cluster.
+    """
+    if DOMAIN == "localhost":
+        response = requests.get(f"http://localhost/discovery/whoami")
+    else:
+        response = requests.get(f"https://{PUBLIC_CLUSTER}.{DOMAIN}/discovery/whoami", timeout=HTTP_TIMEOUT_SECONDS)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data.get('cluster')
+    else:
+        return None
+
+
 def generate_audience_list(username, clusters, org_roles, scope):
     """
     Returns a list of services user has access to.
@@ -687,8 +704,13 @@ def authenticate_user(authorization_str, scope):
     elif (user_role == 'owner') or (user_role == 'member'): # owners not requesting admin and regular members
         org_roles += ['member']
 
-    # get clusters (match one-to-one to user's teams)
+    # get team clusters (match one-to-one to user's teams)
     clusters += get_user_teams(authorization_str, org_roles)
+
+    # get public cluster
+    public_cluster_name = get_public_cluster()
+    if public_cluster_name and isinstance(public_cluster_name, str):
+        clusters += [public_cluster_name]
 
     # build audience list (JWT claim)
     audience_list = generate_audience_list(username, clusters, org_roles, scope)
