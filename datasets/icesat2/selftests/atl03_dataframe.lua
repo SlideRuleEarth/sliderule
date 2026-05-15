@@ -28,7 +28,7 @@ end
 
 runner.unittest("ATL03 DataFrame", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms03({
         srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5"
@@ -72,7 +72,7 @@ end)
 
 runner.unittest("ATL03 DataFrame - Ancillary Data", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms03({
         srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5",
@@ -131,7 +131,7 @@ end, {"long"})
 
 runner.unittest("ATL06 Surface Fitter", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms03({
         srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5",

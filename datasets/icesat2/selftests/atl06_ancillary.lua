@@ -16,7 +16,7 @@ runner.unittest("ATL06 Ancillary", function()
 
     local cnt = 0
     local resultq = msg.subscribe("atl06-ancillary-resultq")
-    local parms = icesat2.parms({resource="ATL03_20181017222812_02950102_007_01.h5", srt=3, cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}})
+    local parms = icesat2.parms06d({resource="ATL03_20181017222812_02950102_007_01.h5", srt=3, cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}})
     local algo = icesat2.atl06("atl06-ancillary-resultq", parms)
     local algo_disp = streaming.dispatcher("atl06-ancillary-recq")
     algo_disp:attach(algo, "atl03rec")

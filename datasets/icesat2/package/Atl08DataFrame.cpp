@@ -53,14 +53,14 @@ const struct luaL_Reg Atl08DataFrame::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl08DataFrame::luaCreate (lua_State* L)
 {
-    Atl03Parameters* _parms = NULL;
+    Atl08Parameters* _parms = NULL;
     H5Object* _hdf08 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
-        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE, Atl03Parameters::LUA_META_NAME));
+        _parms = dynamic_cast<Atl08Parameters*>(getLuaObject(L, 2, Atl08Parameters::OBJECT_TYPE, Atl08Parameters::LUA_META_NAME));
         _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE, NULL, true, NULL));
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
@@ -79,7 +79,7 @@ int Atl08DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Atl03Parameters* _parms, H5Object* _hdf08, const char* outq_name):
+Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Atl08Parameters* _parms, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",                 &time_ns,                   "Unix time (nanoseconds) of the photon measurement"},
@@ -132,11 +132,11 @@ Atl08DataFrame::Atl08DataFrame (lua_State* L, const char* beam_str, Atl03Paramet
     if(outq_name) outQ = new Publisher(outq_name);
 
     /* Optional Quality Score Columns */
-    if(parms->phoreal.te_quality_filter_provided)
+    if(parms->te_quality_filter_provided)
     {
         addColumn("te_quality_score", &te_quality_score, "Terrian quality score", false);
     }
-    if(parms->phoreal.can_quality_filter_provided)
+    if(parms->can_quality_filter_provided)
     {
         addColumn("can_quality_score", &can_quality_score, "Canopy quality score", false);
     }
@@ -191,20 +191,20 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest<f
     /* Terrain Datasets */
     terrain_slope           (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/terrain_slope").c_str(),                 0, aoi.first_index, aoi.count),
     n_te_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/n_te_photons").c_str(),                  0, aoi.first_index, aoi.count),
-    te_quality_score        (df->parms->phoreal.te_quality_filter_provided ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(), 0, aoi.first_index, aoi.count),
+    te_quality_score        (df->parms->te_quality_filter_provided ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/terrain/te_quality_score").c_str(), 0, aoi.first_index, aoi.count),
     h_te_uncertainty        (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_uncertainty").c_str(),              0, aoi.first_index, aoi.count),
     h_te_median             (df->hdf08, FString("%s/%s", df->beam, "land_segments/terrain/h_te_median").c_str(),                   0, aoi.first_index, aoi.count),
     /* Canopy Datasets */
-    h_canopy                (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_canopy_abs" : "land_segments/canopy/h_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    h_canopy                (df->hdf08, FString("%s/%s", df->beam, df->parms->use_abs_h.value ? "land_segments/canopy/h_canopy_abs" : "land_segments/canopy/h_canopy").c_str(), 0, aoi.first_index, aoi.count),
     h_canopy_uncertainty    (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/h_canopy_uncertainty").c_str(),           0, aoi.first_index, aoi.count),
     segment_cover           (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/segment_cover").c_str(),                  0, aoi.first_index, aoi.count),
     n_ca_photons            (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/n_ca_photons").c_str(),                   0, aoi.first_index, aoi.count),
-    can_quality_score       (df->parms->phoreal.can_quality_filter_provided ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(), 0, aoi.first_index, aoi.count),
-    h_max_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_max_canopy_abs" : "land_segments/canopy/h_max_canopy").c_str(), 0, aoi.first_index, aoi.count),
-    h_min_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_min_canopy_abs" : "land_segments/canopy/h_min_canopy").c_str(), 0, aoi.first_index, aoi.count),
-    h_mean_canopy           (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/h_mean_canopy_abs" : "land_segments/canopy/h_mean_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    can_quality_score       (df->parms->can_quality_filter_provided ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/canopy/can_quality_score").c_str(), 0, aoi.first_index, aoi.count),
+    h_max_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->use_abs_h.value ? "land_segments/canopy/h_max_canopy_abs" : "land_segments/canopy/h_max_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    h_min_canopy            (df->hdf08, FString("%s/%s", df->beam, df->parms->use_abs_h.value ? "land_segments/canopy/h_min_canopy_abs" : "land_segments/canopy/h_min_canopy").c_str(), 0, aoi.first_index, aoi.count),
+    h_mean_canopy           (df->hdf08, FString("%s/%s", df->beam, df->parms->use_abs_h.value ? "land_segments/canopy/h_mean_canopy_abs" : "land_segments/canopy/h_mean_canopy").c_str(), 0, aoi.first_index, aoi.count),
     canopy_openness         (df->hdf08, FString("%s/%s", df->beam, "land_segments/canopy/canopy_openness").c_str(),                0, aoi.first_index, aoi.count),
-    canopy_h_metrics        (df->hdf08, FString("%s/%s", df->beam, df->parms->phoreal.use_abs_h.value ? "land_segments/canopy/canopy_h_metrics_abs" : "land_segments/canopy/canopy_h_metrics").c_str(), H5Coro::ALL_COLS, aoi.first_index, aoi.count),
+    canopy_h_metrics        (df->hdf08, FString("%s/%s", df->beam, df->parms->use_abs_h.value ? "land_segments/canopy/canopy_h_metrics_abs" : "land_segments/canopy/canopy_h_metrics").c_str(), H5Coro::ALL_COLS, aoi.first_index, aoi.count),
     anc_data                (df->parms->atl08Fields, df->hdf08, FString("%s/%s", df->beam, "land_segments").c_str(),H5Coro::ALL_COLS, aoi.first_index, aoi.count)
 {
     /* Join Hardcoded Reads */
@@ -217,14 +217,14 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest<f
     solar_elevation.join(df->readTimeoutMs, true);
     terrain_slope.join(df->readTimeoutMs, true);
     n_te_photons.join(df->readTimeoutMs, true);
-    if(df->parms->phoreal.te_quality_filter_provided) te_quality_score.join(df->readTimeoutMs, true);
+    if(df->parms->te_quality_filter_provided) te_quality_score.join(df->readTimeoutMs, true);
     h_te_uncertainty.join(df->readTimeoutMs, true);
     h_te_median.join(df->readTimeoutMs, true);
     h_canopy.join(df->readTimeoutMs, true);
     h_canopy_uncertainty.join(df->readTimeoutMs, true);
     segment_cover.join(df->readTimeoutMs, true);
     n_ca_photons.join(df->readTimeoutMs, true);
-    if(df->parms->phoreal.can_quality_filter_provided) can_quality_score.join(df->readTimeoutMs, true);
+    if(df->parms->can_quality_filter_provided) can_quality_score.join(df->readTimeoutMs, true);
     h_max_canopy.join(df->readTimeoutMs, true);
     h_min_canopy.join(df->readTimeoutMs, true);
     h_mean_canopy.join(df->readTimeoutMs, true);
@@ -241,7 +241,7 @@ Atl08DataFrame::Atl08Data::Atl08Data (Atl08DataFrame* df, const AreaOfInterest<f
 void* Atl08DataFrame::subsettingThread (void* parm)
 {
     Atl08DataFrame* df = static_cast<Atl08DataFrame*>(parm);
-    const Atl03Parameters& parms = *df->parms;
+    const Atl08Parameters& parms = *df->parms;
     using std::numeric_limits;
 
     /* Start Trace */
@@ -290,16 +290,16 @@ void* Atl08DataFrame::subsettingThread (void* parm)
             }
 
             /* Apply Quality Filters */
-            if(parms.phoreal.te_quality_filter_provided)
+            if(parms.te_quality_filter_provided)
             {
-                if(atl08.te_quality_score[segment] < parms.phoreal.te_quality_filter.value)
+                if(atl08.te_quality_score[segment] < parms.te_quality_filter.value)
                 {
                     continue;
                 }
             }
-            if(parms.phoreal.can_quality_filter_provided)
+            if(parms.can_quality_filter_provided)
             {
-                if(atl08.can_quality_score[segment] < parms.phoreal.can_quality_filter.value)
+                if(atl08.can_quality_score[segment] < parms.can_quality_filter.value)
                 {
                     continue;
                 }
@@ -339,11 +339,11 @@ void* Atl08DataFrame::subsettingThread (void* parm)
             }
             df->canopy_h_metrics.append(metrics);
 
-            if(parms.phoreal.te_quality_filter_provided)
+            if(parms.te_quality_filter_provided)
             {
                 df->te_quality_score.append(atl08.te_quality_score[segment]);
             }
-            if(parms.phoreal.can_quality_filter_provided)
+            if(parms.can_quality_filter_provided)
             {
                 df->can_quality_score.append(atl08.can_quality_score[segment]);
             }

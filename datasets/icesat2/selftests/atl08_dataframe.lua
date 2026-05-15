@@ -34,7 +34,7 @@ end
 
 runner.unittest("ATL08 DataFrame", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5"
     })
@@ -112,7 +112,7 @@ end)
 
 runner.unittest("ATL08 DataFrame - Quality Filters", function()
 
-    local base_parms = icesat2.parms({
+    local base_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5"
     })
@@ -125,7 +125,7 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     runner.assert(base_df:numrows() == 10214, string.format("incorrect number of rows: %d", base_df:numrows()))
     runner.assert(base_df:numcols() == 21, string.format("incorrect number of columns: %d", base_df:numcols()))
 
-    local te_parms = icesat2.parms({
+    local te_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
         phoreal = { te_quality_filter = 70 }
@@ -137,7 +137,7 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     runner.assert(te_df:numcols() == 22, string.format("incorrect number of columns: %d", te_df:numcols()))
     check_columns(te_df, {"te_quality_score"})
 
-    local can_parms = icesat2.parms({
+    local can_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
         phoreal = { can_quality_filter = 75 }
@@ -149,7 +149,7 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     runner.assert(can_df:numcols() == 22, string.format("incorrect number of columns: %d", can_df:numcols()))
     check_columns(can_df, {"can_quality_score"})
 
-    local both_parms = icesat2.parms({
+    local both_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
         phoreal = { te_quality_filter = 70, can_quality_filter = 75 }
@@ -161,7 +161,7 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     runner.assert(both_df:numcols() == 23, string.format("incorrect number of columns: %d", both_df:numcols()))
     check_columns(both_df, {"te_quality_score", "can_quality_score"})
 
-    local zero_parms = icesat2.parms({
+    local zero_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
         phoreal = { te_quality_filter = 0, can_quality_filter = 0 }
@@ -179,7 +179,7 @@ end)
 
 runner.unittest("ATL08 DataFrame - Ancillary Data", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
         atl08_fields = {"beam_azimuth", "segment_watermask"}

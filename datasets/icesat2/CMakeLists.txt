@@ -18,6 +18,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DispatchParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Parameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
@@ -61,6 +62,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06DispatchParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Parameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h

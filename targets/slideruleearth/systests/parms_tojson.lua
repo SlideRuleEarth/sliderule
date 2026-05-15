@@ -113,7 +113,7 @@ if __icesat2__ then
     runner.assert(string.len(json.encode(js)) > 0)
 
     print(string.format("\n--------------------------------\nUserSet icesat2.parms.export\n--------------------------------"))
-    js = icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}):export()
+    js = icesat2.parms03({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}):export()
     runner.assert(js.atl03_geo_fields[1] == "solar_elevation")
 end
 

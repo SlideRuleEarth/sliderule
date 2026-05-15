@@ -5,7 +5,7 @@ local prettyprint = require("prettyprint")
 
 runner.unittest("ICESat-2 Fields", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms03({
         track = 1,
         cnf = 0,
         yapc = {

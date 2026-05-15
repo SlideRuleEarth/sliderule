@@ -29,45 +29,53 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl06_fields__
-#define __atl06_fields__
-
 /******************************************************************************
- * INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Atl08Parameters.h"
+#include "FieldMap.h"
 #include "LuaObject.h"
-#include "Icesat2Parameters.h"
-#include "FieldElement.h"
 
 /******************************************************************************
- * CLASSES
+ * STATIC DATA
  ******************************************************************************/
 
-class Atl06Parameters: public Icesat2Parameters
+const char* Atl08Parameters::LUA_META_NAME = "Atl08Parameters";
+
+ /******************************************************************************
+ * METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void Atl08Parameters::fromLua (lua_State* L, int index)
 {
-    public:
+    Icesat2Parameters::fromLua(L, index);
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+    // check for te quality filter
+    lua_getfield(L, index, "te_quality_filter");
+    te_quality_filter_provided = !lua_isnil(L, -1);
+    lua_pop(L, 1);
 
-        static const char* LUA_META_NAME;
+    // check for can quality filter
+    lua_getfield(L, index, "can_quality_filter");
+    can_quality_filter_provided = !lua_isnil(L, -1);
+    lua_pop(L, 1);
+}
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        virtual void    fromLua             (lua_State* L, int index) override;
-                        Atl06Parameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
-        virtual         ~Atl06Parameters    (void) override = default;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        FieldList<string> atl06Fields; // list of ATL06 fields to associate with an ATL06 subsetting request
-};
-
-#endif  /* __atl06_fields__ */
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+Atl08Parameters::Atl08Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
+    Icesat2Parameters (L, key_space, asset_name, _resource, lua_meta_name),
+    te_quality_filter_provided(false),
+    can_quality_filter_provided(false)
+{
+    addParameter("use_abs_h",           &use_abs_h,             "Read absolute (instead of relative) height metrics; i.e. return ellipsoidal elevations instead of relief measurements");
+    addParameter("te_quality_filter",   &te_quality_filter,     "Filter out low quality terrain photons when calculating metrics");
+    addParameter("can_quality_filter",  &can_quality_filter,    "Filter out low quality canopy photons when calculating metrics");
+    addParameter("atl08_fields",        &atl08Fields,           "Ancillary fields in the 'land_segments' group of the ATL08 granule to include in the response");
+}

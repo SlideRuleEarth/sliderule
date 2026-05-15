@@ -488,7 +488,7 @@ RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const cha
     addParameter("resource",            &resource,              "A single resource to process; 'resources' should be used instead, even when there is only one resource to process");
     addParameter("resources",           &resources,             "A list of resources to process (e.g. granule names like 'ATL03_20181019065445_03150111_007_01.h5')");
     addParameter("max_resources",       &maxResources,          "Maximum number of resources that can be processed in a single request; overriding this allows larger regions to be processed but risks crashing the servers");
-    addParameter("poly",                &polygon,               "Polygon of area of interest");
+    addParameter("poly",                &polygon,               "Polygon of area of interest, defined as a closed set of lat,lon pairs with counter-clockwise winding; in the form of [{'lat': <lat>, 'lon': <lon>}, ...]");
     addParameter("proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing");
     addParameter("datum",               &datum,                 "Vertical datum to use when returning elevation data");
     addParameter("points_in_polygon",   &pointsInPolygon,       "The number of coordinates in the polygon");

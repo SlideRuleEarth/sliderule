@@ -34,7 +34,7 @@ end
 
 runner.unittest("ATL06 DataFrame", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms06({
         srt = 3,
         cnf = 4,
         resource = "ATL06_20200303180710_10390603_007_01.h5"
@@ -113,7 +113,7 @@ end)
 
 runner.unittest("ATL06 DataFrame - Ancillary Data", function()
 
-    local parms = icesat2.parms({
+    local parms = icesat2.parms06({
         srt = 3,
         cnf = 4,
         resource = "ATL06_20200303180710_10390603_007_01.h5",

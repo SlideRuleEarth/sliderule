@@ -49,6 +49,7 @@
 #include "Atl06DispatchParameters.h"
 #include "Atl08DataFrame.h"
 #include "Atl08Dispatch.h"
+#include "Atl08Parameters.h"
 #include "Atl09Sampler.h"
 #include "Atl13DataFrame.h"
 #include "Atl13IODriver.h"
@@ -88,6 +89,7 @@ int icesat2_open (lua_State *L)
         {"parms03",             luaCreateParameters<Atl03Parameters>},
         {"parms06",             luaCreateParameters<Atl06Parameters>},
         {"parms06d",            luaCreateParameters<Atl06DispatchParameters>},
+        {"parms08",             luaCreateParameters<Atl08Parameters>},
         {"parms13",             luaCreateParameters<Atl13Parameters>},
         {"parms13s",            luaCreateParameters<Atl13sParameters>},
         {"parms24",             luaCreateParameters<Atl24Parameters>},

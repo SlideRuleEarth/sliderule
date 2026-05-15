@@ -101,9 +101,10 @@ local function parameter_schemas()
                         output(outputdir.."/components/schemas/Atl03Parameters.json", icesat2.parms03():describe("Request parameters for executing ICESat-2 photon cloud processing requests"))
                         output(outputdir.."/components/schemas/Atl06Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 ATL06 subsetting and dataframe requests"))
                         output(outputdir.."/components/schemas/Atl06DispatchParameters.json", icesat2.parms06d():describe("Request parameters for executing ICESat-2 ATL06-SR processing requests"))
+                        output(outputdir.."/components/schemas/Atl08Parameters.json", icesat2.parms06():describe("Request parameters for executing ICESat-2 ATL08 dataframe requests"))
                         output(outputdir.."/components/schemas/Atl13Parameters.json", icesat2.parms13():describe("Request parameters for executing ICESat-2 ATL13 dataframe requests"))
                         output(outputdir.."/components/schemas/Atl13sParameters.json", icesat2.parms13s():describe("Request parameters for executing ICESat-2 ATL13 subsetting requests"))
-                        output(outputdir.."/components/schemas/Atl24Parameters.json", icesat2.parms24():describe("Request parameters for executing ICESat-2 ATL24 subsetting requests"))
+                        output(outputdir.."/components/schemas/Atl24Parameters.json", icesat2.parms24():describe("Request parameters for executing ICESat-2 ATL24 dataframe requests"))
     end
     if __gedi__     then
                         output(outputdir.."/components/schemas/GediParameters.json", gedi.parms():describe("Request parameters for executing GEDI processing requests"))

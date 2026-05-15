@@ -104,7 +104,7 @@ int Atl03Reader::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE, Atl03Parameters::LUA_META_NAME));
+        _parms = dynamic_cast<Atl03Parameters*>(getLuaObject(L, 2, Atl03Parameters::OBJECT_TYPE)); // can accept Atl03Parameters or Atl06DispatchParameters
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */

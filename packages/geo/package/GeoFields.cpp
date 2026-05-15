@@ -185,7 +185,7 @@ GeoFields::GeoFields (void):
         {"substr",              &url_substring,         "substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)"},
         {"use_poi_time",        &use_poi_time,          "overrides the 'closest_time' setting (or provides one if not set) with the time associated with the point of interest being sampled"},
         {"doy_range",           &doy_range,             "day of year range to seasonally filter data"},
-        {"sort_by_index",       &sort_by_index,         ""},
+        {"sort_by_index",       &sort_by_index,         "maintain a spatially sorted index of rasters for optimized sampling performance"},
         {"force_single_sample", &force_single_sample,   "forces the sampling code to select (or generate) a single value for the returned sample values; this has the result of changing the column type of the returned dataframe from being a list to being a single double-precision element; the available options are: first, last, min, max, mean, median; note that when mean or median are selected, the only valid sampled data returned is 'value', all other sample columns should be ignored"},
         {"target_crs",          &target_crs,            "override the CRS of the raster dataset being sampled"},
         {"proj_pipeline",       &proj_pipeline,         "override the PROJ pipeline used to transform the source dataset into the CRS of the target dataset CRS to sample that dataset"},

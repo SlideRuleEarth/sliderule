@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl06_fields__
-#define __atl06_fields__
+#ifndef __atl08_fields__
+#define __atl08_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -45,7 +45,7 @@
  * CLASSES
  ******************************************************************************/
 
-class Atl06Parameters: public Icesat2Parameters
+class Atl08Parameters: public Icesat2Parameters
 {
     public:
 
@@ -60,14 +60,20 @@ class Atl06Parameters: public Icesat2Parameters
          *--------------------------------------------------------------------*/
 
         virtual void    fromLua             (lua_State* L, int index) override;
-                        Atl06Parameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
-        virtual         ~Atl06Parameters    (void) override = default;
+                        Atl08Parameters     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
+        virtual         ~Atl08Parameters    (void) override = default;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldList<string> atl06Fields; // list of ATL06 fields to associate with an ATL06 subsetting request
+        FieldElement<bool>      use_abs_h {false};      // use absolute heights
+        FieldElement<int8_t>    te_quality_filter {0};  // minimum allowed terrain quality score
+        FieldElement<int8_t>    can_quality_filter {0}; // minimum allowed canopy quality score
+        FieldList<string>       atl08Fields;            // list of ATL08 fields to include as ancillary fields in the dataframe
+
+        bool te_quality_filter_provided;
+        bool can_quality_filter_provided;
 };
 
-#endif  /* __atl06_fields__ */
+#endif  /* __atl08_fields__ */

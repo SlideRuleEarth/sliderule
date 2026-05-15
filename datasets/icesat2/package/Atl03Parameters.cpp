@@ -105,11 +105,7 @@ PhorealFields::PhorealFields():
                       {"geoloc",            &geoloc,                "Controls how the geolocation of the metrics are calculated"},
                       {"use_abs_h",         &use_abs_h,             "Use absolute height values when calculating the metrics; this is non-standard and for special cases only"},
                       {"send_waveform",     &send_waveform,         "Send the full vertical reconstructed waveform used to calculate the metrics; only supported by 'atl08p'"},
-                      {"above_classifier",  &above_classifier,      "Use the ABoVE classification algorithm for canopy photons"},
-                      {"te_quality_filter", &te_quality_filter,     "Filter out low quality terrain photons when calculating metrics"},
-                      {"can_quality_filter",&can_quality_filter,    "Filter out low quality canopy photons when calculating metrics"} }),
-    te_quality_filter_provided(false),
-    can_quality_filter_provided(false),
+                      {"above_classifier",  &above_classifier,      "Use the ABoVE classification algorithm for canopy photons"} }),
     provided(false)
 {
 }
@@ -121,14 +117,6 @@ void PhorealFields::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        lua_getfield(L, index, "te_quality_filter");
-        te_quality_filter_provided = !lua_isnil(L, -1);
-        lua_pop(L, 1);
-
-        lua_getfield(L, index, "can_quality_filter");
-        can_quality_filter_provided = !lua_isnil(L, -1);
-        lua_pop(L, 1);
-
         FieldMap<Field>::fromLua(L, index);
 
         if(binsize.value <= 0.0)
@@ -313,11 +301,11 @@ Atl03Parameters::Atl03Parameters(lua_State* L, uint64_t key_space, const char* a
     addParameter("phoreal",             &phoreal,               "Configuration structure for the 'PhoREAL' algorithm; when provided the servers will calculate canopy metrics on the source photon cloud and return those metrics as a dataset similar to ATL08");
     addParameter("als",                 &blanket,               "Configuration structure for the 'Surface Blanket' algorithm; when provided the servers will calculate a canopy top and ground using the source photon cloud and return those values in the response");
     addParameter("atl24",               &atl24,                 "Configuration for classifying bathymetry photons");
-    addParameter("atl03_bckgrd_fields", &atl03BckgrdFields,     "Ancillary fields in the 'bckgrd_atlas' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
-    addParameter("atl03_geo_fields",    &atl03GeoFields,        "Ancillary fields in the 'geolocation' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
-    addParameter("atl03_corr_fields",   &atl03CorrFields,       "Ancillary fields in the 'geophys_corr' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
-    addParameter("atl03_ph_fields",     &atl03PhFields,         "Ancillary fields in the 'heights' group of the ATL03 granule to include in the response; supported by atl03x, atl06x, and atl08x");
-    addParameter("atl08_fields",        &atl08Fields,           "Ancillary fields in the 'land_segments' group of the ATL08 granule to include in the response; supported by atl08x");
+    addParameter("atl03_bckgrd_fields", &atl03BckgrdFields,     "Ancillary fields in the 'bckgrd_atlas' group of the ATL03 granule to include in the response; supported by atl03x, fit, and phoreal");
+    addParameter("atl03_geo_fields",    &atl03GeoFields,        "Ancillary fields in the 'geolocation' group of the ATL03 granule to include in the response; supported by atl03x, fit, and phoreal");
+    addParameter("atl03_corr_fields",   &atl03CorrFields,       "Ancillary fields in the 'geophys_corr' group of the ATL03 granule to include in the response; supported by atl03x, fit, and phoreal");
+    addParameter("atl03_ph_fields",     &atl03PhFields,         "Ancillary fields in the 'heights' group of the ATL03 granule to include in the response; supported by atl03x, fit, and phoreal");
+    addParameter("atl08_fields",        &atl08Fields,           "Ancillary fields in the 'land_segments' group of the ATL08 granule to include in the response; supported by atl03x, and phoreal");
 }
 
 /******************************************************************************

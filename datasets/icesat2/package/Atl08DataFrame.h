@@ -39,7 +39,7 @@
 #include "GeoDataFrame.h"
 #include "H5VarSet.h"
 #include "AreaOfInterest.h"
-#include "Atl03Parameters.h"
+#include "Atl08Parameters.h"
 #include "FieldArray.h"
 
 /******************************************************************************
@@ -150,7 +150,7 @@ class Atl08DataFrame: public GeoDataFrame
         Thread*                 readerPid;
         int                     readTimeoutMs;
         Publisher*              outQ;
-        Atl03Parameters*        parms;
+        Atl08Parameters*        parms;
         H5Object*               hdf08;
         const char*             beam;
 
@@ -158,7 +158,7 @@ class Atl08DataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl08DataFrame      (lua_State* L, const char* beam_str, Atl03Parameters* _parms, H5Object* _hdf08, const char* outq_name);
+                        Atl08DataFrame      (lua_State* L, const char* beam_str, Atl08Parameters* _parms, H5Object* _hdf08, const char* outq_name);
                         ~Atl08DataFrame     (void) override;
         static void*    subsettingThread    (void* parm);
 };
