@@ -15,7 +15,7 @@ runner.authenticate({'nsidc-cloud'})
 runner.unittest("ATL03 Ancillary", function()
     local cnt = 0
     local recq = msg.subscribe("atl03-ancillary-recq")
-    local f = icesat2.atl03s("atl03-ancillary-recq", icesat2.parms03({resource="ATL03_20181017222812_02950102_007_01.h5", srt=3, cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}))
+    local f = icesat2.atl03s("atl03-ancillary-recq", icesat2.parms03({resource="ATL03_20181017222812_02950102_007_01.h5", srt=3, cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}, nil, "icesat2"))
     local status = true
     while status do
         local rec = recq:recvrecord(25000)

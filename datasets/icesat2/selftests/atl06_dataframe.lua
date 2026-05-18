@@ -38,7 +38,7 @@ runner.unittest("ATL06 DataFrame", function()
         srt = 3,
         cnf = 4,
         resource = "ATL06_20200303180710_10390603_007_01.h5"
-    })
+    }, nil, "icesat2")
 
     local atl06h5 = h5coro.object(asset_name, parms["resource"])
     local atl06df = icesat2.atl06x("gt1l", parms, atl06h5, core.EVENTQ)
@@ -118,7 +118,7 @@ runner.unittest("ATL06 DataFrame - Ancillary Data", function()
         cnf = 4,
         resource = "ATL06_20200303180710_10390603_007_01.h5",
         atl06_fields = {"dem/dem_flag", "dem/dem_h"}
-    })
+    }, nil, "icesat2")
 
     local atl06h5 = h5coro.object(asset_name, parms["resource"])
     local atl06df = icesat2.atl06x("gt2r", parms, atl06h5, core.EVENTQ)

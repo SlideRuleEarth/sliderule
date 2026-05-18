@@ -186,7 +186,7 @@ class TestAtl08x:
         assert "can_quality_score" not in base.columns
 
         # te-only filter
-        parms = {"beams": "gt3r", "phoreal": {"te_quality_filter": 70}}
+        parms = {"beams": "gt3r", "te_quality_filter": 70}
         gdf = sliderule.run("atl08x", parms, resources=[GRANULE])
         assert len(gdf) == 9837
         assert "te_quality_score" in gdf.columns
@@ -194,7 +194,7 @@ class TestAtl08x:
         assert gdf["te_quality_score"].min() >= 70
 
         # can-only filter
-        parms = {"beams": "gt3r", "phoreal": {"can_quality_filter": 75}}
+        parms = {"beams": "gt3r", "can_quality_filter": 75}
         gdf = sliderule.run("atl08x", parms, resources=[GRANULE])
         assert len(gdf) == 6486
         assert "te_quality_score" not in gdf.columns
@@ -202,7 +202,7 @@ class TestAtl08x:
         assert gdf["can_quality_score"].min() >= 75
 
         # both filters
-        parms = {"beams": "gt3r", "phoreal": {"te_quality_filter": 70, "can_quality_filter": 75}}
+        parms = {"beams": "gt3r", "te_quality_filter": 70, "can_quality_filter": 75}
         gdf = sliderule.run("atl08x", parms, resources=[GRANULE])
         assert len(gdf) == 6412
         assert "te_quality_score" in gdf.columns
@@ -211,7 +211,7 @@ class TestAtl08x:
         assert gdf["can_quality_score"].min() >= 75
 
         # zero thresholds (should match baseline but include scores)
-        parms = {"beams": "gt3r", "phoreal": {"te_quality_filter": 0, "can_quality_filter": 0}}
+        parms = {"beams": "gt3r", "te_quality_filter": 0, "can_quality_filter": 0}
         gdf = sliderule.run("atl08x", parms, resources=[GRANULE])
         assert len(gdf) == 10214
         assert "te_quality_score" in gdf.columns

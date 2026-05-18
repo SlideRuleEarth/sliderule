@@ -37,7 +37,7 @@ runner.unittest("ATL08 DataFrame", function()
     local parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5"
-    })
+    }, nil, "icesat2")
 
     local atl08h5 = h5coro.object(asset_name, parms["resource"])
     local atl08df = icesat2.atl08x("gt3r", parms, atl08h5, core.EVENTQ)
@@ -115,7 +115,7 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     local base_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5"
-    })
+    }, nil, "icesat2")
 
     local atl08h5 = h5coro.object(asset_name, base_parms["resource"])
     local base_df = icesat2.atl08x("gt3r", base_parms, atl08h5, core.EVENTQ)
@@ -128,8 +128,8 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     local te_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
-        phoreal = { te_quality_filter = 70 }
-    })
+        te_quality_filter = 70
+    }, nil, "icesat2")
     local te_df = icesat2.atl08x("gt3r", te_parms, atl08h5, core.EVENTQ)
     runner.assert(te_df:waiton(60000), "timed out creating dataframe", true)
     runner.assert(te_df:inerror() == false, "dataframe encountered error")
@@ -140,8 +140,8 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     local can_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
-        phoreal = { can_quality_filter = 75 }
-    })
+        can_quality_filter = 75
+    }, nil, "icesat2")
     local can_df = icesat2.atl08x("gt3r", can_parms, atl08h5, core.EVENTQ)
     runner.assert(can_df:waiton(60000), "timed out creating dataframe", true)
     runner.assert(can_df:inerror() == false, "dataframe encountered error")
@@ -152,8 +152,9 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     local both_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
-        phoreal = { te_quality_filter = 70, can_quality_filter = 75 }
-    })
+        te_quality_filter = 70,
+        can_quality_filter = 75
+    }, nil, "icesat2")
     local both_df = icesat2.atl08x("gt3r", both_parms, atl08h5, core.EVENTQ)
     runner.assert(both_df:waiton(60000), "timed out creating dataframe", true)
     runner.assert(both_df:inerror() == false, "dataframe encountered error")
@@ -164,8 +165,9 @@ runner.unittest("ATL08 DataFrame - Quality Filters", function()
     local zero_parms = icesat2.parms08({
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
-        phoreal = { te_quality_filter = 0, can_quality_filter = 0 }
-    })
+        te_quality_filter = 0,
+        can_quality_filter = 0
+    }, nil, "icesat2")
     local zero_df = icesat2.atl08x("gt3r", zero_parms, atl08h5, core.EVENTQ)
     runner.assert(zero_df:waiton(60000), "timed out creating dataframe", true)
     runner.assert(zero_df:inerror() == false, "dataframe encountered error")
@@ -183,7 +185,7 @@ runner.unittest("ATL08 DataFrame - Ancillary Data", function()
         beams = "gt3r",
         resource = "ATL08_20200307004141_10890603_007_01.h5",
         atl08_fields = {"beam_azimuth", "segment_watermask"}
-    })
+    }, nil, "icesat2")
 
     local atl08h5 = h5coro.object(asset_name, parms["resource"])
     local atl08df = icesat2.atl08x("gt3r", parms, atl08h5, core.EVENTQ)

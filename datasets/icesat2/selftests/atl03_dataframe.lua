@@ -32,7 +32,7 @@ runner.unittest("ATL03 DataFrame", function()
         srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5"
-    })
+    }, nil, "icesat2")
 
     local atl03h5 = h5coro.object(asset_name, parms["resource"])
     local atl03df = icesat2.atl03x("gt1l", parms, atl03h5, nil, nil, core.EVENTQ)
@@ -80,7 +80,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
         atl03_corr_fields = {"geoid"},
         atl03_ph_fields = {"ph_id_channel", "ph_id_pulse"},
         atl08_fields = {"h_dif_ref", "rgt", "sigma_atlas_land", "cloud_flag_atm"}
-    })
+    }, nil, "icesat2")
 
     local atl03h5 = h5coro.object(asset_name, parms["resource"])
     local atl08h5 = h5coro.object(asset_name, "ATL08_20200304065203_10470605_006_01.h5")
@@ -136,7 +136,7 @@ runner.unittest("ATL06 Surface Fitter", function()
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5",
         fit = { maxi = 2 }
-    })
+    }, nil, "icesat2")
 
     local atl03h5 = h5coro.object(asset_name, parms["resource"])
     local df = icesat2.atl03x("gt1l", parms, atl03h5, nil, nil, core.EVENTQ)
