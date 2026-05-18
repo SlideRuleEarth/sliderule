@@ -156,11 +156,11 @@ package:
     libgcc: '>=14'
     aws-c-common: '>=0.12.6,<0.12.7.0a0'
     aws-c-cal: '>=0.9.13,<0.9.14.0a0'
-    s2n: '>=1.7.2,<1.7.3.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/aws-c-io-0.26.3-h73478e9_1.conda
+    s2n: '>=1.7.3,<1.7.4.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/aws-c-io-0.26.3-ha908662_2.conda
   hash:
-    md5: e9d3a9ab4391f0cbf46b7fe59319358a
-    sha256: af1fd1e0286d59115aa76b87f770e7c8a9c20f5fcec3c7a5ae56bb1dd041229d
+    md5: 7e2e26b56835826025e64c39955619a2
+    sha256: 4bede3c2515cb7d1716b4bbe3c4c591cf109ec2590b1040f57233b1246210202
   category: main
   optional: false
 - name: aws-c-mqtt
@@ -441,16 +441,16 @@ package:
   category: main
   optional: false
 - name: click
-  version: 8.3.3
+  version: 8.4.0
   manager: conda
   platform: linux-aarch64
   dependencies:
     __unix: ''
     python: '>=3.10'
-  url: https://conda.anaconda.org/conda-forge/noarch/click-8.3.3-pyhc90fa1f_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/click-8.4.0-pyhc90fa1f_0.conda
   hash:
-    md5: 2266262ce8a425ecb6523d765f79b303
-    sha256: 37a5d8b10ea3516e2c42f870c9c351b9f7b31ff48c66d83490039f417e1e5228
+    md5: 003767c47f1f0a474c4de268b57839c3
+    sha256: 99ab8ef815c4520cce3a7482c2513f377c14348206857661d84c76a55e030f97
   category: main
   optional: false
 - name: colorama
@@ -1370,15 +1370,15 @@ package:
   category: main
   optional: false
 - name: libuuid
-  version: '2.42'
+  version: 2.42.1
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42-h1022ec0_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.1-h1022ec0_0.conda
   hash:
-    md5: a0b5de740d01c390bdbb46d7503c9fab
-    sha256: 7d427edf58c702c337bf62bc90f355b7fc374a65fd9f70ea7a490f13bb76b1b9
+    md5: 0f42f9fedd2a32d798de95a7f65c456f
+    sha256: 1628839b062e98b2192857d4da8496ac9ac6b0dbb77aa040c34efc9192c440ee
   category: main
   optional: false
 - name: libxml2
@@ -1486,7 +1486,7 @@ package:
   category: main
   optional: false
 - name: numpy
-  version: 2.4.4
+  version: 2.4.5
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -1494,13 +1494,13 @@ package:
     libstdcxx: '>=14'
     libgcc: '>=14'
     libblas: '>=3.9.0,<4.0a0'
-    python_abi: 3.14.*
     liblapack: '>=3.9.0,<4.0a0'
+    python_abi: 3.14.*
     libcblas: '>=3.9.0,<4.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/numpy-2.4.4-py314he1698a1_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/numpy-2.4.5-py314he1698a1_0.conda
   hash:
-    md5: 36a4c334a9d6f24f02d2e03e12788c9f
-    sha256: b2f634bf8c92b8c2b044efb66f18d72bfbb95d89bf9894aab1ff26f3835155fd
+    md5: bdb49f3f231962d4bca98ed2c59ab92f
+    sha256: 84c4b05037cc1b73749c41977bc3e204b3f4a11cc750984b44d3462a6eb865a3
   category: main
   optional: false
 - name: openapi-core
@@ -1947,16 +1947,16 @@ package:
   category: main
   optional: false
 - name: s2n
-  version: 1.7.2
+  version: 1.7.3
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=14'
     openssl: '>=3.5.6,<4.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/s2n-1.7.2-h8d42d4d_1.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/s2n-1.7.3-h8d42d4d_0.conda
   hash:
-    md5: 5d28f677274b1d4486b3228b6a48042e
-    sha256: e94791b9a06e0bfbcef5d4b98edcc672c5ceed246f82edc8e9e4a13dfa0d5657
+    md5: 7753838e7e5cb2966210cd4ee4392e74
+    sha256: b389533d31f3052f1e7de1e867b25b080cb571c2fc5b62711b609a3bfca7a532
   category: main
   optional: false
 - name: setuptools
