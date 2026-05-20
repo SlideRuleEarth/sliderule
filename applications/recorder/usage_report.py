@@ -1,3 +1,4 @@
+import csv
 import sys
 import copy
 import time
@@ -6,7 +7,11 @@ import boto3
 import pandas as pd
 import numpy as np
 import geoip2.database
+from PIL import Image
+from matplotlib.colors import LogNorm
+import matplotlib.cm as cm
 from datetime import datetime, timezone
+from collections import defaultdict
 
 # -------------------------------------------
 # command line arguments
@@ -20,9 +25,12 @@ parser = argparse.ArgumentParser(
         "  python usage_report.py --start \"2026-01-10\"\n"
     )
 )
-parser.add_argument('--start',  type=str,   required=True, help='start is required as ISO datetime string YYYY-MM-DD HH:MM:SS)') #
-parser.add_argument('--end',    type=str,   default=f'{datetime.now()}') # optional ISO datetime string
-parser.add_argument('--grid',   type=str,   default=None) # sliderule_usage_grid.png
+parser.add_argument('--start',          type=str,   required=True, help='start is required as ISO datetime string YYYY-MM-DD HH:MM:SS)') #
+parser.add_argument('--end',            type=str,   default=f'{datetime.now()}') # optional ISO datetime string
+parser.add_argument('--grid_aoi',       type=str,   default="/data/web/sliderule_aoi_grid.png")
+parser.add_argument('--grid_usage',     type=str,   default="/data/web/sliderule_usage_grid.png")
+parser.add_argument('--geonames',       type=str,   default="/data/geopy/cities500.txt") # from http://download.geonames.org/export/dump/cities500.zip
+parser.add_argument('--country_info',   type=str,   default="/data/geopy/countryInfo.txt") # from http://download.geonames.org/export/dump/countryInfo.txt
 args,_ = parser.parse_known_args()
 
 # -------------------------------------------
@@ -282,10 +290,31 @@ def get_timespan(table, where_clause):
     return {'start': start_dt, 'end': end_dt, 'span': end_dt - start_dt}
 
 # -------------------------------------------
+# generate map
+# -------------------------------------------
+def generate_map(grid, filename):
+    data = grid.astype(np.float64)
+    data[data == 0] = np.nan
+
+    # Log-scale normalization to accentuate lower values
+    vmin = max(np.nanmin(data), 1.0)  # clamp min to 1 for log scale
+    norm = LogNorm(vmin=vmin, vmax=np.nanmax(data))
+    mapped = cm.jet(norm(data))  # RGBA float array
+    mapped = (mapped * 255).astype(np.uint8)
+
+    # Make NaN pixels fully transparent
+    mask = np.isnan(data)
+    mapped[mask] = [0, 0, 0, 0]
+
+    # Save image
+    img = Image.fromarray(np.flipud(mapped), mode='RGBA')
+    img.save(filename)
+    print(f'Saved PNG {filename}: {img.size[0]}x{img.size[1]} pixels')
+
+# -------------------------------------------
 # AIO grid
 # -------------------------------------------
-def aoi_sql_grid(table, where_clause):
-    from PIL import Image
+def aoi_sql_grid(table, where_clause, filename):
     query = f"""
         SELECT
             CAST(FLOOR((aoi_x + 180.0) / 0.25) AS INTEGER) AS grid_x,
@@ -304,17 +333,132 @@ def aoi_sql_grid(table, where_clause):
     rows = execute_query(query, f'AOI of {table}')
     grid = np.zeros((720, 1440), dtype=np.uint32)
     for row in rows:
-        print(f"{int(row["grid_y"])},{int(row["grid_x"])} => {row["point_count"]}")
-        grid[int(row["grid_y"]), int(row["grid_x"])] = row["point_count"]
-    # normalize data to uint8
-    max_val = grid.max()
-    if max_val > 0:
-        normalized = (grid / max_val * 255).astype(np.uint8)
-    else:
-        normalized = grid.astype(np.uint8)
-    # data is a (720, 1440) uint8 numpy array, lat -90→90 bottom→top
-    img = Image.fromarray(np.flipud(normalized), mode='L')
-    img.save(args.grid)
+        x = int(row["grid_x"])
+        y = int(row["grid_y"])
+        if x == 1440: x = 1439
+        if y == 720: y = 719
+        if(x < 1440 and x >= 0 and y < 720 and y >= 0):
+            grid[y, x] = row["point_count"]
+        else:
+            print(f"Not gridding {y},{x} => {row["point_count"]}")
+    generate_map(grid, filename)
+
+# -------------------------------------------
+# grid usage
+# -------------------------------------------
+def load_geonames(path):
+    """Load GeoNames cities500.txt into a dict keyed by city name (lowercase).
+    Each entry is a list of (city_name, country_code, lat, lon, population)."""
+    print("Loading GeoNames database...")
+    cities = defaultdict(list)
+    with open(path, "r", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
+        for row in reader:
+            name = row[1]
+            asciiname = row[2]
+            lat = float(row[4])
+            lon = float(row[5])
+            country_code = row[8]
+            population = int(row[14]) if row[14] else 0
+            entry = (name, country_code, lat, lon, population)
+            cities[name.lower()].append(entry)
+            if asciiname.lower() != name.lower():
+                cities[asciiname.lower()].append(entry)
+            # Also index alternate names
+            for alt in row[3].split(","):
+                alt = alt.strip().lower()
+                if alt and alt not in cities:
+                    cities[alt].append(entry)
+    print(f"Loaded {len(cities)} unique city name keys.")
+    return cities
+
+def load_countrycodes(path):
+    """Country code lookup from country name"""
+    print("Loading CountryCode database...")
+    country_to_code = {}
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("#"):
+                continue
+            parts = line.strip().split("\t")
+            if len(parts) >= 5:
+                country_to_code[parts[4].lower()] = parts[0]
+    print(f"Loaded {len(country_to_code)} country codes.")
+    return country_to_code
+
+def geocode_offline(place, geonames_db, countrycode_db):
+    """Lookup lat/lon from 'Country, City' string using local GeoNames database."""
+    parts = [p.strip() for p in place.split(",")]
+    city_name = parts[-1] if len(parts) > 1 else parts[0]
+    country_name = parts[0] if len(parts) > 1 else None
+    # If city is "None", use the most populous city in the country as a fallback
+    if city_name.lower() == "none":
+        if country_name:
+            country_code = countrycode_db.get(country_name.lower())
+            if country_code:
+                # Find the most populous city in that country
+                best = None
+                for candidates_list in geonames_db.values():
+                    for c in candidates_list:
+                        if c[1] == country_code:
+                            if best is None or c[4] > best[4]:
+                                best = c
+                if best:
+                    return best[2], best[3]
+        return None
+    candidates = geonames_db.get(city_name.lower(), [])
+    if not candidates:
+        return None
+    # filter by country if provided
+    if country_name:
+        country_code = countrycode_db.get(country_name.lower())
+        if country_code:
+            filtered = [c for c in candidates if c[1] == country_code]
+            if filtered:
+                candidates = filtered
+    # pick the one with highest population
+    best = max(candidates, key=lambda c: c[4])
+    return best[2], best[3]
+
+def usage_grid(locations, filename):
+    grid = np.zeros((720, 1440), dtype=np.uint32)
+    geonames_db = load_geonames(args.geonames)
+    countrycode_db = load_countrycodes(args.country_info)
+    # create grid of locations
+    for place, count in locations.items():
+        loc = geocode_offline(place, geonames_db, countrycode_db)
+        if loc is not None:
+            lat, lon = loc
+        else:
+            print(f"Could not geocode {place}")
+            continue
+        # Convert lat/lon to 0.25 degree grid indices
+        # Lat: -90 to 90 -> row 0 (south) to 719 (north)
+        # Lon: -180 to 180 -> col 0 (west) to 1439 (east)
+        row = int((lat + 90) / 0.25)
+        col = int((lon + 180) / 0.25)
+        row = min(max(row, 0), 719)
+        col = min(max(col, 0), 1439)
+#        print(f"{place} -> lat={lat:.2f}, lon={lon:.2f} -> row={row}, col={col}, count={count}")
+        grid[row, col] = count
+        # expand grid points into boxes based on value partitions
+        expanded = np.zeros_like(grid, dtype=np.uint32)
+        ys, xs = np.where(grid > 0) # Find all non-zero cells
+        for y, x in zip(ys, xs):
+            val = grid[y, x]
+            # determine partition (0..24 -> 1, 25..49 -> 2, ..., 225..255 -> 10)
+            partition = val // 25 + 1
+            partition = min(partition, 10)
+            radius = partition
+            # define box bounds, clipped to grid
+            y_min = max(y - radius, 0)
+            y_max = min(y + radius, 719)
+            x_min = max(x - radius, 0)
+            x_max = min(x + radius, 1439)
+            # add value to all cells in the box
+            expanded[y_min:y_max+1, x_min:x_max+1] += val
+    # create png
+    generate_map(expanded, filename)
 
 # -------------------------------------------
 # display stats
@@ -376,9 +520,9 @@ display_stats('Alert Codes', alert_status_code_counts, True)
 display_stats('Summary', summary, False)
 
 # grid requests
-if args.grid:
-    aoi_sql_grid(telemetry_table, where_clause)
-    display_stats('Globe', {
-        'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
-        'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
-    }, False)
+usage_grid(source_location_counts, args.grid_usage)
+aoi_sql_grid(telemetry_table, where_clause, args.grid_aoi)
+display_stats('Globe', {
+    'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
+    'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
+}, False)

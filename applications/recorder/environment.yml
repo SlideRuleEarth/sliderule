@@ -9,3 +9,4 @@ dependencies:
   - geoip2
   - pandas
   - pillow
+  - matplotlib
