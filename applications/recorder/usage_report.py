@@ -439,16 +439,15 @@ def usage_grid(locations, filename):
         col = int((lon + 180) / 0.25)
         row = min(max(row, 0), 719)
         col = min(max(col, 0), 1439)
-#        print(f"{place} -> lat={lat:.2f}, lon={lon:.2f} -> row={row}, col={col}, count={count}")
         grid[row, col] = count
         # expand grid points into boxes based on value partitions
         expanded = np.zeros_like(grid, dtype=np.uint32)
         ys, xs = np.where(grid > 0) # Find all non-zero cells
         for y, x in zip(ys, xs):
             val = grid[y, x]
-            # determine partition (0..24 -> 1, 25..49 -> 2, ..., 225..255 -> 10)
-            partition = val // 25 + 1
-            partition = min(partition, 10)
+            # determine partition
+            partition = val // 50 + 1
+            partition = min(partition, 5)
             radius = partition
             # define box bounds, clipped to grid
             y_min = max(y - radius, 0)
