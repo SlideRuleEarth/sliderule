@@ -385,17 +385,25 @@ class Session:
                 self.logger.debug(f'Failed to discover available nodes: {e}')
                 available_nodes = 0
 
-            # Check if Deployment Needed
-            if deploy_needed and available_nodes < node_capacity:
+            # Check if Scaling Needed
+            if deploy_needed:
                 deploy_needed = False
-
-                # Deployment Request
-                rsps = self.provisioner.deploy(is_public=is_public, node_capacity=node_capacity, ttl=ttl, version=version)
-                inerror = "error" in rsps
-                self.logger.info(f'Requesting deployment of {self.cluster}: {"failed" if inerror else "succeeded"}')
-                if inerror: # error occurred
-                    self.logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
-                    break
+                if available_nodes < node_capacity:
+                    # Deployment Request
+                    rsps = self.provisioner.deploy(is_public=is_public, node_capacity=node_capacity, ttl=ttl, version=version)
+                    inerror = "error" in rsps
+                    self.logger.info(f'Requesting deployment of {self.cluster}: {"failed" if inerror else "succeeded"}')
+                    if inerror: # error occurred
+                        self.logger.critical(f'Unable to deploy {self.cluster}: {rsps.get("exception")}')
+                        break
+                else:
+                    # Extension Request
+                    rsps = self.provisioner.extend(ttl=ttl)
+                    inerror = "error" in rsps
+                    self.logger.info(f'Requesting extension of {self.cluster} for {ttl} minutes: {"failed" if inerror else "succeeded"}')
+                    if inerror: # error occurred
+                        self.logger.critical(f'Unable to extend {self.cluster}: {rsps.get("exception")}')
+                        break
 
             # Check for Exit Conditions
             if not block:
@@ -739,7 +747,7 @@ class Session:
             headers["x-sliderule-timestamp"] = str(timestamp)
             headers["x-sliderule-signature"] = signature_b64
         except Exception as e:
-            self.logger.warning(f"Failed to sign request: {e}")
+            self.logger.warning(f"Request not signed: {e}")
 
 
     #
