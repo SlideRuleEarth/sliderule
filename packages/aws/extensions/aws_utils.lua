@@ -39,7 +39,14 @@ local function config_leap_seconds ()
 end
 
 -- Configure Earth Data Assets and Credentials --
-local function config_earth_data ()
+local function config_earth_data (credentials_to_maintain)
+    -- configure which credentials to maintain
+    if not credentials_to_maintain then
+        credentials_to_maintain = {"authenticate_to_nsidc", "authenticate_to_ornldaac", "authenticate_to_lpdaac", "authenticate_to_podaac", "authenticate_to_asf"}
+    end
+    for _,credential in ipairs(credentials_to_maintain) do
+        sys.setcfg(credential, true)
+    end
     -- load earthdata assets
     earthdata.load()
     -- run IAM role authentication script (identity="iam-role")
@@ -81,10 +88,26 @@ local function config_earth_data ()
     end
 end
 
+-- Wait for Earth Data Credentials --
+local function wait_credentials (credential, timeout)
+    local seconds_remaining = timeout or 10
+    while not aws.csget(credential) do
+        seconds_remaining = seconds_remaining - 1
+        if seconds_remaining == 0 then
+            sys.log(core.CRITICAL, string.format("failed to establish credentials for %s", credential))
+            return false
+        end
+        sys.log(core.CRITICAL, string.format("waiting to establish credentials for %s ... %d remaining", credential, seconds_remaining))
+        sys.wait(1)
+    end
+    return true
+end
+
 -- Exported Package --
 return {
     config_aws = config_aws,
     config_monitoring = config_monitoring,
     config_leap_seconds = config_leap_seconds,
-    config_earth_data = config_earth_data
+    config_earth_data = config_earth_data,
+    wait_credentials = wait_credentials
 }

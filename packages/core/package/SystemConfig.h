@@ -91,11 +91,11 @@ class SystemConfig: public FieldMap<Field>
         FieldElement<event_level_t>     telemetryLevel              {INFO};
         FieldElement<event_level_t>     alertLevel                  {INFO};
         FieldElement<int>               appPort                     {9081};
-        FieldElement<bool>              authenticateToNSIDC         {true};
-        FieldElement<bool>              authenticateToORNLDAAC      {true};
-        FieldElement<bool>              authenticateToLPDAAC        {true};
-        FieldElement<bool>              authenticateToPODAAC        {true};
-        FieldElement<bool>              authenticateToASF           {true};
+        FieldElement<bool>              authenticateToNSIDC         {false};
+        FieldElement<bool>              authenticateToORNLDAAC      {false};
+        FieldElement<bool>              authenticateToLPDAAC        {false};
+        FieldElement<bool>              authenticateToPODAAC        {false};
+        FieldElement<bool>              authenticateToASF           {false};
         FieldElement<bool>              registerAsService           {true};
         FieldElement<float>             memoryThreshold             {0.85};
         FieldElement<int>               msgQDepth                   {10000};
