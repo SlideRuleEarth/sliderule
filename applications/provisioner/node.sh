@@ -46,10 +46,6 @@ aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/server/ /data/ --recursive
 mkdir -p /data
 aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/ams/ /data/ --recursive
 
-# Download plugin files
-mkdir -p /plugins
-aws s3 cp s3://$PROJECT_BUCKET/plugins/ /plugins/ --recursive
-
 # Create docker-compose.yml
 cat > docker-compose.yml << EOF
 version: "3.9"
