@@ -291,8 +291,8 @@ Resources:
             Content-Type: text/x-shellscript; charset="us-ascii"
 
             #!/bin/bash
-            mkdir -p /plugins
-            aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
+            mkdir -p /data
+            aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/server/ /data/ --recursive
 
             --==BOUNDARY==--
 
