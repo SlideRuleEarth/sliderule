@@ -270,12 +270,14 @@ def report_jobs_handler(body):
 #
 def report_queue_handler(body):
 
-    # initialize response state
-    state = {"report": {}, "jobs": []}
-
     # get optional request variables
     job_state = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
     job_name = body.get("job_name") # string providing a single name
+    verbose = body.get("verbose", False)
+
+    # initialize response state
+    state = {"report": {js: 0 for js in job_state}}
+    if verbose: state["jobs"] = []
 
     # get job states list
     job_states = None
@@ -295,16 +297,21 @@ def report_queue_handler(body):
 
     # list jobs
     for job_status in job_states:
-        response = batch.list_jobs(
-            jobQueue=f"{STACK_NAME}-job-queue",
-            jobStatus=job_status
-        )
-        job_list = response["jobSummaryList"]
+        job_list = []
+        parms = {"jobQueue": f"{STACK_NAME}-job-queue", "jobStatus": job_status}
+        while True:
+            response = batch.list_jobs(**parms)
+            job_list.extend(response["jobSummaryList"])
+            next_token = response.get("nextToken")
+            if not next_token:
+                break
+            parms["nextToken"] = next_token
         if job_name:
             job_list = [job for job in job_list if job["jobName"] == job_name]
-        state["report"][job_status] = len(job_list)
-        for job in job_list:
-            state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
+        state["report"][job_status] += len(job_list)
+        if verbose:
+            for job in job_list:
+                state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
     # success
     return json_response(200, state)
