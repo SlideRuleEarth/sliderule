@@ -273,8 +273,9 @@ def report_queue_handler(body):
     # initialize response state
     state = {"report": {}, "jobs": []}
 
-    # get required request variables
-    job_state = body["job_state"]
+    # get optional request variables
+    job_state = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
+    job_name = body.get("job_name") # string providing a single name
 
     # get job states list
     job_states = None
@@ -294,10 +295,13 @@ def report_queue_handler(body):
 
     # list jobs
     for job_status in job_states:
-        response = batch.list_jobs(
-            jobQueue=f"{STACK_NAME}-job-queue",
-            jobStatus=job_status
-        )
+        kwargs = {
+            "jobQueue": f"{STACK_NAME}-job-queue",
+            "jobStatus": job_status
+        }
+        if job_name:
+            kwargs["filters"] = [{"name": "JOB_NAME", "values": [job_name]}]
+        response = batch.list_jobs(**kwargs)
         state["report"][job_status] = len(response["jobSummaryList"])
         for job in response["jobSummaryList"]:
             state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
