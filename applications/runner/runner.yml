@@ -305,7 +305,7 @@ Resources:
       ComputeResources:
         Type: SPOT
         MinvCpus: 0
-        MaxvCpus: 64
+        MaxvCpus: 256
         DesiredvCpus: 0
         InstanceTypes:
           - default_arm64
@@ -364,7 +364,7 @@ Resources:
             - Type: VCPU
               Value: "1"
             - Type: MEMORY
-              Value: "4096"
+              Value: "4000"
           JobRoleArn: !GetAtt JobRunnerRole.Arn
           Command:
             - "/usr/local/etc/sliderule/job_runner.lua"

@@ -295,15 +295,15 @@ def report_queue_handler(body):
 
     # list jobs
     for job_status in job_states:
-        kwargs = {
-            "jobQueue": f"{STACK_NAME}-job-queue",
-            "jobStatus": job_status
-        }
+        response = batch.list_jobs(
+            jobQueue=f"{STACK_NAME}-job-queue",
+            jobStatus=job_status
+        )
+        job_list = response["jobSummaryList"]
         if job_name:
-            kwargs["filters"] = [{"name": "JOB_NAME", "values": [job_name]}]
-        response = batch.list_jobs(**kwargs)
-        state["report"][job_status] = len(response["jobSummaryList"])
-        for job in response["jobSummaryList"]:
+            job_list = [job for job in job_list if job["jobName"] == job_name]
+        state["report"][job_status] = len(job_list)
+        for job in job_list:
             state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
     # success
@@ -389,3 +389,65 @@ def lambda_gateway(event, context):
 
         # unhandled exception
         return exception_reponse(e)
+
+# ###############################
+# Main: Local Test Environment
+# ###############################
+
+if __name__ == '__main__':
+
+    # imports
+    import sliderule
+    import argparse
+
+    # command line arguments
+    parser = argparse.ArgumentParser(description="""Provisioner Command Line""")
+    parser.add_argument('--job_name',       type=str,               default=None)
+    parser.add_argument('--api',            type=str,               default=None)
+    parser.add_argument('--verbose',        action='store_true',    default=False)
+    args,_ = parser.parse_known_args()
+
+    # sliderule python client session
+    session = sliderule.create_session(domain=DOMAIN, verbose=args.verbose)
+    session.authenticate()
+
+    # request parameters
+    body = json.dumps({
+        "job_name": args.job_name,
+    })
+
+    # sign request
+    headers = {}
+    session._Session__signrequest(headers, f"{DOMAIN}{args.api}", body)
+
+    # build request
+    rqst = {
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "org_roles": f'[{" ".join(session.ps_metadata["org_roles"])}]',
+                        "aud": f'[{" ".join(session.ps_metadata["aud"])}]',
+                        "sub": f'{session.ps_metadata["sub"]}'
+                    }
+                }
+            }
+        },
+        "headers": {
+            "host": DOMAIN,
+            "x-sliderule-timestamp": headers["x-sliderule-timestamp"],
+            "x-sliderule-signature": headers["x-sliderule-signature"],
+        },
+        "rawPath": args.api,
+        "body": body
+    }
+
+    # make request
+    rsps = lambda_gateway(rqst, None)
+
+    # display response
+    if rsps.get("statusCode") == 200:
+        content = json.loads(rsps["body"])
+        print(json.dumps(content, indent=2))
+    else:
+        print(json.dumps(rsps, indent=2))

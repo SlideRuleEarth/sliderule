@@ -780,6 +780,20 @@ runner-cancel-all: ## cancels all jobs
 runner-logs:
 	aws logs tail /aws/lambda/$(RUNNER_STACKNAME)-gateway --since 2h --format short
 
+runner-run:
+	STACK_NAME=$(RUNNER_STACKNAME) \
+	DOMAIN=$(DOMAIN) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_FOLDER=$(PROJECT_FOLDER) \
+	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
+	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
+	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
+	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+    ALERT_EMAIL=$(ALERT_EMAIL) \
+	AWS_REGION=$(AWS_REGION) \
+	conda run -n sliderule --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/runner && python runner.py $(ARGS)'
+
 runner-test: ## run runner tests
 	conda run -n runner --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/runner && \
