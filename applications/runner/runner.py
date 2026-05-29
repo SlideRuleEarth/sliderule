@@ -25,7 +25,7 @@ MAX_VCPUS = 8
 MIN_VCPUS = 1
 MAX_MEMORY = 32768
 MIN_MEMORY = 8192
-API_CONCURRENCY = 20
+API_CONCURRENCY = 10
 MAX_ARGS_ARRAY_SIZE = 10000
 
 batch = boto3.client("batch")
@@ -146,7 +146,7 @@ def verify_signature(path, body, username, event):
 #
 # List Jobs
 #
-def list_jobs(job_state, job_name, parent_job_id):
+def list_jobs(job_state, name, parent_job_id=None):
     """
     validate parameters and list jobs that match job name
     """
@@ -178,8 +178,8 @@ def list_jobs(job_state, job_name, parent_job_id):
             if not next_token:
                 break
             parms["nextToken"] = next_token
-    if job_name:
-        job_list = [job for job in job_list if job["jobName"] == job_name]
+    if name:
+        job_list = [job for job in job_list if job["jobName"] == name]
     return job_list
 
 #
@@ -334,16 +334,17 @@ def report_jobs_handler(body):
 def report_queue_handler(body):
 
     # get optional request variables
-    job_state = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
-    job_name = body.get("job_name") # string providing a single name
-    verbose = body.get("verbose", False)
+    job_state   = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
+    name        = body.get("name") # string providing a single name
+    job_id      = body.get("job_id") # string providing the parent job id
+    verbose     = body.get("verbose", False)
 
     # initialize response state
     state = {"report": {js: 0 for js in job_state}}
     if verbose: state["jobs"] = []
 
     # list jobs
-    job_list = list_jobs(job_state, job_name)
+    job_list = list_jobs(job_state, name, job_id)
     for job in job_list:
         state["report"][job["status"]] += 1
         if verbose:
@@ -362,13 +363,13 @@ def cancel_handler(body):
 
     # get optional request variables
     job_list = body.get("job_list")
-    job_name = body.get("job_name")
+    name = body.get("name")
 
     # get jobs to delete
     if job_list:
         jobs_to_delete = job_list
     else:
-        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], job_name)]
+        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], name)]
 
     # delete jobs
     with ThreadPoolExecutor(max_workers=API_CONCURRENCY) as executor:
@@ -441,19 +442,34 @@ if __name__ == '__main__':
 
     # command line arguments
     parser = argparse.ArgumentParser(description="""Provisioner Command Line""")
-    parser.add_argument('--job_name',       type=str,               default=None)
-    parser.add_argument('--api',            type=str,               default=None)
-    parser.add_argument('--verbose',        action='store_true',    default=False)
+    parser.add_argument('--api',        type=str,               default=None)
+    parser.add_argument('--name',       type=str,               default=None)
+    parser.add_argument('--job_id',     type=str,               default=None)
+    parser.add_argument('--script',     type=str,               default=None)
+    parser.add_argument('--arg',        type=str,               default=None)
+    parser.add_argument('--args',       type=str, nargs='*',    default=None)
+    parser.add_argument('--vcpus',      type=int,               default=None)
+    parser.add_argument('--memory',     type=int,               default=None)
+    parser.add_argument('--verbose',    action='store_true',    default=False)
     args,_ = parser.parse_known_args()
 
     # sliderule python client session
-    session = sliderule.create_session(domain=DOMAIN, verbose=args.verbose)
+    session = sliderule.create_session(domain=DOMAIN)
     session.authenticate()
 
     # request parameters
-    body = json.dumps({
-        "job_name": args.job_name,
-    })
+    body_dict = {}
+    if args.name: body_dict["name"] = args.name
+    if args.job_id: body_dict["job_id"] = args.job_id
+    if args.arg: body_dict["args"] = args.arg
+    if args.args: body_dict["args"] = json.dumps(args.args)
+    if args.vcpus: body_dict["vcpus"] = args.vcpus
+    if args.memory: body_dict["memory"] = args.memory
+    if args.verbose: body_dict["verbose"] = args.verbose
+    if args.script:
+        with open(args.script, "r") as file:
+            body_dict["script"] = base64.b64encode(file.read().encode()).decode()
+    body = json.dumps(body_dict)
 
     # sign request
     headers = {}

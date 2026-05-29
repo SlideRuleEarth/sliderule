@@ -2,7 +2,7 @@ type: object
 required:
   - name
   - script
-  - args_list
+  - args
 properties:
   name:
     type: string
@@ -12,7 +12,7 @@ properties:
     type: string
     format: byte
     description: Base64-encoded Lua script to execute.
-  args_list:
+  args:
     type: array
     items:
       type: string

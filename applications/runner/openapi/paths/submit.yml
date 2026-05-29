@@ -3,7 +3,7 @@ post:
   summary: Submit a batch runner job
   description: >
     Submits a Lua script with a list of arguments to be executed as individual
-    AWS Batch jobs. Each element of args_list becomes a separate job invocation.
+    AWS Batch jobs. Each element of args becomes a separate job invocation.
   parameters:
     - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
     - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'

@@ -21,12 +21,12 @@ def test_empty_script():
 
 def test_invalid_args_list():
     with pytest.raises(RuntimeError):
-        rsps = submit_handler({"name": "hello_world", "script":lua_script, "args_list": "test1"}, "user")
+        rsps = submit_handler({"name": "hello_world", "script":lua_script, "args": "test1"}, "user")
 
 def test_invalid_vcpus():
     with pytest.raises(RuntimeError):
-        rsps = submit_handler({"name": "hello_world", "script":lua_script, "args_list": [""], "vcpus": 50}, "user")
+        rsps = submit_handler({"name": "hello_world", "script":lua_script, "args": [""], "vcpus": 50}, "user")
 
 def test_invalid_memory():
     with pytest.raises(RuntimeError):
-        rsps = submit_handler({"name": "hello_world", "script":lua_script, "args_list": [""], "memory": "lots"}, "user")
+        rsps = submit_handler({"name": "hello_world", "script":lua_script, "args": [""], "memory": "lots"}, "user")

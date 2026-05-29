@@ -560,15 +560,15 @@ class Session:
     class __Runner:
         def __init__ (self, session):
             self.session = session
-        def submit (self, *, name, script, args_list, optional_args=None):
+        def submit (self, *, name, script, args, optional_args=None):
             if optional_args == None: optional_parms = {}
-            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args_list": args_list} | optional_args)
+            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args": args} | optional_args)
         def jobs (self, *, job_list):
             return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
-        def queue (self, *, job_state=None, job_name=None):
+        def queue (self, *, job_state=None, name=None):
             data = {}
             if job_state: data["job_state"] = job_state
-            if job_name: data["job_name"] = job_name
+            if name: data["name"] = name
             return self.session.gateway_request("report/queue", subdomain="runner", data=data)
         def cancel (self, *, job_list):
             return self.session.gateway_request("cancel", subdomain="runner", data={"job_list": job_list})
