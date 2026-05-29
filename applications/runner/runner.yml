@@ -345,8 +345,8 @@ Resources:
         Type: container
         Parameters:
           script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
-          args: "granule.h5" # example to be overridden
-          result: !Sub "s3://${ProjectPublicBucket}/runner/runid/result.json" # example to be overridden
+          args: "s3://${ProjectPublicBucket}/runner/runid/args.json" # example to be overridden
+          output: !Sub "s3://${ProjectPublicBucket}/runner/runid" # example to be overridden
         RetryStrategy:
           Attempts: 3  # 1 initial attempt + 2 retries = 3 total
           EvaluateOnExit:
@@ -370,7 +370,7 @@ Resources:
             - "/usr/local/etc/sliderule/job_runner.lua"
             - "Ref::script"
             - "Ref::args"
-            - "Ref::result"
+            - "Ref::output"
           Environment:
             - Name: LOG_FORMAT
               Value: FMT_CLOUD
@@ -435,7 +435,7 @@ Resources:
         - arm64
       Runtime: python3.13
       MemorySize: 256 # MB
-      Timeout: 300 # seconds
+      Timeout: 600 # seconds
       Handler: runner.lambda_gateway
       Description: Routes requests based on path
       Code:

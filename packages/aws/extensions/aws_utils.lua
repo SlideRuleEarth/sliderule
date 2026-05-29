@@ -103,11 +103,27 @@ local function wait_credentials (credential, timeout)
     return true
 end
 
+-- Unique String Generator --
+local function unique_string (nchars)
+    local unique = {}
+    for i = 1, nchars do
+        local selection = math.random(1, 3) -- digit, lower alpha, upper alpha
+        local possibilities = {
+            math.random(48, 57), -- 0 to 9
+            math.random(97, 122), -- a to z
+            math.random(65, 90) -- A to Z
+        }
+        table.insert(unique, string.char(possibilities[selection]))
+    end
+    return table.concat(unique)
+end
+
 -- Exported Package --
 return {
     config_aws = config_aws,
     config_monitoring = config_monitoring,
     config_leap_seconds = config_leap_seconds,
     config_earth_data = config_earth_data,
-    wait_credentials = wait_credentials
+    wait_credentials = wait_credentials,
+    unique_string = unique_string
 }

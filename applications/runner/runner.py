@@ -5,6 +5,7 @@ import boto3
 import hashlib
 import botocore.exceptions
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from cryptography.hazmat.primitives.serialization import load_ssh_public_key
 
 # ###############################
@@ -24,6 +25,8 @@ MAX_VCPUS = 8
 MIN_VCPUS = 1
 MAX_MEMORY = 32768
 MIN_MEMORY = 8192
+API_CONCURRENCY = 20
+MAX_ARGS_ARRAY_SIZE = 10000
 
 batch = boto3.client("batch")
 ses = boto3.client('ses')
@@ -140,6 +143,52 @@ def verify_signature(path, body, username, event):
         print(f"Failed to verify request signature: {e}")
         return False
 
+#
+# List Jobs
+#
+def list_jobs(job_state, job_name, parent_job_id):
+    """
+    validate parameters and list jobs that match job name
+    """
+    # get job states list
+    job_states = None
+    if isinstance(job_state, list):
+        job_states = job_state
+    elif isinstance(job_state, str):
+        job_states = [job_state]
+    else:
+        raise RuntimeError(f"Invalid job states supplied: {type(job_state)}")
+
+    # validate parameters
+    for job_status in job_states:
+        if not isinstance(job_status, str):
+            raise RuntimeError(f"Invalid job state supplied: {type(job_status)}")
+        elif job_status not in JOB_STATES:
+            raise RuntimeError(f"Unknown job state supplied: {job_status}")
+
+    # list jobs
+    job_list = []
+    for job_status in job_states:
+        parms = {"jobQueue": f"{STACK_NAME}-job-queue", "jobStatus": job_status}
+        if parent_job_id: parms | {"arrayJobId": parent_job_id}
+        while True:
+            response = batch.list_jobs(**parms)
+            job_list.extend(response["jobSummaryList"])
+            next_token = response.get("nextToken")
+            if not next_token:
+                break
+            parms["nextToken"] = next_token
+    if job_name:
+        job_list = [job for job in job_list if job["jobName"] == job_name]
+    return job_list
+
+#
+# Cancel Jobs
+#
+def cancel_job(job_id):
+    batch.cancel_job(jobId=job_id, reason="Canceled by user")
+    return job_id
+
 # ###############################
 # Path Handlers
 # ###############################
@@ -155,7 +204,7 @@ def submit_handler(body, username):
     # get required request variables
     name = body["name"]
     script = base64.b64decode(body["script"]).decode('utf-8')
-    args_list = body["args_list"]
+    args = body["args"]
 
     # get optional request variables
     vcpus = body.get("vcpus")
@@ -166,8 +215,10 @@ def submit_handler(body, username):
         raise RuntimeError(f"Invalid name supplied of type {type(name)}")
     elif len(script) <= 0:
         raise RuntimeError(f"Empty script provided")
-    elif not isinstance(args_list, list):
-        raise RuntimeError(f"Invalid array of arguments supplied of type {type(args_list)}")
+    elif (not isinstance(args, list)) and (not isinstance(args, str)):
+        raise RuntimeError(f"Invalid arguments type: {type(args)}")
+    elif isinstance(args, list) and (len(args) > MAX_ARGS_ARRAY_SIZE):
+        raise RuntimeError(f"Argument array size too large: {len(args)}")
     elif (vcpus != None) and ((not isinstance(vcpus, int)) or (vcpus < MIN_VCPUS) or (vcpus > MAX_VCPUS)):
         raise RuntimeError(f"Invalid vCPUs provided: {vcpus}")
     elif (memory != None) and ((not isinstance(memory, int)) or (memory < MIN_MEMORY) or (memory > MAX_MEMORY)):
@@ -188,12 +239,23 @@ def submit_handler(body, username):
     state["name"] = name
     state["run_url"] = run_url
 
-    # load initial files to S3
+    # handle array arguments
+    if isinstance(args, list):
+        args_list = args
+        args_str = f"{run_path}/args.json"
+        s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_str, Body=json.dumps(args))
+    else: # is string (checked above)
+        args_str = args.strip()
+        if len(args_str) == 0:
+            args_str = "nil"
+        args_list = [args_str]
+
+    # load additional run files to S3
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/script.lua", Body=script)
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/receipt.json", Body=json.dumps({
         "name": name,
         "username": username,
-        "args": {str(i):args_list[i] for i in range(len(args_list))},
+        "args": args_str,
         "environment": ENVIRONMENT_VERSION
     }, indent=2))
 
@@ -206,27 +268,28 @@ def submit_handler(body, username):
         if memory != None:
             container_overrides["resourceRequirements"].append({"type": "MEMORY", "value": str(memory)})
 
-    # submit jobs
-    job_ids = []
-    for i in range(len(args_list)):
-        response = batch.submit_job(
-            jobName=name,
-            jobQueue=f"{STACK_NAME}-job-queue",
-            jobDefinition=f"{STACK_NAME}-default-job-definition",
-            parameters={
-                "script": f"{run_url}/script.lua",
-                "args": len(args_list[i].strip()) > 0 and args_list[i] or "nil",
-                "result": f"{run_url}/result_{i}.json"
-            },
-            containerOverrides=container_overrides
-        )
-        job_ids.append(response["jobId"])
-        print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')
-    state["job_ids"] = job_ids
+    # submit job
+    kwargs = {
+        "jobName": name,
+        "jobQueue": f"{STACK_NAME}-job-queue",
+        "jobDefinition": f"{STACK_NAME}-default-job-definition",
+        "parameters": {
+            "script": f"{run_url}/script.lua",
+            "args": args_str,
+            "output": run_url
+        },
+        "containerOverrides": container_overrides
+    }
+    if isinstance(args, list):
+        kwargs["arrayProperties"] = {
+            "size": len(args_list)
+        }
+    response = batch.submit_job(**kwargs)
+    print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')
+    state["job_id"] = response["jobId"]
 
     # status deployment
     send_email(f"SlideRule Job Submission (@{username} {name})", json.dumps(state, indent=2))
-    print(f'Jobs submitted on {STACK_NAME}: {len(job_ids)}')
 
     # success
     return json_response(200, state)
@@ -279,39 +342,12 @@ def report_queue_handler(body):
     state = {"report": {js: 0 for js in job_state}}
     if verbose: state["jobs"] = []
 
-    # get job states list
-    job_states = None
-    if isinstance(job_state, list):
-        job_states = job_state
-    elif isinstance(job_state, str):
-        job_states = [job_state]
-    else:
-        raise RuntimeError(f"Invalid job states supplied: {type(job_state)}")
-
-    # validate parameters
-    for job_status in job_states:
-        if not isinstance(job_status, str):
-            raise RuntimeError(f"Invalid job state supplied: {type(job_status)}")
-        elif job_status not in JOB_STATES:
-            raise RuntimeError(f"Unknown job state supplied: {job_status}")
-
     # list jobs
-    for job_status in job_states:
-        job_list = []
-        parms = {"jobQueue": f"{STACK_NAME}-job-queue", "jobStatus": job_status}
-        while True:
-            response = batch.list_jobs(**parms)
-            job_list.extend(response["jobSummaryList"])
-            next_token = response.get("nextToken")
-            if not next_token:
-                break
-            parms["nextToken"] = next_token
-        if job_name:
-            job_list = [job for job in job_list if job["jobName"] == job_name]
-        state["report"][job_status] += len(job_list)
+    job_list = list_jobs(job_state, job_name)
+    for job in job_list:
+        state["report"][job["status"]] += 1
         if verbose:
-            for job in job_list:
-                state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
+            state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
 
     # success
     return json_response(200, state)
@@ -326,24 +362,20 @@ def cancel_handler(body):
 
     # get optional request variables
     job_list = body.get("job_list")
+    job_name = body.get("job_name")
 
     # get jobs to delete
-    jobs_to_delete = job_list
-    if jobs_to_delete == None:
-        jobs_to_delete = []
-        # find all jobs
-        for state in ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"]:
-            response = batch.list_jobs(
-                jobQueue=f"{STACK_NAME}-job-queue",
-                jobStatus=state
-            )
-            for job in response["jobSummaryList"]:
-                jobs_to_delete.append(job["jobId"])
+    if job_list:
+        jobs_to_delete = job_list
+    else:
+        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], job_name)]
 
     # delete jobs
-    for job_id in jobs_to_delete:
-        batch.cancel_job(jobId=job_id, reason="Canceled by user")
-        state.append(job_id)
+    with ThreadPoolExecutor(max_workers=API_CONCURRENCY) as executor:
+        futures = {executor.submit(cancel_job, job_id): job_id for job_id in jobs_to_delete}
+        for future in as_completed(futures):
+            job_id = future.result()
+            state.append(job_id)
 
     # success
     return json_response(200, state)
