@@ -54,9 +54,9 @@ local array_index = tonumber(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX"))
 if array_index then
     local arguments_file_path = string.format("%s/args.json", output_directory)
     local local_arguments_file = string.format("/tmp/args-%s.json", aws_utils.unique_string(7))
-    local arguments_download_status = aws.s3download(output, arguments_file_path, local_arguments_file)
+    local arguments_download_status = aws.s3download(output_bucket, arguments_file_path, local_arguments_file)
     if not arguments_download_status then
-        print("Failed to download arguments from s3")
+        print("Failed to download arguments from s3://%s/%s", output_bucket, arguments_file_path)
         return sys.quit(1) -- failure
     end
     local f, err = io.open(local_arguments_file, "r")

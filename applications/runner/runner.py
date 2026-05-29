@@ -24,7 +24,7 @@ MAX_JOBS_TO_DESCRIBE = 100
 MAX_VCPUS = 8
 MIN_VCPUS = 1
 MAX_MEMORY = 32768
-MIN_MEMORY = 8192
+MIN_MEMORY = 4096
 API_CONCURRENCY = 10
 MAX_ARGS_ARRAY_SIZE = 10000
 
@@ -169,8 +169,16 @@ def list_jobs(job_state, name, parent_job_id=None):
     # list jobs
     job_list = []
     for job_status in job_states:
-        parms = {"jobQueue": f"{STACK_NAME}-job-queue", "jobStatus": job_status}
-        if parent_job_id: parms | {"arrayJobId": parent_job_id}
+        if parent_job_id:
+            parms = {
+                "arrayJobId": parent_job_id,
+                "jobStatus": job_status
+            }
+        else:
+            parms = {
+                "jobQueue": f"{STACK_NAME}-job-queue",
+                "jobStatus": job_status
+            }
         while True:
             response = batch.list_jobs(**parms)
             job_list.extend(response["jobSummaryList"])
@@ -344,7 +352,7 @@ def report_queue_handler(body):
     if verbose: state["jobs"] = []
 
     # list jobs
-    job_list = list_jobs(job_state, name, job_id)
+    job_list = list_jobs(job_state, name, parent_job_id=job_id)
     for job in job_list:
         state["report"][job["status"]] += 1
         if verbose:
