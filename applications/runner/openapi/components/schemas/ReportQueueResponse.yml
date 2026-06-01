@@ -10,6 +10,8 @@ properties:
       SUCCEEDED: 12
   jobs:
     type: array
+    description: >
+      Only present when the request includes `"verbose": true`.
     items:
       type: object
       properties:

@@ -11,3 +11,20 @@ properties:
           type: string
           enum: [SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED]
     description: One or more job states to query.
+  name:
+    type: string
+    description: Only jobs with the provided name are reported.
+    example: my-processing-job
+  job_id:
+    type: string
+    description: >
+      Parent job id for a batch array job processing request.
+      When supplied, only child jobs of this parent job id are returned.
+      Note, the name parameter, if supplied, is still applied as a filter;
+      so it is recommended that when job_id is supplied, name is omitted.
+    example: 23e58402-c585-4865-8e36-ad0504aa205e
+  verbose:
+    type: boolean
+    description: When set to true the response will include a description of each job.
+    example: true
+    default: false

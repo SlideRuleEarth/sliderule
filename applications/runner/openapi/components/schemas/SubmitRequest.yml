@@ -25,6 +25,6 @@ properties:
     description: Optional vCPU override per job container.
   memory:
     type: integer
-    minimum: 8192
+    minimum: 4096
     maximum: 32768
     description: Optional memory (MB) override per job container.

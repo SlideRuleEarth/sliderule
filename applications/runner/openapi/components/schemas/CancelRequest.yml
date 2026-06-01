@@ -7,3 +7,9 @@ properties:
     description: >
       List of job IDs to cancel. If omitted, all active jobs
       (SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING) will be canceled.
+  name:
+    type: string
+    description: >
+      The name associated with the jobs that should be cancelled.
+      Only used if job_list is not supplied.
+    example: my-processing-job
