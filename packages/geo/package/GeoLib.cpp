@@ -830,47 +830,35 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
 /*----------------------------------------------------------------------------
  * burnGeoJson
  *----------------------------------------------------------------------------*/
-bool GeoLib::burnGeoJson(RegionMask& image)
+void GeoLib::burnGeoJson(RegionMask& image)
 {
-    // initialize raster (to be cleaned up below)
-    GeoJsonRaster* raster = NULL;
+    // this should only be called once
+    if(!image.data) throw RunTimeException(CRITICAL, RTE_FAILURE, "Data is already populated");
 
-    // reset image data
-    delete [] image.data;
-    image.data = NULL;
+    // create geojson raster
+    GeoJsonRaster* raster = GeoJsonRaster::create(image.geojson.value, image.cellSize.value);
+    if(!raster) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to create raster");
 
-    try
+    // populate image attributes
+    const GeoJsonRaster::bbox_t bbox = raster->getRasterBbox();
+    image.cols = raster->getRasterCols();
+    image.rows = raster->getRasterRows();
+    image.lonMin = bbox.lon_min;
+    image.lonMax = bbox.lon_max;
+    image.latMin = bbox.lat_min;
+    image.latMax = bbox.lat_max;
+
+    // populate image data
+    const long data_size = static_cast<long>(image.cols.value) * static_cast<long>(image.rows.value);
+    if(data_size > 0)
     {
-        // create geojson raster
-        raster = GeoJsonRaster::create(image.geojson.value, image.cellSize.value);
-        if(!raster) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to create raster");
-
-        // populate image attributes
-        const GeoJsonRaster::bbox_t bbox = raster->getRasterBbox();
-        image.cols = raster->getRasterCols();
-        image.rows = raster->getRasterRows();
-        image.lonMin = bbox.lon_min;
-        image.lonMax = bbox.lon_max;
-        image.latMin = bbox.lat_min;
-        image.latMax = bbox.lat_max;
-
-        // populate image data
-        const long data_size = static_cast<long>(image.cols.value) * static_cast<long>(image.rows.value);
-
-        if(data_size > 0)
-        {
-            image.data = new uint8_t [data_size];
-            memcpy(image.data, raster->getRasterData(), data_size);
-        }
+        image.data = new uint8_t [data_size];
+        memcpy(image.data, raster->getRasterData(), data_size);
+        delete raster; // clean up raster
     }
-    catch(const RunTimeException& e)
+    else
     {
-        mlog(e.level(), "Error rasterizing region mask: %s", e.what());
+        delete raster; // clean up raster
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to create raster of size 0");
     }
-
-    // clean up raster
-    delete raster;
-
-    // return status
-    return image.data == NULL;
 }

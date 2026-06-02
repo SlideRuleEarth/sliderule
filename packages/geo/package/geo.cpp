@@ -343,7 +343,7 @@ void initgeo (void)
 #endif
 
     /* Register Region Mask Rasterizer */
-    RegionMask::registerRasterizer(GeoLib::burnGeoJson);
+    RegionMask::registerRasterizer(RegionMask::GEOJSON_FORMAT, GeoLib::burnGeoJson);
 
     /* Register user URL raster */
     RasterObject::registerRaster(LUA_USER_URL_RASTER_NAME, GeoUserUrlRaster::create);

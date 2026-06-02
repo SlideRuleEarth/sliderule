@@ -267,6 +267,9 @@ void initcore (void)
     Asset::registerDriver(Asset::NIL_DRIVER, Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
 
+    /* Register Region Mask Rasterizers */
+    RegionMask::registerRasterizer(RegionMask::B16MASK_FORMAT, RegionMask::decodeB16mask);
+
     /* Initialize Lua Extensions */
     LuaLibrarySys::lsys_init();
     LuaLibraryMsg::lmsg_init();

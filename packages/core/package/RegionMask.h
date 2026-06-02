@@ -52,37 +52,48 @@ class RegionMask: public FieldMap<Field>
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* GEOJSON_FORMAT;
+        static const char* B16MASK_FORMAT;
+
         static const int PIXEL_ON   = 1;
         static const int PIXEL_OFF  = 0;
+
+        static const int MAX_ROWS = 1800; // 0.1 degree cellsize
+        static const int MAX_COLS = 3600; // 0.1 degree cellsize
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef bool (*burn_func_t) (RegionMask& image);
+        typedef void (*burn_func_t) (RegionMask& image);
+
+        typedef struct {
+            const char* format;
+            burn_func_t burn_func;
+        } rasterizer_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void registerRasterizer  (burn_func_t func);
+        static void registerRasterizer  (const char* format, burn_func_t func);
+        static void decodeB16mask       (RegionMask& image);
 
                     RegionMask          (void);
                     ~RegionMask         (void) override;
 
         bool        valid               (void) const;
-
         void        fromLua             (lua_State* L, int index) override;
-
         bool        includes            (double lon, double lat) const;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static burn_func_t      burnMask;
+        static Dictionary<rasterizer_t> rasterizers;
 
         FieldElement<string>    geojson{""};
+        FieldElement<string>    b16mask{""};
         FieldElement<double>    cellSize{0.0};
         FieldElement<uint32_t>  cols{0};
         FieldElement<uint32_t>  rows{0};

@@ -515,7 +515,7 @@ def run(api, parms, aoi=None, resources=None, session=None):
 #
 # Format Region Specification
 #
-def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
+def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None):
     '''
     Convert a GeoJSON/Shapefile/GeoDataFrame/list representation of a set of geospatial regions into a list of lat,lon coordinates and raster image recognized by SlideRule
 
@@ -533,6 +533,11 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                     size of pixel in degrees used to create the raster image of the polygon
         n_clusters: int
                     number of clusters of polygons to create when breaking up the request to CMR
+        tif_parms:  dict
+                    dictionary of parameters used to read tif file
+                    "off" is the value used for off
+                    "res" is the pixel size
+                    "bbox" is [lonmin, latmin, lonmax, latmax]
 
     Returns
     -------
@@ -567,12 +572,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     # GeoDataFrame
     if isinstance(source, geopandas.GeoDataFrame):
         gdf = source
-        datafile = gdf.to_json()
 
     # Polygon
     elif isinstance(source, Polygon):
         gdf = geopandas.GeoDataFrame(geometry=[source], crs=DEFAULT_CRS)
-        datafile = gdf.to_json()
 
     # bounding box as [lon lat lon lat]
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
@@ -584,41 +587,62 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             lats = [source[i] for i in range(0,len(source),2)]
         p = Polygon([point for point in zip(lons, lats)])
         gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
-        datafile = gdf.to_json()
 
     # List of lat/lon dictionaries
     elif isinstance(source, list) and (len(source) >= 4) and isinstance(source[0], dict):
         p = Polygon([(c["lon"], c["lat"]) for c in source])
         gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
-        datafile = gdf.to_json()
 
     # Shapefile
     elif isinstance(source, str) and (source.find(".shp") > 1):
         gdf = geopandas.read_file(source)
-        datafile = gdf.to_json()
 
     # GeoJSON file
     elif isinstance(source, str) and (source.find(".geojson") > 1):
         gdf = geopandas.read_file(source)
         with open(source, mode='rt') as file:
-            datafile = file.read()
+            raster = {
+               "geojson": file.read(),
+                "cellsize": cellsize
+            }
+
+    # TIF file (global mask)
+    elif isinstance(source, str) and (source.find(".tif") > 1):
+        import rasterio
+        gdf = None
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", rasterio.errors.NotGeoreferencedWarning)
+            with rasterio.open(source) as dataset:
+                data = dataset.read(1)
+                bits = numpy.packbits((data.flatten() != tif_parms["off"]).astype(numpy.uint8))
+                raster = {"b16mask": bits.tobytes().hex()}
+                if dataset.crs is not None:
+                    raster["cellsize"] = dataset.res[0]
+                    raster["lonmin"] = dataset.bounds.left
+                    raster["latmin"] = dataset.bounds.bottom
+                    raster["lonmax"] = dataset.bounds.right
+                    raster["latmax"] = dataset.bounds.top
+                else:
+                    raster["cellsize"] = tif_parms["res"]
+                    raster["lonmin"] = tif_parms["bbox"][0]
+                    raster["latmin"] = tif_parms["bbox"][1]
+                    raster["lonmax"] = tif_parms["bbox"][2]
+                    raster["latmax"] = tif_parms["bbox"][3]
 
     # GeoJSON dictionary
     elif isinstance(source, dict) and ("features" in source):
         gdf = geopandas.GeoDataFrame.from_features(source["features"])
-        datafile = gdf.to_json()
 
     # GeoJSON string
     elif isinstance(source, str) and (source.find("FeatureCollection") > 0):
         geojson_dict = json.loads(source)
         gdf = geopandas.GeoDataFrame.from_features(geojson_dict["features"])
-        datafile = gdf.to_json()
 
     # Unsupported
     else:
         raise FatalError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
 
-    # If user provided raster we don't have gdf, geopandas cannot easily convert it
+    # Create polygon(s) from GeoDataFrame
     polygon = clusters = None
     if gdf is not None:
         # simplify polygon
@@ -651,15 +675,14 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
                 c_poly = gdf2poly(c_gdf)
                 clusters.append(c_poly)
 
-    # return region
+    # Return region
     return {
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
-        "raster": {
-            "geojson": datafile, # geojson file
-            "length": len(datafile), # geojson file length
-            "cellsize": cellsize  # units are in crs/projection
+        "raster": raster or { # used by region mask
+            "geojson": gdf.to_json(),
+            "cellsize": cellsize
         }
     }
 

@@ -695,8 +695,9 @@ vector<uint8_t> StringLib::b64decode(const string& data)
 /*----------------------------------------------------------------------------
  * b16encode
  *----------------------------------------------------------------------------*/
-char* StringLib::b16encode(const void* data, int size, bool lower_case, char* dst)
+int StringLib::b16encode(const void* data, int size, bool lower_case, char* dst)
 {
+    assert(dst);
     assert(data);
     assert(size > 0);
 
@@ -708,18 +709,45 @@ char* StringLib::b16encode(const void* data, int size, bool lower_case, char* ds
     else digits = upper_digits;
 
     const int encoded_len = size * 2;
-    char* str = dst;
-    if(!str) str = new char [encoded_len + 1];
-    str[encoded_len] = '\0';
+    dst[encoded_len] = '\0';
 
     const uint8_t* data_ptr = reinterpret_cast<const uint8_t*>(data);
     for(int i = 0, j = 0; i < size; i++)
     {
-        str[j++] = digits[data_ptr[i] >> 4];
-        str[j++] = digits[data_ptr[i] & 0x0F];
+        dst[j++] = digits[data_ptr[i] >> 4];
+        dst[j++] = digits[data_ptr[i] & 0x0F];
     }
 
-    return str;
+    return size;
+}
+
+/*----------------------------------------------------------------------------
+ * b16decode
+ *----------------------------------------------------------------------------*/
+int StringLib::b16decode(const char* str, int size, bool lower_case, uint8_t* dst)
+{
+    assert(dst);
+    assert(str);
+    assert(size > 0);
+    assert(size % 2 == 0);
+
+    static const char* lower_digits = "0123456789abcdef";
+    static const char* upper_digits = "0123456789ABCDEF";
+
+    const char* digits;
+    if(lower_case) digits = lower_digits;
+    else digits = upper_digits;
+
+    int j = 0;
+    for(int i = 0; i < size; i += 2)
+    {
+        const char* hi = strchr(digits, str[i]);
+        const char* lo = strchr(digits, str[i + 1]);
+        if(!hi || !lo) return j; // early exit, failure
+        dst[j++] = static_cast<uint8_t>((hi - digits) << 4 | (lo - digits));
+    }
+
+    return j;
 }
 
 /*----------------------------------------------------------------------------
