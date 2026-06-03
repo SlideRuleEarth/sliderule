@@ -3,7 +3,7 @@
 .coverage
 .coverage.*
 .github/copilot-instructions.md
-
+.claude/
 
 # excces nc file
 *.nc

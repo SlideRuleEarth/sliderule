@@ -537,6 +537,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None)
                     dictionary of parameters used to read tif file
                     "off" is the value used for off
                     "res" is the pixel size
+                    "flipup": reverse the vertical orientation
+                    "fliplr": reverse the horizontal orientation
                     "bbox" is [lonmin, latmin, lonmax, latmax]
 
     Returns
@@ -614,6 +616,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None)
             warnings.simplefilter("ignore", rasterio.errors.NotGeoreferencedWarning)
             with rasterio.open(source) as dataset:
                 data = dataset.read(1)
+                if "flipup" in tif_parms and tif_parms["flipup"]:
+                    data = numpy.flipud(data)
+                if "fliplr" in tif_parms and tif_parms["fliplr"]:
+                    data = numpy.flipud(data)
                 bits = numpy.packbits((data.flatten() != tif_parms["off"]).astype(numpy.uint8))
                 raster = {"b16mask": bits.tobytes().hex()}
                 if dataset.crs is not None:
