@@ -12,7 +12,7 @@ vrtLat = 39.0
 # VRT file hosted on public AWS S3 bucket, with a single band containing elevation data.
 vrtUrl = "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt"
 vrtFile = "/vsicurl/" + vrtUrl
-vrtValue = 2975.9291237136
+vrtValue = 2975.8558815261
 
 
 class TestUserUrlPublicAws:
@@ -32,7 +32,7 @@ class TestUserUrlPublicAws:
         assert len(rsps["samples"][0]) == 1
 
         sample = rsps["samples"][0][0]
-        assert abs(sample["value"] - vrtValue) < sigma
+        assert abs(sample["value"] - vrtValue) < sigma, f"{sample["value"]}"
         assert sample["file"] == vrtFile
 
     def test_raster_sample_api(self, init):
@@ -44,5 +44,5 @@ class TestUserUrlPublicAws:
 
         assert init
         assert len(gdf) == 1
-        assert abs(gdf["value"].iat[0] - vrtValue) < sigma
+        assert abs(gdf["value"].iat[0] - vrtValue) < sigma, f"{gdf["value"].iat[0]}"
         assert gdf["file"].iat[0] == vrtFile

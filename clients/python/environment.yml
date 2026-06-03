@@ -4,6 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - boto3
   - coverage
   - cryptography
   - geopandas

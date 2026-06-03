@@ -571,6 +571,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None)
         {"lon": -108.2878686387796,"lat": 38.89051431295789},
         {"lon": -108.20772968780051,"lat": 38.8232055291981}    ]
     '''
+    # Initialize Output Variables
+    gdf = None
+    raster = None
+
     # GeoDataFrame
     if isinstance(source, geopandas.GeoDataFrame):
         gdf = source
