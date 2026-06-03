@@ -236,7 +236,7 @@ const T& FieldMap<T>::operator[](const char* key) const
  *       schemas:
  *         <object name>:
  *           type: object                       <---- from here
- *           description: <decsription>
+ *           description: <description>
  *           properties:                        <---- to here
  *             <field name>:
  *               type: object | string | number | integer | boolean | array

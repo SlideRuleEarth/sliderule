@@ -1233,7 +1233,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
     field_def.exttype = NULL;
 
     /* Set Description */
-    field_def.decsription = "None";
+    field_def.description = "None";
 
     /* Define Field */
     const RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, &field_def);

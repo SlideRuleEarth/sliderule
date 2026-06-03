@@ -1808,7 +1808,7 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const fie
         f.elements = field->elements;
         f.exttype = field->exttype;
         f.flags = field->flags;
-        f.description = field->decsription;
+        f.description = field->description;
 
         // uniquely add the field
         if(def->fields.add(field->name, f, true))

@@ -136,7 +136,7 @@ class RecordObject
             int32_t         elements;
             const char*     exttype;
             uint64_t        flags;              // 64-bits provided here to consume padding
-            const char*     decsription;
+            const char*     description;
         } fieldDef_t;
 
         typedef enum {
