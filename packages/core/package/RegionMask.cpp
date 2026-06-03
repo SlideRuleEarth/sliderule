@@ -53,7 +53,7 @@ const char* RegionMask::B16MASK_FORMAT = "b16mask";
  *----------------------------------------------------------------------------*/
 void RegionMask::registerRasterizer (const char* format, burn_func_t func)
 {
-    rasterizer_t rasterizer = {
+    const rasterizer_t rasterizer = {
         .format = format,
         .burn_func = func
     };
@@ -65,32 +65,35 @@ void RegionMask::registerRasterizer (const char* format, burn_func_t func)
  *----------------------------------------------------------------------------*/
 void RegionMask::decodeB16mask(RegionMask& image)
 {
+    // this should only be called once
+    if(image.data) throw RunTimeException(CRITICAL, RTE_FAILURE, "Data is already populated");
+
     // get and check rows of raster
-    uint32_t rows = static_cast<uint32_t>((image.latMax.value - image.latMin.value) / image.cellSize.value);
+    const uint32_t rows = static_cast<uint32_t>((image.latMax.value - image.latMin.value) / image.cellSize.value);
     if(rows > MAX_ROWS)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Number of rows exceeds maximum allowed: %u", rows);
     }
 
     // get and check columns of raster
-    uint32_t cols = static_cast<uint32_t>((image.lonMax.value - image.lonMin.value) / image.cellSize.value);
+    const uint32_t cols = static_cast<uint32_t>((image.lonMax.value - image.lonMin.value) / image.cellSize.value);
     if(cols > MAX_COLS)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Number of columns exceeds maximum allowed: %u", cols);
     }
 
     // get and check size of raster
-    uint32_t data_size = rows * cols;
-    size_t expected_b16_size = data_size / 8 * 2; // 8 bits per byte, 2 ASCII bytes per byte
+    const uint32_t data_size = rows * cols;
+    const size_t expected_b16_size = data_size / 8 * 2; // 8 bits per byte, 2 ASCII bytes per byte
     if(image.b16mask.value.length() != expected_b16_size)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid b16 size: %lu (expected %lu)", image.b16mask.value.length(), expected_b16_size);
     }
 
     // decode raster
-    size_t bit_array_length = image.b16mask.value.length() / 2;
+    const size_t bit_array_length = image.b16mask.value.length() / 2;
     uint8_t* bit_array = new uint8_t [bit_array_length];
-    uint32_t bytes_decoded = StringLib::b16decode(image.b16mask.value.c_str(), image.b16mask.value.length(), true, bit_array);
+    const uint32_t bytes_decoded = StringLib::b16decode(image.b16mask.value.c_str(), image.b16mask.value.length(), true, bit_array);
     if(bytes_decoded != bit_array_length)
     {
         delete [] bit_array;

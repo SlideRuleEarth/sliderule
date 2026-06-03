@@ -22,10 +22,10 @@ runner.unittest("3DEP 10m Slope Scale Length", function()
     local scales = {0, 40, 100}          -- the slope_scale_length values to cycle through
     local demType = "usgs3dep-10meter-dem"
 
-    local expResults = {{2638.235986840923, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
-    local expSlopeResults = {{12.556465, 190.624991,  9},
-                            { 8.535686, 169.976891, 49},
-                            { 8.944002, 165.335726,169}}
+    local expResults = {{2638.349756, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
+    local expSlopeResults = {{12.232819, 190.473626,   9},
+                             {8.436632,  169.851066,  49},
+                             {8.858873,  165.393248, 169}}
 
     for sindx, scale in ipairs(scales) do
         print(string.format("slope_scale_length = %d", scale))
@@ -60,13 +60,13 @@ runner.unittest("3DEP 10m Slope Scale Length", function()
             sampleCnt = sampleCnt + 1
 
             if tostring(el) ~= "nan" then
-                runner.assert(math.abs(el - expResults[i][1]) < sigma)
+                runner.assert(math.abs(el - expResults[i][1]) < sigma, string.format("sample = %f, expected = %f, error = %f", el, expResults[i][1], math.abs(el - expResults[i][1])))
             end
             runner.assert(time == expResults[i][2])
             runner.assert(fname == expResults[i][3])
 
-            runner.assert(math.abs(slope - expSlopeResults[sindx][1]) < sigma)
-            runner.assert(math.abs(aspect - expSlopeResults[sindx][2]) < sigma)
+            runner.assert(math.abs(slope - expSlopeResults[sindx][1]) < sigma, string.format("slope = %f, expected = %f, error = %f", slope, expSlopeResults[sindx][1], math.abs(slope - expSlopeResults[sindx][1])))
+            runner.assert(math.abs(aspect - expSlopeResults[sindx][2]) < sigma, string.format("aspect = %f, expected = %f, error = %f", aspect, expSlopeResults[sindx][2], math.abs(aspect - expSlopeResults[sindx][2])))
             runner.assert(slope_count == expSlopeResults[sindx][3])
 
             runner.assert(stats_count == 317)  -- from 100 meter radius

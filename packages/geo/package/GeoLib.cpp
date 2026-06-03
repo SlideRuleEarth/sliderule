@@ -833,7 +833,7 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
 void GeoLib::burnGeoJson(RegionMask& image)
 {
     // this should only be called once
-    if(!image.data) throw RunTimeException(CRITICAL, RTE_FAILURE, "Data is already populated");
+    if(image.data) throw RunTimeException(CRITICAL, RTE_FAILURE, "Data is already populated");
 
     // create geojson raster
     GeoJsonRaster* raster = GeoJsonRaster::create(image.geojson.value, image.cellSize.value);

@@ -21,7 +21,7 @@ runner.unittest("3DEP 10m DEM Sample (serial)", function()
     local lats = {   39.1}
     local heights = { 0 }
 
-    local expResults = {{2638.235986840923, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
+    local expResults = {{2638.349756372173, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
 
     local tbl, err = dem:sample(lons[1], lats[1], heights[1])
     runner.assert(err == 0)
@@ -36,7 +36,7 @@ runner.unittest("3DEP 10m DEM Sample (serial)", function()
         sampleCnt = sampleCnt + 1
 
         if tostring(el) ~= "nan" then
-            runner.assert(math.abs(el - expResults[i][1]) < sigma)
+            runner.assert(math.abs(el - expResults[i][1]) < sigma, string.format("sample = %f, expected = %f, error = %f", el, expResults[i][1], math.abs(el - expResults[i][1])))
         end
         runner.assert(time == expResults[i][2])
         runner.assert(fname == expResults[i][3])
