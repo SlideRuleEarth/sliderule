@@ -68,6 +68,8 @@ class S3CurlIODriver: public Asset::IODriver
 
         static IODriver*    create          (const Asset* _asset, const char* resource);
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
+        string              path            (void) override;
+        int64_t             size            (void) override;
 
         // fixed GET - memory preallocated
         static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,
@@ -89,7 +91,12 @@ class S3CurlIODriver: public Asset::IODriver
                                              const char* bucket, const char* key, const char* endpoint,
                                              const CredentialStore::Credential* credentials);
 
+        // HEAD - return size of object in bytes
+        static int64_t      probe           (const char* bucket, const char* key, const char* endpoint,
+                                             const CredentialStore::Credential* credentials);
+
         static int          luaGet          (lua_State* L);
+        static int          luaProbe        (lua_State* L);
         static int          luaDownload     (lua_State* L);
         static int          luaRead         (lua_State* L);
         static int          luaUpload       (lua_State* L);

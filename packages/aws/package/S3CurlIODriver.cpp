@@ -147,7 +147,7 @@ static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 /*----------------------------------------------------------------------------
  * buildReadHeadersV2
  *----------------------------------------------------------------------------*/
-static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const CredentialStore::Credential* credentials)
+static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const CredentialStore::Credential* credentials, const char* verb="GET")
 {
     /* Initial HTTP Header List */
     struct curl_slist* headers = NULL;
@@ -166,7 +166,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const 
         headers = curl_slist_append(headers, securityTokenHeader.c_str());
 
         /* Build Authorization Header */
-        const FString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.c_str(), securityTokenHeader.c_str(), bucket, key);
+        const FString stringToSign("%s\n\n\n%s\n%s\n/%s/%s", verb, date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
         HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
@@ -393,6 +393,22 @@ Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resour
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     return get(data, size, pos, ioBucket, ioKey, asset->getEndpoint(), &latestCredentials);
+}
+
+/*----------------------------------------------------------------------------
+ * path
+ *----------------------------------------------------------------------------*/
+string S3CurlIODriver::path (void)
+{
+    return FString("s3://%s/%s", ioBucket, ioKey).c_str();
+}
+
+/*----------------------------------------------------------------------------
+ * size
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::size (void)
+{
+    return probe(ioBucket, ioKey, asset->getEndpoint(), &latestCredentials);
 }
 
 /*----------------------------------------------------------------------------
@@ -815,6 +831,91 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
 }
 
 /*----------------------------------------------------------------------------
+ * probe - HEAD request to retrieve object size
+ *----------------------------------------------------------------------------*/
+int64_t S3CurlIODriver::probe (const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
+{
+    bool status = false;
+    int64_t object_size = -1;
+
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
+
+    /* Build URL */
+    const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
+
+    /* Issue HEAD Request */
+    int attempts = ATTEMPTS_PER_REQUEST;
+    while(!status && (attempts-- > 0))
+    {
+        /* Build Headers (signed as HEAD) */
+        struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials, "HEAD");
+
+        /* Initialize cURL Request */
+        CURL* curl = initializeReadRequest(url, headers, NULL, NULL);
+        if(curl)
+        {
+            /* Convert to HEAD - no body transferred */
+            curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+
+            /* Perform Request */
+            const CURLcode res = curl_easy_perform(curl);
+            if(res == CURLE_OK)
+            {
+                /* Get HTTP Code */
+                long http_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if(http_code < 300)
+                {
+                    /* Get Content Length */
+                    curl_off_t cl = -1;
+                    curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &cl);
+                    if(cl >= 0)
+                    {
+                        object_size = static_cast<int64_t>(cl);
+                        status = true;
+                    }
+                    else
+                    {
+                        mlog(ERROR, "S3 probe missing Content-Length: %s", key_ptr);
+                    }
+                }
+                else
+                {
+                    mlog(ERROR, "S3 probe returned http error <%ld>: %s", http_code, key_ptr);
+                }
+            }
+            else if(res == CURLE_OPERATION_TIMEDOUT)
+            {
+                mlog(ERROR, "cURL probe timed out (%d) for request: %s", res, key_ptr);
+                OsApi::performIOTimeout();
+            }
+            else
+            {
+                mlog(ERROR, "cURL probe failed (%d) for request: %s", res, key_ptr);
+                OsApi::performIOTimeout();
+            }
+
+            /* Clean Up cURL */
+            curl_easy_cleanup(curl);
+        }
+
+        /* Clean Up Headers */
+        curl_slist_free_all(headers);
+    }
+
+    /* Throw Exception on Failure */
+    if(!status)
+    {
+        throw RunTimeException(ERROR, RTE_FAILURE, "cURL probe request to S3 failed");
+    }
+
+    /* Return Object Size */
+    return object_size;
+}
+
+/*----------------------------------------------------------------------------
  * luaGet - s3get(<bucket>, <key>, [<endpoint>], [<identity>]) -> contents
  *----------------------------------------------------------------------------*/
 int S3CurlIODriver::luaGet(lua_State* L)
@@ -854,6 +955,44 @@ int S3CurlIODriver::luaGet(lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error getting S3 object: %s", e.what());
+    }
+
+    /* Return Results */
+    lua_pushboolean(L, status);
+    return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * luaProbe - s3probe(<bucket>, <key>, [<endpoint>], [<identity>]) -> size of object
+ *----------------------------------------------------------------------------*/
+int S3CurlIODriver::luaProbe(lua_State* L)
+{
+    bool status = false;
+    int num_rets = 1;
+    const FString default_endpoint("s3.%s.amazonaws.com", SystemConfig::settings().projectRegion.value.c_str());
+
+    try
+    {
+        /* Get Parameters */
+        const char* bucket      = LuaObject::getLuaString(L, 1);
+        const char* key         = LuaObject::getLuaString(L, 2);
+        const char* endpoint    = LuaObject::getLuaString(L, 3, true, default_endpoint.c_str());
+        const char* identity    = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_IDENTITY);
+
+        /* Get Credentials */
+        const CredentialStore::Credential credentials = CredentialStore::get(identity);
+
+        /* Make Request */
+        const int64_t obj_size = probe(bucket, key, endpoint, &credentials);
+
+        /* Return Results */
+        lua_pushinteger(L, obj_size);
+        status = true;
+        num_rets++;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error probing S3 object: %s", e.what());
     }
 
     /* Return Results */

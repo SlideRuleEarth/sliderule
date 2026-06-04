@@ -43,7 +43,7 @@
  * FILE IO DRIVER CLASS
  ******************************************************************************/
 
-class FileIODriver: Asset::IODriver
+class FileIODriver: public Asset::IODriver
 {
     public:
 
@@ -57,8 +57,10 @@ class FileIODriver: Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-        static IODriver*    create  (const Asset* _asset, const char* resource);
-        int64_t             ioRead  (uint8_t* data, int64_t size, uint64_t pos) override;
+        static IODriver*    create      (const Asset* _asset, const char* resource);
+        int64_t             ioRead      (uint8_t* data, int64_t size, uint64_t pos) override;
+        string              path        (void) override;
+        int64_t             size        (void) override;
 
     private:
 
@@ -74,6 +76,7 @@ class FileIODriver: Asset::IODriver
          *--------------------------------------------------------------------*/
 
         const Asset*    asset;
+        string          filePath;
         fileptr_t       ioFile;
 };
 

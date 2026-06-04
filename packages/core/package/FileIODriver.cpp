@@ -38,6 +38,8 @@
 #include "Asset.h"
 #include "StringLib.h"
 
+#include <sys/stat.h>
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -72,13 +74,34 @@ int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 }
 
 /*----------------------------------------------------------------------------
+ * path
+ *----------------------------------------------------------------------------*/
+string FileIODriver::path (void)
+{
+    return filePath;
+}
+
+/*----------------------------------------------------------------------------
+ * size
+ *----------------------------------------------------------------------------*/
+int64_t FileIODriver::size (void)
+{
+    struct stat st;
+    if(fstat(fileno(ioFile), &st) != 0)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to get size of file: %s", filePath.c_str());
+    }
+    return static_cast<int64_t>(st.st_size);
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 FileIODriver::FileIODriver (const Asset* _asset, const char* resource):
-    asset(_asset)
+    asset(_asset),
+    filePath(FString("%s/%s", asset->getPath(), resource).c_str())
 {
-    const FString filepath("%s/%s", asset->getPath(), resource);
-    ioFile = fopen(filepath.c_str(), "r");
+    ioFile = fopen(filePath.c_str(), "r");
     if(ioFile == NULL)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to open resource");

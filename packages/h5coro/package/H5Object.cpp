@@ -44,6 +44,7 @@
 const char* H5Object::OBJECT_TYPE = "H5Object";
 const char* H5Object::LUA_META_NAME = "H5Object";
 const struct luaL_Reg H5Object::LUA_META_TABLE[] = {
+    {"size",        luaSize},
     {NULL,          NULL}
 };
 
@@ -92,4 +93,25 @@ H5Object::H5Object (lua_State* L, Asset* _asset, const char* resource, uint32_t 
 H5Object::~H5Object (void)
 {
     asset->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ luaSize - size() -> size of object
+ *----------------------------------------------------------------------------*/
+int H5Object::luaSize(lua_State* L)
+{
+    try
+    {
+        H5Object* h5_obj = dynamic_cast<H5Object*>(LuaObject::getLuaSelf(L, 1));
+        const int64_t size = h5_obj->ioDriver->size();
+        lua_pushinteger(L, size);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error probing S3 object: %s", e.what());
+        lua_pushboolean(L, false);
+    }
+
+    /* Return Results */
+    return 1;
 }

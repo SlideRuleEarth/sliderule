@@ -67,6 +67,7 @@ int aws_open (lua_State *L)
         {"csget",       CredentialStore::luaGet},
         {"csput",       CredentialStore::luaPut},
         {"s3get",       S3CurlIODriver::luaGet},
+        {"s3probe",     S3CurlIODriver::luaProbe},
         {"s3download",  S3CurlIODriver::luaDownload},
         {"s3read",      S3CurlIODriver::luaRead},
         {"s3upload",    S3CurlIODriver::luaUpload},

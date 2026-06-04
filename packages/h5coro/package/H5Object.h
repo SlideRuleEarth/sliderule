@@ -71,6 +71,8 @@ class H5Object: public LuaObject, public H5Coro::Context
         H5Object    (lua_State* L, Asset* _asset, const char* resource, uint32_t option_flags=0);
         ~H5Object   (void) override;
 
+        static int  luaSize (lua_State* L);
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

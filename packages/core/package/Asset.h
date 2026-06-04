@@ -71,6 +71,8 @@ class Asset: public LuaObject
                                     IODriver    (void);
                 virtual             ~IODriver   (void);
                 virtual int64_t     ioRead      (uint8_t* data, int64_t size, uint64_t pos);
+                virtual string      path        (void);
+                virtual int64_t     size        (void);
         };
 
         /*--------------------------------------------------------------------
