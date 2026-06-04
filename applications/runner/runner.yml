@@ -276,6 +276,11 @@ Resources:
     Properties:
       LaunchTemplateData:
         ImageId: !Sub '{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}'
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub "${AWS::StackName}-job-runner"
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
             Ebs:

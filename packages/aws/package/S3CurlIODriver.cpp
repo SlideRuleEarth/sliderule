@@ -74,7 +74,6 @@ typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
 /*----------------------------------------------------------------------------
  * sha256hash
  *----------------------------------------------------------------------------*/
-#if 0
 #define SHA256_HEX_STR_SIZE ((SHA256_DIGEST_LENGTH * 2) + 1)
 static void sha256hash(const void* data, size_t len, char* dst)
 {
@@ -88,7 +87,6 @@ static void sha256hash(const void* data, size_t len, char* dst)
     EVP_MD_CTX_free(context);
     StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
 }
-#endif
 
 /*----------------------------------------------------------------------------
  * curlWriteFixed
@@ -226,86 +224,87 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
 
 /*----------------------------------------------------------------------------
  * buildWriteHeadersV4
- *
- * Does not work, the response from AWS is:
- *  "The AWS Access Key Id you provided does not exist in our records."
- *
- * Looks like the issue is related to how to provide the session token
- * when using temporary credentials
  *----------------------------------------------------------------------------*/
-#if 0
-static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials, long content_length)
+static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* endpoint, const char* region, const CredentialStore::Credential* credentials, long content_length)
 {
     /* Must Supply Credentials */
-    if(!credentials || !credentials->provided)
+    if(!credentials || credentials->expiration.value.empty())
     {
         return NULL;
     }
 
-    /* Build Date String */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
-    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
-    FString timestamp("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+    /* Massage Key */
+    const char* key_ptr = key;
+    if(key_ptr[0] == '/') key_ptr++;
 
-    /* Build Canonical Request */
+    /* Get Session Token Present */
+    const char* token = credentials->sessionToken.value.c_str();
+
+    /* Build Date Strings */
+    const TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
+    const TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    const FString timestamp("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+    const FString date("%04d%02d%02d", gmt_date.year, gmt_date.month, gmt_date.day);
+
+    /* Build Signed Headers List (sorted, lowercase, semicolon-separated) */
+    const char* signed_headers = "content-length;host;x-amz-content-sha256;x-amz-date;x-amz-security-token";
+
+    /* Build Canonical Request and Hash */
     char canonical_request_hash[SHA256_HEX_STR_SIZE];
-    FString canonical_request("PUT\n/%s\n\ncontent-length:%ld\ndate:%s\nhost:%s.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\ncontent-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token\nUNSIGNED-PAYLOAD",
-                                    key, content_length, timestamp.c_str(), bucket, timestamp.c_str(), credentials->sessionToken.value.c_str());
+    const FString canonical_request(
+        "PUT\n/%s/%s\n\ncontent-length:%ld\nhost:%s\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\n%s\nUNSIGNED-PAYLOAD",
+        bucket, key_ptr, content_length, endpoint, timestamp.c_str(), token, signed_headers);
     sha256hash(canonical_request.c_str(), canonical_request.length(), canonical_request_hash);
 
-    /* Build String To Sign */
-    FString date("%04d%02d%02d", gmt_date.year, gmt_date.month, gmt_date.day);
-    FString scope("%s/%s/s3/aws4_request", date.c_str(), region);
-    FString str2sign("AWS4-HMAC-SHA256\n%s\n%s\n%s", timestamp.c_str(), scope.c_str(), canonical_request_hash);
+    /* Build String to Sign */
+    const FString scope("%s/%s/s3/aws4_request", date.c_str(), region);
+    const FString str2sign("AWS4-HMAC-SHA256\n%s\n%s\n%s", timestamp.c_str(), scope.c_str(), canonical_request_hash);
 
-    /* Calculate Signature */
-    FString secret_access_key_str2sign("AWS4%s", credentials->secretAccessKey.value.c_str());
+    /* Derive Signing Key */
+    const FString secret_access_key_str2sign("AWS4%s", credentials->secretAccessKey.value.c_str());
 
     unsigned char date_key[EVP_MAX_MD_SIZE];
-    unsigned int date_key_size = EVP_MAX_MD_SIZE; // set below with actual size
-    HMAC(EVP_sha256(), secret_access_key_str2sign.c_str(), secret_access_key_str2sign.length(), (unsigned char*)date.c_str(), date.length(), date_key, &date_key_size);
+    unsigned int date_key_size = EVP_MAX_MD_SIZE;
+    HMAC(EVP_sha256(), reinterpret_cast<const unsigned char*>(secret_access_key_str2sign.c_str()), secret_access_key_str2sign.length(),
+         reinterpret_cast<const unsigned char*>(date.c_str()), date.length(), date_key, &date_key_size);
 
     unsigned char date_region_key[EVP_MAX_MD_SIZE];
-    unsigned int date_region_key_size = EVP_MAX_MD_SIZE; // set below with actual size
-    HMAC(EVP_sha256(), date_key, date_key_size, (unsigned char*)region, StringLib::size(region), date_region_key, &date_region_key_size);
+    unsigned int date_region_key_size = EVP_MAX_MD_SIZE;
+    HMAC(EVP_sha256(), date_key, date_key_size,
+         reinterpret_cast<const unsigned char*>(region), StringLib::size(region), date_region_key, &date_region_key_size);
 
     unsigned char date_region_service_key[EVP_MAX_MD_SIZE];
-    unsigned int date_region_service_key_size = EVP_MAX_MD_SIZE; // set below with actual size
-    HMAC(EVP_sha256(), date_region_key, date_region_key_size, (unsigned char*)"s3", 2, date_region_service_key, &date_region_service_key_size);
+    unsigned int date_region_service_key_size = EVP_MAX_MD_SIZE;
+    HMAC(EVP_sha256(), date_region_key, date_region_key_size,
+         reinterpret_cast<const unsigned char*>("s3"), 2, date_region_service_key, &date_region_service_key_size);
 
     unsigned char signing_key[EVP_MAX_MD_SIZE];
-    unsigned int signing_key_size = EVP_MAX_MD_SIZE; // set below with actual size
-    HMAC(EVP_sha256(), date_region_service_key, date_region_service_key_size, (unsigned char*)"aws4_request", 12, signing_key, &signing_key_size);
+    unsigned int signing_key_size = EVP_MAX_MD_SIZE;
+    HMAC(EVP_sha256(), date_region_service_key, date_region_service_key_size,
+         reinterpret_cast<const unsigned char*>("aws4_request"), 12, signing_key, &signing_key_size);
 
+    /* Sign the String to Sign */
     unsigned char signature[EVP_MAX_MD_SIZE];
-    unsigned int signature_size = EVP_MAX_MD_SIZE; // set below with actual size
-    HMAC(EVP_sha256(), signing_key, signing_key_size, (unsigned char*)str2sign.c_str(), str2sign.length(), signature, &signature_size);
+    unsigned int signature_size = EVP_MAX_MD_SIZE;
+    HMAC(EVP_sha256(), signing_key, signing_key_size,
+         reinterpret_cast<const unsigned char*>(str2sign.c_str()), str2sign.length(), signature, &signature_size);
 
     char signature_hex[SHA256_HEX_STR_SIZE];
     StringLib::b16encode(signature, signature_size, true, signature_hex);
 
-    /* Initialize and Remove Unwanted Headers */
-    struct curl_slist* headers = NULL;
-    headers = curl_slist_append(headers, "Transfer-Encoding:");
-
     /* Build Headers */
-    FString date_hdr("Date: %s", timestamp.c_str());
-    headers = curl_slist_append(headers, date_hdr.c_str());
-    FString content_length_hdr("Content-Length: %ld", content_length);
-    headers = curl_slist_append(headers, content_length_hdr.c_str());
-    FString auth_hdr("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request,SignedHeaders=content-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token,Signature=%s", credentials->accessKeyId, date.c_str(), region, signature_hex);
-    headers = curl_slist_append(headers, auth_hdr.c_str());
-    FString amz_date_hdr("x-amz-date: %s", timestamp.c_str());
-    headers = curl_slist_append(headers, amz_date_hdr.c_str());
-    FString amz_token_hdr("x-amz-security-token: %s", credentials->sessionToken.value.c_str());
-    headers = curl_slist_append(headers, amz_date_hdr.c_str());
-    FString amz_content_sha256_hdr("x-amz-content-sha256: %s", "UNSIGNED-PAYLOAD");
-    headers = curl_slist_append(headers, amz_content_sha256_hdr.c_str());
+    struct curl_slist* headers = NULL;
+    headers = curl_slist_append(headers, "Transfer-Encoding:"); // strip Transfer-Encoding curl might otherwise add
+    headers = curl_slist_append(headers, FString("x-amz-date: %s", timestamp.c_str()).c_str());
+    headers = curl_slist_append(headers, FString("x-amz-content-sha256: %s", "UNSIGNED-PAYLOAD").c_str());
+    headers = curl_slist_append(headers, FString("x-amz-security-token: %s", token).c_str());
+    headers = curl_slist_append(headers, FString("Content-Length: %ld", content_length).c_str());
+    headers = curl_slist_append(headers, FString("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s", credentials->accessKeyId.value.c_str(), scope.c_str(), signed_headers, signature_hex).c_str());
 
-    /* Return Headers */
     return headers;
 }
-#endif
+
+
 /*----------------------------------------------------------------------------
  * initializeReadRequest
  *----------------------------------------------------------------------------*/
@@ -763,8 +762,25 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
         const char* key_ptr = key;
         if(key_ptr[0] == '/') key_ptr++;
 
+        /* Extract Region from Endpoint (expects "s3.<region>.amazonaws.com") */
+        const char* region = NULL;
+        char region_buf[64];
+        const int s3_prefix_len = 3;
+        const int s3_suffix_len = 14;
+        const int endpoint_len = StringLib::size(endpoint);
+        const int region_len = endpoint_len - s3_prefix_len - s3_suffix_len;
+        if( (region_len > 0 && region_len < 64) &&
+            (strncmp(endpoint, "s3.", s3_prefix_len) == 0) &&
+            (strcmp(endpoint + endpoint_len - s3_suffix_len, ".amazonaws.com") == 0) )
+        {
+            memcpy(region_buf, endpoint + s3_prefix_len, region_len);
+            region_buf[region_len] = '\0';
+            region = region_buf;
+        }
+
         /* Build Headers */
-        headers = buildWriteHeadersV2(bucket, key_ptr, credentials, content_length);
+        if(region)  headers = buildWriteHeadersV4(bucket, key_ptr, endpoint, region, credentials, content_length);
+        else        headers = buildWriteHeadersV2(bucket, key_ptr, credentials, content_length);
 
         /* Build URL */
         const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
