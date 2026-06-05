@@ -312,7 +312,6 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     if(sha256_b64)
     {
         headers = curl_slist_append(headers, FString("x-amz-checksum-sha256: %s", sha256_b64).c_str());
-        headers = curl_slist_append(headers, "x-amz-sdk-checksum-algorithm: SHA256");
     }
     headers = curl_slist_append(headers, FString("x-amz-security-token: %s", token).c_str());
     headers = curl_slist_append(headers, FString("Content-Length: %ld", content_length).c_str());
