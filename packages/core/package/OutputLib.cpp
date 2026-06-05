@@ -167,7 +167,7 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
         {
             try
             {
-                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->endpoint.value.c_str(), &parms->credentials);
+                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->endpoint.value.c_str(), &parms->credentials, parms->withChecksum);
             }
             catch(const RunTimeException& e)
             {

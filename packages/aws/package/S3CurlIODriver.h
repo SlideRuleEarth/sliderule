@@ -89,7 +89,7 @@ class S3CurlIODriver: public Asset::IODriver
         // file PUT - data read directly from file
         static int64_t      put             (const char* filename,
                                              const char* bucket, const char* key, const char* endpoint,
-                                             const CredentialStore::Credential* credentials);
+                                             const CredentialStore::Credential* credentials, bool with_checksum=false);
 
         // HEAD - return size of object in bytes
         static int64_t      probe           (const char* bucket, const char* key, const char* endpoint,

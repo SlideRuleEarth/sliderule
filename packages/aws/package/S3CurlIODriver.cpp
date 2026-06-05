@@ -225,7 +225,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
 /*----------------------------------------------------------------------------
  * buildWriteHeadersV4
  *----------------------------------------------------------------------------*/
-static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* endpoint, const char* region, const CredentialStore::Credential* credentials, long content_length)
+static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* endpoint, const char* region, const CredentialStore::Credential* credentials, long content_length, const char* sha256_b64)
 {
     /* Must Supply Credentials */
     if(!credentials || credentials->expiration.value.empty())
@@ -247,14 +247,26 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     const FString date("%04d%02d%02d", gmt_date.year, gmt_date.month, gmt_date.day);
 
     /* Build Signed Headers List (sorted, lowercase, semicolon-separated) */
-    const char* signed_headers = "content-length;host;x-amz-content-sha256;x-amz-date;x-amz-security-token";
+    const char* signed_headers = sha256_b64
+        ? "content-length;host;x-amz-checksum-sha256;x-amz-content-sha256;x-amz-date;x-amz-security-token"
+        : "content-length;host;x-amz-content-sha256;x-amz-date;x-amz-security-token";
 
     /* Build Canonical Request and Hash */
     char canonical_request_hash[SHA256_HEX_STR_SIZE];
-    const FString canonical_request(
-        "PUT\n/%s/%s\n\ncontent-length:%ld\nhost:%s\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\n%s\nUNSIGNED-PAYLOAD",
-        bucket, key_ptr, content_length, endpoint, timestamp.c_str(), token, signed_headers);
-    sha256hash(canonical_request.c_str(), canonical_request.length(), canonical_request_hash);
+    if(sha256_b64)
+    {
+        const FString canonical_request(
+            "PUT\n/%s/%s\n\ncontent-length:%ld\nhost:%s\nx-amz-checksum-sha256:%s\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\n%s\nUNSIGNED-PAYLOAD",
+            bucket, key_ptr, content_length, endpoint, sha256_b64, timestamp.c_str(), token, signed_headers);
+        sha256hash(canonical_request.c_str(), canonical_request.length(), canonical_request_hash);
+    }
+    else
+    {
+        const FString canonical_request(
+            "PUT\n/%s/%s\n\ncontent-length:%ld\nhost:%s\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\n%s\nUNSIGNED-PAYLOAD",
+            bucket, key_ptr, content_length, endpoint, timestamp.c_str(), token, signed_headers);
+        sha256hash(canonical_request.c_str(), canonical_request.length(), canonical_request_hash);
+    }
 
     /* Build String to Sign */
     const FString scope("%s/%s/s3/aws4_request", date.c_str(), region);
@@ -297,6 +309,11 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     headers = curl_slist_append(headers, "Transfer-Encoding:"); // strip Transfer-Encoding curl might otherwise add
     headers = curl_slist_append(headers, FString("x-amz-date: %s", timestamp.c_str()).c_str());
     headers = curl_slist_append(headers, FString("x-amz-content-sha256: %s", "UNSIGNED-PAYLOAD").c_str());
+    if(sha256_b64)
+    {
+        headers = curl_slist_append(headers, FString("x-amz-checksum-sha256: %s", sha256_b64).c_str());
+        headers = curl_slist_append(headers, "x-amz-sdk-checksum-algorithm: SHA256");
+    }
     headers = curl_slist_append(headers, FString("x-amz-security-token: %s", token).c_str());
     headers = curl_slist_append(headers, FString("Content-Length: %ld", content_length).c_str());
     headers = curl_slist_append(headers, FString("Authorization: AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s", credentials->accessKeyId.value.c_str(), scope.c_str(), signed_headers, signature_hex).c_str());
@@ -365,6 +382,91 @@ static CURL* initializeWriteRequest (const FString& url, headers_t headers, writ
 
     /* Return Handle */
     return curl;
+}
+
+/*----------------------------------------------------------------------------
+ * calculateChecksum
+ *----------------------------------------------------------------------------*/
+static string calculateChecksum (FILE* fd)
+{
+    string sha256_b64;
+    EVP_MD_CTX* context = NULL;
+    unsigned char* buffer = NULL;
+
+    try
+    {
+        /* Create Context for Digest */
+        context = EVP_MD_CTX_new();
+        if(!context)
+        {
+            throw RunTimeException(ERROR, RTE_FAILURE, "Failed to create context for checksum calculation");
+        }
+
+        /* Initialize Context for Digest */
+        if(!EVP_DigestInit_ex(context, EVP_sha256(), NULL))
+        {
+            throw RunTimeException(ERROR, RTE_FAILURE, "Failed to initialize context for checksum calculation");
+        }
+
+        /* Allocate File Buffer */
+        const size_t buffer_size = 0x100000; // 1MB
+        buffer = new unsigned char [buffer_size];
+
+        /* Read File and Update Digest */
+        while(true)
+        {
+            /* Read File */
+            const size_t bytes_read = fread(buffer, 1, buffer_size, fd);
+            if(bytes_read == 0)
+            {
+                if(ferror(fd))
+                {
+                    char err_buf[256];
+                    throw RunTimeException(ERROR, RTE_FAILURE, "Failed to read file: %s", strerror_r(errno, err_buf, sizeof(err_buf)));
+                }
+                break; // normal exit from loop
+            }
+
+            /* Update Digest */
+            if(!EVP_DigestUpdate(context, buffer, bytes_read))
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to update digest");
+            }
+        }
+
+        /* Finalize Digest */
+        unsigned char hash[SHA256_DIGEST_LENGTH];
+        unsigned int hash_size = 0;
+        if(!EVP_DigestFinal_ex(context, hash, &hash_size))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to finalize digest");
+        }
+        else if(hash_size != SHA256_DIGEST_LENGTH)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid hash size: %u", hash_size);
+        }
+
+        /* Populate Checksum */
+        sha256_b64 = StringLib::b64encode(hash, SHA256_DIGEST_LENGTH);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to calculate checksum: %s", e.what());
+    }
+
+    /* Clean Up */
+    if(context) EVP_MD_CTX_free(context);   // free digest context
+    delete [] buffer;                       // deallocate read buffer
+    fseek(fd, 0L, SEEK_SET);                // return file pointer to start of file
+
+    /* Check for Failed Checksum Calculation */
+    if(sha256_b64.empty())
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to calculate checksum");
+    }
+
+    /* Return Checksum */
+    return sha256_b64;
 }
 
 /******************************************************************************
@@ -732,7 +834,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
 /*----------------------------------------------------------------------------
  * put - file
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials, bool with_checksum)
 {
     CURL* curl = NULL;
     file_data_t data = {NULL, 0};
@@ -778,8 +880,16 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
             region = region_buf;
         }
 
+        /* Calculate Checksum */
+        string sha256_b64;
+        if(with_checksum)
+        {
+            if(region)  sha256_b64 = calculateChecksum(data.fd);
+            else        mlog(WARNING, "Skipping checksum calculation for v2 header write");
+        }
+
         /* Build Headers */
-        if(region)  headers = buildWriteHeadersV4(bucket, key_ptr, endpoint, region, credentials, content_length);
+        if(region)  headers = buildWriteHeadersV4(bucket, key_ptr, endpoint, region, credentials, content_length, !sha256_b64.empty() ? sha256_b64.c_str() : NULL);
         else        headers = buildWriteHeadersV2(bucket, key_ptr, credentials, content_length);
 
         /* Build URL */
