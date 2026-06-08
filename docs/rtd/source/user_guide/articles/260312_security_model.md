@@ -1,4 +1,4 @@
-# 2026-03-12: Security Model
+# Security Model
 
 :::{note}
 With release v5.2.0, SlideRule has overhauled and tighted its security model to prevent misuse of its public services.

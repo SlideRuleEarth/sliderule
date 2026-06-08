@@ -28,7 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #
-#  Uses the "event" endpoint to capture a set of traces and produce human 
+#  Uses the "event" endpoint to capture a set of traces and produce human
 #  readable results; also produces an output compatible with the GSFC
 #  Software Timing Analyzer developed by Steve Slegel.
 #
@@ -51,7 +51,7 @@ parser.add_argument('--organization',       type=str,               default=None
 parser.add_argument('--verbose',            action='store_true',    default=False)
 parser.add_argument('--depth',              type=int,               default=0)
 parser.add_argument('--filter',             type=str, nargs='+',    default=[])
-args,_ = parser.parse_known_args()
+args,_ = parser.parse_args()
 
 ###############################################################################
 # GLOBALS

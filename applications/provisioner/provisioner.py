@@ -895,7 +895,7 @@ if __name__ == '__main__':
     parser.add_argument('--api',            type=str,               default=None)
     parser.add_argument('--user_service',   action='store_true',    default=False)
     parser.add_argument('--verbose',        action='store_true',    default=False)
-    args,_ = parser.parse_known_args()
+    args,_ = parser.parse_args()
 
     # sliderule python client session
     session = sliderule.create_session(domain=DOMAIN, cluster=args.cluster, verbose=args.verbose, user_service=args.user_service)

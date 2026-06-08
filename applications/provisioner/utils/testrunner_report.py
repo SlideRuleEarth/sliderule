@@ -38,7 +38,7 @@ parser.add_argument('--testfile',   type=str,   default=None)
 parser.add_argument('--testdir',    type=str,   default="s3://sliderule/cf/testrunner")
 parser.add_argument('--branch',     type=str,   default="main")
 parser.add_argument('--output',     type=str,   default="/tmp/summary.json")
-args,_ = parser.parse_known_args()
+args,_ = parser.parse_args()
 
 # create S3 client
 s3_client = boto3.client("s3")

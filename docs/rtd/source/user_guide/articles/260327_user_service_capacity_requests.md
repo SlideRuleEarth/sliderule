@@ -1,4 +1,4 @@
-# 2026-03-27: User Service Capacity Requests
+# User Service Capacity Requests
 
 :::{note}
 With release v5.3.0, SlideRule supports provisioning internal sub-clusters on the public cluster that are dedicted to a specific user.

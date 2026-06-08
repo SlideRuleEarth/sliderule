@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description="""ATL24""")
 parser.add_argument('--collection_file',    type=str,   default="data/atl24_v2_granule_collection.csv")
 parser.add_argument('--parquet_file',       type=str,   default="data/atl24r2.parquet")
 parser.add_argument('--db_file',            type=str,   default="data/atl24r2.db")
-args,_ = parser.parse_known_args()
+args,_ = parser.parse_args()
 
 # -------------------------------------------
 # load collection

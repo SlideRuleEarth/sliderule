@@ -52,7 +52,7 @@ parser.add_argument('--verbose',        '-v',   action='store_true',    default=
 parser.add_argument('--loglvl',         '-j',   type=str,               default="CRITICAL")
 parser.add_argument('--nocleanup',      '-u',   action='store_true',    default=False)
 parser.add_argument('--no_aux',         '-x',   action='store_true',    default=False)
-args,_ = parser.parse_known_args()
+args,_ = parser.parse_args()
 
 # Initialize Organization
 if args.organization == "None":

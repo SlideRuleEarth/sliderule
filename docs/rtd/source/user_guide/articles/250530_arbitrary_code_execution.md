@@ -1,4 +1,4 @@
-# 2025-05-30: Arbitrary Code Execution
+# Arbitrary Code Execution
 
 :::{note}
 SlideRule now supports the execution of user supplied code (written as Lua scripts) on private clusters.

@@ -1,4 +1,4 @@
-# 2025-12-08: Public Cluster Release v5
+# Public Cluster Release v5
 
 :::{note}
 Version 5.0 of SlideRule has been officially released.  The changes include an overhaul of the private clusters, consistent ATL13 query formats, ATL24 release 002, improved earthdata error handling, and `h5p` slice support.  See release notes for full details.

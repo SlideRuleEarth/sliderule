@@ -31,7 +31,7 @@ parser.add_argument('--grid_aoi',       type=str,   default="/data/web/sliderule
 parser.add_argument('--grid_usage',     type=str,   default="/data/web/sliderule_usage_grid.png")
 parser.add_argument('--geonames',       type=str,   default="/data/geopy/cities500.txt") # from http://download.geonames.org/export/dump/cities500.zip
 parser.add_argument('--country_info',   type=str,   default="/data/geopy/countryInfo.txt") # from http://download.geonames.org/export/dump/countryInfo.txt
-args,_ = parser.parse_known_args()
+args,_ = parser.parse_args()
 
 # -------------------------------------------
 # constants

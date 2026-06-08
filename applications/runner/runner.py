@@ -459,7 +459,7 @@ if __name__ == '__main__':
     parser.add_argument('--vcpus',      type=int,               default=None)
     parser.add_argument('--memory',     type=int,               default=None)
     parser.add_argument('--verbose',    action='store_true',    default=False)
-    args,_ = parser.parse_known_args()
+    args,_ = parser.parse_args()
 
     # sliderule python client session
     session = sliderule.create_session(domain=DOMAIN)

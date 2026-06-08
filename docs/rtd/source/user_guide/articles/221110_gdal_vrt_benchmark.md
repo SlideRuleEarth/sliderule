@@ -1,4 +1,4 @@
-# 2022-11-10: VRT Performance Benchmarking
+# VRT Performance Benchmarking
 
 :::{note}
 GDAL VRT performance was benchmarked using the ArcticDEM mosaic dataset.

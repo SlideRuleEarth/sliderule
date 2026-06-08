@@ -1,4 +1,4 @@
-# 2026-01-20: Private Clusters
+# Private Clusters
 
 :::{note}
 With release v5.0.2, SlideRule has transitioned the management of private clusters from the django-based ***SlideRule Provisioning System*** which was deployed in AWS ECS, to the pure Python-based ***SlideRule Authenticator*** and ***SlideRule Provisioner*** which are deployed via AWS Lambda.  The main functions of the original system have been preserved, with a change in focus on clusters for individual users instead of organizations.  See release notes for full details: [https://docs.slideruleearth.io/developer_guide/release_notes/release-v05-00-00.html](https://docs.slideruleearth.io/developer_guide/release_notes/release-v05-00-00.html)

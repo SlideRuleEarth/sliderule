@@ -1,4 +1,4 @@
-# 2025-09-10: Building a Plugin for SlideRule
+# Building a Plugin for SlideRule
 
 :::{note}
 SlideRule plugins allow independent organizations to extend the functionality of SlideRule without needing to modify the SlideRule source code.  Independent development teams can build their plugins against the SlideRule code base and produce executable modules that can be loaded by the SlideRule executable at runtime.  These plugins leverage the features of SlideRule (scalabilty, web services, and data processing), while providing application-specific functionality.

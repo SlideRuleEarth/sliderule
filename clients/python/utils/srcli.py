@@ -49,7 +49,7 @@ parser.add_argument('--timezone',           type=str,               default="Ame
 parser.add_argument('--args',               nargs='+', type=str,    default=None)
 parser.add_argument('-j', '--asjson',       action='store_true',    default=False)
 parser.add_argument('-c', '--commands',     nargs='+', type=str,    default=[])
-args,_ = parser.parse_known_args()
+args,_ = parser.parse_args()
 
 # Create Session
 session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=True, user_service=args.user_service)
