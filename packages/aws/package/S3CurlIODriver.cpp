@@ -68,8 +68,38 @@ typedef struct curl_slist* headers_t;
 typedef size_t (*write_cb_t)(void*, size_t, size_t, void*);
 
 /******************************************************************************
+ * LOCAL DATA
+ ******************************************************************************/
+
+static CURLSH* curlShare = NULL;
+static Mutex curlShareMutex;
+
+/******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * sha256hash
+ *----------------------------------------------------------------------------*/
+static void shareLock(CURL *handle, curl_lock_data data, curl_lock_access access, void *userptr)
+{
+    (void)handle;
+    (void)data;
+    (void)access;
+    Mutex* mutex = reinterpret_cast<Mutex*>(userptr);
+    mutex->lock();
+}
+
+/*----------------------------------------------------------------------------
+ * sha256hash
+ *----------------------------------------------------------------------------*/
+static void shareUnlock(CURL *handle, curl_lock_data data, void *userptr)
+{
+    (void)handle;
+    (void)data;
+    Mutex* mutex = reinterpret_cast<Mutex*>(userptr);
+    mutex->unlock();
+}
 
 /*----------------------------------------------------------------------------
  * sha256hash
@@ -347,6 +377,7 @@ static CURL* initializeReadRequest (const FString& url, headers_t headers, write
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, S3CurlIODriver::SSL_VERIFYHOST);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, write_parm);
+        curl_easy_setopt(curl, CURLOPT_SHARE, curlShare);
     }
     else
     {
@@ -378,7 +409,7 @@ static CURL* initializeWriteRequest (const FString& url, headers_t headers, writ
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, S3CurlIODriver::SSL_VERIFYHOST);
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_cb);
         curl_easy_setopt(curl, CURLOPT_READDATA, read_parm);
-
+        curl_easy_setopt(curl, CURLOPT_SHARE, curlShare);
     }
     else
     {
@@ -484,6 +515,18 @@ const char* S3CurlIODriver::CURL_FORMAT = "s3";
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void S3CurlIODriver::init (void)
+{
+    curlShare = curl_share_init();
+    curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+    curl_share_setopt(curlShare, CURLSHOPT_LOCKFUNC, shareLock);
+    curl_share_setopt(curlShare, CURLSHOPT_UNLOCKFUNC, shareUnlock);
+    curl_share_setopt(curlShare, CURLSHOPT_USERDATA, &curlShareMutex);
+}
 
 /*----------------------------------------------------------------------------
  * create

@@ -93,6 +93,9 @@ void initaws (void)
     /* Initialize AWS SDK */
     Aws::InitAPI(options);
 
+    /* Initialize Modules */
+    S3CurlIODriver::init();
+
     /* Register I/O Drivers */
     Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
     Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);

@@ -66,6 +66,7 @@ class S3CurlIODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void         init            (void);
         static IODriver*    create          (const Asset* _asset, const char* resource);
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
         string              path            (void) override;
