@@ -26,7 +26,7 @@ parser.add_argument('--desired_nodes',  type=int,               default=None)
 parser.add_argument('--time_to_live',   type=int,               default=120)
 parser.add_argument('--verbose',        action='store_true',    default=False)
 parser.add_argument('--loglvl',         type=str,               default="CRITICAL")
-args,_ = parser.parse_args()
+args = parser.parse_args()
 
 # initialize organization
 if args.organization == "None":

@@ -16,7 +16,7 @@ parser.add_argument('--atl13_mappings',     type=str,               default="/da
 parser.add_argument('--atl13_granules',     type=str,               default="/data/ATL13/atl13_granules.parquet")
 parser.add_argument('--atl13_db',           type=str,               default="/data/atl13r7.db")
 parser.add_argument('--test_only',          action='store_true',    default=False)
-args,_ = parser.parse_args()
+args = parser.parse_args()
 
 # -------------------------------------------
 # build database

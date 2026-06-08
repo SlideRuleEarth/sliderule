@@ -5,6 +5,7 @@ RUN dnf update \
   && dnf groupinstall -y "Development Tools" \
   && dnf install -y \
   gcc14-c++ \
+  libasan8 \
   cmake \
   readline-devel \
   lua-devel \

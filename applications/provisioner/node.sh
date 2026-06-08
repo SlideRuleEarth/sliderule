@@ -65,7 +65,6 @@ services:
       - /etc/ssl/certs:/etc/ssl/certs
       - /var/run/docker.sock:/var/run/docker.sock
       - /data:/data
-      - /plugins:/plugins
     environment:
       - LOG_FORMAT=FMT_CLOUD
       - IPV4=$MYIP

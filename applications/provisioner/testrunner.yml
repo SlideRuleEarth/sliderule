@@ -235,11 +235,6 @@ Resources:
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/ams/ /data/ --recursive
           aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/server/ /data/ --recursive
           #
-          # Plugins
-          #
-          mkdir -p /plugins
-          aws s3 cp s3://${ProjectBucket}/plugins/ /plugins/ --recursive
-          #
           # Install Mamba
           #
           cd /

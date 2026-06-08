@@ -41,7 +41,7 @@ Result is pretty-printed PROJJSON (stdout or --outfile).""")
 parser.add_argument('crs',       type=str, help='Base CRS (EPSG:xxxx, WKT, PROJ, or PROJJSON)')
 parser.add_argument('datum',     type=str, nargs='?', default='NONE', help='Vertical datum: EGM08 | NAVD88 | NONE')
 parser.add_argument('--outfile', type=str, default=None, help='Write output to file instead of stdout')
-args,_ = parser.parse_args()
+args = parser.parse_args()
 
 ##############################
 # Helper Functions

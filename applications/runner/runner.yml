@@ -400,9 +400,6 @@ Resources:
             - Name: CONTAINER_REGISTRY
               Value: !Sub ${ContainerRegistry}
           Volumes:
-            - Name: plugins
-              Host:
-                SourcePath: /plugins
             - Name: data
               Host:
                 SourcePath: /data
@@ -410,9 +407,6 @@ Resources:
               Host:
                 SourcePath: /etc/ssl/certs
           MountPoints:
-            - SourceVolume: plugins
-              ContainerPath: /plugins
-              ReadOnly: true
             - SourceVolume: data
               ContainerPath: /data
               ReadOnly: true

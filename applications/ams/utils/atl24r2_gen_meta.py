@@ -190,7 +190,7 @@ if __name__ == "__main__":
     parser.add_argument("--release" ,       type=str,               default="002")
     parser.add_argument("--version" ,       type=str,               default="01")
     parser.add_argument('--skip_errors',    action='store_true',    default=False)
-    args,_ = parser.parse_args()
+    args = parser.parse_args()
 
     # ------------------------------------------------
     # Initialize

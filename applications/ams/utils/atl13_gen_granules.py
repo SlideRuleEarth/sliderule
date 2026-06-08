@@ -106,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument('--granule_cache',  type=str,   default="/data/ATL13/atl13_granules.txt")
     parser.add_argument('--atl13_granules', type=str,   default="/data/ATL13/atl13_granules.parquet")
     parser.add_argument("--cores",          type=int,   default=os.cpu_count())
-    args,_ = parser.parse_args()
+    args = parser.parse_args()
 
     # get list of granules to process
     granules = read_cache(args.granule_cache)

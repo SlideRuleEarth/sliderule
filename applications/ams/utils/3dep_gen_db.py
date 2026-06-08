@@ -13,7 +13,7 @@ from shapely.geometry import Polygon
 parser = argparse.ArgumentParser(description="""3DEP""")
 parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/3dep_catalog_v3.parquet")
 parser.add_argument('--db_file',        type=str,   default="/data/3dep.db")
-args,_ = parser.parse_args()
+args = parser.parse_args()
 
 # -------------------------------------------
 # load original parquet file

@@ -81,9 +81,15 @@ static void sha256hash(const void* data, size_t len, char* dst)
     unsigned int hash_size = 0;
     EVP_MD_CTX* context = EVP_MD_CTX_new();
     if(EVP_DigestInit_ex(context, EVP_sha256(), NULL))
-    if(EVP_DigestUpdate(context, data, len))
-    if(EVP_DigestFinal_ex(context, hash, &hash_size))
-    assert(hash_size == SHA256_DIGEST_LENGTH);
+    {
+        if(EVP_DigestUpdate(context, data, len))
+        {
+            if(EVP_DigestFinal_ex(context, hash, &hash_size))
+            {
+                assert(hash_size == SHA256_DIGEST_LENGTH);
+            }
+        }
+    }
     EVP_MD_CTX_free(context);
     StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
 }

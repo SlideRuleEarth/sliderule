@@ -51,7 +51,7 @@ parser.add_argument('--organization',       type=str,               default=None
 parser.add_argument('--verbose',            action='store_true',    default=False)
 parser.add_argument('--depth',              type=int,               default=0)
 parser.add_argument('--filter',             type=str, nargs='+',    default=[])
-args,_ = parser.parse_args()
+args = parser.parse_args()
 
 ###############################################################################
 # GLOBALS

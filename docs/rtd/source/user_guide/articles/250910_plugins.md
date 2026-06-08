@@ -37,12 +37,4 @@ API scripts are the user-facing interface for all of SlideRule's functions.  Whe
 
 ## Installing a Plugin
 
-#### Local Execution
-
 The SlideRule executable looks in one place for all plugins: `/usr/local/etc/sliderule`.  Any shared object in that directory is loaded as a plugin.  Underneath that directory, any Lua script in `/usr/local/etc/sliderule/ext` is available as a Lua extension script, and any Lua script in `/usr/local/etc/sliderule/api` is available as a Lua API script.  Note - any script treated as an API script is considered to be directly executable upon request by a user.  For that reason, only scripts in the special directory are treated as API scripts; all other scripts are not directly accessible to users and must be called by API scripts.
-
-#### Cloud Deployments
-
-In the cloud deployment of SlideRule, two steps are necessary to make third-party plugins available to the SlideRule executable:
-* The startup script for each AWS EC2 instance looks for plugins at `s3://sliderule/plugins` and copies any files there to the local instance's `/plugins` directory.
-* The startup code within the SlideRule Docker container looks for a mounted `/plugins` directory and copies any files there to the internal `/usr/local/etc/sliderule` directory.

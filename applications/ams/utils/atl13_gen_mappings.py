@@ -18,7 +18,7 @@ parser.add_argument('--concurrency',    type=int,               default=8)
 parser.add_argument('--query',          action='store_true',    default=False)  # query CMR to build list of filenames
 parser.add_argument('--verbose',        action='store_true',    default=False)
 parser.add_argument('--dryrun',         action='store_true',    default=False)
-args,_ = parser.parse_args()
+args = parser.parse_args()
 
 # initialize client
 if args.organization == "None":
