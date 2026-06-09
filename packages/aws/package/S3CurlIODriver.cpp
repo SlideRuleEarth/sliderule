@@ -116,12 +116,12 @@ static void sha256hash(const void* data, size_t len, char* dst)
         {
             if(EVP_DigestFinal_ex(context, hash, &hash_size))
             {
-                assert(hash_size == SHA256_DIGEST_LENGTH);
+                StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
             }
         }
     }
     EVP_MD_CTX_free(context);
-    StringLib::b16encode(hash, SHA256_DIGEST_LENGTH, true, dst);
+    assert(hash_size == SHA256_DIGEST_LENGTH);
 }
 
 /*----------------------------------------------------------------------------
@@ -160,8 +160,8 @@ static size_t curlWriteFile(const void *buffer, size_t size, size_t nmemb, void 
     file_data_t* data = reinterpret_cast<file_data_t*>(userp);
     const size_t rsps_size = size * nmemb;
     const size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
-    if(bytes_written > 0) data->size += rsps_size;
-    return bytes_written;
+    data->size += bytes_written;
+    return bytes_written; // if this is less than rsps_size, cURL aborts the write with a failure
 }
 
 /*----------------------------------------------------------------------------
@@ -170,11 +170,9 @@ static size_t curlWriteFile(const void *buffer, size_t size, size_t nmemb, void 
 static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 {
     file_data_t* data = reinterpret_cast<file_data_t*>(userp);
-
     const size_t buffer_size = size * nmemb;
     const size_t bytes_read = fread(buffer, 1, buffer_size, data->fd);
-    if(bytes_read) data->size += bytes_read;
-
+    data->size += bytes_read;
     return bytes_read;
 }
 
@@ -203,7 +201,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const 
         const FString stringToSign("%s\n\n\n%s\n%s\n/%s/%s", verb, date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), credentials->secretAccessKey.value.length(), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
         const string encodedHash = StringLib::b64encode(hash, hash_size);
         const FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash.c_str());
         headers = curl_slist_append(headers, authorizationHeader.c_str());
@@ -248,7 +246,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
         const FString stringToSign("PUT\n\n%s\n%s\n%s\n/%s/%s", contentType.c_str(), date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), credentials->secretAccessKey.value.length(), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
         const string encodedHash = StringLib::b64encode(hash, hash_size);
         const FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash.c_str());
         headers = curl_slist_append(headers, authorizationHeader.c_str());
@@ -264,7 +262,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
 static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const char* endpoint, const char* region, const CredentialStore::Credential* credentials, long content_length, const char* sha256_b64)
 {
     /* Must Supply Credentials */
-    if(!credentials || credentials->expiration.value.empty())
+    if(!credentials || credentials->sessionToken.value.empty())
     {
         return NULL;
     }
@@ -523,6 +521,8 @@ void S3CurlIODriver::init (void)
 {
     curlShare = curl_share_init();
     curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+    curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+    curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
     curl_share_setopt(curlShare, CURLSHOPT_LOCKFUNC, shareLock);
     curl_share_setopt(curlShare, CURLSHOPT_UNLOCKFUNC, shareUnlock);
     curl_share_setopt(curlShare, CURLSHOPT_USERDATA, &curlShareMutex);
@@ -565,6 +565,7 @@ int64_t S3CurlIODriver::size (void)
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
 {
+    assert(size > 0);
     bool status = false;
 
     /* Massage Key */
@@ -573,10 +574,6 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
 
     /* Build URL */
     const FString url("https://%s/%s/%s", endpoint, bucket, key_ptr);
-
-    /* Check Size and Initialize Data */
-    assert(size > 0);
-    data[0] = 0;
 
     /* Setup Buffer for Callback */
     fixed_data_t info = {
@@ -749,6 +746,10 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
             else if(!rsps_set.empty())
             {
                 mlog(ERROR, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
+                for(int i = 0; i < rsps_set.length(); i++)
+                {
+                    delete [] rsps_set.get(i).data;
+                }
                 rsps_set.clear(); // try again
             }
             else if(res == CURLE_OPERATION_TIMEDOUT)
@@ -840,7 +841,8 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
                 else if(data.size > 0)
                 {
                     mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
-                    rqst_complete = true; // fail outright, no retry
+                    fseek(data.fd, 0L, SEEK_SET); // reset file pointer
+                    data.size = 0; // reset bytes written
                 }
                 else if(res == CURLE_OPERATION_TIMEDOUT)
                 {
@@ -912,20 +914,32 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
         const char* key_ptr = key;
         if(key_ptr[0] == '/') key_ptr++;
 
-        /* Extract Region from Endpoint (expects "s3.<region>.amazonaws.com") */
+        /* Extract Region from Endpoint (expects "s3.<region>.<domain>") */
         const char* region = NULL;
         char region_buf[64];
         const int s3_prefix_len = 3;
-        const int s3_suffix_len = 14;
-        const int endpoint_len = StringLib::size(endpoint);
-        const int region_len = endpoint_len - s3_prefix_len - s3_suffix_len;
-        if( (region_len > 0 && region_len < 64) &&
-            (strncmp(endpoint, "s3.", s3_prefix_len) == 0) &&
-            (strcmp(endpoint + endpoint_len - s3_suffix_len, ".amazonaws.com") == 0) )
+        if(strncmp(endpoint, "s3.", s3_prefix_len) == 0)
         {
-            memcpy(region_buf, endpoint + s3_prefix_len, region_len);
-            region_buf[region_len] = '\0';
-            region = region_buf;
+            const char* region_start = endpoint + s3_prefix_len;
+            const char* region_end = strchr(region_start, '.');
+            if(region_end)
+            {
+                const int region_len = region_end - region_start;
+                if(region_len > 0 && region_len < static_cast<int>(sizeof(region_buf)))
+                {
+                    memcpy(region_buf, region_start, region_len);
+                    region_buf[region_len] = '\0';
+                    region = region_buf;
+                }
+                else
+                {
+                    throw RunTimeException(ERROR, RTE_FAILURE, "Invalid region in endpoint: %s", endpoint);
+                }
+            }
+            else
+            {
+                throw RunTimeException(ERROR, RTE_FAILURE, "Invalid domain in endpoint: %s", endpoint);
+            }
         }
 
         /* Calculate Checksum */
@@ -1281,12 +1295,13 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         const char* filename    = LuaObject::getLuaString(L, 3);
         const char* endpoint    = LuaObject::getLuaString(L, 4, true, default_endpoint.c_str());
         const char* identity    = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_IDENTITY);
+        const bool with_checksum = LuaObject::getLuaBoolean(L, 6, true, false);
 
         /* Get Credentials */
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        const int64_t upload_size = put(filename, bucket, key, endpoint, &credentials);
+        const int64_t upload_size = put(filename, bucket, key, endpoint, &credentials, with_checksum);
 
         /* Push Contents */
         if(upload_size > 0)
@@ -1341,8 +1356,15 @@ S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
     */
     ioKey = ioBucket;
     while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-    if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
+    if(*ioKey == '/')
+    {
+        *ioKey = '\0';
+    }
+    else
+    {
+        delete [] ioBucket;
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
+    }
     ioKey++;
 
     /* Get Latest Credentials */
