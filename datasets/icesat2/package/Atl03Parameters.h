@@ -101,7 +101,7 @@ struct PhorealFields: public FieldMap<Field>
     } phoreal_geoloc_t;
 
     FieldElement<double>            binsize {1.0};              // size of photon height bin
-    FieldElement<phoreal_geoloc_t>  geoloc {MEDIAN};            // how are geolocation stats calculated
+    FieldElement<phoreal_geoloc_t>  geoloc {MEDIAN, 0, {MEAN, MEDIAN, CENTER}}; // how are geolocation stats calculated
     FieldElement<bool>              use_abs_h {false};          // use absolute heights
     FieldElement<bool>              send_waveform {false};      // include the waveform in the results
     FieldElement<bool>              above_classifier {false};   // use the ABoVE classification algorithm
@@ -155,10 +155,12 @@ class Atl03Parameters: public Icesat2Parameters
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldElement<surface_type_t>                        surfaceType {SRT_DYNAMIC};                              // surface reference type (used to select signal confidence column)
+        FieldElement<surface_type_t>                        surfaceType {SRT_DYNAMIC, 0,{SRT_LAND, SRT_OCEAN,       // surface reference type (used to select signal confidence column)
+                                                                                         SRT_SEA_ICE, SRT_LAND_ICE,
+                                                                                         SRT_INLAND_WATER}};
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
-        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification
+        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true};// list of desired signal confidences of photons from atl03 classification
         FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh { true,  false, false, false, false, false,   // list of desired photon quality levels from atl03
                                                                         false, false, false, false, false, false,
                                                                         false, false, false, false, false, false,

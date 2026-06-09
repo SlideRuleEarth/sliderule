@@ -299,6 +299,7 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
 	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/$*.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
+	sed -i 's/Redoc\.hydrate(__redoc_state, container)/Redoc.init(__redoc_state.spec.data, __redoc_state.options || {}, container)/' $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
 
 ########################
 # Docker Build Targets
@@ -330,6 +331,7 @@ sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
+	sed -i 's/Redoc\.hydrate(__redoc_state, container)/Redoc.init(__redoc_state.spec.data, __redoc_state.options || {}, container)/' $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)

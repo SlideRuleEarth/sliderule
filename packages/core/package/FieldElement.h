@@ -53,7 +53,7 @@ class FieldElement: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldElement    (const T& default_value, uint32_t encoding_mask=0);
+        explicit        FieldElement    (const T& default_value, uint32_t encoding_mask=0, std::initializer_list<T> enum_list={});
                         FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
         virtual         ~FieldElement   (void) override = default;
@@ -103,6 +103,7 @@ class FieldElement: public Field
 
         T value;
         bool initialized;
+        vector<T> enumeration;
 };
 
 /******************************************************************************
@@ -133,10 +134,11 @@ inline long FieldElement<string>::serialize (uint8_t* buffer, size_t size) const
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask):
+FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask, std::initializer_list<T> enum_list):
     Field(ELEMENT, getImpliedEncoding<T>() | encoding_mask),
     value(default_value),
-    initialized(true)
+    initialized(true),
+    enumeration(enum_list)
 {
 }
 
@@ -157,7 +159,8 @@ template <class T>
 FieldElement<T>::FieldElement(const FieldElement<T>& element):
     Field(ELEMENT, getImpliedEncoding<T>()),
     value(element.value),
-    initialized(element.initialized)
+    initialized(element.initialized),
+    enumeration(element.enumeration)
 {
 }
 
@@ -220,8 +223,24 @@ template <class T>
 string FieldElement<T>::toOpenApi (const char* description) const
 {
     FString default_property("%s", initialized ? FString(", \"default\": %s", toJson().c_str()).c_str() : "");
-    return FString("{\"type\": \"%s\", \"format\": \"%s\", \"description\": \"%s\"%s}",
-        this->getOpenApiType(), this->getOpenApiFormat(), description, default_property.c_str()).c_str();
+    FString schema_property("\"format\": \"%s\", \"description\": \"%s\"%s", this->getOpenApiFormat(), description, default_property.c_str());
+    if(enumeration.empty())
+    {
+        return FString("{\"type\": \"%s\", %s}",
+            this->getOpenApiType(), schema_property.c_str()).c_str();
+    }
+    else
+    {
+        string string_enum;
+        for (size_t i = 0; i < enumeration.size(); i++)
+        {
+            if (i > 0) string_enum += ',';
+            string_enum += convertToJson(enumeration[i]);
+        }
+
+        return FString("{\"type\": \"string\", \"enum\": [%s], %s}",
+            string_enum.c_str(), schema_property.c_str()).c_str();
+    }
 }
 
 /*----------------------------------------------------------------------------

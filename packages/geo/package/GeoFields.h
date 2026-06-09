@@ -122,7 +122,7 @@ class GeoFields: public FieldMap<Field>
         * Data
         *--------------------------------------------------------------------*/
 
-        FieldElement<sampling_algo_t>           sampling_algo {NEARESTNEIGHBOUR_ALGO};
+        FieldElement<sampling_algo_t>           sampling_algo {NEARESTNEIGHBOUR_ALGO, 0, { NEARESTNEIGHBOUR_ALGO, BILINEAR_ALGO, CUBIC_ALGO, CUBICSPLINE_ALGO, LANCZOS_ALGO, AVERAGE_ALGO, MODE_ALGO, GAUSS_ALGO }};
         FieldElement<int>                       sampling_radius {0};
         FieldElement<string>                    t0;
         FieldElement<string>                    t1;
@@ -135,7 +135,7 @@ class GeoFields: public FieldMap<Field>
         FieldElement<bool>                      use_poi_time {false};
         FieldElement<string>                    doy_range;
         FieldElement<bool>                      sort_by_index {false};
-        FieldElement<single_sample_option_t>    force_single_sample {SINGLE_SAMPLE_NA};
+        FieldElement<single_sample_option_t>    force_single_sample {SINGLE_SAMPLE_NA, 0, { SINGLE_SAMPLE_FIRST, SINGLE_SAMPLE_LAST, SINGLE_SAMPLE_MIN, SINGLE_SAMPLE_MAX, SINGLE_SAMPLE_MEAN, SINGLE_SAMPLE_MEDIAN }};
         FieldElement<string>                    target_crs;
         FieldElement<string>                    proj_pipeline;
         FieldElement<string>                    url;

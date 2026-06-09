@@ -285,7 +285,7 @@ void Atl03Parameters::fromLua (lua_State* L, int index)
 Atl03Parameters::Atl03Parameters(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name):
     Icesat2Parameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
-    addParameter("srt",                 &surfaceType,           "Surface reference type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water");
+    addParameter("srt",                 &surfaceType,           "Surface reference type; setting to dynamic will tell the server to select the reference type with the highest confidence");
     addParameter("pass_invalid",        &passInvalid,           "Boolean flag indicating whether or not extents that fail validation checks are still used and returned in the results");
     addParameter("dist_in_seg",         &distInSeg,             "Boolean flag indicating that the units of the len and res are in ATL03 segments (e.g. if true then len=2 is exactly two ATL03 segments which is approximately 40 meters)");
     addParameter("cnf",                 &atl03Cnf,              "Confidence level for photon selection, can be supplied as a single value (which means the confidence must be at least that), or a list (which means the confidence must be in the list); note - the confidence can be supplied as strings or as numbers {-2, -1, 0, 1, 2, 3, 4}");

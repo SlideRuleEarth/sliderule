@@ -79,7 +79,8 @@ class OutputFields: public FieldMap<Field>
         *--------------------------------------------------------------------*/
 
         FieldElement<string>    path;                       // file system path to the file (includes filename)
-        FieldElement<format_t>  format {GEOPARQUET};        // format of the file
+        FieldElement<format_t>  format {GEOPARQUET, 0,      // format of the file
+                                        {FEATHER, PARQUET, GEOPARQUET, CSV, H5, LAS, LAZ}};
         FieldElement<bool>      openOnComplete {false};     // flag to client to open file on completion
         FieldElement<bool>      asGeo {false};              // whether to create a standard geo-based formatted file
         FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record

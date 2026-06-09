@@ -44,6 +44,7 @@
 #include "AssetField.h"
 #include "RegionMask.h"
 #include "MathLib.h"
+#include "TimeLib.h"
 #include "OutputFields.h"
 #include "SystemConfig.h"
 
@@ -142,36 +143,42 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
          * Data
          *--------------------------------------------------------------------*/
 
-        AssetField                      asset;              // name of Asset in asset dictionary to use for granules
-        FieldElement<string>            resource;           // granule name (including file extension)
-        FieldList<string>               resources;          // list of granule names
-        FieldColumn<MathLib::coord_t>   polygon;
-        FieldElement<int>               maxResources        {SystemConfig::settings().requestMaxResources.value};
-        FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
-        FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
-        FieldElement<int>               pointsInPolygon     {0, Field::READ_ONLY};
-        FieldElement<int>               timeout             {REQUEST_INVALID_TIMEOUT}; // global timeout
-        FieldElement<int>               rqstTimeout         {REQUEST_INVALID_TIMEOUT};
-        FieldElement<int>               nodeTimeout         {REQUEST_INVALID_TIMEOUT};
-        FieldElement<int>               readTimeout         {REQUEST_INVALID_TIMEOUT};
-        FieldElement<int>               clusterSizeHint     {0};
-        FieldElement<uint64_t>          keySpace            {INVALID_KEY};
-        RegionMask                      regionMask;
-        FieldElement<string>            slideruleVersion    {LIBID, Field::READ_ONLY};
-        FieldElement<string>            buildInformation    {BUILDINFO, Field::READ_ONLY};
-        FieldElement<string>            environmentVersion  {SystemConfig::settings().environmentVersion.value, Field::READ_ONLY};
-        OutputFields                    output;
+        AssetField                          asset;              // name of Asset in asset dictionary to use for granules
+        FieldElement<string>                resource;           // granule name (including file extension)
+        FieldList<string>                   resources;          // list of granule names
+        FieldElement<TimeLib::gmt_time_t>   t0;                 // start time
+        FieldElement<TimeLib::gmt_time_t>   t1;                 // stop time
+        FieldColumn<MathLib::coord_t>       polygon;
+        FieldElement<int>                   maxResources        {SystemConfig::settings().requestMaxResources.value};
+        FieldElement<MathLib::proj_t>       projection          {MathLib::AUTOMATIC_PROJECTION, 0, { MathLib::NORTH_POLAR, MathLib::SOUTH_POLAR, MathLib::PLATE_CARREE, MathLib::AUTOMATIC_PROJECTION }};
+        FieldElement<MathLib::datum_t>      datum               {MathLib::UNSPECIFIED_DATUM, 0, { MathLib::ITRF2014, MathLib::ITRF2020, MathLib::EGM08, MathLib::NAVD88 }};
+        FieldElement<int>                   pointsInPolygon     {0, Field::READ_ONLY};
+        FieldElement<int>                   timeout             {REQUEST_INVALID_TIMEOUT}; // global timeout
+        FieldElement<int>                   rqstTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>                   nodeTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>                   readTimeout         {REQUEST_INVALID_TIMEOUT};
+        FieldElement<int>                   clusterSizeHint     {0};
+        FieldElement<uint64_t>              keySpace            {INVALID_KEY};
+        RegionMask                          regionMask;
+        FieldElement<string>                slideruleVersion    {LIBID, Field::READ_ONLY};
+        FieldElement<string>                buildInformation    {BUILDINFO, Field::READ_ONLY};
+        FieldElement<string>                environmentVersion  {SystemConfig::settings().environmentVersion.value, Field::READ_ONLY};
+        OutputFields                        output;
 
         #ifdef __geo__
-        FieldMap<GeoFields>             samplers;
+        FieldMap<GeoFields>                 samplers;
         #endif
 
-        MathLib::point_t*               projectedPolygon    {NULL};
+        MathLib::point_t*                   projectedPolygon    {NULL};
 };
 
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+string convertToJson(const TimeLib::gmt_time_t& v);
+int convertToLua(lua_State* L, const TimeLib::gmt_time_t& v);
+void convertFromLua(lua_State* L, int index, TimeLib::gmt_time_t& v);
 
 string convertToJson(const MathLib::coord_t& v);
 int convertToLua(lua_State* L, const MathLib::coord_t& v);
@@ -189,6 +196,7 @@ string convertToJson(const MathLib::datum_t& v);
 int convertToLua(lua_State* L, const MathLib::datum_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::datum_t& v);
 
+inline uint32_t toEncoding(TimeLib::gmt_time_t& v) { (void)v; return Field::OBJECT; }
 inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::OBJECT; }
 inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::OBJECT; };
 inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::OBJECT; };

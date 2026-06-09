@@ -487,6 +487,8 @@ RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const cha
     addParameter("asset",               &asset,                 "The name of a collection of resources; this rarely needs to be specified because the default value for most endpoints are sufficient");
     addParameter("resource",            &resource,              "A single resource to process; 'resources' should be used instead, even when there is only one resource to process");
     addParameter("resources",           &resources,             "A list of resources to process (e.g. granule names like 'ATL03_20181019065445_03150111_007_01.h5')");
+    addParameter("t0",                  &t0,                    "Start time of the temporal filter for the data to be processed, supplied as a date time stamp (i.e. YYYY-MM-DDThh:mm:ssZ)");
+    addParameter("t1",                  &t1,                    "Stop time of the temporal filter for the data to be processed, supplied as a date time stamp (i.e. YYYY-MM-DDThh:mm:ssZ)");
     addParameter("max_resources",       &maxResources,          "Maximum number of resources that can be processed in a single request; overriding this allows larger regions to be processed but risks crashing the servers");
     addParameter("poly",                &polygon,               "Polygon of area of interest, defined as a closed set of lat,lon pairs with counter-clockwise winding; in the form of [{'lat': <lat>, 'lon': <lon>}, ...]");
     addParameter("proj",                &projection,            "Projection used when subsetting data; in most cases, do not specify and the code will do the right thing; options are ['auto', 'plate_carree', 'north_polar', 'south_polar']");
@@ -519,6 +521,44 @@ RequestParameters::~RequestParameters(void)
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * convertToJson - TimeLib::gmt_time_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const TimeLib::gmt_time_t& v)
+{
+    TimeLib::date_t date = TimeLib::gmt2date(v);
+    FString time_str("%04d-%02d-%02dT%02d:%02d:%02dZ", date.year, date.month, date.day, v.hour, v.minute, v.second);
+    return time_str.c_str();
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - TimeLib::gmt_time_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const TimeLib::gmt_time_t& v)
+{
+    lua_pushstring(L, convertToJson(v).c_str());
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - TimeLib::gmt_time_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, TimeLib::gmt_time_t& v)
+{
+    if(lua_isstring(L, index)) // timestamp string
+    {
+        const char* time_str = LuaObject::getLuaString(L, index);
+        const int64_t gps = TimeLib::str2gpstime(time_str);
+        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to parse time supplied: %s", time_str);
+        v = TimeLib::gps2gmttime(gps);
+    }
+    else if(lua_isnumber(L, index)) // unix system time in microseconds
+    {
+        const int64_t time_sys = LuaObject::getLuaInteger(L, index);
+        v = TimeLib::sys2gmttime(time_sys);
+    }
+}
 
 /*----------------------------------------------------------------------------
  * convertToJson - MathLib::coord_t
