@@ -563,10 +563,9 @@ int64_t S3CurlIODriver::size (void)
 /*----------------------------------------------------------------------------
  * get - fixed
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* endpoint, const CredentialStore::Credential* credentials)  // NOLINT(readability-non-const-parameter)
 {
     assert(size > 0);
-    assert(data[0] = 0); // needed by static analyzer to keep data non-const
     bool status = false;
 
     /* Massage Key */

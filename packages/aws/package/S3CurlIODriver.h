@@ -73,7 +73,7 @@ class S3CurlIODriver: public Asset::IODriver
         int64_t             size            (void) override;
 
         // fixed GET - memory preallocated
-        static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,
+        static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,  // NOLINT(readability-non-const-parameter)
                                              const char* bucket, const char* key, const char* endpoint,
                                              const CredentialStore::Credential* credentials);
 
