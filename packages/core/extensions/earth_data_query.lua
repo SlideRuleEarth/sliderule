@@ -68,9 +68,9 @@ ASSETS = {
     },
     ["icesat2-atl24"] = {
         name        = "ATL24",
-        identity    = "iam-role",
-        driver      = "s3",
-        path        = "sliderule/data/ATL24r2",
+        identity    = "nsidc-cloud",
+        driver      = "s3atl24",
+        path        = "nsidc-cumulus-prod-protected",
         endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "002",

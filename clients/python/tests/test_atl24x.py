@@ -227,3 +227,23 @@ class TestAtl24x:
         assert gdf_empty.empty
         assert len(gdf_empty.columns) == len(sliderule.run("atl24x", {}, resources=RESOURCES).columns)
         assert gdf_empty["gt"].value_counts().empty
+
+    def test_query(self, init):
+        poly = [
+            {"lat": 21.222261686673306, "lon": -73.78074797284968},
+            {"lat": 21.07228912392266,  "lon": -73.78074797284968},
+            {"lat": 21.07228912392266,  "lon": -73.51303956051089},
+            {"lat": 21.222261686673306, "lon": -73.51303956051089},
+            {"lat": 21.222261686673306, "lon": -73.78074797284968}
+        ]
+        gdf = sliderule.run("atl24x", {
+            "poly": poly,
+            "t0": "2022-02-02",
+            "t1": "2023-01-01",
+            "atl24": {
+                "class_ph": ["unclassified", "bathymetry", "sea_surface"],
+                "confidence_threshold": 0.8,
+            }
+        })
+        assert init
+        assert len(gdf) == 27923
