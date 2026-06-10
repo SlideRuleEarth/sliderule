@@ -750,7 +750,7 @@ def report_tests_handler(rqst):
 
     # get test summary
     summary_file = f"{rqst["branch"]}-summary.json"
-    s3.download_file(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
+    s3.download_file(Bucket=PROJECT_BUCKET, Key=f"testrunner/{summary_file}", Filename=f"/tmp/{summary_file}")
 
     # read test summary
     with open(f"/tmp/{summary_file}", "r") as file:

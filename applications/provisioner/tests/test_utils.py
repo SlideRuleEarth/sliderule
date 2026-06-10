@@ -20,6 +20,6 @@ def test_build_cluster_name():
 # Test Populating User Data
 #
 def test_populate_user_data():
-    user_data = populate_user_data("node.sh", {"is_public": True, "version": "myversion"}, "myusername")
+    user_data = populate_user_data("node.sh", {"is_public": True, "version": "myversion", "cluster": "mycluster"}, "myusername")
     assert "myversion" in user_data
     assert "$MYIP" in user_data

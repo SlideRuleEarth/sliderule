@@ -125,9 +125,10 @@ AUTHENTICATOR_STACKNAME = authenticator-$(BASE_DOMAIN)
 PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
 RUNNER_STACKNAME = runner-$(BASE_DOMAIN)
 CERTBOT_STACKNAME = certbot-$(BASE_DOMAIN)
-RECORDER_STACKNAME = recorder # not scoped to domain (we only want one)
-TESTRUNNER_STACKNAME = testrunner # not scoped to domain (we only want one)
 DOCUMENTATION_STACKNAME = documentation-$(BASE_DOMAIN)
+# not scoped to domain (we only want one)
+RECORDER_STACKNAME = recorder
+TESTRUNNER_STACKNAME = testrunner
 
 AUTHENTICATOR_HOSTNAME = login.$(DOMAIN)
 PROVISIONER_HOSTNAME = provisioner.$(DOMAIN)
@@ -513,7 +514,7 @@ testrunner-report: ## invokes the provisioner *report* lambda function and displ
 	conda run -n sliderule --no-capture-output \
 	sh -c '	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --report tests --asjson'
 
-testrunner-run: ## invokes the provisioner *report* lambda function and displays the response
+testrunner-run: ## invokes the provisioner *test* lambda function and displays the response
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --branch main --commands test'
 

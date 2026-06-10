@@ -35,7 +35,7 @@ import boto3
 # command line arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
 parser.add_argument('--testfile',   type=str,   default=None)
-parser.add_argument('--testdir',    type=str,   default="s3://sliderule/cf/testrunner")
+parser.add_argument('--testdir',    type=str,   default="s3://sliderule/testrunner")
 parser.add_argument('--branch',     type=str,   default="main")
 parser.add_argument('--output',     type=str,   default="/tmp/summary.json")
 args = parser.parse_args()

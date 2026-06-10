@@ -138,7 +138,7 @@ Resources:
               - Effect: Allow
                 Action: ["s3:PutObject"]
                 Resource:
-                  - !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/testrunner/*"
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/testrunner/*"
         - PolicyName: testrunner-ec2-access
           PolicyDocument:
             Version: "2012-10-17"
@@ -204,6 +204,7 @@ Resources:
           export HOME=/root
           export USER=root
           export AWS_REGION=${AWS::Region}
+          export AWS_DEFAULT_REGION=${AWS::Region}
           #
           # System Dependencies
           #
@@ -286,10 +287,10 @@ Resources:
           #
           # Record of Run
           #
-          aws s3 cp /testrunner.log s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Branch}-${DeployDate}-testrunner.log
+          aws s3 cp /testrunner.log s3://${ProjectBucket}/testrunner/${Branch}-${DeployDate}-testrunner.log
           cd /sliderule/applications/provisioner
-          /root/miniforge3/envs/provisioner/bin/python utils/testrunner_report.py --testfile ${Branch}-${DeployDate}-testrunner.log --testdir s3://${ProjectBucket}/${ProjectFolder}/testrunner --branch ${Branch} --output /tmp/${Branch}-summary.json
-          aws s3 cp /tmp/${Branch}-summary.json s3://${ProjectBucket}/${ProjectFolder}/testrunner/${Branch}-summary.json
+          /root/miniforge3/envs/provisioner/bin/python utils/testrunner_report.py --testfile ${Branch}-${DeployDate}-testrunner.log --testdir s3://${ProjectBucket}/testrunner --branch ${Branch} --output /tmp/${Branch}-summary.json
+          aws s3 cp /tmp/${Branch}-summary.json s3://${ProjectBucket}/testrunner/${Branch}-summary.json
 
   #
   # Custom Schedule Trigger
