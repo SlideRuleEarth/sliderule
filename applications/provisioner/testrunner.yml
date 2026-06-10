@@ -111,7 +111,7 @@ Resources:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
         - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
       Policies:
-        - PolicyName: testrunner-s3-access
+        - PolicyName: !Sub "${AWS::StackName}-s3-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -139,7 +139,7 @@ Resources:
                 Action: ["s3:PutObject"]
                 Resource:
                   - !Sub "arn:aws:s3:::${ProjectBucket}/testrunner/*"
-        - PolicyName: testrunner-ec2-access
+        - PolicyName: !Sub "${AWS::StackName}-ec2-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -148,6 +148,14 @@ Resources:
                   - ec2:DescribeInstances
                   - ec2:TerminateInstances
                 Resource: "*"
+        - PolicyName: !Sub "${AWS::StackName}-secret-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -197,7 +205,7 @@ Resources:
             DeleteOnTermination: true
       Tags:
         - Key: Name
-          Value: !Sub "testrunner-${DeployDate}"
+          Value: !Sub "${AWS::StackName}-${DeployDate}"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash

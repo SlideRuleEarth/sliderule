@@ -676,6 +676,12 @@ provisioner-delete: ## deletes the lambda provisioner functions
 	aws cloudformation delete-stack --stack-name $(PROVISIONER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(PROVISIONER_STACKNAME)
 
+provisioner-update: provisioner-build ## updates the lambda provisioner functions
+	aws s3 cp $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
+	aws lambda update-function-code --function-name $(PROVISIONER_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
+#	aws lambda update-function-code --function-name $(PROVISIONER_STACKNAME)-schedule --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
+#	aws lambda update-function-code --function-name $(PROVISIONER_STACKNAME)-destroy --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
+
 provisioner-logs:
 	aws logs tail /aws/lambda/$(PROVISIONER_STACKNAME)-gateway --since 2h --format short
 

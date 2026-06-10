@@ -310,7 +310,7 @@ Resources:
       ComputeResources:
         Type: SPOT
         MinvCpus: 0
-        MaxvCpus: 256
+        MaxvCpus: 1024
         DesiredvCpus: 0
         InstanceTypes:
           - default_arm64

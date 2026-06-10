@@ -527,8 +527,8 @@ RequestParameters::~RequestParameters(void)
  *----------------------------------------------------------------------------*/
 string convertToJson(const TimeLib::gmt_time_t& v)
 {
-    TimeLib::date_t date = TimeLib::gmt2date(v);
-    FString time_str("%04d-%02d-%02dT%02d:%02d:%02dZ", date.year, date.month, date.day, v.hour, v.minute, v.second);
+    const TimeLib::date_t date = TimeLib::gmt2date(v);
+    const FString time_str("%04d-%02d-%02dT%02d:%02d:%02dZ", date.year, date.month, date.day, v.hour, v.minute, v.second);
     return time_str.c_str();
 }
 
