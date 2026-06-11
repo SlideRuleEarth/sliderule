@@ -31,6 +31,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import boto3
+import os
 
 # command line arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
@@ -92,9 +93,12 @@ results["num_logs"] = len(log_files)
 results["total_files"] = num_files
 results["date"] = latest_dt.astimezone().strftime("%Y-%m-%d %H:%M:%S")
 
-# download latest log file
-local_log_file = f"/tmp/{latest_log_file}"
-s3_client.download_file(Bucket=bucket, Key=f"{subfolder}/{latest_log_file}", Filename=local_log_file)
+# get latest log file
+if os.path.exists(latest_log_file):
+    local_log_file = latest_log_file
+else:
+    local_log_file = f"/tmp/{latest_log_file}"
+    s3_client.download_file(Bucket=bucket, Key=f"{subfolder}/{latest_log_file}", Filename=local_log_file)
 
 # test parser class
 class TestParser:
@@ -150,7 +154,7 @@ class TestParser:
                 if line.startswith("FAILED") or line.startswith("ERROR"):
                     result["errors"] += 1
                     result["summary"].append(line.split(" ")[1].strip())
-                elif line.startswith("=================="):
+                elif line.startswith("==========="):
                     toks = line.split(" ")
                     for i in range(1, len(toks)):
                         if "failed" in toks[i]:
