@@ -780,6 +780,7 @@ def deploy_test_handler(rqst):
             {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
             {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
             {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
+            {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
             {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
