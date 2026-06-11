@@ -189,6 +189,7 @@ Resources:
                   - arn:aws:s3:::esa-worldcover
                   - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
                   - arn:aws:s3:::dataforgood-fb-data
+                  - arn:aws:s3:::casals-data
               - Effect: Allow
                 Action: ["s3:GetObject"]
                 Resource:
@@ -199,6 +200,7 @@ Resources:
                   - arn:aws:s3:::esa-worldcover/*
                   - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
                   - arn:aws:s3:::dataforgood-fb-data/*
+                  - arn:aws:s3:::casals-data/*
               - Effect: Allow
                 Action: ["s3:PutObject"]
                 Resource:

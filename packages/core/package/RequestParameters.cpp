@@ -527,9 +527,18 @@ RequestParameters::~RequestParameters(void)
  *----------------------------------------------------------------------------*/
 string convertToJson(const TimeLib::gmt_time_t& v)
 {
-    const TimeLib::date_t date = TimeLib::gmt2date(v);
-    const FString time_str("%04d-%02d-%02dT%02d:%02d:%02dZ", date.year, date.month, date.day, v.hour, v.minute, v.second);
-    return time_str.c_str();
+    if(v.year > 1900 && v.year < 2100) // format as a date-time string
+    {
+        const TimeLib::date_t date = TimeLib::gmt2date(v);
+        const FString time_str("\"%04d-%02d-%02dT%02d:%02d:%02dZ\"", date.year, date.month, date.day, v.hour, v.minute, v.second);
+        return time_str.c_str();
+    }
+    else // format as gps seconds
+    {
+        const int64_t gps = TimeLib::gmt2gpstime(v);
+        const FString time_str("%ld", gps);
+        return time_str.c_str();
+    }
 }
 
 /*----------------------------------------------------------------------------

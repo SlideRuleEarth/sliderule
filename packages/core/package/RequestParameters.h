@@ -146,8 +146,8 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
         AssetField                          asset;              // name of Asset in asset dictionary to use for granules
         FieldElement<string>                resource;           // granule name (including file extension)
         FieldList<string>                   resources;          // list of granule names
-        FieldElement<TimeLib::gmt_time_t>   t0;                 // start time
-        FieldElement<TimeLib::gmt_time_t>   t1;                 // stop time
+        FieldElement<TimeLib::gmt_time_t>   t0                  {{0,0,0,0,0,0}};
+        FieldElement<TimeLib::gmt_time_t>   t1                  {{0,0,0,0,0,0}};
         FieldColumn<MathLib::coord_t>       polygon;
         FieldElement<int>                   maxResources        {SystemConfig::settings().requestMaxResources.value};
         FieldElement<MathLib::proj_t>       projection          {MathLib::AUTOMATIC_PROJECTION, 0, { MathLib::NORTH_POLAR, MathLib::SOUTH_POLAR, MathLib::PLATE_CARREE, MathLib::AUTOMATIC_PROJECTION }};

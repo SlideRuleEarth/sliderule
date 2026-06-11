@@ -118,27 +118,30 @@ Resources:
               - Effect: Allow
                 Action: ["s3:ListBucket"]
                 Resource:
-                  - arn:aws:s3:::sliderule
-                  - arn:aws:s3:::sliderule-public
+                  - !Sub "arn:aws:s3:::${ProjectBucket}"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}"
                   - arn:aws:s3:::pgc-opendata-dems
                   - arn:aws:s3:::prd-tnm
                   - arn:aws:s3:::esa-worldcover
                   - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds
                   - arn:aws:s3:::dataforgood-fb-data
+                  - arn:aws:s3:::casals-data
               - Effect: Allow
                 Action: ["s3:GetObject"]
                 Resource:
-                  - arn:aws:s3:::sliderule/*
-                  - arn:aws:s3:::sliderule-public/*
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
                   - arn:aws:s3:::pgc-opendata-dems/*
                   - arn:aws:s3:::prd-tnm/*
                   - arn:aws:s3:::esa-worldcover/*
                   - arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*
                   - arn:aws:s3:::dataforgood-fb-data/*
+                  - arn:aws:s3:::casals-data/*
               - Effect: Allow
                 Action: ["s3:PutObject"]
                 Resource:
                   - !Sub "arn:aws:s3:::${ProjectBucket}/testrunner/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
         - PolicyName: !Sub "${AWS::StackName}-ec2-access"
           PolicyDocument:
             Version: "2012-10-17"
