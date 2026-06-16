@@ -255,7 +255,7 @@ def get_affiliation(username):
 #
 # Populate User Data
 #
-def populate_user_data(script, rqst, service):
+def populate_user_data(script, rqst, service, parms=None):
     """
     Populates environment variables of a user data script using the environment and request parameters
     """
@@ -263,7 +263,8 @@ def populate_user_data(script, rqst, service):
         "VERSION": rqst["version"],
         "IS_PUBLIC": json.dumps(rqst["is_public"]),
         "CLUSTER": rqst["cluster"],
-        "SERVICE": service
+        "SERVICE": service,
+        **( parms if isinstance(parms, dict) else {} )
     })
 
 # ###############################
@@ -774,18 +775,21 @@ def deploy_test_handler(rqst):
         destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
         scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
 
+        # get user data for instance
+        deploy_date = datetime.now().strftime("%Y%m%d%H%M%S")
+        test_runner_user_data = populate_user_data("test.sh", rqst, rqst["cluster"], {
+            "BRANCH": rqst["branch"],
+            "DEPLOY_DATE": deploy_date
+        })
+
         # build parameters for stack creation
         state["parms"] = [
-            {"ParameterKey": "Domain", "ParameterValue": DOMAIN},
-            {"ParameterKey": "EnvironmentVersion", "ParameterValue": ENVIRONMENT_VERSION},
             {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
-            {"ParameterKey": "ProjectFolder", "ParameterValue": PROJECT_FOLDER},
             {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
-            {"ParameterKey": "ContainerRegistry", "ParameterValue": CONTAINER_REGISTRY},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
-            {"ParameterKey": "DeployDate", "ParameterValue": datetime.now().strftime("%Y%m%d%H%M%S")},
-            {"ParameterKey": "Branch", "ParameterValue": rqst["branch"]}
+            {"ParameterKey": "DeployDate", "ParameterValue": deploy_date},
+            {"ParameterKey": "TestRunnerUserData", "ParameterValue": test_runner_user_data}
         ]
 
         # read template

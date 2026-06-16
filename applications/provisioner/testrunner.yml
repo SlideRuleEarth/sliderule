@@ -6,17 +6,9 @@ Parameters:
   #
   # Variables
   #
-  Domain:
-    Type: String
-  EnvironmentVersion:
-    Type: String
   ProjectBucket:
     Type: String
-  ProjectFolder:
-    Type: String
   ProjectPublicBucket:
-    Type: String
-  ContainerRegistry:
     Type: String
   DestroyLambdaArn:
     Type: String
@@ -24,7 +16,7 @@ Parameters:
     Type: String
   DeployDate:
     Type: String
-  Branch:
+  TestRunnerUserData:
     Type: String
 
   #
@@ -212,98 +204,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-${DeployDate}"
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          export HOME=/root
-          export USER=root
-          export AWS_REGION=${AWS::Region}
-          export AWS_DEFAULT_REGION=${AWS::Region}
-          #
-          # System Dependencies
-          #
-          dnf update -y
-          dnf install -y git make rsync wget docker
-          #
-          # Configure Docker
-          #
-          systemctl enable docker
-          systemctl start docker
-          usermod -aG docker ec2-user
-          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
-          #
-          # Install Docker Compose V2
-          #
-          curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
-          chmod +x /usr/local/bin/docker-compose
-          mkdir -p /usr/local/lib/docker/cli-plugins
-          ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
-          #
-          # ILB
-          #
-          mkdir -p /etc/ssl/private
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/${Domain}.pem /etc/ssl/private/${Domain}.pem
-          #
-          # Data
-          #
-          mkdir -p /data/
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/ams/ /data/ --recursive
-          aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/server/ /data/ --recursive
-          #
-          # Install Mamba
-          #
-          cd /
-          wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
-          bash Miniforge3-Linux-aarch64.sh -b
-          #
-          # Setup and Clone SlideRule Repository
-          #
-          docker pull ${ContainerRegistry}/sliderule-buildenv:latest
-          git clone https://github.com/SlideRuleEarth/sliderule.git
-          cd /sliderule
-          git checkout ${Branch}
-          #
-          # Configure Logging
-          #
-          exec > /testrunner.log 2>&1
-          #
-          # Build and Run Self Tests
-          #
-          cd /sliderule/targets/slideruleearth
-          make build CONFIG=debug BUILD_CMD="sh -c \"cd /sliderule/targets/slideruleearth && make config-debug && make && make selftest\""
-          #
-          # Build Cluster
-          #
-          make cluster-docker
-          #
-          # SlideRule PyTests
-          #
-          cd /sliderule/targets/slideruleearth
-          docker compose up -d ilb ams sliderule
-          cd /sliderule/clients/python
-          /root/miniforge3/bin/mamba env create -f environment.yml -y
-          /root/miniforge3/envs/sliderule/bin/pip install .
-          /root/miniforge3/envs/sliderule/bin/pytest --domain localhost --organization None
-          cd /sliderule/targets/slideruleearth
-          docker compose down ilb ams sliderule
-          #
-          # Provisioner PyTests
-          #
-          cd /sliderule/applications/provisioner
-          /root/miniforge3/bin/mamba env create -f environment.yml -y
-          /root/miniforge3/envs/provisioner/bin/pytest
-          #
-          # AMS PyTests
-          #
-          cd /sliderule/applications/ams
-          /root/miniforge3/bin/mamba env create -f environment.yml -y
-          /root/miniforge3/envs/ams/bin/pytest
-          #
-          # Record of Run
-          #
-          aws s3 cp /testrunner.log s3://${ProjectBucket}/testrunner/${Branch}-${DeployDate}-testrunner.log
-          cd /sliderule/applications/provisioner
-          /root/miniforge3/envs/provisioner/bin/python utils/testrunner_report.py --testfile ${Branch}-${DeployDate}-testrunner.log --testdir s3://${ProjectBucket}/testrunner --branch ${Branch} --output /tmp/${Branch}-summary.json
-          aws s3 cp /tmp/${Branch}-summary.json s3://${ProjectBucket}/testrunner/${Branch}-summary.json
+        Fn::Base64: !Ref TestRunnerUserData
 
   #
   # Custom Schedule Trigger

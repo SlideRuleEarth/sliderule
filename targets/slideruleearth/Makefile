@@ -484,24 +484,6 @@ cluster-direct-resources: ## list resources associated with cluster that are pre
 #	- The provisioner provides lambdas that are used to destroy the testrunner stack
 #	- The testrunner automatically destroys itself after one hour
 
-testrunner-create: ## invokes the provisioner lambda function and displays the response
-	aws cloudformation create-stack \
-		--stack-name 	$(TESTRUNNER_STACKNAME) \
-		--template-body file://$(ROOT)/applications/provisioner/testrunner.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
-		--region 		$(AWS_REGION) \
-		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
-						ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
-						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
-						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
-						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
-						ParameterKey=DestroyLambdaArn,ParameterValue=$(DESTROY_LAMBDA_ARN) \
-						ParameterKey=ScheduleLambdaArn,ParameterValue=$(SCHEDULE_LAMBDA_ARN) \
-						ParameterKey=DeployDate,ParameterValue=$(TIMESTAMP) \
-						ParameterKey=Branch,ParameterValue=$(BRANCH)
-	aws cloudformation wait stack-create-complete --stack-name $(TESTRUNNER_STACKNAME)
-
 testrunner-describe: ## status the creation/deletion of the test runner
 	aws cloudformation describe-stack-events --stack-name $(TESTRUNNER_STACKNAME)
 
@@ -639,6 +621,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cp $(ROOT)/applications/provisioner/ilb.sh $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/monitor.sh $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/applications/provisioner/node.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/applications/provisioner/test.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner functions
