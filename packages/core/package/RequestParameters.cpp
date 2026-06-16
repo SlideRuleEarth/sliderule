@@ -533,11 +533,9 @@ string convertToJson(const TimeLib::gmt_time_t& v)
         const FString time_str("\"%04d-%02d-%02dT%02d:%02d:%02dZ\"", date.year, date.month, date.day, v.hour, v.minute, v.second);
         return time_str.c_str();
     }
-    else // format as gps seconds
+    else
     {
-        const int64_t gps = TimeLib::gmt2gpstime(v);
-        const FString time_str("%ld", gps);
-        return time_str.c_str();
+        return "null";
     }
 }
 

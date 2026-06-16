@@ -4,6 +4,7 @@
 .coverage.*
 .github/copilot-instructions.md
 .claude/
+.agents/
 
 # excces nc file
 *.nc
