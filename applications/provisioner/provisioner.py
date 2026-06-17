@@ -44,6 +44,18 @@ ALERT_EMAIL = os.environ.get('ALERT_EMAIL')
 
 SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp','sliderule','monitor']
 
+MAX_NODES = {
+    "owner": 100,
+    "member": 50
+}
+
+MAX_TTL = {
+    "owner": 525600, # 1 year
+    "member": 720 # 12 hours
+}
+
+MIN_TTL = 15 # minutes, for autoshutdown
+
 # ###############################
 # Utilities
 # ###############################
@@ -325,9 +337,9 @@ def verify_signature(path, body, username, event):
 def get_max_nodes(org_roles):
     max_nodes = 0
     if 'owner' in org_roles:
-        max_nodes = 100
+        max_nodes = MAX_NODES["owner"]
     elif 'member' in org_roles:
-        max_nodes = 50
+        max_nodes = MAX_NODES["member"]
     return max_nodes
 
 #
@@ -336,9 +348,9 @@ def get_max_nodes(org_roles):
 def get_max_ttl(org_roles):
     max_ttl = 0
     if 'owner' in org_roles:
-        max_ttl = 525600 # 1 year
+        max_ttl = MAX_TTL["owner"]
     elif 'member' in org_roles:
-        max_ttl = 720 # 12 hours
+        max_ttl = MAX_TTL["member"]
     return max_ttl
 
 #
@@ -369,9 +381,6 @@ def get_user_info(claims):
 # Validate Request
 #
 def validate_request(event, info):
-
-    # configuration
-    MIN_TTL_FOR_AUTOSHUTDOWN = 15 # minutes
 
     # pull out required request parameters
     path = event.get("rawPath", '')
@@ -425,7 +434,7 @@ def validate_request(event, info):
 
     # check ttl
     ttl = body.get("ttl")
-    if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < MIN_TTL_FOR_AUTOSHUTDOWN)):
+    if ttl and ((int(ttl) > info["maxTTL"]) or (int(ttl) < MIN_TTL)):
         print(f'Access denied to {info["username"]}, invalid ttl: {ttl}')
         return None
 
