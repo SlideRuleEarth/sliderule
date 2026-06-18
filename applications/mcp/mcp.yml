@@ -53,10 +53,9 @@ Resources:
           DOMAIN: !Ref Domain
           CLUSTER: !Ref Cluster
           MCP_HOSTNAME: !Ref McpHostname
+          JWT_ISSUER: !Ref JwtIssuer
           PROJECT_BUCKET: !Ref ProjectBucket
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
-          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
-          JWT_ISSUER: !Ref JwtIssuer
 
   ## IAM Role
   LambdaExecutionRole:

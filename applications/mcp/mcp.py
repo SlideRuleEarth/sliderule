@@ -227,62 +227,12 @@ def lambda_gateway(event, context):
         print(f'Received request to {rqst["path"]} from {rqst["username"]} ({rqst["role"]}): {rqst["method"]} - {rqst["params"]}') # diagnostic
 
         # route request
-        if   rqst == None:                              return gateway_response(200, rpc_error(rqst, INVALID_REQUEST_CODE, f'invalid request'))
-        elif rqst["path"] == f'/{CLUSTER}/info':        return gateway_response(200, {"environment_version": ENVIRONMENT_VERSION})
-        elif rqst["path"] == f'/{CLUSTER}':             return gateway_response(200, rpc_response(rqst))
-        else:                                           return gateway_response(404, {'error': 'not found'})
+        if   rqst == None:                          return gateway_response(200, rpc_error(rqst, INVALID_REQUEST_CODE, f'invalid request'))
+        elif rqst["path"] == f'/{CLUSTER}/info':    return gateway_response(200, {"environment_version": ENVIRONMENT_VERSION})
+        elif rqst["path"] == f'/{CLUSTER}':         return gateway_response(200, rpc_response(rqst))
+        else:                                       return gateway_response(404, {'error': 'not found'})
 
     except Exception as e:
 
         # unhandled exception
         return gateway_response(500, {'error': 'unhandled exception', 'exception': f'{e}'})
-
-# ###############################
-# Main: Local Test Environment
-# ###############################
-
-if __name__ == '__main__':
-
-    # imports
-    import sliderule
-    import argparse
-
-    # command line arguments
-    parser = argparse.ArgumentParser(description="""Provisioner Command Line""")
-    parser.add_argument('--tool',       type=str,               default=None)
-    parser.add_argument('--verbose',    action='store_true',    default=False)
-    args = parser.parse_args()
-
-    # sliderule python client session
-    session = sliderule.create_session(domain=DOMAIN, verbose=args.verbose)
-    session.authenticate()
-
-    # build request
-    rqst = {
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "org_roles": f'[{" ".join(session.ps_metadata["org_roles"])}]',
-                        "aud": f'[{" ".join(session.ps_metadata["aud"])}]',
-                        "sub": f'{session.ps_metadata["sub"]}'
-                    }
-                }
-            }
-        },
-        "headers": {
-            "host": DOMAIN
-        },
-        "rawPath": args.tool,
-        "body": json.dumps({})
-    }
-
-    # make request
-    rsps = lambda_gateway(rqst, None)
-
-    # display response
-    if rsps.get("statusCode") == 200:
-        content = json.loads(rsps["body"])
-        print(json.dumps(content, indent=2))
-    else:
-        print(json.dumps(rsps, indent=2))

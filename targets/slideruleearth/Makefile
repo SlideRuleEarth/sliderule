@@ -82,6 +82,7 @@ PROVISIONER_STAGE_DIR = $(STAGE)/provisioner
 RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
+MCP_STAGE_DIR = $(STAGE)/mcp
 DOCUMENTATION_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
 DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
@@ -124,6 +125,7 @@ TTL ?= 60
 AUTHENTICATOR_STACKNAME = authenticator-$(BASE_DOMAIN)
 PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
 RUNNER_STACKNAME = runner-$(BASE_DOMAIN)
+MCP_STACKNAME = mcp-$(BASE_DOMAIN)
 CERTBOT_STACKNAME = certbot-$(BASE_DOMAIN)
 DOCUMENTATION_STACKNAME = documentation-$(BASE_DOMAIN)
 # not scoped to domain (we only want one)
@@ -139,6 +141,7 @@ MCP_HOSTNAME = mcp.$(DOMAIN)
 AUTHENTICATOR_ZIPFILE = $(AUTHENTICATOR_STACKNAME).zip
 PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME).zip
 RUNNER_ZIPFILE = $(RUNNER_STACKNAME).zip
+MCP_ZIPFILE = $(MCP_STACKNAME).zip
 CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
 
 ALERT_STREAM = recorder-firehose-alerts
@@ -797,6 +800,71 @@ runner-test: ## run runner tests
 	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
     SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
     ALERT_EMAIL=$(ALERT_EMAIL) \
+	coverage run -m pytest $(ARGS) && \
+	coverage report -m'
+
+########################
+# MCP Targets
+########################
+
+mcp-build: ## create the mcp lambda zipfile
+	-rm -Rf $(MCP_STAGE_DIR)
+	mkdir -p $(MCP_STAGE_DIR)
+	cp $(ROOT)/applications/mcp/requirements.txt $(MCP_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(MCP_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/applications/mcp/mcp.py $(MCP_STAGE_DIR)/package/
+	cp $(ROOT)/applications/mcp/sandbox.py $(MCP_STAGE_DIR)/package/
+	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "/*__pycache__/*"
+
+mcp-create: provisioner-build ## creates the lambda mcp functions
+	aws s3 cp $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
+	aws cloudformation create-stack \
+		--stack-name 	$(MCP_STACKNAME) \
+		--template-body file://$(ROOT)/applications/mcp/mcp.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
+						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
+						ParameterKey=Cluster,ParameterValue=$(CLUSTER) \
+						ParameterKey=McpHostname,ParameterValue=$(MCP_HOSTNAME) \
+						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
+						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
+						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
+	aws cloudformation wait stack-create-complete --stack-name $(MCP_STACKNAME)
+
+mcp-describe: ## status the creation/deletion of the mcp functions
+	aws cloudformation describe-stack-events --stack-name $(MCP_STACKNAME)
+
+mcp-delete: ## deletes the lambda mcp functions
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
+	aws cloudformation delete-stack --stack-name $(MCP_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(MCP_STACKNAME)
+
+mcp-update: mcp-build ## updates the lambda mcp functions
+	aws s3 cp $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
+	aws lambda update-function-code --function-name $(MCP_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(MCP_ZIPFILE)
+
+mcp-logs:
+	aws logs tail /aws/lambda/$(MCP_STACKNAME)-gateway --since 2h --format short
+
+mcp-test: ## run provisioner tests
+	conda run -n provisioner --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/provisioner && \
+	ENVIRONMENT_VERSION = $(ENVIRONMENT_VERSION) \
+    DOMAIN=$(DOMAIN) \
+	CLUSTER=$(CLUSTER) \
+	MCP_HOSTNAME=$(MCP_HOSTNAME) \
+    JWT_ISSUER=$(JWT_ISSUER) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
 	coverage run -m pytest $(ARGS) && \
 	coverage report -m'
 
