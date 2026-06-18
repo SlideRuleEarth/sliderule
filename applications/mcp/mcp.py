@@ -4,11 +4,13 @@ import base64
 import boto3
 import sandbox
 
+
 # ###############################
 # Cached Objects
 # ###############################
 
 s3 = boto3.client("s3")
+
 
 # ###############################
 # Globals
@@ -28,6 +30,7 @@ METHOD_NOT_FOUND_CODE   = -32601
 INVALID_PARAMS_CODE     = -32602
 INTERNAL_ERROR_CODE     = -32603
 PARSE_ERROR_CODE        = -32700
+
 
 # ###############################
 # Utilities
@@ -94,47 +97,47 @@ def rpc_result(rqst, result):
     }
 
 #
+# Parse Request
+#
+def parse_request(event):
+
+    # pull out claims
+    claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
+    username = claims.get('sub', '<anonymous>')
+    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+    role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
+
+    # pull out request parameters
+    path = event.get("rawPath", '')
+    body = get_body(event)
+    method = body["method"]
+    parms = body["params"]
+    rqst_id = body["id"]
+
+    # display diagnostic message
+    print(f'Received request to {path} from {username} ({role}): {method} - {parms}') # diagnostic
+
+    # build and return request info
+    return {
+        "path": path,
+        "username": username,
+        "role": role,
+        "method": method,
+        "parms": parms,
+        "id": rqst_id
+    }
+
+#
 # Validate Request
 #
-def validate_request(event):
+def validate_request(rqst):
 
-    try:
+    # check organization membership (only required when calling a tool)
+    if (rqst["method"] == "tools/call") and (rqst["role"] not in ["owner", "member", "affiliate"]):
+        return INVALID_REQUEST_CODE, f'access to tools denied to {rqst["username"]}, organization role: {rqst["role"]}'
 
-        # pull out claims
-        claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
-        username = claims.get('sub', '<anonymous>')
-        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-
-        # pull out request parameters
-        path = event.get("rawPath", '')
-        body = get_body(event)
-        method = body["method"]
-        parms = body["params"]
-        rqst_id = body["id"]
-
-        # check organization membership (only required when calling a tool)
-        role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
-        if (method == "tools/call") and (role not in ["owner", "member", "affiliate"]):
-            raise RuntimeError(f'access to tools denied to {username}, organization roles: {org_roles}')
-
-        # display diagnostic message
-        print(f'Received request to {path} from {username} ({role}): {method} - {parms}') # diagnostic
-
-        # build and return request info
-        return {
-            "path": path,
-            "username": username,
-            "role": role,
-            "id": rqst_id,
-            "method": method,
-            "parms": parms
-        }
-
-    except Exception as e:
-
-        # handle validation error
-        print(f'Validation error: {e}')
-        return None
+    # success
+    return 0, None
 
 # ###############################
 # Method Handlers
@@ -176,6 +179,7 @@ def resources_template_handler(rqst):
 def resources_read_handler(rqst):
     return rpc_result(rqst, {})
 
+
 # ###############################
 # JSON RPC Processing
 # ###############################
@@ -204,6 +208,7 @@ def rpc_response(rqst):
     except Exception as e:
         return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
 
+
 # ###############################
 # Lambda Gateway
 # ###############################
@@ -215,10 +220,11 @@ def lambda_gateway(event, context):
     try:
 
         # process request
-        rqst = validate_request(event) # validate request against claims and return safe request parameters
+        rqst = parse_request(event)
+        code, msg = validate_request(rqst)
 
         # route request
-        if   rqst == None:                          return gateway_response(200, rpc_error(rqst, INVALID_REQUEST_CODE, f'invalid request'))
+        if   code < 0:                              return gateway_response(200, rpc_error(rqst, code, msg))
         elif rqst["path"] == f'/{CLUSTER}/info':    return gateway_response(200, {"environment_version": ENVIRONMENT_VERSION})
         elif rqst["path"] == f'/{CLUSTER}':         return gateway_response(200, rpc_response(rqst))
         else:                                       return gateway_response(404, {'error': 'not found'})

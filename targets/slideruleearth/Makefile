@@ -855,8 +855,8 @@ mcp-logs: ## display logs from recents MCP invocations
 	aws logs tail /aws/lambda/$(MCP_STACKNAME)-gateway --since 2h --format short
 
 mcp-test: ## run provisioner tests
-	conda run -n provisioner --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/provisioner && \
+	conda run -n mcp --no-capture-output \
+	sh -c 'cd $(ROOT)/applications/mcp && \
 	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
     DOMAIN=$(DOMAIN) \
 	CLUSTER=$(CLUSTER) \

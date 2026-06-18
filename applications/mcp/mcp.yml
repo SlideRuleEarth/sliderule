@@ -3,10 +3,6 @@ Description: SlideRule MCP Server
 
 Parameters:
 
-  ##
-  ## Parameters
-  ##
-
   EnvironmentVersion:
     Type: String
   Domain:

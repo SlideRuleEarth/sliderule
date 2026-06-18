@@ -1,39 +1,37 @@
-from provisioner import lambda_gateway
+import json
+from mcp import lambda_gateway
 
-#
-# Test Membership
-#
-def test_not_member():
-    rsps = lambda_gateway({
+def construct_request(roles, path, method, parms, id):
+    return {
         "requestContext": {
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": "[]"
+                        "org_roles": f"[{' '.join(roles)}]"
                     }
                 }
             }
         },
-        "rawPath": "/",
-        "body": ""
-    }, None)
-    assert rsps['statusCode'] == 403
+        "rawPath": json.dumps(path),
+        "body": json.dumps({
+            "method": method,
+            "params": parms,
+            "id": id
+        })
+    }
+#
+# Test Membership
+#
+def test_not_member():
+    rsps = lambda_gateway(construct_request([], "/sliderule", "tools/call", {}, 1), None)
+    error = json.loads(rsps["body"])['error']
+    assert rsps['statusCode'] == 200, f"{rsps}"
+    assert error['code'] == -32600, f"{error}"
+
 
 #
 # Test Path
 #
 def test_invalid_path():
-    rsps = lambda_gateway({
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "org_roles": '[member]'
-                    }
-                }
-            }
-        },
-        "rawPath": "/does_not_exist",
-        "body": '{"node_capacity":"10","ttl":"600"}'
-    }, None)
+    rsps = lambda_gateway(construct_request(["member"], "/does_not_exist", "tools/call", {}, 1), None)
     assert rsps['statusCode'] == 404, f"{rsps}"
