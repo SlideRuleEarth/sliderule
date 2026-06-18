@@ -158,6 +158,24 @@ def tools_call_handler(rqst):
         return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
 
 #
+# List Resources
+#
+def resources_list_handler(rqst):
+    try:
+        return rpc_result(rqst, {})
+    except Exception as e:
+        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+
+#
+# Template Resources
+#
+def resources_template_handler(rqst):
+    try:
+        return rpc_result(rqst, {})
+    except Exception as e:
+        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+
+#
 # Read Resource
 #
 def resources_read_handler(rqst):
@@ -174,10 +192,12 @@ def resources_read_handler(rqst):
 # Method Routing
 #
 METHODS = {
-    "initialize":       initialize_handler,
-    "tools/list":       tools_list_handler,
-    "tools/call":       tools_call_handler,
-    "resources/read":   resources_read_handler
+    "initialize":               initialize_handler,
+    "tools/list":               tools_list_handler,
+    "tools/call":               tools_call_handler,
+    "resources/list":           resources_template_handler,
+    "resources/templates/list": resources_list_handler,
+    "resources/read":           resources_read_handler
 }
 
 #
@@ -201,6 +221,7 @@ def lambda_gateway(event, context):
     Lambda entry point for API Gateway
     """
     try:
+
         # process request
         rqst = validate_request(event) # validate request against claims and return safe request parameters
         print(f'Received request to {rqst["path"]} from {rqst["username"]} ({rqst["role"]}): {rqst["method"]} - {rqst["params"]}') # diagnostic
@@ -212,6 +233,7 @@ def lambda_gateway(event, context):
         else:                                           return gateway_response(404, {'error': 'not found'})
 
     except Exception as e:
+
         # unhandled exception
         return gateway_response(500, {'error': 'unhandled exception', 'exception': f'{e}'})
 
