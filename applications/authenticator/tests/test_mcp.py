@@ -37,7 +37,7 @@ def test_nominal():
         "state":                    state,
         "code_challenge":           code_challenge,
         "code_challenge_method":    'S256',
-        "resource":                 f"https://mcp.localhost/mcp"
+        "resource":                 f"https://{os.environ.get("MCP_HOSTNAME")}/{os.environ.get("PUBLIC_CLUSTER")}"
     })
 
     login_rsps = lambda_gateway(login_rqst, None)
@@ -72,7 +72,7 @@ def test_nominal():
     assert rsps['statusCode'] == 200, "make sure to run stub server"
     assert token_parms["scope"] == "mcp:resources"
     assert len(claims["aud"]) == 1
-    assert claims["aud"][0] == f"https://mcp.{os.environ.get("DOMAIN")}/mcp"
+    assert claims["aud"][0] == f"https://{os.environ.get("MCP_HOSTNAME")}/{os.environ.get("PUBLIC_CLUSTER")}"
 
 #
 # Test Invalid Scope
@@ -106,7 +106,7 @@ def test_invalid_scope():
         "code_challenge":           code_challenge,
         "code_challenge_method":    'S256',
         "scope":                    "sliderule:access",
-        "resource":                 f"https://mcp.localhost/mcp"
+        "resource":                 f"https://{os.environ.get("MCP_HOSTNAME")}/{os.environ.get("PUBLIC_CLUSTER")}"
     })
 
     login_rsps = lambda_gateway(login_rqst, None)
@@ -119,4 +119,3 @@ def test_invalid_scope():
     callback_rsps = lambda_gateway(callback_rqst, None)
 
     assert callback_rsps['statusCode'] == 500
-

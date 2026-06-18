@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SlideRule MCP Server
+
+Parameters:
+
+  ##
+  ## Parameters
+  ##
+
+  EnvironmentVersion:
+    Type: String
+  Domain:
+    Type: String
+  Cluster:
+    Type: String
+  McpHostname:
+    Type: String
+  JwtIssuer:
+    Type: String
+  ProjectBucket:
+    Type: String
+  ProjectPublicBucket:
+    Type: String
+  HostedZoneId:
+    Type: String
+  CertificateArn:
+    Type: String
+  LambdaZipFile:
+    Type: String
+
+Resources:
+
+  # Gateway Lambda Function
+  GatewayLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-gateway'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 256 # MB
+      Timeout: 300 # seconds
+      Handler: mcp.lambda_gateway
+      Description: Routes requests based on path
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          DOMAIN: !Ref Domain
+          CLUSTER: !Ref Cluster
+          MCP_HOSTNAME: !Ref McpHostname
+          PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          LAMBDA_ZIP_FILE: !Ref LambdaZipFile
+          JWT_ISSUER: !Ref JwtIssuer
+
+  ## IAM Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/PowerUserAccess
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/*"
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+              - Effect: Allow
+                Action: ["s3:PutObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+
+  # API Gateway HTTP API
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-gateway'
+      Description: MCP Server for SlideRule
+      ProtocolType: HTTP
+
+  # JWT Authorizer (Native API Gateway)
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: !Sub '${AWS::StackName}-jwt-authorizer'
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - mcp
+        Issuer: !Ref JwtIssuer
+
+  # API Gateway Integration with Lambda
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  # API Gateway Routes
+  ApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /{proxy+}'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # API Gateway Stage
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+  # API Gateway Custom Domain Name
+  ApiCustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref McpHostname
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref CertificateArn
+
+  ## API Mapping (connects custom domain to API)
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiCustomDomain
+    Properties:
+      DomainName: !Ref ApiCustomDomain
+      ApiId: !Ref HttpApi
+      Stage: $default
+
+  # Route53 Alias Record
+  ApiDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub "${Domain}."
+      Name: !Ref McpHostname
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
+        EvaluateTargetHealth: false

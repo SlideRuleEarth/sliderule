@@ -46,23 +46,6 @@ Parameters:
   LambdaZipFile:
     Type: String
 
-  ##
-  ## Constants
-  ##
-
-  PublicCIDRBlock:
-    Type: String
-    Default: "0.0.0.0/0"
-  VpcCIDRBlock:
-    Type: String
-    Default: "10.0.0.0/16"
-  InternetGatewayCIDRBlock:
-    Type: String
-    Default: "10.0.128.0/17"
-  JobRunnerCIDRBlock:
-    Type: String
-    Default: "10.0.0.0/17"
-
 Resources:
 
   ##

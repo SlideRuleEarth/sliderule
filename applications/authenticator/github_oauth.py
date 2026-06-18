@@ -26,6 +26,7 @@ import requests
 DOMAIN = os.environ.get('DOMAIN')
 PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
+MCP_HOSTNAME = os.environ.get('MCP_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
@@ -637,8 +638,8 @@ def generate_audience_list(username, clusters, org_roles, scope):
                 audiences.extend(clusters)
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
-        if 'mcp' in resources: # any authenticated user has access to MCP services
-            audiences.append(f'https://mcp.{DOMAIN}/mcp')
+        if 'mcp' in resources: # access to MCP services
+            audiences.append(f'mcp')
 
     # Return list of audiences
     return audiences

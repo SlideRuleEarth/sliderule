@@ -14,7 +14,7 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
 
 * ***Owner*** - SlideRuleEarth owner with administrator access to all services
 * ***Member*** - SlideRuleEarth member with nominal access to all services
-* ***Collaborator*** - External affliate of the SlideRuleEarth team with access to designated services
+* ***Affiliate*** - External affliate of the SlideRuleEarth team with access to designated services
 * ***Guest*** - Authenticated user with access to public services
 * ***Anonymous*** - Unauthenticated
 

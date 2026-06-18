@@ -134,6 +134,7 @@ AUTHENTICATOR_HOSTNAME = login.$(DOMAIN)
 PROVISIONER_HOSTNAME = provisioner.$(DOMAIN)
 RUNNER_HOSTNAME = runner.$(DOMAIN)
 DOCUMENTATION_HOSTNAME = docs.$(DOMAIN)
+MCP_HOSTNAME = mcp.$(DOMAIN)
 
 AUTHENTICATOR_ZIPFILE = $(AUTHENTICATOR_STACKNAME).zip
 PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME).zip
@@ -583,6 +584,7 @@ authenticator-test: ## run authenticator tests
 	DOMAIN=localhost \
 	PUBLIC_CLUSTER=localhost \
 	AUTHENTICATOR_HOSTNAME=localhost \
+	MCP_HOSTNAME=mcp.localhost \
 	GITHUB_ORG=myorg \
 	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
 	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
