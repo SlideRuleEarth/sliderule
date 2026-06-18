@@ -1,0 +1,20 @@
+[
+    {
+        "uriTemplate":  "sliderule://datasets/{uuid}",
+        "name":         "SlideRule datasets",
+        "description":  "Dynamically generated data produced by SlideRule",
+        "mimeType":     "application/json"
+    },
+    {
+        "uriTemplate":  "sliderule://jobs/{uuid}",
+        "name":         "SlideRule jobs",
+        "description":  "Processing requests running in SlideRule",
+        "mimeType":     "application/json"
+    },
+    {
+        "uriTemplate":  "sliderule://openapi/sliderule/{path}",
+        "name":         "SlideRule specification",
+        "description":  "OpenAPI specification for SlideRule endpoints",
+        "mimeType":     "application/json"
+    }
+]

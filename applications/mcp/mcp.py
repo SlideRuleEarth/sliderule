@@ -16,13 +16,9 @@ s3 = boto3.client("s3")
 # Globals
 # ###############################
 
-STACK_NAME = os.environ.get("STACK_NAME")
-DOMAIN = os.environ.get("DOMAIN")
 CLUSTER = os.environ.get('CLUSTER')
-MCP_HOSTNAME = os.environ.get("MCP_HOSTNAME")
 PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
 PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
-JWT_ISSUER = os.environ.get('JWT_ISSUER')
 ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
 
 INVALID_REQUEST_CODE    = -32600
@@ -147,7 +143,18 @@ def validate_request(rqst):
 # Initialize
 #
 def initialize_handler(rqst):
-    return rpc_result(rqst, {})
+    return rpc_result(rqst, {
+        "protocolVersion": "2025-03-26",
+        "capabilities": {
+            "tools": {},
+            "resources": {},
+            "prompts": {},
+        },
+        "serverInfo": {
+            "name": f"SlideRule MCP Server",
+            "version": f"{ENVIRONMENT_VERSION}"
+        }
+    })
 
 #
 # List Tools
@@ -165,13 +172,19 @@ def tools_call_handler(rqst):
 # List Resources
 #
 def resources_list_handler(rqst):
-    return rpc_result(rqst, {})
+    with open("resources/resources.json") as file:
+        return rpc_result(rqst, {
+            "resources": json.load(file)
+        })
 
 #
 # Template Resources
 #
 def resources_template_handler(rqst):
-    return rpc_result(rqst, {})
+    with open("resources/templates.json") as file:
+        return rpc_result(rqst, {
+            "resourceTemplates": json.load(file)
+        })
 
 #
 # Read Resource
@@ -179,6 +192,20 @@ def resources_template_handler(rqst):
 def resources_read_handler(rqst):
     return rpc_result(rqst, {})
 
+#
+# List Prompts
+#
+def prompts_list_handler(rqst):
+    with open("prompts/prompts.json") as file:
+        return rpc_result(rqst, {
+            "prompts": json.load(file)
+        })
+
+#
+# Get Prompts
+#
+def prompts_get_handler(rqst):
+    return rpc_result(rqst, {})
 
 # ###############################
 # JSON RPC Processing
@@ -193,7 +220,9 @@ METHODS = {
     "tools/call":               tools_call_handler,
     "resources/list":           resources_list_handler,
     "resources/templates/list": resources_template_handler,
-    "resources/read":           resources_read_handler
+    "resources/read":           resources_read_handler,
+    "prompts/list":             prompts_list_handler,
+    "prompts/get":              prompts_get_handler,
 }
 
 #

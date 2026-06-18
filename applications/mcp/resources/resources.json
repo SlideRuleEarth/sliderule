@@ -1,0 +1,26 @@
+[
+    {
+        "uri":          "sliderule://openapi/sliderule.json",
+        "name":         "SlideRule bundled specification",
+        "description":  "OpenAPI specification for SlideRule endpoints; self-contained specifiction bundled in a single file",
+        "mimeType":     "application/json"
+    },
+    {
+        "uri":          "sliderule://openapi/sliderule/openapi.json",
+        "name":         "SlideRule multi-file specification",
+        "description":  "OpenAPI specification for SlideRule endpoints; includes references that need to be resolved with successive reads",
+        "mimeType":     "application/json"
+    },
+    {
+        "uri":          "docs://sliderule/overview",
+        "name":         "Overview",
+        "description":  "Overview of SlideRule",
+        "mimeType":     "text/markdown"
+    },
+    {
+        "uri":          "docs://sliderule/python/installation",
+        "name":         "Python Installation",
+        "description":  "Install the SlideRule Python client",
+        "mimeType":     "text/markdown"
+    }
+]
