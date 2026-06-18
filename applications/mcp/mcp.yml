@@ -21,8 +21,6 @@ Parameters:
     Type: String
   ProjectPublicBucket:
     Type: String
-  HostedZoneId:
-    Type: String
   CertificateArn:
     Type: String
   LambdaZipFile:
@@ -70,7 +68,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/PowerUserAccess
       Policies:
         - PolicyName: !Sub "${AWS::StackName}-s3-access"
           PolicyDocument:

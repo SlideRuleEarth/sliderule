@@ -98,33 +98,43 @@ def rpc_result(rqst, result):
 #
 def validate_request(event):
 
-    # pull out claims
-    claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
-    username = claims.get('sub', '<anonymous>')
-    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+    try:
 
-    # pull out request parameters
-    path = event.get("rawPath", '')
-    body = get_body(event)
-    method = body["method"]
-    parms = body["params"]
-    rqst_id = body["id"]
+        # pull out claims
+        claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
+        username = claims.get('sub', '<anonymous>')
+        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
 
-    # check organization membership (only required when calling a tool)
-    role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
-    if (method == "tools/call") and (role not in ["owner", "member", "affiliate"]):
-        print(f'Access to tools denied to {username}, organization roles: {org_roles}')
+        # pull out request parameters
+        path = event.get("rawPath", '')
+        body = get_body(event)
+        method = body["method"]
+        parms = body["params"]
+        rqst_id = body["id"]
+
+        # check organization membership (only required when calling a tool)
+        role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
+        if (method == "tools/call") and (role not in ["owner", "member", "affiliate"]):
+            raise RuntimeError(f'access to tools denied to {username}, organization roles: {org_roles}')
+
+        # display diagnostic message
+        print(f'Received request to {path} from {username} ({role}): {method} - {parms}') # diagnostic
+
+        # build and return request info
+        return {
+            "path": path,
+            "username": username,
+            "role": role,
+            "id": rqst_id,
+            "method": method,
+            "parms": parms
+        }
+
+    except Exception as e:
+
+        # handle validation error
+        print(f'Validation error: {e}')
         return None
-
-    # build and return request info
-    return {
-        "path": path,
-        "username": username,
-        "role": role,
-        "id": rqst_id,
-        "method": method,
-        "parms": parms
-    }
 
 # ###############################
 # Method Handlers
@@ -134,55 +144,37 @@ def validate_request(event):
 # Initialize
 #
 def initialize_handler(rqst):
-    try:
-        return rpc_result(rqst, {})
-    except Exception as e:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+    return rpc_result(rqst, {})
 
 #
 # List Tools
 #
 def tools_list_handler(rqst):
-    try:
-        return rpc_result(rqst, {})
-    except Exception as e:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+    return rpc_result(rqst, {})
 
 #
 # Call Tool
 #
 def tools_call_handler(rqst):
-    try:
-        return rpc_result(rqst, {})
-    except Exception as e:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+    return rpc_result(rqst, {})
 
 #
 # List Resources
 #
 def resources_list_handler(rqst):
-    try:
-        return rpc_result(rqst, {})
-    except Exception as e:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+    return rpc_result(rqst, {})
 
 #
 # Template Resources
 #
 def resources_template_handler(rqst):
-    try:
-        return rpc_result(rqst, {})
-    except Exception as e:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+    return rpc_result(rqst, {})
 
 #
 # Read Resource
 #
 def resources_read_handler(rqst):
-    try:
-        return rpc_result(rqst, {})
-    except Exception as e:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
+    return rpc_result(rqst, {})
 
 # ###############################
 # JSON RPC Processing
@@ -195,8 +187,8 @@ METHODS = {
     "initialize":               initialize_handler,
     "tools/list":               tools_list_handler,
     "tools/call":               tools_call_handler,
-    "resources/list":           resources_template_handler,
-    "resources/templates/list": resources_list_handler,
+    "resources/list":           resources_list_handler,
+    "resources/templates/list": resources_template_handler,
     "resources/read":           resources_read_handler
 }
 
@@ -206,7 +198,7 @@ METHODS = {
 def rpc_response(rqst):
     try:
         if rqst["method"] in METHODS:
-            return METHODS[rqst["method"]](rqst["params"])
+            return METHODS[rqst["method"]](rqst)
         else:
             return rpc_error(rqst, METHOD_NOT_FOUND_CODE, f'method {rqst["method"]} not found')
     except Exception as e:
@@ -224,7 +216,6 @@ def lambda_gateway(event, context):
 
         # process request
         rqst = validate_request(event) # validate request against claims and return safe request parameters
-        print(f'Received request to {rqst["path"]} from {rqst["username"]} ({rqst["role"]}): {rqst["method"]} - {rqst["params"]}') # diagnostic
 
         # route request
         if   rqst == None:                          return gateway_response(200, rpc_error(rqst, INVALID_REQUEST_CODE, f'invalid request'))

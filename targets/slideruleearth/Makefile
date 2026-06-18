@@ -671,10 +671,10 @@ provisioner-update: provisioner-build ## updates the lambda provisioner function
 #	aws lambda update-function-code --function-name $(PROVISIONER_STACKNAME)-schedule --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
 #	aws lambda update-function-code --function-name $(PROVISIONER_STACKNAME)-destroy --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
 
-provisioner-logs:
+provisioner-logs: ## display logs for recent provisioner invocations
 	aws logs tail /aws/lambda/$(PROVISIONER_STACKNAME)-gateway --since 2h --format short
 
-provisioner-run:
+provisioner-run: ## run local command line tool provided by provisioner
 	STACK_NAME=$(PROVISIONER_STACKNAME) \
 	VERSION=$(VERSION) \
 	IS_PUBLIC=$(IS_PUBLIC) \
@@ -775,10 +775,10 @@ runner-cancel-all: ## cancels all jobs
 	conda run -n sliderule --no-capture-output \
 	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all'
 
-runner-logs:
+runner-logs: ## display logs from recent runner invocations
 	aws logs tail /aws/lambda/$(RUNNER_STACKNAME)-gateway --since 2h --format short
 
-runner-run:
+runner-run: ## execute a local runner command line tool
 	STACK_NAME=$(RUNNER_STACKNAME) \
 	DOMAIN=$(DOMAIN) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
@@ -821,7 +821,7 @@ mcp-build: ## create the mcp lambda zipfile
 	cp $(ROOT)/applications/mcp/sandbox.py $(MCP_STAGE_DIR)/package/
 	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "/*__pycache__/*"
 
-mcp-create: provisioner-build ## creates the lambda mcp functions
+mcp-create: mcp-build ## creates the lambda mcp functions
 	aws s3 cp $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
 	aws cloudformation create-stack \
 		--stack-name 	$(MCP_STACKNAME) \
@@ -835,7 +835,6 @@ mcp-create: provisioner-build ## creates the lambda mcp functions
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
-						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(MCP_STACKNAME)
@@ -852,13 +851,13 @@ mcp-update: mcp-build ## updates the lambda mcp functions
 	aws s3 cp $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
 	aws lambda update-function-code --function-name $(MCP_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(MCP_ZIPFILE)
 
-mcp-logs:
+mcp-logs: ## display logs from recents MCP invocations
 	aws logs tail /aws/lambda/$(MCP_STACKNAME)-gateway --since 2h --format short
 
 mcp-test: ## run provisioner tests
 	conda run -n provisioner --no-capture-output \
 	sh -c 'cd $(ROOT)/applications/provisioner && \
-	ENVIRONMENT_VERSION = $(ENVIRONMENT_VERSION) \
+	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
     DOMAIN=$(DOMAIN) \
 	CLUSTER=$(CLUSTER) \
 	MCP_HOSTNAME=$(MCP_HOSTNAME) \
