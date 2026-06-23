@@ -9,4 +9,5 @@ dependencies:
   - pytest-env
   - requests
   - sliderule
+  - trafilatura
   - pip

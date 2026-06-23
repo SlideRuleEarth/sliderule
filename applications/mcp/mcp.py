@@ -3,7 +3,7 @@ import json
 import base64
 import boto3
 import sandbox
-
+import applications.mcp.resource as resource
 
 # ###############################
 # Cached Objects
@@ -172,25 +172,25 @@ def tools_call_handler(rqst):
 # List Resources
 #
 def resources_list_handler(rqst):
-    with open("resources/resources.json") as file:
-        return rpc_result(rqst, {
-            "resources": json.load(file)
-        })
+    return rpc_result(rqst, {
+        "resources": resource.resources()
+    })
 
 #
 # Template Resources
 #
 def resources_template_handler(rqst):
-    with open("resources/templates.json") as file:
-        return rpc_result(rqst, {
-            "resourceTemplates": json.load(file)
-        })
+    return rpc_result(rqst, {
+        "resourceTemplates": resource.templates()
+    })
 
 #
 # Read Resource
 #
 def resources_read_handler(rqst):
-    return rpc_result(rqst, {})
+    return rpc_result(rqst, {
+        "contents": [ resource.read(rqst["parms"]["uri"]) ]
+    })
 
 #
 # List Prompts

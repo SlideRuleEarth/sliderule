@@ -1,3 +1,4 @@
 requests
 croniter
 cryptography
+trafilatura

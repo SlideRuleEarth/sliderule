@@ -1,182 +1,194 @@
 [
     {
+        "uri":          "sliderule://mcp/workflows",
+        "name":         "Workflows",
+        "description":  "Overview of the two SlideRule MCP workflows:\n1. Use SlideRule tools to dynamically generate datasets;\n2. Read documentation resources to learn the Python client and generate code.\nRecommended starting point for LLMs using the SlideRule MCP server.",
+        "mimeType":     "text/markdown"
+    },
+    {
+        "uri":          "sliderule://mcp/datasets",
+        "name":         "Datasets",
+        "description":  "Maps scientific questions to SlideRule datasets and tools. Explains when to use ATL03, ATL06, ATL08, ATL13, ATL24, GEDI products, and other supported datasets.",
+        "mimeType":     "text/markdown"
+    },
+    {
         "uri":          "sliderule://openapi/sliderule.json",
         "name":         "SlideRule bundled specification",
-        "description":  "OpenAPI specification for SlideRule endpoints; self-contained specifiction bundled in a single file",
+        "description":  "Self-contained OpenAPI specification for all SlideRule endpoints. Recommended for LLMs and code generation.",
         "mimeType":     "application/json"
     },
     {
         "uri":          "sliderule://openapi/sliderule/openapi.json",
         "name":         "SlideRule multi-file specification",
-        "description":  "OpenAPI specification for SlideRule endpoints; includes references that need to be resolved with successive reads",
+        "description":  "Multi-file OpenAPI specification for all SlideRule endpoints. Contains relative references that can be resolved through additional resource reads.",
         "mimeType":     "application/json"
     },
     {
-        "uri":          "docs://python/getting_started/Install",
+        "uri":          "sliderule://docs/python/getting_started/Install",
         "name":         "Installation",
         "description":  "Instructions on how to install the SlideRule Python client",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/getting_started/Getting-Started",
+        "uri":          "sliderule://docs/python/getting_started/Getting-Started",
         "name":         "Getting Started",
         "description":  "Beginner's guide to using the SlideRule Python client; initializing the client and making your first request",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/user_guide/overview",
+        "uri":          "sliderule://docs/python/user_guide/overview",
         "name":         "SlideRule Overview",
         "description":  "Broad overview of the SlideRule data processing system and Python client",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/user_guide/basic_usage",
+        "uri":          "sliderule://docs/python/user_guide/basic_usage",
         "name":         "Basic Usage Guide",
         "description":  "A guide for using the SlideRule Python client for making basic processing requests",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/user_guide/xseries",
+        "uri":          "sliderule://docs/python/user_guide/xseries",
         "name":         "X-Series Guide",
         "description":  "A description of the request and response behavior of the x-series APIs",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/user_guide/raster_sampling",
+        "uri":          "sliderule://docs/python/user_guide/raster_sampling",
         "name":         "Raster Sampling Guide",
         "description":  "A guide for how to include samples from raster datasets when generating your own custom datasets",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/user_guide/icesat2",
+        "uri":          "sliderule://docs/python/user_guide/icesat2",
         "name":         "ICESat-2 Guide",
         "description":  "An overview of SlideRule's support for processing ICESat-2 data, with API descriptions and explanations of input parameters and output results.",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/I user_guide/gedi",
+        "uri":          "sliderule://docs/python/user_guide/gedi",
         "name":         "GEDI Guide",
         "description":  "An overview of SlideRule's support for processing GEDI data, with API descriptions and explanations of input parameters and output results.",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/api_reference/sliderule",
+        "uri":          "sliderule://docs/python/api_reference/sliderule",
         "name":         "SlideRule API Reference",
         "description":  "Reference documentation for all of the base `sliderule` module Python client APIs",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "docs://python/api_reference/h5",
+        "uri":          "sliderule://docs/python/api_reference/h5",
         "name":         "H5 API Reference",
         "description":  "Reference documentation for the `h5` module Python client APIs",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/ancillary_fields.ipynb",
+        "uri":          "sliderule://examples/python/ancillary_fields",
         "name":         "Ancillary Fields",
-        "description":  "This example targets older p-series endpoints and walks you through the steps necessary to include ancillary fields in the data returned for atl03sp and atl06p requests.",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for older p-series endpoints that walks through the steps necessary to include ancillary fields in the data returned for atl03sp and atl06p requests.",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/arcticdem_request",
+        "uri":          "sliderule://examples/python/arcticdem_request",
         "name":         "ArcticDEM Mosaic Sampling",
-        "description":  "This tutorial walks you through the steps necessary to sample the ArcticDEM at the location of each elevation generated by an atl06p request. The DEM value is returned as an additional column in the GeoDataFrame.",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "A tutoral that walks through the steps necessary to sample the ArcticDEM at the location of each elevation generated by an atl06p request. The DEM value is returned as an additional column in the GeoDataFrame.",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/arcticdem_strip_boundaries.ipynb",
+        "uri":          "sliderule://examples/python/arcticdem_strip_boundaries",
         "name":         "ArcticDEM Strips Sampling",
-        "description":  "This example demonstrates how to work with individual strips when sampling ArcticDEM at `atl06p` points.",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for how to work with individual strips when sampling ArcticDEM at `atl06p` points.",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/atl06_glims_subset.ipynb",
+        "uri":          "sliderule://examples/python/atl06_glims_subset",
         "name":         "ATL06 GLIMS Shapefile Usage",
-        "description":  "This example uses SlideRule to retrieve ATL06 segments that intersect a provided shapefile.",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for using SlideRule to retrieve ATL06 segments that intersect a provided shapefile.",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/atl09_atmo_sampler.ipynb",
+        "uri":          "sliderule://examples/python/atl09_atmo_sampler",
         "name":         "ATL09 Sampling",
-        "description":  "This example demostrates how to append ATL09 data to custom generated datasets.",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for how to append ATL09 data to custom generated datasets.",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/atl09_h5x.ipynb",
+        "uri":          "sliderule://examples/python/atl09_h5x",
         "name":         "ATL09 DataFrame",
-        "description":  "This example demostrates how to build a custom ATL09 DataFrame using the `h5x` API",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for how to build a custom ATL09 DataFrame using the `h5x` API",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/atl13_access.ipynb",
+        "uri":          "sliderule://examples/python/atl13_access",
         "name":         "ATL13 Access",
-        "description":  "This example demonstrates accessing ATL13 data using lake names, reference ids, and contained coordinates",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for accessing ATL13 data using lake names, reference ids, and contained coordinates",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/atl24_access.ipynb",
+        "uri":          "sliderule://examples/python/atl24_access",
         "name":         "ATL24 Access",
-        "description":  "This example demonstrates subsetting and filtering ATL24 data",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for subsetting and filtering ATL24 data",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/atl24_las_output.ipynb",
+        "uri":          "sliderule://examples/python/atl24_las_output",
         "name":         "ATL24 LAZ Output",
-        "description":  "This example demonstrates how to create a LAZ file from a subsetted and filtered ATL24 dataset",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for how to create a LAZ file from a subsetted and filtered ATL24 dataset",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/blanket_surface.ipynb",
+        "uri":          "sliderule://examples/python/blanket_surface",
         "name":         "Surface Blanket",
-        "description":  "This example demonstrates running the Surface Blanket (ALS) Algorithm in ATL03x",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for running the Surface Blanket (ALS) Algorithm in ATL03x",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/boulder_watershed.ipynb",
+        "uri":          "sliderule://examples/python/boulder_watershed",
         "name":         "Basic ATL03 Processing",
-        "description":  "This example walks through using `atl03x` to get ICESat-2 data over the Boulder Watershed",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example that walks through using `atl03x` to get ICESat-2 data over the Boulder Watershed",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/earthdata_query.ipynb",
+        "uri":          "sliderule://examples/python/earthdata_query",
         "name":         "Earthdata Query",
-        "description":  "This example notebooks demonstrates different methods for querying CMR, CMR-STAC, and TNM",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for using different methods for querying CMR, CMR-STAC, and TNM",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/first_request.ipynb",
+        "uri":          "sliderule://examples/python/first_request",
         "name":         "First Request",
-        "description":  "This tutorial is for complete beginners and walks through the steps necessary to make your very first SlideRule processing request.",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "A tutoral for beginners that walks through the steps necessary to make your very first SlideRule processing request.",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/gedi_l2a_access.ipynb",
+        "uri":          "sliderule://examples/python/gedi_l2a_access",
         "name":         "GEDI L2A Access",
-        "description":  "This example notebook shows how to access GEDI L2A data",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for how to access GEDI L2A data",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/geoparquet_output.ipynb",
+        "uri":          "sliderule://examples/python/geoparquet_output",
         "name":         "GeoParquet Output",
-        "description":  "This example notebook goes over the steps necessary to return data in the GeoParquet format when using the older p-series APIs ",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example of the steps necessary to return data in the GeoParquet format when using the older p-series APIs ",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/grandmesa.ipynb",
+        "uri":          "sliderule://examples/python/grandmesa",
         "name":         "Grand Mesa",
-        "description":  "This example notebook processes ATL03 data from the Grand Mesa, CO region and produce a customized ATL06 dataset",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for processing ATL03 data from the Grand Mesa, CO region and produce a customized ATL06 dataset",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/grandmesa_atl03_classification.ipynb",
+        "uri":          "sliderule://examples/python/grandmesa_atl03_classification",
         "name":         "ATL03 Classifications",
-        "description":  "This example demostrates how to generate ATL03 photon classifications using ATL08 and YAPC",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for generating ATL03 photon classifications using ATL08 and YAPC",
+        "mimeType":     "text/markdown"
     },
     {
-        "uri":          "examples://python/phoreal.ipynb",
+        "uri":          "sliderule://examples/python/phoreal",
         "name":         "PhoREAL",
-        "description":  "This example demonstrates using the PhoREAL algorithm on ATL03 data to generate custom vegetation and canopy metrics",
-        "mimeType":     "application/x-ipynb+json"
+        "description":  "An example for using the PhoREAL algorithm on ATL03 data to generate custom vegetation and canopy metrics",
+        "mimeType":     "text/markdown"
     }
 ]
