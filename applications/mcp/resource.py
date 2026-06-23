@@ -85,7 +85,7 @@ def read(uri):
 
     # openapi resource
     elif resource_path[0] == "openapi":
-        with urllib.request.urlopen(f"https://sliderule.slideruleearth.io/{'/'.join(resource_path[1:])}") as rsp:
+        with urllib.request.urlopen(f"https://sliderule.slideruleearth.io/openapi/{'/'.join(resource_path[1:])}") as rsp:
             text = rsp.read().decode("utf-8")
 
     # doc/python resource

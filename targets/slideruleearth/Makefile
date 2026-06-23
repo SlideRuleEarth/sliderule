@@ -819,6 +819,9 @@ mcp-build: ## create the mcp lambda zipfile
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/applications/mcp/mcp.py $(MCP_STAGE_DIR)/package/
 	cp $(ROOT)/applications/mcp/sandbox.py $(MCP_STAGE_DIR)/package/
+	cp $(ROOT)/applications/mcp/resource.py $(MCP_STAGE_DIR)/package/
+	cp -R $(ROOT)/applications/mcp/prompts $(MCP_STAGE_DIR)/package/
+	cp -R $(ROOT)/applications/mcp/resources $(MCP_STAGE_DIR)/package/
 	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "/*__pycache__/*"
 
 mcp-create: mcp-build ## creates the lambda mcp functions

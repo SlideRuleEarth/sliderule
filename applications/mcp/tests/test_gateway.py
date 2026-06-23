@@ -1,24 +1,7 @@
 import json
 from mcp import lambda_gateway
+from tests.utility import construct_request
 
-def construct_request(roles, path, method, parms, id):
-    return {
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "org_roles": f"[{' '.join(roles)}]"
-                    }
-                }
-            }
-        },
-        "rawPath": json.dumps(path),
-        "body": json.dumps({
-            "method": method,
-            "params": parms,
-            "id": id
-        })
-    }
 #
 # Test Membership
 #

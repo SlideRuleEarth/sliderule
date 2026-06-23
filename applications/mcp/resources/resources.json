@@ -1,12 +1,12 @@
 [
     {
-        "uri":          "sliderule://mcp/workflows",
+        "uri":          "sliderule://mcp/workflows.md",
         "name":         "Workflows",
         "description":  "Overview of the two SlideRule MCP workflows:\n1. Use SlideRule tools to dynamically generate datasets;\n2. Read documentation resources to learn the Python client and generate code.\nRecommended starting point for LLMs using the SlideRule MCP server.",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://mcp/datasets",
+        "uri":          "sliderule://mcp/datasets.md",
         "name":         "Datasets",
         "description":  "Maps scientific questions to SlideRule datasets and tools. Explains when to use ATL03, ATL06, ATL08, ATL13, ATL24, GEDI products, and other supported datasets.",
         "mimeType":     "text/markdown"

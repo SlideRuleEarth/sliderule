@@ -3,14 +3,13 @@ import json
 import base64
 import boto3
 import sandbox
-import applications.mcp.resource as resource
+import resource
 
 # ###############################
 # Cached Objects
 # ###############################
 
 s3 = boto3.client("s3")
-
 
 # ###############################
 # Globals
@@ -26,7 +25,6 @@ METHOD_NOT_FOUND_CODE   = -32601
 INVALID_PARAMS_CODE     = -32602
 INTERNAL_ERROR_CODE     = -32603
 PARSE_ERROR_CODE        = -32700
-
 
 # ###############################
 # Utilities
@@ -237,7 +235,6 @@ def rpc_response(rqst):
     except Exception as e:
         return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
 
-
 # ###############################
 # Lambda Gateway
 # ###############################
@@ -247,7 +244,6 @@ def lambda_gateway(event, context):
     Lambda entry point for API Gateway
     """
     try:
-
         # process request
         rqst = parse_request(event)
         code, msg = validate_request(rqst)
