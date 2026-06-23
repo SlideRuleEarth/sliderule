@@ -1,12 +1,12 @@
 [
     {
-        "uriTemplate":  "sliderule://datasets/{uuid}",
+        "uriTemplate":  "mcp://datasets/{uuid}",
         "name":         "SlideRule datasets",
         "description":  "Dynamically generated data produced by SlideRule",
         "mimeType":     "application/json"
     },
     {
-        "uriTemplate":  "sliderule://jobs/{uuid}",
+        "uriTemplate":  "mcp://jobs/{uuid}",
         "name":         "SlideRule jobs",
         "description":  "Processing requests running in SlideRule",
         "mimeType":     "application/json"
