@@ -2,8 +2,8 @@ import os
 import json
 import base64
 import boto3
-import sandbox
 import resource
+import prompt
 
 # ###############################
 # Cached Objects
@@ -194,16 +194,17 @@ def resources_read_handler(rqst):
 # List Prompts
 #
 def prompts_list_handler(rqst):
-    with open("prompts/prompts.json") as file:
-        return rpc_result(rqst, {
-            "prompts": json.load(file)
-        })
+    return rpc_result(rqst, {
+        "prompts": prompt.prompts()
+    })
 
 #
 # Get Prompts
 #
 def prompts_get_handler(rqst):
-    return rpc_result(rqst, {})
+    return rpc_result(rqst, {
+        "messages": prompt.respond(rqst["parms"])
+    })
 
 # ###############################
 # JSON RPC Processing

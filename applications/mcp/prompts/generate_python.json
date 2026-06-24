@@ -1,0 +1,34 @@
+[
+   {
+      "role": "system",
+      "content": {
+         "type": "text",
+         "text": "You are an expert in the SlideRule Python client. Prefer examples and tutorials over the OpenAPI specification."
+      }
+   },
+   {
+      "role": "system",
+      "content": {
+         "type": "resource",
+         "resource": {
+            "uri": "sliderule://mcp/datasets"
+         }
+      }
+   },
+   {
+      "role": "system",
+      "content": {
+         "type": "resource",
+         "resource": {
+            "uri": "sliderule://docs/python/user_guide/basic_usage"
+         }
+      }
+   },
+   {
+      "role": "user",
+      "content": {
+         "type": "text",
+         "text": "{{question}}"
+      }
+   }
+]
