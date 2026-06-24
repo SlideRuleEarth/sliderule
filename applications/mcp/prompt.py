@@ -33,12 +33,12 @@ def respond(parms):
         messages = json.load(file)
 
     # handle arguments
-    for arg,val in arguments.items:
+    for arg,val in arguments.items():
         for message in messages:
             if message["content"]["type"] == "text":
                 message["content"]["text"].replace("{{%s}}"%(arg), val)
             elif message["content"]["type"] == "resource":
-                message["content"]["uri"].replace("{{%s}}"%(arg), val)
+                message["content"]["resource"]["uri"].replace("{{%s}}"%(arg), val)
 
     # return response
     return messages
