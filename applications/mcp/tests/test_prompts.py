@@ -9,7 +9,7 @@ def test_list_prompts():
     rsps = lambda_gateway(construct_request(["member"], "/sliderule", "prompts/list", {}, 0), None)
     body = json.loads(rsps["body"])
     assert len(body["result"]["prompts"]) == 2
-    assert body["result"]["prompts"][0]["name"] == "generate_python"
+    assert body["result"]["prompts"][0]["name"] == "generate_dataset"
 
 #
 # Generate Prompt

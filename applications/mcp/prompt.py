@@ -1,44 +1,67 @@
-import json
+# ###############################
+# Base Message Class
+# ###############################
 
-#
-# Get List of Prompts
-#
-def prompts():
-    with open("prompts/prompts.json") as file:
-        return json.load(file)
+class UserMessage:
 
-#
-# Respond to Prompt
-#
-def respond(parms):
+    def __init__(self, role, msg_type, content):
+        self.role = role
+        self.type = msg_type
+        self.content = content
 
-    # get prompt parameters
-    name = parms["name"]
-    arguments = parms["arguments"]
+    @property
+    def definition(self):
+        if self.type == "text":
+            return {
+                "role": self.role,
+                "content": {
+                    "type": "text",
+                    "text": self.content
+                }
+            }
+        elif self.type == "resource":
+            return {
+                "role": self.role,
+                "content": {
+                    "type": "text",
+                    "resource": {
+                        "uri": self.content
+                    }
+                }
+            }
+        else:
+            raise RuntimeError(f"invalid message type: {self.type}")
 
-    # get matched prompt
-    available_prompts = prompts()
-    matched_prompt = None
-    for prompt in available_prompts:
-        if name == prompt["name"]:
-            matched_prompt = prompt
-            break
+# ###############################
+# Base Prompt Class
+# ###############################
 
-    # check matched prompt
-    if not matched_prompt:
-        raise RuntimeError("Error: unable to locate prompt")
+class UserPrompt:
 
-    # read prompt
-    with open(f"prompts/{name}.json", "r") as file:
-        messages = json.load(file)
+    QUESTION = {
+        "name": "question",
+        "description": "Scientific question or desired analysis",
+        "required": True
+    }
 
-    # handle arguments
-    for arg,val in arguments.items():
-        for message in messages:
-            if message["content"]["type"] == "text":
-                message["content"]["text"].replace("{{%s}}"%(arg), val)
-            elif message["content"]["type"] == "resource":
-                message["content"]["resource"]["uri"].replace("{{%s}}"%(arg), val)
+    def __init__(self, name, description, arguments):
+        self.name = name
+        self.description = description
+        self.arguments = arguments
 
-    # return response
-    return messages
+    @property
+    def definition(self):
+        return {
+            "name": self.name,
+            "description": self.description,
+            "arguments": self.arguments
+        }
+
+    def messages(self): # pure virtual
+        raise NotImplementedError()
+
+    def respond(self, arguments):
+        msgs = self.messages()
+        if "question" in arguments:
+            msgs.append(UserMessage("user", "text", arguments["question"]))
+        return [msg.definition for msg in msgs]
