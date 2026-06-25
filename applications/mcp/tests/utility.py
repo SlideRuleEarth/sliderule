@@ -1,4 +1,7 @@
+import os
 import json
+
+CLUSTER = os.environ.get('CLUSTER')
 
 def construct_request(roles, path, method, parms, id):
     return {
