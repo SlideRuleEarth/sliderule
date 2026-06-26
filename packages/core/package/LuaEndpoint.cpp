@@ -36,6 +36,9 @@
 #include <algorithm>
 
 #include "LuaEndpoint.h"
+#include "AlertMonitor.h"
+#include "CredentialStore.h"
+#include "S3CurlIODriver.h"
 #include "OsApi.h"
 #include "SystemConfig.h"
 #include "TimeLib.h"
@@ -56,6 +59,8 @@ const char* LuaEndpoint::ENDPOINT_ROLES = "roles";
 const char* LuaEndpoint::ENDPOINT_SIGNED = "signed";
 const char* LuaEndpoint::ENDPOINT_OUTPUTS = "outputs";
 const char* LuaEndpoint::ENDPOINT_PARMS = "parms";
+
+std::unordered_map<LuaEndpoint::content_t, LuaEndpoint::handler_f> LuaEndpoint::endpointHandlers;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -81,19 +86,21 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * defaultHandler
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments)
+bool LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script)
 {
+    (void)endpoint;
+
     /* Get Lua State */
     lua_State* L = engine->getLuaState();
 
     /* Set Environment */
-    if(selected_output == BINARY)
+    if(request->content_type == BINARY)
     {
-        request->setLuaTable(L, request->id, request->rspq.getName(), arguments);
+        setLuaTable(L, request, request->rspq.getName(), script.argument.c_str());
     }
     else
     {
-        request->setLuaTable(L, request->id, "", arguments);
+        setLuaTable(L, request, "", script.argument.c_str());
     }
 
     /* Get Main Function */
@@ -106,7 +113,7 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
     }
 
     /* Send Header for Binary Output */
-    if(selected_output == BINARY)
+    if(request->content_type == BINARY)
     {
         sendHeader(OK, content2str(BINARY), &request->rspq);
     }
@@ -117,7 +124,7 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
     const char* result = engine->getResult(&in_error, 1);
 
     /* Handle Text and JSON Output */
-    if(selected_output == TEXT or selected_output == JSON)
+    if(request->content_type == TEXT or request->content_type == JSON)
     {
         if(lua_status != LUA_OK)
         {
@@ -137,13 +144,100 @@ void LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t
         }
         else
         {
-            sendHeader(OK, content2str(selected_output), &request->rspq, result, StringLib::size(result));
+            sendHeader(OK, content2str(request->content_type), &request->rspq, result, StringLib::size(result));
         }
     }
     else if(lua_status != LUA_OK)
     {
         const FString error_msg("Endpoint %s encountered error: %s", request->resource, result);
         throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
+    }
+
+    /* Terminate Connection */
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * asyncHandler
+ *----------------------------------------------------------------------------*/
+bool LuaEndpoint::asyncHandler (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script)
+{
+    /* Get Lua State */
+    lua_State* L = engine->getLuaState();
+
+    /* Set Environment */
+    Subscriber async_rspq(FString("%s-async", request->id).c_str());
+    setLuaTable(L, request, async_rspq.getName(), script.argument.c_str());
+
+    /* Get Main Function */
+    lua_getfield(L, -1, ENDPOINT_MAIN);
+    if(!lua_isfunction(L, -1))
+    {
+        const FString error_msg("Did not find function <%s> to call in %s", ENDPOINT_MAIN, request->resource);
+        sendHeader(Internal_Server_Error, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
+    }
+
+    /* Build Receipt */
+    UString response_id; // unique response id
+    AlertMonitor alert_mon(NULL, INFO, async_rspq.getName());
+    Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(SystemConfig::settings().stagingAsset.value.c_str(), Asset::OBJECT_TYPE));
+    if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to access staging asset: %s", SystemConfig::settings().stagingAsset.value.c_str());
+    const CredentialStore::Credential& credentials = CredentialStore::get(asset->getIdentity());
+    FString receipt_filename("receipt-%s.txt", response_id.c_str());
+
+    /* Send Header and Async Response (as JSON) */
+    FString response("{\"receipt\": \"%s/%s\", \"endpoint\": \"%s\", \"parameters\": %s}", asset->getPath(), receipt_filename.c_str(), request->resource, endpoint.request_parameters->toJson().c_str());
+    sendHeader(OK, content2str(JSON), &request->rspq, response.c_str(), response.size());
+
+    /* Terminate Connection */
+    const int rc = request->rspq.postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
+    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", request->rspq.getName(), rc);
+
+    /* Execute Main Function */
+    const int lua_status = lua_pcall(L, 0, LUA_MULTRET, 0); // removes function from stack
+    bool in_error = false;
+    const char* result = engine->getResult(&in_error, 1);
+    if(lua_status != LUA_OK)
+    {
+        Publisher outq(async_rspq);
+        alert(CRITICAL, RTE_FAILURE, &outq, NULL, "Endpoint %s failed to execute: %s", request->resource, result);
+    }
+    else if(in_error)
+    {
+        Publisher outq(async_rspq);
+        alert(CRITICAL, RTE_FAILURE, &outq, NULL, "Endpoint %s exited in an error state: %s", request->resource, result);
+    }
+
+    /* Upload Receipt to S3 */
+    const char* alert_filename = alert_mon.snapshot();
+    const int64_t bytes_uploaded = S3CurlIODriver::put(alert_filename, asset->getPath(), receipt_filename.c_str(), asset->getEndpoint(), &credentials, false);
+    if(bytes_uploaded <= 0) mlog(CRITICAL, "Failed to upload %s to %s/%s in staging asset", alert_filename, asset->getPath(), receipt_filename.c_str());
+
+    /* Connection Already Terminated */
+    return false;
+}
+
+/*----------------------------------------------------------------------------
+ * registerHandler - NOT THREAD SAFE
+ *----------------------------------------------------------------------------*/
+void LuaEndpoint::registerHandler (content_t content, handler_f handler)
+{
+    endpointHandlers[content] = handler;
+}
+
+/*----------------------------------------------------------------------------
+ * retrieveHandler - NOT THREAD SAFE
+ *----------------------------------------------------------------------------*/
+LuaEndpoint::handler_f LuaEndpoint::retrieveHandler (content_t content)
+{
+    if (endpointHandlers.contains(content))
+    {
+        return endpointHandlers.at(content);
+    }
+    else
+    {
+        return NULL;
     }
 }
 
@@ -170,6 +264,20 @@ LuaEndpoint::~LuaEndpoint(void) = default;
 void LuaEndpoint::handleRequest (Request* request)
 {
     const Thread pid(requestThread, request, false);
+}
+
+/*----------------------------------------------------------------------------
+ * setLuaTable
+ *----------------------------------------------------------------------------*/
+int LuaEndpoint::setLuaTable(lua_State* L, Request* request, const char* rspq_name, const char* argument)
+{
+    lua_newtable(L);
+    LuaEngine::setAttrStr(L, "id", request->id);
+    LuaEngine::setAttrStr(L, "srcip", request->getHdrSourceIp());
+    LuaEngine::setAttrStr(L, "rspq", rspq_name);
+    LuaEngine::setAttrStr(L, "arg", argument);
+    lua_setglobal(L, "_rqst");
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -301,7 +409,7 @@ LuaEndpoint::endpoint_t LuaEndpoint::loadLuaScript (Request* request, LuaEngine*
  *----------------------------------------------------------------------------*/
 void LuaEndpoint::captureRequest (Request* request, const endpoint_t& endpoint, EventLib::tlm_input_t& tlm)
 {
-    mlog(endpoint.log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
+    mlog(endpoint.log_level, "%s %s (%s): %s", verb2str(request->verb), request->resource, content2str(request->content_type), request->body);
     if(endpoint.request_parameters && endpoint.request_parameters->pointsInPolygon.value > 0)
     {
         const MathLib::coord_t& coord = endpoint.request_parameters->polygon[0];
@@ -362,9 +470,9 @@ void LuaEndpoint::checkSignature (Request* request, const endpoint_t& endpoint)
 }
 
 /*----------------------------------------------------------------------------
- * selectOutput
+ * selectContentType
  *----------------------------------------------------------------------------*/
-EndpointObject::content_t LuaEndpoint::selectOutput (Request* request, const endpoint_t& endpoint, const string& extension)
+EndpointObject::content_t LuaEndpoint::selectContentType (Request* request, const endpoint_t& endpoint, const string& extension)
 {
     /* Select Output */
     string* accept_hdr;
@@ -428,21 +536,18 @@ void LuaEndpoint::checkMemoryUsage(Request* request)
 }
 
 /*----------------------------------------------------------------------------
- * executeEndpoint
+ * executeEndpoint - returns if connection needs to be terminated
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, content_t selected_output, const string& arguments)
+bool LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script)
 {
-    handler_f handler = retrieveHandler(selected_output); // returns NULL if no handler is found
-    if(handler)
-    {
-        handler(request, engine, selected_output, arguments.c_str());
-    }
-    else
-    {
-        const FString error_msg("Unable to handle requested format: %s", content2str(selected_output));
-        sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
-        throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
-    }
+    // execute handler
+    handler_f handler = retrieveHandler(request->content_type); // returns NULL if no handler is found
+    if(handler) return handler(request, engine, endpoint, script);
+
+    // only reached when no handler found
+    const FString error_msg("Unable to handle requested format: %s", content2str(request->content_type));
+    sendHeader(Not_Acceptable, content2str(TEXT), &request->rspq, error_msg.c_str(), error_msg.length());
+    throw RunTimeException(ERROR, RTE_FAILURE, "%s", error_msg.c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -452,6 +557,7 @@ void* LuaEndpoint::requestThread (void* parm)
 {
     EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
     const double start = TimeLib::latchtime();
+    bool terminate = true;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
@@ -474,12 +580,12 @@ void* LuaEndpoint::requestThread (void* parm)
     try
     {
         const endpoint_t endpoint = loadLuaScript(request, &engine, script.path); // throws on error
+        request->content_type = selectContentType(request, endpoint, script.extension); // throws on error, returns output format
         captureRequest(request, endpoint, tlm); // logs request and populates additional telemetry
         checkRole(request, endpoint); // throws on error
         checkSignature(request, endpoint); // throws on error
-        const content_t selected_output = selectOutput(request, endpoint, script.extension); // throws on error, returns output format
         checkMemoryUsage(request); // throws on error
-        executeEndpoint(request, &engine, selected_output, script.argument); // executes registered handler, throws on error
+        terminate = executeEndpoint(request, &engine, endpoint, script); // executes registered handler, throws on error
     }
     catch(const RunTimeException& e)
     {
@@ -488,8 +594,11 @@ void* LuaEndpoint::requestThread (void* parm)
     }
 
     /* End Response */
-    const int rc = request->rspq.postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
-    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", request->rspq.getName(), rc);
+    if(terminate)
+    {
+        const int rc = request->rspq.postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
+        if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", request->rspq.getName(), rc);
+    }
 
     /* Generate Telemetry */
     tlm.duration = static_cast<float>(TimeLib::latchtime() - start);

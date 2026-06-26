@@ -1,9 +1,9 @@
-from tool import CallableTool
+from tool import Tool
 
 #
 # ams/list_collections
 #
-class ListCollections(CallableTool):
+class ListCollections(Tool):
 
     def __init__(self):
         super().__init__(
@@ -22,7 +22,7 @@ class ListCollections(CallableTool):
 #
 # ams/search
 #
-class Search(CallableTool):
+class Search(Tool):
 
     def __init__(self):
         super().__init__(
@@ -41,7 +41,7 @@ class Search(CallableTool):
 #
 # ams/describe
 #
-class Describe(CallableTool):
+class Describe(Tool):
 
     def __init__(self):
         super().__init__(

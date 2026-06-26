@@ -39,6 +39,8 @@
 #include "OsApi.h"
 #include "List.h"
 
+#include <uuid/uuid.h>
+
 /******************************************************************************
  * STRING LIBRARY CLASS
  ******************************************************************************/
@@ -61,6 +63,22 @@ class StringLib
 
                 char*   carray;
                 long    bufsize;
+        };
+
+        class UniqueString
+        {
+            public:
+
+                UniqueString (void);
+                ~UniqueString (void) = default;
+
+                const char*     c_str       (bool duplicate = false) const;
+                long            length      (void) const;
+                long            size        (void) const;
+
+            private:
+
+                char str[UUID_STR_LEN];
         };
 
         /*--------------------------------------------------------------------
@@ -120,5 +138,6 @@ class StringLib
  *----------------------------------------------------------------------------*/
 
 typedef StringLib::FormattedString FString;
+typedef StringLib::UniqueString UString;
 
 #endif  /* __string_lib__ */

@@ -316,17 +316,12 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
  *----------------------------------------------------------------------------*/
 const char* OutputLib::getUniqueFileName (const char* id)
 {
-    char uuid_str[UUID_STR_LEN];
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse_lower(uuid, uuid_str);
-
     string tmp_file(TMP_FILE_PREFIX);
 
     if(id) tmp_file.append(id).append(".");
     else tmp_file.append("arrow.");
 
-    tmp_file.append(uuid_str).append(".bin");
+    tmp_file.append(UString().c_str()).append(".bin");
     return StringLib::duplicate(tmp_file.c_str());
 }
 

@@ -73,15 +73,21 @@ class LuaEndpoint: public EndpointObject
             vector<string>      allowed_roles;      // ENDPOINT_ROLES
             bool                signature_required; // ENDPOINT_SIGNED
             vector<content_t>   supported_outputs;  // ENDPOINT_OUTPUTS
-            RequestParameters*      request_parameters; // ENDPOINT_PARMS
+            RequestParameters*  request_parameters; // ENDPOINT_PARMS
         } endpoint_t;
 
-         /*--------------------------------------------------------------------
+        typedef bool (*handler_f) (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script);
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
-        static void         defaultHandler      (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
+        static bool         defaultHandler      (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script);
+        static bool         asyncHandler        (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script);
+
+        static void         registerHandler     (content_t content, handler_f handler);
+        static handler_f    retrieveHandler     (content_t content);
 
     protected:
 
@@ -94,15 +100,23 @@ class LuaEndpoint: public EndpointObject
 
         void                handleRequest       (Request* request) override;
 
+        static int          setLuaTable         (lua_State* L, Request* request, const char* rspq_name, const char* argument);
         static endpoint_t   loadLuaScript       (Request* request, LuaEngine* engine, const string& script);
         static void         captureRequest      (Request* request, const endpoint_t& endpoint, EventLib::tlm_input_t& tlm);
         static void         checkRole           (Request* request, const endpoint_t& endpoint);
         static void         checkSignature      (Request* request, const endpoint_t& endpoint);
-        static content_t    selectOutput        (Request* request, const endpoint_t& endpoint, const string& extension);
+        static content_t    selectContentType    (Request* request, const endpoint_t& endpoint, const string& extension);
         static void         checkMemoryUsage    (Request* request);
-        static void         executeEndpoint     (Request* request, LuaEngine* engine, content_t selected_output, const string& arguments);
+        static bool         executeEndpoint     (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script);
 
         static void*        requestThread       (void* parm);
+        static void*        asyncThread         (void* parm);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static std::unordered_map<content_t, handler_f> endpointHandlers;
 };
 
 #endif  /* __lua_endpoint__ */

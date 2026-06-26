@@ -1,9 +1,9 @@
-from tool import CallableTool
+from tool import Tool
 
 #
 # data/describe
 #
-class DataDescribe(CallableTool):
+class DataDescribe(Tool):
 
     def __init__(self):
         super().__init__(
@@ -27,7 +27,7 @@ class DataDescribe(CallableTool):
 #
 # data/query
 #
-class DataQuery(CallableTool):
+class DataQuery(Tool):
 
     def __init__(self):
         super().__init__(

@@ -69,7 +69,7 @@ return {
     roles = {"member", "owner"},
     signed = true,
     inputs = {"json"},
-    outputs = {"json"},
+    outputs = {"json", "async"},
     schema = {
         tags = "a-series, cre",
         request = [[ "application/json": {

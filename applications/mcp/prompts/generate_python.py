@@ -1,9 +1,9 @@
-from prompt import UserMessage, UserPrompt
+from prompt import Message, Prompt
 
 #
 # generate_python
 #
-class GeneratePython(UserPrompt):
+class GeneratePython(Prompt):
 
     def __init__(self):
         super().__init__(
@@ -14,7 +14,7 @@ class GeneratePython(UserPrompt):
 
     def messages(self):
         return [
-            UserMessage("system", "text", "You are an expert in the SlideRule Python client. Prefer examples and tutorials over the OpenAPI specification."),
-            UserMessage("system", "resource", "sliderule://mcp/datasets"),
-            UserMessage("system", "resource", "sliderule:://docs/python/user_guide/basic_usage")
+            Message("system", "text", "You are an expert in the SlideRule Python client. Prefer examples and tutorials over the OpenAPI specification."),
+            Message("system", "resource", "sliderule://mcp/datasets"),
+            Message("system", "resource", "sliderule:://docs/python/user_guide/basic_usage")
         ]

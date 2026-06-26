@@ -6,8 +6,8 @@ import urllib.request
 import importlib.util
 import inspect
 from pathlib import Path
-from tool import CallableTool
-from prompt import UserMessage, UserPrompt
+from tool import Tool
+from prompt import Message, Prompt
 import trafilatura
 
 # ###############################
@@ -137,7 +137,7 @@ def get_available_prompts():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         for _class_name, prompt_class in inspect.getmembers(module, inspect.isclass):
-            if prompt_class.__module__ == module_name and issubclass(prompt_class, UserPrompt):
+            if prompt_class.__module__ == module_name and issubclass(prompt_class, Prompt):
                 prompt = prompt_class()
                 prompts[prompt.name] = prompt
     return prompts
@@ -167,7 +167,7 @@ def get_available_tools():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         for _class_name, tool_class in inspect.getmembers(module, inspect.isclass):
-            if tool_class.__module__ == module_name and issubclass(tool_class, CallableTool):
+            if tool_class.__module__ == module_name and issubclass(tool_class, Tool):
                 tool = tool_class()
                 tools[tool.name] = tool
     return tools
@@ -238,7 +238,9 @@ def tools_list_handler(rqst):
 def tools_call_handler(rqst):
     name = rqst["parms"]["name"]
     arguments = rqst["parms"].get("arguments", {})
-    return rpc_result(rqst, TOOLS[name].call(arguments))
+    return rpc_result(rqst, {
+        "content": TOOLS[name].call(arguments)
+    })
 
 #
 # List Resources

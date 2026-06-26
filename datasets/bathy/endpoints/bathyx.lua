@@ -47,7 +47,7 @@ return {
     roles = {},
     signed = false,
     inputs = {"json"},
-    outputs = {"binary", "arrow"},
+    outputs = {"binary", "arrow", "async"},
     schema = {
         tags = "x-series, bathy",
         request = [[ "application/json": {

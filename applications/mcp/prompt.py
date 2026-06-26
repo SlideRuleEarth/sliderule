@@ -2,7 +2,7 @@
 # Base Message Class
 # ###############################
 
-class UserMessage:
+class Message:
 
     def __init__(self, role, msg_type, content):
         self.role = role
@@ -36,7 +36,7 @@ class UserMessage:
 # Base Prompt Class
 # ###############################
 
-class UserPrompt:
+class Prompt:
 
     QUESTION = {
         "name": "question",
@@ -63,5 +63,5 @@ class UserPrompt:
     def respond(self, arguments):
         msgs = self.messages()
         if "question" in arguments:
-            msgs.append(UserMessage("user", "text", arguments["question"]))
+            msgs.append(Message("user", "text", arguments["question"]))
         return [msg.definition for msg in msgs]

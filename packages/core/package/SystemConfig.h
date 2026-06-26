@@ -104,6 +104,7 @@ class SystemConfig: public FieldMap<Field>
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
         FieldElement<int>               requestMaxResources         {300};
         FieldElement<int>               signedRequestTimeWindow     {60}; // seconds
+        FieldElement<string>            stagingAsset                {"sliderule-stage"};
 
         // ENVIRONMENT VARIABLES
         FieldElement<string>            ipv4;

@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "AlertMonitor.h"
 #include "AmsLib.h"
 #include "Asset.h"
 #include "AssetIndex.h"
@@ -121,6 +122,7 @@ static int core_open (lua_State *L)
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
         {"logmon",          LogMonitor::luaCreate},
+        {"alertmon",        AlertMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"webroot",         FileEndpoint::luaCreate},
@@ -282,9 +284,10 @@ void initcore (void)
     LuaEngine::extend(LUA_CORE_LIBNAME, core_open, LIBID);
 
     /* Register Endpoint Content Handlers */
-    EndpointObject::registerHandler(EndpointObject::TEXT, LuaEndpoint::defaultHandler);
-    EndpointObject::registerHandler(EndpointObject::JSON, LuaEndpoint::defaultHandler);
-    EndpointObject::registerHandler(EndpointObject::BINARY, LuaEndpoint::defaultHandler);
+    LuaEndpoint::registerHandler(EndpointObject::TEXT, LuaEndpoint::defaultHandler);
+    LuaEndpoint::registerHandler(EndpointObject::JSON, LuaEndpoint::defaultHandler);
+    LuaEndpoint::registerHandler(EndpointObject::BINARY, LuaEndpoint::defaultHandler);
+    LuaEndpoint::registerHandler(EndpointObject::ASYNC, LuaEndpoint::asyncHandler);
 
     /* Print Status */
     print2term("%s package initialized (%s)\n", LUA_CORE_LIBNAME, LIBID);
@@ -338,4 +341,3 @@ int geterrors(void)
 {
     return appErrors;
 }
-

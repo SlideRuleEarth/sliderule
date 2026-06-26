@@ -49,7 +49,6 @@
 
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
 FString EndpointObject::serverHead("sliderule/%s", LIBID);
-std::unordered_map<EndpointObject::content_t, EndpointObject::handler_f> EndpointObject::endpointHandlers;
 
  /******************************************************************************
  * REQUEST SUBCLASS
@@ -67,6 +66,7 @@ EndpointObject::Request::Request (const char* _id):
     body        (NULL),
     length      (0),
     trace_id    (ORIGIN),
+    content_type(UNKNOWN),
     id          (StringLib::duplicate(_id)),
     rspq        (id)
 {
@@ -82,20 +82,6 @@ EndpointObject::Request::~Request (void)
     delete [] version;
     delete [] path;
     delete [] id;
-}
-
-/*----------------------------------------------------------------------------
- * setLuaTable
- *----------------------------------------------------------------------------*/
-int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, const char* rspq_name, const char* argument) const
-{
-    lua_newtable(L);
-    LuaEngine::setAttrStr(L, "id", rqst_id);
-    LuaEngine::setAttrStr(L, "rspq", rspq_name);
-    LuaEngine::setAttrStr(L, "srcip", getHdrSourceIp());
-    LuaEngine::setAttrStr(L, "arg", argument);
-    lua_setglobal(L, "_rqst");
-    return 1;
 }
 
  /*----------------------------------------------------------------------------
@@ -378,6 +364,8 @@ EndpointObject::content_t EndpointObject::str2content (const char* str)
     if(StringLib::match(str, "application/octet-stream"))   return BINARY;
     if(StringLib::match(str, "arrow"))                      return ARROW;
     if(StringLib::match(str, "application/arrow"))          return ARROW;
+    if(StringLib::match(str, "async"))                      return ASYNC;
+    if(StringLib::match(str, "application/async"))          return ASYNC;
     return UNKNOWN;
 }
 
@@ -392,6 +380,7 @@ const char* EndpointObject::content2str (content_t content)
         case JSON:      return "application/json";
         case BINARY:    return "application/octet-stream";
         case ARROW:     return "application/arrow";
+        case ASYNC:     return "application/async";
         default:        return "unknown";
     }
 }
@@ -435,29 +424,5 @@ void EndpointObject::sendHeader (EndpointObject::code_t http_code, const char* c
     else
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid header construction");
-    }
-}
-
-
-/*----------------------------------------------------------------------------
- * registerHandler - NOT THREAD SAFE
- *----------------------------------------------------------------------------*/
-void EndpointObject::registerHandler (content_t content, handler_f handler)
-{
-    endpointHandlers[content] = handler;
-}
-
-/*----------------------------------------------------------------------------
- * retrieveHandler - NOT THREAD SAFE
- *----------------------------------------------------------------------------*/
-EndpointObject::handler_f EndpointObject::retrieveHandler (content_t content)
-{
-    if (endpointHandlers.contains(content))
-    {
-        return endpointHandlers.at(content);
-    }
-    else
-    {
-        return NULL;
     }
 }

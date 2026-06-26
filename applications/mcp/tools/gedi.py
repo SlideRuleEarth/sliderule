@@ -1,9 +1,9 @@
-from tool import CallableTool
+from tool import Tool
 
 #
 # gedi/l1b/subset
 #
-class L1BSubset(CallableTool):
+class L1BSubset(Tool):
 
     def __init__(self):
         super().__init__(
@@ -22,7 +22,7 @@ class L1BSubset(CallableTool):
 #
 # gedi/l2a/subset
 #
-class L2ASubset(CallableTool):
+class L2ASubset(Tool):
 
     def __init__(self):
         super().__init__(
@@ -41,7 +41,7 @@ class L2ASubset(CallableTool):
 #
 # gedi/l4a/subset
 #
-class L4ASubset(CallableTool):
+class L4ASubset(Tool):
 
     def __init__(self):
         super().__init__(

@@ -29,31 +29,58 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_endpoint__
-#define __arrow_endpoint__
+#ifndef __alert_monitor__
+#define __alert_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "EndpointObject.h"
-#include "LuaEndpoint.h"
+#include "MsgQ.h"
+#include "Monitor.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * PISTACHE SERVER CLASS
+ * CLASS
  ******************************************************************************/
 
-struct ArrowEndpoint: public LuaEndpoint
+class AlertMonitor: public Monitor
 {
-    typedef struct {
-        Request* request;
-        Sem ready;
-    } info_t;
+    public:
 
-    static bool arrowHandler (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script);
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-    static void* responseThread (void* parm);
+        static const int MAX_OUTPUT_SIZE = 512;
+        static const int MAX_FILENAME_SIZE = 64;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int luaCreate (lua_State* L);
+
+        AlertMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
+        ~AlertMonitor (void) override;
+
+        const char* snapshot (void); // flush to file and return filename
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        char fileName[MAX_FILENAME_SIZE];
+        FILE* fileHandle;
 };
 
-#endif  /* __arrow_endpoint__ */
+#endif  /* __alert_monitor__ */

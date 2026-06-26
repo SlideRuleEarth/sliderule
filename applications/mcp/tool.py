@@ -7,10 +7,38 @@ import boto3
 s3 = boto3.client("s3")
 
 # ###############################
+# Base Content Class
+# ###############################
+
+class Content:
+
+    def __init__(self, msg_type, content):
+        self.type = msg_type
+        self.content = content
+
+    @property
+    def definition(self):
+        if self.type == "text":
+            return {
+                "type": "text",
+                "text": self.content
+            }
+        elif self.type == "resource":
+            return {
+                "type": "text",
+                "resource": {
+                    "uri": self.content
+                }
+            }
+        else:
+            raise RuntimeError(f"invalid content type: {self.type}")
+
+
+# ###############################
 # Base Tool Class
 # ###############################
 
-class CallableTool:
+class Tool:
 
     GEOSPATIAL_TEMPORAL_PROPERTIES = {
         "poly": {

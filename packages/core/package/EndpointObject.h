@@ -96,7 +96,8 @@ class EndpointObject: public LuaObject
             JSON = 2,
             BINARY = 3,
             ARROW = 4,
-            UNKNOWN = 5
+            ASYNC = 5,
+            UNKNOWN = 6
         } content_t;
 
         typedef Dictionary<string*> HeaderDictionary;
@@ -117,25 +118,19 @@ class EndpointObject: public LuaObject
                 uint8_t*            body;
                 long                length; // of body
                 uint32_t            trace_id;
+                content_t           content_type;
                 const char*         id; // must be unique
                 Publisher           rspq;
 
                 explicit Request (const char* _id);
                 ~Request (void);
 
-                int         setLuaTable         (lua_State* L, const char* rqst_id, const char* rspq_name, const char* argument) const;
                 const char* getHdrSourceIp      (void) const;
                 const char* getHdrClient        (void) const;
                 const char* getHdrAccount       (void) const;
                 const char* getHdrOrgRoles      (void) const;
                 bool        verifyHdrSignature  (const char* account) const;
         };
-
-        /*--------------------------------------------------------------------
-         * Endpoint Handler Typedef
-         *--------------------------------------------------------------------*/
-
-         typedef void (*handler_f) (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments);
 
         /*--------------------------------------------------------------------
          * Methods
@@ -153,9 +148,6 @@ class EndpointObject: public LuaObject
         static string       buildheader         (code_t code, const char* content_type, int content_length, const char* transfer_encoding);
         static void         sendHeader          (EndpointObject::code_t , const char* content_type, Publisher* rspq, const char* msg=NULL, long msglen=-1);
 
-        static void         registerHandler     (content_t content, handler_f handler);
-        static handler_f    retrieveHandler     (content_t content);
-
         virtual void        handleRequest       (Request* request) = 0;
 
 
@@ -164,7 +156,6 @@ class EndpointObject: public LuaObject
          *--------------------------------------------------------------------*/
 
          static FString serverHead;
-         static std::unordered_map<content_t, handler_f> endpointHandlers;
  };
 
 #endif  /* __endpoint_object__ */

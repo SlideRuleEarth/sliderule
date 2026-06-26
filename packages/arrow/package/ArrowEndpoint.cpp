@@ -44,11 +44,11 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * defaultHandler
+ * arrowHandler
  *----------------------------------------------------------------------------*/
-void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content_t selected_output, const char* arguments)
+bool ArrowEndpoint::arrowHandler (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script)
 {
-    assert(selected_output == EndpointObject::ARROW); (void)selected_output;
+    (void)endpoint;
 
     /* Start Response Thread */
     info_t info;
@@ -60,7 +60,7 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     lua_State* L = engine->getLuaState();
 
     /* Supply Global Variables to Script */
-    request->setLuaTable(engine->getLuaState(), request->id, FString("%s-arrow", request->id).c_str(), arguments);
+    setLuaTable(engine->getLuaState(), request, FString("%s-arrow", request->id).c_str(), script.argument.c_str());
 
     /* Get Main Function */
     lua_getfield(L, -1, ENDPOINT_MAIN);
@@ -79,6 +79,9 @@ void ArrowEndpoint::defaultHandler (Request* request, LuaEngine* engine, content
     {
         mlog(CRITICAL, "Failed to execute endpoint %s: %d", request->resource, lua_status);
     }
+
+    /* Terminate Connection */
+    return true;
 }
 
 /*----------------------------------------------------------------------------

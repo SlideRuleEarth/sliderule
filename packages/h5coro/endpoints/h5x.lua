@@ -107,7 +107,7 @@ return {
     roles = {},
     signed = false,
     inputs = {"json"},
-    outputs = {"binary"},
+    outputs = {"binary", "arrow", "async"},
     schema = {
         tags = "x-series, h5coro",
         request = [[ "application/json": {

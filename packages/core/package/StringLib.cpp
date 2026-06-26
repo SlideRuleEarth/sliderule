@@ -36,6 +36,7 @@
 #include "StringLib.h"
 #include "OsApi.h"
 
+#include <uuid/uuid.h>
 #include <cstdarg>
 #include <string.h>
 #include <limits.h>
@@ -123,6 +124,51 @@ long StringLib::FormattedString::length(void) const
  * size - alias for length
  *----------------------------------------------------------------------------*/
 long StringLib::FormattedString::size(void) const
+{
+    return length();
+}
+
+/******************************************************************************
+ * UNIQUE STRING METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+StringLib::UniqueString::UniqueString(void)
+{
+    uuid_t uuid;
+    uuid_generate(uuid);
+    uuid_unparse_lower(uuid, str);
+}
+
+/*----------------------------------------------------------------------------
+ * c_str
+ *----------------------------------------------------------------------------*/
+const char* StringLib::UniqueString::c_str(bool duplicate) const
+{
+    if(duplicate)
+    {
+        char* new_str = new char[UUID_STR_LEN];
+        StringLib::copy(new_str, str, UUID_STR_LEN);
+        return new_str;
+    }
+
+    return str;
+}
+
+/*----------------------------------------------------------------------------
+ * length - number of non-null characters in string
+ *----------------------------------------------------------------------------*/
+long StringLib::UniqueString::length(void) const
+{
+    return UUID_STR_LEN - 1; // remove null terminator in length
+}
+
+/*----------------------------------------------------------------------------
+ * size - alias for length
+ *----------------------------------------------------------------------------*/
+long StringLib::UniqueString::size(void) const
 {
     return length();
 }

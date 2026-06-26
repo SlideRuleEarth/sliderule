@@ -1,4 +1,4 @@
-from tool import CallableTool
+from tool import Tool
 
 #
 # Globals
@@ -21,7 +21,7 @@ ALONG_TRACK_SEGMENT_PROPERTIES = {
 #
 # icesat2/atl03/subset
 #
-class Atl03Subset(CallableTool):
+class Atl03Subset(Tool):
 
     def __init__(self):
         super().__init__(
@@ -40,7 +40,7 @@ class Atl03Subset(CallableTool):
 #
 # icesat2/atl03/surface_fit
 #
-class Atl03SurfaceFit(CallableTool):
+class Atl03SurfaceFit(Tool):
 
     def __init__(self):
         super().__init__(
@@ -59,7 +59,7 @@ class Atl03SurfaceFit(CallableTool):
 #
 # icesat2/atl03/density_metrics
 #
-class Atl03DensityMetrics(CallableTool):
+class Atl03DensityMetrics(Tool):
 
     def __init__(self):
         super().__init__(
@@ -78,7 +78,7 @@ class Atl03DensityMetrics(CallableTool):
 #
 # icesat2/atl06/subset
 #
-class Atl06Subset(CallableTool):
+class Atl06Subset(Tool):
 
     def __init__(self):
         super().__init__(
@@ -97,7 +97,7 @@ class Atl06Subset(CallableTool):
 #
 # icesat2/atl08/subset
 #
-class Atl08Subset(CallableTool):
+class Atl08Subset(Tool):
 
     def __init__(self):
         super().__init__(
@@ -116,7 +116,7 @@ class Atl08Subset(CallableTool):
 #
 # icesat2/atl13/subset
 #
-class Atl13Subset(CallableTool):
+class Atl13Subset(Tool):
 
     def __init__(self):
         super().__init__(
@@ -135,7 +135,7 @@ class Atl13Subset(CallableTool):
 #
 # icesat2/atl24/subset
 #
-class Atl24Subset(CallableTool):
+class Atl24Subset(Tool):
 
     def __init__(self):
         super().__init__(
