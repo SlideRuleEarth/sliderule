@@ -15,7 +15,7 @@ jobs:
           set -euxo pipefail  # stop workflow if curl exits non-zero
           JWT=$(curl -fsS https://login.slideruleearth.io/auth/github/pat -d "{\"pat\":\"$SLIDERULE_GITHUB_TOKEN\"}" | jq -r '.token')
           REPORT=$(curl -fsS -X POST -H "Authorization: Bearer $JWT" https://provisioner.slideruleearth.io/report/tests)
-          REPORT_EPOCH=$(date -d "$(echo $REPORT | jq -r '.report.date')" +%s)
-          TODAY_EPOCH=$(date -d "$(date +%F)" +%s)
+          REPORT_EPOCH=$(date -d "$(echo $REPORT | jq -r '.date')" +%s)
+          YESTERDAY_EPOCH=$(date -d "yesterday" +%s)
           jq -e '.status == true' <<< "$REPORT" > /dev/null # check success
-          (( REPORT_EPOCH >= TODAY_EPOCH )) # check test ran today
+          (( REPORT_EPOCH >= YESTERDAY_EPOCH )) # check test ran today or yesterday

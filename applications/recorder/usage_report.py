@@ -337,7 +337,7 @@ def aoi_sql_grid(table, where_clause, filename):
         y = int(row["grid_y"])
         if x == 1440: x = 1439
         if y == 720: y = 719
-        if(x < 1440 and x >= 0 and y < 720 and y >= 0):
+        if(x < 1440 and x > 0 and y < 720 and y > 0): # 0,0 is an unfortunate artifact of not being populated
             grid[y, x] = row["point_count"]
         else:
             print(f"Not gridding {y},{x} => {row["point_count"]}")

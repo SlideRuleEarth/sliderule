@@ -1,4 +1,5 @@
 from tool import Tool
+from sliderule import sliderule
 
 #
 # Globals
@@ -35,6 +36,12 @@ class Atl03Subset(Tool):
         )
 
     def call(self, arguments):
+        poly = sliderule.toregion(arguments["poly"])["poly"]
+        rsps = sliderule.source("atl03x.async", {"parms": arguments | {
+            "poly": poly,
+            "output": {"asset": "sliderule-stage"}
+        }})
+
         return None
 
 #
