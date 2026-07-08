@@ -1,4 +1,5 @@
-requests
 croniter
 cryptography
+geopandas
+requests
 trafilatura

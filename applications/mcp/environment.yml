@@ -5,6 +5,7 @@ channels:
 dependencies:
   - boto3
   - coverage
+  - geopandas
   - pytest
   - pytest-env
   - requests

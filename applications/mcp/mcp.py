@@ -15,8 +15,6 @@ import trafilatura
 # ###############################
 
 CLUSTER = os.environ.get('CLUSTER')
-PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
-PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
 ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
 
 INVALID_REQUEST_CODE    = -32600
