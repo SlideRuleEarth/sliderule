@@ -14,10 +14,22 @@ def test_list_tools():
 #
 # Call Tool
 #
-#def test_call_tool():
-#    rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "tools/call", {"name": "icesat2/atl03/subset", "arguments": {}}, 0), None)
-#    body = json.loads(rsps["body"])
-#    assert len(body["result"]["content"][0]["text"]) > 10
+def test_call_tool(local):
+    aoi = [ { "lat": -80.75, "lon": -70.00 },
+            { "lat": -81.00, "lon": -70.00 },
+            { "lat": -81.00, "lon": -65.00 },
+            { "lat": -80.75, "lon": -65.00 },
+            { "lat": -80.75, "lon": -70.00 } ]
+    resources = ["ATL03_20181019065445_03150111_006_02.h5"]
+    rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "tools/call", {"name": "icesat2/atl03/subset", "arguments": {
+        "track": 1,
+        "cnf": 4,
+        "poly": aoi,
+        "resources": resources
+    }}, 0), None)
+    body = json.loads(rsps["body"])
+    assert body["result"]["content"]["type"] == "resource"
+    assert body["result"]["content"]["resource"]["uri"].startswith("sliderule://mcp/jobs/")
 
 #
 # Missing Tool

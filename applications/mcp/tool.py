@@ -85,15 +85,19 @@ class Tool:
     def call(self, arguments):
         raise NotImplementedError()
 
+    @staticmethod
     def datasetUri(mcp_id):
-        f"sliderule://mcp/datasets/{mcp_id}"
+        return f"sliderule://mcp/datasets/{mcp_id}"
 
+    @staticmethod
     def jobUri(mcp_id):
-        f"sliderule://mcp/jobs/{mcp_id}"
+        return f"sliderule://mcp/jobs/{mcp_id}"
 
+    @staticmethod
     def jobKey(mcp_id):
         return f"mcp/job-{mcp_id}"
 
+    @staticmethod
     def jobResource(contents, receipt=None, result=None):
         mcp_id = uuid.uuid4()
         s3.put_object(
@@ -113,6 +117,7 @@ class Tool:
             }
         }
 
+    @staticmethod
     def jobStatus(mcp_id):
         obj = s3.get_object(
             Bucket=PROJECT_PUBLIC_BUCKET,
@@ -184,6 +189,7 @@ class Tool:
             })
         }
 
+    @staticmethod
     def datasetStatus(mcp_id):
         obj = s3.get_object(
             Bucket=PROJECT_PUBLIC_BUCKET,

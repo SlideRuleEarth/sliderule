@@ -18,6 +18,15 @@ ALONG_TRACK_SEGMENT_PROPERTIES = {
         "description": "Length of the photon segment used to compute each elevation estimate, in meters."
     }
 }
+GRANULE_PROPERTIES = {
+    "resources": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        },
+        "description": "List of granule names"
+    }
+}
 
 #
 # icesat2/atl03/subset
@@ -30,8 +39,8 @@ class Atl03Subset(Tool):
             description="Subset ICESat-2 ATL03 photon cloud data by spatial and temporal filters.",
             schema={
                 "type": "object",
-                "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES | GRANULE_PROPERTIES,
+                "required": ["poly"]
             }
         )
 
@@ -53,8 +62,8 @@ class Atl03SurfaceFit(Tool):
             description="Fit a surface to the ICESat-2 ATL03 photon cloud and return along track elevations",
             schema={
                 "type": "object",
-                "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES | ALONG_TRACK_SEGMENT_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES | GRANULE_PROPERTIES | ALONG_TRACK_SEGMENT_PROPERTIES,
+                "required": ["poly"]
             }
         )
 
@@ -73,7 +82,7 @@ class Atl03DensityMetrics(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES | ALONG_TRACK_SEGMENT_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 
@@ -92,7 +101,7 @@ class Atl06Subset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 
@@ -111,7 +120,7 @@ class Atl08Subset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 
@@ -130,7 +139,7 @@ class Atl13Subset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 
@@ -149,7 +158,7 @@ class Atl24Subset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 

@@ -712,7 +712,7 @@ def getdefinition (rectype, fieldname, session=None):
 def gdf2poly(gdf):
 
     # pull out coordinates
-    hull = gdf.unary_union.convex_hull
+    hull = gdf.union_all().convex_hull
     polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
 
     # determine winding of polygon #

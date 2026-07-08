@@ -12,7 +12,7 @@ class L1BSubset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 
@@ -31,7 +31,7 @@ class L2ASubset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 
@@ -50,7 +50,7 @@ class L4ASubset(Tool):
             schema={
                 "type": "object",
                 "properties": self.GEOSPATIAL_TEMPORAL_PROPERTIES,
-                "required": ["poly", "t0", "t1"]
+                "required": ["poly"]
             }
         )
 

@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import re
+import traceback
 import urllib.request
 import importlib.util
 import inspect
@@ -378,6 +379,7 @@ def rpc_response(rqst):
         else:
             return rpc_error(rqst, METHOD_NOT_FOUND_CODE, f'method {rqst["method"]} not found')
     except Exception as e:
+        traceback.print_exc()
         return rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}')
 
 # ###############################
