@@ -288,11 +288,13 @@ def resources_read_handler(rqst):
 
     # mcp dataset resource
     if resource_path[0] == "mcp" and resource_path[1] == "datasets":
-        text = "" # TODO
+        mcp_id = resource_path[-1]
+        text = json.dumps(Tool.datasetStatus(mcp_id))
 
     # mcp job resource
     elif resource_path[0] == "mcp" and resource_path[1] == "jobs":
-        text = "" # TODO
+        mcp_id = resource_path[-1]
+        text = json.dumps(Tool.jobStatus(mcp_id))
 
     # mcp raw resource
     elif resource_path[0] == "mcp":

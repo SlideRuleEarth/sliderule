@@ -85,6 +85,7 @@ class OutputFields: public FieldMap<Field>
         FieldElement<bool>      asGeo {false};              // whether to create a standard geo-based formatted file
         FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record
         FieldElement<bool>      withValidation {false};     // whether to validate the arrow structure before outputing
+        FieldElement<bool>      withOpenApi {false};        // whether to include open api schema embedded in metadata
         FieldElement<string>    assetName;
         FieldElement<string>    endpoint;
         FieldList<string>       ancillaryFields;            // legacy functionality in support of ancillary fields for streamed results

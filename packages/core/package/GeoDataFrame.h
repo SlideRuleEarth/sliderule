@@ -175,6 +175,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         void                        clear               (void) override;
         long                        length              (void) const override;
+        string                      toOpenApi           (const char* description) const override;
 
         long                        addRow              (void);
         void                        setNumRows          (long rows);

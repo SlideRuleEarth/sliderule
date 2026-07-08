@@ -36,10 +36,9 @@ class Atl03Subset(Tool):
         )
 
     def call(self, arguments):
-        poly = sliderule.toregion(arguments["poly"])["poly"]
         rsps = sliderule.source("atl03x.async", {"parms": arguments | {
-            "poly": poly,
-            "output": {"asset": "sliderule-stage"}
+            "poly": sliderule.toregion(arguments["poly"])["poly"],
+            "output": {"asset": "sliderule-stage", "with_openapi": True}
         }}, rethrow=True)
         return self.jobResource(rsps, receipt=rsps["receipt"], result=rsps["parameters"]["output"]["path"])
 

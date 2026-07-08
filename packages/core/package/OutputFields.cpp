@@ -59,6 +59,7 @@ OutputFields::OutputFields (void):
         {"as_geo",              &asGeo,             "Boolean for writing the file as a GeoParquet; deprecated, use format='geoparquet' instead"},
         {"with_checksum",       &withChecksum,      "Boolean to include a checksum of the file in the response"},
         {"with_validation",     &withValidation,    "Boolean to perform extended server-side validation of the file that it meets the specified format standard"},
+        {"with_openapi",        &withOpenApi,       "Boolean to embed the OpenAPI schema definition of the dataframe in the metadata"},
         {"asset",               &assetName,         "Name of a credentialed asset to write the file to; only used if the file is not directly returned to the user"},
         {"endpoint",            &endpoint,          "Name of the endpoint to write the file to; only used if the file is not directly returned to the user"},
         #ifdef __aws__

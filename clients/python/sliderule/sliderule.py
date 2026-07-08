@@ -738,6 +738,27 @@ def emptyframe(**kwargs):
     return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
 
 #
+# Populate MetaData
+#
+def populatemetadata(df, path):
+    # Read metadata from file
+    try:
+        # Imports needed just to read metadata
+        import pyarrow.parquet as pq
+        import ctypes
+        import json
+        # pull out metadata
+        metadata = pq.read_metadata(path)
+        for key in metadata.metadata:
+            if key in [b'ARROW:schema', b'pandas', b'geo']:
+                continue
+            metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
+            df.attrs[key.decode('ascii')] = json.loads(metadata_str)
+    except Exception as e:
+        # could fail for a multitude of reasons; just log and move on
+        logger.debug(f'Failed to read metadata from {path}: {e}')
+
+#
 # Get Values from Raw Buffer
 #
 def getvalues(data, dtype, size, num_elements=0):
@@ -797,22 +818,7 @@ def procoutputfile(parm, rsps):
 
         # Only read Parquet metadata for Parquet or GeoParquet
         if output["format"] in ("parquet", "geoparquet"):
-            # Read metadata from file
-            try:
-                # Imports needed just to read metadata
-                import pyarrow.parquet as pq
-                import ctypes
-                import json
-                # pull out metadata
-                metadata = pq.read_metadata(path)
-                for key in metadata.metadata:
-                    if key in [b'ARROW:schema', b'pandas', b'geo']:
-                        continue
-                    metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
-                    local_file.attrs[key.decode('ascii')] = json.loads(metadata_str)
-            except Exception as e:
-                # could fail for a multitude of reasons; just log and move on
-                logger.debug(f'Failed to read metadata from {path}: {e}')
+            populatemetadata(local_file, path)
 
     # Return back to caller either path or opened dataframe
     return local_file

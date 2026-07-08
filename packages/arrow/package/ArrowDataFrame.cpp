@@ -289,23 +289,22 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 }
 
 /*----------------------------------------------------------------------------
-* appendGeoMetaData
+* geoMetaData
 *----------------------------------------------------------------------------*/
-void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const string& crs)
+string geoMetaData (const string& crs)
 {
     if (crs.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required");
 
     const string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
                               "encoding":"WKB","geometry_types":["Point"],"crs":)" + crs + R"(}}})";
 
-    /* Append Meta String */
-    metadata->Append("geo", geostr);
+    return geostr;
 }
 
 /*----------------------------------------------------------------------------
-* appendPandasMetaData
+* pandasMetaData
 *----------------------------------------------------------------------------*/
-void appendPandasMetaData (const char* index_column_name, const shared_ptr<arrow::KeyValueMetadata>& metadata, const shared_ptr<arrow::Schema>& schema)
+string pandasMetaData (const char* index_column_name, const shared_ptr<arrow::Schema>& schema)
 {
     /* Initialize Pandas Meta Data String */
     string pandasstr(R"json({
@@ -382,8 +381,8 @@ void appendPandasMetaData (const char* index_column_name, const shared_ptr<arrow
     pandasstr = std::regex_replace(pandasstr, std::regex("_INDEX_"), index_column_name);
     pandasstr = std::regex_replace(pandasstr, std::regex("_COLUMNS_"), columns.c_str());
 
-    /* Append Meta String */
-    metadata->Append("pandas", pandasstr);
+    /* Return Pandas String */
+    return pandasstr;
 }
 
 /*----------------------------------------------------------------------------
@@ -609,11 +608,12 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS());
-                appendPandasMetaData(lua_obj->indexColumnName.c_str(), metadata, schema);
+                if(format == OutputFields::GEOPARQUET) metadata->Append("geo", geoMetaData(dataframe.getCRS()));
+                metadata->Append("pandas", pandasMetaData(lua_obj->indexColumnName.c_str(), schema));
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.getMetaAsJson());
                 metadata->Append("recordinfo", dataframe.getInfoAsJson());
+                if(arrow_parms.withOpenApi == true) metadata->Append("openapi", dataframe.toOpenApi("OpenAPI Schema"));
                 schema = schema->WithMetadata(metadata);
 
                 // create parquet writer

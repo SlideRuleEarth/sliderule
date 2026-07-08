@@ -604,11 +604,46 @@ void GeoDataFrame::clear(void)
 }
 
 /*----------------------------------------------------------------------------
- * length
- *----------------------------------------------------------------------------*/
+* length
+*----------------------------------------------------------------------------*/
 long GeoDataFrame::length(void) const
 {
     return numRows;
+}
+
+/*----------------------------------------------------------------------------
+* length
+*----------------------------------------------------------------------------*/
+string GeoDataFrame::toOpenApi (const char* description) const
+{
+    // initial attributes
+    string str = FString("{\"type\": \"object\", \"description\": \"%s\", \"properties\": {", description).c_str();
+
+    // column properties
+    typename Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator column_iter(columnFields.fields);
+    for(int i = 0; i < column_iter.length; i++)
+    {
+        const typename Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::kv_t kv = column_iter[i];
+        str += FString("\"%s\": %s,", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str()).c_str();
+    }
+
+    // metadata properties
+    typename Dictionary<FieldMap<Field>::entry_t>::Iterator meta_iter(metaFields.fields);
+    for(int i = 0; i < meta_iter.length; i++)
+    {
+        const typename Dictionary<FieldMap<Field>::entry_t>::kv_t kv = meta_iter[i];
+        if(kv.value.field->encoding & META_COLUMN)
+        {
+            str += FString("\"%s\": %s,", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str()).c_str();
+        }
+    }
+
+    // finish attributes
+    if(!str.empty() && str.back() == ',') str.pop_back();
+    str += "}}";
+
+    // return
+    return str;
 }
 
 /*----------------------------------------------------------------------------
@@ -1856,31 +1891,8 @@ int GeoDataFrame::luaDescribe (lua_State* L)
         const GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char* description = getLuaString(L, 2);
 
-        // initial attributes
-        string str = FString("{\"type\": \"object\", \"description\": \"%s\", \"properties\": {", description).c_str();
-
-        // column properties
-        typename Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator column_iter(lua_obj->columnFields.fields);
-        for(int i = 0; i < column_iter.length; i++)
-        {
-            const typename Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::kv_t kv = column_iter[i];
-            str += FString("\"%s\": %s,", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str()).c_str();
-        }
-
-        // metadata properties
-        typename Dictionary<FieldMap<Field>::entry_t>::Iterator meta_iter(lua_obj->metaFields.fields);
-        for(int i = 0; i < meta_iter.length; i++)
-        {
-            const typename Dictionary<FieldMap<Field>::entry_t>::kv_t kv = meta_iter[i];
-            if(kv.value.field->encoding & META_COLUMN)
-            {
-                str += FString("\"%s\": %s,", kv.key, kv.value.field->toOpenApi(kv.value.description).c_str()).c_str();
-            }
-        }
-
-        // finish attributes
-        if(!str.empty() && str.back() == ',') str.pop_back();
-        str += "}}";
+        // get open api string
+        string str = lua_obj->toOpenApi(description);
 
         // return schema
         lua_pushstring(L, str.c_str());

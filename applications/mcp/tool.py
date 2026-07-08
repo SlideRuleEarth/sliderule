@@ -3,7 +3,8 @@ import boto3
 import uuid
 import json
 import time
-import geopandas as gpd
+import ctypes
+import pyarrow.parquet as pq
 from botocore.exceptions import ClientError
 
 # ###############################
@@ -84,11 +85,20 @@ class Tool:
     def call(self, arguments):
         raise NotImplementedError()
 
+    def datasetUri(mcp_id):
+        f"sliderule://mcp/datasets/{mcp_id}"
+
+    def jobUri(mcp_id):
+        f"sliderule://mcp/jobs/{mcp_id}"
+
+    def jobKey(mcp_id):
+        return f"mcp/job-{mcp_id}"
+
     def jobResource(contents, receipt=None, result=None):
-        job_id = uuid.uuid4()
+        mcp_id = uuid.uuid4()
         s3.put_object(
             Bucket=PROJECT_PUBLIC_BUCKET,
-            Key=f"mcp/job-{job_id}",
+            Key=Tool.jobKey(mcp_id),
             Body=json.dumps({
                 "time": time.time(),
                 "receipt": receipt,
@@ -99,14 +109,14 @@ class Tool:
         return {
             "type": "resource",
             "resource": {
-                "uri": f"sliderule://job/{job_id}"
+                "uri": Tool.jobUri(mcp_id)
             }
         }
 
-    def jobStatus(job_id):
+    def jobStatus(mcp_id):
         obj = s3.get_object(
             Bucket=PROJECT_PUBLIC_BUCKET,
-            Key=f"mcp/job-{job_id}"
+            Key=Tool.jobKey(mcp_id)
         )
         body = obj["Body"].read().decode("utf-8")
         contents = json.loads(body)
@@ -121,7 +131,7 @@ class Tool:
             # check time
             if now > (contents["time"] + MAX_JOB_TIME_SECONDS):
                 return {
-                    "uri": f"sliderule://job/{job_id}",
+                    "uri": Tool.jobUri(mcp_id),
                     "mimeType": "application/json",
                     "text": json.dumps({
                         "status": "timeout",
@@ -133,7 +143,7 @@ class Tool:
                 }
             else: # receipt does not exist, but timeout has not yet occurred... assume still running
                 return {
-                    "uri": f"sliderule://job/{job_id}",
+                    "uri": Tool.jobUri(mcp_id),
                     "mimeType": "application/json",
                     "text": json.dumps({
                         "status": "running",
@@ -151,7 +161,7 @@ class Tool:
             )
         except ClientError: # result is missing, failed execution
             return {
-                "uri": f"sliderule://job/{job_id}",
+                "uri": Tool.jobUri(mcp_id),
                 "mimeType": "application/json",
                 "text": json.dumps({
                     "status": "failed",
@@ -163,33 +173,46 @@ class Tool:
             }
         # success
         return {
-            "uri": f"sliderule://job/{job_id}",
+            "uri": Tool.jobUri(mcp_id),
             "mimeType": "application/json",
             "text": json.dumps({
                 "status": "complete",
                 "created": contents["time"],
                 "updated": now,
-                "dataset": f"sliderule://dataset/{job_id}",
+                "dataset": Tool.datasetUri(mcp_id),
                 "error": None
             })
         }
 
-    def datasetStatus(job_id):
+    def datasetStatus(mcp_id):
         obj = s3.get_object(
             Bucket=PROJECT_PUBLIC_BUCKET,
-            Key=f"mcp/job-{job_id}"
+            Key=Tool.jobKey(mcp_id)
         )
         body = obj["Body"].read().decode("utf-8")
         contents = json.loads(body)
-        gdf = gpd.read_parquet(contents["result"])
-
+        metadata = pq.read_metadata(contents["result"])
+        arrow_schema = metadata.schema.to_arrow_schema()
+        openapi_str = ctypes.create_string_buffer(metadata.metadata["openapi"]).value.decode('ascii')
+        openapi_schema = json.loads(openapi_str)
         return {
-            "uri": f"sliderule://dataset/{job_id}",
+            "uri": Tool.datasetUri(mcp_id),
             "mimeType": "application/json",
             "text": json.dumps({
+                "job": Tool.jobKey(mcp_id),
                 "created": contents["time"],
                 "format": "application/x-parquet",
-                "rows": len(gdf),
-                "schema": {col: str(dtype) for col, dtype in gdf.dtypes.items()}
+                "size": obj["ContentLength"],
+                "num_rows": metadata.num_rows,
+                "columns": [{
+                    "name": field.name,
+                    "type": str(field.type),
+                    "nullable": field.nullable
+                } for field in arrow_schema],
+                "openapi": openapi_schema,
+                "operations": [
+                    "data/query",
+                    "data/export"
+                ]
             })
         }
