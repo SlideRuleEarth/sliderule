@@ -4,6 +4,7 @@ import uuid
 import json
 import time
 import ctypes
+import sliderule
 import pyarrow.parquet as pq
 from botocore.exceptions import ClientError
 
@@ -125,68 +126,54 @@ class Tool:
         )
         body = obj["Body"].read().decode("utf-8")
         contents = json.loads(body)
+        bucket, key = sliderule.splits3uri(contents["receipt"])
         now = time.time()
         try:
             # check for receipt
             s3.head_object(
-                Bucket=PROJECT_PUBLIC_BUCKET,
-                Key=contents["receipt"]
+                Bucket=bucket,
+                Key=key
             )
         except ClientError:
             # check time
             if now > (contents["time"] + MAX_JOB_TIME_SECONDS):
                 return {
-                    "uri": Tool.jobUri(mcp_id),
-                    "mimeType": "application/json",
-                    "text": json.dumps({
-                        "status": "timeout",
-                        "created": contents["time"],
-                        "updated": now,
-                        "dataset": None,
-                        "error": f"Processing exceeded maximum time allowed: {MAX_JOB_TIME_SECONDS}"
-                    })
-                }
-            else: # receipt does not exist, but timeout has not yet occurred... assume still running
-                return {
-                    "uri": Tool.jobUri(mcp_id),
-                    "mimeType": "application/json",
-                    "text": json.dumps({
-                        "status": "running",
-                        "created": contents["time"],
-                        "updated": now,
-                        "dataset": None,
-                        "error": None
-                    })
-                }
-        try:
-            # check for result
-            s3.head_object(
-                Bucket=PROJECT_PUBLIC_BUCKET,
-                Key=contents["result"]
-            )
-        except ClientError: # result is missing, failed execution
-            return {
-                "uri": Tool.jobUri(mcp_id),
-                "mimeType": "application/json",
-                "text": json.dumps({
-                    "status": "failed",
+                    "status": "timeout",
                     "created": contents["time"],
                     "updated": now,
                     "dataset": None,
-                    "error": f"Missing result: {contents["result"]}"
-                })
+                    "error": f"Processing exceeded maximum time allowed: {MAX_JOB_TIME_SECONDS}"
+                }
+            else: # receipt does not exist, but timeout has not yet occurred... assume still running
+                return {
+                    "status": "running",
+                    "created": contents["time"],
+                    "updated": now,
+                    "dataset": None,
+                    "error": None
+                }
+        try:
+            # check for result
+            bucket, key = sliderule.splits3uri(contents["result"])
+            s3.head_object(
+                Bucket=bucket,
+                Key=key
+            )
+        except ClientError: # result is missing, failed execution
+            return {
+                "status": "failed",
+                "created": contents["time"],
+                "updated": now,
+                "dataset": None,
+                "error": f"Missing result: {contents["result"]}"
             }
         # success
         return {
-            "uri": Tool.jobUri(mcp_id),
-            "mimeType": "application/json",
-            "text": json.dumps({
-                "status": "complete",
-                "created": contents["time"],
-                "updated": now,
-                "dataset": Tool.datasetUri(mcp_id),
-                "error": None
-            })
+            "status": "complete",
+            "created": contents["time"],
+            "updated": now,
+            "dataset": Tool.datasetUri(mcp_id),
+            "error": None
         }
 
     @staticmethod
@@ -197,28 +184,24 @@ class Tool:
         )
         body = obj["Body"].read().decode("utf-8")
         contents = json.loads(body)
+        result_bucket, result_key = sliderule.splits3uri(contents["result"])
+        result_head = s3.head_object(Bucket=result_bucket, Key=result_key)
         metadata = pq.read_metadata(contents["result"])
         arrow_schema = metadata.schema.to_arrow_schema()
-        openapi_str = ctypes.create_string_buffer(metadata.metadata["openapi"]).value.decode('ascii')
+        openapi_str = ctypes.create_string_buffer(metadata.metadata[b'openapi']).value.decode('ascii')
         openapi_schema = json.loads(openapi_str)
         return {
-            "uri": Tool.datasetUri(mcp_id),
-            "mimeType": "application/json",
-            "text": json.dumps({
-                "job": Tool.jobKey(mcp_id),
-                "created": contents["time"],
-                "format": "application/x-parquet",
-                "size": obj["ContentLength"],
-                "num_rows": metadata.num_rows,
-                "columns": [{
-                    "name": field.name,
-                    "type": str(field.type),
-                    "nullable": field.nullable
-                } for field in arrow_schema],
-                "openapi": openapi_schema,
-                "operations": [
-                    "data/query",
-                    "data/export"
-                ]
-            })
+            "job": Tool.jobKey(mcp_id),
+            "created": contents["time"],
+            "request": contents["contents"],
+            "result": contents["result"],
+            "format": "application/x-parquet",
+            "size": result_head["ContentLength"],
+            "num_rows": metadata.num_rows,
+            "columns": {field.name: str(field.type) for field in arrow_schema},
+            "openapi": openapi_schema,
+            "operations": [
+                "data/query",
+                "data/export"
+            ]
         }

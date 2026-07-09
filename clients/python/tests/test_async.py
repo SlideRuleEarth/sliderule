@@ -39,7 +39,7 @@ class TestAsync:
         }
         rsps = sliderule.source("atl03x.async", {"parms": parms})
         assert init
-        receipt_bucket, receipt_key = rsps["receipt"].split("/")
+        receipt_bucket, receipt_key = sliderule.splits3uri(rsps["receipt"])
         time_remaining = 10
         while not object_exists(receipt_bucket, receipt_key):
             if time_remaining <= 0:

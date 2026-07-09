@@ -759,6 +759,21 @@ def populatemetadata(df, path):
         logger.debug(f'Failed to read metadata from {path}: {e}')
 
 #
+# Split S3 URI
+#
+def splits3uri(uri):
+    """
+    uri: s3://<bucket>/<key> where key can contain additional '/' characters
+    return: bucket, key
+    """
+    obj_path = uri.split("s3://")[-1]
+    obj_elem = obj_path.split("/")
+    bucket = obj_elem[0]
+    key = '/'.join(obj_elem[1:])
+    return bucket, key
+
+
+#
 # Get Values from Raw Buffer
 #
 def getvalues(data, dtype, size, num_elements=0):

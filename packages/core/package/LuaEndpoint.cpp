@@ -187,7 +187,7 @@ bool LuaEndpoint::asyncHandler (Request* request, LuaEngine* engine, const endpo
     FString receipt_filename("receipt-%s.txt", response_id.c_str());
 
     /* Send Header and Async Response (as JSON) */
-    FString response("{\"receipt\": \"%s/%s\", \"endpoint\": \"%s\", \"parameters\": %s}", asset->getPath(), receipt_filename.c_str(), request->resource, endpoint.request_parameters->toJson().c_str());
+    FString response("{\"receipt\": \"s3://%s/%s\", \"endpoint\": \"%s\", \"parameters\": %s}", asset->getPath(), receipt_filename.c_str(), request->resource, endpoint.request_parameters->toJson().c_str());
     sendHeader(OK, content2str(JSON), &request->rspq, response.c_str(), response.size());
 
     /* Terminate Connection */

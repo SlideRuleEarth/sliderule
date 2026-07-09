@@ -274,7 +274,7 @@ def resources_read_handler(rqst):
                 matched_resource = resource
                 break
         elif "uriTemplate" in resource:
-            pattern = re.sub(r'\{(\w+)\}', r'(?P<\1>[^/]+)', re.escape(resource["uriTemplate"]))
+            pattern = re.sub(r'\\\{(\w+)\\\}', r'(?P<\1>[^/]+)', re.escape(resource["uriTemplate"]))
             pattern = re.compile(f'^{pattern}$')
             if pattern.match(uri):
                 matched_resource = resource
@@ -282,7 +282,7 @@ def resources_read_handler(rqst):
 
     # check matched resource
     if not matched_resource:
-        raise RuntimeError("Error: unable to locate resource")
+        raise RuntimeError("unable to locate resource")
 
     # get resource path
     resource_path = uri.split("://")[-1].split("/")
@@ -321,7 +321,7 @@ def resources_read_handler(rqst):
 
     # unhandled resource
     else:
-        raise RuntimeError("Internal error: failed to parse resource path")
+        raise RuntimeError("failed to parse resource path")
 
     # return resource content
     return rpc_result(rqst, {
