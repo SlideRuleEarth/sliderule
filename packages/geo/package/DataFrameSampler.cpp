@@ -658,7 +658,7 @@ bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t*
 
     // add file id table metadata entry for raster
     const FString key("%s.%s", GeoFields::PARMS, sampler->rkey);
-    if(!dataframe->addMetaData(key.c_str(), field, "File ID table", true))
+    if(!dataframe->addMetaData(key.c_str(), field, StringLib::duplicate("File ID table"), true))
     {
         delete field;
         mlog(ERROR, "Failed to file id table for <%s> to dataframe metadata", key.c_str());

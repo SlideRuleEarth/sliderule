@@ -53,7 +53,7 @@ local function main()
     -- join and serialize (send) each dataframe
     for _,df in pairs(dfs) do
         if parms:withsamplers() then df:run(geo.framesampler(parms)) end -- execute sampler runner
-        df:run(core.framesender(dfq_name, parms["key_space"], timeout))
+        df:run(core.framesender(parms, dfq_name))
         df:run(core.TERMINATE)
     end
 

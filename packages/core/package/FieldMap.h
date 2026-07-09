@@ -195,6 +195,7 @@ void FieldMap<T>::clear(void)
         if(entry.free_on_delete)
         {
             delete entry.field;
+            delete [] entry.description;
         }
         key = fields.next(&entry);
     }

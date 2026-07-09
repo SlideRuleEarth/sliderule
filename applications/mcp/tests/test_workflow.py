@@ -51,4 +51,3 @@ def test_atl03_subset(local):
     content = json.loads(body["result"]["contents"][0]["text"])
     assert content["num_rows"] == 445500
     assert len(content["columns"]) == 18
-    print("FINAL", content)

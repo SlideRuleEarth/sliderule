@@ -45,6 +45,7 @@
 #include "FieldColumn.h"
 #include "FieldMap.h"
 #include "RecordObject.h"
+#include "RequestParameters.h"
 
 /******************************************************************************
  * CLASS
@@ -157,12 +158,12 @@ class GeoDataFrame: public LuaObject, public Field
             static const struct luaL_Reg LUA_META_TABLE[];
 
             static int luaCreate (lua_State* L);
-            FrameSender(lua_State* L, const char* _rspq, uint64_t _key_space, int _timeout);
+            FrameSender(lua_State* L, RequestParameters* _parms, const char* _rspq, int _timeout);
             ~FrameSender(void) override;
             bool run(GeoDataFrame* dataframe) override;
 
+            RequestParameters* parms;
             const char* rspq;
-            uint64_t key_space;
             int timeout;
         };
 
@@ -267,8 +268,8 @@ class GeoDataFrame: public LuaObject, public Field
                                             const std::initializer_list<FieldMap<Field>::init_entry_t>& meta_list, const char* _crs=NULL, okey_t df_key=0);
         virtual         ~GeoDataFrame       (void) override;
 
-        void            appendDataframe     (GeoDataFrame::gdf_rec_t* data, int32_t source_id);
-        void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
+        void            appendDataframe     (GeoDataFrame::gdf_rec_t* rec, int32_t source_id);
+        void            sendDataframe       (const char* rspq, uint64_t key_space, bool with_openapi, int timeout) const;
         static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
 
