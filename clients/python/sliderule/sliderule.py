@@ -817,22 +817,26 @@ def procoutputfile(parm, rsps):
     if "open_on_complete" in output and output["open_on_complete"]:
 
         # Open the file as a DataFrame
-        if (output["format"] == "geoparquet") or (output["format"] == "parquet" and "as_geo" in output and output["as_geo"]):
-            local_file = geopandas.read_parquet(path) # GeoParquet
-        elif output["format"] == "parquet":
-            local_file = geopandas.pd.read_parquet(path) # Parquet
-        elif output["format"] == "feather":
-            local_file = geopandas.pd.read_feather(path) # Feather
-        elif output["format"] == "csv":
-            local_file = geopandas.pd.read_csv(path) # CSV
-        elif output["format"] == "las" or output["format"] == "laz":
-            from sliderule import las # delayed import to avoid loading PDAL dependency unnecessarily
-            local_file = las.load(path)
-        else:
-            raise FatalError('unsupported output format: %s' % (output["format"]))
+        try:
+            if (output["format"] == "geoparquet") or (output["format"] == "parquet" and "as_geo" in output and output["as_geo"]):
+                local_file = geopandas.read_parquet(path) # GeoParquet
+            elif output["format"] == "parquet":
+                local_file = geopandas.pd.read_parquet(path) # Parquet
+            elif output["format"] == "feather":
+                local_file = geopandas.pd.read_feather(path) # Feather
+            elif output["format"] == "csv":
+                local_file = geopandas.pd.read_csv(path) # CSV
+            elif output["format"] == "las" or output["format"] == "laz":
+                from sliderule import las # delayed import to avoid loading PDAL dependency unnecessarily
+                local_file = las.load(path)
+            else:
+                raise RuntimeError(f'unsupported format - {output["format"]}')
+        except Exception as e:
+            logger.debug(f'Failed to open {path}: {e}')
+            local_file = None
 
         # Only read Parquet metadata for Parquet or GeoParquet
-        if output["format"] in ("parquet", "geoparquet"):
+        if (output["format"] in ("parquet", "geoparquet")) and (local_file is not None):
             populatemetadata(local_file, path)
 
     # Return back to caller either path or opened dataframe
