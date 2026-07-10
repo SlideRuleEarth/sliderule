@@ -610,9 +610,6 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.getMetaAsJson());
                 metadata->Append("recordinfo", dataframe.getInfoAsJson());
-
-printf("OPENAPI: %s\n",  dataframe.toOpenApi("OpenAPI Schema").c_str());
-
                 if(arrow_parms.withOpenApi == true) metadata->Append("openapi", dataframe.toOpenApi("OpenAPI Schema"));
                 schema = schema->WithMetadata(metadata);
 
