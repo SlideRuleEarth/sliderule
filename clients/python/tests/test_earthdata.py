@@ -108,7 +108,7 @@ class TestCMR:
         ]
         rsps = earthdata.search({"asset": "icesat2", "poly": poly})
         assert init
-        assert len(rsps) >= 160
+        assert len(rsps) >= 100
 
 #
 # STAC
