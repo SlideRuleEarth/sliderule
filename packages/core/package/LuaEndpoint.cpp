@@ -179,15 +179,15 @@ bool LuaEndpoint::asyncHandler (Request* request, LuaEngine* engine, const endpo
     }
 
     /* Build Receipt */
-    UString response_id; // unique response id
+    const UString response_id; // unique response id
     AlertMonitor alert_mon(NULL, INFO, async_rspq.getName());
     Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(SystemConfig::settings().stagingAsset.value.c_str(), Asset::OBJECT_TYPE));
     if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to access staging asset: %s", SystemConfig::settings().stagingAsset.value.c_str());
     const CredentialStore::Credential& credentials = CredentialStore::get(asset->getIdentity());
-    FString receipt_filename("receipt-%s.txt", response_id.c_str());
+    const FString receipt_filename("receipt-%s.txt", response_id.c_str());
 
     /* Send Header and Async Response (as JSON) */
-    FString response("{\"receipt\": \"s3://%s/%s\", \"endpoint\": \"%s\", \"parameters\": %s}", asset->getPath(), receipt_filename.c_str(), request->resource, endpoint.request_parameters->toJson().c_str());
+    const FString response("{\"receipt\": \"s3://%s/%s\", \"endpoint\": \"%s\", \"parameters\": %s}", asset->getPath(), receipt_filename.c_str(), request->resource, endpoint.request_parameters->toJson().c_str());
     sendHeader(OK, content2str(JSON), &request->rspq, response.c_str(), response.size());
 
     /* Terminate Connection */

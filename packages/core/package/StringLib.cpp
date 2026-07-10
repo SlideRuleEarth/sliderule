@@ -160,7 +160,7 @@ const char* StringLib::UniqueString::c_str(bool duplicate) const
 /*----------------------------------------------------------------------------
  * length - number of non-null characters in string
  *----------------------------------------------------------------------------*/
-long StringLib::UniqueString::length(void) const
+long StringLib::UniqueString::length(void)
 {
     return UUID_STR_LEN - 1; // remove null terminator in length
 }
@@ -168,7 +168,7 @@ long StringLib::UniqueString::length(void) const
 /*----------------------------------------------------------------------------
  * size - alias for length
  *----------------------------------------------------------------------------*/
-long StringLib::UniqueString::size(void) const
+long StringLib::UniqueString::size(void)
 {
     return length();
 }

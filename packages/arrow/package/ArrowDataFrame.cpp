@@ -294,11 +294,8 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 string geoMetaData (const string& crs)
 {
     if (crs.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required");
-
-    const string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
+    return R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
                               "encoding":"WKB","geometry_types":["Point"],"crs":)" + crs + R"(}}})";
-
-    return geostr;
 }
 
 /*----------------------------------------------------------------------------

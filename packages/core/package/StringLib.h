@@ -73,8 +73,8 @@ class StringLib
                 ~UniqueString (void) = default;
 
                 const char*     c_str       (bool duplicate = false) const;
-                long            length      (void) const;
-                long            size        (void) const;
+                static long     length      (void);
+                static long     size        (void);
 
             private:
 

@@ -1937,7 +1937,7 @@ int GeoDataFrame::luaDescribe (lua_State* L)
         const char* description = getLuaString(L, 2);
 
         // get open api string
-        string str = lua_obj->toOpenApi(description);
+        const string str = lua_obj->toOpenApi(description);
 
         // return schema
         lua_pushstring(L, str.c_str());
