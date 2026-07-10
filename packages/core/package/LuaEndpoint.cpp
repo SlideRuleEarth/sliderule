@@ -214,6 +214,9 @@ bool LuaEndpoint::asyncHandler (Request* request, LuaEngine* engine, const endpo
     const int64_t bytes_uploaded = S3CurlIODriver::put(alert_filename, asset->getPath(), receipt_filename.c_str(), asset->getEndpoint(), &credentials, false);
     if(bytes_uploaded <= 0) mlog(CRITICAL, "Failed to upload %s to %s/%s in staging asset", alert_filename, asset->getPath(), receipt_filename.c_str());
 
+    /* Release Staging Asset */
+    asset->releaseLuaObject();
+
     /* Connection Already Terminated */
     return false;
 }
