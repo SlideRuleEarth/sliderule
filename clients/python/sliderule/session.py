@@ -30,7 +30,6 @@
 import os
 import sys
 import requests
-import threading
 import json
 import struct
 import ctypes
@@ -115,6 +114,7 @@ class Session:
     PUBLIC_DOMAIN = "slideruleearth.io"
     PUBLIC_CLUSTER = "sliderule"
     PRIVATE_KEY = ".sliderule_key"
+    ACCESS_TOKEN_CACHE = "ps_access_token.json"
     MAX_PS_CLUSTER_WAIT_SECS = 600
 
     #
@@ -155,7 +155,6 @@ class Session:
         self.ps_access_token = None
         self.ps_token_exp = None
         self.ps_metadata = None
-        self.ps_lock = threading.Lock()
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
 
@@ -188,7 +187,10 @@ class Session:
 
         # set service
         if user_service:
-            self.service = self.ps_metadata['sub']
+            if self.ps_metadata and 'sub' in self.ps_metadata:
+                self.service = self.ps_metadata['sub']
+            else:
+                raise RuntimeError(f'Unable to initialize user capacity')
         else:
             self.service = self.cluster
 
@@ -294,6 +296,10 @@ class Session:
             except requests.HTTPError as e:
                 if e.response.status_code == 503:
                     rsps = 'Cluster experiencing heavy load'
+                elif e.response.status_code == 403:
+                    rsps = 'Invalid access token'
+                    self.__clear_cache(self.ACCESS_TOKEN_CACHE)
+                    break # skip retries
                 else:
                     rsps = f'HTTP error <{e.response.status_code}> {rsps}'
                     break # skip retries
@@ -610,15 +616,16 @@ class Session:
         """
         if not force_login:
             # attempt to retrieve token from local cache
-            result = self.__load_cache("ps_access_token.json")
-            try:
-                if result and (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
-                    return result
-                else:
-                    ts = datetime.fromtimestamp(result['metadata']['exp'])
-                    self.logger.info(f"Invalid or expired token: {ts.strftime('%Y-%m-%d %H:%M:%S')}")
-            except Exception as e:
-                self.logger.error(f"Exception occurred when reading token from local cache: {e}")
+            result = self.__load_cache(self.ACCESS_TOKEN_CACHE)
+            if result:
+                try:
+                    if (result["status"] == "success") and (int(datetime.now().timestamp()) < result["metadata"]["exp"]):
+                        return result
+                    else:
+                        ts = datetime.fromtimestamp(result['metadata']['exp'])
+                        self.logger.info(f"Invalid or expired token: {ts.strftime('%Y-%m-%d %H:%M:%S')}")
+                except Exception as e:
+                    self.logger.error(f"Exception occurred when reading token from local cache: {e}")
 
         # sequence user through device flow
         try:
@@ -642,11 +649,9 @@ class Session:
 
             # open browser if possible
             try:
-                print("Attempting to open browser... ", end='')
                 webbrowser.open(verification_uri_complete)
-                print("success.")
             except Exception:
-                print("failed (must manually open).")
+                print("Manually open browser to proceed.")
 
             # poll for authorization
             print("Waiting for authorization...  ", end='')
@@ -665,7 +670,7 @@ class Session:
                 if result['status'] == 'success':
                     print(f"\bsuccess")
                     # attempt to store token to local cache
-                    if not self.__store_cache("ps_access_token.json", result):
+                    if not self.__store_cache(self.ACCESS_TOKEN_CACHE, result):
                         self.logger.info(f"Unsuccessful storing token to local cache")
                     # return metadata
                     return result
@@ -719,25 +724,12 @@ class Session:
     #
     #  __buildauthheader
     #
-    def __buildauthheader(self, headers, force_refresh=False):
+    def __buildauthheader(self, headers):
         '''
         builds the necessary authentication header for the http request to private
         clusters by using the bearer token from the provisioning system
         '''
         if self.ps_access_token:
-            # Check if Refresh Needed
-            now = time.time()
-            with self.ps_lock:
-                if now > self.ps_token_exp or force_refresh:
-                    host = "https://login." + self.domain + "/auth/refresh/"
-                    hdrs = {'Authorization': 'Bearer ' + self.ps_access_token}
-                    try:
-                        rsps = self.session.get(host, headers=hdrs, timeout=self.rqst_timeout).json()
-                        self.ps_access_token = rsps["token"]
-                        self.ps_token_exp = int(((rsps['exp'] - now) / 2) + now)
-                    except Exception as e:
-                        self.logger.error(f'Failed to refresh token: {e}')
-            # Build Authentication Header
             headers['Authorization'] = 'Bearer ' + self.ps_access_token
 
     #
@@ -773,7 +765,7 @@ class Session:
             with open(cache_file, "r") as file:
                 return json.loads(file.read())
         except Exception as e:
-            self.logger.info(f'Unable to load data from {filename}: {e}')
+            self.logger.debug(f'Unable to load cache from {filename}: {e}')
             return None
 
     #
@@ -790,8 +782,20 @@ class Session:
                 file.write(json.dumps(contents))
             return True
         except Exception as e:
-            self.logger.error(f'Failed store data to {filename}: {e}')
+            self.logger.error(f'Failed store cache to {filename}: {e}')
             return False
+
+    #
+    #  __clear_cache
+    #
+    def __clear_cache (self, filename):
+        try:
+            cache_file = Path(Path.home() / ".cache" / "sliderule" / filename)
+            if os.path.exists(cache_file):
+                os.remove(cache_file)
+        except Exception as e:
+            self.logger.debug(f'Unable to clear cache for {filename}: {e}')
+            return None
 
     #
     #  __populate
