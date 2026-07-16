@@ -1209,7 +1209,7 @@ int RecordObject::parseSerial(const unsigned char* buffer, int size, const char*
 unsigned int RecordObject::str2flags (const char* str)
 {
     unsigned int flags = NATIVE_FLAGS;
-    List<string*>* flaglist = StringLib::split(str, strlen(str), '|');
+    List<string*>* flaglist = StringLib::split(str, StringLib::size(str), '|');
     for(int i = 0; i < flaglist->length(); i++)
     {
         const char* flag = flaglist->get(i)->c_str();
@@ -1843,7 +1843,7 @@ void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, 
     for(int i = 0; i < field_iter.length; i++)
     {
         const Dictionary<field_t>::kv_t kv = field_iter[i];
-        const FString field_name("%s%s%s", field_prefix, strlen(field_prefix) == 0 ? "" : ".", kv.key);
+        const FString field_name("%s%s%s", field_prefix, StringLib::size(field_prefix) == 0 ? "" : ".", kv.key);
         const field_t& _field = kv.value;
 
         /* Check for Marked Field */

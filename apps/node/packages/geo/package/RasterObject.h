@@ -95,13 +95,13 @@ class RasterObject: public LuaObject
         static bool          registerRaster  (const char* _name, factory_f create);
         static int           luaFatories     (lua_State* L);
         uint32_t             getSamples      (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL);
-        virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) = 0;
+        virtual uint32_t     getSamples      (const vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) = 0;
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL);
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL);
-        void                 getBands        (std::vector<string>& bands);
-        virtual void         resolveBands    (std::vector<string>& bands);
-        void                 resolveBandsStrict(std::vector<string>& bands);
-        void                 resolveBands    (void* rptr, std::vector<int>& bands);
+        void                 getBands        (vector<string>& bands);
+        virtual void         resolveBands    (vector<string>& bands);
+        void                 resolveBandsStrict(vector<string>& bands);
+        void                 resolveBands    (void* rptr, vector<int>& bands);
         ~RasterObject    (void) override;
 
         bool hasBands (void) const
@@ -199,7 +199,7 @@ class RasterObject: public LuaObject
         static int  luaSamples      (lua_State* L);
         static int  luaSubsets      (lua_State* L);
 
-        static void getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
+        static void getThreadsRanges(vector<range_t>& ranges, uint32_t num,
                                      uint32_t minPerThread, uint32_t maxNumThreads);
 
         void        fileDictSetSamples(List<RasterSample*>* slist);

@@ -35,7 +35,6 @@
 
 #include "PgcWkt.h"
 #include <fstream>
-#include <string>
 #include <sstream>
 #include "OsApi.h"
 
@@ -84,4 +83,3 @@ const char* getRemaWkt2(void)
 {
     return pgcRemaWkt2.c_str();
 }
-

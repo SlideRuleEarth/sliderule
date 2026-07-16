@@ -61,7 +61,7 @@ GeoIndexedRaster::PointSample::PointSample(const PointSample& ps):
 /*----------------------------------------------------------------------------
  * SampleCollector Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::SampleCollector::SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups):
+GeoIndexedRaster::SampleCollector::SampleCollector(GeoIndexedRaster* _obj, const vector<point_groups_t>& _pointsGroups):
     obj(_obj),
     pGroupsRange({0, 0}),
     pointsGroups(_pointsGroups),
@@ -72,7 +72,7 @@ GeoIndexedRaster::SampleCollector::SampleCollector(GeoIndexedRaster* _obj, const
 /*----------------------------------------------------------------------------
  * GroupsFinder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::GroupsFinder::GroupsFinder(GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points):
+GeoIndexedRaster::GroupsFinder::GroupsFinder(GeoIndexedRaster* _obj, const vector<point_info_t>* _points):
     obj(_obj),
     pointsRange({0, 0}),
     points(_points)
@@ -82,7 +82,7 @@ GeoIndexedRaster::GroupsFinder::GroupsFinder(GeoIndexedRaster* _obj, const std::
 /*----------------------------------------------------------------------------
  * getSamples - batch sampling
  *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
+uint32_t GeoIndexedRaster::getSamples(const vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
 
@@ -104,10 +104,10 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     perfStats.clear();
 
     /* Vector of points and their associated raster groups */
-    std::vector<point_groups_t> pointsGroups;
+    vector<point_groups_t> pointsGroups;
 
     /* Vector of rasters and all points they contain */
-    std::vector<unique_raster_t*> uniqueRasters;
+    vector<unique_raster_t*> uniqueRasters;
 
     try
     {
@@ -245,7 +245,7 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
 
     for(const auto& rinfo: rgroup->infovect)
     {
-        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) != 0) continue;
+        if(!StringLib::match(VALUE_TAG, rinfo.tag.c_str())) continue;
 
         /* This is the unique raster we are looking for, it cannot be NULL */
         unique_raster_t* ur = rinfo.uraster;
@@ -313,7 +313,7 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
 {
     for(const auto& rinfo: rgroup->infovect)
     {
-        if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) != 0) continue;
+        if(!StringLib::match(FLAGS_TAG, rinfo.tag.c_str())) continue;
 
         /* This is the unique raster we are looking for, it cannot be NULL */
         unique_raster_t* ur = rinfo.uraster;
@@ -404,7 +404,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                 /* Open raster so we can get inner bands from it */
                 raster->open();
 
-                std::vector<int> bands;
+                vector<int> bands;
                 breader->obj->resolveBands(raster, bands);
 
                 /*
@@ -412,7 +412,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                  * `bands` contains the actual GDAL band numbers that will be sampled.
                  */
                 ur->flagsSampleIndex = -1;
-                if(strcmp(FLAGS_TAG, ur->rinfo->tag.c_str()) == 0)
+                if(StringLib::match(FLAGS_TAG, ur->rinfo->tag.c_str()))
                 {
                     /* Dataset-provided band number for flags. */
                     const int flagsBandNum = ur->rinfo->flagsBandNum;
@@ -514,8 +514,8 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
     mlog(DEBUG, "Finding groups for points range: %u - %u", start, end);
 
-    std::vector<OGRFeature*> foundFeatures;
-    std::vector<OGRFeature*> threadFeatures;
+    vector<OGRFeature*> foundFeatures;
+    vector<OGRFeature*> threadFeatures;
     OGRPoint                 ogrPoint;
 
     for(uint32_t i = start; i < end; i++)
@@ -574,7 +574,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
             {
                 for(const raster_info_t& rinfo : rgroup->infovect)
                 {
-                    if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) == 0)
+                    if(StringLib::match(FLAGS_TAG, rinfo.tag.c_str()))
                     {
                         rgroup->hasFlags = true;
                         break;
@@ -701,8 +701,8 @@ bool GeoIndexedRaster::createBatchReaderThreads(uint32_t rasters2sample)
 /*----------------------------------------------------------------------------
  * findAllGroups
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
-                                     std::vector<point_groups_t>& pointsGroups,
+bool GeoIndexedRaster::findAllGroups(const vector<point_info_t>* points,
+                                     vector<point_groups_t>& pointsGroups,
                                      raster_points_map_t& rasterToPointsMap)
 {
     /* Do not find groups if sampling stopped */
@@ -714,15 +714,15 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
     try
     {
         /* Start rasters groups finder threads */
-        std::vector<Thread*> pids;
-        std::vector<GroupsFinder*> rgroupFinders;
+        vector<Thread*> pids;
+        vector<GroupsFinder*> rgroupFinders;
 
         const uint32_t numMaxThreads = std::thread::hardware_concurrency();
         const uint32_t minPointsPerThread = 100;
 
         mlog(samplingLogLevel, "Finding rasters groups for %zu points with %u threads", points->size(), numMaxThreads);
 
-        std::vector<range_t> pointsRanges;
+        vector<range_t> pointsRanges;
         getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
         const uint32_t numThreads = pointsRanges.size();
 
@@ -780,7 +780,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             for (const raster_points_map_t::value_type &pair : gf->rasterToPointsMap)
             {
                 const uint64_t globalId = mapLocalToGlobal(pair.first);
-                std::vector<uint32_t>& dest = rasterToPointsMap[globalId];
+                vector<uint32_t>& dest = rasterToPointsMap[globalId];
                 dest.insert(dest.end(), pair.second.begin(), pair.second.end());
             }
 
@@ -814,8 +814,8 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
 /*----------------------------------------------------------------------------
  * findUniqueRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRasters,
-                                         const std::vector<point_groups_t>& pointsGroups,
+bool GeoIndexedRaster::findUniqueRasters(vector<unique_raster_t*>& uniqueRasters,
+                                         const vector<point_groups_t>& pointsGroups,
                                          raster_points_map_t& rasterToPointsMap)
 {
     /* Do not find unique rasters if sampling stopped */
@@ -892,7 +892,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
             if(it != rasterToPointsMap.end())
             {
                 /* Remove duplicates and sort point indices */
-                std::vector<uint32_t>& pts = it->second;
+                vector<uint32_t>& pts = it->second;
                 if(!pts.empty())
                 {
                     std::sort(pts.begin(), pts.end());
@@ -979,7 +979,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
 /*----------------------------------------------------------------------------
  * sampleUniqueRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& uniqueRasters)
+bool GeoIndexedRaster::sampleUniqueRasters(const vector<unique_raster_t*>& uniqueRasters)
 {
     /* Do not sample rasters if sampling stopped */
     if(!sampling()) return true;
@@ -1065,7 +1065,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
 /*----------------------------------------------------------------------------
  * collectSamples
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsGroups, List<sample_list_t*>& sllist)
+bool GeoIndexedRaster::collectSamples(const vector<point_groups_t>& pointsGroups, List<sample_list_t*>& sllist)
 {
     /* Do not collect samples if sampling stopped */
     if(!sampling()) return true;
@@ -1077,13 +1077,13 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
                        [&pointsGroups](const point_groups_t& pg) { return pg.pointIndex == &pg - pointsGroups.data(); }));
 
     /* Start sample collection threads */
-    std::vector<Thread*> pids;
-    std::vector<SampleCollector*> sampleCollectors;
+    vector<Thread*> pids;
+    vector<SampleCollector*> sampleCollectors;
 
     const uint32_t numMaxThreads = std::thread::hardware_concurrency();
     const uint32_t minPointGroupsPerThread = 100;
 
-    std::vector<range_t> pGroupRanges;
+    vector<range_t> pGroupRanges;
     getThreadsRanges(pGroupRanges, pointsGroups.size(), minPointGroupsPerThread, numMaxThreads);
     const uint32_t numThreads = pGroupRanges.size();
 
@@ -1109,7 +1109,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     mlog(DEBUG, "Merging sample lists");
     for(SampleCollector* sc : sampleCollectors)
     {
-        const std::vector<sample_list_t*>& slvector = sc->slvector;
+        const vector<sample_list_t*>& slvector = sc->slvector;
         for(sample_list_t* slist : slvector)
         {
             /* Update file dictionary */
@@ -1131,7 +1131,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
 /*----------------------------------------------------------------------------
  * getConvexHull
  *----------------------------------------------------------------------------*/
-OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* points)
+OGRGeometry* GeoIndexedRaster::getConvexHull(const vector<point_info_t>* points)
 {
     if(points->empty())
         return NULL;

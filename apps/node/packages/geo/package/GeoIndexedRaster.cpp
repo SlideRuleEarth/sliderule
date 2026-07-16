@@ -53,7 +53,7 @@ const char* GeoIndexedRaster::DATE_TAG  = "datetime";
  * RasterFinder Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::RasterFinder::RasterFinder (const OGRGeometry* _geo,
-                                              const std::vector<OGRFeature*>* _featuresList,
+                                              const vector<OGRFeature*>* _featuresList,
                                               RasterFileDictionary& _fileDict):
     geo(_geo),
     featuresList(_featuresList),

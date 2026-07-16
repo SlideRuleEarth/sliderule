@@ -604,7 +604,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
 
                 // set metadata
-                auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+                auto metadata = schema->metadata() ? schema->metadata()->Copy() : make_shared<arrow::KeyValueMetadata>();
                 if(format == OutputFields::GEOPARQUET) metadata->Append("geo", geoMetaData(dataframe.getCRS()));
                 metadata->Append("pandas", pandasMetaData(lua_obj->indexColumnName.c_str(), schema));
                 metadata->Append("sliderule", parms.toJson());

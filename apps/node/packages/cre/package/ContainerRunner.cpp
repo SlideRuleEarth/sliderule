@@ -39,7 +39,6 @@
 #include <sstream>
 #include <iostream>
 #include <array>
-#include <memory>
 
 #include "ContainerRunner.h"
 #include "OsApi.h"
@@ -478,7 +477,7 @@ string ContainerRunner::authenticateToDocker (void)
 
     // execute command
     const FString cmd("aws ecr get-login-password --region us-west-2");
-    const std::unique_ptr<FILE, decltype(&pclose)> shell(popen(cmd.c_str(), "r"), pclose);
+    const unique_ptr<FILE, decltype(&pclose)> shell(popen(cmd.c_str(), "r"), pclose);
     if(shell)
     {
         // read output

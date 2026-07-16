@@ -73,7 +73,7 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
                 BlueTopoBathyRaster (lua_State* L, RequestParameters* rqst_parms, const char* key);
                ~BlueTopoBathyRaster (void) override;
 
-        void    getIndexFile (const std::vector<point_info_t>* points, string& file) final;
+        void    getIndexFile (const vector<point_info_t>* points, string& file) final;
         bool    findRasters  (raster_finder_t* finder) final;
 
         /*--------------------------------------------------------------------

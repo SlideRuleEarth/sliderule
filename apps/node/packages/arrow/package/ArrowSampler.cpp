@@ -60,7 +60,7 @@ int ArrowSampler::luaCreate(lua_State* L)
     RequestParameters* rqst_parms = NULL;
     const char* input_file = NULL;
     const char* outq_name =  NULL;
-    std::vector<raster_info_t> user_rasters;
+    vector<raster_info_t> user_rasters;
 
     /* Get Parameters */
     try
@@ -228,7 +228,7 @@ const char* ArrowSampler::getMetadataFile(void)
 /*----------------------------------------------------------------------------
  * getBatchSamplers
  *----------------------------------------------------------------------------*/
-const std::vector<ArrowSampler::batch_sampler_t*>& ArrowSampler::getBatchSamplers(void)
+const vector<ArrowSampler::batch_sampler_t*>& ArrowSampler::getBatchSamplers(void)
 {
     return batchSamplers;
 }
@@ -241,7 +241,7 @@ const std::vector<ArrowSampler::batch_sampler_t*>& ArrowSampler::getBatchSampler
  * Constructor
  *----------------------------------------------------------------------------*/
 ArrowSampler::ArrowSampler(lua_State* L, RequestParameters* rqst_parms, const char* input_file,
-                           const char* outq_name, const std::vector<raster_info_t>& user_rasters):
+                           const char* outq_name, const vector<raster_info_t>& user_rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     active(false),
     mainPid(NULL),

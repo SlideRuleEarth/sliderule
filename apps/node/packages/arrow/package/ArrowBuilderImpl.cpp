@@ -229,7 +229,7 @@ bool ArrowBuilderImpl::createSchema (void)
             auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
 
             /* Set MetaData */
-            auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+            auto metadata = schema->metadata() ? schema->metadata()->Copy() : make_shared<arrow::KeyValueMetadata>();
             if(arrowBuilder->getParms()->format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata);
             appendServerMetaData(metadata);
             appendPandasMetaData(metadata);
@@ -390,7 +390,7 @@ bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int fla
 /*----------------------------------------------------------------------------
 * appendGeoMetaData
 *----------------------------------------------------------------------------*/
-void ArrowBuilderImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void ArrowBuilderImpl::appendGeoMetaData (const shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Initialize Meta Data String */
     string geostr(R"json({
@@ -453,7 +453,7 @@ void ArrowBuilderImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueM
 /*----------------------------------------------------------------------------
 * appendServerMetaData
 *----------------------------------------------------------------------------*/
-void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void ArrowBuilderImpl::appendServerMetaData (const shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Build Launch Time String */
     const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
@@ -534,7 +534,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
 /*----------------------------------------------------------------------------
 * appendPandasMetaData
 *----------------------------------------------------------------------------*/
-void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void ArrowBuilderImpl::appendPandasMetaData (const shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Initialize Pandas Meta Data String */
     string pandasstr(R"json({
@@ -620,7 +620,7 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
 *----------------------------------------------------------------------------*/
 void ArrowBuilderImpl::createMetadataFile(void)
 {
-    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+    auto metadata = make_shared<arrow::KeyValueMetadata>();
     appendServerMetaData(metadata);
 
     rapidjson::Document doc;

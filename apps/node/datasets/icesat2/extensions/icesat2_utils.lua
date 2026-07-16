@@ -41,14 +41,14 @@ local function find_atl09_granule (parms, userlog, with_time_range)
                 atl09_resource = rsps2[1]
                 break -- success
             else
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("Invalid number of resources for ATL09 CMR request for %s: %d", json.encode(atl09_parms), #rsps2))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("Invalid number of resources for ATL09 CMR request for %s: %d", json.encode(atl09_parms), #rsps2))
                 break -- failure
             end
         else
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("Failed attempt %d to make ATL09 CMR request <%d>: %s", atl09_attempt, rc2, rsps2))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("Failed attempt %d to make ATL09 CMR request <%d>: %s", atl09_attempt, rc2, rsps2))
             atl09_attempt = atl09_attempt + 1
             if atl09_attempt > atl09_max_retries then
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("Failed to make ATL09 CMR request for %s... aborting!", json.encode(atl09_parms)))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("Failed to make ATL09 CMR request for %s... aborting!", json.encode(atl09_parms)))
                 break -- failure
             end
         end
@@ -68,7 +68,7 @@ local function add_atmo_runner (runners, parms, userlog)
         table.insert(runners, atmo)
         return true
     else
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("Failed to find atmospheric data using %s", name_filter))
+        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("Failed to find atmospheric data using %s", name_filter))
         return false
     end
 end

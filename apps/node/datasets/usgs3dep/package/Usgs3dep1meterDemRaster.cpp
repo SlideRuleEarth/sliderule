@@ -79,7 +79,7 @@ Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
     VSIUnlink(indexFile.c_str());
 }
 
-void Usgs3dep1meterDemRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
+void Usgs3dep1meterDemRaster::getIndexFile(const vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -91,7 +91,7 @@ void Usgs3dep1meterDemRaster::getIndexFile(const std::vector<point_info_t>* poin
  *----------------------------------------------------------------------------*/
 bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
 {
-    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
     const uint32_t start   = 0;
     const uint32_t end     = flist->size();
@@ -110,10 +110,10 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
             const char* fname = feature->GetFieldAsString("url");
-            if(fname && strlen(fname) > 0)
+            if(fname && StringLib::size(fname) > 0)
             {
                 const string fileName(fname);
-                const size_t pos = strlen(URL_str);
+                const size_t pos = StringLib::size(URL_str);
 
                 raster_info_t rinfo;
                 rinfo.elevationBandNum = 1;

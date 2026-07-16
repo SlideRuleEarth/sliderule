@@ -66,7 +66,7 @@ GeoRaster::~GeoRaster(void) = default;
  * samplePointBands
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::samplePointBands(const point_info_t& pinfo, sample_list_t& slist,
-                                     const std::vector<int>& bands, bool oneBand)
+                                     const vector<int>& bands, bool oneBand)
 {
     uint32_t ssErrors = SS_NO_ERRORS;
 
@@ -101,7 +101,7 @@ uint32_t GeoRaster::samplePointBands(const point_info_t& pinfo, sample_list_t& s
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
+uint32_t GeoRaster::getSamples(const vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
     uint32_t ssErrors = SS_NO_ERRORS;
@@ -113,7 +113,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
         const uint32_t maxNumThreads = std::min(std::thread::hardware_concurrency(), static_cast<uint32_t>(16));
 
         /* Get readers ranges */
-        std::vector<range_t> ranges;
+        vector<range_t> ranges;
         getThreadsRanges(ranges, points.size(), 5, maxNumThreads);
 
         for(uint32_t i = 0; i < ranges.size(); i++)
@@ -128,7 +128,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
         if(numThreads == 1)
         {
             /* Single thread, read all samples in one thread using this RasterObject */
-            std::vector<sample_list_t*> samples;
+            vector<sample_list_t*> samples;
             ssErrors = readSamples(this, ranges[0], points, samples);
             for(sample_list_t* slist : samples)
             {
@@ -138,7 +138,7 @@ uint32_t GeoRaster::getSamples(const std::vector<point_info_t>& points, List<sam
         else
         {
             /* Start reader threads */
-            std::vector<Thread*> pids;
+            vector<Thread*> pids;
 
             for(uint32_t i = 0; i < numThreads; i++)
             {
@@ -225,7 +225,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     {
         OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
 
-        std::vector<int> bands;
+        vector<int> bands;
         resolveBands(&raster, bands);
         for(const int bandNum : bands)
         {
@@ -319,7 +319,7 @@ void GeoRaster::onStopSampling(void)
  * Reader Constructor
  *----------------------------------------------------------------------------*/
 GeoRaster::Reader::Reader(GeoRaster* _owner, RequestParameters* _rqstParms, const char* _samplerKey, const string& _crs,
-                           const std::vector<RasterObject::point_info_t>& _points) :
+                           const vector<RasterObject::point_info_t>& _points) :
     owner(_owner),
     rqstParms(_rqstParms),
     samplerKey(_samplerKey),
@@ -383,8 +383,8 @@ void* GeoRaster::readerThread(void* parm)
  * readSamples
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::readSamples(RasterObject* robj, const range_t& range,
-                                const std::vector<point_info_t>& points,
-                                std::vector<sample_list_t*>& samples)
+                                const vector<point_info_t>& points,
+                                vector<sample_list_t*>& samples)
 {
     uint32_t ssErrors = SS_NO_ERRORS;
     GeoRaster* grobj = dynamic_cast<GeoRaster*>(robj);
@@ -394,7 +394,7 @@ uint32_t GeoRaster::readSamples(RasterObject* robj, const range_t& range,
         return SS_RUNTIME_ERROR;
     }
 
-    std::vector<int> bands;
+    vector<int> bands;
     try
     {
         /* Resolve requested bands once per reader range, not once per point. */

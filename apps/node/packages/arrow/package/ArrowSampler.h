@@ -94,7 +94,7 @@ class ArrowSampler: public LuaObject
             RasterObject*                robj;
             ArrowSampler*                obj;
             List<sample_list_t*>         samples;
-            std::vector<std::pair<uint64_t, const char*>> filemap;
+            vector<std::pair<uint64_t, const char*>> filemap;
 
             explicit BatchSampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
                     ~BatchSampler (void);
@@ -109,7 +109,7 @@ class ArrowSampler: public LuaObject
         const OutputFields*                  getParms        (void);
         const char*                          getDataFile     (void);
         const char*                          getMetadataFile (void);
-        const std::vector<batch_sampler_t*>& getBatchSamplers(void);
+        const vector<batch_sampler_t*>& getBatchSamplers(void);
 
     private:
 
@@ -126,8 +126,8 @@ class ArrowSampler: public LuaObject
         RequestParameters*                rqstParms;
         const OutputFields&           parms;
         Publisher*                    outQ;
-        std::vector<point_info_t>     points;
-        std::vector<batch_sampler_t*> batchSamplers;
+        vector<point_info_t>     points;
+        vector<batch_sampler_t*> batchSamplers;
         ArrowSamplerImpl*             impl;
         const char*                   dataFile;           // used locally to build parquet file
         const char*                   metadataFile;       // used locally to build json metadata file
@@ -139,7 +139,7 @@ class ArrowSampler: public LuaObject
          *--------------------------------------------------------------------*/
 
                         ArrowSampler     (lua_State* L, RequestParameters* rqst_parms, const char* input_file,
-                                          const char* outq_name, const std::vector<raster_info_t>& rasters);
+                                          const char* outq_name, const vector<raster_info_t>& rasters);
                         ~ArrowSampler    (void) override;
         void            Delete           (void);
         static void*    mainThread       (void* parm);

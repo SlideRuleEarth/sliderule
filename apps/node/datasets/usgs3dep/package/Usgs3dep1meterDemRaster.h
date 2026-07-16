@@ -69,7 +69,7 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
                 Usgs3dep1meterDemRaster (lua_State* L, RequestParameters* rqst_parms, const char* key);
                ~Usgs3dep1meterDemRaster (void) override;
 
-        void    getIndexFile     (const std::vector<point_info_t>* points, string& file) final;
+        void    getIndexFile     (const vector<point_info_t>* points, string& file) final;
         bool    findRasters      (raster_finder_t* finder) final;
 
         static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);

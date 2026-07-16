@@ -132,7 +132,6 @@
 #include <dlfcn.h>
 #include <dirent.h>
 #include <signal.h>
-#include <string.h>
 #include <atomic>
 
 /******************************************************************************

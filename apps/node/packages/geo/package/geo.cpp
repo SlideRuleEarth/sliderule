@@ -248,7 +248,7 @@ static void configGDAL(void)
     const char* debug = CPLGetConfigOption("CPL_DEBUG", "");
     const char* curl_verbose = CPLGetConfigOption("CPL_CURL_VERBOSE", "");
 
-    if ((strcmp(debug, "ON") == 0 || strcmp(curl_verbose, "YES") == 0))
+    if ((StringLib::match(debug, "ON") || StringLib::match(curl_verbose, "YES")))
     {
         #ifndef GDAL_ERROR_REPORTING
         #define GDAL_ERROR_REPORTING

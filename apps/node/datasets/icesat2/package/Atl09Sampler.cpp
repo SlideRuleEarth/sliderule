@@ -300,9 +300,9 @@ bool Atl09Sampler::run (GeoDataFrame* dataframe)
         for(int i = 0; i < parms->atl09Fields.length(); i++)
         {
             const string& field = parms->atl09Fields[i];
-            if(field.find("bckgrd_atlas") != std::string::npos) bckgrd_atlas_fields.append(field);
-            else if(field.find("high_rate") != std::string::npos) high_rate_fields.append(field);
-            else if(field.find("low_rate") != std::string::npos) low_rate_fields.append(field);
+            if(field.find("bckgrd_atlas") != string::npos) bckgrd_atlas_fields.append(field);
+            else if(field.find("high_rate") != string::npos) high_rate_fields.append(field);
+            else if(field.find("low_rate") != string::npos) low_rate_fields.append(field);
         }
 
         // get index variables for each group

@@ -80,7 +80,7 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestParameters* rqst_parms, 
  *----------------------------------------------------------------------------*/
 GebcoBathyRaster::~GebcoBathyRaster(void) = default;
 
-void GebcoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
+void GebcoBathyRaster::getIndexFile(const vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = filePath + "/" + indexFile;
@@ -92,7 +92,7 @@ void GebcoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, str
  *----------------------------------------------------------------------------*/
 bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
 {
-    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
     const uint32_t start   = 0;
     const uint32_t end     = flist->size();
@@ -110,7 +110,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
             const char* dataFile  = feature->GetFieldAsString("data_raster");
-            if(dataFile && (strlen(dataFile) > 0))
+            if(dataFile && (StringLib::size(dataFile) > 0))
             {
                 raster_info_t rinfo;
                 rinfo.elevationBandNum = 1;
@@ -122,7 +122,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
             if(parms->flags_file)
             {
                 const char* flagsFile = feature->GetFieldAsString("flags_raster");
-                if(flagsFile && (strlen(flagsFile) > 0))
+                if(flagsFile && (StringLib::size(flagsFile) > 0))
                 {
                     raster_info_t rinfo;
                     rinfo.flagsBandNum    = 1;

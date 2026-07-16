@@ -178,7 +178,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestParameters* rqst_parms, const 
     try
     {
         /* Create raster from geojson file */
-        const vsi_l_offset len = strlen(geojstr);
+        const vsi_l_offset len = StringLib::size(geojstr);
         GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(geojstr));
         VSILFILE* fp = VSIFileFromMemBuffer(jsonFile.c_str(), bytes, len, FALSE);
         CHECKPTR(fp);

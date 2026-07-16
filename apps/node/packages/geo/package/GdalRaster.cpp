@@ -153,7 +153,7 @@ void GdalRaster::open(void)
             const char* bandName = band->GetDescription();
 
             /* Only store bands that have valid names */
-            if (bandName && strlen(bandName) > 0)
+            if (bandName && StringLib::size(bandName) > 0)
             {
                 bandMap[string(bandName)] = i;
                 mlog(DEBUG, "Band %d: %s", i, bandName);
@@ -1022,7 +1022,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
 
         int hasNodata = FALSE;
         const double nodata = band->GetNoDataValue(&hasNodata);
-        std::vector<double> validSamples;
+        vector<double> validSamples;
         /*
          * Only use pixels within radius from pixel containing point of interest.
          * Ignore nodata values.
@@ -1151,7 +1151,7 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
             throw RunTimeException(DEBUG, RTE_FAILURE, "sampling window outside of raster bbox");
 
         /* Read window */
-        std::vector<double> buf(windowSize * windowSize);
+        vector<double> buf(windowSize * windowSize);
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
@@ -1297,7 +1297,7 @@ void GdalRaster::createTransform(void)
     const char* projref = dset->GetProjectionRef();
 
     /* Use projref from raster if specified and not an empty string */
-    if(projref && strlen(projref) > 0)
+    if(projref && StringLib::size(projref) > 0)
     {
         ogrerr = targetCRS.importFromWkt(projref);
         if(ogrerr != OGRERR_NONE)

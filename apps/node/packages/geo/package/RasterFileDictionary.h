@@ -93,7 +93,7 @@ class RasterFileDictionary
          *--------------------------------------------------------------------*/
 
         Dictionary<uint64_t>     fileDict;       // Dictionary to store raster file names
-        std::vector<string> fileVector;     // Vector to store raster file names by id (index derived from lower 32 bits of fileDict value)
+        vector<string> fileVector;     // Vector to store raster file names by id (index derived from lower 32 bits of fileDict value)
         std::set<uint64_t>       sampleIdSet;    // Set to store raster fileIds used only in returned RasterSamples
         uint64_t                 keySpace;       // Key space
         static Mutex             mutex;          // Mutex for thread safety, only add() method is thread safe

@@ -32,7 +32,6 @@
 #ifndef __gedtm_time_utils__
 #define __gedtm_time_utils__
 
-#include <string>
 #include <regex>
 #include <stdexcept>
 #include "TimeLib.h"

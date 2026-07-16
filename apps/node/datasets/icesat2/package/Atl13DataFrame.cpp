@@ -199,7 +199,7 @@ void* Atl13DataFrame::subsettingThread (void* parm)
         /* Reference ID Prefilter */
         const bool use_refid = (parms.atl13.reference_id.value > 0);
         std::function<void(long&, long&)> prefilter;
-        std::unique_ptr<H5Array<int64_t>> refid;
+        unique_ptr<H5Array<int64_t>> refid;
         if(use_refid)
         {
             refid = std::make_unique<H5Array<int64_t>>(df->hdf13, FString("/%s/%s", df->beam, "atl13refid").c_str());

@@ -143,7 +143,7 @@ LandsatHlsRaster::~LandsatHlsRaster(void)
     VSIUnlink(indexFile.c_str());
 }
 
-void LandsatHlsRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
+void LandsatHlsRaster::getIndexFile(const vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -156,7 +156,7 @@ void LandsatHlsRaster::getIndexFile(const std::vector<point_info_t>* points, str
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
 {
-    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
     const uint32_t start   = 0;
     const uint32_t end     = flist->size();
@@ -185,15 +185,15 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
                     continue;
 
                 const char* fname = feature->GetFieldAsString(bandName);
-                if(fname && strlen(fname) > 0)
+                if(fname && StringLib::size(fname) > 0)
                 {
                     const string fileName(fname);
-                    const size_t pos = strlen(URL_str);
+                    const size_t pos = StringLib::size(URL_str);
 
                     raster_info_t rinfo;
                     rinfo.fileId = finder->fileDict.add(filePath + fileName.substr(pos));
 
-                    if(strcmp(bandName, "Fmask") == 0)
+                    if(StringLib::match(bandName, "Fmask"))
                     {
                         /* Use base class generic flags tag */
                         rinfo.flagsBandNum = 1;
@@ -258,7 +258,7 @@ uint32_t LandsatHlsRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
     const int INNER_BAND_INDX = 0;
 
     /* Samples to be returned to the user */
-    std::vector<RasterSample*> sampleVect;
+    vector<RasterSample*> sampleVect;
 
     /* Collect samples for all rasters */
     for(const auto& rinfo : rgroup->infovect)
@@ -454,7 +454,7 @@ bool LandsatHlsRaster::validateBand(band_type_t type, const char* bandName)
     for(int i = 0; i < tagsCnt; i++)
     {
         const char* tag = tags[i];
-        if( strncasecmp(bandName, tag, strlen(tag)) == 0)
+        if( strncasecmp(bandName, tag, StringLib::size(tag)) == 0)
             return true;
     }
 

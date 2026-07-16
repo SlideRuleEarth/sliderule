@@ -74,7 +74,7 @@ class NisarDataset: public GeoIndexedRaster
                 NisarDataset (lua_State* L, RequestParameters* rqst_parms, const char* key);
                ~NisarDataset (void) override;
 
-        void    getIndexFile (const std::vector<point_info_t>* points, string& file) final;
+        void    getIndexFile (const vector<point_info_t>* points, string& file) final;
         bool    findRasters  (raster_finder_t* finder) final;
 
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;

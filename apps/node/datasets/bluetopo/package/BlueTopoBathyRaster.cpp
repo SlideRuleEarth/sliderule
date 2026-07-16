@@ -71,7 +71,7 @@ BlueTopoBathyRaster::~BlueTopoBathyRaster(void) = default;
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void BlueTopoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
+void BlueTopoBathyRaster::getIndexFile(const vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -83,7 +83,7 @@ void BlueTopoBathyRaster::getIndexFile(const std::vector<point_info_t>* points, 
  *----------------------------------------------------------------------------*/
 bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
 {
-    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
     const uint32_t start   = 0;
     const uint32_t end     = flist->size();
@@ -103,7 +103,7 @@ bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
             rgroup->gpsTime = getGmtDate(feature, "Delivered_Date", rgroup->gmtDate) / 1000.0;
 
             const char* dataFile  = feature->GetFieldAsString("GeoTIFF_link");
-            if(dataFile && (strlen(dataFile) > 0))
+            if(dataFile && (StringLib::size(dataFile) > 0))
             {
                 string fullPath(dataFile);
                 size_t pos = fullPath.find(token);
@@ -216,7 +216,7 @@ bool BlueTopoBathyRaster::validateBandNames(void)
         for(size_t j = 0; j < validBandsCnt; j++)
         {
             /* Raster band names are case insensitive */
-            if(strcmp(parms->bands[i].c_str(), validBands[j]) == 0)
+            if(StringLib::match(parms->bands[i].c_str(), validBands[j]))
             {
                 valid = true;
                 break;

@@ -99,7 +99,7 @@ UT_RasterSample::~UT_RasterSample(void)
 /*----------------------------------------------------------------------------
  * ReadPointsFile
  *----------------------------------------------------------------------------*/
-bool UT_RasterSample::ReadPointsFile(std::vector<RasterObject::point_info_t>& points, const char* filePath)
+bool UT_RasterSample::ReadPointsFile(vector<RasterObject::point_info_t>& points, const char* filePath)
 {
     FILE* file = fopen(filePath, "r");
     if (!file) {
@@ -152,7 +152,7 @@ bool UT_RasterSample::TestFileDictionary(RasterObject* raster)
         return false;
     }
 
-    if(strcmp(raserName, raster2) != 0)
+    if(!StringLib::match(raserName, raster2))
     {
         mlog(CRITICAL, "Expected %s but got %s", raster2, raserName);
         return false;
@@ -217,11 +217,11 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
             return returnLuaStatus(L, false);
         }
 
-        std::vector<RasterObject::point_info_t> points2sample;
+        vector<RasterObject::point_info_t> points2sample;
 
         if(pointsFile)
         {
-            std::vector<RasterObject::point_info_t> pointsInFile;
+            vector<RasterObject::point_info_t> pointsInFile;
             print2term("Using points file: %s\n", pointsFile);
             if(!lua_obj->ReadPointsFile(pointsInFile, pointsFile))
             {
@@ -349,7 +349,7 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
                 const char* serialName = serialDict.get(serial->fileId);
                 const char* batchName  = lua_obj->raster->fileDictGet(batch->fileId);
 
-                if (strcmp(serialName, batchName) != 0)
+                if (!StringLib::match(serialName, batchName))
                 {
                     print2term("Files differ:\n");
                     print2term("Serial: %s\n", serialName);
@@ -424,4 +424,3 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
     /* Return Status */
     return returnLuaStatus(L, status);
 }
-

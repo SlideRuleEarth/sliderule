@@ -499,6 +499,18 @@ int LuaLibraryMsg::lmsg_alert (lua_State* L)
         return luaL_error(L, "invalid message queue");
     }
 
+    /* Get Lua Caller Location */
+    lua_Debug ar;
+    const char* src = "?";
+    int line = -1;
+    if(lua_getstack(L, 1, &ar) && lua_getinfo(L, "Sl", &ar))
+    {
+        src = ar.short_src;
+        const char* slash = strrchr(src, '/');
+        if(slash) src = slash + 1;
+        line = ar.currentline;
+    }
+
     /* Get Event Level */
     event_level_t lvl = INVALID_EVENT_LEVEL;
     if(lua_isinteger(L, 2))
@@ -507,7 +519,7 @@ int LuaLibraryMsg::lmsg_alert (lua_State* L)
     }
     else
     {
-        mlog(CRITICAL, "Invalid event level: %d", lvl);
+        mlog(CRITICAL, "(%s:%d) Invalid event level: %d", src, line, lua_type(L, 2));
         return 0;
     }
 
@@ -519,7 +531,7 @@ int LuaLibraryMsg::lmsg_alert (lua_State* L)
     }
     else
     {
-        mlog(CRITICAL, "Invalid exception code: %d", code);
+        mlog(CRITICAL, "(%s:%d) Invalid exception code: %d", src, line, lua_type(L, 3));
         return 0;
     }
 
@@ -528,12 +540,12 @@ int LuaLibraryMsg::lmsg_alert (lua_State* L)
     const char* msg = lua_tolstring(L, 4, &msg_size);
     if(msg_size == 0)
     {
-        mlog(CRITICAL, "Invalid length of message: %lu", msg_size);
+        mlog(CRITICAL, "(%s:%d) Invalid length of message", src, line);
         return 0;
     }
 
     /* Generate Exception */
-    alert(lvl, code, msg_data->pub, NULL, "%s", msg);
+    alert(lvl, code, msg_data->pub, NULL, "(%s:%d) %s", src, line, msg);
 
     /* Return Results */
     lua_pushboolean(L, true);
@@ -597,10 +609,10 @@ int LuaLibraryMsg::lmsg_recvstring (lua_State* L)
     {
         const int timeoutms = (int)lua_tointeger(L, 2);
         char str[MAX_STR_SIZE];
-        const int strlen = msg_data->sub->receiveCopy(str, MAX_STR_SIZE - 1, timeoutms);
-        if(strlen > 0)
+        const int len = msg_data->sub->receiveCopy(str, MAX_STR_SIZE - 1, timeoutms);
+        if(len > 0)
         {
-            lua_pushlstring(L, str, strlen);
+            lua_pushlstring(L, str, len);
         }
         else
         {

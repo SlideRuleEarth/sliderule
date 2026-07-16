@@ -74,8 +74,8 @@ class GeoIndexedRaster: public RasterObject
         typedef struct PointSample {
             OGRPoint                       point;
             int64_t                        pointIndex;    // index to the user provided list of points to sample
-            std::vector<RasterSample*>     bandSample;    // vector of samples for each band
-            std::vector<uint8_t>           bandSampleReturned; // multiple rasters may share the same sample,
+            vector<RasterSample*>     bandSample;    // vector of samples for each band
+            vector<uint8_t>           bandSampleReturned; // multiple rasters may share the same sample,
                                                                // these flags are used to avoid returning the same sample, if set a copy of the sample is returned
             uint32_t                       ssErrors;      // sampling errors
 
@@ -100,7 +100,7 @@ class GeoIndexedRaster: public RasterObject
         /* Group of rasters belonging to the same geojson stac catalog feature */
         typedef struct RaserGroup {
             char*                      featureId;  // stac catalog feature id
-            std::vector<raster_info_t> infovect;   // vector of rasters belonging to the same stac catalog feature
+            vector<raster_info_t> infovect;   // vector of rasters belonging to the same stac catalog feature
             TimeLib::gmt_time_t        gmtDate;    // feature date (can be computed from start/end dates)
             int64_t                    gpsTime;    // feature gps time in seconds
             bool                       hasFlags;   // true if this group contains a FLAGS_TAG raster
@@ -112,10 +112,10 @@ class GeoIndexedRaster: public RasterObject
         /* Raster and associated points to sample, used by batch sampling */
         typedef struct UniqueRaster {
             const raster_info_t*         rinfo;
-            std::vector<point_sample_t>  pointSamples;                       // vector of samples for each point in this raster
+            vector<point_sample_t>  pointSamples;                       // vector of samples for each point in this raster
             int                          flagsSampleIndex;                   // index into sampled bands for flags, -1 if unresolved
             bool                         useDenseLookup;                     // true if using dense vector lookup
-            std::vector<point_sample_t*> pointIndexLookup;                   // direct lookup by point index
+            vector<point_sample_t*> pointIndexLookup;                   // direct lookup by point index
             std::unordered_map<int64_t, point_sample_t*> pointIndexMap;      // sparse lookup fallback
             explicit UniqueRaster(const raster_info_t* _rinfo): rinfo(_rinfo), flagsSampleIndex(-1), useDenseLookup(true) {}
         } unique_raster_t;
@@ -146,36 +146,36 @@ class GeoIndexedRaster: public RasterObject
         typedef struct SampleCollector {
             GeoIndexedRaster*                  obj;
             range_t                            pGroupsRange;  // range of point groups to process for this thread
-            const std::vector<point_groups_t>& pointsGroups;
-            std::vector<sample_list_t*>        slvector;      // vecotor of sample lists to be returned to the user
+            const vector<point_groups_t>& pointsGroups;
+            vector<sample_list_t*>        slvector;      // vecotor of sample lists to be returned to the user
             uint32_t                           ssErrors;      // sampling errors
-            explicit SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups);
+            explicit SampleCollector(GeoIndexedRaster* _obj, const vector<point_groups_t>& _pointsGroups);
         } sample_collector_t;
 
         /* Map of raster file id to list of points to be sampled in that raster */
-        typedef std::unordered_map<uint64_t, std::vector<uint32_t>> raster_points_map_t;
+        typedef std::unordered_map<uint64_t, vector<uint32_t>> raster_points_map_t;
 
         /* GroupsFinder thread info used by batch sampling code */
         typedef struct GroupsFinder {
             GeoIndexedRaster*                obj;
             range_t                          pointsRange;
-            const std::vector<point_info_t>* points;
-            std::vector<point_groups_t>      pointsGroups;
+            const vector<point_info_t>* points;
+            vector<point_groups_t>      pointsGroups;
             raster_points_map_t              rasterToPointsMap;
             RasterFileDictionary             threadFileDict;
             std::unordered_map<uint64_t, uint64_t> localToGlobalFileIds; // cache for mapping thread-local file ids to global ids
             std::unordered_map<long, OGRFeature*>  featureCache;         // cache cloned features by FID to avoid repeated clones
 
-            explicit GroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
+            explicit GroupsFinder (GeoIndexedRaster* _obj, const vector<point_info_t>* _points);
         } groups_finder_t;
 
         /* Used by GroupsFinder */
         typedef struct RasterFinder {
             const OGRGeometry*              geo;
-            const std::vector<OGRFeature*>* featuresList;  // features to test for intersection with geo
-            std::vector<rasters_group_t*>   rasterGroups;  // result raster groups which intersect with geo
+            const vector<OGRFeature*>* featuresList;  // features to test for intersection with geo
+            vector<rasters_group_t*>   rasterGroups;  // result raster groups which intersect with geo
             RasterFileDictionary&           fileDict;
-            explicit RasterFinder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList, RasterFileDictionary& _fileDict);
+            explicit RasterFinder(const OGRGeometry* geo, const vector<OGRFeature*>* _featuresList, RasterFileDictionary& _fileDict);
         } raster_finder_t;
 
         /*--------------------------------------------------------------------
@@ -185,7 +185,7 @@ class GeoIndexedRaster: public RasterObject
         /* import getSamples with single point */
         using RasterObject::getSamples;
 
-        uint32_t        getSamples            (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
+        uint32_t        getSamples            (const vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
 
     protected:
 
@@ -200,7 +200,7 @@ class GeoIndexedRaster: public RasterObject
         virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         bool             openGeoIndex          (const string& newFile, OGRGeometry* filter=NULL);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void     getIndexFile          (const std::vector<point_info_t>* points, string& file) = 0;
+        virtual void     getIndexFile          (const vector<point_info_t>* points, string& file) = 0;
         virtual bool     findRasters           (raster_finder_t* finder) = 0;
 
         /*--------------------------------------------------------------------
@@ -277,20 +277,20 @@ class GeoIndexedRaster: public RasterObject
 
         bool            createBatchReaderThreads  (uint32_t rasters2sample);
         bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
-        static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
+        static OGRGeometry* getConvexHull   (const vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, OGRGeometry* filter);
 
-        bool            findAllGroups       (const std::vector<point_info_t>* points,
-                                             std::vector<point_groups_t>& pointsGroups,
+        bool            findAllGroups       (const vector<point_info_t>* points,
+                                             vector<point_groups_t>& pointsGroups,
                                              raster_points_map_t& rasterToPointsMap);
 
-        bool            findUniqueRasters   (std::vector<unique_raster_t*>& uniqueRasters,
-                                             const std::vector<point_groups_t>& pointsGroups,
+        bool            findUniqueRasters   (vector<unique_raster_t*>& uniqueRasters,
+                                             const vector<point_groups_t>& pointsGroups,
                                              raster_points_map_t& rasterToPointsMap);
 
-        bool            sampleUniqueRasters (const std::vector<unique_raster_t*>& uniqueRasters);
+        bool            sampleUniqueRasters (const vector<unique_raster_t*>& uniqueRasters);
 
-        bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
+        bool            collectSamples      (const vector<point_groups_t>& pointsGroups,
                                              List<sample_list_t*>& sllist);
 };
 

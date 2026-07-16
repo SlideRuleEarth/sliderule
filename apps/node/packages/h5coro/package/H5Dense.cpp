@@ -85,7 +85,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     fheap_addr = _fheap_addr;
     fheap_info = heap_info_ptr;
     name = _name;
-    name_hash = checksumLookup3(_name, strlen(_name), 0);
+    name_hash = checksumLookup3(_name, StringLib::size(_name), 0);
 
     /* Init portion of BTree Hdr */
     addr = name_bt2_addr;

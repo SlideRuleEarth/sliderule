@@ -65,7 +65,7 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ArrowSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void processInputFile     (const char* file_path, std::vector<point_info_t>& points);
+        void processInputFile     (const char* file_path, vector<point_info_t>& points);
         bool processSamples       (ArrowSampler::batch_sampler_t* sampler);
         void createOutpuFiles     (void);
 
@@ -77,11 +77,11 @@ class ArrowSamplerImpl
 
         ArrowSampler*                                     arrowSampler;
         Mutex                                             mutex;
-        std::vector<std::shared_ptr<arrow::Field>>        newFields;
-        std::vector<std::shared_ptr<arrow::ChunkedArray>> newColumns;
+        vector<shared_ptr<arrow::Field>>        newFields;
+        vector<shared_ptr<arrow::ChunkedArray>> newColumns;
 
-        std::shared_ptr<arrow::io::ReadableFile>          inputFile;
-        std::unique_ptr<parquet::arrow::FileReader>       reader;
+        shared_ptr<arrow::io::ReadableFile>          inputFile;
+        unique_ptr<parquet::arrow::FileReader>       reader;
 
         char* timeKey;
         char* xKey;
@@ -94,25 +94,25 @@ class ArrowSamplerImpl
 
         void                          getMetadata             (void);
         bool                          getMetadataLegacy       (void);
-        void                          getPoints               (std::vector<point_info_t>& points);
-        void                          getXYPoints             (std::vector<point_info_t>& points);
-        void                          getGeoPoints            (std::vector<point_info_t>& points);
-        std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
-        std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table>& table);
+        void                          getPoints               (vector<point_info_t>& points);
+        void                          getXYPoints             (vector<point_info_t>& points);
+        void                          getGeoPoints            (vector<point_info_t>& points);
+        shared_ptr<arrow::Table> inputFileToTable        (const vector<const char*>& columnNames = {});
+        shared_ptr<arrow::Table> addNewColumns           (const shared_ptr<arrow::Table>& table);
         bool                          makeColumnsWithLists    (ArrowSampler::batch_sampler_t* sampler);
         bool                          makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* sampler);
         static RasterSample*          getFirstValidSample     (sample_list_t* slist);
-        static void                   tableToParquet          (const std::shared_ptr<arrow::Table>& table,
+        static void                   tableToParquet          (const shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
-        static void                   tableToCsv              (const std::shared_ptr<arrow::Table>& table,
+        static void                   tableToCsv              (const shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
-        static void                   tableToFeather          (const std::shared_ptr<arrow::Table>& table,
+        static void                   tableToFeather          (const shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
-        static std::shared_ptr<arrow::Table> removeGeometryColumn(std::shared_ptr<arrow::Table>& table);
+        static shared_ptr<arrow::Table> removeGeometryColumn(shared_ptr<arrow::Table>& table);
         static wkbpoint_t             convertWKBToPoint       (const string& wkb_data);
         static void                   printParquetMetadata    (const char* file_path);
         string                   createFileMap           (void);
-        static void                   metadataToJson          (const std::shared_ptr<arrow::Table>& table,
+        static void                   metadataToJson          (const shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
 };
 

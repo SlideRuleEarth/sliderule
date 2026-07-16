@@ -207,7 +207,7 @@ int RasterObject::luaFatories (lua_State* L)
  *----------------------------------------------------------------------------*/
 uint32_t RasterObject::getSamples(const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
-    std::vector<point_info_t> points;
+    vector<point_info_t> points;
     points.push_back(pinfo);
 
     List<sample_list_t*> sllist;
@@ -269,7 +269,7 @@ uint32_t RasterObject::getSubsets(const MathLib::extent_t& extent, int64_t gps, 
 /*----------------------------------------------------------------------------
  * getBands
  *----------------------------------------------------------------------------*/
-void RasterObject::getBands(std::vector<string>& bands)
+void RasterObject::getBands(vector<string>& bands)
 {
     for(long i = 0; i < parms->bands.length(); i++)
     {
@@ -281,7 +281,7 @@ void RasterObject::getBands(std::vector<string>& bands)
 /*----------------------------------------------------------------------------
  * resolveBands
  *----------------------------------------------------------------------------*/
-void RasterObject::resolveBands(std::vector<string>& bands)
+void RasterObject::resolveBands(vector<string>& bands)
 {
     return getBands(bands);
 }
@@ -289,7 +289,7 @@ void RasterObject::resolveBands(std::vector<string>& bands)
 /*----------------------------------------------------------------------------
  * resolveBandsStrict
  *----------------------------------------------------------------------------*/
-void RasterObject::resolveBandsStrict(std::vector<string>& bands)
+void RasterObject::resolveBandsStrict(vector<string>& bands)
 {
     if(parms->bands.length() > 0)
     {
@@ -312,11 +312,11 @@ void RasterObject::resolveBandsStrict(std::vector<string>& bands)
 /*----------------------------------------------------------------------------
  * resolveBands
  *----------------------------------------------------------------------------*/
-void RasterObject::resolveBands(void* rptr, std::vector<int>& bands)
+void RasterObject::resolveBands(void* rptr, vector<int>& bands)
 {
     GdalRaster* raster = static_cast<GdalRaster*>(rptr);
 
-    std::vector<string> bandsNames;
+    vector<string> bandsNames;
     resolveBands(bandsNames);
 
     if(bandsNames.empty())
@@ -406,12 +406,12 @@ int RasterObject::luaBatchSamples(lua_State *L)
         /* Get Self */
         lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
 
-        std::vector<double> lonVec;
-        std::vector<double> latVec;
-        std::vector<double> heightVec;
+        vector<double> lonVec;
+        vector<double> latVec;
+        vector<double> heightVec;
 
         /* Helper Lambda to Read Lua Table into Vector */
-        auto luaTableToVector = [&](int tableIndex, std::vector<double> &vec)
+        auto luaTableToVector = [&](int tableIndex, vector<double> &vec)
         {
             lua_pushnil(L); // Start at the beginning of the table
             while (lua_next(L, tableIndex) != 0)
@@ -449,7 +449,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
         }
 
         /* Create point_info_t vector from tables */
-        std::vector<point_info_t> points;
+        vector<point_info_t> points;
         for (size_t i = 0; i < lonVec.size(); i++)
         {
             points.push_back({{lonVec[i], latVec[i], heightVec[i]}, gps});
@@ -608,7 +608,7 @@ int RasterObject::luaSubsets(lua_State *L)
 /*----------------------------------------------------------------------------
  * getThreadsRanges
  *----------------------------------------------------------------------------*/
-void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
+void RasterObject::getThreadsRanges(vector<range_t>& ranges, uint32_t num,
                                     uint32_t minPerThread, uint32_t maxNumThreads)
 {
     ranges.clear();

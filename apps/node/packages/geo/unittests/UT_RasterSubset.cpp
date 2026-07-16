@@ -121,8 +121,8 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
         const MathLib::extent_t extent = {{llx, lly}, {urx, ury}};
         lua_obj->raster->getSubsets(extent, 0, subsetsList, NULL);
 
-        std::vector<SampleInfo_t*>  rasterSamples;
-        std::vector<SampleInfo_t*>  subRasterSamples;
+        vector<SampleInfo_t*>  rasterSamples;
+        vector<SampleInfo_t*>  subRasterSamples;
 
         /* Get samples from parent RasterObject */
         List<RasterSample*> samplesList;

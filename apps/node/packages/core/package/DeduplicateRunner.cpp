@@ -178,7 +178,7 @@ bool DeduplicateRunner::run (GeoDataFrame* dataframe)
 
     // initialize state variables
     const long num_rows = dataframe->length();
-    std::vector<uint8_t> row_storage;
+    vector<uint8_t> row_storage;
     row_storage.reserve(num_rows * row_size);
     std::unordered_set<std::string_view, Hasher, std::equal_to<void>> hash_table;
     hash_table.reserve(num_rows);

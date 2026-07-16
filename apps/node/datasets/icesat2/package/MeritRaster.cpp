@@ -212,7 +212,7 @@ uint32_t MeritRaster::samplePoint (const point_info_t& pinfo, sample_list_t& sli
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSamples (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
+uint32_t MeritRaster::getSamples (const vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
     uint32_t ssErrors = SS_NO_ERRORS;

@@ -86,7 +86,7 @@ GeoRtree::~GeoRtree(void)
 /*----------------------------------------------------------------------------
  * query
  *----------------------------------------------------------------------------*/
-void GeoRtree::query(const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures)
+void GeoRtree::query(const OGRGeometry* geo, vector<OGRFeature*>& resultFeatures)
 {
     /* Use the default GEOS context */
     query(geo, geosContext, resultFeatures);
@@ -96,7 +96,7 @@ void GeoRtree::query(const OGRGeometry* geo, std::vector<OGRFeature*>& resultFea
  * query
  *----------------------------------------------------------------------------*/
 void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
-                     std::vector<OGRFeature*>& resultFeatures)
+                     vector<OGRFeature*>& resultFeatures)
 {
     if(rtree == NULL)
     {
@@ -123,7 +123,7 @@ void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
 
 
     /* Query the R-tree using the envelope of the point */
-    std::vector<FeatureIndexPair*> resultPairs;
+    vector<FeatureIndexPair*> resultPairs;
     GEOSSTRtree_query_r(context, rtree, geosEnvelope, queryCallback, &resultPairs);
     // mlog(DEBUG, "Found %zu features for query", resultPairs.size());
 
@@ -250,6 +250,6 @@ void GeoRtree::queryCallback(void* item, void* userdata)
     FeatureIndexPair* featurePair = static_cast<FeatureIndexPair*>(item);
 
     /* Cast userdata to a vector of FeatureIndexPair* and store the pair */
-    std::vector<FeatureIndexPair*>* resultPairs = static_cast<std::vector<FeatureIndexPair*>*>(userdata);
+    vector<FeatureIndexPair*>* resultPairs = static_cast<vector<FeatureIndexPair*>*>(userdata);
     resultPairs->push_back(featurePair);
 }

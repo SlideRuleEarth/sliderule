@@ -41,7 +41,7 @@
  * PROTECTED METHODS
  ******************************************************************************/
 
-static const std::vector<const char*> dates = {"start_datetime", "end_datetime"};
+static const vector<const char*> dates = {"start_datetime", "end_datetime"};
 
 /*----------------------------------------------------------------------------
  * Constructor
@@ -92,7 +92,7 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
     return true;
 }
 
-void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, string& file)
+void PgcDemStripsRaster::getIndexFile(const vector<point_info_t>* points, string& file)
 {
     static_cast<void>(points);
     file = indexFile;
@@ -104,7 +104,7 @@ void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, s
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
 {
-    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
     const uint32_t start   = 0;
     const uint32_t end     = flist->size();
@@ -125,7 +125,7 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             const char *fname = feature->GetFieldAsString("dem");
-            if(fname && strlen(fname) > 0)
+            if(fname && StringLib::size(fname) > 0)
             {
                 string fileName(fname);
                 std::size_t pos = fileName.find(demName);

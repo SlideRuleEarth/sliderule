@@ -34,7 +34,6 @@
  ******************************************************************************/
 
 #include <cmath>
-#include <vector>
 #include <tiffio.h>
 #include <gdal.h>
 #include <ogr_spatialref.h>
@@ -67,7 +66,7 @@ static constexpr double CLOSE_RING_EPSILON       = 1e-9;
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-static bool luaTableToCoords(lua_State* L, int index, std::vector<MathLib::coord_t>& coords)
+static bool luaTableToCoords(lua_State* L, int index, vector<MathLib::coord_t>& coords)
 {
     if(!lua_istable(L, index))
     {
@@ -103,7 +102,7 @@ static bool luaTableToCoords(lua_State* L, int index, std::vector<MathLib::coord
     return true;
 }
 
-static GEOSGeometry* coordsToGeosPolygon(GEOSContextHandle_t context, const std::vector<MathLib::coord_t>& coords)
+static GEOSGeometry* coordsToGeosPolygon(GEOSContextHandle_t context, const vector<MathLib::coord_t>& coords)
 {
     if(coords.size() < 3)
     {
@@ -112,7 +111,7 @@ static GEOSGeometry* coordsToGeosPolygon(GEOSContextHandle_t context, const std:
     }
 
     /* Ensure ring is closed */
-    std::vector<MathLib::coord_t> ring = coords;
+    vector<MathLib::coord_t> ring = coords;
     const MathLib::coord_t& first = ring.front();
     const MathLib::coord_t& last = ring.back();
     if(fabs(first.lat - last.lat) > CLOSE_RING_EPSILON || fabs(first.lon - last.lon) > CLOSE_RING_EPSILON)
@@ -662,7 +661,7 @@ int GeoLib::luaPolySimplify(lua_State* L)
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Simplify tolerance must be >= 0.0");
         }
 
-        std::vector<MathLib::coord_t> coords;
+        vector<MathLib::coord_t> coords;
         if(!luaTableToCoords(L, 1, coords))
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid polygon argument");

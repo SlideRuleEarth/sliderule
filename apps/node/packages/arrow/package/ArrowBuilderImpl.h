@@ -99,9 +99,9 @@ class ArrowBuilderImpl
 
         bool createSchema           (void);
         bool buildFieldList         (const char* rec_type, int offset, int flags);
-        static void appendGeoMetaData(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+        static void appendGeoMetaData(const shared_ptr<arrow::KeyValueMetadata>& metadata);
+        void appendServerMetaData   (const shared_ptr<arrow::KeyValueMetadata>& metadata);
+        void appendPandasMetaData   (const shared_ptr<arrow::KeyValueMetadata>& metadata);
         void createMetadataFile     (void);
         static void processField    (RecordObject::field_t& field,
                                      shared_ptr<arrow::Array>* column,

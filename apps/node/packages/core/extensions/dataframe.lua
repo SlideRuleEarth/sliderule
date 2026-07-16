@@ -153,7 +153,9 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     end
 
     -- Check DataFrame Constraints
-    if df:numrows() <= 0 or df:numcols() <= 0 then
+    if df:numcols() <= 0 then
+        userlog:alert(core.WARNING, core.RTE_STATUS, string.format("request <%s> resulted in an invalid dataframe", rspq));
+    elseif df:numrows() <= 0 then
         userlog:alert(core.WARNING, core.RTE_STATUS, string.format("request <%s> produced an empty dataframe", rspq));
     end
 

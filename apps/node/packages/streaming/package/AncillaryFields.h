@@ -36,8 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <string>
-
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "OsApi.h"
