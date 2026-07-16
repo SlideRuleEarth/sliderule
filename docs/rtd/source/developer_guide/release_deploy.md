@@ -41,7 +41,7 @@ nvm use 20
 * Verify the presence of the conda environments needed to run the different pytest suites: `sliderule`, `ams`.
 ```bash
 conda env create -f clients/python/environment.yml # creates sliderule environment
-conda env create -f applications/ams/environment.yml # creates ams environment
+conda env create -f apps/ams/environment.yml # creates ams environment
 conda env list # lists what conda environments are available
 ```
 ## Guide
@@ -62,14 +62,14 @@ make selftest
 
 * Run the `provisioner` PyTests. The provisioner application has its own set of pytests that run under the `sliderule` conda environment and test the basic functionality and APIs of the *provisioner* lambdas.
 
-From `sliderule/applications/provisioner`
+From `sliderule/apps/provisioner`
 ```bash
 pytest
 ```
 
 * Run the `ams` PyTests. The Asset Metadata Service (AMS) application has its own set of pytests that run under the `ams` conda environment and test the basic functionality and APIs of the *ams* container.
 
-From `sliderule/applications/ams`
+From `sliderule/apps/ams`
 ```bash
 make test
 ```

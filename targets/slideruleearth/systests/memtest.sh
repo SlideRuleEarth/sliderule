@@ -2,7 +2,7 @@
 
 logfile=memtest.log
 progname=sliderule
-testscript="targets/slideruleearth/systests/test_runner.lua"
+testscript="apps/node/scripts/test_runner.lua"
 valgrind_suppressions="targets/slideruleearth/systests/memtest.supp"
 valgrind_options="--leak-check=full --show-leak-kinds=all --show-reachable=yes --track-origins=yes --track-fds=yes --log-file=${logfile} --suppressions=${valgrind_suppressions}"
 

@@ -9,7 +9,7 @@
 # To update a single package to the latest version compatible with the version constraints in the source:
 #     conda-lock lock  --lockfile conda-lock.yml --update PACKAGE
 # To re-solve the entire environment, e.g. after changing a version constraint in the source file:
-#     conda-lock -f ../../../../applications/ams/environment.yml -f environment.yml --lockfile conda-lock.yml
+#     conda-lock -f ../../../../apps/ams/environment.yml -f environment.yml --lockfile conda-lock.yml
 version: 1
 metadata:
   content_hash:
@@ -20,7 +20,7 @@ metadata:
   platforms:
   - linux-aarch64
   sources:
-  - ../../../../applications/ams/environment.yml
+  - ../../../../apps/ams/environment.yml
   - environment.yml
 package:
 - name: _openmp_mutex

@@ -9,4 +9,4 @@ repos:
                     '--'
                   ]
                   types_or: [python, rst, markdown]
-                  files: ^(applications|clients|datasets|docs|packages|platforms|targets)/
+                  files: ^(applications|clients|docs|targets)/

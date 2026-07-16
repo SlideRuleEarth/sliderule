@@ -167,10 +167,10 @@ class TestParser:
         return result
 
 # open up latest log file and search for results
-selftest = TestParser("selftest", "/sliderule/stage/sliderule/bin/sliderule /sliderule/targets/slideruleearth/test_runner.lua")
+selftest = TestParser("selftest", "/sliderule/stage/sliderule/bin/sliderule /sliderule/apps/node/scripts/test_runner.lua")
 sliderule = TestParser("pytest", "rootdir: /sliderule/clients/python")
-provisioner = TestParser("pytest", "rootdir: /sliderule/applications/provisioner")
-ams = TestParser("pytest", "rootdir: /sliderule/applications/ams")
+provisioner = TestParser("pytest", "rootdir: /sliderule/apps/provisioner")
+ams = TestParser("pytest", "rootdir: /sliderule/apps/ams")
 with open(local_log_file, "r") as file:
     for line in file.readlines():
         line = line.strip()

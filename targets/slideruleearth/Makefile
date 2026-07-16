@@ -190,7 +190,7 @@ USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 BUILD_CONFIG ?= release
 BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(BUILD_CONFIG) && make"
-RUN_CMD ?= $(ROOT)/targets/slideruleearth/server.lua
+RUN_CMD ?= $(ROOT)/apps/node/scripts/server.lua
 ARGS ?=
 
 CLANG_VER ?= ""
@@ -223,10 +223,10 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
-	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)/apps/node
 
 config-release: prep ## configure server to run a release version locally
-	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)/apps/node
 
 run: ## run the server locally
 	LOG_FORMAT=FMT_TEXT \
@@ -279,14 +279,14 @@ job: ## execute the job runner locally
 	CLUSTER=localhost \
 	DOMAIN=localhost \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth/job_runner.lua $(ARGS)
+	$(INSTALLDIR)/bin/sliderule $(ROOT)/apps/nodes/scripts/job_runner.lua $(ARGS)
 
 python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \
 	sh -c 'cd $(ROOT)/clients/python && pip install .'
 
 selftest: ## run the self test on the server code
-	make run RUN_CMD=$(ROOT)/targets/slideruleearth/test_runner.lua
+	make run RUN_CMD=$(ROOT)/apps/node/scripts/test_runner.lua
 
 openapi: ## bundle and lint the openapi docs for sliderule
 	make sliderule-openapi
@@ -299,7 +299,7 @@ openapi: ## bundle and lint the openapi docs for sliderule
 %-openapi: ## bundle and lint openapi docs
 	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/$*
-	cp -R $(ROOT)/applications/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
+	cp -R $(ROOT)/apps/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
 	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
@@ -328,11 +328,11 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 
 sliderule-test: ## run python client tests
 	conda run -n ams --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
+	sh -c 'cd $(ROOT)/apps/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
 
 sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
 	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
-	make run RUN_CMD="openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
+	make run RUN_CMD="$(ROOT)/apps/node/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
@@ -342,9 +342,9 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
 	cp docker/ilb/Dockerfile $(ILB_STAGE_DIR)
-	cp $(ROOT)/applications/ilb/haproxy.cfg $(ILB_STAGE_DIR)
-	cp $(ROOT)/applications/ilb/orchestrator.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/applications/ilb/analyzer.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/ilb/haproxy.cfg $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/ilb/orchestrator.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/ilb/analyzer.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
@@ -364,7 +364,7 @@ monitor-agent-docker: ## build monitor agent docker image; needs VERSION
 	cd $(MONITOR_AGENT_STAGE_DIR); docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION) .
 
 ams-lock: ## update dependencies of ams
-	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/applications/ams/environment.yml
+	cd docker/ams && conda-lock -p linux-$(ARCH) -f $(ROOT)/apps/ams/environment.yml
 	cd docker/ams && conda-lock render -p linux-$(ARCH)
 
 ams-docker: ## build ams docker image; uses VERSION
@@ -373,21 +373,21 @@ ams-docker: ## build ams docker image; uses VERSION
 	cp docker/ams/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
 	cp docker/ams/conda-* $(AMS_STAGE_DIR)
 	cp docker/ams/docker-entrypoint.sh $(AMS_STAGE_DIR)
-	cp $(ROOT)/applications/ams/pyproject.toml $(AMS_STAGE_DIR)
+	cp $(ROOT)/apps/ams/pyproject.toml $(AMS_STAGE_DIR)
 	cp $(ROOT)/version.txt $(AMS_STAGE_DIR)
 	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(AMS_STAGE_DIR)/ams
-	cp $(ROOT)/applications/ams/ams/*.py $(AMS_STAGE_DIR)/ams
+	cp $(ROOT)/apps/ams/ams/*.py $(AMS_STAGE_DIR)/ams
 	cd $(AMS_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ams:$(VERSION) .
 
 ams-run: ## run ams locally
-	cd $(ROOT)/applications/ams && \
+	cd $(ROOT)/apps/ams && \
 	conda run -n ams --no-capture-output \
 	flask --app ams run --debug --port 9082
 
 ams-test: ## run ams tests
 	conda run -n ams --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/ams && coverage run -m pytest $(ARGS) && coverage report -m'
+	sh -c 'cd $(ROOT)/apps/ams && coverage run -m pytest $(ARGS) && coverage report -m'
 
 ########################
 # Cluster Targets
@@ -459,7 +459,7 @@ cluster-deploy-candidate: ## deploy candidate public cluster
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
 		--stack-name 			dns \
-		--template-file 		$(ROOT)/applications/provisioner/dns.yml \
+		--template-file 		$(ROOT)/apps/provisioner/dns.yml \
 		--capabilities 			CAPABILITY_NAMED_IAM \
 		--region 				$(AWS_REGION) \
 		--parameter-overrides 	Domain=$(DOMAIN) \
@@ -512,7 +512,7 @@ testrunner-run: ## invokes the provisioner *test* lambda function and displays t
 recorder-create:  ## creates the lambda recorder functions
 	aws cloudformation create-stack \
 		--stack-name 	$(RECORDER_STACKNAME) \
-		--template-body file://$(ROOT)/applications/recorder/recorder.yml \
+		--template-body file://$(ROOT)/apps/recorder/recorder.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
@@ -535,21 +535,21 @@ recorder-delete: ## deletes the lambda recorder functions
 authenticator-build: ## builds the authenticator lambda package zipfile
 	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
 	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
-	cp $(ROOT)/applications/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
+	cp $(ROOT)/apps/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
 	docker run -it --rm \
 		-v $(AUTHENTICATOR_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
+	cp $(ROOT)/apps/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
 	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) . -x "/*__pycache__/*"
 
 authenticator-create: authenticator-build  ## creates the lambda authenticator functions
 	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
 	aws cloudformation create-stack \
 		--stack-name 	$(AUTHENTICATOR_STACKNAME) \
-		--template-body file://$(ROOT)/applications/authenticator/authenticator.yml \
+		--template-body file://$(ROOT)/apps/authenticator/authenticator.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
@@ -583,7 +583,7 @@ authenticator-logs:
 
 authenticator-test: ## run authenticator tests
 	conda run -n authenticator --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/authenticator && \
+	sh -c 'cd $(ROOT)/apps/authenticator && \
 	DOMAIN=localhost \
 	PUBLIC_CLUSTER=localhost \
 	AUTHENTICATOR_HOSTNAME=localhost \
@@ -611,29 +611,29 @@ authenticator-test: ## run authenticator tests
 provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
-	cp $(ROOT)/applications/provisioner/requirements.txt $(PROVISIONER_STAGE_DIR)/
+	cp $(ROOT)/apps/provisioner/requirements.txt $(PROVISIONER_STAGE_DIR)/
 	docker run -it --rm \
 		-v $(PROVISIONER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/userasg.yml $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/ilb.sh $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/monitor.sh $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/node.sh $(PROVISIONER_STAGE_DIR)/package/
-	cp $(ROOT)/applications/provisioner/test.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/provisioner.py $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/scheduler.py $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/cluster.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/userasg.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/testrunner.yml $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/ilb.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/monitor.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/node.sh $(PROVISIONER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/provisioner/test.sh $(PROVISIONER_STAGE_DIR)/package/
 	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner functions
 	aws s3 cp $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
 	aws cloudformation create-stack \
 		--stack-name 	$(PROVISIONER_STACKNAME) \
-		--template-body file://$(ROOT)/applications/provisioner/provisioner.yml \
+		--template-body file://$(ROOT)/apps/provisioner/provisioner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
@@ -697,11 +697,11 @@ provisioner-run: ## run local command line tool provided by provisioner
     ALERT_EMAIL=$(ALERT_EMAIL) \
 	AWS_REGION=$(AWS_REGION) \
 	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/provisioner && python provisioner.py $(ARGS)'
+	sh -c 'cd $(ROOT)/apps/provisioner && python provisioner.py $(ARGS)'
 
 provisioner-test: ## run provisioner tests
 	conda run -n provisioner --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/provisioner && \
+	sh -c 'cd $(ROOT)/apps/provisioner && \
     DOMAIN=$(DOMAIN) \
 	PUBLIC_CLUSTER=$(PUBLIC_CLUSTER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
@@ -718,21 +718,21 @@ provisioner-test: ## run provisioner tests
 runner-build: ## create the runner lambda zipfile
 	-rm -Rf $(RUNNER_STAGE_DIR)
 	mkdir -p $(RUNNER_STAGE_DIR)
-	cp $(ROOT)/applications/runner/requirements.txt $(RUNNER_STAGE_DIR)/
+	cp $(ROOT)/apps/runner/requirements.txt $(RUNNER_STAGE_DIR)/
 	docker run -it --rm \
 		-v $(RUNNER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/runner/runner.py $(RUNNER_STAGE_DIR)/package/
+	cp $(ROOT)/apps/runner/runner.py $(RUNNER_STAGE_DIR)/package/
 	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) . -x "/*__pycache__/*"
 
 runner-create: runner-build ## creates the lambda runner functions
 	aws s3 cp $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation create-stack \
 		--stack-name 	$(RUNNER_STACKNAME) \
-		--template-body file://$(ROOT)/applications/runner/runner.yml \
+		--template-body file://$(ROOT)/apps/runner/runner.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
@@ -790,11 +790,11 @@ runner-run: ## execute a local runner command line tool
     ALERT_EMAIL=$(ALERT_EMAIL) \
 	AWS_REGION=$(AWS_REGION) \
 	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/runner && python runner.py $(ARGS)'
+	sh -c 'cd $(ROOT)/apps/runner && python runner.py $(ARGS)'
 
 runner-test: ## run runner tests
 	conda run -n runner --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/runner && \
+	sh -c 'cd $(ROOT)/apps/runner && \
     DOMAIN=$(DOMAIN) \
     ENVIRONMENT_VERSION=$(DOENVIRONMENT_VERSIONMAIN) \
 	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
@@ -810,24 +810,24 @@ runner-test: ## run runner tests
 mcp-build: ## create the mcp lambda zipfile
 	-rm -Rf $(MCP_STAGE_DIR)
 	mkdir -p $(MCP_STAGE_DIR)
-	cp $(ROOT)/applications/mcp/requirements.txt $(MCP_STAGE_DIR)/
+	cp $(ROOT)/apps/mcp/requirements.txt $(MCP_STAGE_DIR)/
 	docker run -it --rm \
 		-v $(MCP_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
-	cp $(ROOT)/applications/mcp/*.py $(MCP_STAGE_DIR)/package/
-	cp -R $(ROOT)/applications/mcp/tools $(MCP_STAGE_DIR)/package/
-	cp -R $(ROOT)/applications/mcp/resources $(MCP_STAGE_DIR)/package/
-	cp -R $(ROOT)/applications/mcp/prompts $(MCP_STAGE_DIR)/package/
+	cp $(ROOT)/apps/mcp/*.py $(MCP_STAGE_DIR)/package/
+	cp -R $(ROOT)/apps/mcp/tools $(MCP_STAGE_DIR)/package/
+	cp -R $(ROOT)/apps/mcp/resources $(MCP_STAGE_DIR)/package/
+	cp -R $(ROOT)/apps/mcp/prompts $(MCP_STAGE_DIR)/package/
 	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "/*__pycache__/*"
 
 mcp-create: mcp-build ## creates the lambda mcp functions
 	aws s3 cp $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
 	aws cloudformation create-stack \
 		--stack-name 	$(MCP_STACKNAME) \
-		--template-body file://$(ROOT)/applications/mcp/mcp.yml \
+		--template-body file://$(ROOT)/apps/mcp/mcp.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
@@ -858,7 +858,7 @@ mcp-logs: ## display logs from recents MCP invocations
 
 mcp-test: ## run provisioner tests
 	conda run -n mcp --no-capture-output \
-	sh -c 'cd $(ROOT)/applications/mcp && \
+	sh -c 'cd $(ROOT)/apps/mcp && \
 	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
     DOMAIN=$(DOMAIN) \
 	CLUSTER=$(CLUSTER) \
@@ -882,14 +882,14 @@ certbot-build: ## create the certbot lambda zipfile
 		--entrypoint /bin/bash \
 		public.ecr.aws/lambda/python:3.11 \
 		-c "pip install --target /host/package certbot certbot-dns-route53"
-	cp $(ROOT)/applications/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
+	cp $(ROOT)/apps/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
 	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) . -x "/*__pycache__/*"
 
 certbot-create: certbot-build ## creates the lambda certbot function
 	aws s3 cp $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
 	aws cloudformation create-stack \
 		--stack-name 	$(CERTBOT_STACKNAME) \
-		--template-body file://$(ROOT)/applications/certbot/certbot.yml \
+		--template-body file://$(ROOT)/apps/certbot/certbot.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
 		--parameters 	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
@@ -998,7 +998,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
-	- cd $(ROOT)/applications/ams && ./clean.sh
+	- cd $(ROOT)/apps/ams && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml

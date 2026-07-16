@@ -84,14 +84,14 @@ docker compose down ilb ams sliderule
 #
 # Provisioner PyTests
 #
-cd /sliderule/applications/provisioner
+cd /sliderule/apps/provisioner
 /root/miniforge3/bin/mamba env create -f environment.yml -y
 /root/miniforge3/envs/provisioner/bin/pytest
 
 #
 # AMS PyTests
 #
-cd /sliderule/applications/ams
+cd /sliderule/apps/ams
 /root/miniforge3/bin/mamba env create -f environment.yml -y
 /root/miniforge3/envs/ams/bin/pytest
 
@@ -99,6 +99,6 @@ cd /sliderule/applications/ams
 # Record of Run
 #
 aws s3 cp /testrunner.log s3://$PROJECT_BUCKET/testrunner/$BRANCH-$DEPLOY_DATE-testrunner.log
-cd /sliderule/applications/provisioner
+cd /sliderule/apps/provisioner
 /root/miniforge3/envs/provisioner/bin/python utils/testrunner_report.py --testfile $BRANCH-$DEPLOY_DATE-testrunner.log --testdir s3://$PROJECT_BUCKET/testrunner --branch $BRANCH --output /tmp/$BRANCH-summary.json
 aws s3 cp /tmp/$BRANCH-summary.json s3://$PROJECT_BUCKET/testrunner/$BRANCH-summary.json

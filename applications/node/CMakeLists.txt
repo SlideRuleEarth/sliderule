@@ -1,4 +1,5 @@
 cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
+message (STATUS "Building sliderule processing node")
 project (SLIDERULE LANGUAGES CXX)
 
 # Squelch a warning when building on Win32/Cygwin
@@ -187,7 +188,7 @@ option (USE_SLIDERULEEARTH_TARGET "Include slideruleearth target configuration" 
 
 # Version Information #
 
-file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/version.txt TGTVER)
+file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../../version.txt TGTVER)
 string(REPLACE "v" "" LIBVER ${TGTVER})
 
 # C++ Version #
@@ -309,9 +310,28 @@ target_include_directories (slideruleLib PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/auto
 
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR})
 
-# Server Application
+# SlideRule Application #
 
-add_subdirectory (applications/server)
+execute_process (COMMAND git --git-dir ${PROJECT_SOURCE_DIR}/.git --work-tree ${PROJECT_SOURCE_DIR} describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE COMMITINFO)
+string(REGEX REPLACE "\n$" "" COMMITINFO "${COMMITINFO}")
+
+execute_process(COMMAND uname -r OUTPUT_VARIABLE OSINFO)
+string(REGEX REPLACE "\n$" "" OSINFO "${OSINFO}")
+
+execute_process(COMMAND date OUTPUT_VARIABLE DATEINFO)
+string(REGEX REPLACE "\n$" "" DATEINFO "${DATEINFO}")
+
+set(BUILDINFO "${COMMITINFO}, ${OSINFO}, ${DATEINFO}")
+target_compile_definitions (slideruleLib PUBLIC BUILDINFO="${BUILDINFO}")
+
+add_executable (sliderule ${CMAKE_CURRENT_LIST_DIR}/SlideRule.cpp)
+
+set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
+set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
+set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
+
+target_link_libraries (sliderule PUBLIC "-Wl,--whole-archive" slideruleLib "-Wl,--no-whole-archive")
+install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)
 
 # Add Packages #
 
@@ -414,10 +434,10 @@ endif()
 # Targets #
 
 if(${USE_SLIDERULEEARTH_TARGET})
-    add_subdirectory (targets/slideruleearth)
+    add_subdirectory (scripts)
 endif()
 
 # Installation #
 
 install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
-install (FILES ${CMAKE_CURRENT_LIST_DIR}/version.txt DESTINATION ${CONFDIR})
+install (FILES ${CMAKE_CURRENT_LIST_DIR}/../../version.txt DESTINATION ${CONFDIR})
