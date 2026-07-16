@@ -51,7 +51,6 @@ except:
 ###############################################################################
 
 DEFAULT_CRS = "EPSG:4326"
-logger = logging.getLogger(__name__)
 slideruleSession = None
 
 ###############################################################################
@@ -119,16 +118,12 @@ def init (
         cluster=organization,
         verbose=verbose,
         loglevel=loglevel,
+        loghandler=log_handler,
         node_capacity=desired_nodes,
         ttl=time_to_live,
         github_token=github_token,
         rethrow=rethrow,
         user_service=user_service)
-    # configure logging
-    if log_handler != None:
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
-        logger.addHandler(log_handler)
     # verify compatibility between client and server versions
     try:
         status = check_version(plugins=plugins)
@@ -136,7 +131,7 @@ def init (
         if rethrow:
             raise
         else:
-            logger.error(f'Initialization check failed: {e}')
+            slideruleSession.logger.error(f'Initialization check failed: {e}')
         status = False
     return status
 
@@ -233,16 +228,13 @@ def set_verbose (enable, loglevel=logging.INFO, session=None):
     '''
     Sets up a console logger to print log messages to screen
 
-    If you want more control over the behavior of the log messages being captured, do not call this function but instead
-    create and configure a Python log handler of your own and attach it to `sliderule.logger`.
-
     Parameters
     ----------
         enable:     bool
                     True: creates console logger if it doesn't exist, False: destroys console logger if it does exist
 
-        loglevel:       int
-                        minimum severity of log message to output
+        loglevel:   int
+                    minimum severity of log message to output
 
     Examples
     --------
@@ -438,13 +430,13 @@ def check_version (plugins=None, session=None):
 
     # check version mismatches
     if (versions['server'][0] != versions['client'][0]) or (versions['server'][1] > versions['client'][1]):
-        logger.warning(f'Warning, this environment is using an outdated client ({info["client"]["version"]}). The code will run but some functionality supported by the server ({info["server"]["version"]}) may not be available.')
+        session.logger.warning(f'Warning, this environment is using an outdated client ({info["client"]["version"]}). The code will run but some functionality supported by the server ({info["server"]["version"]}) may not be available.')
 
     # check plugins
     if isinstance(plugins, list):
         for plugin in plugins:
             if versions[plugin][0] != versions['client'][0]:
-                logger.warning(f'Client {info["client"]["version"]} may be incompatible with the {plugin} plugin {info[plugin]["version"]}')
+                session.logger.warning(f'Client {info["client"]["version"]} may be incompatible with the {plugin} plugin {info[plugin]["version"]}')
 
     # return boolean for backward compatibility
     return True
@@ -503,7 +495,7 @@ def run(api, parms, aoi=None, resources=None, session=None):
     rsps = source(api, {"parms": parms}, stream=True, session=session)
 
     # build geodataframe
-    gdf = procoutputfile(parms, rsps)
+    gdf = procoutputfile(parms, rsps, session)
 
     # delete tempfile
     if delete_tempfile and os.path.exists(parms["output"]["path"]):
@@ -738,27 +730,6 @@ def emptyframe(**kwargs):
     return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
 
 #
-# Populate MetaData
-#
-def populatemetadata(df, path):
-    # Read metadata from file
-    try:
-        # Imports needed just to read metadata
-        import pyarrow.parquet as pq
-        import ctypes
-        import json
-        # pull out metadata
-        metadata = pq.read_metadata(path)
-        for key in metadata.metadata:
-            if key in [b'ARROW:schema', b'pandas', b'geo']:
-                continue
-            metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
-            df.attrs[key.decode('ascii')] = json.loads(metadata_str)
-    except Exception as e:
-        # could fail for a multitude of reasons; just log and move on
-        logger.debug(f'Failed to read metadata from {path}: {e}')
-
-#
 # Split S3 URI
 #
 def splits3uri(uri):
@@ -793,11 +764,12 @@ def getvalues(data, dtype, size, num_elements=0):
 #
 # Process Output File
 #
-def procoutputfile(parm, rsps):
+def procoutputfile(parm, rsps, session=None):
     '''
     parm: request parameters
     rsps: response
     '''
+    session = checksession(session)
     output = parm["output"]
 
     # Get file path to read from
@@ -815,7 +787,7 @@ def procoutputfile(parm, rsps):
     # Handle local files
     local_file = path # default to just returning the name of the parquet file
     if "open_on_complete" in output and output["open_on_complete"]:
-
+        session.logger.debug(f'Opening {path}')
         # Open the file as a DataFrame
         try:
             if (output["format"] == "geoparquet") or (output["format"] == "parquet" and "as_geo" in output and output["as_geo"]):
@@ -832,12 +804,26 @@ def procoutputfile(parm, rsps):
             else:
                 raise RuntimeError(f'unsupported format - {output["format"]}')
         except Exception as e:
-            logger.debug(f'Failed to open {path}: {e}')
+            session.logger.debug(f'Failed to open {path}: {e}')
             local_file = None
 
         # Only read Parquet metadata for Parquet or GeoParquet
         if (output["format"] in ("parquet", "geoparquet")) and (local_file is not None):
-            populatemetadata(local_file, path)
+            try:
+                # Imports needed just to read metadata
+                import pyarrow.parquet as pq
+                import ctypes
+                import json
+                # pull out metadata
+                metadata = pq.read_metadata(path)
+                for key in metadata.metadata:
+                    if key in [b'ARROW:schema', b'pandas', b'geo']:
+                        continue
+                    metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
+                    local_file.attrs[key.decode('ascii')] = json.loads(metadata_str)
+            except Exception as e:
+                # could fail for a multitude of reasons; just log and move on
+                session.logger.debug(f'Failed to read metadata from {path}: {e}')
 
     # Return back to caller either path or opened dataframe
     return local_file

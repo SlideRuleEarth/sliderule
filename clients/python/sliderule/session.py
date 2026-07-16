@@ -94,6 +94,9 @@ CODED_TYPE = {
     12: "STRING"
 }
 
+CONSOLE = logging.StreamHandler()
+CONSOLE.setFormatter(logging.Formatter('%(created)f %(levelname)-7s [%(filename)12s:%(lineno)5d] %(message)s'))
+
 ###############################################################################
 # CLASSES
 ###############################################################################
@@ -124,6 +127,8 @@ class Session:
         ttl             = 60, # minutes
         verbose         = False,
         loglevel        = logging.INFO,
+        loghandler      = None,
+        logname         = "sliderule",
         trust_env       = False,
         ssl_verify      = True,
         rqst_timeout    = (10, 120), # (connection, read) in seconds
@@ -154,8 +159,12 @@ class Session:
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
 
-        # initialize logging
-        self.logger = logging.getLogger(__name__)
+        # initialize logger
+        self.logger = logging.getLogger(logname)
+        if verbose:
+            self.set_verbose(loglevel, loghandler)
+
+        # initialize event logging
         self.eventlogger = {
             0: self.logger.debug,
             1: self.logger.info,
@@ -163,10 +172,6 @@ class Session:
             3: self.logger.error,
             4: self.logger.critical
         }
-
-        # set verbosity
-        if verbose:
-            self.set_verbose(loglevel)
 
         # configure callbacks
         self.callbacks = {
@@ -331,7 +336,7 @@ class Session:
     #
     #  set_verbose
     #
-    def set_verbose (self, loglevel=logging.INFO):
+    def set_verbose (self, loglevel=logging.INFO, loghandler=None):
         '''
         set verbosity of log messages by adding the console log
         handler and by setting the log level
@@ -352,14 +357,19 @@ class Session:
         elif loglevel == "CRITICAL":
             loglevel = logging.CRITICAL
 
-        # enable logging to console
-        if len(self.logger.handlers) == 0:
-            self.logger.addHandler(logging.StreamHandler())
+        # enable logging
+        if loghandler != None:
+            for handler in self.logger.handlers:
+                self.logger.removeHandler(handler)
+            self.logger.addHandler(loghandler)
+        elif len(self.logger.handlers) == 0:
+            self.logger.addHandler(CONSOLE)
 
         # always set level to requested
         self.logger.setLevel(loglevel)
         for handler in self.logger.handlers:
             handler.setLevel(loglevel)
+
     #
     # scaleout
     #
