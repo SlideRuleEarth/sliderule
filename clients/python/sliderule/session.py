@@ -94,7 +94,7 @@ CODED_TYPE = {
 }
 
 CONSOLE = logging.StreamHandler()
-CONSOLE.setFormatter(logging.Formatter('%(created)f %(levelname)-7s [%(filename)12s:%(lineno)5d] %(message)s'))
+CONSOLE.setFormatter(logging.Formatter('%(created)f %(levelname)-8s [%(filename)12s:%(lineno)5d] %(message)s'))
 
 ###############################################################################
 # CLASSES
