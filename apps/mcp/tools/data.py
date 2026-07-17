@@ -31,7 +31,7 @@ class DataQuery(Tool):
 
     def __init__(self):
         super().__init__(
-            name="data/describe",
+            name="data/query",
             description="Executes SQL on dataset resources and returns results or handle to another resource",
             schema={
                 "type": "object",

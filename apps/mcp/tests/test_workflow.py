@@ -22,7 +22,7 @@ def test_atl03_subset(local):
         "resources": resources
     }}, 0), None)
     body = json.loads(rsps["body"])
-    job_uri = body["result"]["content"]["resource"]["uri"]
+    job_uri = body["result"]["content"][0]["resource"]["uri"]
 
     # read job
     seconds_to_wait = 10

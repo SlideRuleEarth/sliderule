@@ -8,7 +8,7 @@ import importlib.util
 import inspect
 from pathlib import Path
 from tool import Tool
-from prompt import Message, Prompt
+from prompt import Prompt
 import trafilatura
 
 # ###############################
@@ -101,8 +101,8 @@ def parse_request(event):
     path = event.get("rawPath", '')
     body = get_body(event)
     method = body["method"]
-    parms = body["params"]
-    rqst_id = body["id"]
+    parms = body.get("params", {})
+    rqst_id = body.get("id") # absent id indicates a JSON-RPC notification
     # display diagnostic message
     print(f'Received request to {path} from {username} ({role}): {method} - {parms}') # diagnostic
     # build and return request info
@@ -236,9 +236,14 @@ def tools_list_handler(rqst):
 #
 def tools_call_handler(rqst):
     name = rqst["parms"]["name"]
+    if name not in TOOLS:
+        return rpc_error(rqst, INVALID_PARAMS_CODE, f'tool {name} not found')
     arguments = rqst["parms"].get("arguments", {})
+    content = TOOLS[name].call(arguments)
+    if content is None:
+        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'tool {name} is not implemented')
     return rpc_result(rqst, {
-        "content": TOOLS[name].call(arguments)
+        "content": content if isinstance(content, list) else [content]
     })
 
 #
@@ -346,6 +351,8 @@ def prompts_list_handler(rqst):
 #
 def prompts_get_handler(rqst):
     name = rqst["parms"]["name"]
+    if name not in PROMPTS:
+        return rpc_error(rqst, INVALID_PARAMS_CODE, f'prompt {name} not found')
     arguments = rqst["parms"].get("arguments", {})
     return rpc_result(rqst, {
         "messages": PROMPTS[name].respond(arguments)
@@ -393,6 +400,11 @@ def lambda_gateway(event, context):
     try:
         # process request
         rqst = parse_request(event)
+
+        # handle notifications (no id) - no response body is expected
+        if rqst["id"] is None:
+            return gateway_response(202, {})
+
         code, msg = validate_request(rqst)
 
         # route request

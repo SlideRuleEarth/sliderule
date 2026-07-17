@@ -25,4 +25,4 @@ def test_generate_prompt():
 def test_missing_prompt():
     rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "prompts/get", {"name": "missing_prompt", "arguments": {"question": "how do I write code"}}, 0), None)
     body = json.loads(rsps["body"])
-    assert body["error"]["code"] == -32603
+    assert body["error"]["code"] == -32602

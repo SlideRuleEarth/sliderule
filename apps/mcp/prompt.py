@@ -23,7 +23,7 @@ class Message:
             return {
                 "role": self.role,
                 "content": {
-                    "type": "text",
+                    "type": "resource",
                     "resource": {
                         "uri": self.content
                     }

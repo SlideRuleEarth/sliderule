@@ -9,7 +9,7 @@ def test_list_tools():
     rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "tools/list", {}, 0), None)
     body = json.loads(rsps["body"])
     assert len(body["result"]["tools"]) > 10
-    assert body["result"]["tools"][0]["name"] == "icesat2/atl03/density_metrics"
+    assert body["result"]["tools"][0]["name"] == "ams/describe"
 
 #
 # Call Tool
@@ -28,8 +28,8 @@ def test_call_tool(local):
         "resources": resources
     }}, 0), None)
     body = json.loads(rsps["body"])
-    assert body["result"]["content"]["type"] == "resource"
-    assert body["result"]["content"]["resource"]["uri"].startswith("sliderule://mcp/jobs/")
+    assert body["result"]["content"][0]["type"] == "resource"
+    assert body["result"]["content"][0]["resource"]["uri"].startswith("sliderule://mcp/jobs/")
 
 #
 # Missing Tool
@@ -37,4 +37,4 @@ def test_call_tool(local):
 def test_missing_tool():
     rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "tools/call", {"name": "missing/tool", "arguments": {}}, 0), None)
     body = json.loads(rsps["body"])
-    assert body["error"]["code"] == -32603
+    assert body["error"]["code"] == -32602

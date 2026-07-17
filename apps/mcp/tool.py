@@ -40,7 +40,7 @@ class Content:
             }
         elif self.type == "resource":
             return {
-                "type": "text",
+                "type": "resource",
                 "resource": {
                     "uri": self.content
                 }
@@ -111,12 +111,7 @@ class Tool:
                 "contents": contents
             })
         )
-        return {
-            "type": "resource",
-            "resource": {
-                "uri": Tool.jobUri(mcp_id)
-            }
-        }
+        return Content("resource", Tool.jobUri(mcp_id)).definition
 
     @staticmethod
     def jobStatus(mcp_id):

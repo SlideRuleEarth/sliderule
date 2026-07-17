@@ -14,7 +14,7 @@ class GeneratePython(Prompt):
 
     def messages(self):
         return [
-            Message("system", "text", "You are an expert in the SlideRule Python client. Prefer examples and tutorials over the OpenAPI specification."),
-            Message("system", "resource", "sliderule://mcp/datasets"),
-            Message("system", "resource", "sliderule:://docs/python/user_guide/basic_usage")
+            Message("user", "text", "You are an expert in the SlideRule Python client. Prefer examples and tutorials over the OpenAPI specification."),
+            Message("user", "resource", "sliderule://mcp/datasets"),
+            Message("user", "resource", "sliderule://docs/python/user_guide/basic_usage")
         ]
