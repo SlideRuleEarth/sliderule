@@ -149,7 +149,7 @@ bool LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, const end
     }
     else if(lua_status != LUA_OK)
     {
-        const FString error_msg("Endpoint %s encountered error: %s", request->resource, result);
+        const FString error_msg("Endpoint <%s> encountered error: %s", request->resource, result);
         throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", error_msg.c_str());
     }
 
