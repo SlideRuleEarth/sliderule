@@ -130,7 +130,7 @@ Resources:
       Target: !Sub 'integrations/${LambdaIntegration}'
 
   # API Gateway Routes - OAuth 2.1 Well Known Route (with path insertion)
-  ApiRouteOAuth:
+  ApiRouteOAuthPath:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
