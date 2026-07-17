@@ -120,6 +120,16 @@ Resources:
       AuthorizerId: !Ref JwtAuthorizer
       Target: !Sub 'integrations/${LambdaIntegration}'
 
+  # GET route so the Lambda can answer 405 Method Not Allowed (no server-to-client streaming)
+  ApiRouteGet:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /{proxy+}'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
   # API Gateway Stage
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
