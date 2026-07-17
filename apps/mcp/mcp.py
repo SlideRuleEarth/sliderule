@@ -15,6 +15,8 @@ import trafilatura
 # ###############################
 
 CLUSTER = os.environ.get('CLUSTER')
+JWT_ISSUER = os.environ.get('JWT_ISSUER')
+MCP_HOSTNAME = os.environ.get('MCP_HOSTNAME')
 ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
 
 INVALID_REQUEST_CODE    = -32600
@@ -408,9 +410,15 @@ def lambda_gateway(event, context):
         if (rqst["method"] == "tools/call") and (rqst["role"] not in ["owner", "member", "affiliate"]):
             return gateway_response(200, rpc_error(rqst["id"], INVALID_REQUEST_CODE, f'access to tools denied to {rqst["username"]}, organization role: {rqst["role"]}'))
 
-        # check for non-standard "info" request
-        if rqst["path"] == f'/{CLUSTER}/info':
-            return gateway_response(200, {"environment_version": ENVIRONMENT_VERSION})
+        # handle OAuth2.1 discovery requests
+        if (rqst["path"] == '/.well-known/oauth-protected-resource') or \
+           (rqst["path"].startswith('/.well-known/oauth-protected-resource')):
+            return gateway_response(200, {
+                "resource": f"https://{MCP_HOSTNAME}/{CLUSTER}",
+                "authorization_servers": [JWT_ISSUER],
+                "scopes_supported": ["mcp"],
+                "bearer_methods_supported": ["header"]
+            })
 
         # handle rpc method request
         if rqst["path"] == f'/{CLUSTER}':

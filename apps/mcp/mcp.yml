@@ -110,7 +110,7 @@ Resources:
       IntegrationUri: !GetAtt GatewayLambda.Arn
       PayloadFormatVersion: '2.0'
 
-  # API Gateway Routes
+  # API Gateway Routes - Nominal
   ApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -120,8 +120,26 @@ Resources:
       AuthorizerId: !Ref JwtAuthorizer
       Target: !Sub 'integrations/${LambdaIntegration}'
 
-  # GET route so the Lambda can answer 405 Method Not Allowed (no server-to-client streaming)
-  ApiRouteGet:
+  # API Gateway Routes - OAuth 2.1 Well Known Route
+  ApiRouteOAuth:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /.well-known/oauth-protected-resource'
+      AuthorizationType: NONE
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # API Gateway Routes - OAuth 2.1 Well Known Route (with path insertion)
+  ApiRouteOAuth:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /.well-known/oauth-protected-resource/{proxy+}'
+      AuthorizationType: NONE
+      Target: !Sub 'integrations/${LambdaIntegration}'
+
+  # API Gateway Routes - Stream (responds with 405 Method Not Allowed since streaming not supported)
+  ApiRouteStream:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
