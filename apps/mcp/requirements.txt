@@ -3,3 +3,6 @@ cryptography
 geopandas
 requests
 trafilatura
+sliderule
+boto3
+pyarrow

@@ -24,6 +24,9 @@ INVALID_PARAMS_CODE     = -32602
 INTERNAL_ERROR_CODE     = -32603
 PARSE_ERROR_CODE        = -32700
 
+SUPPORTED_PROTOCOL_VERSIONS = ["2024-11-05", "2025-03-26", "2025-06-18"]
+LATEST_PROTOCOL_VERSION     = SUPPORTED_PROTOCOL_VERSIONS[-1]
+
 # ###############################
 # Utilities
 # ###############################
@@ -210,18 +213,28 @@ PROMPTS = get_available_prompts()
 # Initialize
 #
 def initialize_handler(rqst):
+    # honor the client's requested protocol version if we support it, otherwise
+    # respond with our latest supported version (per the MCP initialization spec)
+    requested_version = rqst["parms"].get("protocolVersion")
+    protocol_version = requested_version if requested_version in SUPPORTED_PROTOCOL_VERSIONS else LATEST_PROTOCOL_VERSION
     return rpc_result(rqst, {
-        "protocolVersion": "2025-03-26",
+        "protocolVersion": protocol_version,
         "capabilities": {
             "tools": {},
             "resources": {},
             "prompts": {},
         },
         "serverInfo": {
-            "name": f"SlideRule MCP Server",
+            "name": "SlideRule MCP Server",
             "version": f"{ENVIRONMENT_VERSION}"
         }
     })
+
+#
+# Ping
+#
+def ping_handler(rqst):
+    return rpc_result(rqst, {})
 
 #
 # List Tools
@@ -367,6 +380,7 @@ def prompts_get_handler(rqst):
 #
 METHODS = {
     "initialize":               initialize_handler,
+    "ping":                     ping_handler,
     "tools/list":               tools_list_handler,
     "tools/call":               tools_call_handler,
     "resources/list":           resources_list_handler,
