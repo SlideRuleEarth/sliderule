@@ -59,10 +59,10 @@ def get_body(event):
 #
 # API Gateway Response Format
 #
-def gateway_response(status_code, body, headers=None):
+def gateway_response(status_code, body):
     response_headers = {'Content-Type': 'application/json'}
-    if headers:
-        response_headers.update(headers)
+    if status_code == 405:
+        response_headers.update({'Allow': 'POST'})
     return {
         'statusCode': status_code,
         'headers': response_headers,
@@ -91,40 +91,6 @@ def rpc_result(id, result):
         "jsonrpc": "2.0",
         "id": id,
         "result": result
-    }
-#
-# Parse Request
-#
-def parse_request(event):
-
-    # pull out claims (validated by API Gateway)
-    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-    username = claims.get('sub', '<anonymous>')
-    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-    role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
-
-    # pull out request parameters
-    path = event.get("rawPath", '')
-    body = get_body(event)
-    method = body["method"]
-    parms = body.get("params", {})
-    rqst_id = body.get("id") # absent id indicates a JSON-RPC notification
-    verb = event["requestContext"].get("http", {}).get("method", "POST")
-    version = event.get("headers", {}).get("mcp-protocol-version")
-
-    # log diagnostic message
-    print(f'Received request to {path} from {username} ({role}): {method} - {parms}')
-
-    # return request structure
-    return {
-        "path": path,
-        "username": username,
-        "role": role,
-        "method": method,
-        "parms": parms,
-        "id": rqst_id,
-        "verb": verb,
-        "version": version
     }
 
 #
@@ -387,52 +353,94 @@ METHODS = {
 # Lambda Gateway
 # ###############################
 
-def lambda_gateway(event, context):
-    """
-    Lambda entry point for API Gateway
-    """
+#
+# Handle Request
+#
+def handle_request(event):
+    '''
+    Control flow for handling MCP requests
+    '''
     try:
+
         # handle OAuth2.1 discovery requests (unauthenticated GET with no JSON-RPC body);
         # must be handled before parse_request, which requires JWT claims and a body method
         if event.get("rawPath", "").startswith('/.well-known/oauth-protected-resource'):
-            return gateway_response(200, {
+            return 200, {
                 "resource": f"https://{MCP_HOSTNAME}/{CLUSTER}",
                 "authorization_servers": [JWT_ISSUER],
                 "scopes_supported": ["mcp"],
                 "bearer_methods_supported": ["header"]
-            })
+            }
 
-        rqst = parse_request(event)
+        # pull out claims (validated by API Gateway)
+        claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+        username = claims.get('sub', '<anonymous>')
+        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+        role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
+
+        # pull out request parameters
+        path = event.get("rawPath", '')
+        body = get_body(event)
+        method = body["method"]
+        parms = body.get("params", {})
+        rqst_id = body.get("id") # absent id indicates a JSON-RPC notification
+        verb = event["requestContext"].get("http", {}).get("method", "POST")
+        version = event.get("headers", {}).get("mcp-protocol-version")
+
+        # log diagnostic message
+        print(f'Received request to {path} from {username} ({role}): {method} - {parms}')
+
+        # create request structure
+        rqst = {
+            "path": path,
+            "username": username,
+            "role": role,
+            "method": method,
+            "parms": parms,
+            "id": rqst_id,
+            "verb": verb,
+            "version": version
+        }
 
         # reject non-POST methods - this is a stateless JSON-only MCP server
         if rqst["verb"] != "POST":
-            return gateway_response(405, {'error': 'method not allowed'}, headers={'Allow': 'POST'})
+            return 405, {'error': 'method not allowed'}
 
         # validate the MCP protocol version header
         if rqst["version"] not in SUPPORTED_PROTOCOL_VERSIONS:
-            return gateway_response(400, {'error': f'unsupported MCP protocol version: {rqst["version"]}'})
+            return 400, {'error': f'unsupported MCP protocol version: {rqst["version"]}'}
 
         # handle notifications (no id) - no response body is expected
         if rqst["id"] is None:
-            return gateway_response(202, {})
+            return 202, {}
 
         # check organization membership (only required when calling a tool)
         if (rqst["method"] == "tools/call") and (rqst["role"] not in ["owner", "member", "affiliate"]):
-            return gateway_response(200, rpc_error(rqst["id"], INVALID_REQUEST_CODE, f'access to tools denied to {rqst["username"]}, organization role: {rqst["role"]}'))
+            return 200, rpc_error(rqst["id"], INVALID_REQUEST_CODE, f'access to tools denied to {rqst["username"]}, organization role: {rqst["role"]}')
 
         # handle rpc method request
         if rqst["path"] == f'/{CLUSTER}':
             if rqst["method"] not in METHODS:
-                return gateway_response(200, rpc_error(rqst["id"], METHOD_NOT_FOUND_CODE, f'method {rqst["method"]} not found'))
+                return 200, rpc_error(rqst["id"], METHOD_NOT_FOUND_CODE, f'method {rqst["method"]} not found')
             try:
-                return gateway_response(200, METHODS[rqst["method"]](rqst))
+                return 200, METHODS[rqst["method"]](rqst)
             except Exception as e:
-                return gateway_response(200, rpc_error(rqst["id"], INTERNAL_ERROR_CODE, f'{e}'))
+                return 200, rpc_error(rqst["id"], INTERNAL_ERROR_CODE, f'{e}')
 
         # no path found
-        return gateway_response(404, {'error': 'not found'})
+        return 404, {'error': 'not found'}
 
     except Exception as e:
 
         # unhandled exception
-        return gateway_response(500, {'error': 'unhandled exception', 'exception': f'{e}'})
+        return 500, {'error': 'unhandled exception', 'exception': f'{e}'}
+
+#
+# Lambda Gateway (entrypoint)
+#
+def lambda_gateway(event, context):
+    """
+    Lambda entry point for API Gateway
+    """
+    http_code, response = handle_request(event)
+    return gateway_response(http_code, response)
