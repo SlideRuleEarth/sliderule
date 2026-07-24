@@ -42,7 +42,7 @@ import matplotlib.colorbar
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from traitlets.utils.bunch import Bunch
-from sliderule import logger
+import sliderule
 import sliderule.io
 
 # imports with warnings if not present
@@ -1386,13 +1386,13 @@ class widgets:
         try:
             rgt = int(self.rgt.value)
         except:
-            logger.critical(f"RGT {self.rgt.value} is invalid")
+            sliderule.log("CRITICAL", f"RGT {self.rgt.value} is invalid")
             return "0"
         # verify ground track values
         if (rgt >= 1) and (rgt <= 1387):
             return self.rgt.value
         else:
-            logger.critical(f"RGT {self.rgt.value} is outside available range")
+            sliderule.log("CRITICAL", f"RGT {self.rgt.value} is outside available range")
             return "0"
 
     @property
@@ -1436,7 +1436,7 @@ class widgets:
         if (self.cycle.value in all_cycles):
             return self.cycle.value
         else:
-            logger.critical(f"Cycle {self.cycle.value} is outside available range")
+            sliderule.log("CRITICAL", f"Cycle {self.cycle.value} is outside available range")
             return "0"
 
     @property
@@ -2130,14 +2130,14 @@ class leaflet:
                     # simply attempt to add the layer or control
                     self.map.add(layer)
             except ipyleaflet.LayerException as e:
-                logger.info(f"Layer {layer} already on map")
+                sliderule.log("INFO", f"Layer {layer} already on map")
                 pass
             except ipyleaflet.ControlException as e:
-                logger.info(f"Control {layer} already on map")
+                sliderule.log("INFO", f"Control {layer} already on map")
                 pass
             except Exception as e:
-                logger.critical(f"Could add layer {layer}")
-                logger.error(traceback.format_exc())
+                sliderule.log("CRITICAL", f"Could add layer {layer}")
+                sliderule.log("ERROR", traceback.format_exc())
                 pass
 
     # remove map layers
@@ -2185,14 +2185,14 @@ class leaflet:
                     # simply attempt to remove the layer or control
                     self.map.remove(layer)
             except ipyleaflet.LayerException as e:
-                logger.info(f"Layer {layer} already removed from map")
+                sliderule.log("INFO", f"Layer {layer} already removed from map")
                 pass
             except ipyleaflet.ControlException as e:
-                logger.info(f"Control {layer} already removed from map")
+                sliderule.log("INFO", f"Control {layer} already removed from map")
                 pass
             except Exception as e:
-                logger.critical(f"Could not remove layer {layer}")
-                logger.error(traceback.format_exc())
+                sliderule.log("CRITICAL", f"Could not remove layer {layer}")
+                sliderule.log("ERROR", traceback.format_exc())
                 pass
 
     # handle cursor movements for label
@@ -2223,7 +2223,7 @@ class leaflet:
         # calculate area of region
         area = sliderule.io.area(lon,lat)
         if kwargs['check_valid'] and (area > kwargs['maximum_area']):
-            logger.warning(f"Region is too large: {area:0.0f} km^2")
+            sliderule.log("WARNING", f"Region is too large: {area:0.0f} km^2")
             return
         # create sliderule region from list
         region = sliderule.io.to_region(lon,lat)
@@ -2280,7 +2280,7 @@ class leaflet:
         kwargs.setdefault('colorbar', True)
         kwargs.setdefault('position', 'topright')
         # add warning that function is deprecated
-        logger.critical(f"Deprecated. Will be removed in a future release")
+        sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
         # remove any prior instances of a data layer
         if self.geojson is not None:
             self.map.remove(self.geojson)
@@ -2643,14 +2643,14 @@ class LeafletMap:
         try:
             self.map.remove(layer)
         except ipyleaflet.LayerException as e:
-            logger.info(f"Layer {layer} already removed from map")
+            sliderule.log("INFO", f"Layer {layer} already removed from map")
             pass
         except ipyleaflet.ControlException as e:
-            logger.info(f"Control {layer} already removed from map")
+            sliderule.log("INFO", f"Control {layer} already removed from map")
             pass
         except Exception as e:
-            logger.critical(f"Could not remove layer {layer}")
-            logger.error(traceback.format_exc())
+            sliderule.log("CRITICAL", f"Could not remove layer {layer}")
+            sliderule.log("ERROR", traceback.format_exc())
             pass
 
     def get_norm_bounds(self, **kwargs):
@@ -3084,4 +3084,3 @@ class ICESat2:
         ground_track = self.ground_track(GT)
         lr_track_dict = dict(gt1l=0,gt1r=1,gt2l=0,gt2r=1,gt3l=0,gt3r=1)
         return lr_track_dict[ground_track]
-

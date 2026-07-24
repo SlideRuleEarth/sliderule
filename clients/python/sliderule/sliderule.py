@@ -730,19 +730,18 @@ def emptyframe(**kwargs):
     return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
 
 #
-# Split S3 URI
+# Log Message
 #
-def splits3uri(uri):
-    """
-    uri: s3://<bucket>/<key> where key can contain additional '/' characters
-    return: bucket, key
-    """
-    obj_path = uri.split("s3://")[-1]
-    obj_elem = obj_path.split("/")
-    bucket = obj_elem[0]
-    key = '/'.join(obj_elem[1:])
-    return bucket, key
-
+def log(lvl, msg, session):
+    session = checksession(session)
+    logger = {
+        "DEBUG":    session.logger.debug,
+        "INFO":     session.logger.info,
+        "WARNING":  session.logger.warning,
+        "ERROR":    session.logger.error,
+        "CRITICAL": session.logger.critical
+    }
+    logger[lvl](msg)
 
 #
 # Get Values from Raw Buffer

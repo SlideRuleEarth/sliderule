@@ -45,11 +45,7 @@ class Atl03Subset(Tool):
         )
 
     def call(self, arguments):
-        rsps = sliderule.source("atl03x.async", {"parms": arguments | {
-            "poly": sliderule.toregion(arguments["poly"])["poly"],
-            "output": {"asset": "sliderule-stage", "with_openapi": True}
-        }}, rethrow=True)
-        return self.jobResource(rsps, receipt=rsps["receipt"], result=rsps["parameters"]["output"]["path"])
+        return self.slideruleAsync("atl03x", arguments)
 
 #
 # icesat2/atl03/surface_fit

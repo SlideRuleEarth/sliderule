@@ -821,6 +821,7 @@ mcp-build: ## create the mcp lambda zipfile
 	cp -R $(ROOT)/apps/mcp/tools $(MCP_STAGE_DIR)/package/
 	cp -R $(ROOT)/apps/mcp/resources $(MCP_STAGE_DIR)/package/
 	cp -R $(ROOT)/apps/mcp/prompts $(MCP_STAGE_DIR)/package/
+	cp $(ROOT)/version.txt $(MCP_STAGE_DIR)/package/
 	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "/*__pycache__/*"
 
 mcp-create: mcp-build ## creates the lambda mcp functions

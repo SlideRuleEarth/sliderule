@@ -32,7 +32,7 @@ import numpy
 import geopandas
 import warnings
 import sliderule
-from sliderule import logger
+from sliderule import log
 from sliderule.session import Session
 
 ###############################################################################
@@ -134,7 +134,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
                         columns[field][cnt] = batch[field]
                     cnt += 1
     else:
-        logger.debug("No response returned")
+        log("DEBUG", "No response returned")
 
     # Build Initial GeoDataFrame
     gdf = sliderule.todataframe(columns, height_key=height_key, crs=GEDI_CRS)

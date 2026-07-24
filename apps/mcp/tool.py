@@ -4,7 +4,7 @@ import uuid
 import json
 import time
 import ctypes
-import sliderule
+import requests
 import pyarrow.parquet as pq
 from botocore.exceptions import ClientError
 
@@ -12,6 +12,8 @@ from botocore.exceptions import ClientError
 # Environment
 # ###############################
 
+DOMAIN = os.environ.get("DOMAIN")
+CLUSTER = os.environ.get("CLUSTER")
 PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
 MAX_JOB_TIME_SECONDS = 600 # 10 minutes
 
@@ -19,7 +21,35 @@ MAX_JOB_TIME_SECONDS = 600 # 10 minutes
 # Cached Globals
 # ###############################
 
+# S3 client
 s3 = boto3.client("s3")
+
+# Version string
+try:
+    with open("version.txt") as f:
+        version = f.read()
+except:
+    version = "local"
+
+# Request session
+session = requests.Session()
+session.trust_env = False
+
+# ###############################
+# Utilities
+# ###############################
+
+# Split S3 URI
+def splits3uri(uri):
+    """
+    uri: s3://<bucket>/<key> where key can contain additional '/' characters
+    return: bucket, key
+    """
+    obj_path = uri.split("s3://")[-1]
+    obj_elem = obj_path.split("/")
+    bucket = obj_elem[0]
+    key = '/'.join(obj_elem[1:])
+    return bucket, key
 
 # ###############################
 # Base Content Class
@@ -57,8 +87,28 @@ class Tool:
 
     GEOSPATIAL_TEMPORAL_PROPERTIES = {
         "poly": {
-            "type": "string",
-            "description": "GeoJSON polygon for spatial filtering"
+            "type": "array",
+            "description": "Polygon boundary as a closed ring of lat/lon vertices. The first and last points must be identical to close the ring. Vertices should be ordered counter-clockwise.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90,
+                        "description": "Latitude in decimal degrees"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180,
+                        "description": "Longitude in decimal degrees"
+                    }
+                },
+                "required": ["lat", "lon"],
+                "additionalProperties": False
+            },
+            "minItems": 4
         },
         "t0": {
             "type": "string",
@@ -121,7 +171,7 @@ class Tool:
         )
         body = obj["Body"].read().decode("utf-8")
         contents = json.loads(body)
-        bucket, key = sliderule.splits3uri(contents["receipt"])
+        bucket, key = splits3uri(contents["receipt"])
         now = time.time()
         try:
             # check for receipt
@@ -149,7 +199,7 @@ class Tool:
                 }
         try:
             # check for result
-            bucket, key = sliderule.splits3uri(contents["result"])
+            bucket, key = splits3uri(contents["result"])
             s3.head_object(
                 Bucket=bucket,
                 Key=key
@@ -179,7 +229,7 @@ class Tool:
         )
         body = obj["Body"].read().decode("utf-8")
         contents = json.loads(body)
-        result_bucket, result_key = sliderule.splits3uri(contents["result"])
+        result_bucket, result_key = splits3uri(contents["result"])
         result_head = s3.head_object(Bucket=result_bucket, Key=result_key)
         metadata = pq.read_metadata(contents["result"])
         arrow_schema = metadata.schema.to_arrow_schema()
@@ -200,3 +250,14 @@ class Tool:
                 "data/export"
             ]
         }
+
+    @staticmethod
+    def slideruleAsync(api, arguments):
+        url = DOMAIN and f'https://{CLUSTER}.{DOMAIN}/source/{api}.async' or f'http://localhost/source/{api}.async'
+        headers = {'x-sliderule-client': f'mcp-{version}'}
+        parms = arguments | {"output": {"asset": "sliderule-stage", "with_openapi": True}}
+        response = session.get(url, data=json.dumps({"parms": parms}), headers=headers, timeout=(10, 120))
+        payload = b''.join([line for line in response.iter_content(None)])
+        receipt = json.loads(payload) # parse receipt json
+        response.raise_for_status() # catch http errors
+        return Tool.jobResource(receipt, receipt=receipt["receipt"], result=receipt["parameters"]["output"]["path"])

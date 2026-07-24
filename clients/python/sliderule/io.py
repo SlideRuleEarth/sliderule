@@ -33,7 +33,7 @@ import ctypes
 import warnings
 import datetime
 import numpy as np
-from sliderule import logger
+import sliderule
 from sliderule.icesat2 import ICESAT2_CRS
 
 # imports with warnings if not present
@@ -438,8 +438,8 @@ def to_json(filename, **kwargs):
     with open(filename, 'w') as fid:
         json.dump(output, fid)
     # print the filename and dictionary structure
-    logger.info(filename)
-    logger.info(list(output.keys()))
+    sliderule.log("INFO", filename)
+    sliderule.log("INFO", list(output.keys()))
 
 # read request parameters and regions from JSON
 def from_json(filename, **kwargs):
@@ -447,8 +447,8 @@ def from_json(filename, **kwargs):
     with open(filename, 'r') as fid:
         attributes = json.load(fid)
     # print the filename and dictionary structure
-    logger.info(filename)
-    logger.info(list(attributes.keys()))
+    sliderule.log("INFO", filename)
+    sliderule.log("INFO", list(attributes.keys()))
     # try to get the sliderule adjustable parameters
     SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
         'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
@@ -548,7 +548,7 @@ def from_parquet(filename, **kwargs):
     metadata = parquet.read_metadata(filename).metadata
     # validate sliderule metadata
     if b'sliderule' not in metadata.keys():
-        logger.error("No sliderule metadata found in Parquet file")
+        sliderule.log("ERROR", "No sliderule metadata found in Parquet file")
         return output
     # decode sliderule metadata from JSON
     parms = json.loads(metadata[b'sliderule'].decode('utf-8'))
@@ -575,7 +575,7 @@ def from_parquet(filename, **kwargs):
 # output geodataframe to netCDF (version 3)
 def to_nc(gdf, filename, **kwargs):
     # add warning that function is deprecated
-    logger.critical(f"Deprecated. Will be removed in a future release")
+    sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
@@ -664,8 +664,8 @@ def to_nc(gdf, filename, **kwargs):
         setattr(fileID, 'poly{0:d}_x'.format(i), json.dumps(lon))
         setattr(fileID, 'poly{0:d}_y'.format(i), json.dumps(lat))
     # Output netCDF structure information
-    logger.info(filename)
-    logger.info(list(fileID.variables.keys()))
+    sliderule.log("INFO", filename)
+    sliderule.log("INFO", list(fileID.variables.keys()))
     # Closing the netCDF file
     fileID.close()
     warnings.filterwarnings("default")
@@ -673,7 +673,7 @@ def to_nc(gdf, filename, **kwargs):
 # input geodataframe from netCDF (version 3)
 def from_nc(filename, **kwargs):
     # add warning that function is deprecated
-    logger.critical(f"Deprecated. Will be removed in a future release")
+    sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
     # set default crs
     kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
@@ -798,7 +798,7 @@ def to_hdf(gdf, filename, **kwargs):
 # write pandas dataframe to pytables HDF5
 def write_pytables(df, filename, attributes, **kwargs):
     # add warning that function is deprecated
-    logger.critical(f"Deprecated. Will be removed in a future release")
+    sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
@@ -850,15 +850,15 @@ def write_pytables(df, filename, attributes, **kwargs):
         setattr(fileID.root._v_attrs, f'poly{i:d}_x', json.dumps(lon))
         setattr(fileID.root._v_attrs, f'poly{i:d}_y', json.dumps(lat))
     # Output HDF5 structure information
-    logger.info(filename)
-    logger.info(fileID.get_storer('sliderule_segments').non_index_axes[0][1])
+    sliderule.log("INFO", filename)
+    sliderule.log("INFO", fileID.get_storer('sliderule_segments').non_index_axes[0][1])
     # Closing the HDF5 file
     fileID.close()
 
 # write pandas dataframe to h5py HDF5
 def write_h5py(df, filename, attributes, **kwargs):
     # add warning that function is deprecated
-    logger.critical(f"Deprecated. Will be removed in a future release")
+    sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
@@ -933,8 +933,8 @@ def write_h5py(df, filename, attributes, **kwargs):
         fileID.attrs[f'poly{i:d}_x'] = json.dumps(lon)
         fileID.attrs[f'poly{i:d}_y'] = json.dumps(lat)
     # Output HDF5 structure information
-    logger.info(filename)
-    logger.info(list(fileID.keys()))
+    sliderule.log("INFO", filename)
+    sliderule.log("INFO", list(fileID.keys()))
     # Closing the HDF5 file
     fileID.close()
 
@@ -959,7 +959,7 @@ def from_hdf(filename, **kwargs):
 # read pandas dataframe from pytables HDF5
 def read_pytables(filename, **kwargs):
     # add warning that function is deprecated
-    logger.critical(f"Deprecated. Will be removed in a future release")
+    sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
     # set default crs
     kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
@@ -1029,7 +1029,7 @@ def read_pytables(filename, **kwargs):
 # read pandas dataframe from h5py HDF5
 def read_h5py(filename, **kwargs):
     # add warning that function is deprecated
-    logger.critical(f"Deprecated. Will be removed in a future release")
+    sliderule.log("CRITICAL", f"Deprecated. Will be removed in a future release")
     # set default crs
     kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')

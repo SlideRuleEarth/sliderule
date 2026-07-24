@@ -31,7 +31,6 @@ import os
 import numpy
 import tempfile
 import sliderule
-from sliderule import logger
 
 ###############################################################################
 # GLOBALS
@@ -182,7 +181,7 @@ def h5p (datasets, resource, asset):
     try:
         rsps = sliderule.source("h5p", rqst, stream=True, rethrow=True)
     except RuntimeError as e:
-        logger.critical(e)
+        sliderule.log("CRITICAL", e)
         rsps = []
 
     # Build Record Data

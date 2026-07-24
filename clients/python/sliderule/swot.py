@@ -27,11 +27,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 import logging
 import numpy
 import sliderule
-from sliderule import logger
 from sliderule.session import Session
 
 ###############################################################################
@@ -161,5 +159,5 @@ def swotl2p(parm, callbacks={}, resources=None):
 
     # Handle Runtime Errors
     except RuntimeError as e:
-        logger.critical(e)
+        sliderule.log("CRITICAL", e)
         return {}

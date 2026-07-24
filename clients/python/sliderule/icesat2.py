@@ -32,7 +32,7 @@ import numpy
 import geopandas
 import warnings
 import sliderule
-from sliderule import earthdata, logger
+from sliderule import earthdata
 from sliderule.session import Session, BASIC_TYPES, CODED_TYPE
 
 ###############################################################################
@@ -666,7 +666,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
                         columns[field][cnt] = batch[field]
                     cnt += 1
     else:
-        logger.debug("No response returned")
+        sliderule.log("DEBUG", "No response returned")
 
     # Build Initial GeoDataFrame
     gdf = sliderule.todataframe(columns, height_key=height_key, crs=ICESAT2_CRS)
@@ -778,9 +778,9 @@ def __flattenbatches03(rsps, parm, keep_id, height_key):
                 # Return Response
                 return gdf
             else:
-                logger.debug("No photons returned")
+                sliderule.log("DEBUG", "No photons returned")
         else:
-            logger.debug("No response returned")
+            sliderule.log("DEBUG", "No response returned")
 
     # Return Empty Response
     return sliderule.emptyframe(crs=ICESAT2_CRS)
@@ -849,9 +849,9 @@ def __flattenbatches03v(rsps, parm, keep_id):
                 # Return Response
                 return gdf
             else:
-                logger.debug("No segment counts returned")
+                sliderule.log("DEBUG", "No segment counts returned")
         else:
-            logger.debug("No response returned")
+            sliderule.log("DEBUG", "No response returned")
 
     # Error Case
     return sliderule.emptyframe(crs=ICESAT2_CRS)
