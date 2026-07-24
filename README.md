@@ -4,10 +4,11 @@
 
 #### A cloud-native framework for on-demand science data processing, hosted at [slideruleearth.io](https://slideruleearth.io).
 
- This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website. If you are a science data user interested in using SlideRule, you can get started right away with our [web client](https://client.slideruleearth.io) or check out our [documentation](https://docs.slideruleearth.io) where you will find [installation instructions](https://slideruleearth.io/getting_started/Install.html) for our Python client.
+ This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website. If you are a science data user interested in using SlideRule, you can get started right away with our [web client](https://client.slideruleearth.io) or check out our [documentation](https://docs.slideruleearth.io) where you will find [installation instructions](https://docs.slideruleearth.io/getting_started/Install.html) for our Python client.
 
+ This readme focuses on the server-side framework written in C++.
 
-## I. Prerequisites
+## I. Server Prerequisites
 
 1. Basic build environment
 
@@ -37,26 +38,25 @@
    $ sudo apt install clang clang-tidy cppcheck
    ```
 
-## II. Building with CMake
+## II. Building the server with CMake
 
-From the root directory of the repository:
-1. `make config`
+From the `targets/slideruleearth` directory of the repository:
+1. `make config-release`
 2. `make`
-3. `sudo make install`
 
 This will build the following binaries:
 * `sliderule`: console application
 
-and perform the following installations:
-* `/usr/local/bin`: applications
-* `/usr/local/include/sliderule`: class header files for plugin development
-* `/usr/local/etc/sliderule`: configuration files and scripts
+and perform the following installations (default `$PREFIX` is `<repo>/stage/sliderule`):
+* `$PREFIX/bin`: applications
+* `$PREFIX/include/sliderule`: class header files for plugin development
+* `$PREFIX/etc/sliderule`: configuration files and scripts
 
-To take full control of the compile options exposed by cmake, run the following commands in the root directory (or from anywhere as long as you point to the `CMakeLists.txt` file in the root directory):
+To take full control of the compile options exposed by cmake, run the following commands in the `apps/node` directory (or from anywhere as long as you point to the `CMakeLists.txt` file in the that directory):
 1.	`mkdir -p build`
 2.	`cd build; cmake <options> ..`
 3. `make`
-4.  `sudo make install`
+4. `sudo make install`
 
 For help and all available targets type `make help`.
 
@@ -115,7 +115,7 @@ Here are some steps you can take to setup a basic development environment and ge
 
 ### 1. Install the base packages needed to build SlideRule
 
-The SlideRule framework is divided up into packages (which are compile-time modules) and plugins (which are run-time modules).  This repository only contains packages; plugins are built from other repositories and are not necessary for core functionality.  The ___core___ package provides the base functionality of SlideRule and must be compiled.  All other packages extend the functionality of SlideRule and are conditionally compiled.
+The SlideRule server-side framework is divided up into packages (which are compile-time modules) and plugins (which are run-time modules).  This repository only contains packages; plugins are built from other repositories and are not necessary for core functionality.  The ___core___ package provides the base functionality of SlideRule and must be compiled.  All other packages extend the functionality of SlideRule and are conditionally compiled.
 
 ### 2. Install all dependencies
 
@@ -149,29 +149,20 @@ Alternatively, SlideRule can be run as an interactive Lua interpreter.  Just typ
 
 This section details the directory structure of the SlideRule repository to help you navigate where different functionality resides.
 
+### apps
+
+Contains the executable source code for the server-side components of SlideRule.  `node` is the C++ code that implements the cluster-based science data processing.  Many of the other applications are micro-services that support the data processing cluster. Inside the `node` application there are the following important subdirectories:L
+*  __datasets__:  Contains packages specific to an earth science dataset or mission.  Datasets are implemented exactly like packages (see [packages](#packages)), yet are separated out into their own parent directory for emphasis. By convention, they are allowed to depend on any package in the *package* directory, but cannot depend on any other *dataset*.
+* __platforms__: Contains the C++ modules that implement an operating system abstraction layer which enables the framework to run on various platforms.
+* __packages__: Contains the C++ modules that implement the primary functions provided by the framework.  See [package list](packages/README.md) for a list of available packages. The [core](packages/core/README.md) package contains the fundamental framework classes and is not dependent on any other package.  Other packages should only be dependent on the core package or provide conditional compilation blocks that allow the package to be compiled in the absence of any package outside the core package. By convention, each package contains two files that are named identical to the package directory name: _{package}.cpp_, _{package}.h_.  The _CMakeLists.txt_ provides the object modules and any package specific definitions needed to compile the package.  It also defines the package's globally defined name used in conditional compilation blocks.  The _{package}.cpp_ file provides an initialization function named with the prototype `void init{package}(void)` that is used to initialize the package on startup.  The _{package}.h_ file exports the initialization function and anything else necessary to use the package. Any target that includes the package should only include the package's header file, and make a call to the package initialization function.
+
 ### clients
 
 Contains the source code for the different clients that make interacting with SlideRule easier.  These clients often support additional functionality to aid science data investigations.  See https://docs.slideruleearth.io/ for more details.
 
-### datasets
-
-Contains packages specific to an earth science dataset or mission.  Datasets are implemented exactly like packages (see [packages](#packages)), yet are separated out into their own parent directory for emphasis. By convention, they are allowed to depend on any package in the *package* directory, but cannot depend on any other *dataset*.
-
 ### docs
 
 Contains the source files to build the documentation website hosted at https://docs.slideruleearth.io.
-
-### platforms
-
-Contains the C++ modules that implement an operating system abstraction layer which enables the framework to run on various platforms.
-
-### packages
-
-Contains the C++ modules that implement the primary functions provided by the framework.  See [package list](packages/README.md) for a list of available packages. The [core](packages/core/README.md) package contains the fundamental framework classes and is not dependent on any other package.  Other packages should only be dependent on the core package or provide conditional compilation blocks that allow the package to be compiled in the absence of any package outside the core package.
-
-By convention, each package contains two files that are named identical to the package directory name: _{package}.cpp_, _{package}.h_.  The _CMakeLists.txt_ provides the object modules and any package specific definitions needed to compile the package.  It also defines the package's globally defined name used in conditional compilation blocks.  The _{package}.cpp_ file provides an initialization function named with the prototype `void init{package}(void)` that is used to initialize the package on startup.  The _{package}.h_ file exports the initialization function and anything else necessary to use the package.
-
-Any target that includes the package should only include the package's header file, and make a call to the package initialization function.
 
 ### targets
 
