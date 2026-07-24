@@ -214,7 +214,7 @@ PROMPTS = get_available_prompts()
 def initialize_handler(rqst):
     requested_version = rqst["parms"].get("protocolVersion", LATEST_PROTOCOL_VERSION)
     protocol_version = requested_version if requested_version in SUPPORTED_PROTOCOL_VERSIONS else LATEST_PROTOCOL_VERSION
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "protocolVersion": protocol_version,
         "capabilities": {
             "tools": {},
@@ -231,13 +231,13 @@ def initialize_handler(rqst):
 # Ping
 #
 def ping_handler(rqst):
-    return rpc_result(rqst, {})
+    return rpc_result(rqst["id"], {})
 
 #
 # List Tools
 #
 def tools_list_handler(rqst):
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "tools": [tool.definition for tool in TOOLS.values()]
     })
 
@@ -247,12 +247,12 @@ def tools_list_handler(rqst):
 def tools_call_handler(rqst):
     name = rqst["parms"]["name"]
     if name not in TOOLS:
-        return rpc_error(rqst, INVALID_PARAMS_CODE, f'tool {name} not found')
+        return rpc_error(rqst["id"], INVALID_PARAMS_CODE, f'tool {name} not found')
     arguments = rqst["parms"].get("arguments", {})
     content = TOOLS[name].call(arguments)
     if content is None:
-        return rpc_error(rqst, INTERNAL_ERROR_CODE, f'tool {name} is not implemented')
-    return rpc_result(rqst, {
+        return rpc_error(rqst["id"], INTERNAL_ERROR_CODE, f'tool {name} is not implemented')
+    return rpc_result(rqst["id"], {
         "content": content if isinstance(content, list) else [content]
     })
 
@@ -260,7 +260,7 @@ def tools_call_handler(rqst):
 # List Resources
 #
 def resources_list_handler(rqst):
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "resources": RESOURCES
     })
 
@@ -268,7 +268,7 @@ def resources_list_handler(rqst):
 # Template Resources
 #
 def resources_template_handler(rqst):
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "resourceTemplates": TEMPLATES
     })
 
@@ -339,7 +339,7 @@ def resources_read_handler(rqst):
         raise RuntimeError("failed to parse resource path")
 
     # return resource content
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "contents": [ {
             "uri": uri,
             "mimeType": matched_resource["mimeType"],
@@ -352,7 +352,7 @@ def resources_read_handler(rqst):
 # List Prompts
 #
 def prompts_list_handler(rqst):
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "prompts": [prompt.definition for prompt in PROMPTS.values()]
     })
 
@@ -362,9 +362,9 @@ def prompts_list_handler(rqst):
 def prompts_get_handler(rqst):
     name = rqst["parms"]["name"]
     if name not in PROMPTS:
-        return rpc_error(rqst, INVALID_PARAMS_CODE, f'prompt {name} not found')
+        return rpc_error(rqst["id"], INVALID_PARAMS_CODE, f'prompt {name} not found')
     arguments = rqst["parms"].get("arguments", {})
-    return rpc_result(rqst, {
+    return rpc_result(rqst["id"], {
         "messages": PROMPTS[name].respond(arguments)
     })
 
@@ -392,6 +392,16 @@ def lambda_gateway(event, context):
     Lambda entry point for API Gateway
     """
     try:
+        # handle OAuth2.1 discovery requests (unauthenticated GET with no JSON-RPC body);
+        # must be handled before parse_request, which requires JWT claims and a body method
+        if event.get("rawPath", "").startswith('/.well-known/oauth-protected-resource'):
+            return gateway_response(200, {
+                "resource": f"https://{MCP_HOSTNAME}/{CLUSTER}",
+                "authorization_servers": [JWT_ISSUER],
+                "scopes_supported": ["mcp"],
+                "bearer_methods_supported": ["header"]
+            })
+
         rqst = parse_request(event)
 
         # reject non-POST methods - this is a stateless JSON-only MCP server
@@ -410,24 +420,14 @@ def lambda_gateway(event, context):
         if (rqst["method"] == "tools/call") and (rqst["role"] not in ["owner", "member", "affiliate"]):
             return gateway_response(200, rpc_error(rqst["id"], INVALID_REQUEST_CODE, f'access to tools denied to {rqst["username"]}, organization role: {rqst["role"]}'))
 
-        # handle OAuth2.1 discovery requests
-        if (rqst["path"] == '/.well-known/oauth-protected-resource') or \
-           (rqst["path"].startswith('/.well-known/oauth-protected-resource')):
-            return gateway_response(200, {
-                "resource": f"https://{MCP_HOSTNAME}/{CLUSTER}",
-                "authorization_servers": [JWT_ISSUER],
-                "scopes_supported": ["mcp"],
-                "bearer_methods_supported": ["header"]
-            })
-
         # handle rpc method request
         if rqst["path"] == f'/{CLUSTER}':
             if rqst["method"] not in METHODS:
-                return gateway_response(200, rpc_error(rqst, METHOD_NOT_FOUND_CODE, f'method {rqst["method"]} not found'))
+                return gateway_response(200, rpc_error(rqst["id"], METHOD_NOT_FOUND_CODE, f'method {rqst["method"]} not found'))
             try:
                 return gateway_response(200, METHODS[rqst["method"]](rqst))
             except Exception as e:
-                return gateway_response(200, rpc_error(rqst, INTERNAL_ERROR_CODE, f'{e}'))
+                return gateway_response(200, rpc_error(rqst["id"], INTERNAL_ERROR_CODE, f'{e}'))
 
         # no path found
         return gateway_response(404, {'error': 'not found'})
