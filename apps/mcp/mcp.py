@@ -354,6 +354,43 @@ METHODS = {
 # ###############################
 
 #
+# Parse Request
+#
+def parse_request(event):
+    """
+    Build and return a validated request structure
+    """
+    # pull out claims (validated by API Gateway)
+    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+    username = claims.get('sub', '<anonymous>')
+    org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+    role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
+
+    # pull out request parameters
+    path = event.get("rawPath", '')
+    body = get_body(event)
+    method = body["method"]
+    parms = body.get("params", {})
+    rqst_id = body.get("id") # absent id indicates a JSON-RPC notification
+    verb = event["requestContext"].get("http", {}).get("method", "POST")
+    version = event.get("headers", {}).get("mcp-protocol-version")
+
+    # log diagnostic message
+    print(f'Received request to {path} from {username} ({role}): {method} - {parms}')
+
+    # create and return request structure
+    return {
+        "path": path,
+        "username": username,
+        "role": role,
+        "method": method,
+        "parms": parms,
+        "id": rqst_id,
+        "verb": verb,
+        "version": version
+    }
+
+#
 # Handle Request
 #
 def handle_request(event):
@@ -372,35 +409,8 @@ def handle_request(event):
                 "bearer_methods_supported": ["header"]
             }
 
-        # pull out claims (validated by API Gateway)
-        claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
-        username = claims.get('sub', '<anonymous>')
-        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
-        role = "owner" in org_roles and "owner" or "member" in org_roles and "member" or "affiliate" in org_roles and "affiliate" or "guest"
-
-        # pull out request parameters
-        path = event.get("rawPath", '')
-        body = get_body(event)
-        method = body["method"]
-        parms = body.get("params", {})
-        rqst_id = body.get("id") # absent id indicates a JSON-RPC notification
-        verb = event["requestContext"].get("http", {}).get("method", "POST")
-        version = event.get("headers", {}).get("mcp-protocol-version")
-
-        # log diagnostic message
-        print(f'Received request to {path} from {username} ({role}): {method} - {parms}')
-
-        # create request structure
-        rqst = {
-            "path": path,
-            "username": username,
-            "role": role,
-            "method": method,
-            "parms": parms,
-            "id": rqst_id,
-            "verb": verb,
-            "version": version
-        }
+        # parse and validate mcp request
+        rqst = parse_request(event)
 
         # reject non-POST methods - this is a stateless JSON-only MCP server
         if rqst["verb"] != "POST":
