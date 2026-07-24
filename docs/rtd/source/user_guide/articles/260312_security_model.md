@@ -41,22 +41,24 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
 
 #### Permissions
 
-* ***sliderule:access*** - nominal access to cluster services
-* ***sliderule:admin*** - administrative access to cluster services
-* ***provisioner:access*** - access to provisioner services
-* ***runner:access*** - access to runner services
-* ***mcp:tools*** - access to mcp server
-* ***mcp:resources*** - access to mcp server
-* ***monitor:access*** - access to cluster monitor
+* Owner
+    * ***sliderule:admin*** - administrative access to cluster services
+* Member / Affiliate
+    * ***provisioner:access*** - access to provisioner services
+    * ***runner:access*** - access to runner services
+* Guest
+    * ***sliderule:access*** - nominal access to cluster services
+    * ***mcp:access*** - access to mcp server
+    * ***monitor:access*** - access to cluster monitor
 
 #### Authorization Flows
 
-| Flow | Endpoints | Allowed Highest Roles | Allowed Permissions | Notes |
+| Flow | Endpoints | Highest Allowed Role | Notes |
 |:----:|:---------:|:-------------:|:-------------------:|:-----:|
-| OAuth2.1 Web | /auth/github/register, /auth/github/login, /auth/github/callback, /auth/github/token | Owner | _all_ | preferred method for web applications |
-| Device | /auth/github/device, /auth/github/device/poll | Owner | sliderule:access, sliderule:admin, provisioner:access, runner:access | preferred method for python client |
-| PAT Key | /auth/github/pat | Member | sliderule:access, provisioner:access, runner:access | used for CI/CD pipelines |
-| Basic Web | /auth/github/basic/login | Member | monitor:access | returns JWT via cookie |
+| Device | /auth/github/device, /auth/github/device/poll | Owner | preferred method for python client |
+| OAuth2.1 Web | /auth/github/register, /auth/github/login, /auth/github/callback, /auth/github/token | Member | preferred method for web applications |
+| PAT Key | /auth/github/pat | Member | used for CI/CD pipelines |
+| Basic Web | /auth/github/basic/login | Guest | returns JWT via cookie |
 
 ### Security Rules
 

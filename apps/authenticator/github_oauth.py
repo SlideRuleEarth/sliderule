@@ -37,17 +37,16 @@ SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
 AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
 
+# Scopes restricted to project services (not allowed for third party applications)
+GUEST_SCOPES = {"sliderule:access", "monitor:access", "mcp:tools", "mcp:resources", "mcp:access"}
+MEMBER_SCOPES = GUEST_SCOPES | {"provisioner:access", "runner:access"}
+OWNER_SCOPES = MEMBER_SCOPES | {"sliderule:admin"}
+
 # GitHub OAuth endpoints (from the environment only for testing)
 GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
 GITHUB_TOKEN_URL = os.environ.get('GITHUB_TOKEN_URL','https://github.com/login/oauth/access_token')
 GITHUB_DEVICE_CODE_URL = os.environ.get('GITHUB_DEVICE_CODE_URL','https://github.com/login/device/code')
 GITHUB_API_URL = os.environ.get('GITHUB_API_URL','https://api.github.com')
-
-# Scopes restricted to project services (not allowed for third party applications)
-TRUSTED_SCOPES = {"sliderule:access", "sliderule:admin", "provisioner:access", "runner:access", "monitor:access"}
-
-# Scopes for MCP services
-MCP_SCOPES = {"mcp:tools", "mcp:resources"}
 
 # JWT configuration
 JWT_ALGORITHM = 'RS256'
@@ -61,7 +60,6 @@ ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
 ALLOWED_CHALLENGE_METHODS   = {"S256"}
-ALLOWED_SCOPES              = MCP_SCOPES | TRUSTED_SCOPES
 
 # HTTP request timeout (seconds) - prevents Lambda from hanging on stalled connections
 HTTP_TIMEOUT_SECONDS = 15 # seconds
@@ -622,23 +620,23 @@ def generate_audience_list(username, clusters, org_roles, scope):
     # Initialize allowed services
     audiences = []
 
-    # Get resources from scopes
-    resources = {s.split(":")[0] for s in scope}
+    # Get scopes
+    scopes = {s.split(":")[0] for s in scope}
 
     # Provide member services
     if ('member' in org_roles) or ('affiliate' in org_roles): # member/affiliate only access
-        if 'provisioner' in resources: # access to provisioner
+        if 'provisioner' in scopes: # access to provisioner
             audiences.append('provisioner')
-        if 'runner' in resources: # access to runner
+        if 'runner' in scopes: # access to runner
             audiences.append('runner')
-        if 'monitor' in resources: # access to cluster monitor
+        if 'monitor' in scopes: # access to cluster monitor
             audiences.append('monitor')
-        if 'sliderule' in resources: # access to cluster
+        if 'sliderule' in scopes: # access to cluster
             if clusters: # all members can access services at subdomains tied to these clusters
                 audiences.extend(clusters)
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
-        if 'mcp' in resources: # access to MCP services
+        if 'mcp' in scopes: # access to MCP services
             audiences.append(f'mcp')
 
     # Return list of audiences
@@ -677,9 +675,9 @@ def create_auth_token(metadata):
     return token
 
 
-def authenticate_user(authorization_str, scope):
+def authorize_user(authorization_str, scope):
     """
-    Build the authentication token and metadata for the user
+    Build the authorization token and metadata for the user
     """
     # get username (JWT claim)
     user_info = get_github_user(authorization_str)
@@ -762,7 +760,7 @@ def handle_register(event: dict) -> dict:
     response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
     auth_method         = parms.get('token_endpoint_auth_method', 'none')
     challenge_method    = parms.get('code_challenge_method', 'S256') # not an official RFC 7591 field but MCP clients send it
-    scope               = parms.get('scope', ' '.join(MCP_SCOPES)) # optional per the standard, defaults to limited MCP scopes
+    scope               = parms.get('scope', ' '.join(GUEST_SCOPES)) # optional per the standard
 
     # check redirect_uris
     if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
@@ -989,14 +987,14 @@ def handle_callback(event):
         # construct scope of authorization request
         scope = session_challenge["scope"]
         if session_challenge["resource"]:
-            scope.append(session_challenge["resource"].split("https://")[-1].split(".")[0] + ":resources")
+            scope.append(session_challenge["resource"].split("https://")[-1].split(".")[0] + ":access")
 
         # check rules for scope and redirect
         if contains_redirect(redirect_uri, THIRD_PARTY_REDIRECT_HOSTS):
-            if contains_scope(scope, TRUSTED_SCOPES):
+            if not contains_scope(scope, GUEST_SCOPES, check="all"):
                 raise RuntimeError(f"Forbidden scope: {scope}")
         elif contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            if not contains_scope(scope, ALLOWED_SCOPES):
+            if not contains_scope(scope, MEMBER_SCOPES, check="all"):
                 raise RuntimeError(f"Invalid scope: {scope}")
         else: # redirect not allowed
             raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
@@ -1088,7 +1086,7 @@ def handle_token(event):
             # authenticate user (gets token and metadata)
             # note that scope is created in the above callback and verified there
             access_token = exchange_code_for_token(session_code["github_code"])
-            token, metadata = authenticate_user(f'Bearer {access_token}', session_code["scope"])
+            token, metadata = authorize_user(f'Bearer {access_token}', session_code["scope"])
             refresh_token = '' # TODO: revisit
         elif grant_type == "refresh_token":
             raise RuntimeError("not supported at this time")
@@ -1353,7 +1351,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata
-        token, metadata = authenticate_user(f'Bearer {access_token}', ['sliderule:access', 'sliderule:admin', 'provisioner:access', 'runner:access'])
+        token, metadata = authorize_user(f'Bearer {access_token}', OWNER_SCOPES)
 
         # Response with a successful authentication
         return json_response(200, {
@@ -1418,7 +1416,7 @@ def handle_pat_login(event):
             })
 
         # Token is valid! Authenticate user to get your own session token/metadata
-        token, metadata = authenticate_user(f'token {pat}', ['sliderule:access', 'provisioner:access', 'runner:access'])
+        token, metadata = authorize_user(f'token {pat}', MEMBER_SCOPES)
         return json_response(200, {
             'status': 'success',
             'token': token,
@@ -1489,7 +1487,7 @@ def basic_callback(code, redirect_uri):
     try:
         # Authenticate user (gets token and ignores metadata)
         access_token = exchange_code_for_token(code)
-        token, _ = authenticate_user(f'Bearer {access_token}', ['monitor:access'])
+        token, _ = authorize_user(f'Bearer {access_token}', GUEST_SCOPES)
 
         # check redirect_uri against only the trusted redirect hosts
         # (since this is the basic authorization flow)
@@ -1648,7 +1646,7 @@ def handle_authorization_server(event: dict) -> dict:
         "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for authorization_code grant.
         "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
-        "scopes_supported": list(ALLOWED_SCOPES),
+        "scopes_supported": list(MEMBER_SCOPES), # only support member-level scopes for dynamically registered clients
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
         "registration_endpoint": f"{base_url}/auth/github/register", # Dynamic client registration (RFC 7591)
