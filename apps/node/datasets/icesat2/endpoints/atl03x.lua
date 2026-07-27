@@ -32,7 +32,7 @@ local function main()
         -- atl08
         local atl08h5 = nil
         if parms:stage(icesat2.ATL08) then
-            atl08h5 = h5coro.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
+            atl08h5 = h5coro.object(parms["asset"], resource:gsub("ATL03", "ATL08"):gsub("007_02.h5", "007_01.h5"))
         end
 
         -- atl09

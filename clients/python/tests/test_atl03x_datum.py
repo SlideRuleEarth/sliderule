@@ -86,7 +86,7 @@ class TestAtl03x_Datum:
         assert gdf1.height.mean() < gdf2.height.mean()
 
         # Compare CRS against files (skip NAVD88)
-        crs_dir = (Path(__file__).parent / "../../../packages/core/crsfiles").resolve()
+        crs_dir = (Path(__file__).parent / "../../../apps/node/packages/core/crsfiles").resolve()
         itrf_file_str  = _squash_ws((crs_dir / "EPSG7912.projjson").read_text(encoding="utf-8"))
         egm08_file_str = _squash_ws((crs_dir / "EPSG7912_EGM08.projjson").read_text(encoding="utf-8"))
 

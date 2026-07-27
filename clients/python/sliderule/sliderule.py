@@ -732,7 +732,7 @@ def emptyframe(**kwargs):
 #
 # Log Message
 #
-def log(lvl, msg, session):
+def log(lvl, msg, session=None):
     session = checksession(session)
     logger = {
         "DEBUG":    session.logger.debug,
