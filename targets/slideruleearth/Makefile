@@ -345,8 +345,8 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/apps/ilb/haproxy.cfg $(ILB_STAGE_DIR)
 	cp $(ROOT)/apps/ilb/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/apps/ilb/analyzer.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/node/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/node/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
 
 monitor-docker: ## build monitor docker image; needs VERSION
