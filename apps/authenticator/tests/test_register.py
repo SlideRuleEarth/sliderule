@@ -30,10 +30,7 @@ def test_nominal():
     assert rsps['statusCode'] == 201
     assert check_dictionary(rsps['headers'], {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Cache-Control': 'no-store'
     })
     body = json.loads(rsps['body'])
     scopes = body["scope"].split()

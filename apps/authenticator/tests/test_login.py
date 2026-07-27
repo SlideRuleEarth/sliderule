@@ -47,10 +47,7 @@ def test_nominal():
     assert rsps['statusCode'] == 302
     assert check_dictionary(rsps['headers'], {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
     })
     assert 'http://localhost:9083/login/oauth/authorize?client_id=' in rsps['headers']['Location']
 

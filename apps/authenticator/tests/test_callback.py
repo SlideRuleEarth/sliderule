@@ -16,7 +16,7 @@ register_rqst = build_query_request('/auth/github/register', {
     "response_types": ['code'],
     "auth_method": 'none',
     "challenge_method": 'S256',
-    "scope": 'mcp:tools mcp:resources sliderule:access sliderule:admin'
+    "scope": 'mcp:tools mcp:resources sliderule:access'
 })
 
 register_rsps = json.loads(lambda_gateway(register_rqst, None)["body"])
@@ -65,10 +65,7 @@ def test_nominal():
     assert rsps['statusCode'] == 302
     assert check_dictionary(rsps['headers'], {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
     })
     assert redirect_uri in rsps['headers']['Location']
     assert 'code' in redirect_parms

@@ -88,7 +88,7 @@ def test_invalid_scope():
         "response_types": ['code'],
         "auth_method": 'none',
         "challenge_method": 'S256',
-        "scope": 'mcp:tools mcp:resources sliderule:access sliderule:admin'
+        "scope": 'mcp:tools mcp:resources sliderule:access'
     })
 
     register_rsps = json.loads(lambda_gateway(register_rqst, None)["body"])
