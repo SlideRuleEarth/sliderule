@@ -70,9 +70,9 @@ def test_nominal():
     claims = json.loads(decoded)
 
     assert rsps['statusCode'] == 200, "make sure to run stub server"
-    assert token_parms["scope"] == "mcp:resources"
+    assert "mcp:access" in token_parms["scope"]
     assert len(claims["aud"]) == 1
-    assert claims["aud"][0] == f"https://{os.environ.get("MCP_HOSTNAME")}/{os.environ.get("PUBLIC_CLUSTER")}"
+    assert claims["aud"][0] == "mcp"
 
 #
 # Test Invalid Scope

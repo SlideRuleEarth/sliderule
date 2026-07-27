@@ -37,10 +37,11 @@ SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
 AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
 
-# Scopes restricted to project services (not allowed for third party applications)
-GUEST_SCOPES = {"sliderule:access", "monitor:access", "mcp:tools", "mcp:resources", "mcp:access"}
-MEMBER_SCOPES = GUEST_SCOPES | {"provisioner:access", "runner:access"}
+# Scopes for project services
+GUEST_SCOPES = {"sliderule:access", "monitor:access"}
+MEMBER_SCOPES = GUEST_SCOPES | {"provisioner:access", "runner:access"} #
 OWNER_SCOPES = MEMBER_SCOPES | {"sliderule:admin"}
+THIRD_PARTY_SCOPES = {"mcp:tools", "mcp:resources", "mcp:access"}
 
 # GitHub OAuth endpoints (from the environment only for testing)
 GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
@@ -237,35 +238,26 @@ def get_affiliation(username):
         print(f"Failed to get the affiliates file: {e}")
         return None
 
+
 # =============================================================================
 # API Gateway Helper Functions
 # =============================================================================
 
-def json_response(status_code, body, headers=None, with_cors=True, with_cache=False):
+def json_response(status_code, body, headers=None):
     """Return a JSON API response with headers."""
     response = {
         'statusCode': status_code,
-        'headers': {'Content-Type': 'application/json'}
+        'headers': {
+            'Content-Type': 'application/json'
+        }
     }
+    # add base headers
+    if headers != None:
+        response['headers'] |= headers
     # add body
     if body != None:
         response |= {
             'body': json.dumps(body)
-        }
-    # add base headers
-    if headers != None:
-        response['headers'] |= headers
-    # add cors
-    if with_cors:
-        response['headers'] |= {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        }
-    # add cache
-    if with_cache:
-        response['headers'] |= {
-            "Cache-Control": "public, max-age=3600"
         }
     # return full response
     return response
@@ -290,6 +282,8 @@ def contains_scope(scope, scopes_to_check, check="any"):
             if s not in scopes_to_check:
                 return False
         return True
+    else:
+        raise RuntimeError("invalid check")
 
 
 def intersection_of_scope(scope_1, scope_2):
@@ -365,7 +359,7 @@ def verify_signed_state(state):
         state: The state string from the OAuth callback
 
     Returns:
-        Tuple of (is_valid: bool, redirect_uri: str | None, error: str | None)
+        payload string
     """
     # Parse state into components
     parts = state.split(':')
@@ -636,8 +630,12 @@ def generate_audience_list(username, clusters, org_roles, scope):
                 audiences.extend(clusters)
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
-        if 'mcp' in scopes: # access to MCP services
-            audiences.append(f'mcp')
+
+    # Exclusive MCP service (override everything else if requested)
+    # does not require organizational membership/affiliation
+    # user just needs to be authenticated
+    if 'mcp' in scopes:
+        audiences = ['mcp']
 
     # Return list of audiences
     return audiences
@@ -818,6 +816,11 @@ def handle_register(event: dict) -> dict:
             'error': 'invalid_client_metadata',
             'error_description': 'scope must be a space-separated string'
         })
+    elif not contains_scope(scope.split(), MEMBER_SCOPES | THIRD_PARTY_SCOPES, check="all"):
+        return json_response(400, {
+            'error': 'invalid_client_metadata',
+            'error_description': 'invalid scope'
+        })
 
     # generate client credentials
     client_id = str(uuid.uuid4()) # stable, unique, and unguessable
@@ -958,7 +961,7 @@ def handle_callback(event):
 
         # extract and verify state information
         payload = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
-        client_id, redirect_uri_b64, client_state = payload.split(":")
+        client_id, redirect_uri_b64, client_state = payload.split(":", 2)
         redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
 
         # check OAuth errors from GitHub
@@ -987,14 +990,17 @@ def handle_callback(event):
         # construct scope of authorization request
         scope = session_challenge["scope"]
         if session_challenge["resource"]:
-            scope.append(session_challenge["resource"].split("https://")[-1].split(".")[0] + ":access")
+            # special case third-party MCP clients that supply scope as resource
+            mcp_resource = session_challenge["resource"].split("https://")[-1]
+            if mcp_resource == f'{MCP_HOSTNAME}/{PUBLIC_CLUSTER}':
+                scope += list(THIRD_PARTY_SCOPES)
 
         # check rules for scope and redirect
         if contains_redirect(redirect_uri, THIRD_PARTY_REDIRECT_HOSTS):
-            if not contains_scope(scope, GUEST_SCOPES, check="all"):
+            if not contains_scope(scope, THIRD_PARTY_SCOPES, check="all"):
                 raise RuntimeError(f"Forbidden scope: {scope}")
         elif contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            if not contains_scope(scope, MEMBER_SCOPES, check="all"):
+            if not contains_scope(scope, MEMBER_SCOPES | THIRD_PARTY_SCOPES, check="all"):
                 raise RuntimeError(f"Invalid scope: {scope}")
         else: # redirect not allowed
             raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
@@ -1236,8 +1242,6 @@ def handle_device_code_request(event):
             })
 
         data = response.json()
-        print(f"Response from GitHub: {data}")
-
         if 'error' in data:
             return json_response(400, {
                 'error': data.get('error'),
@@ -1350,8 +1354,9 @@ def handle_device_poll(event):
                 'error_description': 'No access token in response'
             })
 
-        # Authenticate user to get token and metadata
-        token, metadata = authorize_user(f'Bearer {access_token}', OWNER_SCOPES)
+        # Authenticate user to get token and metadata (device flow supports all scopes)
+        scope = parms.get('scope', ' '.join(OWNER_SCOPES)).split()
+        token, metadata = authorize_user(f'Bearer {access_token}', scope)
 
         # Response with a successful authentication
         return json_response(200, {
@@ -1592,7 +1597,9 @@ def handle_jwks(event):
         }
 
         # return response
-        return json_response(200, {"keys": [jwk]}, with_cache=True)
+        return json_response(200, {"keys": [jwk]}, headers={
+            "Cache-Control": "public, max-age=3600"
+        })
 
     except Exception as e:
         print(f"Error generating JWKS: {e}")
@@ -1626,7 +1633,9 @@ def handle_openid(event):
         }
 
         # return response
-        return json_response(200, body, with_cache=True)
+        return json_response(200, body, headers={
+            "Cache-Control": "public, max-age=3600"
+        })
 
     except Exception as e:
         print(f"Error in openid discovery: {e}")
@@ -1646,7 +1655,7 @@ def handle_authorization_server(event: dict) -> dict:
         "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for authorization_code grant.
         "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
-        "scopes_supported": list(MEMBER_SCOPES), # only support member-level scopes for dynamically registered clients
+        "scopes_supported": list(MEMBER_SCOPES | THIRD_PARTY_SCOPES), # only support member-level and third-party scopes for dynamically registered clients
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
         "registration_endpoint": f"{base_url}/auth/github/register", # Dynamic client registration (RFC 7591)
@@ -1655,7 +1664,9 @@ def handle_authorization_server(event: dict) -> dict:
         "id_token_signing_alg_values_supported": ["RS256"], # The signing algorithms used when issuing JWTs.
         "grant_types_supported": list(ALLOWED_GRANT_TYPES),
     }
-    return json_response(200, metadata, with_cache=True)
+    return json_response(200, metadata, headers={
+            "Cache-Control": "public, max-age=3600"
+        })
 
 # =============================================================================
 # Lambda Function for Login

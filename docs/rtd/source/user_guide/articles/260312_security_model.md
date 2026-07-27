@@ -68,7 +68,7 @@ At different stages of the authorization flows there are time limits imposed to 
 
 | Element | Time Limit | Notes |
 |:-------:|:----------:|:-----:|
-| SlideRule JWT | 12 hours ||
+| SlideRule JWT | 24 hours ||
 | OAuth2.1 Web Authorization Session | 12 hours | Once a client is dynamically registered it must complete all authorization requests within this time |
 | OAuth2.1 Web Authorization Code | 2 minutes | Once a client receives an authorization code it has this long to exchange it for a token; after its first use the code is no longer valid |
 | GitHub HTTP Requests | 15 seconds | All requests to GitHub APIs must complete promptly |
@@ -94,7 +94,7 @@ When a third party application is granted access to SlideRule services, a reduce
 
 #### MCP Exclusivity
 
-When MCP resources are requested (either via the `scope` or `resource` field of the authorization request), all permissions that would have been granted in the JWT are dropped and only the `mcp:tools` and `mcp:resources` permissions are provided.  This is to limit third party agents from broad access to SlideRule resources.
+When MCP resources are requested (either via the `scope` or `resource` field of the authorization request), all permissions that would have been granted in the JWT are dropped and only the `mcp:access` permission is provided.  This is to limit third party agents from broad access to SlideRule resources.
 
 #### Request Signing
 
