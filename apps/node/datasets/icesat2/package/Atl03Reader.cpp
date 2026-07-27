@@ -159,8 +159,11 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Atl03Parameters* 
 
     /* Generate ATL08 Resource Name */
     char* resource08 = StringLib::duplicate(parms->getResource());
-    resource08[4] = '8';
-    if(resource08[32] == '7') resource08[35] = '1';
+    if(resource08 && StringLib::size(resource08) >= 38)
+    {
+        resource08[4] = '8';
+        if(resource08[32] == '7') resource08[35] = '1';
+    }
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);

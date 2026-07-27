@@ -201,7 +201,7 @@ COMMON_CFG += -DUSE_HDF_PACKAGE=ON
 COMMON_CFG += $(USERCFG)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/apps/node/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += -DSKIP_STATIC_ANALYSIS=OFF      # ON to disable static analysis for faster debug builds, set to OFF before committing
 DEBUG_CFG += $(COMMON_CFG)

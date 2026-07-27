@@ -14,7 +14,7 @@ aws_utils.config_aws()
 
 -- Find All Self Test Directories --
 local selftests_dir_list = {}
-local td = runner.rootdir(arg[0]).."../../" -- root directory
+local td = runner.rootdir(arg[0]).."../../../apps/node/" -- root directory
 local packages_dir_list = sys.pathfind(td.."packages", "selftests")
 local datasets_dir_list = sys.pathfind(td.."datasets", "selftests")
 table.move(packages_dir_list, 1, #packages_dir_list, #selftests_dir_list + 1, selftests_dir_list)
