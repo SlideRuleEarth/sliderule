@@ -296,7 +296,7 @@ class Session:
             except requests.HTTPError as e:
                 if e.response.status_code == 503:
                     rsps = 'Cluster experiencing heavy load'
-                elif e.response.status_code == 403:
+                elif e.response.status_code == 403 or e.response.status_code == 401:
                     rsps = 'Invalid access token'
                     self.__clear_cache(self.ACCESS_TOKEN_CACHE)
                     break # skip retries
@@ -523,6 +523,13 @@ class Session:
 
         except Exception as e:
             self.logger.error(f'Failed to make request to {url}: {e}')
+
+            # Authorization Error
+            if e.response.status_code == 403 or e.response.status_code == 401:
+                self.logger.info(f"Clearing access token cache ...")
+                self.__clear_cache(self.ACCESS_TOKEN_CACHE)
+
+            # Error Response
             if self.throw_exceptions:
                 raise
             return {'error': f'{e}', 'error_description': f'{rsps}'}
