@@ -34,7 +34,7 @@ def build_radius_query(clause, parms):
     lon = parms.get("lon")
     lat = parms.get("lat")
     r = parms.get("r")
-    u = parms.get("u")
+    u = parms.get("u", "km")
     if lon is None or lat is None or r is None:
         return ''
     # coerce to float (guards against SQL injection via these fields)
@@ -42,21 +42,22 @@ def build_radius_query(clause, parms):
     lat = float(lat)
     r = float(r)
     # convert radius to meters
-    if u in ("km", "kilometers", None):
+    if u in ("km", "kilometers"):
         radius_m = r * 1000.0
     elif u in ("mi", "miles"):
         radius_m = r * 1609.344
     else:
         raise ValueError(f"unsupported radius units: {u}")
-    # bounding box (degrees) for a coarse, RTREE-index-accelerated filter
-    dlat = radius_m / 111320.0
-    coslat = max(math.cos(math.radians(lat)), 1e-12)
-    dlon = radius_m / (111320.0 * coslat)
-    minlon, maxlon = lon - dlon, lon + dlon
-    minlat, maxlat = lat - dlat, lat + dlat
-    bbox = f"{__check(clause)} ST_Within(geometry, ST_MakeEnvelope({minlon}, {minlat}, {maxlon}, {maxlat}))"
-    refine = f"{__check(clause)} ST_Distance_Sphere(geometry, ST_Point({lon}, {lat})) <= {radius_m}"
-    return f"{bbox}\n            {refine}"
+    # Explicit haversine great-circle distance (meters) using ST_X (lon) and ST_Y (lat)
+    R_EARTH = 6371008.8  # mean earth radius (m)
+    haversine = (
+        f"2 * {R_EARTH} * asin(sqrt("
+        f"pow(sin(radians((ST_Y(geometry) - {lat}) / 2.0)), 2) "
+        f"+ cos(radians({lat})) * cos(radians(ST_Y(geometry))) "
+        f"* pow(sin(radians((ST_X(geometry) - {lon}) / 2.0)), 2)"
+        f"))"
+    )
+    return f"{__check(clause)} {haversine} <= {radius_m}"
 
 #
 # Get ICESat-2 Name Filter
