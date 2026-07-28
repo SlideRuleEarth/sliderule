@@ -4,7 +4,12 @@ get:
   description: >
     Retrieve full metadata for a specific 3DEP granule by its ID.
   parameters:
-    - $ref: '../components/parameters/GranuleId.yml'
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The granule ID
   responses:
     '200':
       description: Successful granule detail response

@@ -27,6 +27,10 @@ paths:
     $ref: 'paths/casals1b.yml'
   /ams/CASALS1B/search_mask:
     $ref: 'paths/casals1b_search_mask.yml'
+  /ams/IS2GT/legacy:
+    $ref: 'paths/is2gt_legacy.yml'
+  /ams/IS2GT:
+    $ref: 'paths/is2gt.yml'
   /ams/3DEP1M:
     $ref: 'paths/3dep1m.yml'
   /ams/3DEP1M/id/{id}:
@@ -40,29 +44,14 @@ components:
       $ref: 'components/schemas/ICESat2QueryParams.yml'
     ATL13Request:
       $ref: 'components/schemas/ATL13Request.yml'
-    ATL13Response:
-      $ref: 'components/schemas/ATL13Response.yml'
     ATL24Request:
       $ref: 'components/schemas/ATL24Request.yml'
-    ATL24Response:
-      $ref: 'components/schemas/ATL24Response.yml'
-    ATL24GranuleResponse:
-      $ref: 'components/schemas/ATL24GranuleResponse.yml'
     CASALS1BRequest:
       $ref: 'components/schemas/CASALS1BRequest.yml'
-    CASALS1BResponse:
-      $ref: 'components/schemas/CASALS1BResponse.yml'
+    IS2GTRequest:
+      $ref: 'components/schemas/IS2GTRequest.yml'
     3DEP1MRequest:
       $ref: 'components/schemas/3DEP1MRequest.yml'
-    3DEP1MResponse:
-      $ref: 'components/schemas/3DEP1MResponse.yml'
-    3DEP1MFeature:
-      $ref: 'components/schemas/3DEP1MFeature.yml'
-  parameters:
-    GranuleName:
-      $ref: 'components/parameters/GranuleName.yml'
-    GranuleId:
-      $ref: 'components/parameters/GranuleId.yml'
   responses:
     BadRequest:
       $ref: 'components/responses/BadRequest.yml'
@@ -74,5 +63,9 @@ components:
       $ref: 'components/responses/ATL24GranuleResponse.yml'
     CASALS1BResponse:
       $ref: 'components/responses/CASALS1BResponse.yml'
+    IS2GTLegacyResponse:
+      $ref: 'components/responses/IS2GTLegacyResponse.yml'
+    IS2GTResponse:
+      $ref: 'components/responses/IS2GTResponse.yml'
     3DEP1MResponse:
       $ref: 'components/responses/3DEP1MResponse.yml'
