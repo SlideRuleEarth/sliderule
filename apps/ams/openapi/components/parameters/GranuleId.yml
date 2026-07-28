@@ -1,6 +1,0 @@
-name: id
-in: path
-required: true
-schema:
-  type: string
-description: The granule ID

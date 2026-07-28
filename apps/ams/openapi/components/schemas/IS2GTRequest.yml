@@ -1,0 +1,39 @@
+type: object
+description: >
+  All fields are optional. Provide lon, lat, and r together to filter by
+  radius. Filters (radius, polygon, time) are combined with AND logic.
+properties:
+  lon:
+    type: number
+    description: Longitude of the radius search center (degrees, EPSG:4326)
+    example: -108.1
+  lat:
+    type: number
+    description: Latitude of the radius search center (degrees, EPSG:4326)
+    example: 39.05
+  r:
+    type: number
+    description: Radius of the search area, in the units given by `u`
+    example: 10
+  u:
+    type: string
+    description: Units of the radius `r`
+    enum:
+      - km
+      - kilometers
+      - mi
+      - miles
+    default: km
+  poly:
+    type: array
+    description: Polygon vertices for spatial filtering
+    items:
+      $ref: './Coordinate.yml'
+  t0:
+    type: string
+    description: Start time filter (ISO 8601 format)
+    example: '2020-01-01T00:00:00Z'
+  t1:
+    type: string
+    description: End time filter (ISO 8601 format)
+    example: '2023-12-31T23:59:59Z'

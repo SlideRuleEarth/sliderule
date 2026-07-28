@@ -10,36 +10,37 @@ from shapely.geometry import Polygon
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--collection_file',    type=str,   default="/data/ATL24/atl24_v2_granule_collection.csv")
-parser.add_argument('--parquet_file',       type=str,   default="/data/ATL24/atl24r2.parquet")
-parser.add_argument('--db_file',            type=str,   default="/data/atl24r2.db")
+parser.add_argument('--data_csv_file',      type=str,   default="/data/is2gt/data.csv")
+parser.add_argument('--parquet_file',       type=str,   default="/data/is2gt/data.parquet")
+parser.add_argument('--db_file',            type=str,   default="/data/is2gt.db")
 args = parser.parse_args()
 
 # -------------------------------------------
-# load collection
+# load data
 # -------------------------------------------
-print(f'Loading collection {args.collection_file}... ', end='')
+print(f'Loading data from {args.data_csv_file}... ', end='')
 sys.stdout.flush()
 start_time = time.perf_counter()
-collection_df = gpd.pd.read_csv(args.collection_file, usecols=['granule', 'beam', 'season', 'bathy_photons', 'bathy_mean_depth', 'bathy_min_depth', 'bathy_max_depth', 'polygon', 'begin_time'])
-print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
+dd = {"time": [], "lon": [], "lat": []}
+with open(args.data_csv_file, "r") as file:
+    for line in file.readlines():
+        tokens = line.split(",")
+        timestamp = tokens[2].split(" ")
+        datestamp = timestamp[0].split("-")
+        dd["time"].append(f"{int(datestamp[2]):04}-{int(datestamp[1]):02}-{int(datestamp[0]):02} {timestamp[1]}")
+        dd["lon"].append(tokens[3])
+        dd["lat"].append(tokens[4])
+df = gpd.pd.DataFrame(dd)
+print(f'read {len(df)} rows in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------
 # create geometry column
 # -------------------------------------------
-def getpoly(poly_str):
-    poly_list = poly_str.split(" ")
-    coord_list = [(poly_list[i+1],poly_list[i]) for i in range(0, len(poly_list), 2)]
-    if len(coord_list) > 20:
-        return Polygon(coord_list).buffer(0.01).simplify(0.01)
-    else:
-        return Polygon(coord_list)
 print(f'Creating geometry column... ', end='')
 sys.stdout.flush()
 start_time = time.perf_counter()
-collection_df["geometry"] = collection_df.apply(lambda row: getpoly(row['polygon']), axis=1)
-del collection_df["polygon"] # remove polygon now that it is contained in the geometry column
-collection_gdf = gpd.GeoDataFrame(collection_df, geometry='geometry', crs='EPSG:7912')
+geometry = gpd.points_from_xy(df["lon"], df["lat"])
+gdf = gpd.GeoDataFrame(df[["time"]], geometry=geometry, crs="EPSG:4326")
 print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------
@@ -48,7 +49,7 @@ print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 print(f'Writing parquet file {args.parquet_file}... ', end='')
 sys.stdout.flush()
 start_time = time.perf_counter()
-collection_gdf.to_parquet(args.parquet_file, index=True)
+gdf.to_parquet(args.parquet_file, index=True)
 print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------
@@ -65,20 +66,19 @@ db = duckdb.connect(args.db_file)
 db.execute(f"""
     INSTALL spatial;
     LOAD spatial;
-    CREATE TABLE atl24db AS
+    CREATE TABLE is2gtdb AS
     SELECT
-        * EXCLUDE (begin_time),
-        CAST(begin_time AS TIMESTAMP) AS begin_time
+        * EXCLUDE (time),
+        CAST(time AS TIMESTAMP) AS time
     FROM '{args.parquet_file}'
-    ORDER BY begin_time;
-    CREATE INDEX idx_begin_time ON atl24db(begin_time);
-    CREATE INDEX idx_granule ON atl24db(granule);
-    CREATE INDEX idx_geom ON atl24db USING RTREE(geometry);
+    ORDER BY time;
+    CREATE INDEX idx_time ON is2gtdb(time);
+    CREATE INDEX idx_geom ON is2gtdb USING RTREE(geometry);
 """)
 print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
 
 # -------------------------------------------
 # display structure of duckdb database
 # -------------------------------------------
-df = db.execute("DESCRIBE atl24db").fetchdf()
+df = db.execute("DESCRIBE is2gtdb").fetchdf()
 print(df)

@@ -4,7 +4,12 @@ get:
   description: >
     Retrieve per-beam metadata for a specific ATL24 granule.
   parameters:
-    - $ref: '../components/parameters/GranuleName.yml'
+    - name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The granule name
   responses:
     '200':
       $ref: '../components/responses/ATL24GranuleResponse.yml'

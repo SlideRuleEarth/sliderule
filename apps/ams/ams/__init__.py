@@ -63,4 +63,9 @@ def create_app(test_config=None):
     casals1b.init_app(app)
     app.register_blueprint(casals1b.casals1b)
 
+    # initialize ICESat-2 Ground Track
+    from . import is2gt
+    is2gt.init_app(app)
+    app.register_blueprint(is2gt.is2gt)
+
     return app

@@ -1,0 +1,32 @@
+description: Successful query response
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        hits:
+          type: integer
+          description: Total number of matching rows
+        time:
+          type: array
+          description: List of timestamps of ground track points (YYYY-MM-DD HH:MM:SS)
+          example: '2021-03-15'
+          items:
+            type: string
+        lon:
+          type: array
+          description: List of longitudes of ground track points (degrees, EPSG:4326)
+          example: 172.6
+          items:
+            type: number
+        lat:
+          type: array
+          description: List of latitudes of ground track points (degrees, EPSG:4326)
+          example: -25.1
+          items:
+            type: number
+      required:
+        - hits
+        - time
+        - lon
+        - lat

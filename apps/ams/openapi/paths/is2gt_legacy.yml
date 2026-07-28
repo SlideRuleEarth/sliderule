@@ -1,0 +1,45 @@
+get:
+  operationId: IS2GTLegacy
+  summary: Query ICESat-2 ground track metadata using legacy format
+  description: >
+    Query ICESat-2 ground track granule metadata by radius, polygon,
+    and/or time. Filters are combined with AND logic. Supports ICESat-2 Ground Track iOS Application.
+  parameters:
+    - name: lon
+      in: query
+      required: true
+      schema:
+        type: number
+      description: Longitude of the radius search center (degrees, EPSG:4326)
+      example: -108.1
+    - name: lat
+      in: query
+      required: true
+      schema:
+        type: number
+      description: Latitude of the radius search center (degrees, EPSG:4326)
+      example: 39.05
+    - name: r
+      in: query
+      required: true
+      schema:
+        type: number
+      description: Radius of the search area, in the units given by `u`
+      example: 10
+    - name: u
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - km
+          - kilometers
+          - mi
+          - miles
+        default: km
+      description: Units of the radius `r`
+  responses:
+    '200':
+      $ref: '../components/responses/IS2GTLegacyResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

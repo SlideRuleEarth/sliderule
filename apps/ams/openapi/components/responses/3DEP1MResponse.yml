@@ -2,4 +2,49 @@ description: Successful query response
 content:
   application/json:
     schema:
-      $ref: '../schemas/3DEP1MResponse.yml'
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        hits:
+          type: integer
+          description: Total number of matching features
+        features:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [Feature]
+              id:
+                type: string
+                description: Granule ID
+              geometry:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [Polygon]
+                  coordinates:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+              properties:
+                type: object
+                properties:
+                  datetime:
+                    type: string
+                    format: date-time
+                  url:
+                    type: string
+                    description: URL to the elevation data asset
+      required:
+        - type
+        - hits
+        - features

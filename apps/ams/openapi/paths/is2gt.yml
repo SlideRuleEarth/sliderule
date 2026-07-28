@@ -1,0 +1,17 @@
+post:
+  operationId: IS2GT
+  summary: Query ICESat-2 ground track metadata
+  description: >
+    Query ICESat-2 ground track granule metadata by radius, polygon,
+    and/or time. Filters are combined with AND logic.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/IS2GTRequest.yml'
+  responses:
+    '200':
+      $ref: '../components/responses/IS2GTResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'

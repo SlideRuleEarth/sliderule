@@ -1,0 +1,37 @@
+description: Successful query response
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        state:
+          type: boolean
+          description: Whether the query completed successfully
+        result:
+          type: array
+          description: List of matching ground track points
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                description: Date of the point (DD-MM-YYYY)
+                example: '15-03-2021'
+              time:
+                type: string
+                description: Time of the point (HH:MM:SS)
+                example: '13:45:07'
+              lon:
+                type: number
+                description: Longitude of the point (degrees, EPSG:4326)
+              lat:
+                type: number
+                description: Latitude of the point (degrees, EPSG:4326)
+            required:
+              - date
+              - time
+              - lon
+              - lat
+      required:
+        - state
+        - result
