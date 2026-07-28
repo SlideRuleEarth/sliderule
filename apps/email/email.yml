@@ -1,0 +1,405 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  SlideRule SES Mail Gateway. Receives inbound email for support@ and users@
+  addresses, archives the raw MIME to S3, and forwards it via Lambda. Built
+  entirely as Infrastructure as Code.
+
+# ---------------------------------------------------------------------------
+# Parameters
+#
+# Nothing about the deployment is hardcoded; every environment-specific value
+# is supplied here and passed to the Lambdas as environment variables.
+# ---------------------------------------------------------------------------
+Parameters:
+
+  Domain:
+    Type: String
+    Default: slideruleearth.io
+    Description: The email domain that SES receives mail for.
+
+  DeveloperEmails:
+    Type: CommaDelimitedList
+    Description: >
+      Comma-separated list of developer email addresses. Support mail is
+      forwarded here, and only these senders may broadcast to users@.
+
+  SupportAddress:
+    Type: String
+    Default: support@slideruleearth.io
+    Description: The inbound support address.
+
+  UsersAddress:
+    Type: String
+    Default: users@slideruleearth.io
+    Description: The inbound users-broadcast address.
+
+  ProjectBucket:
+    Type: String
+    Description: >
+      Existing S3 bucket used to archive received email and to hold the Lambda
+      deployment package. SES is granted least-privilege write access to the
+      email prefixes within this bucket.
+
+  LambdaZipFile:
+    Type: String
+    Description: S3 key (within ProjectBucket) of the Lambda deployment .zip.
+
+  ContactListName:
+    Type: String
+    Default: sliderule-users
+    Description: Name of the SES Contact List holding subscribers.
+
+  ContactListTopic:
+    Type: String
+    Default: broadcast
+    Description: Topic within the Contact List (enables List-Unsubscribe headers).
+
+  ForwardFromAddress:
+    Type: String
+    Default: support@slideruleearth.io
+    Description: >
+      Verified SES identity used as the SMTP From when re-sending. Must belong
+      to the verified Domain.
+
+  SupportS3Prefix:
+    Type: String
+    Default: email/support/
+    Description: S3 key prefix under which SES stores inbound support mail.
+
+  UsersS3Prefix:
+    Type: String
+    Default: email/users/
+    Description: S3 key prefix under which SES stores inbound users mail.
+
+  RejectSpam:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Drop messages SES flags as spam or virus-bearing.
+
+  MaxMessageSize:
+    Type: Number
+    Default: 10485760
+    Description: Maximum accepted message size in bytes (default 10 MB).
+
+  AutoReplyEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Send an automatic acknowledgement to support@ senders.
+
+  LogRetentionDays:
+    Type: Number
+    Default: 90
+    Description: CloudWatch Logs retention in days.
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # =========================================================================
+  # S3 -- bucket policy granting SES permission to archive inbound mail.
+  #
+  # ProjectBucket is an existing bucket (the SlideRule convention). SES needs
+  # explicit s3:PutObject permission, scoped to the email/* prefixes and to
+  # this account, to write received messages.
+  # =========================================================================
+  EmailBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ProjectBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSESPuts
+            Effect: Allow
+            Principal:
+              Service: ses.amazonaws.com
+            Action: s3:PutObject
+            Resource:
+              - !Sub 'arn:aws:s3:::${ProjectBucket}/${SupportS3Prefix}*'
+              - !Sub 'arn:aws:s3:::${ProjectBucket}/${UsersS3Prefix}*'
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  # =========================================================================
+  # SES Contact List (subscriber storage). Subscription management is added
+  # later; for now this holds the OPT_IN contacts the users Lambda reads.
+  # =========================================================================
+  UsersContactList:
+    Type: AWS::SES::ContactList
+    Properties:
+      ContactListName: !Ref ContactListName
+      Description: SlideRule users broadcast subscribers.
+      Topics:
+        - TopicName: !Ref ContactListTopic
+          DisplayName: SlideRule Announcements
+          DefaultSubscriptionStatus: OPT_IN
+          Description: Broadcast announcements to SlideRule users.
+
+  # =========================================================================
+  # CloudWatch Log Groups (created explicitly so retention is managed as code
+  # and IAM can be scoped to exactly these groups).
+  # =========================================================================
+  SupportLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-support'
+      RetentionInDays: !Ref LogRetentionDays
+
+  UsersLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-users'
+      RetentionInDays: !Ref LogRetentionDays
+
+  # =========================================================================
+  # IAM -- least-privilege execution role for the SUPPORT Lambda.
+  # Permissions: read its archived mail, send via SES, write its own logs.
+  # =========================================================================
+  SupportLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-support-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: support-permissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadArchivedMail
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${ProjectBucket}/${SupportS3Prefix}*'
+              - Sid: SendEmail
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref ForwardFromAddress
+              - Sid: WriteLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub '${SupportLogGroup.Arn}:*'
+
+  # =========================================================================
+  # IAM -- least-privilege execution role for the USERS Lambda.
+  # Adds read access to the SES Contact List on top of the support permissions.
+  # =========================================================================
+  UsersLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-users-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: users-permissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadArchivedMail
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${ProjectBucket}/${UsersS3Prefix}*'
+              - Sid: SendEmail
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref ForwardFromAddress
+              - Sid: ReadContactList
+                Effect: Allow
+                Action:
+                  - ses:ListContacts
+                  - ses:GetContact
+                  - ses:GetContactList
+                Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:contact-list/${ContactListName}'
+              - Sid: WriteLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub '${UsersLogGroup.Arn}:*'
+
+  # =========================================================================
+  # Lambda functions
+  # =========================================================================
+  SupportLambda:
+    Type: AWS::Lambda::Function
+    DependsOn: SupportLogGroup
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-support'
+      Role: !GetAtt SupportLambdaRole.Arn
+      Runtime: python3.13
+      Architectures: [arm64]
+      Handler: support_lambda.handler
+      MemorySize: 256
+      Timeout: 120
+      Description: Forwards support@ mail to the developer list.
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          DOMAIN: !Ref Domain
+          DEVELOPER_EMAILS: !Join [',', !Ref DeveloperEmails]
+          SUPPORT_ADDRESS: !Ref SupportAddress
+          USERS_ADDRESS: !Ref UsersAddress
+          PROJECT_BUCKET: !Ref ProjectBucket
+          CONTACT_LIST_NAME: !Ref ContactListName
+          CONTACT_LIST_TOPIC: !Ref ContactListTopic
+          FORWARD_FROM_ADDRESS: !Ref ForwardFromAddress
+          S3_PREFIX: !Ref SupportS3Prefix
+          REJECT_SPAM: !Ref RejectSpam
+          MAX_MESSAGE_SIZE: !Ref MaxMessageSize
+          AUTO_REPLY_ENABLED: !Ref AutoReplyEnabled
+
+  UsersLambda:
+    Type: AWS::Lambda::Function
+    DependsOn: UsersLogGroup
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-users'
+      Role: !GetAtt UsersLambdaRole.Arn
+      Runtime: python3.13
+      Architectures: [arm64]
+      Handler: users_lambda.handler
+      MemorySize: 256
+      Timeout: 300
+      Description: Broadcasts authorized users@ mail to opted-in subscribers.
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          DOMAIN: !Ref Domain
+          DEVELOPER_EMAILS: !Join [',', !Ref DeveloperEmails]
+          SUPPORT_ADDRESS: !Ref SupportAddress
+          USERS_ADDRESS: !Ref UsersAddress
+          PROJECT_BUCKET: !Ref ProjectBucket
+          CONTACT_LIST_NAME: !Ref ContactListName
+          CONTACT_LIST_TOPIC: !Ref ContactListTopic
+          FORWARD_FROM_ADDRESS: !Ref ForwardFromAddress
+          S3_PREFIX: !Ref UsersS3Prefix
+          REJECT_SPAM: !Ref RejectSpam
+          MAX_MESSAGE_SIZE: !Ref MaxMessageSize
+
+  # =========================================================================
+  # Lambda permissions allowing SES to invoke the functions. The SourceAccount
+  # condition prevents other accounts from triggering our Lambdas.
+  # =========================================================================
+  SupportLambdaSesPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SupportLambda
+      Action: lambda:InvokeFunction
+      Principal: ses.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  UsersLambdaSesPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UsersLambda
+      Action: lambda:InvokeFunction
+      Principal: ses.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  # =========================================================================
+  # SES Receipt Rule Set + Rules
+  #
+  # Each rule first archives the raw message to S3, then invokes the Lambda.
+  # NOTE: CloudFormation cannot mark a rule set active; run
+  #   aws ses set-active-receipt-rule-set --rule-set-name <name>
+  # after deployment (see README).
+  # =========================================================================
+  ReceiptRuleSet:
+    Type: AWS::SES::ReceiptRuleSet
+    Properties:
+      RuleSetName: !Sub '${AWS::StackName}-ruleset'
+
+  SupportReceiptRule:
+    Type: AWS::SES::ReceiptRule
+    DependsOn:
+      - EmailBucketPolicy
+      - SupportLambdaSesPermission
+    Properties:
+      RuleSetName: !Ref ReceiptRuleSet
+      Rule:
+        Name: support-rule
+        Enabled: true
+        ScanEnabled: true
+        TlsPolicy: Optional
+        Recipients:
+          - !Ref SupportAddress
+        Actions:
+          - S3Action:
+              BucketName: !Ref ProjectBucket
+              ObjectKeyPrefix: !Ref SupportS3Prefix
+          - LambdaAction:
+              FunctionArn: !GetAtt SupportLambda.Arn
+              InvocationType: Event
+
+  UsersReceiptRule:
+    Type: AWS::SES::ReceiptRule
+    DependsOn:
+      - EmailBucketPolicy
+      - UsersLambdaSesPermission
+      - SupportReceiptRule
+    Properties:
+      RuleSetName: !Ref ReceiptRuleSet
+      After: support-rule
+      Rule:
+        Name: users-rule
+        Enabled: true
+        ScanEnabled: true
+        TlsPolicy: Optional
+        Recipients:
+          - !Ref UsersAddress
+        Actions:
+          - S3Action:
+              BucketName: !Ref ProjectBucket
+              ObjectKeyPrefix: !Ref UsersS3Prefix
+          - LambdaAction:
+              FunctionArn: !GetAtt UsersLambda.Arn
+              InvocationType: Event
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+
+  ReceiptRuleSetName:
+    Description: Name of the SES receipt rule set (activate it post-deploy).
+    Value: !Ref ReceiptRuleSet
+
+  SupportLambdaName:
+    Description: Support Lambda function name.
+    Value: !Ref SupportLambda
+
+  UsersLambdaName:
+    Description: Users Lambda function name.
+    Value: !Ref UsersLambda
+
+  ContactListNameOut:
+    Description: SES Contact List holding subscribers.
+    Value: !Ref ContactListName

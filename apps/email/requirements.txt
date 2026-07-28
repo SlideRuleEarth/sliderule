@@ -1,0 +1,8 @@
+# boto3 is provided by the AWS Lambda python3.13 runtime, but it is pinned
+# here so local development, unit tests and the deployment package are
+# reproducible. All MIME handling uses the Python standard library (email),
+# so there are no other runtime dependencies.
+boto3>=1.34,<2.0
+
+# ---- Development / test only (not required at runtime) ----
+# pytest>=8.0
