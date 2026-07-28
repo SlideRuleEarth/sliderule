@@ -92,9 +92,9 @@ def is2gt_legacy_route():
             FROM is2gtdb
             {dbutils.build_radius_query(state, data)}
         """).to_arrow_table()
-        t = [t.split(" ")[1] for t in table.column("time")] # times
-        d = [t.split(" ")[0].split("-") for t in table.column("time")] # dates day-month-year
-        d = [f"{int(t[2]):04}-{int(t[1]):02}-{int(t[0]):02}" for t in d] # dates YYYY-MM-DD
+        dts = [t.as_py() for t in table.column("time")]
+        d = [dt.strftime("%d-%m-%Y") for dt in dts] # dates DD-MM-YYYY
+        t = [dt.strftime("%H:%M:%S") for dt in dts] # times HH:MM:SS
         lon = table.column("lon").to_pylist()
         lat = table.column("lat").to_pylist()
         result = [{"date": r[0], "time": r[1], "lon": r[2], "lat": r[3]} for r in zip(d, t, lon, lat)]
