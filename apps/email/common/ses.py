@@ -11,8 +11,6 @@ The class accepts an injected boto3 client so unit tests can supply a stub
 without touching AWS, and it holds no mutable state of its own.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any, Sequence
 

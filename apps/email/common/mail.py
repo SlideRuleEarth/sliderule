@@ -15,8 +15,6 @@ while the *original* sender is preserved in the ``Reply-To`` and
 SES forwarding.
 """
 
-from __future__ import annotations
-
 import copy
 from dataclasses import dataclass
 from email import policy
@@ -52,7 +50,7 @@ class MailParseError(ValueError):
 def normalize_address(raw: str | None) -> str:
     """Reduce an address (possibly with a display name) to a bare, lower-cased email.
 
-    ``"John Smith <JP@SlideRuleEarth.io>"`` -> ``"jp@slideruleearth.io"``.
+    ``"John Smith <JS@SlideRuleEarth.io>"`` -> ``"js@slideruleearth.io"``.
     Returns an empty string when no address can be extracted.
     """
     if not raw:
