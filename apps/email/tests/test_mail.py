@@ -1,7 +1,3 @@
-"""Unit tests for common.mail (parsing, normalization, forward rebuild)."""
-
-from __future__ import annotations
-
 from email import policy
 from email.parser import BytesParser
 

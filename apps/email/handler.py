@@ -27,6 +27,7 @@ AUTO_REPLY = os.environ.get('AUTO_REPLY', True)
 # Cached Objects
 # ###############################
 
+s3 = boto3.client("s3")
 ses = boto3.client("sesv2")
 
 
@@ -73,7 +74,7 @@ def fetch_raw_email(bucket: str, key: str) -> bytes:
     Return the raw MIME bytes stored at ``s3://{bucket}/{key}``.
     """
     try:
-        response = ses.get_object(Bucket=bucket, Key=key)
+        response = s3.get_object(Bucket=bucket, Key=key)
         body = response["Body"]
         data = body.read()
     except Exception as e:
@@ -115,7 +116,7 @@ def send_raw_email(*, raw_message: bytes, source: str, destinations: Sequence[st
 #
 # Get list of contacts opted in to a topic
 #
-def list_opted_in_contacts(self, contact_list_name: str) -> list[Contact]:
+def list_opted_in_contacts(contact_list_name: str) -> list[Contact]:
     """Return every ``OPT_IN`` contact from *contact_list_name*.
     Handles pagination transparently.  Only contacts whose subscription
     status resolves to ``OPT_IN`` are returned.
@@ -131,7 +132,7 @@ def list_opted_in_contacts(self, contact_list_name: str) -> list[Contact]:
         }
         if next_token:
             kwargs["NextToken"] = next_token
-        response = self._client.list_contacts(**kwargs)
+        response = ses.list_contacts(**kwargs)
         for entry in response.get("Contacts", []):
             email = str(entry.get("EmailAddress", "")).strip().lower()
             if not email:
@@ -285,7 +286,7 @@ def lambda_handler(event, context):
                 })
 
             # retrieve archived message from S3
-            raw = fetch_raw_email(PROJECT_BUCKET, f"{S3_PREFIX}/{notification.message_id}")
+            raw = fetch_raw_email(PROJECT_BUCKET, f"{S3_PREFIX}{notification.message_id}")
 
             # enforce maximum message size
             if len(raw) > MAX_MESSAGE_SIZE:
