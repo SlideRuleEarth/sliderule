@@ -5,7 +5,7 @@ from __future__ import annotations
 from email import policy
 from email.parser import BytesParser
 
-from common import mail
+import mail
 from conftest import make_raw_email, make_ses_event
 
 

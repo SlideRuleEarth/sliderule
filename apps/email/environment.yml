@@ -1,0 +1,9 @@
+# conda env create -f environment.yml
+name: email
+channels:
+  - conda-forge
+dependencies:
+  - boto3
+  - coverage
+  - pytest
+  - pytest-env

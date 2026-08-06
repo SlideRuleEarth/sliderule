@@ -12,26 +12,22 @@ Description: >
 # ---------------------------------------------------------------------------
 Parameters:
 
-  Domain:
-    Type: String
-    Default: slideruleearth.io
-    Description: The email domain that SES receives mail for.
-
-  DeveloperEmails:
+  SupportEmails:
     Type: CommaDelimitedList
     Description: >
       Comma-separated list of developer email addresses. Support mail is
       forwarded here, and only these senders may broadcast to users@.
 
-  SupportAddress:
+  SupportEmail:
     Type: String
-    Default: support@slideruleearth.io
-    Description: The inbound support address.
+    Description: >
+      The inbound support address, e.g. support@{domain}.
+      Also the verified SES identity used as the SMTP From when re-sending.
+      Must belong to the verified Domain.
 
-  UsersAddress:
+  UsersEmail:
     Type: String
-    Default: users@slideruleearth.io
-    Description: The inbound users-broadcast address.
+    Description: The inbound users-broadcast address, e.g. users@{domain}
 
   ProjectBucket:
     Type: String
@@ -44,6 +40,10 @@ Parameters:
     Type: String
     Description: S3 key (within ProjectBucket) of the Lambda deployment .zip.
 
+  # ----------------------------------
+  # Constants
+  # ----------------------------------
+
   ContactListName:
     Type: String
     Default: sliderule-users
@@ -54,13 +54,6 @@ Parameters:
     Default: broadcast
     Description: Topic within the Contact List (enables List-Unsubscribe headers).
 
-  ForwardFromAddress:
-    Type: String
-    Default: support@slideruleearth.io
-    Description: >
-      Verified SES identity used as the SMTP From when re-sending. Must belong
-      to the verified Domain.
-
   SupportS3Prefix:
     Type: String
     Default: email/support/
@@ -70,28 +63,6 @@ Parameters:
     Type: String
     Default: email/users/
     Description: S3 key prefix under which SES stores inbound users mail.
-
-  RejectSpam:
-    Type: String
-    Default: 'false'
-    AllowedValues: ['true', 'false']
-    Description: Drop messages SES flags as spam or virus-bearing.
-
-  MaxMessageSize:
-    Type: Number
-    Default: 10485760
-    Description: Maximum accepted message size in bytes (default 10 MB).
-
-  AutoReplyEnabled:
-    Type: String
-    Default: 'false'
-    AllowedValues: ['true', 'false']
-    Description: Send an automatic acknowledgement to support@ senders.
-
-  LogRetentionDays:
-    Type: Number
-    Default: 90
-    Description: CloudWatch Logs retention in days.
 
 # ---------------------------------------------------------------------------
 # Resources
@@ -147,13 +118,13 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-support'
-      RetentionInDays: !Ref LogRetentionDays
+      RetentionInDays: 90
 
   UsersLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-users'
-      RetentionInDays: !Ref LogRetentionDays
+      RetentionInDays: 90
 
   # =========================================================================
   # IAM -- least-privilege execution role for the SUPPORT Lambda.
@@ -187,7 +158,7 @@ Resources:
                 Resource: '*'
                 Condition:
                   StringEquals:
-                    ses:FromAddress: !Ref ForwardFromAddress
+                    ses:FromAddress: !Ref SupportEmail
               - Sid: WriteLogs
                 Effect: Allow
                 Action:
@@ -227,7 +198,7 @@ Resources:
                 Resource: '*'
                 Condition:
                   StringEquals:
-                    ses:FromAddress: !Ref ForwardFromAddress
+                    ses:FromAddress: !Ref SupportEmail
               - Sid: ReadContactList
                 Effect: Allow
                 Action:
@@ -253,7 +224,7 @@ Resources:
       Role: !GetAtt SupportLambdaRole.Arn
       Runtime: python3.13
       Architectures: [arm64]
-      Handler: support_lambda.handler
+      Handler: handler.lambda_handler
       MemorySize: 256
       Timeout: 120
       Description: Forwards support@ mail to the developer list.
@@ -262,18 +233,13 @@ Resources:
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
-          DOMAIN: !Ref Domain
-          DEVELOPER_EMAILS: !Join [',', !Ref DeveloperEmails]
-          SUPPORT_ADDRESS: !Ref SupportAddress
-          USERS_ADDRESS: !Ref UsersAddress
+          SUPPORT_EMAILS: !Join [',', !Ref SupportEmails]
+          SUPPORT_EMAIL: !Ref SupportEmail
+          USERS_EMAIL: !Ref UsersEmail
           PROJECT_BUCKET: !Ref ProjectBucket
           CONTACT_LIST_NAME: !Ref ContactListName
           CONTACT_LIST_TOPIC: !Ref ContactListTopic
-          FORWARD_FROM_ADDRESS: !Ref ForwardFromAddress
           S3_PREFIX: !Ref SupportS3Prefix
-          REJECT_SPAM: !Ref RejectSpam
-          MAX_MESSAGE_SIZE: !Ref MaxMessageSize
-          AUTO_REPLY_ENABLED: !Ref AutoReplyEnabled
 
   UsersLambda:
     Type: AWS::Lambda::Function
@@ -283,7 +249,7 @@ Resources:
       Role: !GetAtt UsersLambdaRole.Arn
       Runtime: python3.13
       Architectures: [arm64]
-      Handler: users_lambda.handler
+      Handler: handler.lambda_handler
       MemorySize: 256
       Timeout: 300
       Description: Broadcasts authorized users@ mail to opted-in subscribers.
@@ -292,17 +258,13 @@ Resources:
         S3Key: !Ref LambdaZipFile
       Environment:
         Variables:
-          DOMAIN: !Ref Domain
-          DEVELOPER_EMAILS: !Join [',', !Ref DeveloperEmails]
-          SUPPORT_ADDRESS: !Ref SupportAddress
-          USERS_ADDRESS: !Ref UsersAddress
+          SUPPORT_EMAILS: !Join [',', !Ref SupportEmails]
+          SUPPORT_EMAIL: !Ref SupportEmail
+          USERS_EMAIL: !Ref UsersEmail
           PROJECT_BUCKET: !Ref ProjectBucket
           CONTACT_LIST_NAME: !Ref ContactListName
           CONTACT_LIST_TOPIC: !Ref ContactListTopic
-          FORWARD_FROM_ADDRESS: !Ref ForwardFromAddress
           S3_PREFIX: !Ref UsersS3Prefix
-          REJECT_SPAM: !Ref RejectSpam
-          MAX_MESSAGE_SIZE: !Ref MaxMessageSize
 
   # =========================================================================
   # Lambda permissions allowing SES to invoke the functions. The SourceAccount
@@ -350,7 +312,7 @@ Resources:
         ScanEnabled: true
         TlsPolicy: Optional
         Recipients:
-          - !Ref SupportAddress
+          - !Ref SupportEmail
         Actions:
           - S3Action:
               BucketName: !Ref ProjectBucket
@@ -374,7 +336,7 @@ Resources:
         ScanEnabled: true
         TlsPolicy: Optional
         Recipients:
-          - !Ref UsersAddress
+          - !Ref UsersEmail
         Actions:
           - S3Action:
               BucketName: !Ref ProjectBucket
