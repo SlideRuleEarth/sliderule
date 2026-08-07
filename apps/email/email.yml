@@ -70,36 +70,45 @@ Parameters:
 Resources:
 
   # =========================================================================
-  # S3 -- bucket policy granting SES permission to archive inbound mail.
+  # IAM -- role that SES assumes to archive inbound mail to S3.
   #
-  # ProjectBucket is an existing bucket (the SlideRule convention). SES needs
-  # explicit s3:PutObject permission, scoped to the email/* prefixes and to
-  # this account, to write received messages.
+  # The shared ProjectBucket already has an externally-managed bucket policy
+  # (S3 allows only one policy per bucket), so this stack cannot own a bucket
+  # policy without clobbering it. Instead the SES S3 receipt action assumes
+  # this role via its IamRoleArn; for same-account delivery the role's own
+  # permissions are sufficient and no bucket policy is required. The trust
+  # policy is scoped to this account and to the specific receipt rules.
   # =========================================================================
-  EmailBucketPolicy:
-    Type: AWS::S3::BucketPolicy
+  SesS3WriteRole:
+    Type: AWS::IAM::Role
     Properties:
-      Bucket: !Ref ProjectBucket
-      PolicyDocument:
+      RoleName: !Sub '${AWS::StackName}-ses-s3-role'
+      AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: AllowSESPuts
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service: ses.amazonaws.com
-            Action: s3:PutObject
-            Resource:
-              - !Sub 'arn:aws:s3:::${ProjectBucket}/${SupportS3Prefix}*'
-              - !Sub 'arn:aws:s3:::${ProjectBucket}/${UsersS3Prefix}*'
+            Action: sts:AssumeRole
             Condition:
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
-                # Restrict writes to the specific receipt rules in this stack.
                 # ${ReceiptRuleSet} resolves to the rule set name; the rule
                 # names are the static Names on the receipt rules below.
                 aws:SourceArn:
                   - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/${ReceiptRuleSet}:receipt-rule/support-rule'
                   - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/${ReceiptRuleSet}:receipt-rule/users-rule'
+      Policies:
+        - PolicyName: ses-s3-archive
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: WriteArchivedMail
+                Effect: Allow
+                Action: s3:PutObject
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/${SupportS3Prefix}*'
+                  - !Sub 'arn:aws:s3:::${ProjectBucket}/${UsersS3Prefix}*'
 
   # =========================================================================
   # SES Contact List (subscriber storage). Subscription management is added
@@ -310,7 +319,6 @@ Resources:
   SupportReceiptRule:
     Type: AWS::SES::ReceiptRule
     DependsOn:
-      - EmailBucketPolicy
       - SupportLambdaSesPermission
     Properties:
       RuleSetName: !Ref ReceiptRuleSet
@@ -325,6 +333,7 @@ Resources:
           - S3Action:
               BucketName: !Ref ProjectBucket
               ObjectKeyPrefix: !Ref SupportS3Prefix
+              IamRoleArn: !GetAtt SesS3WriteRole.Arn
           - LambdaAction:
               FunctionArn: !GetAtt SupportLambda.Arn
               InvocationType: Event
@@ -332,7 +341,6 @@ Resources:
   UsersReceiptRule:
     Type: AWS::SES::ReceiptRule
     DependsOn:
-      - EmailBucketPolicy
       - UsersLambdaSesPermission
       - SupportReceiptRule
     Properties:
@@ -349,6 +357,7 @@ Resources:
           - S3Action:
               BucketName: !Ref ProjectBucket
               ObjectKeyPrefix: !Ref UsersS3Prefix
+              IamRoleArn: !GetAtt SesS3WriteRole.Arn
           - LambdaAction:
               FunctionArn: !GetAtt UsersLambda.Arn
               InvocationType: Event
