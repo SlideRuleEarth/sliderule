@@ -146,6 +146,7 @@ RUNNER_ZIPFILE = $(RUNNER_STACKNAME).zip
 MCP_ZIPFILE = $(MCP_STACKNAME).zip
 CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
 EMAIL_ZIPFILE = $(EMAIL_STACKNAME).zip
+EMAIL_CONTACTS_BACKUP ?= /data/contacts-backup.json
 
 ALERT_STREAM = recorder-firehose-alerts
 TELEMETRY_STREAM = recorder-firehose-telemetry
@@ -943,11 +944,12 @@ email-create: email-build ## creates the lambda email functions
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(EMAIL_STACKNAME)
 	aws ses set-active-receipt-rule-set --rule-set-name $(EMAIL_STACKNAME)-ruleset
+	@echo "make email-list-import to reload contacts from backup"
 
 email-describe: ## status the creation/deletion of the email functions
 	aws cloudformation describe-stack-events --stack-name $(EMAIL_STACKNAME)
 
-email-delete: ## deletes the lambda email functions
+email-delete: email-list-export ## deletes the lambda email functions
 	-aws ses set-active-receipt-rule-set --region $(AWS_REGION)
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(EMAIL_STACKNAME)
@@ -964,14 +966,29 @@ email-support-logs: ## display logs for recent support email invocations
 email-users-logs: ## display logs for recent users email invocations
 	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-users --since 2h --format short
 
-email-list-describe: ## display details of contact list
-	aws sesv2 get-contact-list --contact-list-name sliderule-users
+email-test: ## run email tests
+	conda run -n email --no-capture-output \
+	sh -c 'cd $(ROOT)/apps/email && \
+	SUPPORT_EMAILS=$(SUPPORT_EMAILS) \
+	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+	USERS_EMAIL=$(USERS_EMAIL) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	CONTACT_LIST_NAME="test-name" \
+	CONTACT_LIST_TOPIC="test-topic" \
+	S3_PREFIX="test/" \
+	coverage run -m pytest $(ARGS) && \
+	coverage report -m'
+
+########################
+# Contact Targets (needs Email)
+########################
+
+CONTACT ?= # someone@example.com
+ATTRS ?= # '{"name":"Jane Doe","org":"NASA"}'
 
 email-list-users: ## display list of users in contact list
 	aws sesv2 list-contacts --contact-list-name sliderule-users
 
-CONTACT ?= # someone@example.com
-ATTRS ?= # '{"name":"Jane Doe","org":"NASA"}'
 email-list-add: ## add a contact to the contact list; needs CONTACT, ATTRS
 	aws sesv2 create-contact \
 		--contact-list-name sliderule-users \
@@ -991,18 +1008,40 @@ email-list-remove: ## remove a contact from the contact list; needs CONTACT
 		--contact-list-name sliderule-users \
 		--email-address $(CONTACT)
 
-email-test: ## run email tests
-	conda run -n email --no-capture-output \
-	sh -c 'cd $(ROOT)/apps/email && \
-	SUPPORT_EMAILS=$(SUPPORT_EMAILS) \
-	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
-	USERS_EMAIL=$(USERS_EMAIL) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	CONTACT_LIST_NAME="test-name" \
-	CONTACT_LIST_TOPIC="test-topic" \
-	S3_PREFIX="test/" \
-	coverage run -m pytest $(ARGS) && \
-	coverage report -m'
+email-list-export: ## back up all contacts (topics + attributes) to EMAIL_CONTACTS_BACKUP
+	@echo "Exporting contacts from sliderule-users to $(EMAIL_CONTACTS_BACKUP)"
+	@emails=$$(aws sesv2 list-contacts --contact-list-name sliderule-users --region $(AWS_REGION) --query 'Contacts[].EmailAddress' --output text); \
+	{ \
+	  echo "["; \
+	  first=1; \
+	  for email in $$emails; do \
+	    if [ $$first -eq 0 ]; then echo ","; fi; \
+	    aws sesv2 get-contact --contact-list-name sliderule-users --email-address "$$email" --region $(AWS_REGION); \
+	    first=0; \
+	  done; \
+	  echo "]"; \
+	} | jq 'map({EmailAddress, TopicPreferences, UnsubscribeAll, AttributesData})' > $(EMAIL_CONTACTS_BACKUP); \
+	echo "Exported $$(jq 'length' $(EMAIL_CONTACTS_BACKUP)) contact(s)"
+
+email-list-import: ## restore contacts from EMAIL_CONTACTS_BACKUP (create or update each)
+	@test -f $(EMAIL_CONTACTS_BACKUP) || { echo "backup file not found: $(EMAIL_CONTACTS_BACKUP)"; exit 1; }
+	@echo "Importing contacts into sliderule-users from $(EMAIL_CONTACTS_BACKUP)"
+	@count=$$(jq 'length' $(EMAIL_CONTACTS_BACKUP)); \
+	i=0; \
+	while [ $$i -lt $$count ]; do \
+	  email=$$(jq -r ".[$$i].EmailAddress" $(EMAIL_CONTACTS_BACKUP)); \
+	  topics=$$(jq -c ".[$$i].TopicPreferences // empty" $(EMAIL_CONTACTS_BACKUP)); \
+	  unsub=$$(jq -r ".[$$i].UnsubscribeAll // false" $(EMAIL_CONTACTS_BACKUP)); \
+	  attrs=$$(jq -r ".[$$i].AttributesData // empty" $(EMAIL_CONTACTS_BACKUP)); \
+	  set -- --contact-list-name sliderule-users --email-address "$$email" --region $(AWS_REGION); \
+	  if [ -n "$$topics" ] && [ "$$topics" != "null" ]; then set -- "$$@" --topic-preferences "$$topics"; fi; \
+	  if [ "$$unsub" = "true" ]; then set -- "$$@" --unsubscribe-all; else set -- "$$@" --no-unsubscribe-all; fi; \
+	  if [ -n "$$attrs" ]; then set -- "$$@" --attributes-data "$$attrs"; fi; \
+	  echo "  $$email"; \
+	  aws sesv2 create-contact "$$@" 2>/dev/null || aws sesv2 update-contact "$$@"; \
+	  i=$$((i+1)); \
+	done; \
+	echo "Imported $$count contact(s)"
 
 ########################
 # Documentation Targets
