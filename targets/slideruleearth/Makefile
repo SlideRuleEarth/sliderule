@@ -189,6 +189,8 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
   --query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_HOSTNAME)'].Id" \
   --output text)
 
+SUPPORT_EMAILS ?= ALERT_EMAIL # currently set to single email address
+
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 BUILD_CONFIG ?= release
@@ -546,7 +548,7 @@ authenticator-build: ## builds the authenticator lambda package zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/apps/authenticator/github_oauth.py $(AUTHENTICATOR_STAGE_DIR)/package/
-	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) . -x "/*__pycache__/*"
+	cd $(AUTHENTICATOR_STAGE_DIR)/package/ && zip -r -q $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) . -x "*__pycache__*"
 
 authenticator-create: authenticator-build  ## creates the lambda authenticator functions
 	aws s3 cp $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
@@ -630,7 +632,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 	cp $(ROOT)/apps/provisioner/monitor.sh $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/apps/provisioner/node.sh $(PROVISIONER_STAGE_DIR)/package/
 	cp $(ROOT)/apps/provisioner/test.sh $(PROVISIONER_STAGE_DIR)/package/
-	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "/*__pycache__/*"
+	cd $(PROVISIONER_STAGE_DIR)/package/ && zip -r -q $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) . -x "*__pycache__*"
 
 provisioner-create: provisioner-build ## creates the lambda provisioner functions
 	aws s3 cp $(PROVISIONER_STAGE_DIR)/$(PROVISIONER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
@@ -728,7 +730,7 @@ runner-build: ## create the runner lambda zipfile
 		public.ecr.aws/lambda/python:3.13 \
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/apps/runner/runner.py $(RUNNER_STAGE_DIR)/package/
-	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) . -x "/*__pycache__/*"
+	cd $(RUNNER_STAGE_DIR)/package/ && zip -r -q $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) . -x "*__pycache__*"
 
 runner-create: runner-build ## creates the lambda runner functions
 	aws s3 cp $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
@@ -823,7 +825,7 @@ mcp-build: ## create the mcp lambda zipfile
 	cp -R $(ROOT)/apps/mcp/resources $(MCP_STAGE_DIR)/package/
 	cp -R $(ROOT)/apps/mcp/prompts $(MCP_STAGE_DIR)/package/
 	cp $(ROOT)/version.txt $(MCP_STAGE_DIR)/package/
-	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "/*__pycache__/*"
+	cd $(MCP_STAGE_DIR)/package/ && zip -r -q $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) . -x "*__pycache__*"
 
 mcp-create: mcp-build ## creates the lambda mcp functions
 	aws s3 cp $(MCP_STAGE_DIR)/$(MCP_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(MCP_ZIPFILE)
@@ -885,7 +887,7 @@ certbot-build: ## create the certbot lambda zipfile
 		public.ecr.aws/lambda/python:3.11 \
 		-c "pip install --target /host/package certbot certbot-dns-route53"
 	cp $(ROOT)/apps/certbot/main.py $(CERTBOT_STAGE_DIR)/package/
-	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) . -x "/*__pycache__/*"
+	cd $(CERTBOT_STAGE_DIR)/package/ && zip -r -q $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) . -x "*__pycache__*"
 
 certbot-create: certbot-build ## creates the lambda certbot function
 	aws s3 cp $(CERTBOT_STAGE_DIR)/$(CERTBOT_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(CERTBOT_ZIPFILE)
@@ -925,7 +927,7 @@ email-build: ## create the email lambda zipfile
 		-c "pip install --target /host/package -r /host/requirements.txt"
 	cp $(ROOT)/apps/email/mail.py $(EMAIL_STAGE_DIR)/package/
 	cp $(ROOT)/apps/email/handler.py $(EMAIL_STAGE_DIR)/package/
-	cd $(EMAIL_STAGE_DIR)/package/ && zip -r -q $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) . -x "/*__pycache__/*"
+	cd $(EMAIL_STAGE_DIR)/package/ && zip -r -q $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) . -x "*__pycache__*"
 
 email-create: email-build ## creates the lambda email functions
 	aws s3 cp $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
@@ -934,33 +936,35 @@ email-create: email-build ## creates the lambda email functions
 		--template-body file://$(ROOT)/apps/email/email.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters
-						ParameterKey=SupportEmails,ParameterValue=$(ALERT_EMAIL) \
+		--parameters.   ParameterKey=SupportEmails,ParameterValue=$(SUPPORT_EMAILS) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=UsersEmail,ParameterValue=$(USERS_EMAIL) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(EMAIL_STACKNAME)
+	aws ses set-active-receipt-rule-set --rule-set-name $(EMAIL_STACKNAME)-ruleset --region $(AWS_REGION)
 
 email-describe: ## status the creation/deletion of the email functions
 	aws cloudformation describe-stack-events --stack-name $(EMAIL_STACKNAME)
 
 email-delete: ## deletes the lambda email functions
+	-aws ses set-active-receipt-rule-set --region $(AWS_REGION)
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(EMAIL_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(EMAIL_STACKNAME)
 
 email-update: email-build ## updates the lambda email functions
 	aws s3 cp $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
-	aws lambda update-function-code --function-name $(EMAIL_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+	aws lambda update-function-code --function-name $(EMAIL_STACKNAME)-support --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+	aws lambda update-function-code --function-name $(EMAIL_STACKNAME)-users --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 
 email-logs: ## display logs for recent email invocations
 	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-gateway --since 2h --format short
 
-email-test: ## run provisioner tests
+email-test: ## run email tests
 	conda run -n email --no-capture-output \
 	sh -c 'cd $(ROOT)/apps/email && \
-	SUPPORT_EMAILS=$(ALERT_EMAIL) \
+	SUPPORT_EMAILS=$(SUPPORT_EMAILS) \
 	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
 	USERS_EMAIL=$(USERS_EMAIL) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \

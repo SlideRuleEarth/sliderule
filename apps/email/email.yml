@@ -230,7 +230,7 @@ Resources:
       Role: !GetAtt SupportLambdaRole.Arn
       Runtime: python3.13
       Architectures: [arm64]
-      Handler: handler.lambda_handler
+      Handler: handler.support_lambda
       MemorySize: 256
       Timeout: 120
       Description: Forwards support@ mail to the developer list.
@@ -255,7 +255,7 @@ Resources:
       Role: !GetAtt UsersLambdaRole.Arn
       Runtime: python3.13
       Architectures: [arm64]
-      Handler: handler.lambda_handler
+      Handler: handler.users_lambda
       MemorySize: 256
       Timeout: 300
       Description: Broadcasts authorized users@ mail to opted-in subscribers.

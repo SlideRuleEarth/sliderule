@@ -10,17 +10,17 @@ from typing import Any, Sequence
 # Globals
 # ###############################
 
-USERS_EMAIL = mail.normalize_address(os.environ['USERS_EMAIL'])
-SUPPORT_EMAIL = mail.normalize_address(os.environ['SUPPORT_EMAIL'])
-SUPPORT_EMAILS = list({e.strip().lower() for e in os.environ['SUPPORT_EMAILS'].split(",")}) # recipients of support email
-PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
-CONTACT_LIST_NAME = os.environ['CONTACT_LIST_NAME']
-CONTACT_LIST_TOPIC = os.environ['CONTACT_LIST_TOPIC']
-S3_PREFIX = os.environ["S3_PREFIX"]
+USERS_EMAIL         = mail.normalize_address(os.environ['USERS_EMAIL'])
+SUPPORT_EMAIL       = mail.normalize_address(os.environ['SUPPORT_EMAIL'])
+SUPPORT_EMAILS      = list({e.strip().lower() for e in os.environ['SUPPORT_EMAILS'].split(",")}) # recipients of support email
+PROJECT_BUCKET      = os.environ['PROJECT_BUCKET']
+CONTACT_LIST_NAME   = os.environ['CONTACT_LIST_NAME']
+CONTACT_LIST_TOPIC  = os.environ['CONTACT_LIST_TOPIC']
+S3_PREFIX           = os.environ["S3_PREFIX"]
 
-REJECT_SPAM = os.environ.get('REJECT_SPAM', True)
-MAX_MESSAGE_SIZE = os.environ.get('MAX_MESSAGE_SIZE', 5 * 1048576) # defaults to 5MB
-AUTO_REPLY = os.environ.get('AUTO_REPLY', True)
+REJECT_SPAM         = True
+MAX_MESSAGE_SIZE    = 5 * 1048576 # 5MB
+AUTO_REPLY          = True
 
 
 # ###############################
@@ -145,9 +145,12 @@ def list_opted_in_contacts(contact_list_name: str) -> list[Contact]:
 
 
 # ###############################
-# Process Support Email
+# Handle Lambdas
 # ###############################
 
+#
+# Support Email Processing
+#
 def support_email_processor(parsed: mail.ParsedEmail, notification_message_id: str) -> None:
     """
     Handle a single inbound message end to end.
@@ -211,12 +214,10 @@ def support_email_processor(parsed: mail.ParsedEmail, notification_message_id: s
                 "exception": f"{e}"
             })
 
-
-# ###############################
-# Process User Email
-# ###############################
-
-def user_email_processor(parsed: mail.ParsedEmail, notification_message_id: str) -> None:
+#
+#  Users Email Processing
+#
+def users_email_processor(parsed: mail.ParsedEmail, notification_message_id: str) -> None:
     """
     Authorize the sender and, if permitted, broadcast to subscribers.
     """
@@ -265,14 +266,16 @@ def user_email_processor(parsed: mail.ParsedEmail, notification_message_id: str)
         "contact_list_topic": CONTACT_LIST_TOPIC
     })
 
-
-# ###############################
-# Handle Lambda (entrypoint)
-# ###############################
-
-def lambda_handler(event, context):
+#
+# Process SES Notifications
+#
+def process_notifications(event, processor):
     """
-    Lambda entry point
+    1. Check for spam
+    2. Fetch raw email from S3
+    3. Parse raw email into class object
+    4. Process specific type of email
+    5. Handle errors
     """
     for notification in mail.extract_ses_notifications(event):
         try:
@@ -300,13 +303,27 @@ def lambda_handler(event, context):
             # parse email (tolerating malformed MIME)
             parsed = mail.parse_message(raw)
 
-            # route processing of email based on receipients
-            recipients = {mail.normalize_address(recipient) for recipient in notification.recipients}
-            if SUPPORT_EMAIL in recipients:
-                support_email_processor(parsed, notification.message_id)
-            elif USERS_EMAIL in recipients:
-                user_email_processor(parsed, notification.message_id)
+            # process email with passed-in email processor
+            processor(parsed, notification.message_id)
 
-        # handle exceptions
+        # handle errors
         except EmailProcessingError as e:
             log(str(e), e.payload)
+
+#
+# Support Lambda
+#
+def support_lambda(event, context):
+    """
+    Lambda entry point for support emails
+    """
+    process_notifications(event, support_email_processor)
+
+#
+# Users Lambda
+#
+def users_lambda(event, context):
+    """
+    Lambda entry point for users emails
+    """
+    process_notifications(event, users_email_processor)
