@@ -942,7 +942,7 @@ email-create: email-build ## creates the lambda email functions
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(EMAIL_STACKNAME)
-	aws ses set-active-receipt-rule-set --rule-set-name $(EMAIL_STACKNAME)-ruleset --region $(AWS_REGION)
+	aws ses set-active-receipt-rule-set --rule-set-name $(EMAIL_STACKNAME)-ruleset
 
 email-describe: ## status the creation/deletion of the email functions
 	aws cloudformation describe-stack-events --stack-name $(EMAIL_STACKNAME)
@@ -963,6 +963,33 @@ email-support-logs: ## display logs for recent support email invocations
 
 email-users-logs: ## display logs for recent users email invocations
 	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-users --since 2h --format short
+
+email-list-describe: ## display details of contact list
+	aws sesv2 get-contact-list --contact-list-name sliderule-users
+
+email-list-users: ## display list of users in contact list
+	aws sesv2 list-contacts --contact-list-name sliderule-users
+
+CONTACT ?= # someone@example.com
+ATTRS ?= # '{"name":"Jane Doe","org":"NASA"}'
+email-list-add: ## add a contact to the contact list; needs CONTACT, ATTRS
+	aws sesv2 create-contact \
+		--contact-list-name sliderule-users \
+		--email-address $(CONTACT) \
+		--topic-preferences TopicName=broadcast,SubscriptionStatus=OPT_IN \
+		$(if $(strip $(ATTRS)),--attributes-data '$(ATTRS)',) \
+
+email-list-read: ## display the details for a given contact; needs CONTACT
+	aws sesv2 get-contact \
+		--contact-list-name sliderule-users \
+		--email-address $(CONTACT) \
+		--query AttributesData \
+		--output text
+
+email-list-remove: ## remove a contact from the contact list; needs CONTACT
+	aws sesv2 delete-contact \
+		--contact-list-name sliderule-users \
+		--email-address $(CONTACT)
 
 email-test: ## run email tests
 	conda run -n email --no-capture-output \
