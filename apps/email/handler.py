@@ -249,10 +249,11 @@ def users_email_processor(parsed: mail.ParsedEmail, notification_message_id: str
                 contact_list_name=CONTACT_LIST_NAME,
                 topic_name=CONTACT_LIST_TOPIC,
             )
-        except Exception:
+        except Exception as e:
             log("broadcast send failed", {
                 "message_id": notification_message_id,
-                "recipient": recipient
+                "recipient": recipient,
+                "exception": str(e)
             })
 
     # complete

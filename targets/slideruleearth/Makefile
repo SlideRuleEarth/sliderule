@@ -189,7 +189,7 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions \
   --query "DistributionList.Items[?Aliases.Items[0]=='$(DOCUMENTATION_HOSTNAME)'].Id" \
   --output text)
 
-SUPPORT_EMAILS ?= ALERT_EMAIL # currently set to single email address
+SUPPORT_EMAILS ?= $(ALERT_EMAIL) # currently set to single email address
 
 USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
@@ -936,7 +936,7 @@ email-create: email-build ## creates the lambda email functions
 		--template-body file://$(ROOT)/apps/email/email.yml \
 		--capabilities 	CAPABILITY_NAMED_IAM \
 		--region 		$(AWS_REGION) \
-		--parameters.   ParameterKey=SupportEmails,ParameterValue=$(SUPPORT_EMAILS) \
+		--parameters    ParameterKey=SupportEmails,ParameterValue=$(SUPPORT_EMAILS) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=UsersEmail,ParameterValue=$(USERS_EMAIL) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
@@ -958,8 +958,11 @@ email-update: email-build ## updates the lambda email functions
 	aws lambda update-function-code --function-name $(EMAIL_STACKNAME)-support --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 	aws lambda update-function-code --function-name $(EMAIL_STACKNAME)-users --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
 
-email-logs: ## display logs for recent email invocations
-	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-gateway --since 2h --format short
+email-support-logs: ## display logs for recent support email invocations
+	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-support --since 2h --format short
+
+email-users-logs: ## display logs for recent users email invocations
+	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-users --since 2h --format short
 
 email-test: ## run email tests
 	conda run -n email --no-capture-output \
