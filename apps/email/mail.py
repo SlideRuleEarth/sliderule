@@ -205,6 +205,70 @@ def _delete_all(message: EmailMessage, header: str) -> None:
         del message[header]
 
 
+def _insert_before_body_close(html: str, footer: str) -> str:
+    """Insert *footer* just before the closing ``</body>`` tag if present.
+
+    Falls back to appending at the end when no ``</body>`` tag exists so the
+    footer is always included regardless of how well-formed the HTML is.
+    """
+    idx = html.lower().rfind("</body>")
+    if idx == -1:
+        return html + footer
+    return html[:idx] + footer + html[idx:]
+
+
+# The {{amazonSESUnsubscribeUrl}} placeholder is replaced per-recipient by SES
+# when ListManagementOptions is supplied on send_email (see send_raw_email).
+# Placeholder replacement works only for text/plain and text/html content and
+# only when the message is sent to a single recipient (both satisfied by the
+# per-recipient broadcast loop).
+def _append_body_footer(
+    message: EmailMessage,
+    *,
+    text_footer: str | None = None,
+    html_footer: str | None = None,
+) -> bool:
+    """Append a footer to the message's textual body parts, in place.
+
+    *text_footer* is appended to ``text/plain`` parts and *html_footer* is
+    inserted into ``text/html`` parts (before ``</body>``).  Attachments and
+    non-text parts are left untouched.  Handles both simple and multipart
+    messages.  Returns ``True`` if at least one part was modified.
+    """
+    modified = False
+
+    def _handle(part: EmailMessage) -> None:
+        nonlocal modified
+        # Never touch attachments (including .txt/.html files attached to mail).
+        if part.get_content_disposition() == "attachment":
+            return
+        ctype = part.get_content_type()
+        try:
+            if ctype == "text/plain" and text_footer:
+                body = part.get_content()
+                part.set_content(body + text_footer, subtype="plain", charset="utf-8")
+                modified = True
+            elif ctype == "text/html" and html_footer:
+                body = part.get_content()
+                part.set_content(
+                    _insert_before_body_close(body, html_footer),
+                    subtype="html",
+                    charset="utf-8",
+                )
+                modified = True
+        except Exception:  # noqa: BLE001 - a malformed part must not abort the send
+            return
+
+    if message.is_multipart():
+        for part in message.walk():
+            if not part.is_multipart():
+                _handle(part)  # type: ignore[arg-type]
+    else:
+        _handle(message)
+
+    return modified
+
+
 def build_forward(
     parsed: ParsedEmail,
     *,
@@ -212,6 +276,8 @@ def build_forward(
     forwarded_by: str,
     to_header: str | None = None,
     extra_headers: Iterable[tuple[str, str]] | None = None,
+    footer_text: str | None = None,
+    footer_html: str | None = None,
 ) -> bytes:
     """Reconstruct a deliverable, faithful forward of *parsed*.
 
@@ -229,6 +295,12 @@ def build_forward(
     extra_headers:
         Additional ``(name, value)`` headers to add (e.g. auto-generated
         tracking metadata).
+
+    footer_text / footer_html:
+        Optional footer content appended to the ``text/plain`` and
+        ``text/html`` body parts respectively (attachments are untouched).
+        Used to inject a subscription/unsubscribe footer for list broadcasts;
+        may contain the SES ``{{amazonSESUnsubscribeUrl}}`` placeholder.
 
     Returns
     -------
@@ -276,6 +348,10 @@ def build_forward(
     for name, value in extra_headers or ():
         _delete_all(forwarded, name)
         forwarded[name] = value
+
+    # Optionally append a footer (e.g. an unsubscribe link) to the body parts.
+    if footer_text is not None or footer_html is not None:
+        _append_body_footer(forwarded, text_footer=footer_text, html_footer=footer_html)
 
     # Serialize with the SMTP policy to guarantee correct CRLF line endings
     # and header folding for on-the-wire transmission.

@@ -22,6 +22,22 @@ REJECT_SPAM         = True
 MAX_MESSAGE_SIZE    = 5 * 1048576 # 5MB
 AUTO_REPLY          = True
 
+# Footer appended to users@ broadcasts.
+UNSUBSCRIBE_FOOTER_TEXT = (
+    "\n\n"
+    "-- \n"
+    "You are receiving this email because you subscribed to SlideRule\n"
+    "announcements. To unsubscribe, visit: {{amazonSESUnsubscribeUrl}}\n"
+)
+UNSUBSCRIBE_FOOTER_HTML = (
+    '<div style="margin-top:24px;padding-top:12px;'
+    'border-top:1px solid #cccccc;font-family:Arial,Helvetica,sans-serif;'
+    'font-size:12px;color:#888888;">'
+    "You are receiving this email because you subscribed to SlideRule "
+    'announcements. <a href="{{amazonSESUnsubscribeUrl}}">Unsubscribe</a>.'
+    "</div>"
+)
+
 
 # ###############################
 # Cached Objects
@@ -236,6 +252,8 @@ def users_email_processor(parsed: mail.ParsedEmail, notification_message_id: str
         forward_from=SUPPORT_EMAIL,
         forwarded_by=SUPPORT_EMAIL,
         to_header=USERS_EMAIL,
+        footer_text=UNSUBSCRIBE_FOOTER_TEXT,
+        footer_html=UNSUBSCRIBE_FOOTER_HTML,
     )
 
     # send email to each subscriber from the SES Contact List that has opted in
