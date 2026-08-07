@@ -541,7 +541,7 @@ authenticator-build: ## builds the authenticator lambda package zipfile
 	-rm -Rf $(AUTHENTICATOR_STAGE_DIR)
 	mkdir -p $(AUTHENTICATOR_STAGE_DIR)
 	cp $(ROOT)/apps/authenticator/requirements.txt $(AUTHENTICATOR_STAGE_DIR)/
-	docker run -it --rm \
+	docker run --rm \
 		-v $(AUTHENTICATOR_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
@@ -617,7 +617,7 @@ provisioner-build: ## create the provisioner lambda zipfile
 	-rm -Rf $(PROVISIONER_STAGE_DIR)
 	mkdir -p $(PROVISIONER_STAGE_DIR)
 	cp $(ROOT)/apps/provisioner/requirements.txt $(PROVISIONER_STAGE_DIR)/
-	docker run -it --rm \
+	docker run --rm \
 		-v $(PROVISIONER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
@@ -723,7 +723,7 @@ runner-build: ## create the runner lambda zipfile
 	-rm -Rf $(RUNNER_STAGE_DIR)
 	mkdir -p $(RUNNER_STAGE_DIR)
 	cp $(ROOT)/apps/runner/requirements.txt $(RUNNER_STAGE_DIR)/
-	docker run -it --rm \
+	docker run --rm \
 		-v $(RUNNER_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
@@ -814,7 +814,7 @@ mcp-build: ## create the mcp lambda zipfile
 	-rm -Rf $(MCP_STAGE_DIR)
 	mkdir -p $(MCP_STAGE_DIR)
 	cp $(ROOT)/apps/mcp/requirements.txt $(MCP_STAGE_DIR)/
-	docker run -it --rm \
+	docker run --rm \
 		-v $(MCP_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
@@ -880,7 +880,7 @@ mcp-test: ## run provisioner tests
 certbot-build: ## create the certbot lambda zipfile
 	-rm -Rf $(CERTBOT_STAGE_DIR)
 	mkdir -p $(CERTBOT_STAGE_DIR)
-	docker run -it --rm \
+	docker run --rm \
 		-v $(CERTBOT_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
@@ -919,7 +919,7 @@ email-build: ## create the email lambda zipfile
 	-rm -Rf $(EMAIL_STAGE_DIR)
 	mkdir -p $(EMAIL_STAGE_DIR)
 	cp $(ROOT)/apps/email/requirements.txt $(EMAIL_STAGE_DIR)/
-	docker run -it --rm \
+	docker run --rm \
 		-v $(EMAIL_STAGE_DIR):/host \
 		--user $(shell id -u):$(shell id -g) \
 		--entrypoint /bin/bash \
