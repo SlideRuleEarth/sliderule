@@ -37,8 +37,6 @@ Parameters:
     Type: String
   AffiliatesFilename:
     Type: String
-  EmailDomain:
-    Type: String
   SupportEmail:
     Type: String
   AlertEmail:
@@ -203,7 +201,7 @@ Resources:
                   - ses:SendEmail
                   - ses:SendRawEmail
                 Resource:
-                  - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailDomain}
+                  - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${Domain}
                   - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SupportEmail}
                 Condition:
                   ForAllValues:StringEquals:

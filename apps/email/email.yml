@@ -94,6 +94,12 @@ Resources:
             Condition:
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
+                # Restrict writes to the specific receipt rules in this stack.
+                # ${ReceiptRuleSet} resolves to the rule set name; the rule
+                # names are the static Names on the receipt rules below.
+                aws:SourceArn:
+                  - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/${ReceiptRuleSet}:receipt-rule/support-rule'
+                  - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/${ReceiptRuleSet}:receipt-rule/users-rule'
 
   # =========================================================================
   # SES Contact List (subscriber storage). Subscription management is added
@@ -277,6 +283,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: ses.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/${ReceiptRuleSet}:receipt-rule/support-rule'
 
   UsersLambdaSesPermission:
     Type: AWS::Lambda::Permission
@@ -285,6 +292,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: ses.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/${ReceiptRuleSet}:receipt-rule/users-rule'
 
   # =========================================================================
   # SES Receipt Rule Set + Rules

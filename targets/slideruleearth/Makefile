@@ -83,6 +83,7 @@ RUNNER_STAGE_DIR = $(STAGE)/runner
 AUTHENTICATOR_STAGE_DIR = $(STAGE)/authenticator
 RECORDER_STAGE_DIR = $(STAGE)/recorder
 MCP_STAGE_DIR = $(STAGE)/mcp
+EMAIL_STAGE_DIR = $(STAGE)/email
 DOCUMENTATION_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
 DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
@@ -105,8 +106,8 @@ PUBLIC_CLUSTER ?= sliderule
 CLUSTER ?= developers
 VERSION ?= unstable
 BRANCH ?= main
-EMAIL_DOMAIN ?= mail.slideruleearth.io
-SUPPORT_EMAIL ?= support@$(EMAIL_DOMAIN)
+SUPPORT_EMAIL ?= support@$(DOMAIN)
+USERS_EMAIL ?= users@$(DOMAIN)
 CORS_ALLOW_ORIGINS ?= "https://client.$(DOMAIN)"
 
 PROJECT_BUCKET = sliderule
@@ -127,6 +128,7 @@ PROVISIONER_STACKNAME = provisioner-$(BASE_DOMAIN)
 RUNNER_STACKNAME = runner-$(BASE_DOMAIN)
 MCP_STACKNAME = mcp-$(BASE_DOMAIN)
 CERTBOT_STACKNAME = certbot-$(BASE_DOMAIN)
+EMAIL_STACKNAME = email-$(BASE_DOMAIN)
 DOCUMENTATION_STACKNAME = documentation-$(BASE_DOMAIN)
 # not scoped to domain (we only want one)
 RECORDER_STACKNAME = recorder
@@ -143,6 +145,7 @@ PROVISIONER_ZIPFILE = $(PROVISIONER_STACKNAME).zip
 RUNNER_ZIPFILE = $(RUNNER_STACKNAME).zip
 MCP_ZIPFILE = $(MCP_STACKNAME).zip
 CERTBOT_ZIPFILE = $(CERTBOT_STACKNAME).zip
+EMAIL_ZIPFILE = $(EMAIL_STACKNAME).zip
 
 ALERT_STREAM = recorder-firehose-alerts
 TELEMETRY_STREAM = recorder-firehose-telemetry
@@ -651,7 +654,6 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
 						ParameterKey=AffiliatesFilename,ParameterValue=$(AFFILIATES_FILENAME) \
-						ParameterKey=EmailDomain,ParameterValue=$(EMAIL_DOMAIN) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
@@ -748,7 +750,6 @@ runner-create: runner-build ## creates the lambda runner functions
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
-						ParameterKey=EmailDomain,ParameterValue=$(EMAIL_DOMAIN) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
@@ -909,7 +910,68 @@ certbot-delete: ## deletes the lambda certbot function
 	aws cloudformation wait stack-delete-complete --stack-name $(CERTBOT_STACKNAME)
 
 ########################
-# Website Targets
+# Email Targets
+########################
+
+email-build: ## create the email lambda zipfile
+	-rm -Rf $(EMAIL_STAGE_DIR)
+	mkdir -p $(EMAIL_STAGE_DIR)
+	cp $(ROOT)/apps/email/requirements.txt $(EMAIL_STAGE_DIR)/
+	docker run -it --rm \
+		-v $(EMAIL_STAGE_DIR):/host \
+		--user $(shell id -u):$(shell id -g) \
+		--entrypoint /bin/bash \
+		public.ecr.aws/lambda/python:3.13 \
+		-c "pip install --target /host/package -r /host/requirements.txt"
+	cp $(ROOT)/apps/email/mail.py $(EMAIL_STAGE_DIR)/package/
+	cp $(ROOT)/apps/email/handler.py $(EMAIL_STAGE_DIR)/package/
+	cd $(EMAIL_STAGE_DIR)/package/ && zip -r -q $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) . -x "/*__pycache__/*"
+
+email-create: email-build ## creates the lambda email functions
+	aws s3 cp $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+	aws cloudformation create-stack \
+		--stack-name 	$(EMAIL_STACKNAME) \
+		--template-body file://$(ROOT)/apps/email/email.yml \
+		--capabilities 	CAPABILITY_NAMED_IAM \
+		--region 		$(AWS_REGION) \
+		--parameters
+						ParameterKey=SupportEmails,ParameterValue=$(ALERT_EMAIL) \
+						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
+						ParameterKey=UsersEmail,ParameterValue=$(USERS_EMAIL) \
+						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+	aws cloudformation wait stack-create-complete --stack-name $(EMAIL_STACKNAME)
+
+email-describe: ## status the creation/deletion of the email functions
+	aws cloudformation describe-stack-events --stack-name $(EMAIL_STACKNAME)
+
+email-delete: ## deletes the lambda email functions
+	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+	aws cloudformation delete-stack --stack-name $(EMAIL_STACKNAME)
+	aws cloudformation wait stack-delete-complete --stack-name $(EMAIL_STACKNAME)
+
+email-update: email-build ## updates the lambda email functions
+	aws s3 cp $(EMAIL_STAGE_DIR)/$(EMAIL_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+	aws lambda update-function-code --function-name $(EMAIL_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(EMAIL_ZIPFILE)
+
+email-logs: ## display logs for recent email invocations
+	aws logs tail /aws/lambda/$(EMAIL_STACKNAME)-gateway --since 2h --format short
+
+email-test: ## run provisioner tests
+	conda run -n email --no-capture-output \
+	sh -c 'cd $(ROOT)/apps/email && \
+	SUPPORT_EMAILS=$(ALERT_EMAIL) \
+	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
+	USERS_EMAIL=$(USERS_EMAIL) \
+	PROJECT_BUCKET=$(PROJECT_BUCKET) \
+	CONTACT_LIST_NAME="test-name" \
+	CONTACT_LIST_TOPIC="test-topic" \
+	S3_PREFIX="test/" \
+	coverage run -m pytest $(ARGS) && \
+	coverage report -m'
+
+########################
+# Documentation Targets
 ########################
 
 documentation-prep: ## create environment for building documentation
