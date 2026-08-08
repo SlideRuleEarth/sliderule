@@ -539,6 +539,19 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
     try
     {
+        /* Check YAPC Configuration */
+        if(parms.stages[Icesat2Parameters::STAGE_YAPC])
+        {
+            if(parms.yapc.version.value != 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "yapc version %d is not supported by atl03x; only version 0 (scores read from the ATL03 granule) is supported", parms.yapc.version.value);
+            }
+            if(!df->useYapc006 && !df->useYapc007)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "yapc scores are not present in ATL03 granules prior to release 006 (granule release: %d)", parms.granuleFields.version.value);
+            }
+        }
+
         /* Start Reading ATL08 Data */
         Atl08Class atl08(df);
 
@@ -678,7 +691,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             if(df->useYapc006) // read from atl03 granule release 006
             {
                 yapc_score = atl03.weight006_ph[current_photon];
-                if(yapc_score < parms.yapc.score)
+                if(yapc_score < parms.yapc.score.value)
                 {
                     continue;
                 }
@@ -686,7 +699,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             else if(df->useYapc007) // read from atl03 granule release 007
             {
                 yapc_score = atl03.weight007_ph[current_photon];
-                if(yapc_score < parms.yapc.score)
+                if(yapc_score < parms.yapc.score.value)
                 {
                     continue;
                 }

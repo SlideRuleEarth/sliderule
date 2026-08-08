@@ -62,6 +62,18 @@ runner.unittest("ICESat-2 Fields", function()
 
 end)
 
+-- Self Test --
+
+runner.unittest("Invalid YAPC Version", function()
+
+    local parms = icesat2.parms03({
+        yapc = { version = 9 }
+    })
+
+    runner.assert(parms == false)
+
+end)
+
 -- Report Results --
 
 runner.report()

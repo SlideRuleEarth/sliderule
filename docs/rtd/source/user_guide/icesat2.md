@@ -46,7 +46,7 @@ The default resulting DataFrame from this endpoint contains the following column
 |landcover|ATL08 land cover flags||Optional: must enable `phoreal`|
 |snowcover|ATL08 snow cover flags||Optional: must enable `phoreal`|
 |atl08_class|ATL08 photon classification|0:noise, 1:ground, 2:canopy, 3:top of canopy, 4:unclassified|Optional: must enable `phoreal` or specify `atl08_class`|
-|yapc_score|YAPC photon weight|0-255, higher is denser|Optional: must enable `yapc`|
+|yapc_score|YAPC photon weight|higher is denser; 0-65535 for scores read from release 007 granules, 0-255 for release 006|Optional: must enable `yapc`|
 |atl24_class|ATL24 photon classification|0:unclassified, 40:bathymetry, 41:sea surface|Optional: must enable `atl24`|
 |atl24_confidence|ATL24 photon classification bathymetry confidence score|0 to 1.0, higher is more confident (float)|Optional: must enable `atl24`|
 |spot|ATLAS detector field of view|1-6|Independent of spacecraft orientation|
@@ -88,12 +88,12 @@ ATL03 contains a set of photon classification values, that are designed to ident
 The experimental YAPC (Yet Another Photon Classifier) photon-classification scheme assigns each photon a score based on the number of adjacent photons.  YAPC parameters are provided as a dictionary, with entries described below:
 
 * `yapc`: settings for the yapc algorithm; if provided then SlideRule will execute the YAPC classification on all photons
-    - `score`: the minimum yapc classification score of a photon to be used in the processing request
+    - `score`: the minimum yapc classification score of a photon to be used in the processing request; the score is compared against the raw score values, so its scale depends on where the scores come from: 0-65535 for scores read from release 007 granules (`weight_ph`, where 65535 represents the saturation density), 0-255 for scores read from release 006 granules and for scores calculated on the servers (versions 1-3)
     - `knn`: the number of nearest neighbors to use, or specify 0 to allow automatic selection of the number of neighbors (version 2 only)
     - `min_knn`: minimum number of k-nearest neighbors (version 3 only)
     - `win_h`: the window height used to filter the nearest neighbors (overrides calculated value if non-zero)
     - `win_x`: the window width used to filter the nearest neighbors
-    - `version`: the version of the YAPC algorithm to use; 0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`)
+    - `version`: the version of the YAPC algorithm to use; 0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`; requests to `atl03x` with versions 1-3 are rejected with an error)
 
 To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here is an example set of parameters that runs YAPC:
 
@@ -531,7 +531,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - `atl08_class`: the photon's ATL08 classification (0: noise, 1: ground, 2: canopy, 3: top of canopy, 4: unclassified)
 - `atl03_cnf`: the photon's ATL03 confidence level (-2: TEP, -1: not considered, 0: background, 1: within 10m, 2: low, 3: medium, 4: high)
 - `quality_ph`: the photon's quality classification (0: nominal, 1: possible after pulse, 2: possible impulse responpse effect, 3: possible tep)
-- `yapc_score`: the photon's YAPC classification (0 - 255, the larger the number the higher the confidence in surface reflection)
+- `yapc_score`: the photon's YAPC classification (the larger the number the higher the confidence in surface reflection; 0 - 65535 for scores read from release 007 granules, 0 - 255 otherwise)
 
 Note: when PhoREAL is enabled, the ATL03 extent records (_atl03rec_) are enhanced to include the following populated fields:
 

@@ -179,6 +179,73 @@ runner.unittest("ATL06 Surface Fitter", function()
 
 end, {"long"})
 
+-- Self Test --
+
+runner.unittest("ATL03 DataFrame - YAPC Score Filter", function()
+
+    local poly = {
+        { lon = -42.0, lat = 79.9 },
+        { lon = -40.0, lat = 79.9 },
+        { lon = -40.0, lat = 80.1 },
+        { lon = -42.0, lat = 80.1 },
+        { lon = -42.0, lat = 79.9 }
+    }
+
+    local function count_rows(score)
+        local parms = icesat2.parms03({
+            srt = 3,
+            cnf = -2,
+            poly = poly,
+            yapc = { version = 0, score = score },
+            resource = "ATL03_20200304065203_10470605_007_01.h5"
+        }, nil, "icesat2")
+        local atl03h5 = h5coro.object(asset_name, parms["resource"])
+        local df = icesat2.atl03x("gt1l", parms, atl03h5, nil, nil, core.EVENTQ)
+        runner.assert(df:waiton(240000), "timed out creating dataframe", true)
+        runner.assert(df:inerror() == false, "dataframe encountered error")
+        local min_score = 65535
+        for i = 1, math.min(df:numrows(), 1000) do
+            if df["yapc_score"][i] < min_score then
+                min_score = df["yapc_score"][i]
+            end
+        end
+        return df:numrows(), min_score
+    end
+
+    local rows_all, min_score_all = count_rows(0)
+    local rows_mid, min_score_mid = count_rows(1000)
+    local rows_high, min_score_high = count_rows(8000)
+
+    runner.assert(rows_all > 0, "no photons returned for score 0")
+    runner.assert(rows_mid <= rows_all, string.format("score 1000 did not filter photons: %d > %d", rows_mid, rows_all))
+    runner.assert(rows_high < rows_all, string.format("score 8000 did not filter photons: %d >= %d", rows_high, rows_all))
+    runner.assert(rows_high <= rows_mid, string.format("score threshold not monotonic: %d > %d", rows_high, rows_mid))
+    runner.assert(min_score_mid >= 1000, string.format("photon below score threshold returned: %d < 1000", min_score_mid))
+    runner.assert(min_score_high >= 8000, string.format("photon below score threshold returned: %d < 8000", min_score_high))
+    print(string.format("rows: %d (score 0, min %d), %d (score 1000, min %d), %d (score 8000, min %d)",
+        rows_all, min_score_all, rows_mid, min_score_mid, rows_high, min_score_high))
+
+end)
+
+-- Self Test --
+
+runner.unittest("ATL03 DataFrame - YAPC Unsupported Version", function()
+
+    local parms = icesat2.parms03({
+        srt = 3,
+        cnf = 4,
+        yapc = { version = 3, score = 0 },
+        resource = "ATL03_20200304065203_10470605_007_01.h5"
+    }, nil, "icesat2")
+
+    local atl03h5 = h5coro.object(asset_name, parms["resource"])
+    local df = icesat2.atl03x("gt1l", parms, atl03h5, nil, nil, core.EVENTQ)
+
+    runner.assert(df:waiton(30000), "timed out creating dataframe", true)
+    runner.assert(df:numrows() == 0, string.format("photons returned for unsupported yapc version: %d", df:numrows()))
+
+end)
+
 -- Report Results --
 
 runner.report()
