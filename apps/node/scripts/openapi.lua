@@ -143,7 +143,7 @@ local function dataframe_schemas()
     output(outputdir.."/components/schemas/Gedi04aDataFrame.json", gedi.gedi04ax("beam0", gedi.parmsl4()):describe("GEDI 4A above ground biomass density"))
     -- icesat2
     sys.log(core.INFO, "Building schemas for ICESat-2 dataframes")
-    output(outputdir.."/components/schemas/Atl03DataFrame.json", icesat2.atl03x("gt1l", icesat2.parms03({phoreal={}, fit={}, atl24={compact=false}, atl08_class={}, yapc={}})):describe("ICESat-2 photon cloud (ATL03)"))
+    output(outputdir.."/components/schemas/Atl03DataFrame.json", icesat2.atl03x("gt1l", icesat2.parms03({phoreal={}, fit={}, atl24={compact=false}, atl08_class={}, yapc={}, atl03_signal_class={"primary_signal"}})):describe("ICESat-2 photon cloud (ATL03)"))
     output(outputdir.."/components/schemas/Atl06DataFrame.json", icesat2.atl06x("gt1l", icesat2.parms06()):describe("ICESat-2 ice-sheet elevations (ATL06)"))
     output(outputdir.."/components/schemas/Atl08DataFrame.json", icesat2.atl08x("gt1l", icesat2.parms08()):describe("ICESat-2 vegetation metrics (ATL08)"))
     output(outputdir.."/components/schemas/Atl13DataFrame.json", icesat2.atl13x("gt1l", icesat2.parms13()):describe("ICESat-2 in-land lake metrics (ATL13)"))
