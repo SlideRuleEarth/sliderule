@@ -187,6 +187,12 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Atl03Parameters* 
     /* Read Global Resource Information */
     try
     {
+        /* Check ATL03 Signal Classification Configuration */
+        if(parms->atl03SignalClass.anyEnabled())
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "atl03_signal_class selection is not supported by this endpoint; use atl03x");
+        }
+
         /* Create H5Coro Contexts */
         context = new H5Coro::Context(parms->asset.asset, parms->getResource());
         context08 = new H5Coro::Context(parms->asset.asset, resource08);

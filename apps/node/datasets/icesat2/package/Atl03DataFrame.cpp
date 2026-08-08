@@ -139,6 +139,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Atl03Paramet
     usePodppd(parms->podppdMask.value != 0x00),
     useYapc006(parms->stages[Icesat2Parameters::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)),
     useYapc007(parms->stages[Icesat2Parameters::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
+    useSignalClass(parms->atl03SignalClass.anyEnabled()),
     useGeoid(parms->datum.value == MathLib::EGM08)
 {
     /* Set Optional PhoREAL Columns */
@@ -159,6 +160,12 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Atl03Paramet
     if(parms->stages[Icesat2Parameters::STAGE_ATL08])
     {
         addColumn("atl08_class",        &atl08_class,       "ATL08 classification of photon; included for atl08 classificaiton",            false);
+    }
+
+    /* Set Optional ATL03 Signal Classification Columns */
+    if(useSignalClass)
+    {
+        addColumn("atl03_signal_class", &atl03_signal_class,"ATL03 signal classification of photon; included for atl03 signal classification", false);
     }
 
     /* Set Optional ATL24 Columns */
@@ -231,6 +238,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
     quality_ph          (df->hdf03, FString("%s/%s", df->beam, "heights/quality_ph").c_str(),           0, aoi.first_photon,  aoi.num_photons),
     weight006_ph        (df->useYapc006 ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
     weight007_ph        (df->useYapc007 ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
+    signal_class_ph     (df->useSignalClass ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/signal_class_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
     lat_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lat_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
     lon_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lon_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
     delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, aoi.first_photon,  aoi.num_photons),
@@ -257,6 +265,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest03
     quality_ph.join(df->readTimeoutMs, true);
     if(df->useYapc006) weight006_ph.join(df->readTimeoutMs, true);
     if(df->useYapc007) weight007_ph.join(df->readTimeoutMs, true);
+    if(df->useSignalClass) signal_class_ph.join(df->readTimeoutMs, true);
     lat_ph.join(df->readTimeoutMs, true);
     lon_ph.join(df->readTimeoutMs, true);
     delta_time.join(df->readTimeoutMs, true);
@@ -552,6 +561,12 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
         }
 
+        /* Check ATL03 Signal Classification Configuration */
+        if(df->useSignalClass && (parms.granuleFields.version.value < 7))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "atl03_signal_class selection requires ATL03 release 007 or later (granule release: %d)", parms.granuleFields.version.value);
+        }
+
         /* Start Reading ATL08 Data */
         Atl08Class atl08(df);
 
@@ -705,6 +720,21 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 }
             }
 
+            /* Set and Check ATL03 Signal Classification */
+            int8_t atl03_signal_class = static_cast<int8_t>(Icesat2Parameters::ATL03_SIGNAL_IGNORED);
+            if(df->useSignalClass)
+            {
+                atl03_signal_class = atl03.signal_class_ph[current_photon];
+                if(atl03_signal_class < Icesat2Parameters::ATL03_SIGNAL_IGNORED || atl03_signal_class > Icesat2Parameters::ATL03_SIGNAL_FITTED)
+                {
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal classification: %d", atl03_signal_class);
+                }
+                else if(!parms.atl03SignalClass[static_cast<Icesat2Parameters::atl03_signal_class_t>(atl03_signal_class)])
+                {
+                    continue;
+                }
+            }
+
             /* Set PhoREAL Fields */
             float relief = 0.0;
             uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
@@ -796,6 +826,12 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             if(parms.stages[Icesat2Parameters::STAGE_YAPC])
             {
                 df->yapc_score.append(yapc_score);
+            }
+
+            /* Add Optional ATL03 Signal Classification Data */
+            if(df->useSignalClass)
+            {
+                df->atl03_signal_class.append(atl03_signal_class);
             }
 
             /* Add Optional ATL08 Data */

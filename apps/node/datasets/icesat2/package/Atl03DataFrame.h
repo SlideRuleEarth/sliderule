@@ -85,6 +85,7 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<uint8_t>        snowcover;                      // ATL08 snow cover flags
         FieldColumn<uint8_t>        atl08_class;                    // ATL08 classification
         FieldColumn<uint16_t>       yapc_score;                     // YAPC weight of photon
+        FieldColumn<int8_t>         atl03_signal_class;             // ATL03 signal classification (signal_class_ph)
         FieldColumn<uint8_t>        atl24_class;                    // ATL24 classification
         FieldColumn<float>          atl24_confidence;               // ATL24 classification confidence score
 
@@ -130,6 +131,7 @@ class Atl03DataFrame: public GeoDataFrame
                 H5Array<int8_t>     quality_ph;
                 H5Array<uint8_t>    weight006_ph; // yapc from release 006
                 H5Array<uint16_t>   weight007_ph; // yapc from release 007
+                H5Array<int8_t>     signal_class_ph; // atl03 signal classification from release 007
                 H5Array<double>     lat_ph;
                 H5Array<double>     lon_ph;
                 H5Array<double>     delta_time;
@@ -231,6 +233,7 @@ class Atl03DataFrame: public GeoDataFrame
         bool                usePodppd;
         bool                useYapc006;
         bool                useYapc007;
+        bool                useSignalClass;
         bool                useGeoid;
 
         /*--------------------------------------------------------------------

@@ -366,3 +366,36 @@ class TestAtl03x:
         assert init
         assert len(gdf) == 0 # yapc versions 1-3 are rejected by atl03x
         assert "not supported by atl03x" in caplog.text # rejection was loud, not an incidental empty result
+
+    def test_signal_class_filter(self, init):
+        base = { "track": 1,
+                 "cnf": -2,
+                 "srt": 3 }
+        gdf_all = sliderule.run("atl03x", base, AOI, RESOURCES_007)
+        gdf_sel = sliderule.run("atl03x", {**base, "atl03_signal_class": ["primary_signal", "fitted_signal"]}, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf_all) > 0
+        assert 0 < len(gdf_sel) < len(gdf_all)
+        assert "atl03_signal_class" in gdf_sel.keys()
+        assert set(np.unique(gdf_sel.atl03_signal_class)) <= {4, 5}
+
+    def test_signal_class_fit(self, init):
+        base = { "track": 1,
+                 "cnf": -2,
+                 "srt": 3,
+                 "fit": {} }
+        gdf_all = sliderule.run("atl03x", base, AOI, RESOURCES_007)
+        gdf_sel = sliderule.run("atl03x", {**base, "atl03_signal_class": ["primary_signal", "fitted_signal"]}, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf_all) > 0
+        assert 0 < len(gdf_sel) <= len(gdf_all)
+        assert gdf_sel.n_fit_photons.sum() < gdf_all.n_fit_photons.sum() # fit runs on selected photons only
+
+    def test_signal_class_pre007(self, init):
+        parms = { "track": 1,
+                  "cnf": -2,
+                  "srt": 3,
+                  "atl03_signal_class": ["primary_signal", "fitted_signal"] }
+        gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
+        assert init
+        assert len(gdf) == 0 # signal_class_ph not present before release 007

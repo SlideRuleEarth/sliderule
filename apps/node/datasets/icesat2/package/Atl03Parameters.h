@@ -167,6 +167,7 @@ class Atl03Parameters: public Icesat2Parameters
                                                                         false, false, false, false, false, false,
                                                                         false, false };
         FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
+        FieldEnumeration<atl03_signal_class_t,NUM_ATL03_SIGNAL_CLASSES> atl03SignalClass {false, false, false, false, false, false, false}; // list of signal_class_ph classifications to use (leave empty to skip; requires release 007)
         FieldElement<int>                                   minPhotonCount {10};                                    // PE
         FieldElement<double>                                minAlongTrackSpread {20.0};                             // meters
         FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)

@@ -47,6 +47,7 @@ The default resulting DataFrame from this endpoint contains the following column
 |snowcover|ATL08 snow cover flags||Optional: must enable `phoreal`|
 |atl08_class|ATL08 photon classification|0:noise, 1:ground, 2:canopy, 3:top of canopy, 4:unclassified|Optional: must enable `phoreal` or specify `atl08_class`|
 |yapc_score|YAPC photon weight|higher is denser; 0-65535 for scores read from release 007 granules, 0-255 for release 006|Optional: must enable `yapc`|
+|atl03_signal_class|ATL03 signal classification|-1:ignored, 0:likely_noise, 1:likely_signal, 2:signal_below, 3:signal_above, 4:primary_signal, 5:fitted_signal|Optional: must specify `atl03_signal_class`; requires ATL03 release 007|
 |atl24_class|ATL24 photon classification|0:unclassified, 40:bathymetry, 41:sea surface|Optional: must enable `atl24`|
 |atl24_confidence|ATL24 photon classification bathymetry confidence score|0 to 1.0, higher is more confident (float)|Optional: must enable `atl24`|
 |spot|ATLAS detector field of view|1-6|Independent of spacecraft orientation|
@@ -124,6 +125,14 @@ If ATL24 classification parameters are specified, the ATL24 (bathymetry) files c
 :::{note}
 ATL24 is typically a release behind the ATL03 standard data product which it is based on.  In order to correlate ATL24 classifications to ATL03, a release of ATL03 must be selected that has a corresponding ATL24 release.
 :::
+
+#### 1.2.5 ATL03 Signal Classification
+
+Starting with release 007, ATL03 granules include an experimental per-photon signal classification (`signal_class_ph`) derived from the `weight_ph` photon weights; photons with the highest weights (the highest reflectors) are labelled as the primary signal, and the fitted photons are the subset of the primary signal most likely to represent a surface return.  If ATL03 signal classification parameters are specified, photons are selected based on the classification values specified, and the classification of each selected photon is included in the response.
+
+* `atl03_signal_class`: list of ATL03 signal classifications used to select which photons are used in the processing (the available classifications are: "ignored", "likely_noise", "likely_signal", "signal_below", "signal_above", "primary_signal", "fitted_signal"; the corresponding numeric values -1 through 5 may also be supplied)
+
+This selection is only supported by the `atl03x` endpoint and requires ATL03 release 007 or later granules; requests against earlier releases are rejected with an error.  Because the selection happens before any of the processing algorithms run, it can be combined with `fit` to produce elevations fit to only the selected photons (for example, a fit to the highest reflecting surface using ["primary_signal", "fitted_signal"]).
 
 ### 1.3 Photon-extent Parameters
 
