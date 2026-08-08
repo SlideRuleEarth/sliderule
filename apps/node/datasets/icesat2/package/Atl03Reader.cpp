@@ -861,6 +861,10 @@ Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, con
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid YAPC version specified: %d", info->reader->parms->yapc.version.value);
     }
+    else if(!atl03.read_yapc006 && !atl03.read_yapc007) // version 0, but no granule scores available
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "YAPC scores are not present in ATL03 granules prior to release 006 (granule release: %d)", info->reader->parms->granuleFields.version.value);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1394,7 +1398,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         if(yapc.score) // dynamically calculated
                         {
                             yapc_score = yapc[current_photon];
-                            if(yapc_score < parms->yapc.score)
+                            if(yapc_score < parms->yapc.score.value)
                             {
                                 break;
                             }
@@ -1402,7 +1406,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         else if(atl03.read_yapc006) // read from atl03 granule release 006
                         {
                             yapc_score = atl03.weight006_ph[current_photon];
-                            if(yapc_score < parms->yapc.score)
+                            if(yapc_score < parms->yapc.score.value)
                             {
                                 break;
                             }
@@ -1410,7 +1414,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         else if(atl03.read_yapc007) // read from atl03 granule release 007
                         {
                             yapc_score = atl03.weight007_ph[current_photon];
-                            if(yapc_score < parms->yapc.score)
+                            if(yapc_score < parms->yapc.score.value)
                             {
                                 break;
                             }
