@@ -182,7 +182,7 @@ class BathyDataFrame: public GeoDataFrame
 
         std::atomic<bool>   active;
         Thread*             pid;
-        BathyParameters*        parms;
+        BathyParameters*    parms;
         BathyMask*          bathyMask;
         H5Object*           hdf03;      // atl03 granule
         Publisher*          rqstQ;

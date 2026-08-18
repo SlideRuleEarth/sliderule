@@ -38,6 +38,7 @@
 #include "Asset.h"
 #include "Icesat2Parameters.h"
 #include "Atl03DataFrame.h"
+#include "Atl03Granule.h"
 #include "Atl03Reader.h"
 #include "Atl03Parameters.h"
 #include "Atl03Viewer.h"
@@ -110,6 +111,8 @@ int icesat2_open (lua_State *L)
         {"atmo",                Atl09Sampler::luaCreate},
         {"atl13x",              Atl13DataFrame::luaCreate},
         {"atl24x",              Atl24DataFrame::luaCreate},
+        // misc
+        {"atl03granule",        Atl03Granule::luaCreate},
         {"atl24granule",        Atl24Granule::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},

@@ -285,7 +285,7 @@ job: ## execute the job runner locally
 	CLUSTER=localhost \
 	DOMAIN=localhost \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(INSTALLDIR)/bin/sliderule $(ROOT)/apps/nodes/scripts/job_runner.lua $(ARGS)
+	$(INSTALLDIR)/bin/sliderule $(ROOT)/apps/node/scripts/job_runner.lua $(ARGS)
 
 python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \

@@ -199,10 +199,12 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find surface_h column");
     }
 
-    /* Create New Columns */
-    FieldColumn<float>*     refracted_dZ  = new FieldColumn<float>;
-    FieldColumn<double>*    refracted_lat = new FieldColumn<double>;
-    FieldColumn<double>*    refracted_lon = new FieldColumn<double>;
+    /* Get Classification Column */
+    FieldColumn<int>* class_ph = reinterpret_cast<FieldColumn<int>*>(df.getColumn("class_ph"));
+    if(!class_ph)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find class_ph column");
+    }
 
     /* Get UTM Transformations */
     GeoLib::UTMTransform utm_transform(df.lat_ph[0], df.lon_ph[0]);
@@ -211,20 +213,20 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     /* Run Refraction Correction */
     for(long i = 0; i < df.length(); i++)
     {
-        /* Get Refraction Index of Water */
-        double ri_water = refraction_parms.RIWater.value;
-        if(waterRiMask)
-        {
-            const double pixel = sampleWaterMask(waterRiMask, df.lon_ph[i], df.lat_ph[i]);
-            if(pixel > 0.0) ri_water = pixel; // only set if valid pixel
-        }
-
-        /* Correct All Subaqueous Photons */
+        /* Correct All Subaqueous and Non-Sea-Surface Photons */
         const double depth = (*surface_h)[i] - df.geoid_corr_h[i]; // compute un-refraction-corrected depths
-        if(depth > 0)
+        if((depth > 0) && ((*class_ph)[i] != BathyParameters::SEA_SURFACE))
         {
             /* Count Subaqueous Photons */
             subaqueousPhotons++;
+
+            /* Get Refraction Index of Water */
+            double ri_water = refraction_parms.RIWater.value;
+            if(waterRiMask)
+            {
+                const double pixel = sampleWaterMask(waterRiMask, df.lon_ph[i], df.lat_ph[i]);
+                if(pixel > 0.0) ri_water = pixel; // only set if valid pixel
+            }
 
             /* Calculate Refraction Corrections */
             const double n1 = refraction_parms.RIAir.value;
@@ -270,23 +272,12 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             }
 
             /* Apply Refraction Correction */
-            refracted_dZ->append(dZ);
-            refracted_lat->append(point.x);
-            refracted_lon->append(point.y);
-        }
-        else
-        {
-            /* Set to NaN */
-            refracted_dZ->append(std::numeric_limits<float>::quiet_NaN());
-            refracted_lat->append(std::numeric_limits<double>::quiet_NaN());
-            refracted_lon->append(std::numeric_limits<double>::quiet_NaN());
+            df.geoid_corr_h[i] += dZ;
+            df.ellipse_h[i] += dZ;
+            df.lat_ph[i] = point.x;
+            df.lon_ph[i] = point.y;
         }
     }
-
-    /* Add Columns */
-    df.addExistingColumn("refracted_dZ", refracted_dZ, "Vertical refraction correction (in meters)");
-    df.addExistingColumn("refracted_lat", refracted_lat, "Refraction corrected latitude");
-    df.addExistingColumn("refracted_lon", refracted_lon, "Refraction corrected longitude");
 
     /* Mark Completion */
     return true;
