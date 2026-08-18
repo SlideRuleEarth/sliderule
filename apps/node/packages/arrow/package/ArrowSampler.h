@@ -121,17 +121,16 @@ class ArrowSampler: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        std::atomic<bool>             active;
-        Thread*                       mainPid;
-        RequestParameters*                rqstParms;
-        const OutputFields&           parms;
-        Publisher*                    outQ;
-        vector<point_info_t>     points;
-        vector<batch_sampler_t*> batchSamplers;
-        ArrowSamplerImpl*             impl;
-        const char*                   dataFile;           // used locally to build parquet file
-        const char*                   metadataFile;       // used locally to build json metadata file
-        const char*                   outputMetadataPath; // final destination of the metadata file
+        std::atomic<bool>           active;
+        Thread*                     mainPid;
+        RequestParameters*          rqstParms;
+        const OutputFields&         parms;
+        Publisher*                  outQ;
+        vector<point_info_t>        points;
+        vector<batch_sampler_t*>    batchSamplers;
+        ArrowSamplerImpl*           impl;
+        const char*                 dataFile;           // used locally to build parquet file
+        const char*                 metadataFile;       // used locally to build json metadata file
 
 
         /*--------------------------------------------------------------------

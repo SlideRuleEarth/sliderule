@@ -129,7 +129,7 @@ class ArrowBuilder: public LuaObject
         const char*             getYKey         (void);
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
-        const OutputFields*      getParms        (void);
+        const OutputFields*     getParms        (void);
         bool                    hasAncFields    (void) const;
         bool                    hasAncElements  (void) const;
         const string&           getParmsAsString(void);
@@ -166,10 +166,8 @@ class ArrowBuilder: public LuaObject
         geo_data_t          geoData;
         const char*         dataFile;           // used locally to build data file
         const char*         metadataFile;       // used locally to build json metadata file
-        const char*         outputMetadataPath; // final destination of the metadata file
         const string        parmsAsString;
         const char*         endpoint;
-        const bool          keepLocal;
 
         ArrowBuilderImpl*   impl; // private arrow data
 
@@ -180,7 +178,7 @@ class ArrowBuilder: public LuaObject
                         ArrowBuilder            (lua_State* L, RequestParameters* parms,
                                                  const char* outq_name, const char* inq_name,
                                                  const char* rec_type, const char* id,
-                                                 const char* _endpoint, const bool keep_local);
+                                                 const char* _endpoint);
                         ~ArrowBuilder           (void) override;
         static void*    builderThread           (void* parm);
         static int      luaGetFileNames         (lua_State* L);

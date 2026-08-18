@@ -70,16 +70,12 @@ local function proxy(resources, parms_tbl, endpoint, rec)
     local arrow_file = nil
     local arrow_metafile = nil
     if parms:hasoutput() then
-        -- Determine if Keeping Local File (needed for later ArrowSampler) --
-        local keep_local = parms:withsamplers()
         -- Arrow Builder --
-        arrow_builder = arrow.builder(parms, _rqst.rspq, _rqst.rspq .. "-builder", rec, _rqst.id, endpoint, keep_local)
+        arrow_builder = arrow.builder(parms, _rqst.rspq, _rqst.rspq .. "-builder", rec, _rqst.id, endpoint)
         if arrow_builder then
             rsps_from_nodes = _rqst.rspq .. "-builder"
             terminate_proxy_stream = true
-            if keep_local then
-                arrow_file, arrow_metafile = arrow_builder:filenames()
-            end
+            arrow_file, arrow_metafile = arrow_builder:filenames()
         end
     end
 
@@ -142,11 +138,13 @@ local function proxy(resources, parms_tbl, endpoint, rec)
         end
     end
 
-    -- cleanup
+    -- Send Output Files --
     if arrow_file then
+        core.send2user(arrow_file, _rqst.rspq, parms)
         os.remove(arrow_file)
     end
     if arrow_metafile then
+        core.send2user(arrow_metafile, _rqst.rspq, parms, nil, nil, nil, "_metadata.json")
         os.remove(arrow_metafile)
     end
 end

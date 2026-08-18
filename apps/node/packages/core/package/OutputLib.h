@@ -93,21 +93,27 @@ struct OutputLib
      * METHODS
      ******************************************************************************/
 
-    static void        init         (void);
-    static bool        send2User    (const char* fileName, const char* outputPath, uint32_t traceId, const OutputFields* parms, Publisher* outQ);
-    static bool        send2S3      (const char* fileName, const char* s3dst, const char* outputPath, const OutputFields* parms, Publisher* outQ);
-    static bool        send2Client  (const char* fileName, const char* outPath, const OutputFields* parms, Publisher* outQ);
+    static void         init                    (void);
 
-    static const char* getUniqueFileName        (const char* id = NULL);
-    static char*       createMetadataFileName   (const char* fileName);
+    static const char*  getUniqueFileName       (const char* id = NULL);
 
-    static void        removeFile   (const char* fileName);
-    static bool        renameFile   (const char* oldName, const char* newName);
-    static bool        fileExists   (const char* fileName);
-    static bool        isArrow      (OutputFields::format_t fmt);
-    static bool        isLas        (OutputFields::format_t fmt);
+    static void         removeFile              (const char* fileName);
+    static bool         renameFile              (const char* oldName, const char* newName);
+    static bool         fileExists              (const char* fileName);
+    static bool         isArrow                 (OutputFields::format_t fmt);
+    static bool         isLas                   (OutputFields::format_t fmt);
 
-    static int         luaSend2User (lua_State* L);
+    static int          luaSend2User            (lua_State* L);
+
+    /******************************************************************************
+     * PRIVATE
+     ******************************************************************************/
+
+    private:
+
+        static bool     send2User               (const char* src_file, const string& output_path, uint32_t trace_id, const OutputFields& output_fields, const char* asset_name, bool with_checksum, Publisher* outq);
+        static bool     send2S3                 (const char* src_file, const char* dst_file, const char* endpoint, const CredentialStore::Credential& credentials, bool with_checksum, Publisher* outq);
+        static bool     send2Client             (const char* src_file, const char* dst_file, bool with_checksum, Publisher* outq);
 };
 
 #endif  /* __output_lib__ */

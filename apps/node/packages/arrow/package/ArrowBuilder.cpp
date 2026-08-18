@@ -73,10 +73,9 @@ int ArrowBuilder::luaCreate (lua_State* L)
         const char* rec_type        = getLuaString(L, 4);
         const char* id              = getLuaString(L, 5);
         const char* endpoint        = getLuaString(L, 6);
-        const bool  keep_local      = getLuaBoolean(L, 7, true, false);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, rqst_parms, outq_name, inq_name, rec_type, id, endpoint, keep_local));
+        return createLuaObject(L, new ArrowBuilder(L, rqst_parms, outq_name, inq_name, rec_type, id, endpoint));
     }
     catch(const RunTimeException& e)
     {
@@ -225,14 +224,13 @@ const char* ArrowBuilder::getEndpoint (void)
 ArrowBuilder::ArrowBuilder (lua_State* L, RequestParameters* rqst_parms,
                             const char* outq_name, const char* inq_name,
                             const char* rec_type, const char* id,
-                            const char* _endpoint, const bool keep_local):
+                            const char* _endpoint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     rqstParms(rqst_parms),
     parms(rqst_parms->output),
     hasAncillaryFields(false),
     hasAncillaryElements(false),
-    parmsAsString(rqstParms->toJson()),
-    keepLocal(keep_local)
+    parmsAsString(rqstParms->toJson())
 {
     assert(rqst_parms);
     assert(outq_name);
@@ -276,15 +274,12 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestParameters* rqst_parms,
      * NO THROWING BEYOND THIS POINT
      */
 
-    /* Get Paths */
-    outputMetadataPath = OutputLib::createMetadataFileName(parms.path.value.c_str());
-
     /* Save Parameters */
     endpoint = StringLib::duplicate(_endpoint);
 
     /* Create Unique Temporary Filenames */
     dataFile = OutputLib::getUniqueFileName(id);
-    metadataFile = OutputLib::createMetadataFileName(dataFile);
+    metadataFile = FString("%s.meta", dataFile).c_str(true);
 
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);
@@ -324,7 +319,6 @@ ArrowBuilder::~ArrowBuilder(void)
     rqstParms->releaseLuaObject();
     delete[] dataFile;
     delete[] metadataFile;
-    delete[] outputMetadataPath;
     delete[] endpoint;
     delete[] recType;
     delete[] timeKey;
@@ -498,22 +492,6 @@ void* ArrowBuilder::builderThread(void* parm)
     const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
     if(!status) alert(INFO, RTE_FAILURE, builder->outQ, NULL, "Failed to process last record batch for %s", builder->parms.path.value.c_str());
     builder->recordBatch.clear();
-
-    /* Check if Keeping Local
-     *  when performing additional operations on the parquet file, like the ArrowSampler
-     *  we need to keep the temporary file on disk so that additional operations can
-     *  be performed on it */
-    if(!builder->keepLocal)
-    {
-        /* Send File to User */
-        OutputLib::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
-
-        /* Send Metadata File to User */
-        if(OutputLib::fileExists(builder->metadataFile))
-        {
-            OutputLib::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
-        }
-    }
 
     /* Signal Completion */
     builder->signalComplete();

@@ -87,52 +87,6 @@ void OutputFields::fromLua (lua_State* L, int index)
     {
         asGeo = true; // always set to true if geoparquet (regardless of user input)
     }
-
-    // handle asset
-    if(!assetName.value.empty())
-    {
-        // get asset
-        Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
-        if(asset)
-        {
-            // set endpoint
-            endpoint = asset->getEndpoint();
-
-            // set credentials
-            #ifdef __aws__
-            credentials = CredentialStore::get(asset->getIdentity());
-            #endif
-
-            // set prefix and suffix
-            const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
-            const char* path_suffix = ".bin";
-            if     (format.value == GEOPARQUET) path_suffix = ".geoparquet";
-            else if(format.value == PARQUET)    path_suffix = ".parquet";
-            else if(format.value == CSV)        path_suffix = ".csv";
-            else if(format.value == H5)         path_suffix = ".h5";
-            else if(format.value == LAS)        path_suffix = ".las";
-            else if(format.value == LAZ)        path_suffix = ".laz";
-
-            // set output path
-            if(!path.value.empty() && (path.value[0] != '\0'))
-            {
-                path = FString("%s%s/%s", path_prefix, asset->getPath(), path.value.c_str()).c_str();
-            }
-            else
-            {
-                const FString path_name("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), path_suffix);
-                path = FString("%s%s/%s", path_prefix, asset->getPath(), path_name.c_str()).c_str();
-            }
-            mlog(DEBUG, "Generating unique path: %s", path.value.c_str());
-
-            // release asset
-            asset->releaseLuaObject();
-        }
-    }
-    else if(path.value.empty() || (path.value[0] == '\0'))
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to determine output path");
-    }
 }
 
 /******************************************************************************

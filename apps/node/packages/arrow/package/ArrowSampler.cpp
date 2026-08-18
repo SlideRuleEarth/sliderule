@@ -175,15 +175,6 @@ void* ArrowSampler::mainThread(void* parm)
         if(s->active.load())
         {
             s->impl->createOutpuFiles();
-
-            /* Send Data File to User */
-            OutputLib::send2User(s->dataFile, s->parms.path.value.c_str(), trace_id, &s->parms, s->outQ);
-
-            /* Send Metadata File to User */
-            if(OutputLib::fileExists(s->metadataFile))
-            {
-                OutputLib::send2User(s->metadataFile, s->outputMetadataPath, trace_id, &s->parms, s->outQ);
-            }
         }
     }
     catch(const RunTimeException& e)
@@ -250,8 +241,7 @@ ArrowSampler::ArrowSampler(lua_State* L, RequestParameters* rqst_parms, const ch
     outQ(NULL),
     impl(NULL),
     dataFile(NULL),
-    metadataFile(NULL),
-    outputMetadataPath(NULL)
+    metadataFile(NULL)
 {
     /* Validate Parameters */
     assert(input_file);
@@ -272,12 +262,9 @@ ArrowSampler::ArrowSampler(lua_State* L, RequestParameters* rqst_parms, const ch
         /* Allocate Implementation */
         impl = new ArrowSamplerImpl(this);
 
-        /* Get Paths */
-        outputMetadataPath = OutputLib::createMetadataFileName(parms.path.value.c_str());
-
         /* Create Unique Temporary Filenames */
         dataFile = OutputLib::getUniqueFileName();
-        metadataFile = OutputLib::createMetadataFileName(dataFile);
+        metadataFile = FString("%s.meta", dataFile).c_str(true);
 
         /* Initialize Queues */
         const int qdepth = 0x4000000;   // 64MB
@@ -321,7 +308,6 @@ void ArrowSampler::Delete(void)
 
     delete [] dataFile;
     delete [] metadataFile;
-    delete [] outputMetadataPath;
     delete outQ;
     delete impl;
 

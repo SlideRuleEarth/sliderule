@@ -90,7 +90,7 @@ local function main()
     if not arrow_filename then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to write dataframe") end
 
     -- send parquet file to user
-    local status = core.send2user(arrow_filename, parms, _rqst.rspq)
+    local status = core.send2user(arrow_filename, _rqst.rspq, parms)
     if not status then status_to_client(core.CRITICAL, core.RTE_FAILURE, "failed to send dataframe") end
 
 end

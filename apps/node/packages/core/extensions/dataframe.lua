@@ -176,7 +176,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         end
 
         -- Send Las File to User
-        local status = core.send2user(las_filename, parms, rspq)
+        local status = core.send2user(las_filename, rspq, parms)
         if not status then rc = RC_SEND_FAILURE end
     elseif parms:witharrow() then
         -- Create Arrow DataFrame
@@ -194,7 +194,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         end
 
         -- Send Parquet File to User
-        local status = core.send2user(arrow_filename, parms, rspq)
+        local status = core.send2user(arrow_filename, rspq, parms)
         if not status then rc = RC_SEND_FAILURE end
     else
         -- Return Dataframe back to User

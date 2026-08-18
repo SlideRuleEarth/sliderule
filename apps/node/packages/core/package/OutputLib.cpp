@@ -40,6 +40,7 @@
 #include "RequestParameters.h"
 #include "OutputLib.h"
 #include "RecordObject.h"
+#include "CredentialStore.h"
 
 #ifdef __aws__
 #include "S3CurlIODriver.h"
@@ -98,30 +99,53 @@ void OutputLib::init (void)
 /*----------------------------------------------------------------------------
  * send2User
  *----------------------------------------------------------------------------*/
-bool OutputLib::send2User (const char* fileName, const char* outputPath, uint32_t traceId, const OutputFields* parms, Publisher* outQ)
+bool OutputLib::send2User (const char* src_file, const string& output_path, uint32_t trace_id, const OutputFields& output_fields, const char* asset_name, bool with_checksum, Publisher* outq)
 {
     bool status = false;
+    const uint32_t send_trace_id = start_trace(INFO, trace_id, "send_file", "{\"path\": \"%s\"}", dst_file);
 
     /* Send File to User */
-    const uint32_t send_trace_id = start_trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", outputPath);
-    if(StringLib::find(outputPath, "s3://") == outputPath)
+    if(asset_name)
     {
-        /* Upload File to S3 */
-        status = send2S3(fileName, &outputPath[5], outputPath, parms, outQ);
+        /* Upload File to S3 Asset */
+        Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+        if(!asset)
+        {
+            mlog(CRITICAL, "Unable to output file <%s>, failed to retrieve asset <%s>", src_file, asset_name);
+            status = false;
+        }
+        else if(StringLib::match(asset->getDriver(), "s3"))
+        {
+            mlog(CRITICAL, "Unable to output file <%s>, unsupported driver <%s>", src_file, asset->getDriver());
+            asset->releaseLuaObject();
+            status = false;
+        }
+        else
+        {
+            const char* endpoint = asset->getEndpoint();
+            const CredentialStore::Credential& credentials = CredentialStore::get(asset->getIdentity());
+            status = send2S3(src_file, FString("%s/%s", asset->getPath(), output_path.c_str()).c_str(), endpoint, credentials, with_checksum, outq);
+            asset->releaseLuaObject();
+        }
     }
-    else if(StringLib::find(outputPath, "file://") == outputPath)
+    else if(output_path.starts_with("s3://"))
     {
-        /* Rename File - very fast if both files are on the same partition */
-        status = renameFile(fileName, &outputPath[7]);
+        /* Upload File to User Supplied S3 Bucket */
+        status = send2S3(src_file, output_path.substr(5).c_str(), output_fields.endpoint.value.c_str(), output_fields.credentials, with_checksum, outq);
+    }
+    else if(output_path.starts_with("file://"))
+    {
+        /* Rename File (local) */
+        status = renameFile(src_file, output_path.substr(7).c_str());
     }
     else
     {
         /* Stream File Back to Client */
-        status = send2Client(fileName, outputPath, parms, outQ);
+        status = send2Client(src_file, output_path.c_str(), with_checksum, outq);
     }
 
     /* Delete File Locally */
-    removeFile(fileName);
+    removeFile(src_file);
 
     stop_trace(INFO, send_trace_id);
     return status;
@@ -130,17 +154,17 @@ bool OutputLib::send2User (const char* fileName, const char* outputPath, uint32_
 /*----------------------------------------------------------------------------
  * send2S3
  *----------------------------------------------------------------------------*/
-bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* outputPath, const OutputFields* parms, Publisher* outQ)
+bool OutputLib::send2S3 (const char* src_file, const char* dst_file, const char* endpoint, const CredentialStore::Credential& credentials, bool with_checksum, Publisher* outq)
 {
     #ifdef __aws__
 
     bool status = true;
 
     /* Check Path */
-    if(!s3dst) return false;
+    if(!dst_file) return false;
 
     /* Get Bucket and Key */
-    char* bucket = StringLib::duplicate(s3dst);
+    char* bucket = StringLib::duplicate(dst_file);
     char* key = bucket;
     while(*key != '\0' && *key != '/') key++;
     if(*key == '/')
@@ -150,7 +174,7 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
     else
     {
         status = false;
-        mlog(CRITICAL, "invalid S3 url: %s", s3dst);
+        mlog(CRITICAL, "invalid S3 url: %s", dst_file);
     }
     key++;
 
@@ -158,7 +182,7 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
     if(status)
     {
         /* Send Initial Status */
-        alert(INFO, RTE_STATUS, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
+        alert(INFO, RTE_STATUS, outq, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
 
         /* Upload to S3 */
         int attempt = 0;
@@ -167,27 +191,27 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
         {
             try
             {
-                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->endpoint.value.c_str(), &parms->credentials, parms->withChecksum);
+                bytes_uploaded = S3CurlIODriver::put(src_file, bucket, key, endpoint, &credentials, with_checksum);
             }
             catch(const RunTimeException& e)
             {
-                alert(e.level(), RTE_FAILURE, outQ, NULL, "S3 PUT failed attempt %d, bucket = %s, key = %s, error = %s", attempt, bucket, key, e.what());
+                alert(e.level(), RTE_FAILURE, outq, NULL, "S3 PUT failed attempt %d, bucket = %s, key = %s, error = %s", attempt, bucket, key, e.what());
             }
         }
 
         if(bytes_uploaded > 0)
         {
             /* Send Successful Status */
-            alert(INFO, RTE_STATUS, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
+            alert(INFO, RTE_STATUS, outq, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
 
             /* Send Remote Record */
             RecordObject remote_record(remoteRecType);
             output_file_remote_t* remote = reinterpret_cast<output_file_remote_t*>(remote_record.getRecordData());
-            StringLib::copy(&remote->url[0], outputPath, URL_MAX_LEN);
+            StringLib::copy(&remote->url[0], FString("s3://%s", dst_file).c_str(), URL_MAX_LEN);
             remote->size = bytes_uploaded;
-            if(!remote_record.post(outQ))
+            if(!remote_record.post(outq))
             {
-                mlog(CRITICAL, "Failed to send remote record back to user for %s", outputPath);
+                mlog(CRITICAL, "Failed to send remote record back to user for %s", dst_file);
             }
         }
         else
@@ -196,7 +220,7 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
             status = false;
 
             /* Send Error Status */
-            alert(CRITICAL, RTE_FAILURE, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s", bucket, key);
+            alert(CRITICAL, RTE_FAILURE, outq, NULL, "Upload to S3 failed, bucket = %s, key = %s", bucket, key);
         }
     }
 
@@ -207,7 +231,7 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
     return status;
 
     #else
-    alert(CRITICAL, RTE_FAILURE, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
+    alert(CRITICAL, RTE_FAILURE, outq, NULL, "Output path specifies S3, but server compiled without AWS support");
     return false;
     #endif
 }
@@ -215,12 +239,12 @@ bool OutputLib::send2S3 (const char* fileName, const char* s3dst, const char* ou
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool OutputLib::send2Client (const char* fileName, const char* outPath, const OutputFields* parms, Publisher* outQ)
+bool OutputLib::send2Client (const char* src_file, const char* dst_file, bool with_checksum, Publisher* outq)
 {
     bool status = true;
 
     /* Reopen File to Stream Back as Response */
-    FILE* fp = fopen(fileName, "r");
+    FILE* fp = fopen(src_file, "r");
     if(fp)
     {
         /* Get Size of File */
@@ -229,7 +253,7 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
         fseek(fp, 0L, SEEK_SET);
 
         /* Log Status */
-        mlog(INFO, "Sending file %s of size %ld to %s", fileName, file_size, outPath);
+        mlog(INFO, "Sending file %s of size %ld to %s", src_file, file_size, dst_file);
 
         do
         {
@@ -238,12 +262,12 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
             /* Send Meta Record */
             RecordObject meta_record(metaRecType);
             output_file_meta_t* meta = reinterpret_cast<output_file_meta_t*>(meta_record.getRecordData());
-            StringLib::copy(&meta->filename[0], outPath, FILE_NAME_MAX_LEN);
+            StringLib::copy(&meta->filename[0], dst_file, FILE_NAME_MAX_LEN);
             meta->size = file_size;
-            if(!meta_record.post(outQ))
+            if(!meta_record.post(outq))
             {
                 status = false;
-                mlog(CRITICAL, "Failed to post meta record for file %s", fileName);
+                mlog(CRITICAL, "Failed to post meta record for file %s", src_file);
                 break; // early exit on error
             }
 
@@ -256,18 +280,18 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
                 const long record_bytes = offsetof(output_file_data_t, data) + bytes_to_send;
                 RecordObject data_record(dataRecType, record_bytes, false);
                 output_file_data_t* data = reinterpret_cast<output_file_data_t*>(data_record.getRecordData());
-                StringLib::copy(&data->filename[0], outPath, FILE_NAME_MAX_LEN);
+                StringLib::copy(&data->filename[0], dst_file, FILE_NAME_MAX_LEN);
                 const size_t bytes_read = fread(data->data, 1, bytes_to_send, fp);
-                if(!data_record.post(outQ, offsetof(output_file_data_t, data) + bytes_read))
+                if(!data_record.post(outq, offsetof(output_file_data_t, data) + bytes_read))
                 {
                     status = false;
-                    mlog(CRITICAL, "Incomplete transfer: failed to post data record for file %s", fileName);
+                    mlog(CRITICAL, "Incomplete transfer: failed to post data record for file %s", src_file);
                     break; // early exit on error
                 }
                 offset += bytes_read;
 
                 /* Calculate Checksum */
-                if(parms->withChecksum)
+                if(with_checksum)
                 {
                     for(size_t i = 0; i < bytes_read; i++)
                     {
@@ -277,16 +301,16 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
             }
 
             /* Send EOF Record */
-            if(parms->withChecksum)
+            if(with_checksum)
             {
                 RecordObject eof_record(eofRecType);
                 output_file_eof_t* eof = reinterpret_cast<output_file_eof_t*>(eof_record.getRecordData());
-                StringLib::copy(&eof->filename[0], outPath, FILE_NAME_MAX_LEN);
+                StringLib::copy(&eof->filename[0], dst_file, FILE_NAME_MAX_LEN);
                 eof->checksum = checksum;
-                if(!eof_record.post(outQ))
+                if(!eof_record.post(outq))
                 {
                     status = false;
-                    mlog(CRITICAL, "Failed to post eof record for file %s", fileName);
+                    mlog(CRITICAL, "Failed to post eof record for file %s", src_file);
                 }
             }
         } while(false);
@@ -297,14 +321,14 @@ bool OutputLib::send2Client (const char* fileName, const char* outPath, const Ou
         {
             status = false;
             char err_buf[256];
-            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, fileName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, src_file, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         }
     }
     else // unable to open file
     {
         status = false;
         char err_buf[256];
-        mlog(CRITICAL, "Failed (%d) to read file %s: %s", errno, fileName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+        mlog(CRITICAL, "Failed (%d) to read file %s: %s", errno, src_file, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
     }
 
     /* Return Status */
@@ -326,32 +350,17 @@ const char* OutputLib::getUniqueFileName (const char* id)
 }
 
 /*----------------------------------------------------------------------------
-* createMetadataFileName
-*----------------------------------------------------------------------------*/
-char* OutputLib::createMetadataFileName (const char* fileName)
-{
-    string path(fileName);
-    const size_t dotIndex = path.find_last_of('.');
-    if(dotIndex != string::npos)
-    {
-        path.resize(dotIndex);
-    }
-    path.append("_metadata.json");
-    return StringLib::duplicate(path.c_str());
-}
-
-/*----------------------------------------------------------------------------
  * removeFile
  *----------------------------------------------------------------------------*/
-void OutputLib::removeFile (const char* fileName)
+void OutputLib::removeFile (const char* src_file)
 {
-    if(std::filesystem::exists(fileName))
+    if(std::filesystem::exists(src_file))
     {
-        const int rc = std::remove(fileName);
+        const int rc = std::remove(src_file);
         if(rc != 0)
         {
             char err_buf[256];
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, fileName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, src_file, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         }
     }
 }
@@ -359,19 +368,19 @@ void OutputLib::removeFile (const char* fileName)
 /*----------------------------------------------------------------------------
  * renameFile
  *----------------------------------------------------------------------------*/
-bool OutputLib::renameFile (const char* oldName, const char* newName)
+bool OutputLib::renameFile (const char* old_name, const char* new_name)
 {
-    if(!std::filesystem::exists(oldName))
+    if(!std::filesystem::exists(old_name))
     {
-        mlog(CRITICAL, "Failed to rename file %s to %s: source does not exist", oldName, newName);
+        mlog(CRITICAL, "Failed to rename file %s to %s: source does not exist", old_name, new_name);
         return false;
     }
 
-    const int rc = std::rename(oldName, newName);
+    const int rc = std::rename(old_name, new_name);
     if(rc != 0)
     {
         char err_buf[256];
-        mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, oldName, newName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+        mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, old_name, new_name, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return false;
     }
 
@@ -381,9 +390,9 @@ bool OutputLib::renameFile (const char* oldName, const char* newName)
 /*----------------------------------------------------------------------------
  * fileExists
  *----------------------------------------------------------------------------*/
-bool OutputLib::fileExists (const char* fileName)
+bool OutputLib::fileExists (const char* src_file)
 {
-    return std::filesystem::exists(fileName);
+    return std::filesystem::exists(src_file);
 }
 
 /*----------------------------------------------------------------------------
@@ -419,14 +428,17 @@ int OutputLib::luaSend2User (lua_State* L)
     bool status = false;
     RequestParameters* _parms = NULL;
     Publisher* outq = NULL;
-    const char* outputpath = NULL;
 
     try
     {
         /* Get Parameters */
-        const char* filename = LuaObject::getLuaString(L, 1);
-        _parms = dynamic_cast<RequestParameters*>(LuaObject::getLuaObject(L, 2, RequestParameters::OBJECT_TYPE));
-        const char* outq_name = LuaObject::getLuaString(L, 3);
+        const char* source_filename = LuaObject::getLuaString(L, 1);
+        const char* outq_name = LuaObject::getLuaString(L, 2);
+        _parms = dynamic_cast<RequestParameters*>(LuaObject::getLuaObject(L, 3, RequestParameters::OBJECT_TYPE));
+        const char* destination_filename = LuaObject::getLuaString(L, 4, true, _parms->output.path.value.c_str()); // override
+        const char* asset_name = LuaObject::getLuaString(L, 5, true, _parms->output.assetName.value.c_str()); // override
+        const bool with_checksum = LuaObject::getLuaBoolean(L, 6, true, _parms->output.withChecksum.value); // override
+        const char* with_suffix = LuaObject::getLuaString(L, 7, true, ".bin");
 
         /* Get Trace from Lua Engine */
         lua_getglobal(L, LuaEngine::LUA_TRACEID);
@@ -435,8 +447,16 @@ int OutputLib::luaSend2User (lua_State* L)
         /* Create Publisher */
         outq = new Publisher(outq_name);
 
+        /* (Optionally) Generate Output Path */
+        string output_path = destination_filename;
+        if((destination_filename == NULL) || (destination_filename[0] == '\0'))
+        {
+            output_path = FString("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), with_suffix).c_str();
+            mlog(DEBUG, "Generating unique path: %s", output_path.c_str());
+        }
+
         /* Call Utility to Send File */
-        status = send2User(filename, _parms->output.path.value.c_str(), trace_id, &_parms->output, outq);
+        status = send2User(source_filename, output_path, trace_id, _parms->output, asset_name, with_checksum, outq);
     }
     catch(const RunTimeException& e)
     {
@@ -446,7 +466,6 @@ int OutputLib::luaSend2User (lua_State* L)
     /* Release Allocated Resources */
     if(_parms) _parms->releaseLuaObject();
     delete outq;
-    delete [] outputpath;
 
     /* Return Status */
     lua_pushboolean(L, status);
