@@ -192,18 +192,13 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     const RefractionFields& refraction_parms = parms->refraction;
     bool first_transform_error = true;
 
-    /* Get Sea Surface Column */
-    FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h"));
-    if(!surface_h)
+    /* Get Input Columns */
+    FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h", true));
+    FieldColumn<int>* class_ph = reinterpret_cast<FieldColumn<int>*>(df.getColumn("class_ph", true));
+    if(!surface_h || !class_ph)
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find surface_h column");
-    }
-
-    /* Get Classification Column */
-    FieldColumn<int>* class_ph = reinterpret_cast<FieldColumn<int>*>(df.getColumn("class_ph"));
-    if(!class_ph)
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find class_ph column");
+        mlog(CRITICAL, "Could not get input columns for refraction correction");
+        return false;
     }
 
     /* Get UTM Transformations */

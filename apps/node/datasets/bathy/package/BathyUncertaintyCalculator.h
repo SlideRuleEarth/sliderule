@@ -62,7 +62,6 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
         static int      luaCreate   (lua_State* L);
         static int      luaInit     (lua_State* L);
 
-
         bool            run         (GeoDataFrame* dataframe) override;
 
     private:
@@ -73,44 +72,44 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
 
         typedef struct {
             int Wind;
-            double Kd;
+            char JerlovType[16];
+            double a;
             double b;
             double c;
-        } uncertainty_entry_t;
+        } entry_t;
 
-        typedef struct {
-            double b;
-            double c;
-        } uncertainty_coeff_t;
+        typedef enum {
+            SNR_DIM = 0,
+            THU_DIM = 1,
+            TRANSPORT_DIM = 2,
+            NUM_DIMS = 3,
+        } uncertainty_dim_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyUncertaintyCalculator  (lua_State* L, BathyParameters* _parms, BathyKd* _kd);
+        BathyUncertaintyCalculator  (lua_State* L, BathyParameters* _parms);
         ~BathyUncertaintyCalculator (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static const int            NUM_POINTING_ANGLES = 6;
-        static const int            NUM_WIND_SPEED_RANGES = 5;
-        static const int            NUM_KD_RANGES = 5;
-        static const int            NUM_UNCERTAINTY_DIMENSIONS = 2;
-        static const int            THU = 0;
-        static const int            TVU = 1;
-        static const int            INITIAL_UNCERTAINTY_ROWS = 310;
+        static const int            NUM_POINTING_ANGLES = 5;
+        static const int            NUM_WIND_SPEEDS = 10;
+        static const int            NUM_KDS = 50;
 
-        static const char*          TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES];
-        static const int            POINTING_ANGLES[NUM_POINTING_ANGLES];
-        static const int            WIND_SPEED_RANGES[NUM_WIND_SPEED_RANGES][2];
-        static const double         KD_RANGES[NUM_KD_RANGES][2];
+        static const int            WIND_SPEED_INDEX[NUM_WIND_SPEEDS];
+        static const int            KD_INDEX[NUM_KDS];
 
-        static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEED_RANGES][NUM_KD_RANGES];
+        static const char*          UNCERTAINTY_FILENAMES[NUM_DIMS][NUM_POINTING_ANGLES];
 
-        BathyParameters*                parms;
-        BathyKd*                    kd490;
+        static vector<entry_t>      SNR[NUM_POINTING_ANGLES];
+        static vector<entry_t>      THU[NUM_POINTING_ANGLES];
+        static vector<entry_t>      TRANSPORT[NUM_POINTING_ANGLES];
+
+        BathyParameters*            parms;
 };
 
 #endif

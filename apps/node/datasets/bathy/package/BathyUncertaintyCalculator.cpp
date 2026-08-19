@@ -52,36 +52,82 @@ const struct luaL_Reg BathyUncertaintyCalculator::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* BathyUncertaintyCalculator::TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES] = {
-   {"/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv",
-    "/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv",
-    "/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv",
-    "/data/ICESat2_3deg_500000_AGL_0.022_mrad_THU.csv",
-    "/data/ICESat2_4deg_500000_AGL_0.022_mrad_THU.csv",
-    "/data/ICESat2_5deg_500000_AGL_0.022_mrad_THU.csv"},
-   {"/data/ICESat2_0deg_500000_AGL_0.022_mrad_TVU.csv",
-    "/data/ICESat2_1deg_500000_AGL_0.022_mrad_TVU.csv",
-    "/data/ICESat2_2deg_500000_AGL_0.022_mrad_TVU.csv",
-    "/data/ICESat2_3deg_500000_AGL_0.022_mrad_TVU.csv",
-    "/data/ICESat2_4deg_500000_AGL_0.022_mrad_TVU.csv",
-    "/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv"}
+const char* BathyUncertaintyCalculator::UNCERTAINTY_FILENAMES[NUM_DIMS][NUM_POINTING_ANGLES] = {
+   {"/data/SNR_ATLAS_1_deg.csv",
+    "/data/SNR_ATLAS_2_deg.csv",
+    "/data/SNR_ATLAS_3_deg.csv",
+    "/data/SNR_ATLAS_4_deg.csv",
+    "/data/SNR_ATLAS_5_deg.csv"},
+   {"/data/THU_ATLAS_1_deg.csv",
+    "/data/THU_ATLAS_2_deg.csv",
+    "/data/THU_ATLAS_3_deg.csv",
+    "/data/THU_ATLAS_4_deg.csv",
+    "/data/THU_ATLAS_5_deg.csv"},
+   {"/data/Transport_ATLAS_1_deg.csv",
+    "/data/Transport_ATLAS_2_deg.csv",
+    "/data/Transport_ATLAS_3_deg.csv",
+    "/data/Transport_ATLAS_4_deg.csv",
+    "/data/Transport_ATLAS_5_deg.csv"}
 };
 
-const int BathyUncertaintyCalculator::POINTING_ANGLES[NUM_POINTING_ANGLES] = {0, 1, 2, 3, 4, 5};
-
-const int BathyUncertaintyCalculator::WIND_SPEED_RANGES[NUM_WIND_SPEED_RANGES][2] = {
-//       0                   1                   2                   3                   4
-//  Calm-Light Air      Light Breeze        Gentle Breeze       Moderate Breeze     Fresh Breeze
-      {1, 1},             {2, 3},             {4, 5},             {6, 7},             {8, 10}
+// WIND_SPEED_LUT[wind_speed] --> index
+const int BathyUncertaintyCalculator::WIND_SPEED_INDEX[NUM_WIND_SPEEDS] = {
+    0, // 0
+    0, // 1
+    1, // 2
+    1, // 3
+    2, // 4
+    2, // 5
+    3, // 6
+    3, // 7
+    4, // 8
+    4  // 9
 };
 
-const double BathyUncertaintyCalculator::KD_RANGES[NUM_KD_RANGES][2] = {
+// KD_INDEX[kd] --> index
 //       0             1             2             3            4
-//     clear     clear-moderate   moderate    moderate-high    high
-    {0.06, 0.10}, {0.11, 0.17}, {0.18, 0.25}, {0.26, 0.32}, {0.33, 0.36}
+//      III           IC            3C            5C           7C
+//  [0.00, 0.12]  (0.12, 0.15]  (0.15, 0.21]  (0.21, 0.27]  (0.27, 0.47]
+const int BathyUncertaintyCalculator::KD_INDEX[NUM_KDS] = {
+//   0   1   2   3   4   5   6   7   8   9
+     0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 0
+     0,  0,  0,  1,  1,  1,  2,  2,  2,  2, // 1
+     2,  2,  3,  3,  3,  3,  3,  3,  4,  4, // 2
+     4,  4,  4,  4,  4,  4,  4,  4,  4,  4, // 3
+     4,  4,  4,  4,  4,  4,  4,  4,  4,  4  // 4
 };
 
-BathyUncertaintyCalculator::uncertainty_coeff_t BathyUncertaintyCalculator::UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEED_RANGES][NUM_KD_RANGES];
+vector<BathyUncertaintyCalculator::entry_t> BathyUncertaintyCalculator::SNR[NUM_POINTING_ANGLES];
+vector<BathyUncertaintyCalculator::entry_t> BathyUncertaintyCalculator::THU[NUM_POINTING_ANGLES];
+vector<BathyUncertaintyCalculator::entry_t> BathyUncertaintyCalculator::TRANSPORT[NUM_POINTING_ANGLES];
+
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * discretize - turns floating point value into an index
+ *              (mode - 0: round, 1: floor, 2: ceiling)
+ *----------------------------------------------------------------------------*/
+typedef enum { D_ROUND, D_FLOOR, D_CEILING } dicsretize_t;
+static int discretize(float value, int min, int max, dicsretize_t mode=D_ROUND)
+{
+    int index = 0;
+    if(mode == D_ROUND) index = static_cast<int>(roundf(value));
+    else if(mode == D_FLOOR) index = static_cast<int>(floorf(value));
+    else if(mode == D_CEILING) index = static_cast<int>(ceilf(value));
+    if(index < min) index = min;
+    else if(index >= max) index = max - 1;
+    return index;
+}
+
+/*----------------------------------------------------------------------------
+ * elrad2deg - turns elevation radians into degrees
+ *----------------------------------------------------------------------------*/
+static float elrad2deg(float rad)
+{
+    return fabs(90.0 - ((180.0 / M_PI) * rad));
+}
 
 /******************************************************************************
  * METHODS
@@ -93,18 +139,15 @@ BathyUncertaintyCalculator::uncertainty_coeff_t BathyUncertaintyCalculator::UNCE
 int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 {
     BathyParameters* _parms = NULL;
-    BathyKd* _kd = NULL;
 
     try
     {
         _parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 1, BathyParameters::OBJECT_TYPE, BathyParameters::LUA_META_NAME));
-        _kd = dynamic_cast<BathyKd*>(getLuaObject(L, 2, BathyKd::OBJECT_TYPE));
-        return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms, _kd));
+        return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        if(_kd) _kd->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
@@ -115,18 +158,14 @@ int BathyUncertaintyCalculator::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 int BathyUncertaintyCalculator::luaInit (lua_State* L)
 {
-    /*************************/
-    /* UNCERTAINTY_COEFF_MAP */
-    /*************************/
-
     /* for each dimension */
-    for(int tu_dimension_index = 0; tu_dimension_index < NUM_UNCERTAINTY_DIMENSIONS; tu_dimension_index++)
+    for(int dim = 0; dim < NUM_DIMS; dim++)
     {
         /* for each pointing angle */
         for(int pointing_angle_index = 0; pointing_angle_index < NUM_POINTING_ANGLES; pointing_angle_index++)
         {
             /* get uncertainty filename */
-            const char* uncertainty_filename = TU_FILENAMES[tu_dimension_index][pointing_angle_index];
+            const char* uncertainty_filename = UNCERTAINTY_FILENAMES[dim][pointing_angle_index];
             mlog(INFO, "Processing uncertainty file: %s", uncertainty_filename);
 
             /* open csv file */
@@ -144,60 +183,38 @@ int BathyUncertaintyCalculator::luaInit (lua_State* L)
             if(fscanf(file, "%39s\n", header) <= 0)
             {
                 mlog(CRITICAL, "Failed to read header from uncertainty file %s", uncertainty_filename);
+                fclose(file);
                 lua_pushboolean(L, false);
                 return 1;
             }
 
+            /* select destination table for this dimension and pointing angle */
+            vector<entry_t>* dimension_tables[NUM_DIMS] = {SNR, THU, TRANSPORT};
+            vector<entry_t>& tu = dimension_tables[dim][pointing_angle_index];
+            tu.clear();
+
             /* read all rows */
-            vector<uncertainty_entry_t> tu(INITIAL_UNCERTAINTY_ROWS);
-            uncertainty_entry_t entry;
-            while(fscanf(file, "%d,%lf,%lf,%lf\n", &entry.Wind, &entry.Kd, &entry.b, &entry.c) == 4)
+            entry_t entry;
+            if(dim == SNR_DIM)
             {
-                tu.push_back(entry);
+                /* SNR provides three coefficients: a, b, and c */
+                while(fscanf(file, "%d,%15[^,],%lf,%lf,%lf\n", &entry.Wind, entry.JerlovType, &entry.a, &entry.b, &entry.c) == 5)
+                {
+                    tu.push_back(entry);
+                }
+            }
+            else
+            {
+                /* THU and Transport provide only a and b; leave c unpopulated */
+                entry.c = 0.0;
+                while(fscanf(file, "%d,%15[^,],%lf,%lf\n", &entry.Wind, entry.JerlovType, &entry.a, &entry.b) == 4)
+                {
+                    tu.push_back(entry);
+                }
             }
 
             /* close file */
             fclose(file);
-
-            /* for each wind speed */
-            for(int wind_speed_index = 0; wind_speed_index < NUM_WIND_SPEED_RANGES; wind_speed_index++)
-            {
-                /* for each kd range */
-                for(int kd_range_index = 0; kd_range_index < NUM_KD_RANGES; kd_range_index++)
-                {
-                    /* sum coefficients for each entry in table */
-                    uncertainty_coeff_t coeff_sum = {
-                        .b = 0.0,
-                        .c = 0.0
-                    };
-                    double count = 0;
-                    for(size_t i = 0; i < tu.size(); i++)
-                    {
-                        if( (tu[i].Wind >= WIND_SPEED_RANGES[wind_speed_index][0]) &&
-                            (tu[i].Wind <= WIND_SPEED_RANGES[wind_speed_index][1]) &&
-                            (tu[i].Kd >= KD_RANGES[kd_range_index][0]) &&
-                            (tu[i].Kd <= KD_RANGES[kd_range_index][1]) )
-                        {
-                            coeff_sum.b += tu[i].b;
-                            coeff_sum.c += tu[i].c;
-                            count += 1.0;
-                        }
-                    }
-
-                    /* check count */
-                    if(count <= 0)
-                    {
-                        mlog(CRITICAL, "Failed to average coefficients from uncertainty file: %s", uncertainty_filename);
-                        lua_pushboolean(L, false);
-                        return 1;
-                    }
-
-                    /* set average coefficients */
-                    uncertainty_coeff_t& coeff = UNCERTAINTY_COEFF_MAP[tu_dimension_index][pointing_angle_index][wind_speed_index][kd_range_index];
-                    coeff.b = coeff_sum.b / count;
-                    coeff.c = coeff_sum.c / count;
-                }
-            }
         }
     }
 
@@ -208,10 +225,9 @@ int BathyUncertaintyCalculator::luaInit (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParameters* _parms, BathyKd* _kd):
+BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParameters* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
-    kd490(_kd)
+    parms(_parms)
 {
 }
 
@@ -221,7 +237,6 @@ BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParam
 BathyUncertaintyCalculator::~BathyUncertaintyCalculator (void)
 {
     if(parms) parms->releaseLuaObject();
-    if(kd490) kd490->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -231,118 +246,89 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
 {
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
 
-    /* get sea surface column */
-    FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h"));
-    if(!surface_h)
+    /* get input columns */
+    FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h", true));
+    FieldColumn<float>* kd = reinterpret_cast<FieldColumn<float>*>(df.getColumn("kd", true));
+    FieldColumn<float>* surface_roughness = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_roughness", true));
+    if(!surface_h || !kd || !surface_roughness)
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find surface_h column");
+        mlog(CRITICAL, "unable to find uncertainty input columns");
+        return false;
     }
-
-    /* get atl09 wind speed column */
-    FieldColumn<float>* met_u10m = reinterpret_cast<FieldColumn<float>*>(df.getColumn("met_u10m"));
-    FieldColumn<float>* met_v10m = reinterpret_cast<FieldColumn<float>*>(df.getColumn("met_v10m"));
-    if(!met_u10m || !met_v10m)
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find met_v10m column");
-    }
-
-    /* join kd resource read */
-    kd490->join(parms->readTimeout.value * 1000);
 
     /* create new columns */
     FieldColumn<float>* sigma_thu = new FieldColumn<float>;
     FieldColumn<float>* sigma_tvu = new FieldColumn<float>;
 
-    /* segment level variables */
-    int32_t previous_segment = -1;
-    int pointing_angle_index = 0;
-    int wind_speed_index = 0;
-    int kd_range_index = 0;
-    uint32_t processing_flags = BathyParameters::INVALID_KD;
-    double max_sensor_depth = fabs(parms->minDemDelta.value);
-
     /* for each photon in extent */
     for(long i = 0; i < df.length(); i++)
     {
-        /* calculate segment level variables */
-        if(previous_segment != df.index_seg[i])
-        {
-            previous_segment = df.index_seg[i];
+        /* get lookup table entry index */
+        const int pointing_angle_index = discretize(elrad2deg(df.ref_el[i]), 0, NUM_POINTING_ANGLES);
+        const int wind_speed_index = discretize((*surface_roughness)[i], 0, NUM_WIND_SPEEDS);
+        const int kd_index = discretize((*kd)[i], 0, NUM_KDS, D_CEILING);
+        const int entry_index = wind_speed_index * 5 + kd_index;
 
-            /* get pointing angle index */
-            const float pointing_angle = fabs(90.0 - ((180.0 / M_PI) * df.ref_el[i]));
-            pointing_angle_index = static_cast<int>(roundf(pointing_angle));
-            if(pointing_angle_index < 0) pointing_angle_index = 0;
-            else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
+        /* get coefficients */
+        const entry_t& snr = SNR[pointing_angle_index][entry_index];
+        const entry_t& thu = THU[pointing_angle_index][entry_index];
+        const entry_t& transport = TRANSPORT[pointing_angle_index][entry_index];
 
-            /* get wind speed index */
-            const float wind_v = sqrt(((*met_u10m)[i] * (*met_u10m)[i]) + ((*met_v10m)[i] * (*met_v10m)[i]));
-            const int wind_speed = static_cast<int>(roundf(wind_v));
-            wind_speed_index = 0;
-            while( (wind_speed_index < (NUM_WIND_SPEED_RANGES - 1)) && (wind_speed > WIND_SPEED_RANGES[wind_speed_index + 1][0]) )
-            {
-                wind_speed_index++;
-            }
-
-            /* get kd index */
-            const double kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
-            if(kd > 0) // check if valid
-            {
-                /* start with no flags set */
-                processing_flags = BathyParameters::FLAGS_CLEAR;
-
-                /* calculate max sensor depth */
-                max_sensor_depth = 1.8 / kd;
-
-                /* get kd index */
-                kd_range_index = 0;
-                while( (kd_range_index < (NUM_KD_RANGES - 1)) && (kd > KD_RANGES[kd_range_index + 1][0]) )
-                {
-                    kd_range_index++;
-                }
-            }
-            else
-            {
-                /* set invalid kd flag and max kd and turbidity */
-                processing_flags = BathyParameters::INVALID_KD;
-                kd_range_index = NUM_KD_RANGES - 1;
-            }
-        }
-
-        /* set processing flags */
-        df.processing_flags[i] = df.processing_flags[i] | processing_flags;
+        /**********************************************************************
+            - Email from Keana Keif -
+            - Dated August 17, 2026 -
+            -------------------------------------------------------------------
+         1   The kd ranges have changed slightly from ATL24 version 1.
+         2       Kd: [0.00-0.12] m^-1 == Jerlov III,
+         3       Kd: (0.12-0.15] m^-1 == Jerlov IC,
+         4       Kd: (0.15-0.21] m^-1 == Jerlov 3C,
+         5       Kd: (0.21-0.27] m^-1 == Jerlov 5C,
+         6       Kd: (0.27-0.47] m^-1 == Jerlov 7C
+         7
+         8   Subaqueous TVU is now made up of two components that we are calling: Transport and signal uncertainties.
+         9
+         10  Transport uncertainty (previously just called tvu) follows this equation: (a^2+(b*x)^2)^0.5
+         11      transport_uncertainty =  sqrt(a_transport^2 + (b_transport * depth)^2)
+         12
+         13  Signal uncertainty has a quadratic fit from the SNR LUTs, and then requires slightly more manipulation.
+         14      SNR = a_snr*depth^2 + b_snr*depth + c_snr
+         15      If SNR < 1, SNR = 1 #SNR Value cannot drop below 1 or there is no signal
+         16      signal_uncertainty = 0.071 / sqrt(2 * SNR)
+         17
+         18  Then total vertical uncertainty is:
+         19      sigma_tvu = sqrt(sigma_h^2 + transport_uncertainty^2  + signal_uncertainty^2)
+         20
+         21  For the horizontal uncertainty we want to add a gaussian adjustment, which means we want to multiply the THU LUT result by 0.577.
+         22      sub_thu = 0.577*( a_thu + b_thu * depth)
+         23      sigma_thu = sqrt (sigma_along ^2  + sigma_across^2 + sub_thu^2)
+        **********************************************************************/
 
         /* calculate subaqueous uncertainty */
+        double transport_uncertainty = 0.0;
+        double signal_uncertainty = 0.0;
         double subaqueous_horizontal_uncertainty = 0.0;
-        double subaqueous_vertical_uncertainty = 0.0;
         const double depth = (*surface_h)[i] - df.geoid_corr_h[i];
         if(depth > 0.0)
         {
-            /* uncertainty coefficients */
-            const uncertainty_coeff_t horizontal_coeff = UNCERTAINTY_COEFF_MAP[THU][pointing_angle_index][wind_speed_index][kd_range_index];
-            const uncertainty_coeff_t vertical_coeff = UNCERTAINTY_COEFF_MAP[TVU][pointing_angle_index][wind_speed_index][kd_range_index];
+            /* transport uncertainty */
+            transport_uncertainty = sqrt(pow(transport.a, 2) + pow(transport.b * depth, 2)); // [11]
 
-            /* subaqueous uncertainties */
-            subaqueous_horizontal_uncertainty += (horizontal_coeff.b * depth) + horizontal_coeff.c;
-            subaqueous_vertical_uncertainty += (vertical_coeff.b * depth) + vertical_coeff.c;
+            /* signal uncertainty */
+            double signal_to_noise = (snr.a * pow(depth, 2)) + (snr.b * depth) + snr.c; // [14]
+            if(signal_to_noise < 1) signal_to_noise = 1; // [15]
+            signal_uncertainty = 0.071 / sqrt(2 * signal_to_noise); // [16]
 
-            /* check against minimum uncertainties */
-            subaqueous_horizontal_uncertainty = MAX(subaqueous_horizontal_uncertainty, BathyParameters::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY);
-            subaqueous_vertical_uncertainty = MAX(subaqueous_vertical_uncertainty, BathyParameters::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY);
-
-            /* set maximum sensor depth processing flag */
-            if(depth > max_sensor_depth)
-            {
-                df.processing_flags[i] = df.processing_flags[i] | BathyParameters::SENSOR_DEPTH_EXCEEDED;
-            }
+            /* subaqueous horizontal uncertainty */
+            subaqueous_horizontal_uncertainty = 0.577 * (thu.a + (thu.b * depth)); // [22]
         }
 
-        /* set total uncertainties */
-        sigma_thu->append(sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
-                                 (df.sigma_along[i] * df.sigma_along[i]) +
-                                 (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) ));
-        sigma_tvu->append(sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
-                                 (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) ));
+        /* total uncertainties */
+        const double total_vertical_uncertainty = sqrt(pow(df.sigma_h[i], 2) + pow(transport_uncertainty, 2) + pow(signal_uncertainty, 2)); // [19]
+        const double total_horizontal_uncertainty = sqrt(pow(df.sigma_across[i], 2) + pow(df.sigma_along[i], 2) + pow(subaqueous_horizontal_uncertainty, 2));
+
+        /* set uncertainties */
+        sigma_tvu->append(static_cast<float>(total_vertical_uncertainty));
+        sigma_thu->append(static_cast<float>(total_horizontal_uncertainty));
     }
 
     /* add columns */

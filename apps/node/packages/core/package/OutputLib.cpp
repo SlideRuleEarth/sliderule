@@ -114,7 +114,7 @@ bool OutputLib::send2User (const char* src_file, const string& output_path, uint
             mlog(CRITICAL, "Unable to output file <%s>, failed to retrieve asset <%s>", src_file, asset_name);
             status = false;
         }
-        else if(StringLib::match(asset->getDriver(), "s3"))
+        else if(!StringLib::match(asset->getDriver(), "s3"))
         {
             mlog(CRITICAL, "Unable to output file <%s>, unsupported driver <%s>", src_file, asset->getDriver());
             asset->releaseLuaObject();

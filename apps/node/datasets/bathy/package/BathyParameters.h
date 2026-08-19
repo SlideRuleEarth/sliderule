@@ -116,9 +116,6 @@ class BathyParameters: public Atl03Parameters
         static const char* LUA_META_NAME;
 
         static const double NIGHT_SOLAR_ELEVATION_THRESHOLD;
-        static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
-        static const double MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
-        static const double DEFAULT_WIND_SPEED;
 
         /*--------------------------------------------------------------------
          * Typedefs

@@ -44,9 +44,6 @@
 const char* BathyParameters::LUA_META_NAME = "BathyParameters";
 
 const double BathyParameters::NIGHT_SOLAR_ELEVATION_THRESHOLD = 5.0; // degrees
-const double BathyParameters::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY = 0.0; // meters
-const double BathyParameters::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY = 0.10; // meters
-const double BathyParameters::DEFAULT_WIND_SPEED = 3.3; // meters
 
 /******************************************************************************
  * METHODS
