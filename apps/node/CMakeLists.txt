@@ -2,6 +2,10 @@ cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to
 message (STATUS "Building sliderule processing node")
 project (SLIDERULE LANGUAGES CXX)
 
+# Setting optimization level to support debugging but still get NRVO
+set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g")
+
 # Squelch a warning when building on Win32/Cygwin
 set (CMAKE_LEGACY_CYGWIN_WIN32 0)
 
