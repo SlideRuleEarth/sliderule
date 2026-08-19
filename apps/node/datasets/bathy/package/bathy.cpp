@@ -43,7 +43,6 @@
 #include "BathySeaSurfaceFinder.h"
 #include "BathySignalStrength.h"
 #include "BathyRefractionCorrector.h"
-#include "BathyUncertaintyCalculator.h"
 #ifdef __unittesting__
 #include "UT_BathyRefractionCorrector.h"
 #endif
@@ -73,8 +72,6 @@ int bathy_open (lua_State *L)
         {"seasurface",          BathySeaSurfaceFinder::luaCreate},
         {"signal",              BathySignalStrength::luaCreate},
         {"refraction",          BathyRefractionCorrector::luaCreate},
-        {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
-        {"inituncertainty",     BathyUncertaintyCalculator::luaInit},
 #ifdef __unittesting__
         {"ut_refraction",          UT_BathyRefractionCorrector::luaCreate},
 #endif

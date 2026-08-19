@@ -97,6 +97,143 @@ void OutputLib::init (void)
 }
 
 /*----------------------------------------------------------------------------
+ * getUniqueFileName
+ *----------------------------------------------------------------------------*/
+const char* OutputLib::getUniqueFileName (const char* id)
+{
+    string tmp_file(TMP_FILE_PREFIX);
+
+    if(id) tmp_file.append(id).append(".");
+    else tmp_file.append("arrow.");
+
+    tmp_file.append(UString().c_str()).append(".bin");
+    return StringLib::duplicate(tmp_file.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * removeFile
+ *----------------------------------------------------------------------------*/
+void OutputLib::removeFile (const char* src_file)
+{
+    if(std::filesystem::exists(src_file))
+    {
+        const int rc = std::remove(src_file);
+        if(rc != 0)
+        {
+            char err_buf[256];
+            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, src_file, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * renameFile
+ *----------------------------------------------------------------------------*/
+bool OutputLib::renameFile (const char* old_name, const char* new_name)
+{
+    if(!std::filesystem::exists(old_name))
+    {
+        mlog(CRITICAL, "Failed to rename file %s to %s: source does not exist", old_name, new_name);
+        return false;
+    }
+
+    const int rc = std::rename(old_name, new_name);
+    if(rc != 0)
+    {
+        char err_buf[256];
+        mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, old_name, new_name, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+        return false;
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * fileExists
+ *----------------------------------------------------------------------------*/
+bool OutputLib::fileExists (const char* src_file)
+{
+    return std::filesystem::exists(src_file);
+}
+
+/*----------------------------------------------------------------------------
+ * isArrow -
+ *----------------------------------------------------------------------------*/
+bool OutputLib::isArrow (OutputFields::format_t fmt)
+{
+    bool status = false;
+    switch(fmt)
+    {
+        case OutputFields::FEATHER:     status = true; break;
+        case OutputFields::PARQUET:     status = true; break;
+        case OutputFields::GEOPARQUET:  status = true; break;
+        case OutputFields::CSV:         status = true; break;
+        default:                        status = false; break;
+    }
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * isLas -
+ *----------------------------------------------------------------------------*/
+bool OutputLib::isLas (OutputFields::format_t fmt)
+{
+    return (fmt == OutputFields::LAS) || (fmt == OutputFields::LAZ);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSend2User -
+ *----------------------------------------------------------------------------*/
+int OutputLib::luaSend2User (lua_State* L)
+{
+    bool status = false;
+    RequestParameters* _parms = NULL;
+    Publisher* outq = NULL;
+
+    try
+    {
+        /* Get Parameters */
+        const char* source_filename = LuaObject::getLuaString(L, 1);
+        const char* outq_name = LuaObject::getLuaString(L, 2);
+        _parms = dynamic_cast<RequestParameters*>(LuaObject::getLuaObject(L, 3, RequestParameters::OBJECT_TYPE));
+        const char* destination_filename = LuaObject::getLuaString(L, 4, true, _parms->output.path.value.c_str()); // override
+        const char* asset_name = LuaObject::getLuaString(L, 5, true, _parms->output.assetName.value.c_str()); // override
+        const bool with_checksum = LuaObject::getLuaBoolean(L, 6, true, _parms->output.withChecksum.value); // override
+        const char* with_suffix = LuaObject::getLuaString(L, 7, true, ".bin");
+
+        /* Get Trace from Lua Engine */
+        lua_getglobal(L, LuaEngine::LUA_TRACEID);
+        const uint32_t trace_id = lua_tonumber(L, -1);
+
+        /* Create Publisher */
+        outq = new Publisher(outq_name);
+
+        /* (Optionally) Generate Output Path */
+        string output_path = destination_filename;
+        if((destination_filename == NULL) || (destination_filename[0] == '\0'))
+        {
+            output_path = FString("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), with_suffix).c_str();
+            mlog(DEBUG, "Generating unique path: %s", output_path.c_str());
+        }
+
+        /* Call Utility to Send File */
+        status = send2User(source_filename, output_path, trace_id, _parms->output, asset_name, with_checksum, outq);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error sending file to user: %s", e.what());
+    }
+
+    /* Release Allocated Resources */
+    if(_parms) _parms->releaseLuaObject();
+    delete outq;
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * send2User
  *----------------------------------------------------------------------------*/
 bool OutputLib::send2User (const char* src_file, const string& output_path, uint32_t trace_id, const OutputFields& output_fields, const char* asset_name, bool with_checksum, Publisher* outq)
@@ -333,141 +470,4 @@ bool OutputLib::send2Client (const char* src_file, const char* dst_file, bool wi
 
     /* Return Status */
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * getUniqueFileName
- *----------------------------------------------------------------------------*/
-const char* OutputLib::getUniqueFileName (const char* id)
-{
-    string tmp_file(TMP_FILE_PREFIX);
-
-    if(id) tmp_file.append(id).append(".");
-    else tmp_file.append("arrow.");
-
-    tmp_file.append(UString().c_str()).append(".bin");
-    return StringLib::duplicate(tmp_file.c_str());
-}
-
-/*----------------------------------------------------------------------------
- * removeFile
- *----------------------------------------------------------------------------*/
-void OutputLib::removeFile (const char* src_file)
-{
-    if(std::filesystem::exists(src_file))
-    {
-        const int rc = std::remove(src_file);
-        if(rc != 0)
-        {
-            char err_buf[256];
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, src_file, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * renameFile
- *----------------------------------------------------------------------------*/
-bool OutputLib::renameFile (const char* old_name, const char* new_name)
-{
-    if(!std::filesystem::exists(old_name))
-    {
-        mlog(CRITICAL, "Failed to rename file %s to %s: source does not exist", old_name, new_name);
-        return false;
-    }
-
-    const int rc = std::rename(old_name, new_name);
-    if(rc != 0)
-    {
-        char err_buf[256];
-        mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, old_name, new_name, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
-        return false;
-    }
-
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * fileExists
- *----------------------------------------------------------------------------*/
-bool OutputLib::fileExists (const char* src_file)
-{
-    return std::filesystem::exists(src_file);
-}
-
-/*----------------------------------------------------------------------------
- * isArrow -
- *----------------------------------------------------------------------------*/
-bool OutputLib::isArrow (OutputFields::format_t fmt)
-{
-    bool status = false;
-    switch(fmt)
-    {
-        case OutputFields::FEATHER:     status = true; break;
-        case OutputFields::PARQUET:     status = true; break;
-        case OutputFields::GEOPARQUET:  status = true; break;
-        case OutputFields::CSV:         status = true; break;
-        default:                        status = false; break;
-    }
-    return status;
-}
-
-/*----------------------------------------------------------------------------
- * isLas -
- *----------------------------------------------------------------------------*/
-bool OutputLib::isLas (OutputFields::format_t fmt)
-{
-    return (fmt == OutputFields::LAS) || (fmt == OutputFields::LAZ);
-}
-
-/*----------------------------------------------------------------------------
- * luaSend2User -
- *----------------------------------------------------------------------------*/
-int OutputLib::luaSend2User (lua_State* L)
-{
-    bool status = false;
-    RequestParameters* _parms = NULL;
-    Publisher* outq = NULL;
-
-    try
-    {
-        /* Get Parameters */
-        const char* source_filename = LuaObject::getLuaString(L, 1);
-        const char* outq_name = LuaObject::getLuaString(L, 2);
-        _parms = dynamic_cast<RequestParameters*>(LuaObject::getLuaObject(L, 3, RequestParameters::OBJECT_TYPE));
-        const char* destination_filename = LuaObject::getLuaString(L, 4, true, _parms->output.path.value.c_str()); // override
-        const char* asset_name = LuaObject::getLuaString(L, 5, true, _parms->output.assetName.value.c_str()); // override
-        const bool with_checksum = LuaObject::getLuaBoolean(L, 6, true, _parms->output.withChecksum.value); // override
-        const char* with_suffix = LuaObject::getLuaString(L, 7, true, ".bin");
-
-        /* Get Trace from Lua Engine */
-        lua_getglobal(L, LuaEngine::LUA_TRACEID);
-        const uint32_t trace_id = lua_tonumber(L, -1);
-
-        /* Create Publisher */
-        outq = new Publisher(outq_name);
-
-        /* (Optionally) Generate Output Path */
-        string output_path = destination_filename;
-        if((destination_filename == NULL) || (destination_filename[0] == '\0'))
-        {
-            output_path = FString("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), with_suffix).c_str();
-            mlog(DEBUG, "Generating unique path: %s", output_path.c_str());
-        }
-
-        /* Call Utility to Send File */
-        status = send2User(source_filename, output_path, trace_id, _parms->output, asset_name, with_checksum, outq);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error sending file to user: %s", e.what());
-    }
-
-    /* Release Allocated Resources */
-    if(_parms) _parms->releaseLuaObject();
-    delete outq;
-
-    /* Return Status */
-    lua_pushboolean(L, status);
-    return 1;
 }

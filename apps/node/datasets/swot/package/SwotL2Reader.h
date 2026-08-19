@@ -159,11 +159,10 @@ class SwotL2Reader: public LuaObject
         Mutex                   threadMut;
         int                     threadCount;
         int                     numComplete;
-        Asset*                  asset;
         const char*             resource;
         bool                    sendTerminator;
         Publisher*              outQ;
-        SwotParameters*              parms;
+        SwotParameters*         parms;
         stats_t                 stats;
 
         /*--------------------------------------------------------------------

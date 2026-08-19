@@ -221,20 +221,23 @@ RELEASE ?= # vX.Y.Z
 # Local Build Targets
 ########################
 
-all: ## build the server using the local configuration
+all: ## build the node using the local configuration
 	make -j8 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
 
-config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
+config: prep ## configure the node for typical development
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DSKIP_STATIC_ANALYSIS=ON $(ROOT)/apps/node
+
+config-debug: prep ## configure the node for running locally with debug symbols, tracing, optimizations off, static analysis, and address sanitizer
 	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)/apps/node
 
-config-release: prep ## configure server to run a release version locally
+config-release: prep ## configure node to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)/apps/node
 
-run: ## run the server locally
+run: ## run the node locally
 	LOG_FORMAT=FMT_TEXT \
 	IPV4=$(IPV4) \
 	ENVIRONMENT_VERSION=$(ENVVER) \
@@ -291,7 +294,7 @@ python: ## update python client in sliderule environment
 	conda run -n sliderule --no-capture-output \
 	sh -c 'cd $(ROOT)/clients/python && pip install .'
 
-selftest: ## run the self test on the server code
+selftest: ## run the self test on the node code
 	make run RUN_CMD=$(ROOT)/apps/node/scripts/test_runner.lua
 
 openapi: ## bundle and lint the openapi docs for sliderule
