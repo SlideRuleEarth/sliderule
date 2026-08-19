@@ -76,23 +76,24 @@ def exception_reponse(e):
 # Send Email Message
 #
 def send_email(title, message):
-    response = ses.send_email(
-        Source = SUPPORT_EMAIL,
-        Destination = {
-            "ToAddresses": [ALERT_EMAIL]
-        },
-        Message = {
-            "Subject": {
-                "Data": title
+    try:
+        response = ses.send_email(
+            Source = SUPPORT_EMAIL,
+            Destination = {
+                "ToAddresses": [ALERT_EMAIL]
             },
-            "Body": { "Text": {
-                "Data": message
-            }}
-        })
-    if response["ResponseMetadata"]["HTTPStatusCode"] >= 200 and response["ResponseMetadata"]["HTTPStatusCode"] < 300:
-        return True
-    else:
-        print(f"Error sending email from {SUPPORT_EMAIL} to {ALERT_EMAIL}: {response}")
+            Message = {
+                "Subject": {
+                    "Data": title
+                },
+                "Body": { "Text": {
+                    "Data": message
+                }}
+            })
+        if response["ResponseMetadata"]["HTTPStatusCode"] < 200 or response["ResponseMetadata"]["HTTPStatusCode"] >= 300:
+            raise RuntimeError(f"Failed to send email: {response}")
+    except Exception as e:
+        print(f"Error sending email from {SUPPORT_EMAIL} to {ALERT_EMAIL}: {e}")
         return False
 
 #

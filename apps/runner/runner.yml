@@ -360,7 +360,7 @@ Resources:
             - Action: RETRY
               OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
         Timeout:
-          AttemptDurationSeconds: 3600  # 60 minutes
+          AttemptDurationSeconds: 5400  # 90 minutes
         ContainerProperties:
           Image: !Sub "${ContainerRegistry}/sliderule:runner"
           ResourceRequirements:
