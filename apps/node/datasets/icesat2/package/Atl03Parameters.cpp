@@ -93,6 +93,12 @@ void YapcFields::fromLua (lua_State* L, int index)
     if(lua_istable(L, index))
     {
         FieldMap<Field>::fromLua(L, index);
+
+        if(version.value < 0 || version.value > 3)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid yapc version: %d", version.value);
+        }
+
         provided = true;
     }
 }

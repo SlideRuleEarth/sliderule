@@ -7,6 +7,7 @@ from sliderule import sliderule, icesat2
 
 TESTDIR = Path(__file__).parent
 RESOURCES = ["ATL03_20181019065445_03150111_006_02.h5"]
+RESOURCES_007 = ["ATL03_20181019065445_03150111_007_01.h5"]
 AOI = [ { "lat": -80.75, "lon": -70.00 },
         { "lat": -81.00, "lon": -70.00 },
         { "lat": -81.00, "lon": -65.00 },
@@ -339,3 +340,26 @@ class TestAtl03x:
         assert "x_atc" in gdf.keys()
         assert "atl03_cnf" in gdf.keys()
         assert "geometry" in gdf.keys()
+
+    def test_yapc_score_filter(self, init):
+        base = { "track": 1,
+                 "cnf": -2,
+                 "srt": 3 }
+        gdf_all = sliderule.run("atl03x", {**base, "yapc": {"version": 0, "score": 0}}, AOI, RESOURCES_007)
+        gdf_mid = sliderule.run("atl03x", {**base, "yapc": {"version": 0, "score": 1000}}, AOI, RESOURCES_007)
+        gdf_high = sliderule.run("atl03x", {**base, "yapc": {"version": 0, "score": 8000}}, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf_all) > 0
+        assert len(gdf_high) < len(gdf_all) # threshold filters photons
+        assert len(gdf_high) <= len(gdf_mid) <= len(gdf_all) # row counts monotonic in threshold
+        assert gdf_mid.yapc_score.min() >= 1000
+        assert gdf_high.yapc_score.min() >= 8000
+
+    def test_yapc_unsupported_version(self, init):
+        parms = { "track": 1,
+                  "cnf": 0,
+                  "srt": 3,
+                  "yapc": { "version": 3, "score": 0 } }
+        gdf = sliderule.run("atl03x", parms, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf) == 0 # yapc versions 1-3 are rejected by atl03x
