@@ -1323,7 +1323,8 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
     LuaEngine::setAttrFunc(L, "buildindex", luaBuildIndex);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
-    LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
+    LuaEngine::setAttrFunc(L, "finished",   luaWaitComplete);
+    LuaEngine::setAttrFunc(L, "start",      luaSignalComplete);
 
     // start runner
     runPid = new Thread(runThread, this);
@@ -2225,9 +2226,9 @@ int GeoDataFrame::luaRun (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaRunComplete - :finished([<timeout is milliseconds>])
+ * luaWaitComplete - :finished([<timeout is milliseconds>])
  *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaRunComplete(lua_State* L)
+int GeoDataFrame::luaWaitComplete(lua_State* L)
 {
     bool status = false;
 
@@ -2281,5 +2282,27 @@ int GeoDataFrame::luaRunComplete(lua_State* L)
     }
 
     // return completion status
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSignalComplete - :start()
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaSignalComplete(lua_State* L)
+{
+    bool status = true;
+
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        lua_obj->signalComplete();
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error signaling run: %s", e.what());
+        status = false;
+    }
+
+    // return signaling status
     return returnLuaStatus(L, status);
 }

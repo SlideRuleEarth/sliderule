@@ -290,7 +290,8 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaGetCRS           (lua_State* L);
         static int      luaBuildIndex       (lua_State* L);
         static int      luaRun              (lua_State* L);
-        static int      luaRunComplete      (lua_State* L);
+        static int      luaWaitComplete     (lua_State* L);
+        static int      luaSignalComplete   (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
