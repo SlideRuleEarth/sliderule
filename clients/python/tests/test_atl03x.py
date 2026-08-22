@@ -1,6 +1,7 @@
 """Tests for atl03x"""
 
 import os
+import logging
 import numpy as np
 from pathlib import Path
 from sliderule import sliderule, icesat2
@@ -355,11 +356,13 @@ class TestAtl03x:
         assert gdf_mid.yapc_score.min() >= 1000
         assert gdf_high.yapc_score.min() >= 8000
 
-    def test_yapc_unsupported_version(self, init):
+    def test_yapc_unsupported_version(self, init, caplog):
         parms = { "track": 1,
                   "cnf": 0,
                   "srt": 3,
                   "yapc": { "version": 3, "score": 0 } }
-        gdf = sliderule.run("atl03x", parms, AOI, RESOURCES_007)
+        with caplog.at_level(logging.ERROR):
+            gdf = sliderule.run("atl03x", parms, AOI, RESOURCES_007)
         assert init
         assert len(gdf) == 0 # yapc versions 1-3 are rejected by atl03x
+        assert "not supported by atl03x" in caplog.text # rejection was loud, not an incidental empty result

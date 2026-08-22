@@ -531,7 +531,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - `atl08_class`: the photon's ATL08 classification (0: noise, 1: ground, 2: canopy, 3: top of canopy, 4: unclassified)
 - `atl03_cnf`: the photon's ATL03 confidence level (-2: TEP, -1: not considered, 0: background, 1: within 10m, 2: low, 3: medium, 4: high)
 - `quality_ph`: the photon's quality classification (0: nominal, 1: possible after pulse, 2: possible impulse responpse effect, 3: possible tep)
-- `yapc_score`: the photon's YAPC classification (the larger the number the higher the confidence in surface reflection; 0 - 65535 for scores read from release 007 granules, 0 - 255 otherwise)
+- `yapc_score`: the photon's YAPC photon weight (a photon-density score - higher is denser; when `version: 0` this is the raw `weight_ph` value read from the granule; 0 - 65535 for scores read from release 007 granules, 0 - 255 otherwise)
 
 Note: when PhoREAL is enabled, the ATL03 extent records (_atl03rec_) are enhanced to include the following populated fields:
 
