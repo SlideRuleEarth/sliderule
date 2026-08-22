@@ -538,13 +538,13 @@ int GeoDataFrame::luaCreate (lua_State* L)
                 {
                     // create column
                     const char* name = lua_tostring(L, -2);
-                    FieldColumn<double>* column = new FieldColumn<double>();
+                    FieldColumn<float>* column = new FieldColumn<float>();
 
                     // add values to column
                     const int num_elements = lua_rawlen(L, -1);
                     for(int i = 0; i < num_elements; i++)
                     {
-                        double value;
+                        float value;
                         lua_rawgeti(L, -1, i + 1);
                         convertFromLua(L, -1, value);
                         lua_pop(L, 1);
