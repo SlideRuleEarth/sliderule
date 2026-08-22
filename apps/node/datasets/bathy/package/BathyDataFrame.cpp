@@ -112,6 +112,10 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyParamet
         {"max_signal_conf",     &max_signal_conf,       "Maximum ATL03 signal confidence across all surface types"},
         {"quality_ph",          &quality_ph,            "ATL03 photon quality flags"},
         {"geoid_corr_h",        &geoid_corr_h,          "Geoid (sea level) corrected photon height"},
+        {"ref_el",              &ref_el,                "Elevation of the pointing angle of the laser beam"},
+        {"sigma_h",             &sigma_h,               "Aerial vertical uncertainty"},
+        {"sigma_across",        &sigma_across,          "Aerial along track uncertainty"},
+        {"sigma_along",         &sigma_along,           "Aerial across track uncertainty"}
     },
     {
         {"spot",                &spot,                  "ATLAS detector spot"},

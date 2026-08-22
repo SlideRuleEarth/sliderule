@@ -76,6 +76,11 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
     };
 
     const hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    if(file_id < 0)
+    {
+        mlog(CRITICAL, "Failed to create file: %s", filename);
+        return false;
+    }
     hid_stack.push(file_id);
 
     for(int i = 0; i < datasets.length(); i++)
