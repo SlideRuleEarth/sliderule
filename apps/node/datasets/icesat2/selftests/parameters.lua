@@ -66,11 +66,15 @@ end)
 
 runner.unittest("Invalid YAPC Version", function()
 
+    -- FieldMap catches the parse-time throw: construction succeeds with a
+    -- server-side warning and yapc is left un-provided (stage disabled);
+    -- versions 1-3 on atl03x are rejected loudly at runtime (see
+    -- atl03_dataframe.lua selftests)
     local parms = icesat2.parms03({
         yapc = { version = 9 }
     })
 
-    runner.assert(parms == false)
+    runner.assert(parms ~= false)
 
 end)
 
