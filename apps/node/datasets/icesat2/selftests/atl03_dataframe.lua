@@ -342,7 +342,11 @@ runner.unittest("ATL06 Surface Fitter - Signal Classification", function()
 
     runner.assert(rows_all > 0, "no elevations returned for unfiltered fit")
     runner.assert(rows_sel > 0, "no elevations returned for signal class fit")
-    runner.assert(rows_sel <= rows_all, string.format("signal class fit returned more elevations than unfiltered fit: %d > %d", rows_sel, rows_all))
+    -- fit row counts are not monotonic in photon count: noise photons make
+    -- segments fail the robust fit, so a cleaner selection can yield more
+    -- elevations, not fewer (on this granule/polygon cnf=4 alone gives 527
+    -- rows vs 415 for cnf=0). Only check that the selection changed the fit.
+    runner.assert(rows_sel ~= rows_all, string.format("signal class selection had no effect on fit: %d == %d", rows_sel, rows_all))
 
 end, {"long"})
 
