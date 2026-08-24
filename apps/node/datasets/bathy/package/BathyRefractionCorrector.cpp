@@ -192,6 +192,13 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     const RefractionFields& refraction_parms = parms->refraction;
     bool first_transform_error = true;
 
+    /* Check Size */
+    if(df.length() == 0)
+    {
+        mlog(CRITICAL, "Skipping refraction correction, empty dataframe\n");
+        return true; // not a failure
+    }
+
     /* Get Input Columns */
     FieldColumn<float>* surface_h = reinterpret_cast<FieldColumn<float>*>(df.getColumn("surface_h", true));
     FieldColumn<int>* class_ph = reinterpret_cast<FieldColumn<int>*>(df.getColumn("class_ph", true));
