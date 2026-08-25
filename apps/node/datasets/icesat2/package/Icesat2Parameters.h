@@ -203,6 +203,18 @@ class Icesat2Parameters: public RequestParameters
             NUM_ATL08_CLASSES = 5
         } atl08_class_t;
 
+        /* ATL03 Signal Classification (signal_class_ph, release 007 and later) */
+        typedef enum {
+            ATL03_SIGNAL_IGNORED = -1,
+            ATL03_SIGNAL_LIKELY_NOISE = 0,
+            ATL03_SIGNAL_LIKELY_SIGNAL = 1,
+            ATL03_SIGNAL_BELOW = 2,
+            ATL03_SIGNAL_ABOVE = 3,
+            ATL03_SIGNAL_PRIMARY = 4,
+            ATL03_SIGNAL_FITTED = 5,
+            NUM_ATL03_SIGNAL_CLASSES = 7
+        } atl03_signal_class_t;
+
         /* Algorithm Stages */
         typedef enum {
             STAGE_FITTER = 0,    // surface fit
@@ -423,6 +435,12 @@ void convertFromLua(lua_State* L, int index, Icesat2Parameters::atl08_class_t& v
 int convertToIndex(const Icesat2Parameters::atl08_class_t& v);
 void convertFromIndex(int index, Icesat2Parameters::atl08_class_t& v);
 
+string convertToJson(const Icesat2Parameters::atl03_signal_class_t& v);
+int convertToLua(lua_State* L, const Icesat2Parameters::atl03_signal_class_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::atl03_signal_class_t& v);
+int convertToIndex(const Icesat2Parameters::atl03_signal_class_t& v);
+void convertFromIndex(int index, Icesat2Parameters::atl03_signal_class_t& v);
+
 string convertToJson(const Icesat2Parameters::gt_t& v);
 int convertToLua(lua_State* L, const Icesat2Parameters::gt_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Parameters::gt_t& v);
@@ -443,6 +461,7 @@ inline uint32_t toEncoding(Icesat2Parameters::surface_type_t& v) { (void)v; retu
 inline uint32_t toEncoding(Icesat2Parameters::spot_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::gt_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::atl08_class_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Parameters::atl03_signal_class_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::quality_ph_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::signal_conf_t& v) { (void)v; return Field::INT32; }
 

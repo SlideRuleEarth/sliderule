@@ -571,6 +571,87 @@ void convertFromIndex(int index, Icesat2Parameters::atl08_class_t& v)
 }
 
 /*----------------------------------------------------------------------------
+ * convertToJson - atl03_signal_class_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Parameters::atl03_signal_class_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Parameters::ATL03_SIGNAL_IGNORED:       return "\"ignored\"";
+        case Icesat2Parameters::ATL03_SIGNAL_LIKELY_NOISE:  return "\"likely_noise\"";
+        case Icesat2Parameters::ATL03_SIGNAL_LIKELY_SIGNAL: return "\"likely_signal\"";
+        case Icesat2Parameters::ATL03_SIGNAL_BELOW:         return "\"signal_below\"";
+        case Icesat2Parameters::ATL03_SIGNAL_ABOVE:         return "\"signal_above\"";
+        case Icesat2Parameters::ATL03_SIGNAL_PRIMARY:       return "\"primary_signal\"";
+        case Icesat2Parameters::ATL03_SIGNAL_FITTED:        return "\"fitted_signal\"";
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal classification: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - atl03_signal_class_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const Icesat2Parameters::atl03_signal_class_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Parameters::ATL03_SIGNAL_IGNORED:       lua_pushstring(L, "ignored");       break;
+        case Icesat2Parameters::ATL03_SIGNAL_LIKELY_NOISE:  lua_pushstring(L, "likely_noise");  break;
+        case Icesat2Parameters::ATL03_SIGNAL_LIKELY_SIGNAL: lua_pushstring(L, "likely_signal"); break;
+        case Icesat2Parameters::ATL03_SIGNAL_BELOW:         lua_pushstring(L, "signal_below");  break;
+        case Icesat2Parameters::ATL03_SIGNAL_ABOVE:         lua_pushstring(L, "signal_above");  break;
+        case Icesat2Parameters::ATL03_SIGNAL_PRIMARY:       lua_pushstring(L, "primary_signal");break;
+        case Icesat2Parameters::ATL03_SIGNAL_FITTED:        lua_pushstring(L, "fitted_signal"); break;
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal classification: %d", static_cast<int>(v));
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - atl03_signal_class_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, Icesat2Parameters::atl03_signal_class_t& v)
+{
+    if(lua_isinteger(L, index))
+    {
+        v = static_cast<Icesat2Parameters::atl03_signal_class_t>(LuaObject::getLuaInteger(L, index));
+    }
+    else if(lua_isstring(L, index))
+    {
+        const char* str = LuaObject::getLuaString(L, index);
+        if     (StringLib::match(str, "ignored"))           v = Icesat2Parameters::ATL03_SIGNAL_IGNORED;
+        else if(StringLib::match(str, "likely_noise"))      v = Icesat2Parameters::ATL03_SIGNAL_LIKELY_NOISE;
+        else if(StringLib::match(str, "likely_signal"))     v = Icesat2Parameters::ATL03_SIGNAL_LIKELY_SIGNAL;
+        else if(StringLib::match(str, "signal_below"))      v = Icesat2Parameters::ATL03_SIGNAL_BELOW;
+        else if(StringLib::match(str, "signal_above"))      v = Icesat2Parameters::ATL03_SIGNAL_ABOVE;
+        else if(StringLib::match(str, "primary_signal"))    v = Icesat2Parameters::ATL03_SIGNAL_PRIMARY;
+        else if(StringLib::match(str, "fitted_signal"))     v = Icesat2Parameters::ATL03_SIGNAL_FITTED;
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "atl03 signal classification is an invalid value: %s", str);
+    }
+    else if(!lua_isnil(L, index))
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "atl03 signal classification is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToIndex - atl03_signal_class_t
+ *----------------------------------------------------------------------------*/
+int convertToIndex(const Icesat2Parameters::atl03_signal_class_t& v)
+{
+    return static_cast<int>(v) + 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromIndex - atl03_signal_class_t
+ *----------------------------------------------------------------------------*/
+void convertFromIndex(int index, Icesat2Parameters::atl03_signal_class_t& v)
+{
+    v = static_cast<Icesat2Parameters::atl03_signal_class_t>(index - 1);
+}
+
+/*----------------------------------------------------------------------------
  * convertToJson - gt_t
  *----------------------------------------------------------------------------*/
 string convertToJson(const Icesat2Parameters::gt_t& v)

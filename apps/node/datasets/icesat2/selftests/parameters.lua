@@ -62,6 +62,75 @@ runner.unittest("ICESat-2 Fields", function()
 
 end)
 
+-- Self Test --
+
+runner.unittest("ATL03 Signal Classification Fields", function()
+
+    -- default is every classification enabled, so the request parameters
+    -- recorded in the dataframe metadata capture the (absent) filter
+    local parms_default = icesat2.parms03({})
+
+    runner.assert(#parms_default["atl03_signal_class"] == 7)
+    runner.assert(parms_default["atl03_signal_class"][1] == "ignored")
+    runner.assert(parms_default["atl03_signal_class"][7] == "fitted_signal")
+
+    local parms = icesat2.parms03({
+        atl03_signal_class = {
+            "primary_signal",
+            "fitted_signal"
+        }
+    })
+
+    runner.assert(#parms["atl03_signal_class"] == 2)
+    runner.assert(parms["atl03_signal_class"][1] == "primary_signal")
+    runner.assert(parms["atl03_signal_class"][2] == "fitted_signal")
+
+    local parms_numeric = icesat2.parms03({
+        atl03_signal_class = { -1, 0, 4, 5 }
+    })
+
+    runner.assert(#parms_numeric["atl03_signal_class"] == 4)
+    runner.assert(parms_numeric["atl03_signal_class"][1] == "ignored")
+    runner.assert(parms_numeric["atl03_signal_class"][2] == "likely_noise")
+    runner.assert(parms_numeric["atl03_signal_class"][3] == "primary_signal")
+    runner.assert(parms_numeric["atl03_signal_class"][4] == "fitted_signal")
+
+    -- FieldMap catches the converter throw on invalid values: construction
+    -- succeeds with a server-side warning and the enumeration is left empty
+    -- (fromLua clears it before converting), so the selection is active and
+    -- excludes every photon -- the same behavior as quality_ph
+    local parms_invalid = icesat2.parms03({
+        atl03_signal_class = { "not_a_class" }
+    })
+
+    runner.assert(parms_invalid ~= false)
+    runner.assert(#parms_invalid["atl03_signal_class"] == 0)
+
+    local parms_out_of_bounds = icesat2.parms03({
+        atl03_signal_class = { 6 }
+    })
+
+    runner.assert(parms_out_of_bounds ~= false)
+    runner.assert(#parms_out_of_bounds["atl03_signal_class"] == 0)
+
+end)
+
+-- Self Test --
+
+runner.unittest("Invalid YAPC Version", function()
+
+    -- FieldMap catches the parse-time throw: construction succeeds with a
+    -- server-side warning and yapc is left un-provided (stage disabled);
+    -- versions 1-3 on atl03x are rejected loudly at runtime (see
+    -- atl03_dataframe.lua selftests)
+    local parms = icesat2.parms03({
+        yapc = { version = 9 }
+    })
+
+    runner.assert(parms ~= false)
+
+end)
+
 -- Report Results --
 
 runner.report()

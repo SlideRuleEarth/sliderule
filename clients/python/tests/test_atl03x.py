@@ -1,12 +1,14 @@
 """Tests for atl03x"""
 
 import os
+import logging
 import numpy as np
 from pathlib import Path
 from sliderule import sliderule, icesat2
 
 TESTDIR = Path(__file__).parent
 RESOURCES = ["ATL03_20181019065445_03150111_006_02.h5"]
+RESOURCES_007 = ["ATL03_20181019065445_03150111_007_01.h5"]
 AOI = [ { "lat": -80.75, "lon": -70.00 },
         { "lat": -81.00, "lon": -70.00 },
         { "lat": -81.00, "lon": -65.00 },
@@ -339,3 +341,61 @@ class TestAtl03x:
         assert "x_atc" in gdf.keys()
         assert "atl03_cnf" in gdf.keys()
         assert "geometry" in gdf.keys()
+
+    def test_yapc_score_filter(self, init):
+        base = { "track": 1,
+                 "cnf": -2,
+                 "srt": 3 }
+        gdf_all = sliderule.run("atl03x", {**base, "yapc": {"version": 0, "score": 0}}, AOI, RESOURCES_007)
+        gdf_mid = sliderule.run("atl03x", {**base, "yapc": {"version": 0, "score": 1000}}, AOI, RESOURCES_007)
+        gdf_high = sliderule.run("atl03x", {**base, "yapc": {"version": 0, "score": 8000}}, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf_all) > 0
+        assert len(gdf_high) < len(gdf_all) # threshold filters photons
+        assert len(gdf_high) <= len(gdf_mid) <= len(gdf_all) # row counts monotonic in threshold
+        assert gdf_mid.yapc_score.min() >= 1000
+        assert gdf_high.yapc_score.min() >= 8000
+
+    def test_yapc_unsupported_version(self, init, caplog):
+        parms = { "track": 1,
+                  "cnf": 0,
+                  "srt": 3,
+                  "yapc": { "version": 3, "score": 0 } }
+        with caplog.at_level(logging.ERROR):
+            gdf = sliderule.run("atl03x", parms, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf) == 0 # yapc versions 1-3 are rejected by atl03x
+        assert "not supported by atl03x" in caplog.text # rejection was loud, not an incidental empty result
+
+    def test_signal_class_filter(self, init):
+        base = { "track": 1,
+                 "cnf": -2,
+                 "srt": 3 }
+        gdf_all = sliderule.run("atl03x", base, AOI, RESOURCES_007)
+        gdf_sel = sliderule.run("atl03x", {**base, "atl03_signal_class": ["primary_signal", "fitted_signal"]}, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf_all) > 0
+        assert 0 < len(gdf_sel) < len(gdf_all)
+        assert "atl03_signal_class" in gdf_sel.keys()
+        assert set(np.unique(gdf_sel.atl03_signal_class)) <= {4, 5}
+
+    def test_signal_class_fit(self, init):
+        base = { "track": 1,
+                 "cnf": -2,
+                 "srt": 3,
+                 "fit": {} }
+        gdf_all = sliderule.run("atl03x", base, AOI, RESOURCES_007)
+        gdf_sel = sliderule.run("atl03x", {**base, "atl03_signal_class": ["primary_signal", "fitted_signal"]}, AOI, RESOURCES_007)
+        assert init
+        assert len(gdf_all) > 0
+        assert 0 < len(gdf_sel) <= len(gdf_all)
+        assert gdf_sel.n_fit_photons.sum() < gdf_all.n_fit_photons.sum() # fit runs on selected photons only
+
+    def test_signal_class_pre007(self, init):
+        parms = { "track": 1,
+                  "cnf": -2,
+                  "srt": 3,
+                  "atl03_signal_class": ["primary_signal", "fitted_signal"] }
+        gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
+        assert init
+        assert len(gdf) == 0 # signal_class_ph not present before release 007

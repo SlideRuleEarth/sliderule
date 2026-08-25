@@ -46,7 +46,8 @@ The default resulting DataFrame from this endpoint contains the following column
 |landcover|ATL08 land cover flags||Optional: must enable `phoreal`|
 |snowcover|ATL08 snow cover flags||Optional: must enable `phoreal`|
 |atl08_class|ATL08 photon classification|0:noise, 1:ground, 2:canopy, 3:top of canopy, 4:unclassified|Optional: must enable `phoreal` or specify `atl08_class`|
-|yapc_score|YAPC photon weight|0-255, higher is denser|Optional: must enable `yapc`|
+|yapc_score|YAPC photon weight|higher is denser; 0-65535 for scores read from release 007 granules, 0-255 for release 006|Optional: must enable `yapc`|
+|atl03_signal_class|ATL03 signal classification|-1:ignored, 0:likely_noise, 1:likely_signal, 2:signal_below, 3:signal_above, 4:primary_signal, 5:fitted_signal|Optional: included when `atl03_signal_class` selects a subset of classifications; requires ATL03 release 007|
 |atl24_class|ATL24 photon classification|0:unclassified, 40:bathymetry, 41:sea surface|Optional: must enable `atl24`|
 |atl24_confidence|ATL24 photon classification bathymetry confidence score|0 to 1.0, higher is more confident (float)|Optional: must enable `atl24`|
 |spot|ATLAS detector field of view|1-6|Independent of spacecraft orientation|
@@ -88,12 +89,12 @@ ATL03 contains a set of photon classification values, that are designed to ident
 The experimental YAPC (Yet Another Photon Classifier) photon-classification scheme assigns each photon a score based on the number of adjacent photons.  YAPC parameters are provided as a dictionary, with entries described below:
 
 * `yapc`: settings for the yapc algorithm; if provided then SlideRule will execute the YAPC classification on all photons
-    - `score`: the minimum yapc classification score of a photon to be used in the processing request
+    - `score`: the minimum yapc classification score of a photon to be used in the processing request; the score is compared against the raw score values, so its scale depends on where the scores come from: 0-65535 for scores read from release 007 granules (`weight_ph`, where 65535 represents the saturation density), 0-255 for scores read from release 006 granules and for scores calculated on the servers (versions 1-3)
     - `knn`: the number of nearest neighbors to use, or specify 0 to allow automatic selection of the number of neighbors (version 2 only)
     - `min_knn`: minimum number of k-nearest neighbors (version 3 only)
     - `win_h`: the window height used to filter the nearest neighbors (overrides calculated value if non-zero)
     - `win_x`: the window width used to filter the nearest neighbors
-    - `version`: the version of the YAPC algorithm to use; 0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`)
+    - `version`: the version of the YAPC algorithm to use; 0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`; requests to `atl03x` with versions 1-3 are rejected with an error)
 
 To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here is an example set of parameters that runs YAPC:
 
@@ -124,6 +125,14 @@ If ATL24 classification parameters are specified, the ATL24 (bathymetry) files c
 :::{note}
 ATL24 is typically a release behind the ATL03 standard data product which it is based on.  In order to correlate ATL24 classifications to ATL03, a release of ATL03 must be selected that has a corresponding ATL24 release.
 :::
+
+#### 1.2.5 ATL03 Signal Classification
+
+Starting with release 007, ATL03 granules include an experimental per-photon signal classification (`signal_class_ph`) derived from the `weight_ph` photon weights; photons with the highest weights (the highest reflectors) are labelled as the primary signal, and the fitted photons are the subset of the primary signal most likely to represent a surface return.  The `atl03_signal_class` parameter defaults to every classification, which selects every photon without reading `signal_class_ph`; when a subset of classifications is specified, only photons with those classifications are selected and the classification of each selected photon is included in the response.
+
+* `atl03_signal_class`: list of ATL03 signal classifications used to select which photons are used in the processing; defaults to all of them (the available classifications are: "ignored", "likely_noise", "likely_signal", "signal_below", "signal_above", "primary_signal", "fitted_signal"; the corresponding numeric values -1 through 5 may also be supplied)
+
+This selection is only supported by the `atl03x` endpoint and requires ATL03 release 007 or later granules; requests against earlier releases are rejected with an error.  Because the selection happens before any of the processing algorithms run, it can be combined with `fit` to produce elevations fit to only the selected photons (for example, a fit to the highest reflecting surface using ["primary_signal", "fitted_signal"]).
 
 ### 1.3 Photon-extent Parameters
 
@@ -531,7 +540,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - `atl08_class`: the photon's ATL08 classification (0: noise, 1: ground, 2: canopy, 3: top of canopy, 4: unclassified)
 - `atl03_cnf`: the photon's ATL03 confidence level (-2: TEP, -1: not considered, 0: background, 1: within 10m, 2: low, 3: medium, 4: high)
 - `quality_ph`: the photon's quality classification (0: nominal, 1: possible after pulse, 2: possible impulse responpse effect, 3: possible tep)
-- `yapc_score`: the photon's YAPC classification (0 - 255, the larger the number the higher the confidence in surface reflection)
+- `yapc_score`: the photon's YAPC photon weight (a photon-density score - higher is denser; when `version: 0` this is the raw `weight_ph` value read from the granule; 0 - 65535 for scores read from release 007 granules, 0 - 255 otherwise)
 
 Note: when PhoREAL is enabled, the ATL03 extent records (_atl03rec_) are enhanced to include the following populated fields:
 
