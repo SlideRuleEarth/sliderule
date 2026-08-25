@@ -291,6 +291,21 @@ runner.unittest("ATL03 DataFrame - Signal Classification Filter", function()
         runner.assert(signal_class == 4 or signal_class == 5, string.format("unselected signal class returned: %d", signal_class))
     end
 
+    -- explicitly selecting every classification is equivalent to the default:
+    -- signal_class_ph is not read and no column is added
+    local parms_every = icesat2.parms03({
+        srt = 3,
+        cnf = -2,
+        poly = poly,
+        atl03_signal_class = { "ignored", "likely_noise", "likely_signal", "signal_below", "signal_above", "primary_signal", "fitted_signal" },
+        resource = "ATL03_20200304065203_10470605_007_01.h5"
+    }, nil, "icesat2")
+    local atl03h5_every = h5coro.object(asset_name, parms_every["resource"])
+    local df_every = icesat2.atl03x("gt1l", parms_every, atl03h5_every, nil, nil, core.EVENTQ)
+    runner.assert(df_every:waiton(240000), "timed out creating dataframe", true)
+    runner.assert(df_every:numrows() == df_all:numrows(), string.format("selecting every signal class changed the photon count: %d ~= %d", df_every:numrows(), df_all:numrows()))
+    runner.assert(df_every:numcols() == df_all:numcols(), string.format("selecting every signal class added a column: %d ~= %d", df_every:numcols(), df_all:numcols()))
+
     -- selection is rejected for pre-007 granules
     local parms_006 = icesat2.parms03({
         srt = 3,

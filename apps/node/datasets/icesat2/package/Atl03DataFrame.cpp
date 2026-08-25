@@ -139,7 +139,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Atl03Paramet
     usePodppd(parms->podppdMask.value != 0x00),
     useYapc006(parms->stages[Icesat2Parameters::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value == 6)),
     useYapc007(parms->stages[Icesat2Parameters::STAGE_YAPC] && (parms->yapc.version.value == 0) && (parms->granuleFields.version.value >= 7)),
-    useSignalClass(parms->atl03SignalClass.anyEnabled()),
+    useSignalClass(parms->atl03SignalClass.anyDisabled()),
     useGeoid(parms->datum.value == MathLib::EGM08)
 {
     /* Set Optional PhoREAL Columns */
@@ -162,7 +162,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Atl03Paramet
         addColumn("atl08_class",        &atl08_class,       "ATL08 classification of photon; included for atl08 classificaiton",            false);
     }
 
-    /* Set Optional ATL03 Signal Classification Columns */
+    /* Set Optional ATL03 Signal Classification Columns (only when a subset of classes is selected) */
     if(useSignalClass)
     {
         addColumn("atl03_signal_class", &atl03_signal_class,"ATL03 signal classification of photon; included for atl03 signal classification", false);

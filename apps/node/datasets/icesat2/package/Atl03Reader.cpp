@@ -188,7 +188,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Atl03Parameters* 
     try
     {
         /* Check ATL03 Signal Classification Configuration */
-        if(parms->atl03SignalClass.anyEnabled())
+        if(parms->atl03SignalClass.anyDisabled())
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "atl03_signal_class selection is not supported by this endpoint; use atl03x");
         }

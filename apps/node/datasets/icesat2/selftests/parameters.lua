@@ -66,6 +66,14 @@ end)
 
 runner.unittest("ATL03 Signal Classification Fields", function()
 
+    -- default is every classification enabled, so the request parameters
+    -- recorded in the dataframe metadata capture the (absent) filter
+    local parms_default = icesat2.parms03({})
+
+    runner.assert(#parms_default["atl03_signal_class"] == 7)
+    runner.assert(parms_default["atl03_signal_class"][1] == "ignored")
+    runner.assert(parms_default["atl03_signal_class"][7] == "fitted_signal")
+
     local parms = icesat2.parms03({
         atl03_signal_class = {
             "primary_signal",
@@ -88,8 +96,9 @@ runner.unittest("ATL03 Signal Classification Fields", function()
     runner.assert(parms_numeric["atl03_signal_class"][4] == "fitted_signal")
 
     -- FieldMap catches the converter throw on invalid values: construction
-    -- succeeds with a server-side warning and the enumeration falls back to
-    -- empty, leaving the selection inert
+    -- succeeds with a server-side warning and the enumeration is left empty
+    -- (fromLua clears it before converting), so the selection is active and
+    -- excludes every photon -- the same behavior as quality_ph
     local parms_invalid = icesat2.parms03({
         atl03_signal_class = { "not_a_class" }
     })
