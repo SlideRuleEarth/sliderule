@@ -97,9 +97,9 @@ struct OutputLib
 
     static const char*  getUniqueFileName       (const char* id = NULL);
 
-    static void         removeFile              (const char* fileName);
-    static bool         renameFile              (const char* oldName, const char* newName);
-    static bool         fileExists              (const char* fileName);
+    static void         removeFile              (const char* src_file);
+    static bool         renameFile              (const char* old_name, const char* new_name);
+    static bool         fileExists              (const char* src_file);
     static bool         isArrow                 (OutputFields::format_t fmt);
     static bool         isLas                   (OutputFields::format_t fmt);
 

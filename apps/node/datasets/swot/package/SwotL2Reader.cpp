@@ -441,7 +441,7 @@ void* SwotL2Reader::varThread (void* parm)
     results.data = NULL;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "swot_l2_reader", "{\"resource\":\"%s\"}", reader->resource);
 
     try
     {

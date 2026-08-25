@@ -239,7 +239,7 @@ int OutputLib::luaSend2User (lua_State* L)
 bool OutputLib::send2User (const char* src_file, const string& output_path, uint32_t trace_id, const OutputFields& output_fields, const char* asset_name, bool with_checksum, Publisher* outq)
 {
     bool status = false;
-    const uint32_t send_trace_id = start_trace(INFO, trace_id, "send_file", "{\"path\": \"%s\"}", dst_file);
+    const uint32_t send_trace_id = start_trace(INFO, trace_id, "send_file", "{\"path\": \"%s\"}", output_path.c_str());
 
     /* Send File to User */
     if(asset_name)

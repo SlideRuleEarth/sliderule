@@ -214,6 +214,7 @@ int UT_BathyRefractionCorrector::luaRefractionTest (lua_State* L)
         parms = dynamic_cast<BathyParameters*>(getLuaObject(L, 2, BathyParameters::OBJECT_TYPE));
         refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 3, BathyRefractionCorrector::OBJECT_TYPE));
         FieldColumn<float>* surface_h = new FieldColumn<float>;
+        FieldColumn<int>* class_ph = new FieldColumn<int>;
 
         // build inputs
         BathyDataFrame dataframe(parms);
@@ -221,35 +222,30 @@ int UT_BathyRefractionCorrector::luaRefractionTest (lua_State* L)
         {
             dataframe.addRow();
             surface_h->append(PH_REF_EXPECTED[i].w);
+            class_ph->append(BathyParameters::BATHYMETRY);
             dataframe.geoid_corr_h.append(PH_REF_EXPECTED[i].z);
+            dataframe.ellipse_h.append(PH_REF_EXPECTED[i].z);
             dataframe.ref_az.append(PH_REF_EXPECTED[i].ref_az);
             dataframe.ref_el.append(PH_REF_EXPECTED[i].ref_el);
             dataframe.lat_ph.append(0.0);
             dataframe.lon_ph.append(0.0);
         }
         dataframe.addExistingColumn("surface_h", surface_h, "surface height");
+        dataframe.addExistingColumn("class_ph", class_ph, "surface class_ph");
 
         // run refraction code
         status = refraction->run(&dataframe);
         if(!status) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to run refraction code");
-
-        // get results
-        FieldColumn<float>* refracted_dZ = reinterpret_cast<FieldColumn<float>*>(dataframe.getColumn("refracted_dZ"));
-        if(!refracted_dZ) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to get refracted_dZ columm");
-        FieldColumn<double>* refracted_lat = reinterpret_cast<FieldColumn<double>*>(dataframe.getColumn("refracted_lat"));
-        if(!refracted_lat) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to get refracted_lat columm");
-        FieldColumn<double>* refracted_lon = reinterpret_cast<FieldColumn<double>*>(dataframe.getColumn("refracted_lon"));
-        if(!refracted_lon) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to get refracted_lon columm");
 
         // check results
         double acc_err = 0.0;
         long cnt_err = 0;
         for(int i = 0; i < PH_REF_NUM_EXPECTED; i++)
         {
-            const double err = fabs((*refracted_dZ)[i] - PH_REF_EXPECTED[i].dZ);
+            const double err = fabs(dataframe.geoid_corr_h[i] - PH_REF_EXPECTED[i].z - PH_REF_EXPECTED[i].dZ);
             if(err > 0.0001)
             {
-                mlog(CRITICAL, "Mistached delta Z at row %d: %lf != %lf", i, (*refracted_dZ)[i], PH_REF_EXPECTED[i].dZ);
+                mlog(CRITICAL, "Mistached delta Z at row %d: %lf != %lf", i, dataframe.geoid_corr_h[i] - PH_REF_EXPECTED[i].z, PH_REF_EXPECTED[i].dZ);
                 status = false;
             }
             acc_err += err;
