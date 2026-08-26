@@ -140,7 +140,7 @@ local function proxy(resources, parms_tbl, endpoint, rec)
         os.remove(arrow_file)
     end
     if arrow_metafile then
-        core.send2user(arrow_metafile, _rqst.rspq, parms, nil, nil, nil, "_metadata.json")
+        core.send2user(arrow_metafile, _rqst.rspq, parms, nil, nil, nil, ".meta")
         os.remove(arrow_metafile)
     end
 end

@@ -291,7 +291,7 @@ class TestParquet:
         parms["output"]["format"] = "csv"
         gdf_from_csv = icesat2.atl06p(parms, resources=[resource], keep_id=True)
         os.remove("testfile9.csv")
-        os.remove("testfile9_metadata.json")
+        os.remove("testfile9.csv.meta")
 
         # sort values
         gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')
@@ -335,7 +335,7 @@ class TestParquet:
         gdf_from_feather = icesat2.atl06p(parms, resources=[resource], keep_id=True)
         print(gdf_from_feather)
         os.remove("testfile10.feather")
-        os.remove("testfile10_metadata.json")
+        os.remove("testfile10.feather.meta")
 
         # sort values
         gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')

@@ -199,7 +199,7 @@ int OutputLib::luaSend2User (lua_State* L)
         const char* destination_filename = LuaObject::getLuaString(L, 4, true, _parms->output.path.value.c_str()); // override
         const char* asset_name = LuaObject::getLuaString(L, 5, true, _parms->output.assetName.value.c_str()); // override
         const bool with_checksum = LuaObject::getLuaBoolean(L, 6, true, _parms->output.withChecksum.value); // override
-        const char* with_suffix = LuaObject::getLuaString(L, 7, true, ".bin");
+        const char* with_suffix = LuaObject::getLuaString(L, 7, true, NULL);
 
         /* Get Trace from Lua Engine */
         lua_getglobal(L, LuaEngine::LUA_TRACEID);
@@ -212,8 +212,12 @@ int OutputLib::luaSend2User (lua_State* L)
         string output_path = destination_filename;
         if((destination_filename == NULL) || (destination_filename[0] == '\0'))
         {
-            output_path = FString("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), with_suffix).c_str();
-            mlog(DEBUG, "Generating unique path: %s", output_path.c_str());
+            output_path = FString("%s.%016lX%s", SystemConfig::settings().cluster.value.c_str(), OsApi::time(OsApi::CPU_CLK), with_suffix ? with_suffix : ".bin").c_str();
+            mlog(INFO, "Generating unique path: %s", output_path.c_str());
+        }
+        else if(with_suffix)
+        {
+            output_path = FString("%s%s", output_path.c_str(), with_suffix).c_str();
         }
 
         /* Call Utility to Send File */

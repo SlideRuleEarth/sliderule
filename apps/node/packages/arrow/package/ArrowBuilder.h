@@ -148,8 +148,8 @@ class ArrowBuilder: public LuaObject
          *--------------------------------------------------------------------*/
 
         Thread*             builderPid;
-        RequestParameters*      rqstParms;
-        const OutputFields&  parms;
+        RequestParameters*  rqstParms;
+        const OutputFields& parms;
         std::atomic<bool>   active;
         Subscriber*         inQ;
         const char*         recType;

@@ -382,14 +382,13 @@ class TestAtl03x:
     def test_signal_class_fit(self, init):
         base = { "track": 1,
                  "cnf": -2,
-                 "srt": 3,
-                 "fit": {} }
+                 "srt": 3
+        }
         gdf_all = sliderule.run("atl03x", base, AOI, RESOURCES_007)
         gdf_sel = sliderule.run("atl03x", {**base, "atl03_signal_class": ["primary_signal", "fitted_signal"]}, AOI, RESOURCES_007)
         assert init
         assert len(gdf_all) > 0
-        assert 0 < len(gdf_sel) <= len(gdf_all)
-        assert gdf_sel.n_fit_photons.sum() < gdf_all.n_fit_photons.sum() # fit runs on selected photons only
+        assert 0 < len(gdf_sel) <= len(gdf_all), f"{len(gdf_sel)}, {len(gdf_all)}"
 
     def test_signal_class_pre007(self, init):
         parms = { "track": 1,

@@ -230,6 +230,8 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestParameters* rqst_parms,
     parms(rqst_parms->output),
     hasAncillaryFields(false),
     hasAncillaryElements(false),
+    dataFile(NULL),
+    metadataFile(NULL),
     parmsAsString(rqstParms->toJson())
 {
     assert(rqst_parms);
@@ -279,7 +281,10 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestParameters* rqst_parms,
 
     /* Create Unique Temporary Filenames */
     dataFile = OutputLib::getUniqueFileName(id);
-    metadataFile = FString("%s.meta", dataFile).c_str(true);
+    if(parms.format == OutputFields::FEATHER || parms.format == OutputFields::CSV)
+    {
+        metadataFile = FString("%s.meta", dataFile).c_str(true);
+    }
 
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);

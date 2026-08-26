@@ -4,8 +4,6 @@ import sliderule
 
 softfail_reports = []
 
-logging.basicConfig(level=logging.DEBUG)
-
 def pytest_addoption(parser):
     parser.addoption("--domain", action="store", default="slideruleearth.io")
     parser.addoption("--organization", action="store", default="sliderule")

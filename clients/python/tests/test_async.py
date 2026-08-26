@@ -48,10 +48,17 @@ class TestAsync:
             if time_remaining <= 0:
                 assert False, "timed out waiting for async processing request to finish"
             print(f"Waiting for {rsps["receipt"]} ... waiting {time_remaining} seconds")
+            time_remaining -= 1
             time.sleep(1)
         receipt_obj = s3.get_object(Bucket=receipt_bucket, Key=receipt_key)
         receipt_contents = receipt_obj["Body"].read().decode("utf-8")
         assert receipt_contents.count("\n") == 6
-        output = rsps["parameters"]["output"]["path"]
-        gdf = gpd.read_parquet(output)
+        for line in receipt_contents.split("\n"):
+            if line.startswith("[INFO/0] Upload to S3 completed"):
+                for element in [e.strip() for e in line.split(",")]:
+                    if element.startswith("key = "):
+                        key = element.split(" = ")[-1]
+                    if element.startswith("bucket = "):
+                        bucket = element.split(" = ")[-1]
+        gdf = gpd.read_parquet(f"s3://{bucket}/{key}")
         assert len(gdf) == 195853

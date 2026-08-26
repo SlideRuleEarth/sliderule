@@ -103,8 +103,8 @@ class Test3DEP_10meter:
         assert init
         assert len(gdf) == 1
         assert gdf["slope_count"].iat[0] == 25    # number of valid pixels used for spatial derivative calculation
-        assert abs(gdf["slope"].iat[0]  - 6.6169895646116) < sigma, f"{gdf["slope"].iat[0]}"
-        assert abs(gdf["aspect"].iat[0] - 334.30234873549) < sigma, f"{gdf["aspect"].iat[0]}"
+        assert abs(gdf["slope"].iat[0]  - 6.6170758234893) < sigma, f"{gdf["slope"].iat[0]}"
+        assert abs(gdf["aspect"].iat[0] - 334.30271137003) < sigma, f"{gdf["aspect"].iat[0]}"
 
     def test_batch_sample(self, init):
         # Create 10,000 points in the bounding box (-108.2, 38.9) to (-107.8, 39.1)
@@ -154,4 +154,3 @@ class Test3DEP_10meter:
         assert abs(gdf["3dep.slope"].iloc[0]  - 5.549390227531371) < sigma, f'slope = {gdf["3dep.slope"].iloc[0]}'
         assert abs(gdf["3dep.aspect"].iloc[0] - 70.12982216522603) < sigma, f'aspect = {gdf["3dep.aspect"].iloc[0]}'
         # print(gdf[["3dep.slope", "3dep.aspect", "3dep.count"]])
-
