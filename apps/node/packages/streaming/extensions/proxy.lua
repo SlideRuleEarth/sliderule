@@ -96,21 +96,8 @@ local function proxy(resources, parms_tbl, endpoint, rec)
         end
     end
 
-    -- Handle Arrow Builder and Arrow Sampler --
+    -- Handle Arrow Builder --
     if arrow_builder then
-        -- Create Raster Objects for Arrow Sampler --
-        local georasters = nil
-        if parms:withsamplers() then
-            georasters = {}
-            for key,settings in pairs(parms:samplers()) do
-                local robj = geo.raster(geo.parms(settings))
-                if robj then
-                    georasters[key] = robj
-                else
-                    userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to create raster %s", _rqst.id, key))
-                end
-            end
-         end
 
         -- Wait Until Arrow Builder Completion --
         while (userlog:numsubs() > 0) and not arrow_builder:waiton(interval * 1000) do
@@ -121,20 +108,29 @@ local function proxy(resources, parms_tbl, endpoint, rec)
             end
         end
 
-        -- Handle Arrow Sampler --
-        if georasters then
-            -- Create Arrow Sampler and Sample Rasters --
-            local arrow_sampler = arrow.sampler(parms, arrow_file, _rqst.rspq, georasters)
+        -- Handle Raster Sampling --
+        if parms:withsamplers() then
+
+            -- Sample Dataframe --
+            local df = core.dataframe()
+            local arrow_df = arrow.dataframe(parms, df):import(arrow_file)
+            df:run(geo.framesampler(parms))
+            df:run(core.TERMINATE)
+            df:start()
 
             -- Wait Until Arrow Sampler Completion --
-            while (userlog:numsubs() > 0) and not arrow_sampler:waiton(interval * 1000) do
+            while (userlog:numsubs() > 0) and not df:finished(interval * 1000) do
                 duration = duration + interval
                 if timeout >= 0 and duration >= timeout then
-                    userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for arrow sampler", _rqst.id, duration))
+                    userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for sampling", _rqst.id, duration))
                     do return end
                 end
                 userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> continuing to sample rasters after %d seconds...", _rqst.id, duration))
             end
+
+            -- Overwrite Arrow File with Sampled File --
+            arrow_df:export(arrow_file)
+
         end
     end
 
