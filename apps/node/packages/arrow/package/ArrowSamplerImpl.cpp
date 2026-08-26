@@ -1011,61 +1011,6 @@ shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(shared_ptr<arrow
 }
 
 /*----------------------------------------------------------------------------
-* convertWKBToPoint
-*----------------------------------------------------------------------------*/
-wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const string& wkb_data)
-{
-    wkbpoint_t point;
-
-    if(wkb_data.size() < sizeof(wkbpoint_t))
-    {
-        throw std::runtime_error("Invalid WKB data size.");
-    }
-
-    // Byte order is the first byte
-    size_t offset = 0;
-    std::memcpy(&point.byteOrder, wkb_data.data() + offset, sizeof(uint8_t));
-    offset += sizeof(uint8_t);
-
-    // Next four bytes are wkbType
-    std::memcpy(&point.wkbType, wkb_data.data() + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    // Convert to host byte order if necessary
-    if(point.byteOrder == 0)
-    {
-        // Big endian
-        point.wkbType = be32toh(point.wkbType);
-    }
-    else if(point.byteOrder == 1)
-    {
-        // Little endian
-        point.wkbType = le32toh(point.wkbType);
-    }
-    else throw std::runtime_error("Unknown byte order.");
-
-    // Next eight bytes are x coordinate
-    std::memcpy(&point.x, wkb_data.data() + offset, sizeof(double));
-    offset += sizeof(double);
-
-    if((point.byteOrder == 0 && __BYTE_ORDER != __BIG_ENDIAN) ||
-       (point.byteOrder == 1 && __BYTE_ORDER != __LITTLE_ENDIAN))
-    {
-        point.x = OsApi::swaplf(point.x);
-    }
-
-    // Next eight bytes are y coordinate
-    std::memcpy(&point.y, wkb_data.data() + offset, sizeof(double));
-    if((point.byteOrder == 0 && __BYTE_ORDER != __BIG_ENDIAN) ||
-       (point.byteOrder == 1 && __BYTE_ORDER != __LITTLE_ENDIAN))
-    {
-        point.y = OsApi::swaplf(point.y);
-    }
-
-    return point;
-}
-
-/*----------------------------------------------------------------------------
 * printParquetMetadata
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::printParquetMetadata(const char* file_path)

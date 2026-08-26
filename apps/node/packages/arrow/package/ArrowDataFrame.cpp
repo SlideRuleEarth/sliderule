@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include <parquet/arrow/schema.h>
+#include <parquet/arrow/reader.h>
 #include <parquet/arrow/writer.h>
 #include <parquet/properties.h>
 #include <arrow/table.h>
@@ -43,12 +44,17 @@
 #include <arrow/builder.h>
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <cmath>
 #include <regex>
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "FieldList.h"
 #include "FieldArray.h"
 #include "FieldColumn.h"
+#include "FieldElement.h"
 #include "ArrowDataFrame.h"
 #include "OutputFields.h"
 #include "OutputLib.h"
@@ -505,6 +511,426 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, vector<shared_
 }
 
 /******************************************************************************
+ * IMPORT
+ ******************************************************************************/
+
+static const char* GEOMETRY_COLUMN = "geometry";
+static const uint32_t INVALID_ENCODING = RecordObject::INVALID_FIELD;
+
+/* names of the geo columns as recorded in the file's "recordinfo" metadata */
+typedef struct {
+    string time;
+    string x;
+    string y;
+    string z;
+} recordinfo_t;
+
+/*----------------------------------------------------------------------------
+* decode - T: field column type, A: arrow array type
+*----------------------------------------------------------------------------*/
+template<class T, class A>
+void decode(const shared_ptr<arrow::ChunkedArray>& chunked_array, FieldColumn<T>* field_column, T nodata)
+{
+    for(int c = 0; c < chunked_array->num_chunks(); c++)
+    {
+        const shared_ptr<A> array = std::static_pointer_cast<A>(chunked_array->chunk(c));
+        const int64_t num_rows = array->length();
+        for(int64_t i = 0; i < num_rows; i++)
+        {
+            if(array->IsNull(i)) field_column->append(nodata);
+            else field_column->append(static_cast<T>(array->Value(i)));
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+* decode - string
+*----------------------------------------------------------------------------*/
+void decodeString(const shared_ptr<arrow::ChunkedArray>& chunked_array, FieldColumn<string>* field_column)
+{
+    for(int c = 0; c < chunked_array->num_chunks(); c++)
+    {
+        const shared_ptr<arrow::StringArray> array = std::static_pointer_cast<arrow::StringArray>(chunked_array->chunk(c));
+        const int64_t num_rows = array->length();
+        for(int64_t i = 0; i < num_rows; i++)
+        {
+            if(array->IsNull(i)) field_column->append(string(""));
+            else field_column->append(array->GetString(i));
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+* decode - time8_t
+*----------------------------------------------------------------------------*/
+void decodeTime8(const shared_ptr<arrow::ChunkedArray>& chunked_array, FieldColumn<time8_t>* field_column)
+{
+    for(int c = 0; c < chunked_array->num_chunks(); c++)
+    {
+        const shared_ptr<arrow::TimestampArray> array = std::static_pointer_cast<arrow::TimestampArray>(chunked_array->chunk(c));
+        const int64_t num_rows = array->length();
+        for(int64_t i = 0; i < num_rows; i++)
+        {
+            if(array->IsNull(i)) field_column->append(time8_t(0));
+            else field_column->append(time8_t(array->Value(i)));
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+* decodeList - T: field list type, A: arrow array type
+*----------------------------------------------------------------------------*/
+template<class T, class A>
+void decodeList(const shared_ptr<arrow::ChunkedArray>& chunked_array, FieldColumn<FieldList<T>>* field_column)
+{
+    for(int c = 0; c < chunked_array->num_chunks(); c++)
+    {
+        const shared_ptr<arrow::ListArray> list_array = std::static_pointer_cast<arrow::ListArray>(chunked_array->chunk(c));
+        const shared_ptr<A> value_array = std::static_pointer_cast<A>(list_array->values());
+        const int64_t num_rows = list_array->length();
+        for(int64_t i = 0; i < num_rows; i++)
+        {
+            FieldList<T> list;
+            if(!list_array->IsNull(i))
+            {
+                const int64_t offset = list_array->value_offset(i);
+                const int64_t num_elements = list_array->value_length(i);
+                for(int64_t element = 0; element < num_elements; element++)
+                {
+                    list.append(static_cast<T>(value_array->Value(offset + element)));
+                }
+            }
+            field_column->append(list);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+* decodeList - time8_t
+*----------------------------------------------------------------------------*/
+void decodeListTime8(const shared_ptr<arrow::ChunkedArray>& chunked_array, FieldColumn<FieldList<time8_t>>* field_column)
+{
+    for(int c = 0; c < chunked_array->num_chunks(); c++)
+    {
+        const shared_ptr<arrow::ListArray> list_array = std::static_pointer_cast<arrow::ListArray>(chunked_array->chunk(c));
+        const shared_ptr<arrow::TimestampArray> value_array = std::static_pointer_cast<arrow::TimestampArray>(list_array->values());
+        const int64_t num_rows = list_array->length();
+        for(int64_t i = 0; i < num_rows; i++)
+        {
+            FieldList<time8_t> list;
+            if(!list_array->IsNull(i))
+            {
+                const int64_t offset = list_array->value_offset(i);
+                const int64_t num_elements = list_array->value_length(i);
+                for(int64_t element = 0; element < num_elements; element++)
+                {
+                    list.append(time8_t(value_array->Value(offset + element)));
+                }
+            }
+            field_column->append(list);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+* arrowValueTypeToEncoding - returns INVALID_ENCODING when the type has no field equivalent
+*----------------------------------------------------------------------------*/
+uint32_t arrowValueTypeToEncoding (const shared_ptr<arrow::DataType>& type)
+{
+    switch(type->id())
+    {
+        case arrow::Type::BOOL:     return Field::BOOL;
+        case arrow::Type::INT8:     return Field::INT8;
+        case arrow::Type::INT16:    return Field::INT16;
+        case arrow::Type::INT32:    return Field::INT32;
+        case arrow::Type::INT64:    return Field::INT64;
+        case arrow::Type::UINT8:    return Field::UINT8;
+        case arrow::Type::UINT16:   return Field::UINT16;
+        case arrow::Type::UINT32:   return Field::UINT32;
+        case arrow::Type::UINT64:   return Field::UINT64;
+        case arrow::Type::FLOAT:    return Field::FLOAT;
+        case arrow::Type::DOUBLE:   return Field::DOUBLE;
+        case arrow::Type::STRING:   return Field::STRING;
+
+        case arrow::Type::TIMESTAMP:
+        {
+            const shared_ptr<arrow::TimestampType> timestamp_type = std::static_pointer_cast<arrow::TimestampType>(type);
+            if(timestamp_type->unit() != arrow::TimeUnit::NANO) return INVALID_ENCODING;
+            return Field::TIME8;
+        }
+
+        default: return INVALID_ENCODING;
+    }
+}
+
+/*----------------------------------------------------------------------------
+* arrowTypeToEncoding - nested arrays and columns are exported as arrow lists and imported as lists
+*----------------------------------------------------------------------------*/
+uint32_t arrowTypeToEncoding (const shared_ptr<arrow::DataType>& type)
+{
+    if(type->id() != arrow::Type::LIST) return arrowValueTypeToEncoding(type);
+
+    const shared_ptr<arrow::ListType> list_type = std::static_pointer_cast<arrow::ListType>(type);
+    const uint32_t value_encoding = arrowValueTypeToEncoding(list_type->value_type());
+    if(value_encoding == INVALID_ENCODING) return INVALID_ENCODING;
+    if(value_encoding == Field::STRING || value_encoding == Field::BOOL) return INVALID_ENCODING;
+    return Field::NESTED_LIST | value_encoding;
+}
+
+/*----------------------------------------------------------------------------
+* decodeColumn
+*----------------------------------------------------------------------------*/
+bool decodeColumn (GeoDataFrame* dataframe, const char* name, uint32_t encoding, const shared_ptr<arrow::ChunkedArray>& data)
+{
+    if(!dataframe->addNewColumn(name, encoding, NULL)) return false;
+
+    FieldUntypedColumn* column = dataframe->getColumn(name);
+    switch(encoding & Field::VALUE_MASK)
+    {
+        case Field::BOOL:   decode<bool,     arrow::BooleanArray>(data, dynamic_cast<FieldColumn<bool>*>    (column), false); break;
+        case Field::INT8:   decode<int8_t,   arrow::Int8Array>   (data, dynamic_cast<FieldColumn<int8_t>*>  (column), 0);     break;
+        case Field::INT16:  decode<int16_t,  arrow::Int16Array>  (data, dynamic_cast<FieldColumn<int16_t>*> (column), 0);     break;
+        case Field::INT32:  decode<int32_t,  arrow::Int32Array>  (data, dynamic_cast<FieldColumn<int32_t>*> (column), 0);     break;
+        case Field::INT64:  decode<int64_t,  arrow::Int64Array>  (data, dynamic_cast<FieldColumn<int64_t>*> (column), 0);     break;
+        case Field::UINT8:  decode<uint8_t,  arrow::UInt8Array>  (data, dynamic_cast<FieldColumn<uint8_t>*> (column), 0);     break;
+        case Field::UINT16: decode<uint16_t, arrow::UInt16Array> (data, dynamic_cast<FieldColumn<uint16_t>*>(column), 0);     break;
+        case Field::UINT32: decode<uint32_t, arrow::UInt32Array> (data, dynamic_cast<FieldColumn<uint32_t>*>(column), 0);     break;
+        case Field::UINT64: decode<uint64_t, arrow::UInt64Array> (data, dynamic_cast<FieldColumn<uint64_t>*>(column), 0);     break;
+        case Field::FLOAT:  decode<float,    arrow::FloatArray>  (data, dynamic_cast<FieldColumn<float>*>   (column), std::nanf("")); break;
+        case Field::DOUBLE: decode<double,   arrow::DoubleArray> (data, dynamic_cast<FieldColumn<double>*>  (column), std::nan(""));  break;
+        case Field::STRING: decodeString                         (data, dynamic_cast<FieldColumn<string>*>  (column));        break;
+        case Field::TIME8:  decodeTime8                          (data, dynamic_cast<FieldColumn<time8_t>*> (column));        break;
+
+        case Field::NESTED_LIST | Field::INT8:   decodeList<int8_t,   arrow::Int8Array>  (data, dynamic_cast<FieldColumn<FieldList<int8_t>>*>  (column)); break;
+        case Field::NESTED_LIST | Field::INT16:  decodeList<int16_t,  arrow::Int16Array> (data, dynamic_cast<FieldColumn<FieldList<int16_t>>*> (column)); break;
+        case Field::NESTED_LIST | Field::INT32:  decodeList<int32_t,  arrow::Int32Array> (data, dynamic_cast<FieldColumn<FieldList<int32_t>>*> (column)); break;
+        case Field::NESTED_LIST | Field::INT64:  decodeList<int64_t,  arrow::Int64Array> (data, dynamic_cast<FieldColumn<FieldList<int64_t>>*> (column)); break;
+        case Field::NESTED_LIST | Field::UINT8:  decodeList<uint8_t,  arrow::UInt8Array> (data, dynamic_cast<FieldColumn<FieldList<uint8_t>>*> (column)); break;
+        case Field::NESTED_LIST | Field::UINT16: decodeList<uint16_t, arrow::UInt16Array>(data, dynamic_cast<FieldColumn<FieldList<uint16_t>>*>(column)); break;
+        case Field::NESTED_LIST | Field::UINT32: decodeList<uint32_t, arrow::UInt32Array>(data, dynamic_cast<FieldColumn<FieldList<uint32_t>>*>(column)); break;
+        case Field::NESTED_LIST | Field::UINT64: decodeList<uint64_t, arrow::UInt64Array>(data, dynamic_cast<FieldColumn<FieldList<uint64_t>>*>(column)); break;
+        case Field::NESTED_LIST | Field::FLOAT:  decodeList<float,    arrow::FloatArray> (data, dynamic_cast<FieldColumn<FieldList<float>>*>   (column)); break;
+        case Field::NESTED_LIST | Field::DOUBLE: decodeList<double,   arrow::DoubleArray>(data, dynamic_cast<FieldColumn<FieldList<double>>*>  (column)); break;
+        case Field::NESTED_LIST | Field::TIME8:  decodeListTime8                         (data, dynamic_cast<FieldColumn<FieldList<time8_t>>*> (column)); break;
+
+        default:
+        {
+            // unreachable: arrowTypeToEncoding only produces encodings handled above
+            mlog(WARNING, "Column %s has unsupported encoding %X", name, encoding);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+* geoEncoding - geo flag for a column, GeoDataFrame requires an exact type match
+*----------------------------------------------------------------------------*/
+uint32_t geoEncoding (const string& name, uint32_t value_encoding, const recordinfo_t& recordinfo)
+{
+    uint32_t flag = 0;
+    uint32_t required_encoding = 0;
+
+    if     (!recordinfo.time.empty() && name == recordinfo.time) { flag = Field::TIME_COLUMN; required_encoding = Field::TIME8;  }
+    else if(!recordinfo.x.empty()    && name == recordinfo.x)    { flag = Field::X_COLUMN;    required_encoding = Field::DOUBLE; }
+    else if(!recordinfo.y.empty()    && name == recordinfo.y)    { flag = Field::Y_COLUMN;    required_encoding = Field::DOUBLE; }
+    else if(!recordinfo.z.empty()    && name == recordinfo.z)    { flag = Field::Z_COLUMN;    required_encoding = Field::FLOAT;  }
+    else return 0;
+
+    if(value_encoding != required_encoding)
+    {
+        mlog(WARNING, "Column %s cannot be used as a geo column, encoding is %X and not %X", name.c_str(), value_encoding, required_encoding);
+        return 0;
+    }
+
+    return flag;
+}
+
+/*----------------------------------------------------------------------------
+* processTable
+*----------------------------------------------------------------------------*/
+void processTable (GeoDataFrame* dataframe, const shared_ptr<arrow::Table>& table, const recordinfo_t& recordinfo, const uint32_t trace_id)
+{
+    const shared_ptr<arrow::Schema> schema = table->schema();
+    for(int f = 0; f < schema->num_fields(); f++)
+    {
+        const shared_ptr<arrow::Field> field = schema->field(f);
+        const string& name = field->name();
+
+        // the geometry column is decoded into x and y columns separately
+        if(name == GEOMETRY_COLUMN) continue;
+
+        const uint32_t value_encoding = arrowTypeToEncoding(field->type());
+        if(value_encoding == INVALID_ENCODING)
+        {
+            mlog(WARNING, "Skipping column %s of unsupported type %s", name.c_str(), field->type()->ToString().c_str());
+            continue;
+        }
+
+        const uint32_t decode_trace_id = start_trace(INFO, trace_id, "decodeFields", "{\"field\": %s}", name.c_str());
+        decodeColumn(dataframe, name.c_str(), value_encoding | geoEncoding(name, value_encoding, recordinfo), table->column(f));
+        stop_trace(INFO, decode_trace_id);
+    }
+}
+
+/*----------------------------------------------------------------------------
+* decodeGeometry
+*----------------------------------------------------------------------------*/
+void decodeGeometry (GeoDataFrame* dataframe, const shared_ptr<arrow::Table>& table, const recordinfo_t& recordinfo)
+{
+    const int index = table->schema()->GetFieldIndex(GEOMETRY_COLUMN);
+    if(index < 0) return;
+
+    const string x_name = recordinfo.x.empty() ? string("longitude") : recordinfo.x;
+    const string y_name = recordinfo.y.empty() ? string("latitude") : recordinfo.y;
+
+    unique_ptr<FieldColumn<double>> x_column(new FieldColumn<double>(Field::X_COLUMN));
+    unique_ptr<FieldColumn<double>> y_column(new FieldColumn<double>(Field::Y_COLUMN));
+
+    const shared_ptr<arrow::ChunkedArray> data = table->column(index);
+    for(int c = 0; c < data->num_chunks(); c++)
+    {
+        const shared_ptr<arrow::BinaryArray> array = std::static_pointer_cast<arrow::BinaryArray>(data->chunk(c));
+        const int64_t num_rows = array->length();
+        for(int64_t i = 0; i < num_rows; i++)
+        {
+            const wkbpoint_t point = convertWKBToPoint(array->GetString(i));
+            x_column->append(point.x);
+            y_column->append(point.y);
+        }
+    }
+
+    // addExistingColumn takes ownership of the column, including when it fails
+    dataframe->addExistingColumn(x_name.c_str(), x_column.release(), NULL);
+    dataframe->addExistingColumn(y_name.c_str(), y_column.release(), NULL);
+}
+
+/*----------------------------------------------------------------------------
+* decodeRecordInfo
+*----------------------------------------------------------------------------*/
+void decodeRecordInfo (recordinfo_t& recordinfo, const rapidjson::Value& info)
+{
+    if(info.HasMember("time") && info["time"].IsString()) recordinfo.time = info["time"].GetString();
+    if(info.HasMember("x")    && info["x"].IsString())    recordinfo.x    = info["x"].GetString();
+    if(info.HasMember("y")    && info["y"].IsString())    recordinfo.y    = info["y"].GetString();
+    if(info.HasMember("z")    && info["z"].IsString())    recordinfo.z    = info["z"].GetString();
+}
+
+/*----------------------------------------------------------------------------
+* decodeCRS - pulls the crs out of the geoparquet "geo" metadata
+*----------------------------------------------------------------------------*/
+void decodeCRS (GeoDataFrame* dataframe, const string& json)
+{
+    rapidjson::Document doc;
+    doc.Parse(json.c_str());
+    if(doc.HasParseError() || !doc.IsObject())
+    {
+        mlog(WARNING, "Unable to parse geo metadata");
+        return;
+    }
+
+    const char* primary_column = GEOMETRY_COLUMN;
+    if(doc.HasMember("primary_column") && doc["primary_column"].IsString())
+    {
+        primary_column = doc["primary_column"].GetString();
+    }
+
+    if(!doc.HasMember("columns") || !doc["columns"].IsObject()) return;
+    if(!doc["columns"].HasMember(primary_column)) return;
+
+    const rapidjson::Value& column = doc["columns"][primary_column];
+    if(!column.IsObject() || !column.HasMember("crs")) return;
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    column["crs"].Accept(writer);
+    dataframe->setCRS(buffer.GetString());
+}
+
+/*----------------------------------------------------------------------------
+* decodeMetaData
+*----------------------------------------------------------------------------*/
+void decodeMetaData (GeoDataFrame* dataframe, const string& json)
+{
+    rapidjson::Document doc;
+    doc.Parse(json.c_str());
+    if(doc.HasParseError() || !doc.IsObject())
+    {
+        mlog(WARNING, "Unable to parse dataframe metadata");
+        return;
+    }
+
+    for(rapidjson::Value::ConstMemberIterator entry = doc.MemberBegin(); entry != doc.MemberEnd(); ++entry)
+    {
+        const char* name = entry->name.GetString();
+        Field* element = NULL;
+
+        if     (entry->value.IsBool())   element = new FieldElement<bool>  (entry->value.GetBool(),   Field::META_COLUMN);
+        else if(entry->value.IsNumber()) element = new FieldElement<double>(entry->value.GetDouble(), Field::META_COLUMN);
+        else if(entry->value.IsString()) element = new FieldElement<string>(entry->value.GetString(), Field::META_COLUMN);
+        else
+        {
+            mlog(WARNING, "Skipping metadata %s of unsupported type", name);
+            continue;
+        }
+
+        if(!dataframe->addMetaData(name, element, NULL, true))
+        {
+            mlog(WARNING, "Failed to add metadata %s", name);
+            delete element;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+* processFileMetaData
+*----------------------------------------------------------------------------*/
+void processFileMetaData (GeoDataFrame* dataframe, recordinfo_t& recordinfo, const shared_ptr<parquet::FileMetaData>& file_metadata)
+{
+    const shared_ptr<const arrow::KeyValueMetadata> key_value_metadata = file_metadata->key_value_metadata();
+    if(!key_value_metadata) return;
+
+    string legacy_sliderule;
+    bool found_recordinfo = false;
+
+    for(int i = 0; i < key_value_metadata->size(); i++)
+    {
+        const string key = key_value_metadata->key(i);
+        const string value = key_value_metadata->value(i);
+
+        if(key == "recordinfo")
+        {
+            rapidjson::Document doc;
+            doc.Parse(value.c_str());
+            if(doc.HasParseError() || !doc.IsObject()) mlog(WARNING, "Unable to parse recordinfo metadata");
+            else
+            {
+                decodeRecordInfo(recordinfo, doc);
+                found_recordinfo = true;
+            }
+        }
+        else if(key == "sliderule")  legacy_sliderule = value;
+        else if(key == "geo")        decodeCRS(dataframe, value);
+        else if(key == "meta")       decodeMetaData(dataframe, value);
+    }
+
+    // older files nest the recordinfo inside the sliderule metadata
+    if(!found_recordinfo && !legacy_sliderule.empty())
+    {
+        rapidjson::Document doc;
+        doc.Parse(legacy_sliderule.c_str());
+        if(!doc.HasParseError() && doc.IsObject() && doc.HasMember("recordinfo") && doc["recordinfo"].IsObject())
+        {
+            decodeRecordInfo(recordinfo, doc["recordinfo"]);
+            found_recordinfo = true;
+        }
+    }
+
+    if(!found_recordinfo) mlog(WARNING, "No recordinfo found in file, geo columns will not be identified");
+}
+
+/******************************************************************************
  * CLASS DATA
  ******************************************************************************/
 
@@ -512,7 +938,7 @@ const char* ArrowDataFrame::OBJECT_TYPE = "ArrowDataFrame";
 const char* ArrowDataFrame::LUA_META_NAME = "ArrowDataFrame";
 const struct luaL_Reg ArrowDataFrame::LUA_META_TABLE[] = {
     {"export",  luaExport},
-    {"import",  luaImport}, // TODO
+    {"import",  luaImport},
     {NULL,      NULL}
 };
 
@@ -727,22 +1153,73 @@ int ArrowDataFrame::luaExport (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaImport - import()
+ * luaImport - import(<filename>)
  *----------------------------------------------------------------------------*/
 int ArrowDataFrame::luaImport (lua_State* L)
 {
-    bool status = true;
+    bool status = false;
     try
     {
+        // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
-        (void)lua_obj;
+        const char* filename = getLuaString(L, 2);
 
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported");
+        // get reference
+        GeoDataFrame* dataframe = lua_obj->dataframe;
+        if(dataframe->length() > 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "cannot import into a dataframe that already has %ld rows", dataframe->length());
+        }
+
+        // start trace
+        const uint32_t parent_trace_id = EventLib::grabId();
+        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"filename\": \"%s\"}", filename);
+
+        // read parquet file into arrow table
+        const uint32_t read_trace_id = start_trace(INFO, trace_id, "read_table", "%s", "{}");
+        shared_ptr<arrow::io::ReadableFile> input_file;
+        PARQUET_ASSIGN_OR_THROW(input_file, arrow::io::ReadableFile::Open(filename, arrow::default_memory_pool()));
+        unique_ptr<parquet::arrow::FileReader> reader;
+        PARQUET_ASSIGN_OR_THROW(reader, parquet::arrow::OpenFile(input_file, arrow::default_memory_pool()));
+        shared_ptr<arrow::Table> table;
+        PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
+        stop_trace(INFO, read_trace_id);
+
+        // process file metadata into crs, dataframe metadata, and geo column names
+        recordinfo_t recordinfo;
+        processFileMetaData(dataframe, recordinfo, reader->parquet_reader()->metadata());
+
+        // process arrow table into dataframe columns
+        processTable(dataframe, table, recordinfo, trace_id);
+        decodeGeometry(dataframe, table, recordinfo);
+
+        // check that every column was fully populated
+        const long num_rows = table->num_rows();
+        const vector<string>& column_names = dataframe->getColumnNames();
+        for(const string& name: column_names)
+        {
+            const Field* field = dataframe->getColumn(name.c_str());
+            if(field->length() != num_rows)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "column %s has %ld rows instead of %ld", name.c_str(), field->length(), num_rows);
+            }
+        }
+
+        // finalize dataframe
+        dataframe->setNumRows(num_rows);
+        dataframe->populateGeoColumns();
+        status = true;
+
+        // stop trace
+        stop_trace(INFO, trace_id);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error importing %s: %s", OBJECT_TYPE, e.what());
-        status = false;
+    }
+    catch(const std::exception& e)
+    {
+        mlog(CRITICAL, "Unknown error importing %s: %s", OBJECT_TYPE, e.what());
     }
 
     return returnLuaStatus(L, status);

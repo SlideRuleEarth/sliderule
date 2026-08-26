@@ -109,7 +109,6 @@ class ArrowSamplerImpl
         static void                   tableToFeather          (const shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
         static shared_ptr<arrow::Table> removeGeometryColumn(shared_ptr<arrow::Table>& table);
-        static wkbpoint_t             convertWKBToPoint       (const string& wkb_data);
         static void                   printParquetMetadata    (const char* file_path);
         string                   createFileMap           (void);
         static void                   metadataToJson          (const shared_ptr<arrow::Table>& table,

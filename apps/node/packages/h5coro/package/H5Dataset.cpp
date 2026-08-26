@@ -3540,7 +3540,10 @@ bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t 
         // check for intersection for all dimensions
         for(int d = 0; d < metaData.ndims; d++)
         {
-            if(node_slice[d].r1 < hyperslice[d].r0 || node_slice[d].r0 >= hyperslice[d].r1)
+            // both node_slice and hyperslice are half-open intervals [start, stop);
+            // a chunk that ends exactly where the hyperslice starts shares no elements,
+            // so use <= here (not <) to exclude it.
+            if(node_slice[d].r1 <= hyperslice[d].r0 || node_slice[d].r0 >= hyperslice[d].r1)
             {
                 return false;
             }

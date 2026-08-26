@@ -134,8 +134,7 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
     const string& frame_crs = dataframe->getCRS();
     if(frame_crs.empty())
     {
-        mlog(CRITICAL, "DataFrameSampler: incoming dataframe missing CRS");
-        return false;
+        mlog(WARNING, "DataFrameSampler: incoming dataframe missing CRS");
     }
 
     // populate points vector

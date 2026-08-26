@@ -242,7 +242,7 @@ bool OutputLib::send2User (const char* src_file, const string& output_path, uint
     const uint32_t send_trace_id = start_trace(INFO, trace_id, "send_file", "{\"path\": \"%s\"}", output_path.c_str());
 
     /* Send File to User */
-    if(asset_name)
+    if(asset_name && asset_name[0] != '\0')
     {
         /* Upload File to S3 Asset */
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
