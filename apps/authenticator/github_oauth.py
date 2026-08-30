@@ -595,16 +595,18 @@ def get_public_cluster():
     """
     Returns the name of the public cluster.
     """
-    if DOMAIN == "localhost":
-        response = requests.get(f"http://localhost/discovery/whoami")
-    else:
-        response = requests.get(f"https://{PUBLIC_CLUSTER}.{DOMAIN}/discovery/whoami", timeout=HTTP_TIMEOUT_SECONDS)
+    try:
+        if DOMAIN == "localhost":
+            response = requests.get(f"http://localhost/discovery/whoami")
+        else:
+            response = requests.get(f"https://{PUBLIC_CLUSTER}.{DOMAIN}/discovery/whoami", timeout=HTTP_TIMEOUT_SECONDS)
 
-    if response.status_code == 200:
-        data = response.json()
-        return data.get('cluster')
-    else:
-        return None
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('cluster')
+    except Exception as e:
+        print(f"Failed to get public cluster: {e}")
+    return None
 
 
 def generate_audience_list(username, clusters, org_roles, scope):
