@@ -43,6 +43,7 @@
 #include "MsgQ.h"
 #include "H5CoroLib.h"
 #include "H5Element.h"
+#include "H5Array.h"
 #include "Icesat2Parameters.h"
 #include "Atl03Granule.h"
 
@@ -135,6 +136,8 @@ Atl03Granule::Atl03Granule (lua_State* L, Icesat2Parameters* _parms, H5Object* _
         {"orbit_number",        &orbit_number,          "Orbit number for the data in the granule"},
         {"sc_orient",           &sc_orient,             "Spacecraft orientation when data in granule was collected"},
         {"sc_orient_time",      &sc_orient_time,        "Time when spacecraft orientation changed"},
+        {"lat_poly",            &lat_poly,              "Latitudes of bounding polygon for granule"},
+        {"lon_poly",            &lon_poly,              "Longitudes of bounding polygon for granule"}
     }),
     parms(_parms),
     rqstQ(rqstq_name),
@@ -197,6 +200,9 @@ void* Atl03Granule::readingThread (void* parm)
         H5Element<int8_t>       sc_orient           (granule.hdf03, "/orbit_info/sc_orient");
         H5Element<double>       sc_orient_time      (granule.hdf03, "/orbit_info/sc_orient_time");
 
+        H5Array<double>   bounding_polygon_lat1     (granule.hdf03, "/orbit_info/bounding_polygon_lat1");
+        H5Array<double>   bounding_polygon_lon1     (granule.hdf03, "/orbit_info/bounding_polygon_lon1");
+
         atlas_sdp_gps_epoch.join(granule.readTimeoutMs, true);
         data_end_utc.join(granule.readTimeoutMs, true);
         data_start_utc.join(granule.readTimeoutMs, true);
@@ -221,6 +227,9 @@ void* Atl03Granule::readingThread (void* parm)
         sc_orient.join(granule.readTimeoutMs, true);
         sc_orient_time.join(granule.readTimeoutMs, true);
 
+        bounding_polygon_lat1.join(granule.readTimeoutMs, true);
+        bounding_polygon_lon1.join(granule.readTimeoutMs, true);
+
         granule.atlas_sdp_gps_epoch = atlas_sdp_gps_epoch.value;
         granule.data_end_utc        = data_end_utc.value;
         granule.data_start_utc      = data_start_utc.value;
@@ -244,6 +253,16 @@ void* Atl03Granule::readingThread (void* parm)
         granule.orbit_number        = orbit_number.value;
         granule.sc_orient           = sc_orient.value;
         granule.sc_orient_time      = sc_orient_time.value;
+
+        for(long i = 0; i < bounding_polygon_lat1.size; i++)
+        {
+            granule.lat_poly.append(bounding_polygon_lat1[i]);
+        }
+
+        for(long i = 0; i < bounding_polygon_lon1.size; i++)
+        {
+            granule.lon_poly.append(bounding_polygon_lon1[i]);
+        }
     }
     catch(const RunTimeException& e)
     {

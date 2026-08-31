@@ -44,6 +44,8 @@
 #include "H5CoroLib.h"
 #include "H5Object.h"
 #include "Icesat2Parameters.h"
+#include "FieldElement.h"
+#include "FieldList.h"
 
 /******************************************************************************
  * CLASS
@@ -95,6 +97,8 @@ class Atl03Granule: public LuaObject, public FieldMap<Field>
         FieldElement<int16_t>       orbit_number;
         FieldElement<int8_t>        sc_orient;
         FieldElement<double>        sc_orient_time;
+        FieldList<double>           lat_poly;
+        FieldList<double>           lon_poly;
 
     private:
 
