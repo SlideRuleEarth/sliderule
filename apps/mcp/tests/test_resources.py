@@ -59,7 +59,7 @@ def test_missing_openapi_resource():
 # Read Python Docs Resource
 #
 def test_read_python_docs_resource():
-    rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "resources/read", {"uri": "sliderule://docs/python/getting_started/Install"}, 0), None)
+    rsps = lambda_gateway(construct_request(["member"], f"/{CLUSTER}", "resources/read", {"uri": "sliderule://docs/python/getting-started/install"}, 0), None)
     body = json.loads(rsps["body"])
     assert len(body["result"]["contents"][0]["text"]) > 600
 

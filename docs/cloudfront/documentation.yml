@@ -79,6 +79,27 @@ Resources:
         - DomainName: !Ref DocumentationHostname
           HostedZoneId: !Ref HostedZoneId
 
+  # MyST emits folder-based pages (/page/index.html); an S3 REST origin does not resolve directory indexes on its own
+  DirectoryIndexFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${AWS::StackName}-directory-index"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite directory requests to their index.html
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+            var request = event.request;
+            var uri = request.uri;
+            if (uri.endsWith('/')) {
+                request.uri = uri + 'index.html';
+            } else if (!uri.split('/').pop().includes('.')) {
+                request.uri = uri + '/index.html';
+            }
+            return request;
+        }
+
   WebsiteDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -106,6 +127,9 @@ Resources:
           DefaultTTL: 3600
           MaxTTL: 86400
           ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt DirectoryIndexFunction.FunctionMetadata.FunctionARN
         ViewerCertificate:
           AcmCertificateArn: !Ref WebsiteCertificate
           SslSupportMethod: sni-only

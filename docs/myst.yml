@@ -1,0 +1,86 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: sliderule-docs
+  title: SlideRule
+  description: Process Earth science datasets in the cloud through API calls to SlideRule web services.
+  github: https://github.com/SlideRuleEarth/sliderule
+  copyright: University of Washington
+  static_files:
+    - _static
+    - assets
+  exclude:
+    - '**/.ipynb_checkpoints/**'
+  toc:
+    - file: index.md
+    - title: Getting Started
+      children:
+        - file: getting_started/Install.md
+        - file: getting_started/Getting-Started.md
+        - file: getting_started/Examples.md
+        - file: getting_started/Contributing.md
+        - file: getting_started/License.md
+    - title: Users Guide
+      children:
+        - file: user_guide/overview.md
+        - file: user_guide/basic_usage.md
+        - file: user_guide/xseries.md
+        - file: user_guide/raster_sampling.md
+        - file: user_guide/arrow_output.md
+        - file: user_guide/icesat2.md
+        - file: user_guide/gedi.md
+        - file: user_guide/versioning.md
+        - file: user_guide/articles.md
+          children:
+            - pattern: user_guide/articles/*.md
+              sort: descending
+    - title: Python API Reference
+      children:
+        - file: api_reference/sliderule.md
+        - file: api_reference/icesat2.md
+        - file: api_reference/gedi.md
+        - file: api_reference/earthdata.md
+        - file: api_reference/h5.md
+        - file: api_reference/raster.md
+    - title: Developers Guide
+      children:
+        - file: developer_guide/project_map.md
+        - file: developer_guide/why_sliderule.md
+        - file: developer_guide/under_the_hood.md
+        - file: developer_guide/release_deploy.md
+        - file: developer_guide/endpoints.md
+        - file: developer_guide/how_tos.md
+          children:
+            - pattern: developer_guide/how_tos/*.md
+              sort: descending
+        - file: developer_guide/design.md
+          children:
+            - pattern: developer_guide/design/*.md
+              sort: descending
+        - file: developer_guide/release_notes.md
+          children:
+            - pattern: developer_guide/release_notes/*.md
+              sort: descending
+    - title: Background
+      children:
+        - file: background/ICESat-2.md
+        - file: background/GEDI.md
+        - file: background/NASA-Earthdata.md
+site:
+  template: book-theme
+  title: SlideRule
+  options:
+    logo: assets/SlideRule_blueBG.svg
+    logo_text: SlideRule
+    favicon: assets/favicon.ico
+    style: _static/site.css
+    folders: true
+  nav:
+    - title: Source Code
+      url: https://github.com/SlideRuleEarth/sliderule
+    - title: License
+      url: https://github.com/SlideRuleEarth/sliderule/blob/main/LICENSE
+    - title: Website
+      url: https://slideruleearth.io
+  domains:
+    - docs.slideruleearth.io

@@ -1,1 +1,1 @@
-rm -Rf rtd/build
+rm -Rf _build api_reference

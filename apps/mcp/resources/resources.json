@@ -24,61 +24,61 @@
         "mimeType":     "application/json"
     },
     {
-        "uri":          "sliderule://docs/python/getting_started/Install",
+        "uri":          "sliderule://docs/python/getting-started/install",
         "name":         "Installation",
         "description":  "Instructions on how to install the SlideRule Python client",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/getting_started/Getting-Started",
+        "uri":          "sliderule://docs/python/getting-started/getting-started",
         "name":         "Getting Started",
         "description":  "Beginner's guide to using the SlideRule Python client; initializing the client and making your first request",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/user_guide/overview",
+        "uri":          "sliderule://docs/python/user-guide/overview",
         "name":         "SlideRule Overview",
         "description":  "Broad overview of the SlideRule data processing system and Python client",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/user_guide/basic_usage",
+        "uri":          "sliderule://docs/python/user-guide/basic-usage",
         "name":         "Basic Usage Guide",
         "description":  "A guide for using the SlideRule Python client for making basic processing requests",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/user_guide/xseries",
+        "uri":          "sliderule://docs/python/user-guide/xseries",
         "name":         "X-Series Guide",
         "description":  "A description of the request and response behavior of the x-series APIs",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/user_guide/raster_sampling",
+        "uri":          "sliderule://docs/python/user-guide/raster-sampling",
         "name":         "Raster Sampling Guide",
         "description":  "A guide for how to include samples from raster datasets when generating your own custom datasets",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/user_guide/icesat2",
+        "uri":          "sliderule://docs/python/user-guide/icesat2",
         "name":         "ICESat-2 Guide",
         "description":  "An overview of SlideRule's support for processing ICESat-2 data, with API descriptions and explanations of input parameters and output results.",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/user_guide/gedi",
+        "uri":          "sliderule://docs/python/user-guide/gedi",
         "name":         "GEDI Guide",
         "description":  "An overview of SlideRule's support for processing GEDI data, with API descriptions and explanations of input parameters and output results.",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/api_reference/sliderule",
+        "uri":          "sliderule://docs/python/api-reference/sliderule",
         "name":         "SlideRule API Reference",
         "description":  "Reference documentation for all of the base `sliderule` module Python client APIs",
         "mimeType":     "text/markdown"
     },
     {
-        "uri":          "sliderule://docs/python/api_reference/h5",
+        "uri":          "sliderule://docs/python/api-reference/h5",
         "name":         "H5 API Reference",
         "description":  "Reference documentation for the `h5` module Python client APIs",
         "mimeType":     "text/markdown"

@@ -290,7 +290,7 @@ def resources_read_handler(rqst):
 
     # doc/python resource
     elif resource_path[0] == "docs" and resource_path[1] == "python":
-        with urllib.request.urlopen(f"https://docs.slideruleearth.io/{'/'.join(resource_path[2:])}.html") as resp:
+        with urllib.request.urlopen(f"https://docs.slideruleearth.io/{'/'.join(resource_path[2:])}/") as resp:
             html = resp.read().decode("utf-8")
         text = trafilatura.extract(html, output_format="markdown")
 

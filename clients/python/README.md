@@ -2,7 +2,7 @@
 
 SlideRule's Python client makes it easier to interact with SlideRule from a Python script.
 
-Detailed [documentation](https://slideruleearth.io/rtd/) on installing and using this client can be found at [slideruleearth.io](https://slideruleearth.io/).
+Detailed [documentation](https://docs.slideruleearth.io/) on installing and using this client can be found at [slideruleearth.io](https://slideruleearth.io/).
 
 ## I. Installing the SlideRule Python Client
 

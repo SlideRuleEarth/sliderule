@@ -1,5 +1,5 @@
 # conda env create -f environment.yml
-name: rtd
+name: myst
 channels:
   - conda-forge
 dependencies:
@@ -9,13 +9,7 @@ dependencies:
   - jupyterlab
   - geopandas
   - matplotlib
-  - pandoc
+  # conda-forge's node 26 reports itself as "26.x.y-alpha.0.0.0", which mystmd's semver check rejects
+  - nodejs=24
+  - mystmd
   - pip
-  - pip:
-    - sphinx>=5.0
-    - docutils
-    - sphinx-markdown-tables
-    - sphinx_panels
-    - sphinx_rtd_theme
-    - myst-parser
-    - nbsphinx

@@ -86,7 +86,8 @@ MCP_STAGE_DIR = $(STAGE)/mcp
 EMAIL_STAGE_DIR = $(STAGE)/email
 DOCUMENTATION_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
-DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/rtd/source/_static
+DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/_static
+DOCUMENTATION_HTML_DIR = $(DOCUMENTATION_STAGE_DIR)/_build/html
 DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
@@ -1052,30 +1053,31 @@ email-list-import: ## restore contacts from EMAIL_CONTACTS_BACKUP (create or upd
 
 documentation-prep: ## create environment for building documentation
 	rm -Rf $(DOCUMENTATION_STAGE_DIR)
-	mkdir -p $(DOCUMENTATION_STAGE_DIR)
-	cp -R $(DOCUMENTATION_SOURCE_DIR)/rtd $(DOCUMENTATION_STAGE_DIR)
-	rsync -a $(ROOT) $(DOCUMENTATION_STAGE_DIR) --exclude build --exclude stage
+	mkdir -p $(DOCUMENTATION_STATIC_DIR)
+	rsync -a $(DOCUMENTATION_SOURCE_DIR)/ $(DOCUMENTATION_STAGE_DIR) --exclude _build --exclude api_reference
+	sed -i 's/$${VERSION}/$(shell cat $(PYTHON_CLIENT_DIR)/version.txt)/' $(DOCUMENTATION_STAGE_DIR)/index.md
 	cp $(PYTHON_EXAMPLES_DIR)/* $(DOCUMENTATION_STATIC_DIR)
 	cp $(DOCUMENTATION_ASSET_DIR)/* $(DOCUMENTATION_STATIC_DIR)
 
-documentation-rtd: ## generate read-the-docs static html
-	conda run -n rtd --no-capture-output \
+documentation-build: ## generate the static html with myst
+	conda run -n myst --no-capture-output \
 	sh -c 'pip install $(PYTHON_CLIENT_DIR) && \
-	cd $(DOCUMENTATION_STAGE_DIR)/rtd && \
-	sphinx-build -M html "source" "build"'
+	cd $(DOCUMENTATION_STAGE_DIR) && \
+	python gen_api_reference.py && \
+	myst build --html'
 
-documentation: ## generate the static documentation (uses docs/environment.yml "rtd" conda environment)
+documentation: ## generate the static documentation (uses docs/environment.yml "myst" conda environment)
 	make documentation-prep
 	make openapi
-	make documentation-rtd
+	make documentation-build
 
 documentation-run: ## locally run the documentation
-	conda run -n rtd --no-capture-output \
-	sh -c 'cd $(DOCUMENTATION_STAGE_DIR)/rtd/build/html && \
+	conda run -n myst --no-capture-output \
+	sh -c 'cd $(DOCUMENTATION_HTML_DIR) && \
 	python -m http.server 8000'
 
 documentation-live-update: ## update the documentation in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(DOCUMENTATION_STAGE_DIR)/rtd/build/html s3://$(PROJECT_WEBSITE_BUCKET) --delete
+	aws s3 sync $(DOCUMENTATION_HTML_DIR) s3://$(PROJECT_WEBSITE_BUCKET) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
 documentation-create: ## create documentation stack
@@ -1114,7 +1116,7 @@ release: ## tag and release sliderule; needs RELEASE
 	git commit -m "Version $(RELEASE)"
 	git tag -a $(RELEASE) -m "Version $(RELEASE)"
 	git push --tags && git push
-	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://docs.slideruleearth.io/developer_guide/release_notes/release_notes.html"
+	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://docs.slideruleearth.io/developer-guide/release-notes/"
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
 	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest

@@ -23,7 +23,7 @@ Use MCP resources.
 
 Examples:
 
-- docs/python/getting_started
+- docs/python/getting-started
 - docs/python/choosing_a_dataset
 - examples/python/atl09_atmo_sampler
 - openapi/sliderule.json
