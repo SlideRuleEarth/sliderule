@@ -8,7 +8,7 @@ The recommended way of installing the SlideRule Python client is to use the Cond
 
     conda install -c conda-forge sliderule
 
-In order to run the `example notebooks <Examples.html>`_, we provide an :download:`environment.yml <../assets/environment.yml>` that can be used to create an initial conda environment that has the SlideRule Python client installed along with all the dependencies necessary to run the examples.  To install the client and its dependencies via the environment file:
+In order to run the `example notebooks <Examples.html>`_, we provide an `environment.yml <https://raw.githubusercontent.com/SlideRuleEarth/sliderule/refs/heads/main/clients/python/examples/environment.yml>`_ that can be used to create an initial conda environment that has the SlideRule Python client installed along with all the dependencies necessary to run the examples.  To install the client and its dependencies via the environment file:
 
 .. code-block:: bash
 
@@ -75,4 +75,3 @@ You can then install the `sliderule python` client using `setuptools`:
 
     cd sliderule/clients/python
     pip install .
-
