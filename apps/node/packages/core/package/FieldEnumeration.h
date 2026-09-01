@@ -278,7 +278,7 @@ string FieldEnumeration<T,N>::toOpenApi (const char* description) const
             convertFromIndex(i, selection);
             string selection_str = convertToJson(selection); // separate line here because this throws
             selection_str.erase(std::remove(selection_str.begin(), selection_str.end(), '"'), selection_str.end());
-            if(!first) enum_property += ",";
+            if(!first) enum_property += ", "; // the space keeps the list breakable when rendered as prose
             else first = false;
             enum_property += selection_str;
         }
