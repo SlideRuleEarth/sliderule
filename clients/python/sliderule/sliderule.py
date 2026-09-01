@@ -79,7 +79,7 @@ def init (
     Parameters
     ----------
         url:            str
-                        the IP address or hostname of the SlideRule service (slidereearth.io by default)
+                        the IP address or hostname of the SlideRule service (slideruleearth.io by default)
         verbose:        bool
                         sets up console logger as a convenience to user so all logs are printed to screen
         loglevel:       int

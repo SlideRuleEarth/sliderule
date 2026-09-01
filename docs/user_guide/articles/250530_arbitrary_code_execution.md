@@ -86,7 +86,7 @@ The `h5obj:readp` function returns what is called an `H5Column` in SlideRule.  A
 
 If the user provided script needs to only be run against a single granule, then no additional steps are necessary - the script can be set to the `ace` API as is and the results processed.  But if a user wants to execute the script against multiple granules and take advantage of the cluster computing capabilities of SlideRule, then the user must also write a Python program that manages the orchestration of those requests to SlideRule.
 
-For the ATL13 use case, the Python program used to manage the execution of the above script against all ATL13 granules can be found here: [clients/python/utils/atl13_utils.py](https://github.com/SlideRuleEarth/sliderule/blob/main/clients/python/utils/atl13_utils.py).
+For the ATL13 use case, the Python program used to manage the execution of the above script against all ATL13 granules can be found here: [clients/python/utils/atl13_utils.py](https://github.com/SlideRuleEarth/sliderule/blob/79f9fab9993c0cf2a36a0fc8c9b1a622689e7349/clients/python/utils/atl13_utils.py).
 
 This script queries CMR for a complete list of ATL13 granules and then creates a thread pool for workers that go through that list and issue `ace` API calls for each granule. The default concurrency is set to 8 in the script, but could easily be set to 100 for a private cluster of 10 nodes.
 

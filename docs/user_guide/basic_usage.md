@@ -90,10 +90,10 @@ sliderule.run("atl03x", {"cnf":-1}, resources=["ATL03_20181019065445_03150111_00
 
 There are two general purpose routines provided in the SlideRule Python client for issuing processing requests.
 
-sliderule.source
+`sliderule.source`
 :   Implements the low-level protocol for making requests to SlideRule and processing the results.  This can be used to issue a request to any SlideRule endpoint.
 
-sliderule.run
+`sliderule.run`
 :   Implements a standard SlideRule convention for making requests to SlideRule endpoints that return a dataframe.  This uses the `sliderule.source()` routine.
 
 A user is always free to use one of the routines above for making requests to SlideRule, but many times it is more convenient to use one of the helper functions in the mission specific modules.  For instance, when making processing requests for ICESat-2 data, the `icesat2` module provides many routines that wrap calls to specific endpoints in an easy-to-use Python function.  For instance, when making a request to the `atl06p` endpoint, a user should use the `icesat2.atl06p()` Python routine.

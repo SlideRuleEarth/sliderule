@@ -6,7 +6,7 @@ Version 5.0 of SlideRule has been officially released.  The changes include an o
 
 ## Full release notes
 
-[https://docs.slideruleearth.io/developer_guide/release_notes/release-v05-00-00.html](https://docs.slideruleearth.io/developer_guide/release_notes/release-v05-00-00.html)
+[Release v5.0.0](../../developer_guide/release_notes/release-2026-01-27-v05-00-00.md)
 
 ## TL;DR
 

@@ -52,4 +52,4 @@ earthdata
 
 ## Next Steps
 
-You can checkout the [examples](Examples.md) provided in this guide, or move on to the [tutorials](/tutorials/user.html) section below.
+You can checkout the [examples](Examples.md) provided in this guide.
