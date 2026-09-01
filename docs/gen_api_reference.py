@@ -129,7 +129,7 @@ def render_function(module, module_name, name):
     fn = getattr(module, name)
     summary, sections = split_sections(inspect.getdoc(fn) or "")
 
-    out = [f"## {name}", "", "```python",
+    out = [f"### {name}", "", "```python",
            f"{module_name}.{name}{inspect.signature(fn)}", "```", ""]
     if summary:
         out.extend([summary, ""])
@@ -152,7 +152,9 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     for page, module_name, intro, import_stmt, functions in PAGES:
         module = importlib.import_module(module_name)
-        lines = [f"# {page}", "", intro, "", "```python", import_stmt, "```", ""]
+        # the "Functions" parent is what makes MyST render each function heading as an h3
+        lines = [f"# {page}", "", intro, "", "```python", import_stmt, "```", "",
+                 "## Functions", ""]
         for name in functions:
             lines.extend(render_function(module, module_name, name))
         path = os.path.join(OUTPUT_DIR, f"{page}.md")

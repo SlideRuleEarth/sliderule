@@ -54,7 +54,7 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
 #### Authorization Flows
 
 | Flow | Endpoints | Highest Allowed Role | Notes |
-|:----:|:---------:|:-------------:|:-------------------:|:-----:|
+|:----:|:---------:|:--------------------:|:-----:|
 | Device | /auth/github/device, /auth/github/device/poll | Owner | preferred method for python client |
 | OAuth2.1 Web | /auth/github/register, /auth/github/login, /auth/github/callback, /auth/github/token | Member | preferred method for web applications |
 | PAT Key | /auth/github/pat | Member | used for CI/CD pipelines |

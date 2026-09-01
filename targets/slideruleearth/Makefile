@@ -1066,7 +1066,7 @@ documentation-build: ## generate the static html with myst
 	python gen_api_reference.py && \
 	myst build --html'
 
-documentation: ## generate the static documentation (uses docs/environment.yml "myst" conda environment)
+documentation: ## generate the static documentation (uses docs/environment.yml "myst" conda environment, requires `sliderule` to be built)
 	make documentation-prep
 	make openapi
 	make documentation-build
