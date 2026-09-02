@@ -1096,6 +1096,8 @@ documentation-describe: ## status the creation/deletion of the documentation
 	aws cloudformation describe-stack-events --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 
 documentation-delete: ## deletes the documentation stack
+	aws cloudformation delete-stack --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
+	- aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 	aws cloudformation delete-stack --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME) --retain-resources WebsiteBucketPolicy
 	aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name $(DOCUMENTATION_STACKNAME)
 	aws s3api delete-bucket-policy --bucket $(PROJECT_WEBSITE_BUCKET)
