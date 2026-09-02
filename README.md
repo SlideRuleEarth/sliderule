@@ -153,7 +153,6 @@ corresponding source files.
 * `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git (MIT license)
 * `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html (BSD-style license)
 * `scripts/extensions/base64.lua`: base64 encode/decode code based off of https://github.com/iskolbin/lbase64
-* `clients/python/sliderule/icesat2.py`: subsetting code sourced from NSIDC download script (Regents of the University of Colorado)
 
 The following third-party libraries can be linked to by SlideRule:
 * __Lua__: https://www.lua.org/ (MIT license)
