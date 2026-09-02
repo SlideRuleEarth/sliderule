@@ -2,6 +2,7 @@ import os
 import re
 import json
 import base64
+import gzip
 import socket
 import boto3
 import botocore.exceptions
@@ -271,13 +272,17 @@ def populate_user_data(script, rqst, service, parms=None):
     """
     Populates environment variables of a user data script using the environment and request parameters
     """
-    return Template(open(script).read()).safe_substitute(os.environ | {
+    content = Template(open(script).read()).safe_substitute(os.environ | {
         "VERSION": rqst["version"],
         "IS_PUBLIC": json.dumps(rqst["is_public"]),
         "CLUSTER": rqst["cluster"],
         "SERVICE": service,
         **( parms if isinstance(parms, dict) else {} )
     })
+    user_data = base64.b64encode(gzip.compress(content.encode(), mtime=0)).decode()
+    if len(user_data) > 4096: # CloudFormation has a 4096 byte parameter limit on UserData
+        raise RuntimeError(f"{script} user data too large: {len(user_data)}")
+    return user_data
 
 # ###############################
 # Business Logic
@@ -512,8 +517,6 @@ def deploy_handler(rqst, kind):
     elif kind == 'user':
 
         # get user data for instances
-        ilb_user_data = populate_user_data("ilb.sh", rqst, rqst["username"])
-        monitor_user_data = populate_user_data("monitor.sh", rqst, rqst["username"])
         node_user_data = populate_user_data("node.sh", rqst, rqst["username"])
 
         # get parent stack resources

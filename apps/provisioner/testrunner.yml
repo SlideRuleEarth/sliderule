@@ -203,8 +203,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-${DeployDate}"
-      UserData:
-        Fn::Base64: !Ref TestRunnerUserData
+      UserData: !Ref TestRunnerUserData
 
   #
   # Custom Schedule Trigger

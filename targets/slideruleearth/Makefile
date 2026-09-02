@@ -1065,6 +1065,8 @@ documentation-build: ## generate the static html with myst
 	cd $(DOCUMENTATION_STAGE_DIR) && \
 	python gen_api_reference.py && \
 	myst build --html'
+	# myst bakes the local dev server origin into robots.txt, sitemap.xml, and the page payloads; rewrite it to the published domain
+	grep -rl 'http://localhost:3000' $(DOCUMENTATION_HTML_DIR) | xargs -r sed -i 's|http://localhost:3000|https://$(DOCUMENTATION_HOSTNAME)|g'
 
 documentation: ## generate the static documentation (uses docs/environment.yml "myst" conda environment, requires `sliderule` to be built)
 	make documentation-prep

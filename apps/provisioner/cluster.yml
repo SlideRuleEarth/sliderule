@@ -364,8 +364,7 @@ Resources:
           Value: !Ref IsPublic
         - Key: NodeCapacity
           Value: !Ref NodeCapacity
-      UserData:
-        Fn::Base64: !Ref IlbUserData
+      UserData: !Ref IlbUserData
 
   #
   # EC2 Instance - Monitor
@@ -394,8 +393,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-monitor"
-      UserData:
-        Fn::Base64: !Ref MonitorUserData
+      UserData: !Ref MonitorUserData
 
   #
   # Autoscaling Group - Cluster Node
@@ -419,8 +417,7 @@ Resources:
               VolumeSize: 40
               VolumeType: gp3
               DeleteOnTermination: true
-        UserData:
-          Fn::Base64: !Ref NodeUserData
+        UserData: !Ref NodeUserData
 
   NodeAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
