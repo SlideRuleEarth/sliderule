@@ -88,6 +88,8 @@ DOCUMENTATION_SOURCE_DIR = $(ROOT)/docs
 DOCUMENTATION_STAGE_DIR = $(STAGE)/documentation
 DOCUMENTATION_STATIC_DIR = $(DOCUMENTATION_STAGE_DIR)/_static
 DOCUMENTATION_HTML_DIR = $(DOCUMENTATION_STAGE_DIR)/_build/html
+# kept outside the myst project root, otherwise myst resolves the /openapi links and copies the specs into its own build
+DOCUMENTATION_OPENAPI_DIR = $(STAGE)/openapi
 DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
@@ -307,14 +309,11 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	make provisioner-openapi
 
 %-openapi: ## bundle and lint openapi docs
-	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/$*
 	cp -R $(ROOT)/apps/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
 	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
-	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/$*.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
-	sed -i 's/Redoc\.hydrate(__redoc_state, container)/Redoc.init(__redoc_state.spec.data, __redoc_state.options || {}, container)/' $(DOCUMENTATION_STATIC_DIR)/openapi/$*.html
 
 ########################
 # Docker Build Targets
@@ -341,12 +340,9 @@ sliderule-test: ## run python client tests
 	sh -c 'cd $(ROOT)/apps/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
 
 sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
-	mkdir -p $(DOCUMENTATION_STATIC_DIR)/openapi
 	make run RUN_CMD="$(ROOT)/apps/node/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
-	npx --yes @redocly/cli build-docs $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json --output $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
-	sed -i 's/Redoc\.hydrate(__redoc_state, container)/Redoc.init(__redoc_state.spec.data, __redoc_state.options || {}, container)/' $(DOCUMENTATION_STATIC_DIR)/openapi/sliderule.html
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -1068,10 +1064,24 @@ documentation-build: ## generate the static html with myst
 	# myst bakes the local dev server origin into robots.txt, sitemap.xml, and the page payloads; rewrite it to the published domain
 	grep -rl 'http://localhost:3000' $(DOCUMENTATION_HTML_DIR) | xargs -r sed -i 's|http://localhost:3000|https://$(DOCUMENTATION_HOSTNAME)|g'
 
-documentation: ## generate the static documentation (uses docs/environment.yml "myst" conda environment, requires `sliderule` to be built)
+documentation-openapi: ## render each bundled openapi spec to html with redocly (requires documentation-build to run first)
+	mkdir -p $(DOCUMENTATION_OPENAPI_DIR)
+	@openapi_dir=$(INSTALLDIR)/etc/sliderule/openapi; \
+	for spec_dir in $$openapi_dir/*/; do \
+	  name=$$(basename $$spec_dir); \
+	  if [ ! -f $$openapi_dir/$$name.json ]; then \
+	    echo "skipping $$name: no bundled spec, run 'make $$name-openapi' first"; \
+	    continue; \
+	  fi; \
+	  npx --yes @redocly/cli build-docs $$openapi_dir/$$name.json --output $(DOCUMENTATION_OPENAPI_DIR)/$$name.html; \
+	  sed -i 's/Redoc\.hydrate(__redoc_state, container)/Redoc.init(__redoc_state.spec.data, __redoc_state.options || {}, container)/' $(DOCUMENTATION_OPENAPI_DIR)/$$name.html; \
+	done
+	cp -R $(DOCUMENTATION_OPENAPI_DIR) $(DOCUMENTATION_HTML_DIR)/openapi
+
+documentation: openapi ## generate the static documentation (uses docs/environment.yml "myst" conda environment, requires `sliderule` to be built)
 	make documentation-prep
-	make openapi
 	make documentation-build
+	make documentation-openapi
 
 documentation-run: ## locally run the documentation
 	conda run -n myst --no-capture-output \
