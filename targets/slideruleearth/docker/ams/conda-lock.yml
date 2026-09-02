@@ -952,7 +952,7 @@ package:
   category: main
   optional: false
 - name: libcurl
-  version: 8.21.0
+  version: 8.22.0
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -962,12 +962,12 @@ package:
     libpsl: '>=0.23.1,<0.24.0a0'
     libssh2: '>=1.11.1,<2.0a0'
     libzlib: '>=1.3.2,<2.0a0'
-    openssl: '>=3.5.7,<4.0a0'
+    openssl: '>=3.5.8,<4.0a0'
     zstd: '>=1.5.7,<1.6.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libcurl-8.21.0-h86273da_5.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libcurl-8.22.0-h86273da_0.conda
   hash:
-    md5: c2c977033fa833d7f1f83bb34dd52717
-    sha256: d7bc660680aee2ce4011779bdfc00b3f8d0c98acf503aa2982874d81b075ff66
+    md5: d79a5b16c3aaff5269f9118aa1d9f1ba
+    sha256: 8634a43ca7161d49b94098d8d27f32040ccf19b5227b37d05826ec8b5729b3c4
   category: main
   optional: false
 - name: libedit
@@ -1411,15 +1411,15 @@ package:
   category: main
   optional: false
 - name: libuuid
-  version: 2.42.2
+  version: 2.42.3
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libgcc: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.2-h1022ec0_0.conda
+    libgcc: '>=15'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.3-hd6fdeab_0.conda
   hash:
-    md5: 58fa42bc4bc71fc329889497ec15effb
-    sha256: 7663489f97c104ae3814db10f384932c74b439f3c1fd4247e4fe3599830c090a
+    md5: b759892402ee563731fbbb43860cae00
+    sha256: 3530c720c8b9dbb5aba0712d77fbb158e98d7a533ba1cf4968d42a98c41b7f24
   category: main
   optional: false
 - name: libxml2

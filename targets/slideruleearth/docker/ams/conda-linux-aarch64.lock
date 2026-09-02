@@ -29,7 +29,7 @@ https://conda.anaconda.org/conda-forge/linux-aarch64/liblzma-5.8.3-he30d5cf_1.co
 https://conda.anaconda.org/conda-forge/linux-aarch64/libmpdec-4.0.0-he30d5cf_2.conda#eaaaec4776cd8a7b987c4b1782220141
 https://conda.anaconda.org/conda-forge/linux-aarch64/libstdcxx-16.2.0-hef695bb_4.conda#47b6b37e291c14f39bd95f9d340c45f5
 https://conda.anaconda.org/conda-forge/linux-aarch64/libutf8proc-2.11.3-hec6f9f7_0.conda#afc02d5958046be06b176058e9d630d7
-https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.2-h1022ec0_0.conda#58fa42bc4bc71fc329889497ec15effb
+https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.3-hd6fdeab_0.conda#b759892402ee563731fbbb43860cae00
 https://conda.anaconda.org/conda-forge/linux-aarch64/ncurses-6.6-h2b6f883_1.conda#c3b4349171ca987ff33a1de61f7b3f96
 https://conda.anaconda.org/conda-forge/linux-aarch64/openssl-3.6.4-he6ad1d5_0.conda#4aa504e081d16263e90c335df5499b4d
 https://conda.anaconda.org/conda-forge/linux-aarch64/tk-8.6.13-noxft_hf03c496_4.conda#ebaded4b4b74c2cc43a754ded4eed76f
@@ -68,7 +68,7 @@ https://conda.anaconda.org/conda-forge/linux-aarch64/libxml2-16-2.15.3-h79dcc73_
 https://conda.anaconda.org/conda-forge/linux-aarch64/aws-c-event-stream-0.7.1-h423fd5f_4.conda#0d359b84eeae657d590354b4bf13f804
 https://conda.anaconda.org/conda-forge/linux-aarch64/aws-c-http-0.11.0-hb2c4768_4.conda#8e5a8a7f923a502699da9122857f6da9
 https://conda.anaconda.org/conda-forge/linux-aarch64/libblas-3.11.0-10_haddc8a3_openblas.conda#0aef6d16472137e6b556ecc2208194f6
-https://conda.anaconda.org/conda-forge/linux-aarch64/libcurl-8.21.0-h86273da_5.conda#c2c977033fa833d7f1f83bb34dd52717
+https://conda.anaconda.org/conda-forge/linux-aarch64/libcurl-8.22.0-h86273da_0.conda#d79a5b16c3aaff5269f9118aa1d9f1ba
 https://conda.anaconda.org/conda-forge/linux-aarch64/libxml2-2.15.3-h869d058_1.conda#da311b13a2af5209b926397cd426f27d
 https://conda.anaconda.org/conda-forge/linux-aarch64/orc-2.3.1-h1fb4f23_0.conda#e7ad9dc0d832f29a19e2852cd6de00a3
 https://conda.anaconda.org/conda-forge/linux-aarch64/python-3.14.7-h5d54f3b_4_cp314t.conda#b653540ba38567be4f4db35cf28aa7ca
