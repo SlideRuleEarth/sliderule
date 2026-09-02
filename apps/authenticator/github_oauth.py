@@ -26,13 +26,11 @@ import requests
 DOMAIN = os.environ.get('DOMAIN')
 PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
-MCP_HOSTNAME = os.environ.get('MCP_HOSTNAME')
 GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
 TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(' ')) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
-THIRD_PARTY_REDIRECT_HOSTS = set(os.environ.get('THIRD_PARTY_REDIRECT_HOSTS', '').split(' ')) # Untrusted redirect_uri list which forces descope of audience in token
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
 AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
@@ -41,7 +39,6 @@ AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
 GUEST_SCOPES = {"sliderule:access", "monitor:access"}
 MEMBER_SCOPES = GUEST_SCOPES | {"provisioner:access", "runner:access"} #
 OWNER_SCOPES = MEMBER_SCOPES | {"sliderule:admin"}
-THIRD_PARTY_SCOPES = {"mcp:tools", "mcp:resources", "mcp:access"}
 
 # GitHub OAuth endpoints (from the environment only for testing)
 GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
@@ -56,7 +53,7 @@ JWT_ALGORITHM = 'RS256'
 BASIC_CLIENT_ID = "BASIC"
 
 # OAuth2.1 configuration
-ALLOWED_REDIRECT_HOSTS      = THIRD_PARTY_REDIRECT_HOSTS | TRUSTED_REDIRECT_HOSTS
+ALLOWED_REDIRECT_HOSTS      = TRUSTED_REDIRECT_HOSTS
 ALLOWED_GRANT_TYPES         = {"authorization_code", "refresh_token"}
 ALLOWED_RESPONSE_TYPES      = {"code"}
 ALLOWED_AUTH_METHODS        = {"none"}
@@ -633,12 +630,6 @@ def generate_audience_list(username, clusters, org_roles, scope):
             if 'owner' in org_roles: # owners can access all clusters
                 audiences.append('*')
 
-    # Exclusive MCP service (override everything else if requested)
-    # does not require organizational membership/affiliation
-    # user just needs to be authenticated
-    if 'mcp' in scopes:
-        audiences = ['mcp']
-
     # Return list of audiences
     return audiences
 
@@ -759,7 +750,7 @@ def handle_register(event: dict) -> dict:
     grant_types         = parms.get('grant_types', ['authorization_code']) # default per RFC 7591
     response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
     auth_method         = parms.get('token_endpoint_auth_method', 'none')
-    challenge_method    = parms.get('code_challenge_method', 'S256') # not an official RFC 7591 field but MCP clients send it
+    challenge_method    = parms.get('code_challenge_method', 'S256')
     scope               = parms.get('scope', ' '.join(GUEST_SCOPES)) # optional per the standard
 
     # check redirect_uris
@@ -818,7 +809,7 @@ def handle_register(event: dict) -> dict:
             'error': 'invalid_client_metadata',
             'error_description': 'scope must be a space-separated string'
         })
-    elif not contains_scope(scope.split(), MEMBER_SCOPES | THIRD_PARTY_SCOPES, check="all"):
+    elif not contains_scope(scope.split(), MEMBER_SCOPES, check="all"):
         return json_response(400, {
             'error': 'invalid_client_metadata',
             'error_description': 'invalid scope'
@@ -991,18 +982,10 @@ def handle_callback(event):
 
         # construct scope of authorization request
         scope = session_challenge["scope"]
-        if session_challenge["resource"]:
-            # special case third-party MCP clients that supply scope as resource
-            mcp_resource = session_challenge["resource"].split("https://")[-1]
-            if mcp_resource == f'{MCP_HOSTNAME}/{PUBLIC_CLUSTER}':
-                scope += list(THIRD_PARTY_SCOPES)
 
         # check rules for scope and redirect
-        if contains_redirect(redirect_uri, THIRD_PARTY_REDIRECT_HOSTS):
-            if not contains_scope(scope, THIRD_PARTY_SCOPES, check="all"):
-                raise RuntimeError(f"Forbidden scope: {scope}")
-        elif contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            if not contains_scope(scope, MEMBER_SCOPES | THIRD_PARTY_SCOPES, check="all"):
+        if contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
+            if not contains_scope(scope, MEMBER_SCOPES, check="all"):
                 raise RuntimeError(f"Invalid scope: {scope}")
         else: # redirect not allowed
             raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
@@ -1657,7 +1640,7 @@ def handle_authorization_server(event: dict) -> dict:
         "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for authorization_code grant.
         "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
-        "scopes_supported": list(MEMBER_SCOPES | THIRD_PARTY_SCOPES), # only support member-level and third-party scopes for dynamically registered clients
+        "scopes_supported": list(MEMBER_SCOPES), # only support member-level and third-party scopes for dynamically registered clients
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
         "registration_endpoint": f"{base_url}/auth/github/register", # Dynamic client registration (RFC 7591)

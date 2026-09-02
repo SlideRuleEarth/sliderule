@@ -14,7 +14,7 @@ parms = {
     "response_types": ['code'],
     "auth_method": 'none',
     "challenge_method": 'S256',
-    "scope": 'mcp:tools mcp:resources'
+    "scope": 'sliderule::access'
 }
 
 # #######################
@@ -45,9 +45,8 @@ def test_nominal():
     assert body["response_types"][0] == "code"
     assert body["token_endpoint_auth_method"] == "none"
     assert body["code_challenge_method"] == "S256"
-    assert len(scopes) == 2
-    assert scopes[0] == "mcp:tools"
-    assert scopes[1] == "mcp:resources"
+    assert len(scopes) == 1
+    assert scopes[0] == "sliderule:access"
 
 #
 # Test Invalid Redirect

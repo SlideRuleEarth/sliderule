@@ -10,7 +10,7 @@ properties:
     maxLength: 40
     description: >
       Name of the cluster to deploy. Must not be a system keyword
-      (login, provisioner, client, recorder, runner, mcp, sliderule, monitor).
+      (login, provisioner, client, recorder, runner, sliderule, monitor).
     example: developers
   node_capacity:
     type: integer

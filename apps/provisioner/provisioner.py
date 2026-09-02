@@ -43,7 +43,7 @@ AFFILIATES_FILENAME = os.environ.get('AFFILIATES_FILENAME')
 SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL')
 ALERT_EMAIL = os.environ.get('ALERT_EMAIL')
 
-SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','mcp','sliderule','monitor']
+SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','sliderule','monitor']
 
 MAX_NODES = {
     "owner": 100,

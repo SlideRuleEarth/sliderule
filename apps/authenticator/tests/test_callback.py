@@ -16,7 +16,7 @@ register_rqst = build_query_request('/auth/github/register', {
     "response_types": ['code'],
     "auth_method": 'none',
     "challenge_method": 'S256',
-    "scope": 'mcp:tools mcp:resources sliderule:access'
+    "scope": 'sliderule:access'
 })
 
 register_rsps = json.loads(lambda_gateway(register_rqst, None)["body"])
@@ -35,7 +35,7 @@ def login():
         "client_id":                register_rsps["client_id"],
         "redirect_uri":             redirect_uri,
         "state":                    state,
-        "scope":                    "mcp:tools",
+        "scope":                    "sliderule:access",
         "code_challenge":           code_challenge,
         "code_challenge_method":    'S256'
     })

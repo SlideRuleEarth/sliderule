@@ -14,7 +14,7 @@ properties:
     type: string
     maxLength: 200
     description: Human-readable name for the client.
-    example: My MCP Client
+    example: My Client
   grant_types:
     type: array
     items:
@@ -40,4 +40,4 @@ properties:
   scope:
     type: string
     description: Space-separated list of requested scopes.
-    example: mcp:tools mcp:resources
+    example: sliderule:access

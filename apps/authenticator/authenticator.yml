@@ -18,8 +18,6 @@ Parameters:
     Type: String
   TrustedRedirectHosts:
     Type: String
-  ThirdPartyRedirectHosts:
-    Type: String
   CorsAllowOrigins:
     Type: CommaDelimitedList
   ProjectBucket:
@@ -145,7 +143,6 @@ Resources:
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
           TRUSTED_REDIRECT_HOSTS: !Ref TrustedRedirectHosts
-          THIRD_PARTY_REDIRECT_HOSTS: !Ref ThirdPartyRedirectHosts
           SESSION_TABLE: !Sub '${AWS::StackName}-store'
           PROJECT_BUCKET: !Ref ProjectBucket
           AFFILIATES_FILENAME: !Ref AffiliatesFilename

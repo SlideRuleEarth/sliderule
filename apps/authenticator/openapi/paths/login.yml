@@ -37,7 +37,7 @@ get:
       schema:
         type: string
       description: Space-separated list of scopes. Must be subset of registered scopes.
-      example: mcp:tools mcp:resources
+      example: sliderule:access
     - name: code_challenge
       in: query
       required: true

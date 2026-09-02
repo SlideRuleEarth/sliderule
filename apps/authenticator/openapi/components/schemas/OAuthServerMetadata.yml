@@ -18,7 +18,7 @@ properties:
     type: array
     items:
       type: string
-    example: [mcp:tools, mcp:resources, sliderule:access, runner:access, provisioner:access, monitor:access]
+    example: [sliderule:access, runner:access, provisioner:access, monitor:access]
   token_endpoint_auth_methods_supported:
     type: array
     items:

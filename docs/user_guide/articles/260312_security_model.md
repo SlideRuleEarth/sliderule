@@ -48,7 +48,6 @@ SlideRule Earth leverages GitHub authentication and account membership status wi
     * ***runner:access*** - access to runner services
 * Guest
     * ***sliderule:access*** - nominal access to cluster services
-    * ***mcp:access*** - access to mcp server
     * ***monitor:access*** - access to cluster monitor
 
 #### Authorization Flows
@@ -86,15 +85,7 @@ Members of the SlideRuleEarth organization have permission to deploy, access, an
 
 #### Web Client Restrictions
 
-When logging into SlideRule using the SlideRule Web Client, the client restricts the user permission set to `sliderule:access`, and `provisioner:access`.  This prevents a leaked token from being used for administrator access or for access to any of the other services
-
-#### Third Party Redirects
-
-When a third party application is granted access to SlideRule services, a reduced set of permissions are enforced.  Any authorization attempt that requests permissions not in the reduced set will be rejected.  Currently, the only allowed permissions for third party applications are: `mcp:tools`, `mcp:resources`.
-
-#### MCP Exclusivity
-
-When MCP resources are requested (either via the `scope` or `resource` field of the authorization request), all permissions that would have been granted in the JWT are dropped and only the `mcp:access` permission is provided.  This is to limit third party agents from broad access to SlideRule resources.
+When logging into SlideRule using the SlideRule Web Client, the client restricts the user permission set to `sliderule:access` and `provisioner:access`.  This prevents a leaked token from being used for administrator access or for access to any of the other services
 
 #### Request Signing
 

@@ -16,7 +16,7 @@ properties:
   scope:
     type: string
     description: Space-separated list of granted scopes.
-    example: mcp:tools mcp:resources
+    example: sliderule:access
   info:
     type: object
     description: User interface hints (not for authorization decisions).
