@@ -28,3 +28,17 @@ properties:
     minimum: 4096
     maximum: 32768
     description: Optional memory (MB) override per job container.
+  image:
+    type: string
+    default: sliderule:latest
+    description: Optional container image override for the job.
+    example: sliderule:latest
+  queue:
+    type: string
+    enum:
+      - urgent
+      - default
+      - background
+    default: default
+    description: Optional job queue to submit to; higher priority queues are dispatched first.
+    example: default

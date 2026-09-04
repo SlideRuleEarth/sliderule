@@ -730,7 +730,7 @@ runner-create: runner-build ## creates the lambda runner functions
 	aws cloudformation create-stack \
 		--stack-name 	$(RUNNER_STACKNAME) \
 		--template-body file://$(ROOT)/apps/runner/runner.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
+		--capabilities 	CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
@@ -754,7 +754,9 @@ runner-describe: ## status the creation/deletion of the runner functions
 	aws cloudformation describe-stack-events --stack-name $(RUNNER_STACKNAME)
 
 runner-delete: ## deletes the lambda runner functions
-	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-urgent-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-default-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-background-job-queue --state DISABLED
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(RUNNER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(RUNNER_STACKNAME)

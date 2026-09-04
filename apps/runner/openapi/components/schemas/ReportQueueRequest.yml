@@ -23,6 +23,15 @@ properties:
       Note, the name parameter, if supplied, is still applied as a filter;
       so it is recommended that when job_id is supplied, name is omitted.
     example: 23e58402-c585-4865-8e36-ad0504aa205e
+  queue:
+    type: string
+    enum:
+      - urgent
+      - default
+      - background
+    default: default
+    description: Optional job queue to submit to; higher priority queues are dispatched first.
+    example: default
   verbose:
     type: boolean
     description: When set to true the response will include a description of each job.

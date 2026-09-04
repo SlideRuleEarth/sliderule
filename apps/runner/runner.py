@@ -147,7 +147,7 @@ def verify_signature(path, body, username, event):
 #
 # List Jobs
 #
-def list_jobs(job_state, name, parent_job_id=None):
+def list_jobs(job_state, name, queue, parent_job_id=None):
     """
     validate parameters and list jobs that match job name
     """
@@ -177,7 +177,7 @@ def list_jobs(job_state, name, parent_job_id=None):
             }
         else:
             parms = {
-                "jobQueue": f"{STACK_NAME}-job-queue",
+                "jobQueue": f"{STACK_NAME}-{queue}-job-queue",
                 "jobStatus": job_status
             }
         while True:
@@ -216,6 +216,8 @@ def submit_handler(body, username):
     args = body["args"]
 
     # get optional request variables
+    image = body.get("image", "sliderule:latest")
+    queue = body.get("queue", "default")
     vcpus = body.get("vcpus")
     memory = body.get("memory")
 
@@ -268,6 +270,10 @@ def submit_handler(body, username):
         "environment": ENVIRONMENT_VERSION
     }, indent=2))
 
+    # get job definition
+    tag = image.split(":")[-1]
+    job_definition = f"{STACK_NAME}-{tag}-job-definition"
+
     # optionally build container overrides
     container_overrides = {}
     if (vcpus != None) or (memory != None):
@@ -280,8 +286,8 @@ def submit_handler(body, username):
     # submit job
     kwargs = {
         "jobName": name,
-        "jobQueue": f"{STACK_NAME}-job-queue",
-        "jobDefinition": f"{STACK_NAME}-default-job-definition",
+        "jobQueue": f"{STACK_NAME}-{queue}-job-queue",
+        "jobDefinition": job_definition,
         "parameters": {
             "script": f"{run_url}/script.lua",
             "args": args_str,
@@ -346,6 +352,7 @@ def report_queue_handler(body):
     job_state   = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
     name        = body.get("name") # string providing a single name
     job_id      = body.get("job_id") # string providing the parent job id
+    queue       = body.get("queue", "default")
     verbose     = body.get("verbose", False)
 
     # initialize response state
@@ -353,7 +360,7 @@ def report_queue_handler(body):
     if verbose: state["jobs"] = []
 
     # list jobs
-    job_list = list_jobs(job_state, name, parent_job_id=job_id)
+    job_list = list_jobs(job_state, name, queue, parent_job_id=job_id)
     for job in job_list:
         state["report"][job["status"]] += 1
         if verbose:
@@ -373,12 +380,13 @@ def cancel_handler(body):
     # get optional request variables
     job_list = body.get("job_list")
     name = body.get("name")
+    queue = body.get("queue", "default")
 
     # get jobs to delete
     if job_list:
         jobs_to_delete = job_list
     else:
-        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], name)]
+        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], name, queue)]
 
     # delete jobs
     with ThreadPoolExecutor(max_workers=API_CONCURRENCY) as executor:

@@ -13,3 +13,12 @@ properties:
       The name associated with the jobs that should be cancelled.
       Only used if job_list is not supplied.
     example: my-processing-job
+  queue:
+    type: string
+    enum:
+      - urgent
+      - default
+      - background
+    default: default
+    description: Optional job queue to submit to; higher priority queues are dispatched first.
+    example: default

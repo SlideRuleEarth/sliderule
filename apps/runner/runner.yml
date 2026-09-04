@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::LanguageExtensions
 Description: SlideRule Job Runner
 
 Parameters:
@@ -56,6 +57,9 @@ Parameters:
   JobRunnerCIDRBlock:
     Type: String
     Default: "10.0.0.0/17"
+  SlideRuleRunnerImageTags:
+    Type: CommaDelimitedList
+    Default: "latest,unstable,atl24"
 
 Resources:
 
@@ -329,11 +333,29 @@ Resources:
       LogGroupName: !Sub "/aws/batch/${AWS::StackName}"
       RetentionInDays: 7
 
-  # Job Queue
-  BatchJobQueue:
+  # Job Queues
+  UrgentJobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
-      JobQueueName: !Sub "${AWS::StackName}-job-queue"
+      JobQueueName: !Sub "${AWS::StackName}-urgent-job-queue"
+      State: ENABLED
+      Priority: 3
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+  DefaultJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      JobQueueName: !Sub "${AWS::StackName}-default-job-queue"
+      State: ENABLED
+      Priority: 2
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+  BackgroundJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      JobQueueName: !Sub "${AWS::StackName}-brackground-job-queue"
       State: ENABLED
       Priority: 1
       ComputeEnvironmentOrder:
@@ -341,14 +363,17 @@ Resources:
           ComputeEnvironment: !Ref BatchComputeEnvironment
 
   # Job Definition
-  BatchJobDefinition:
+  'Fn::ForEach::RunnerJobDefinitions':
+    - ImageTag
+    - !Ref SlideRuleRunnerImageTags
+    - 'BatchJobDefinition&{ImageTag}':
       Type: AWS::Batch::JobDefinition
       Properties:
-        JobDefinitionName: !Sub "${AWS::StackName}-default-job-definition"
+        JobDefinitionName: !Sub "${AWS::StackName}-${ImageTag}-job-definition"
         Type: container
         Parameters:
           script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
-          args: "s3://${ProjectPublicBucket}/runner/runid/args.json" # example to be overridden
+          args: !Sub "s3://${ProjectPublicBucket}/runner/runid/args.json" # example to be overridden
           output: !Sub "s3://${ProjectPublicBucket}/runner/runid" # example to be overridden
         RetryStrategy:
           Attempts: 3  # 1 initial attempt + 2 retries = 3 total
@@ -362,7 +387,7 @@ Resources:
         Timeout:
           AttemptDurationSeconds: 5400  # 90 minutes
         ContainerProperties:
-          Image: !Sub "${ContainerRegistry}/sliderule:runner"
+          Image: !Sub "${ContainerRegistry}/sliderule:${ImageTag}"
           ResourceRequirements:
             - Type: VCPU
               Value: "1"
