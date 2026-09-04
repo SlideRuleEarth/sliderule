@@ -66,9 +66,9 @@ class Database:
                 self.database = json.load(file)
         except FileNotFoundError:
             # create database
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, "w") as file:
                 self.database = {"submissions": {}}
-                os.makedirs(os.path.dirname(filename), exist_ok=True)
                 json.dump(self.database, file)
 
     @property

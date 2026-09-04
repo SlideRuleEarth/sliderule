@@ -32,9 +32,9 @@ class Tool:
     # Submit Job
     def submit_job(self):
         # pull out arguments
-        name = self.args.submit[0]
-        script_file = self.args.submit[1]
-        arguments_file = self.args.submit[2]
+        name = self.args.name
+        script_file = self.args.script
+        arguments_file = self.args.arguments
         batch_size = self.args.batch_size
         vcpus = self.args.vcpus
         memory = self.args.memory
@@ -87,17 +87,32 @@ class Tool:
 
 def main():
 
+    # options shared by every subcommand; parents= lets them appear after the command name
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument('--database',   type=Path,              default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
+    common.add_argument('--queue',      type=QueuePriority,     default=QueuePriority.DEFAULT, choices=list(QueuePriority))
+    common.add_argument('--verbose',    action='store_true',    default=False)
+
     # command line arguments
-    parser = argparse.ArgumentParser(description="""SlideRule Runner""")
-    parser.add_argument('--vcpus',      type=int,               default=4)
-    parser.add_argument('--memory',     type=int,               default=16000)
-    parser.add_argument('--batch_size', type=int,               default=10000)
-    parser.add_argument('--queue',      type=QueuePriority,     default=QueuePriority.DEFAULT, choices=list(QueuePriority))
-    parser.add_argument('--image',      type=str,               default="sliderule:latest")
-    parser.add_argument('--database',   type=str,               default=Path(Path.home() / ".cache" / "sliderule" / "runner_database.json"))
-    parser.add_argument('--submit',     nargs=3, type=str,      default=None) # <job name> <script.lua> <arguments.txt>
-    parser.add_argument('--status',     action='store_true',    default=False)
-    parser.add_argument('--verbose',    action='store_true',    default=False)
+    parser = argparse.ArgumentParser(prog="sliderule-runner", description="""SlideRule Runner""")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # submit
+    submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
+    submit.add_argument('name',         metavar="<name>")
+    submit.add_argument('script',       metavar="<script.lua>",     type=Path)
+    submit.add_argument('arguments',    metavar="<arguments.txt>",  type=Path)
+    submit.add_argument('--vcpus',      type=int,                   default=4)
+    submit.add_argument('--memory',     type=int,                   default=16000)
+    submit.add_argument('--batch_size', type=int,                   default=10000)
+    submit.add_argument('--image',      type=str,                   default="sliderule:latest")
+    submit.set_defaults(func=Tool.submit_job)
+
+    # status
+    status = subparsers.add_parser("status", parents=[common], help="report status of submitted jobs")
+    status.set_defaults(func=Tool.get_status)
+
+    # parse command line
     args = parser.parse_args()
 
     # create tool
@@ -105,9 +120,9 @@ def main():
 
     # route command
     try:
-        if args.submit: tool.submit_job()
-        elif args.status: tool.get_status()
+        args.func(tool)
     except Exception as e:
+        if args.verbose: raise
         print(f"Unhandled error: {e}")
     finally:
         tool.finish()
