@@ -94,7 +94,7 @@ const RecordObject::fieldDef_t RasterSampler::sdSampleRecDef[] = {
     {"flags",           RecordObject::UINT32,   offsetof(deriv_t, flags),           1,  NULL, NATIVE_FLAGS, "Any flags (if requested) that accompany the sampled data in the raster it was read from"},
     {"count",           RecordObject::UINT32,   offsetof(deriv_t, derivs.count),    1,  NULL, NATIVE_FLAGS, "Number of pixels read to calculate slope and aspect"},
     {"slope",           RecordObject::DOUBLE,   offsetof(deriv_t, derivs.slopeDeg), 1,  NULL, NATIVE_FLAGS, "The calculated slope at the location being sampled"},
-    {"aspect",          RecordObject::DOUBLE,   offsetof(deriv_t, derivs.aspectDeg),1,  NULL, NATIVE_FLAGS, "The calculated aspect at the location being sampled"}
+    {"aspect",          RecordObject::DOUBLE,   offsetof(deriv_t, derivs.aspectDeg),1,  NULL, NATIVE_FLAGS, "The calculated aspect at the location being sampled; the compass azimuth of the downslope direction in degrees clockwise from north, NaN where the surface is flat"}
 };
 
 const char* RasterSampler::sdGeoRecType = "sdrec";

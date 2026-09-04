@@ -372,7 +372,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column,     "Median absolute deviation of pixel values of pixels that contributed to sample value");
     if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column,  "Number of pixels read to calculate slope and aspect");
     if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column,   "The calculated slope at the location being sampled");
-    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled");
+    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled; the compass azimuth of the downslope direction in degrees clockwise from north, NaN where the surface is flat");
 
     // success
     return true;
@@ -619,7 +619,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column,     "Median absolute deviation of pixel values of pixels that contributed to sample value");
     if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column,  "Number of pixels read to calculate slope and aspect");
     if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column,   "The calculated slope at the location being sampled");
-    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled");
+    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled; the compass azimuth of the downslope direction in degrees clockwise from north, NaN where the surface is flat");
 
     // success
     return true;

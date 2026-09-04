@@ -40,7 +40,7 @@ class TestMosaic:
         assert gdf["count"].iat[0] == 7845         # zonal stats count - valid pixels used for calculation of zonal stats
         assert gdf["slope_count"].iat[0] == 441    # slope aspect count - valid pixels used for calculation of spatial derivatives
         assert abs(gdf["slope"].iat[0] - 0.21147272317954) < sigma
-        assert abs(gdf["aspect"].iat[0] - 288.63621380242) < sigma
+        assert abs(gdf["aspect"].iat[0] - 161.36378619758) < sigma
 
     def test_sample_api_batch_zonal_and_slope_aspect(self, init):
         gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"zonal_stats": True, "radius": 100, "slope_aspect": True, "slope_scale_length": 40})
@@ -52,14 +52,14 @@ class TestMosaic:
         assert gdf["count"].iat[0] == 7845         # zonal stats count - valid pixels used for calculation of zonal stats
         assert gdf["slope_count"].iat[0] == 441    # slope aspect count - valid pixels used for calculation of spatial derivatives
         assert abs(gdf["slope"].iat[0] - 0.21147272317954) < sigma
-        assert abs(gdf["aspect"].iat[0] - 288.63621380242) < sigma
+        assert abs(gdf["aspect"].iat[0] - 161.36378619758) < sigma
         # Second point
         assert abs(gdf["value"].iat[1] - 111.515625) < sigma
         assert gdf["file"].iat[1] ==  vrtFile
         assert gdf["count"].iat[1] == 7845         # zonal stats count - valid pixels used for calculation of zonal stats
         assert gdf["slope_count"].iat[1] == 441    # slope aspect count - valid pixels used for calculation of spatial derivatives
         assert abs(gdf["slope"].iat[1] - 0.43360241027112) < sigma
-        assert abs(gdf["aspect"].iat[1] - 248.46500670648) < sigma
+        assert abs(gdf["aspect"].iat[1] - 201.53499329352) < sigma
 
     def test_vrt_with_aoi(self, init):
         bbox = [-179, 50, -177, 52]
@@ -153,7 +153,7 @@ class TestMosaic:
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
         assert gdf["mosaic.count"].iloc[0] == 441
         assert abs(gdf["mosaic.slope"].iloc[0]  - 28.91345377886832) < sigma, f'slope = {gdf["mosaic.slope"].iloc[0]}'
-        assert abs(gdf["mosaic.aspect"].iloc[0] - 284.7521782959533) < sigma, f'aspect = {gdf["mosaic.aspect"].iloc[0]}'
+        assert abs(gdf["mosaic.aspect"].iloc[0] - 165.2478217040467) < sigma, f'aspect = {gdf["mosaic.aspect"].iloc[0]}'
 
     def test_slope_aspect_and_zonal_stats(self, init):
         resource = "ATL03_20190314093716_11600203_007_01.h5"
