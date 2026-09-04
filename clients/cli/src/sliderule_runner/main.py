@@ -4,7 +4,7 @@ import random
 import string
 import argparse
 from sliderule import sliderule
-from database import Database, JobState, QueuePriority
+from .database import Database, JobState, QueuePriority
 from pathlib import Path
 
 try:
@@ -13,11 +13,6 @@ except Exception:
     print(f"tqdm unavailable, progress of operations will not be reported")
     def tqdm(iterable, **kwargs):
         return iterable
-
-#########################################
-# submit job
-#########################################
-
 
 #########################################
 # Tool
@@ -50,7 +45,7 @@ class Tool:
             script = file.read()
         # read arguments
         with open(arguments_file, "r") as file:
-            arguments = file.readlines()
+            arguments = [line.strip() for line in file.readlines()]
         # process job in batches
         for i in range(0, len(arguments), batch_size):
             # build and check name
@@ -71,7 +66,7 @@ class Tool:
             complete = job["complete"]
             print(f"Statusing {name} - ", end='')
             if not complete:
-                status = self.session.runner.queue(name=name, job_id=job["job_id"], queue=queue)["report"]
+                status = self.session.runner.queue(job_id=job["job_id"], queue=queue)["report"]
                 self.database.submissions[name]["status"] = status
                 if sum([status[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]]) == 0:
                     self.database.submissions[name]["complete"] = True
@@ -97,7 +92,7 @@ def main():
     parser.add_argument('--vcpus',      type=int,               default=4)
     parser.add_argument('--memory',     type=int,               default=16000)
     parser.add_argument('--batch_size', type=int,               default=10000)
-    parser.add_argument('--queue',      type=QueuePriority,     default=QueuePriority.DEFAULT)
+    parser.add_argument('--queue',      type=QueuePriority,     default=QueuePriority.DEFAULT, choices=list(QueuePriority))
     parser.add_argument('--image',      type=str,               default="sliderule:latest")
     parser.add_argument('--database',   type=str,               default=Path(Path.home() / ".cache" / "sliderule" / "runner_database.json"))
     parser.add_argument('--submit',     nargs=3, type=str,      default=None) # <job name> <script.lua> <arguments.txt>

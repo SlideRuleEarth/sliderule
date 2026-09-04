@@ -23,10 +23,10 @@ import os
 from enum import Enum
 
 # ###############################
-# JobStates
+# JobState
 # ###############################
 
-class JobStates(str, Enum):
+class JobState(str, Enum):
 
     SUBMITTED   = "SUBMITTED"
     PENDING     = "PENDING"
@@ -67,7 +67,8 @@ class Database:
         except FileNotFoundError:
             # create database
             with open(filename, "w") as file:
-                self.database = {"submissions": {}, "granules": {}}
+                self.database = {"submissions": {}}
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
                 json.dump(self.database, file)
 
     @property
