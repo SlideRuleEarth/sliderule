@@ -162,10 +162,16 @@ long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltv
 {
     if(provided) *provided = false;
 
-    if(lua_isinteger(L, parm))
+    if(lua_isnumber(L, parm))
     {
-        if(provided) *provided = true;
-        return lua_tointeger(L, parm);
+        /* converts a float with an exact integer representation (e.g. 40.0), fails otherwise (e.g. 40.5) */
+        int isnum = 0;
+        const long value = static_cast<long>(lua_tointegerx(L, parm, &isnum));
+        if(isnum)
+        {
+            if(provided) *provided = true;
+            return value;
+        }
     }
 
     if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
