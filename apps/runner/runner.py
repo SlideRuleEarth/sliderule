@@ -241,6 +241,8 @@ def submit_handler(body, username):
         raise RuntimeError(f"Invalid arguments type: {type(args)}")
     elif isinstance(args, list) and (len(args) > MAX_ARGS_ARRAY_SIZE):
         raise RuntimeError(f"Argument array size too large: {len(args)}")
+    elif isinstance(args, list) and (len(args) == 0):
+        raise RuntimeError(f"Argument array cannot be empty")
     elif (vcpus != None) and ((not isinstance(vcpus, int)) or (vcpus < MIN_VCPUS) or (vcpus > MAX_VCPUS)):
         raise RuntimeError(f"Invalid vCPUs provided: {vcpus}")
     elif (memory != None) and ((not isinstance(memory, int)) or (memory < MIN_MEMORY) or (memory > MAX_MEMORY)):
@@ -265,16 +267,17 @@ def submit_handler(body, username):
     state["name"] = name
     state["run_url"] = run_url
 
-    # handle array arguments
-    if isinstance(args, list):
-        args_list = args
+    # handle arguments
+    process_as_array = isinstance(args, list) and len(args) > 1
+    if process_as_array:
         args_str = f"{run_path}/args.json"
         s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_str, Body=json.dumps(args))
-    else: # is string (checked above)
+    elif isinstance(args, list): # with just one element
+        args_str = str(args[0]).strip()
+    else: # string
         args_str = args.strip()
-        if len(args_str) == 0:
-            args_str = "nil"
-        args_list = [args_str]
+    if len(args_str) == 0:
+        args_str = "nil"
 
     # load additional run files to S3
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/script.lua", Body=script)
@@ -306,9 +309,9 @@ def submit_handler(body, username):
         },
         "containerOverrides": container_overrides
     }
-    if isinstance(args, list):
+    if process_as_array:
         kwargs["arrayProperties"] = {
-            "size": len(args_list)
+            "size": len(args)
         }
     response = batch.submit_job(**kwargs)
     print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')

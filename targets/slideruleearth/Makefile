@@ -93,6 +93,8 @@ DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
+CLI_STAGE_DIR = $(STAGE)/cli
+CLI_CLIENT_DIR = $(ROOT)/clients/cli
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
@@ -309,6 +311,14 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
+
+cli: ## build and install the command line tool locally
+	pip install -e $(CLI_CLIENT_DIR)
+
+cli-publish ## build and publish the command line tool
+	# pip install build twine
+	python -m build --outdir $(CLI_STAGE_DIR)
+	python -m twine upload $(CLI_STAGE_DIR)/*
 
 ########################
 # Docker Build Targets
