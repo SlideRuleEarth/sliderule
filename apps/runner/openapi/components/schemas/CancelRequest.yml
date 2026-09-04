@@ -20,5 +20,5 @@ properties:
       - default
       - background
     default: default
-    description: Optional job queue to submit to; higher priority queues are dispatched first.
+    description: Job queue to cancel jobs from. Only used if job_list is not supplied.
     example: default

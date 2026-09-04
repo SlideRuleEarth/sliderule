@@ -18,13 +18,15 @@ ENVIRONMENT_VERSION = os.environ['ENVIRONMENT_VERSION']
 PROJECT_PUBLIC_BUCKET = os.environ["PROJECT_PUBLIC_BUCKET"]
 SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
 ALERT_EMAIL = os.environ['ALERT_EMAIL']
+IMAGE_TAGS = [tag.strip() for tag in os.environ['IMAGE_TAGS'].split(",")]
 
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
+JOB_QUEUES = ["urgent", "default", "background"]
 MAX_JOBS_TO_DESCRIBE = 100
 MAX_VCPUS = 8
 MIN_VCPUS = 1
 MAX_MEMORY = 32768
-MIN_MEMORY = 4096
+MIN_MEMORY = 4000
 API_CONCURRENCY = 10
 MAX_ARGS_ARRAY_SIZE = 10000
 
@@ -166,6 +168,8 @@ def list_jobs(job_state, name, queue, parent_job_id=None):
             raise RuntimeError(f"Invalid job state supplied: {type(job_status)}")
         elif job_status not in JOB_STATES:
             raise RuntimeError(f"Unknown job state supplied: {job_status}")
+    if queue not in JOB_QUEUES:
+        raise RuntimeError(f"Unknown job queue supplied: {queue}")
 
     # list jobs
     job_list = []
@@ -221,6 +225,13 @@ def submit_handler(body, username):
     vcpus = body.get("vcpus")
     memory = body.get("memory")
 
+    # define job parameters
+    if not isinstance(image, str):
+        raise RuntimeError(f"Invalid image specified of type: {type(image)}")
+    tag = image.split(":")[-1]
+    job_definition = f"{STACK_NAME}-{tag}-job-definition"
+    job_queue = f"{STACK_NAME}-{queue}-job-queue"
+
     # parameter validation
     if not isinstance(name, str):
         raise RuntimeError(f"Invalid name supplied of type {type(name)}")
@@ -234,6 +245,10 @@ def submit_handler(body, username):
         raise RuntimeError(f"Invalid vCPUs provided: {vcpus}")
     elif (memory != None) and ((not isinstance(memory, int)) or (memory < MIN_MEMORY) or (memory > MAX_MEMORY)):
         raise RuntimeError(f"Invalid memory provided: {memory}")
+    elif queue not in JOB_QUEUES:
+        raise RuntimeError(f"Invalid queue provided: {queue}")
+    elif tag not in IMAGE_TAGS:
+        raise RuntimeError(f"Invalid image provided: {image}")
 
     # build unique identifier
     now = datetime.now(timezone.utc).isoformat()
@@ -270,10 +285,6 @@ def submit_handler(body, username):
         "environment": ENVIRONMENT_VERSION
     }, indent=2))
 
-    # get job definition
-    tag = image.split(":")[-1]
-    job_definition = f"{STACK_NAME}-{tag}-job-definition"
-
     # optionally build container overrides
     container_overrides = {}
     if (vcpus != None) or (memory != None):
@@ -286,7 +297,7 @@ def submit_handler(body, username):
     # submit job
     kwargs = {
         "jobName": name,
-        "jobQueue": f"{STACK_NAME}-{queue}-job-queue",
+        "jobQueue": job_queue,
         "jobDefinition": job_definition,
         "parameters": {
             "script": f"{run_url}/script.lua",

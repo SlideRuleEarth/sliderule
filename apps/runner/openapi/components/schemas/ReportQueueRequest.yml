@@ -30,7 +30,7 @@ properties:
       - default
       - background
     default: default
-    description: Optional job queue to submit to; higher priority queues are dispatched first.
+    description: Job queue to report on. Ignored when job_id is supplied.
     example: default
   verbose:
     type: boolean
