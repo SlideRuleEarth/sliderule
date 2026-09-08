@@ -70,7 +70,6 @@
 #include "RegionMask.h"
 #include "RequestParameters.h"
 #include "RequestMetrics.h"
-#include "S3CacheIODriver.h"
 #include "S3CurlIODriver.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
@@ -159,7 +158,6 @@ static int core_open (lua_State *L)
         {"s3download",      S3CurlIODriver::luaDownload},
         {"s3read",          S3CurlIODriver::luaRead},
         {"s3upload",        S3CurlIODriver::luaUpload},
-        {"s3cache",         S3CacheIODriver::luaCreateCache},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
         {"ut_field",        UT_Field::luaCreate},
@@ -280,8 +278,7 @@ void initcore (void)
     /* Register IO Drivers */
     Asset::registerDriver(Asset::NIL_DRIVER, Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
-    Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
-    Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
+    Asset::registerDriver(S3CurlIODriver::FORMAT, S3CurlIODriver::create);
 
     /* Register Region Mask Rasterizers */
     RegionMask::registerRasterizer(RegionMask::B16MASK_FORMAT, RegionMask::decodeB16mask);

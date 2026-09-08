@@ -508,7 +508,7 @@ static string calculateChecksum (FILE* fd)
  ******************************************************************************/
 
 const char* S3CurlIODriver::DEFAULT_IDENTITY = "iam-role";
-const char* S3CurlIODriver::CURL_FORMAT = "s3";
+const char* S3CurlIODriver::FORMAT = "s3";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
@@ -533,7 +533,8 @@ void S3CurlIODriver::init (void)
  *----------------------------------------------------------------------------*/
 Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new S3CurlIODriver(_asset, resource);
+    const FString resourcepath("%s/%s", _asset->getPath(), resource);
+    return new S3CurlIODriver(_asset, resourcepath.c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -1317,35 +1318,18 @@ int S3CurlIODriver::luaUpload(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * Constructor - for derived classes
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
-    asset(_asset)
-{
-    ioBucket = NULL;
-    ioKey = NULL;
-
-    /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getIdentity());
-}
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
     asset(_asset)
 {
-    const FString resourcepath("%s/%s", asset->getPath(), resource);
-
-    /* Allocate Memory */
-    ioBucket = StringLib::duplicate(resourcepath.c_str());
-
     /*
     * Differentiate Bucket and Key
     *  <bucket_name>/<path_to_file>/<filename>
     *  |             |
     * ioBucket      ioKey
     */
+    ioBucket = StringLib::duplicate(resource);
     ioKey = ioBucket;
     while(*ioKey != '\0' && *ioKey != '/') ioKey++;
     if(*ioKey == '/')

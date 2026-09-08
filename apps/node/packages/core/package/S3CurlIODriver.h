@@ -60,7 +60,7 @@ class S3CurlIODriver: public Asset::IODriver
         static const long SSL_VERIFYPEER = 0;
         static const long SSL_VERIFYHOST = 0;
         static const char* DEFAULT_IDENTITY;
-        static const char* CURL_FORMAT;
+        static const char* FORMAT;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -101,15 +101,10 @@ class S3CurlIODriver: public Asset::IODriver
         static int          luaRead         (lua_State* L);
         static int          luaUpload       (lua_State* L);
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        explicit            S3CurlIODriver  (const Asset* _asset);
         explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
                             ~S3CurlIODriver (void) override;
+
+    private:
 
         /*--------------------------------------------------------------------
          * Data

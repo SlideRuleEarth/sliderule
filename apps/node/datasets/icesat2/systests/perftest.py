@@ -31,8 +31,8 @@ elif context == "remote":
     nsidc_creds = sliderule.credentials("cumulus://nsidc-cumulus-prod-protected")
     nsidc_creds.provide(my_creds)
     # Create H5 Handles
-    atl08 = sliderule.h5coro("ATL08_20181214194017_11790102_007_01.h5", "cumulus", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
-    atl03 = sliderule.h5coro("ATL03_20181214194017_11790102_007_01.h5", "cumulus", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
+    atl08 = sliderule.h5coro("ATL08_20181214194017_11790102_007_01.h5", "s3atlas", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
+    atl03 = sliderule.h5coro("ATL03_20181214194017_11790102_007_01.h5", "s3atlas", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
 
 # Build Dictionary of Statistics
 stats = {

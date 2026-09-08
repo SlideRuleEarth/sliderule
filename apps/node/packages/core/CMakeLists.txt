@@ -62,7 +62,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/S3CacheIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
@@ -137,7 +136,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/S3CacheIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h

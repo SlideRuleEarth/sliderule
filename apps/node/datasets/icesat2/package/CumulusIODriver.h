@@ -43,7 +43,7 @@
  * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-class CumulusIODriver: S3CurlIODriver
+class CumulusIODriver: public S3CurlIODriver
 {
     public:
 

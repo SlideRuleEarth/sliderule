@@ -52,18 +52,6 @@ const char* CumulusIODriver::FORMAT = "cumulus";
  *----------------------------------------------------------------------------*/
 Asset::IODriver* CumulusIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new CumulusIODriver(_asset, resource);
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *
- *  Example: /ATLAS/ATL06/007/2019/06/26/ATL06_20190626143632_13640310_007_01.h5
- *----------------------------------------------------------------------------*/
-CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
-    S3CurlIODriver(_asset)
-{
-    /* Build Updated Resource Path Name */
     const int NUM_ELEMENTS = 5;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
@@ -86,7 +74,20 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     memcpy(&day[0], &date[6], 3);
     day[2] = '\0';
 
-    const FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, day, resource);
+    const FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", _asset->getPath(), product, version, year, month, day, resource);
+
+    return new CumulusIODriver(_asset, resourcepath.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *
+ *  Example: /ATLAS/ATL06/007/2019/06/26/ATL06_20190626143632_13640310_007_01.h5
+ *----------------------------------------------------------------------------*/
+CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
+    S3CurlIODriver(_asset)
+{
+    /* Build Updated Resource Path Name */
 
     /*
      * Determine ioBucket and ioKey
