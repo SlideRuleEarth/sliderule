@@ -68,6 +68,10 @@ class S3CurlIODriver: public Asset::IODriver
 
         static void         init            (void);
         static IODriver*    create          (const Asset* _asset, const char* resource);
+        explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
+                            ~S3CurlIODriver (void) override;
+
+        // io driver overrides
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
         int64_t             size            (void) override;
 
@@ -100,9 +104,6 @@ class S3CurlIODriver: public Asset::IODriver
         static int          luaDownload     (lua_State* L);
         static int          luaRead         (lua_State* L);
         static int          luaUpload       (lua_State* L);
-
-        explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
-                            ~S3CurlIODriver (void) override;
 
     private:
 

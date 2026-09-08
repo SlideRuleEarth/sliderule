@@ -538,6 +538,49 @@ Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resour
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
+{
+    /*
+    * Differentiate Bucket and Key
+    *  <bucket_name>/<path_to_file>/<filename>
+    *  |             |
+    * ioBucket      ioKey
+    */
+    ioBucket = StringLib::duplicate(resource);
+    ioKey = ioBucket;
+    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+    if(*ioKey == '/')
+    {
+        *ioKey = '\0';
+    }
+    else
+    {
+        delete [] ioBucket;
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
+    }
+    ioKey++;
+
+    /* Get Latest Credentials */
+    latestCredentials = CredentialStore::get(asset->getIdentity());
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::~S3CurlIODriver (void)
+{
+    /*
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
+    delete [] ioBucket;
+}
+
+/*----------------------------------------------------------------------------
  * ioOpen
  *----------------------------------------------------------------------------*/
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
@@ -1315,47 +1358,4 @@ int S3CurlIODriver::luaUpload(lua_State* L)
     /* Return Results */
     lua_pushboolean(L, status);
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
-    asset(_asset)
-{
-    /*
-    * Differentiate Bucket and Key
-    *  <bucket_name>/<path_to_file>/<filename>
-    *  |             |
-    * ioBucket      ioKey
-    */
-    ioBucket = StringLib::duplicate(resource);
-    ioKey = ioBucket;
-    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-    if(*ioKey == '/')
-    {
-        *ioKey = '\0';
-    }
-    else
-    {
-        delete [] ioBucket;
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
-    }
-    ioKey++;
-
-    /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getIdentity());
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::~S3CurlIODriver (void)
-{
-    /*
-     * Delete Memory Allocated for ioBucket
-     *  only ioBucket is freed because ioKey only points
-     *  into the memory allocated to ioBucket
-     */
-    delete [] ioBucket;
 }
