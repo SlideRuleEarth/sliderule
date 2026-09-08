@@ -1,6 +1,6 @@
 find_package (CURL)
 find_package (OpenSSL REQUIRED)
-find_package(AWSSDK REQUIRED COMPONENTS firehose secretsmanager)
+find_package(AWSSDK REQUIRED COMPONENTS s3 firehose secretsmanager)
 
 message (STATUS "Including aws package")
 

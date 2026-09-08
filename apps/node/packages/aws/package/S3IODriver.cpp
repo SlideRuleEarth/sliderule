@@ -79,7 +79,7 @@ Asset::IODriver* S3IODriver::create (const Asset* _asset, const char* resource)
     *  |             |
     * ioBucket      ioKey
     */
-    FString resourcepath("%s/%s", asset->getPath(), resource);
+    FString resourcepath("%s/%s", _asset->getPath(), resource);
     const char* bucket = resourcepath.c_str();
     char* key = StringLib::find(bucket, '/');
     if((!key) || ((bucket - key) < 0) || ((bucket - key) > resourcepath.length()))
@@ -100,23 +100,16 @@ Asset::IODriver* S3IODriver::create (const Asset* _asset, const char* resource)
 int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     if(size <= 0) return 0;
-    FString range("bytes=%d-%d", pos, pos + size - 1)
+    FString range("bytes=%lu-%lu", pos, pos + size - 1);
     request.SetRange(range.c_str());
     auto outcome = client.GetObject(request);
     if(!outcome.IsSuccess())
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to make range request of %ld bytes at 0x%x: %s", size, pos, outcome.GetError().GetMessage());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to make range request of %ld bytes at 0x%lx: %s", size, pos, outcome.GetError().GetMessage().c_str());
     }
-    stream.read(data, size);
+    auto& stream = outcome.GetResult().GetBody();
+    stream.read(reinterpret_cast<char*>(data), size);
     return stream.gcount();
-}
-
-/*----------------------------------------------------------------------------
- * path
- *----------------------------------------------------------------------------*/
-string S3IODriver::path (void)
-{
-    return "";
 }
 
 /*----------------------------------------------------------------------------
@@ -124,10 +117,13 @@ string S3IODriver::path (void)
  *----------------------------------------------------------------------------*/
 int64_t S3IODriver::size (void)
 {
-    auto outcome = client.HeadObject(request);
+    Aws::S3::Model::HeadObjectRequest head_request;
+    head_request.SetBucket(request.GetBucket());
+    head_request.SetKey(request.GetKey());
+    auto outcome = client.HeadObject(head_request);
     if (!outcome.IsSuccess())
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get size of object: %s", outcome.GetError().GetMessage());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get size of object: %s", outcome.GetError().GetMessage().c_str());
     }
     return outcome.GetResult().GetContentLength();
 }

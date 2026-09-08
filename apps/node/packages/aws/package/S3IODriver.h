@@ -66,7 +66,6 @@ class S3IODriver: public Asset::IODriver
         static void         init            (void);
         static IODriver*    create          (const Asset* _asset, const char* resource);
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
-        string              path            (void) override;
         int64_t             size            (void) override;
 
     protected:
@@ -82,7 +81,7 @@ class S3IODriver: public Asset::IODriver
          * Data
          *--------------------------------------------------------------------*/
 
-         Aws::S3::S3Client s3Client client;
+         Aws::S3::S3Client client;
          Aws::S3::Model::GetObjectRequest request;
 };
 

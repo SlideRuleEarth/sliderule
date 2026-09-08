@@ -69,7 +69,6 @@ class S3CurlIODriver: public Asset::IODriver
         static void         init            (void);
         static IODriver*    create          (const Asset* _asset, const char* resource);
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
-        string              path            (void) override;
         int64_t             size            (void) override;
 
         // fixed GET - memory preallocated
