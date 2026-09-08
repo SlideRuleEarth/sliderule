@@ -256,10 +256,10 @@ Function:   authenticate
    Notes:   accepts optional list of identity keys to authenticate
 ]]
 local function authenticate(identities_to_auth)
-    if not aws.csget("iam-role") then
+    if not core.csget("iam-role") then
         core.script("iam_role_auth")
     end
-    while not aws.csget("iam-role") do
+    while not core.csget("iam-role") do
         print("Waiting to establish IAM role...")
         sys.wait(1)
     end
@@ -287,10 +287,10 @@ local function authenticate(identities_to_auth)
     end
 
     for identity, parms in pairs(target_systems) do
-        if not aws.csget(identity) then
+        if not core.csget(identity) then
             core.script("earth_data_auth", json.encode(parms))
         end
-        while not aws.csget(identity) do
+        while not core.csget(identity) do
             print("Waiting to authenticate to "..identity.."...")
             sys.wait(1)
         end

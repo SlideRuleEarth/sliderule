@@ -17,14 +17,14 @@ local test_file = "t8.shakespeare.txt"
 -- Self Test --
 
 runner.unittest("S3 failed download", function()
-    local status = aws.s3download(test_bucket, string.format("%s/%s", test_path, test_file), "/missing_path/missing_file.txt")
+    local status = core.s3download(test_bucket, string.format("%s/%s", test_path, test_file), "/missing_path/missing_file.txt")
     runner.assert(status == false, "should have failed when trying to write to a non-existent path")
 end)
 
 -- Self Test --
 
 runner.unittest("S3 successful download", function()
-    local status = aws.s3download(test_bucket, string.format("%s/%s", test_path, test_file), test_file)
+    local status = core.s3download(test_bucket, string.format("%s/%s", test_path, test_file), test_file)
     runner.assert(status == true, "failed to download file: "..test_file)
     local f = io.open(test_file, "r")
     local fsize = f:seek("end")
@@ -35,7 +35,7 @@ end)
 -- Self Test --
 
 runner.unittest("S3 range read", function()
-    local response, status = aws.s3read(test_bucket, string.format("%s/%s", test_path, test_file), 11, 261)
+    local response, status = core.s3read(test_bucket, string.format("%s/%s", test_path, test_file), 11, 261)
     runner.assert(status == true, "failed to read file: "..test_file)
     runner.assert(response == "Shakespeare")
 end)

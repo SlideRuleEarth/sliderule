@@ -58,6 +58,8 @@ class StringLib
                 const char*     c_str       (bool duplicate = false) const;
                 long            length      (void) const;
                 long            size        (void) const;
+                char&           operator[]  (long index);
+                char            operator[]  (long index) const;
 
             private:
 

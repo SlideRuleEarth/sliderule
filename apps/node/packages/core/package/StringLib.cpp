@@ -128,6 +128,22 @@ long StringLib::FormattedString::size(void) const
     return length();
 }
 
+/*----------------------------------------------------------------------------
+ * operator[] - mutable reference
+ *----------------------------------------------------------------------------*/
+char& StringLib::FormattedString::operator[] (long index)
+{
+    return carray[index];
+}
+
+/*----------------------------------------------------------------------------
+ * operator[] - immutable copy
+ *----------------------------------------------------------------------------*/
+char StringLib::FormattedString::operator[] (long index) const
+{
+    return carray[index];
+}
+
 /******************************************************************************
  * UNIQUE STRING METHODS
  ******************************************************************************/

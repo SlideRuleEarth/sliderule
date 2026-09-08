@@ -37,10 +37,7 @@
 #include "GdalRaster.h"
 #include "RasterObject.h"
 #include "SystemConfig.h"
-
-#ifdef __aws__
 #include "CredentialStore.h"
-#endif
 
 #include <algorithm>
 #include <uuid/uuid.h>
@@ -671,8 +668,6 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
 {
     if(_parms->asset.asset)
     {
-#ifdef __aws__
-
         /* Set AWS_REGION for sliderule bucket */
         const FString project_path("/vsis3/%s/", SystemConfig::settings().projectBucket.value.c_str());
         const char* project_region = SystemConfig::settings().projectRegion.value.c_str();
@@ -704,7 +699,6 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
             /* same as AWS CLI option '--no-sign-request' */
             VSISetPathSpecificOption(path, "AWS_NO_SIGN_REQUEST", "YES");
         }
-#endif
     }
 }
 

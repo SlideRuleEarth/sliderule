@@ -37,6 +37,7 @@
 #include "AmsLib.h"
 #include "Asset.h"
 #include "AssetIndex.h"
+#include "CredentialStore.h"
 #include "CurlLib.h"
 #include "DeduplicateRunner.h"
 #include "Dictionary.h"
@@ -69,6 +70,8 @@
 #include "RegionMask.h"
 #include "RequestParameters.h"
 #include "RequestMetrics.h"
+#include "S3CacheIODriver.h"
+#include "S3CurlIODriver.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
 #include "SystemConfig.h"
@@ -149,6 +152,14 @@ static int core_open (lua_State *L)
         {"ams",             AmsLib::luaRequest},
         {"parms",           luaCreateParameters<RequestParameters>},
         {"send2user",       OutputLib::luaSend2User},
+        {"csget",           CredentialStore::luaGet},
+        {"csput",           CredentialStore::luaPut},
+        {"s3get",           S3CurlIODriver::luaGet},
+        {"s3probe",         S3CurlIODriver::luaProbe},
+        {"s3download",      S3CurlIODriver::luaDownload},
+        {"s3read",          S3CurlIODriver::luaRead},
+        {"s3upload",        S3CurlIODriver::luaUpload},
+        {"s3cache",         S3CacheIODriver::luaCreateCache},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
         {"ut_field",        UT_Field::luaCreate},
@@ -251,7 +262,7 @@ void initcore (void)
     /* Initialize Platform */
     OsApi::init(os_print);
 
-    /* Initialize Libraries */
+    /* Initialize Libraries & Modules */
     EventLib::init(EVENTQ);  /* Must be called first to handle events (mlog msgs) */
     MsgQ::init();
     SockLib::init();
@@ -261,6 +272,7 @@ void initcore (void)
     RequestMetrics::init();
     CurlLib::init();
     OutputLib::init();
+    S3CurlIODriver::init();
 #ifdef __unittesting__
     UT_TimeLib::init();
 #endif
@@ -268,6 +280,8 @@ void initcore (void)
     /* Register IO Drivers */
     Asset::registerDriver(Asset::NIL_DRIVER, Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
+    Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
+    Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
 
     /* Register Region Mask Rasterizers */
     RegionMask::registerRasterizer(RegionMask::B16MASK_FORMAT, RegionMask::decodeB16mask);

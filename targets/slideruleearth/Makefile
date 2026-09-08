@@ -315,7 +315,7 @@ openapi: ## bundle and lint the openapi docs for sliderule
 cli: ## build and install the command line tool locally
 	pip install -e $(CLI_CLIENT_DIR)
 
-cli-publish ## build and publish the command line tool
+cli-publish: ## build and publish the command line tool
 	# pip install build twine
 	python -m build --outdir $(CLI_STAGE_DIR)
 	python -m twine upload $(CLI_STAGE_DIR)/*

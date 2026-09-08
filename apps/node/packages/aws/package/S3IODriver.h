@@ -29,75 +29,61 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/******************************************************************************
- *INCLUDES
- ******************************************************************************/
+#ifndef __s3_io_driver__
+#define __s3_io_driver__
 
-#include <aws/core/Aws.h>
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
 
 #include "OsApi.h"
-#include "FirehoseMonitor.h"
-#include "SecretManager.h"
-#include "S3IODriver.h"
+#include "Asset.h"
+#include "CredentialStore.h"
+
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
 
 /******************************************************************************
- * DEFINES
+ * AWS S3 CLIENT CLASS
  ******************************************************************************/
 
-#define LUA_AWS_LIBNAME "aws"
-
-/******************************************************************************
- * GLOBALS
- ******************************************************************************/
-
- Aws::SDKOptions options;
-
-/******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * aws_open
- *----------------------------------------------------------------------------*/
-int aws_open (lua_State *L)
+class S3IODriver: public Asset::IODriver
 {
-    static const struct luaL_Reg aws_functions[] = {
-        {"firehose",    FirehoseMonitor::luaCreate},
-        {"secret",      SecretManager::luaGet},
-        {NULL,          NULL}
-    };
+    public:
 
-    /* Set Library */
-    luaL_newlib(L, aws_functions);
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-    return 1;
-}
+        static const char* DEFAULT_IDENTITY;
+        static const char* DRIVER_FORMAT;
 
-/******************************************************************************
- * EXPORTED FUNCTIONS
- ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-extern "C" {
-void initaws (void)
-{
-    /* Initialize AWS SDK */
-    Aws::InitAPI(options);
+        static void         init            (void);
+        static IODriver*    create          (const Asset* _asset, const char* resource);
+        int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
+        string              path            (void) override;
+        int64_t             size            (void) override;
 
-    /* Initialize Modules */
-    S3IODriver::init();
+    protected:
 
-    /* Register IO Drivers */
-    Asset::registerDriver(S3IODriver::DRIVER_FORMAT, S3IODriver::create);
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-    /* Extend Lua */
-    LuaEngine::extend(LUA_AWS_LIBNAME, aws_open, LIBID);
+        explicit            S3IODriver  (const char* bucket, const char* key, const Aws::Auth::AWSCredentials& credentials, Aws::Client::ClientConfiguration& config);
+                            ~S3IODriver (void) override = default;
 
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_AWS_LIBNAME, LIBID);
-}
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
-void deinitaws (void)
-{
-    Aws::ShutdownAPI(options);
-}
-}
+         Aws::S3::S3Client s3Client client;
+         Aws::S3::Model::GetObjectRequest request;
+};
+
+#endif  /* __s3_io_driver__ */

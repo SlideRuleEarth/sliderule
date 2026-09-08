@@ -45,7 +45,7 @@ while sys.alive() do
             sys.log(core.INFO, string.format("New IAM role %s credentials fetched, expiration: %s", role, credential.Expiration))
 
             -- store credentials for use by server
-            rc = aws.csput(identity, credential)
+            rc = core.csput(identity, credential)
 
             if rc then
                 -- calculate next fetch time

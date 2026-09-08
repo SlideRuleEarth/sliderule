@@ -41,10 +41,7 @@
 #include "FieldMap.h"
 #include "FieldElement.h"
 #include "FieldList.h"
-
-#ifdef __aws__
 #include "CredentialStore.h"
-#endif
 
 /******************************************************************************
  * ARROW PARAMETERS CLASS
@@ -90,10 +87,7 @@ class OutputFields: public FieldMap<Field>
         FieldElement<string>    endpoint;
         FieldList<string>       ancillaryFields;            // legacy functionality in support of ancillary fields for streamed results
         FieldList<string>       finalFields;                // which fields to include in the output
-
-        #ifdef __aws__
         CredentialStore::Credential credentials;
-        #endif
 
         /*--------------------------------------------------------------------
         * Methods
