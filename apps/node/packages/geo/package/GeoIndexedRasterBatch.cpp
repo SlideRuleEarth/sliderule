@@ -586,7 +586,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         /* Filter rasters based on POI time */
-        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
+        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0;
         gf->obj->filterRasters(gps, groupList, gf->threadFileDict);
 
         /* Add found rasters which passed the filter to pointsGroups */
