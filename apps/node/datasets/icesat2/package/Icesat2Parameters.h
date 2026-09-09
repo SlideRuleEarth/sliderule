@@ -404,11 +404,11 @@ class Icesat2Parameters: public RequestParameters
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldEnumeration<spot_t, NUM_SPOTS>                 spots = {true, true, true, true, true, true};           // list of which spots (1,2,3,4,5,6)
-        FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])
-        FieldElement<int>                                   track {ALL_TRACKS};                                     // reference pair track number (1, 2, 3, or 0 for all tracks)
-        FieldList<string>                                   atl09Fields;                                            // list of ATL09 fields used by Atl09Sampler
-        Atl03GranuleFields                                  granuleFields;                                          // ATL03 granule attributes
+        FieldEnumeration<spot_t, NUM_SPOTS>     spots = {true, true, true, true, true, true};   // list of which spots (1,2,3,4,5,6)
+        FieldEnumeration<gt_t,NUM_SPOTS>        beams {true, true, true, true, true, true};     // list of which beams (gt[l|r][1|2|3])
+        FieldElement<int>                       track {ALL_TRACKS};                             // reference pair track number (1, 2, 3, or 0 for all tracks)
+        FieldList<string>                       atl09Fields;                                    // list of ATL09 fields used by Atl09Sampler
+        Atl03GranuleFields                      granuleFields;                                  // ATL03 granule attributes
 
         bool stages[NUM_STAGES] = {false, false, false, false, false};
 };

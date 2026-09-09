@@ -105,9 +105,9 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
             local remaining_timeout = math.tointeger(current_timeout)
             local status = df:finished(remaining_timeout, rspq)
             if status then
-                userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> on %s generated dataframe [%s] with %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
+                userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> - %s/%s generated %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
             else
-                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe [%s] to complete", rspq, parms["resource"], key))
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> - %s/%s timed out waiting to complete", rspq, parms["resource"], key))
             end
         end
 
@@ -149,6 +149,9 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     -- Receive DataFrame (blocks until dataframe complete or timeout)
     if not df:waiton(parms["rqst_timeout"] * 1000) then
         userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to receive proxied dataframe"));
+        return RC_PROXY_FAILURE
+    elseif df:inerror() then
+        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> detected error in received dataframe"));
         return RC_PROXY_FAILURE
     end
 
