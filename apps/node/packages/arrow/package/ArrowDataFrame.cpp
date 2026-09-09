@@ -42,6 +42,7 @@
 #include <arrow/io/file.h>
 #include <arrow/ipc/api.h>
 #include <arrow/builder.h>
+#include <arrow/memory_pool.h>
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
 #include <rapidjson/document.h>
@@ -70,7 +71,7 @@
 template<class T, class B>
 void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
-    B builder;
+    B builder(arrowPool());
 
     const long num_rows = field_column->length();
     (void)builder.Reserve(num_rows);
@@ -89,7 +90,7 @@ void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>
 *----------------------------------------------------------------------------*/
 void encodeTime8(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
-    arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+    arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
 
     const long num_rows = field_column->length();
     (void)builder.Reserve(num_rows);
@@ -109,10 +110,10 @@ void encodeTime8(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arr
 template<class T, class B>
 void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
-    auto builder = make_shared<B>();
+    auto builder = make_shared<B>(arrowPool());
 
     const long num_rows = field_column->length();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+    arrow::ListBuilder list_builder(arrowPool(), builder);
     for(long i = 0; i < num_rows; i++)
     {
         const FieldColumn<T>& field = (*field_column)[i];
@@ -134,10 +135,10 @@ void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared
 *----------------------------------------------------------------------------*/
 void encodeColumnTime8(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
-    auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+    auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
 
     const long num_rows = field_column->length();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+    arrow::ListBuilder list_builder(arrowPool(), builder);
     for(long i = 0; i < num_rows; i++)
     {
         const FieldColumn<time8_t>& field = (*field_column)[i];
@@ -160,10 +161,10 @@ void encodeColumnTime8(const FieldColumn<FieldColumn<time8_t>>* field_column, ve
 template<class T, class B>
 void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
-    auto builder = make_shared<B>();
+    auto builder = make_shared<B>(arrowPool());
 
     const long num_rows = field_column->length();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+    arrow::ListBuilder list_builder(arrowPool(), builder);
     for(long i = 0; i < num_rows; i++)
     {
         const FieldList<T>& field = (*field_column)[i];
@@ -185,10 +186,10 @@ void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr
 *----------------------------------------------------------------------------*/
 void encodeListTime8(const FieldColumn<FieldList<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
-    auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+    auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
 
     const long num_rows = field_column->length();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+    arrow::ListBuilder list_builder(arrowPool(), builder);
     for(long i = 0; i < num_rows; i++)
     {
         const FieldList<time8_t>& field = (*field_column)[i];
@@ -211,10 +212,10 @@ void encodeListTime8(const FieldColumn<FieldList<time8_t>>* field_column, vector
 template<class T, class B>
 void encodeArray(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 {
-    auto builder = make_shared<B>();
+    auto builder = make_shared<B>(arrowPool());
 
     const long num_rows = field->length();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+    arrow::ListBuilder list_builder(arrowPool(), builder);
     for(long i = 0; i < num_rows; i++)
     {
         const FieldUnsafeArray<T>* field_array = dynamic_cast<const FieldUnsafeArray<T>*>(field->get(i));
@@ -236,10 +237,10 @@ void encodeArray(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 *----------------------------------------------------------------------------*/
 void encodeArrayTime8(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 {
-    auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+    auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
 
     const long num_rows = field->length();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+    arrow::ListBuilder list_builder(arrowPool(), builder);
     for(long i = 0; i < num_rows; i++)
     {
         const FieldUnsafeArray<time8_t>* field_array = dynamic_cast<const FieldUnsafeArray<time8_t>*>(field->get(i));
@@ -271,7 +272,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
         return;
     }
 
-    arrow::BinaryBuilder builder;
+    arrow::BinaryBuilder builder(arrowPool());
     (void)builder.Reserve(num_rows);
     (void)builder.ReserveData(num_rows * sizeof(wkbpoint_t));
     for(long i = 0; i < num_rows; i++)
@@ -1013,6 +1014,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set writer properties
                 parquet::WriterProperties::Builder writer_props_builder;
+                writer_props_builder.memory_pool(arrowPool());
 
                 // ZSTD compression good compromize between speed (SNAPPY) and file size (GZIP)
                 writer_props_builder.compression(parquet::Compression::ZSTD);
@@ -1040,7 +1042,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 schema = schema->WithMetadata(metadata);
 
                 // create parquet writer
-                auto result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+                auto result = parquet::arrow::FileWriter::Open(*schema, arrowPool(), file_output_stream, writer_props, arrow_writer_props);
                 if(result.ok())
                 {
                     unique_ptr<parquet::arrow::FileWriter> parquet_writer = std::move(result).ValueOrDie();
@@ -1178,9 +1180,9 @@ int ArrowDataFrame::luaImport (lua_State* L)
         // read parquet file into arrow table
         const uint32_t read_trace_id = start_trace(INFO, trace_id, "read_table", "%s", "{}");
         shared_ptr<arrow::io::ReadableFile> input_file;
-        PARQUET_ASSIGN_OR_THROW(input_file, arrow::io::ReadableFile::Open(filename, arrow::default_memory_pool()));
+        PARQUET_ASSIGN_OR_THROW(input_file, arrow::io::ReadableFile::Open(filename, arrowPool()));
         unique_ptr<parquet::arrow::FileReader> reader;
-        PARQUET_ASSIGN_OR_THROW(reader, parquet::arrow::OpenFile(input_file, arrow::default_memory_pool()));
+        PARQUET_ASSIGN_OR_THROW(reader, parquet::arrow::OpenFile(input_file, arrowPool()));
         shared_ptr<arrow::Table> table;
         PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
         stop_trace(INFO, read_trace_id);

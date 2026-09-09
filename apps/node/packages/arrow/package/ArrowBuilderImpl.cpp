@@ -221,6 +221,7 @@ bool ArrowBuilderImpl::createSchema (void)
 
             /* Set Writer Properties */
             parquet::WriterProperties::Builder writer_props_builder;
+            writer_props_builder.memory_pool(arrowPool());
             writer_props_builder.compression(parquet::Compression::SNAPPY);
             writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
             const shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
@@ -236,7 +237,7 @@ bool ArrowBuilderImpl::createSchema (void)
             schema = schema->WithMetadata(metadata);
 
             /* Create Parquet Writer */
-            auto result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+            auto result = parquet::arrow::FileWriter::Open(*schema, arrowPool(), file_output_stream, writer_props, arrow_writer_props);
             if(result.ok())
             {
                 parquetWriter = std::move(result).ValueOrDie();
@@ -660,7 +661,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
     {
         case RecordObject::DOUBLE:
         {
-            arrow::DoubleBuilder builder;
+            arrow::DoubleBuilder builder(arrowPool());
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
@@ -690,7 +691,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
 
         case RecordObject::FLOAT:
         {
-            arrow::FloatBuilder builder;
+            arrow::FloatBuilder builder(arrowPool());
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
@@ -960,7 +961,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
 
         case RecordObject::TIME8:
         {
-            arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+            arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
@@ -990,7 +991,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
 
         case RecordObject::STRING:
         {
-            arrow::StringBuilder builder;
+            arrow::StringBuilder builder(arrowPool());
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
@@ -1041,7 +1042,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::DOUBLE:
         {
             auto builder = make_shared<arrow::DoubleBuilder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1064,7 +1065,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::FLOAT:
         {
             auto builder = make_shared<arrow::FloatBuilder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1087,7 +1088,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::INT8:
         {
             auto builder = make_shared<arrow::Int8Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1110,7 +1111,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::INT16:
         {
             auto builder = make_shared<arrow::Int16Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1133,7 +1134,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::INT32:
         {
             auto builder = make_shared<arrow::Int32Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1156,7 +1157,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::INT64:
         {
             auto builder = make_shared<arrow::Int64Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1179,7 +1180,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::UINT8:
         {
             auto builder = make_shared<arrow::UInt8Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1202,7 +1203,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::UINT16:
         {
             auto builder = make_shared<arrow::UInt16Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1225,7 +1226,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::UINT32:
         {
             auto builder = make_shared<arrow::UInt32Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1248,7 +1249,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::UINT64:
         {
             auto builder = make_shared<arrow::UInt64Builder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1270,8 +1271,8 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
 
         case RecordObject::TIME8:
         {
-            auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1294,7 +1295,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
         case RecordObject::STRING:
         {
             auto builder = make_shared<arrow::StringBuilder>();
-            arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+            arrow::ListBuilder list_builder(arrowPool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1327,7 +1328,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
 *----------------------------------------------------------------------------*/
 void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordObject::field_t& y_field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int num_rows, int batch_row_size_bits)
 {
-    arrow::BinaryBuilder builder;
+    arrow::BinaryBuilder builder(arrowPool());
     (void)builder.Reserve(num_rows);
     (void)builder.ReserveData(num_rows * sizeof(wkbpoint_t));
     for(int i = 0; i < record_batch.length(); i++)
@@ -1432,7 +1433,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
         {
             case RecordObject::DOUBLE:
             {
-                arrow::DoubleBuilder builder;
+                arrow::DoubleBuilder builder(arrowPool());
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
@@ -1446,7 +1447,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
 
             case RecordObject::FLOAT:
             {
-                arrow::FloatBuilder builder;
+                arrow::FloatBuilder builder(arrowPool());
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
@@ -1572,7 +1573,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
 
             case RecordObject::TIME8:
             {
-                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
@@ -1668,7 +1669,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
         {
             case RecordObject::DOUBLE:
             {
-                arrow::DoubleBuilder builder;
+                arrow::DoubleBuilder builder(arrowPool());
                 (void)builder.Reserve(num_rows);
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
@@ -1685,7 +1686,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
 
             case RecordObject::FLOAT:
             {
-                arrow::FloatBuilder builder;
+                arrow::FloatBuilder builder(arrowPool());
                 (void)builder.Reserve(num_rows);
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
@@ -1838,7 +1839,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
 
             case RecordObject::TIME8:
             {
-                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrowPool());
                 (void)builder.Reserve(num_rows);
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
