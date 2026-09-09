@@ -36,6 +36,7 @@
 #include "RasterSample.h"
 #include "GdalRaster.h"
 #include "RasterObject.h"
+#include "TimeLib.h"
 #include "SystemConfig.h"
 
 #ifdef __aws__
@@ -301,7 +302,7 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
+RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum, double epochYears)
 {
     RasterSample* sample = NULL;
 
@@ -317,10 +318,25 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
         CHECKPTR(band);
 
         const double z = poi->getZ();
-        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
-        if(poi->transform(transf) != OGRERR_NONE)
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+
+        /*
+         * Transform the point into the raster's CRS as a 4D coordinate: the point's coordinate
+         * epoch (decimal year) is passed as the time coordinate so that a time-dependent
+         * operation (e.g. dynamic ITRF -> static NAD83(2011)) is evaluated at the epoch the point
+         * was observed, not at the operation's reference epoch (2010.0 for ITRF -> NAD83(2011)).
+         * HUGE_VAL (no point time) leaves the operation at its reference epoch, which is also
+         * what the 3D OGRPoint::transform() did.
+         */
+        double x = poi->getX();
+        double y = poi->getY();
+        double zt = z;
+        double t = epochYears;
+        int ok = 0;
+        if(!transf->Transform(1, &x, &y, &zt, &t, &ok) || !ok)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for x,y,z,t (%lf, %lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ(), epochYears);
+        poi->setX(x);
+        poi->setY(y);
+        poi->setZ(zt);
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -366,6 +382,14 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
     return sample;
 }
 
+
+/*----------------------------------------------------------------------------
+ * pointEpoch
+ *----------------------------------------------------------------------------*/
+double GdalRaster::pointEpoch(int64_t gps_ms)
+{
+    return (gps_ms > 0) ? TimeLib::gps2decimalyear(gps_ms) : HUGE_VAL;
+}
 
 /*----------------------------------------------------------------------------
  * subsetAOI

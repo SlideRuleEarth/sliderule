@@ -231,6 +231,20 @@ TimeLib::gmt_time_t TimeLib::gps2gmttime(int64_t ms)
 }
 
 /*----------------------------------------------------------------------------
+ * gps2decimalyear
+ *
+ *  decimal calendar year of a gps time, e.g. 2024.5 for 2024-07-02T00:00:00Z (a leap
+ *  year); this is the coordinate epoch used by time-dependent coordinate transforms
+ *----------------------------------------------------------------------------*/
+double TimeLib::gps2decimalyear(int64_t ms)
+{
+    const gmt_time_t gmt = gps2gmttime(ms);
+    const int days_in_year = (daysinmonth(gmt.year, 2) == 29) ? 366 : 365;
+    const double day_fraction = ((gmt.hour * 3600.0) + (gmt.minute * 60.0) + gmt.second + (gmt.millisecond / 1000.0)) / 86400.0;
+    return gmt.year + (((gmt.doy - 1) + day_fraction) / days_in_year);
+}
+
+/*----------------------------------------------------------------------------
  * cds2gmttime
  *
  *  converts from CDS (GPS epoch) format to internal structure representation of GMT

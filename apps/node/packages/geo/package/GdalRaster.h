@@ -116,7 +116,8 @@ class GdalRaster
 
         virtual           ~GdalRaster     (void);
         void               open           (void);
-        RasterSample*      samplePOI      (OGRPoint* poi, int bandNum);
+        RasterSample*      samplePOI      (OGRPoint* poi, int bandNum, double epochYears);
+        static double      pointEpoch     (int64_t gps_ms);   /* coordinate epoch (decimal year) of a point's gps time, HUGE_VAL if the point has no time */
         RasterSubset*      subsetAOI      (OGRPolygon* poly, int bandNum);
         uint8_t*           getPixels      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);
         const string& getFileName    (void) const { return fileName;}
