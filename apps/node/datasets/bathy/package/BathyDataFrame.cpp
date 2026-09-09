@@ -646,7 +646,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     catch(const RunTimeException& e)
     {
         alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.active, "Failure on resource %s beam %s: %s", parms.resource.value.c_str(), dataframe.beam, e.what());
-        dataframe.inError = true;
+        if(e.code() != RTE_RESOURCE_EMPTY) dataframe.inError = true;
     }
 
     /* Mark Completion */
