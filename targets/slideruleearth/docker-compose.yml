@@ -49,6 +49,7 @@ services:
       - ./:/haproxy
       - /etc/ssl/private:/etc/ssl/private
       - /etc/haproxy/pem/:/etc/haproxy/pem/
+      - /var/run/haproxy:/var/run/haproxy
     environment:
       - IS_PUBLIC=true
       - DOMAIN=localhost
