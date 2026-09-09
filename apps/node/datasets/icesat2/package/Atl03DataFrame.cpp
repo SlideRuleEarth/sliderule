@@ -84,7 +84,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
         if(_parms) _parms->releaseLuaObject();
         if(_hdf03) _hdf03->releaseLuaObject();
         if(_hdf08) _hdf08->releaseLuaObject();
-        if(_hdf24) _hdf08->releaseLuaObject();
+        if(_hdf24) _hdf24->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
