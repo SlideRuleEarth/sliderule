@@ -276,7 +276,7 @@ class GeoIndexedRaster: public RasterObject
         static void*    samplesCollectThread(void *param);
 
         bool            createBatchReaderThreads  (uint32_t rasters2sample);
-        bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
+        bool            filterRasters       (int64_t gps_ms, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, OGRGeometry* filter);
 
