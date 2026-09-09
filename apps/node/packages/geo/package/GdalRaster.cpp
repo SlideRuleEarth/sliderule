@@ -1109,7 +1109,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
  * computeSlopeAspect
  *
  *  – Returns slope in degrees [0…90] and aspect in degrees CW from north
- *    (compass azimuth of the downslope direction) in [0…360); aspect is Nan
+ *    (compass azimuth of the downslope direction) in [0…360); aspect is NaN
  *    if the cell is perfectly flat or if slope is undefined.
  *----------------------------------------------------------------------------*/
 void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample)
@@ -1225,10 +1225,10 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
             if(aRad < 0) aRad += 2 * M_PI;
             const double trigDeg = aRad * RAD2DEG;
 
-            /* Convert to compass azimuth, CW from north, in [0, 360).
-             * Same final step gdaldem applies unless -trigonometric is requested. */
-            aspectDeg = (trigDeg > 90.0) ? (450.0 - trigDeg) : (90.0 - trigDeg);
-            if(aspectDeg == 360.0) aspectDeg = 0.0;  /* rounds up for trigDeg just above 90 */
+            /* Convert to compass azimuth, CW from north, in [0, 360): the same final
+             * step gdaldem applies unless -trigonometric is requested; fmod keeps the
+             * result in range without an exact-equality check on a double. */
+            aspectDeg = std::fmod(450.0 - trigDeg, 360.0);
         }
 
         /* Store */
