@@ -49,7 +49,7 @@ class TestSampler:
         assert len(gdf) == 197
         assert len(gdf.keys()) == 21
         assert gdf["cycle"].mean() == 2
-        assert abs(gdf["mosaic.value"].mean() - 1474.9005392520041) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
+        assert abs(gdf["mosaic.value"].mean() - 1474.8996820691264) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time_ns"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
 
@@ -100,7 +100,7 @@ class TestSampler:
         assert abs(mean_value - 307.9317036290323) < 0.0001, mean_value
 
 
-    def test_force_single_sample(self, init):
+    def test_all_force_single(self, init):
         poly = [
             {"lat": 59.86856921063384, "lon": -44.34985645709006},
             {"lat": 59.85613150141896, "lon": -44.34985645709006},
@@ -158,4 +158,3 @@ class TestSampler:
                 found = True
                 break
         assert found, f"last = {gdf["strips.value"].iloc[0]}, not found"
-

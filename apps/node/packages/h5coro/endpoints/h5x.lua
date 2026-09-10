@@ -3,7 +3,7 @@
 -------------------------------------------------------
 local json      = require("json")
 local rqst      = json.decode(arg[1])
-local parms     = h5coro.parms(rqst["parms"], rqst["key_space"], rqst["asset"], rqst["resource"])
+local parms     = h5coro.parms(rqst["parms"], 0, rqst["asset"], rqst["resource"])
 local timeout   = parms["timeout"] * 1000
 local resource  = parms["resource"]
 local groups    = parms["groups"]

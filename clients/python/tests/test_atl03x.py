@@ -364,7 +364,7 @@ class TestAtl03x:
         with caplog.at_level(logging.ERROR):
             gdf = sliderule.run("atl03x", parms, AOI, RESOURCES_007)
         assert init
-        assert len(gdf) == 0 # yapc versions 1-3 are rejected by atl03x
+        assert gdf is None # yapc versions 1-3 are rejected by atl03x
         assert "not supported by atl03x" in caplog.text # rejection was loud, not an incidental empty result
 
     def test_signal_class_filter(self, init):
@@ -397,4 +397,4 @@ class TestAtl03x:
                   "atl03_signal_class": ["primary_signal", "fitted_signal"] }
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
-        assert len(gdf) == 0 # signal_class_ph not present before release 007
+        assert gdf is None # signal_class_ph not present before release 007

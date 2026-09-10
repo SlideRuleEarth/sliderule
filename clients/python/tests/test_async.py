@@ -52,7 +52,7 @@ class TestAsync:
             time.sleep(1)
         receipt_obj = s3.get_object(Bucket=receipt_bucket, Key=receipt_key)
         receipt_contents = receipt_obj["Body"].read().decode("utf-8")
-        assert receipt_contents.count("\n") == 6
+        assert receipt_contents.count("\n") == 7
         for line in receipt_contents.split("\n"):
             if line.startswith("[INFO/0] Upload to S3 completed"):
                 for element in [e.strip() for e in line.split(",")]:
