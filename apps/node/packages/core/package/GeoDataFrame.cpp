@@ -1426,7 +1426,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
     // this is checked in the receive thread to catch duplicate records and guarantee a consistent set
     // the failure case that produces duplicate records will cause those records to be separated by
     // more than 1 microsecond of processing time
-    uint64_t stamp = static_cast<uint64_t>(OsApi::time(OsApi::CPU_CLK));
+    const uint64_t stamp = static_cast<uint64_t>(OsApi::time(OsApi::CPU_CLK));
 
     // create and send column records
     Dictionary<column_entry_t>::Iterator column_iter(columnFields.fields);
@@ -1668,7 +1668,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                     const uint64_t key = rec_data->key;
 
                     // handle duplicates
-                    if(seen_keys.count(key) > 0)
+                    if(seen_keys.contains(key))
                     {
                         duplicate_recs++;
                         inq.dereference(ref);
@@ -1712,7 +1712,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                         eof_recs++;
 
                         // pull out stamp
-                        uint64_t stamp = rec_data->stamp;
+                        const uint64_t stamp = rec_data->stamp;
 
                         // pull out data from eof rec
                         const eof_subrec_t eof_subrec = *reinterpret_cast<const eof_subrec_t*>(rec_data->data);

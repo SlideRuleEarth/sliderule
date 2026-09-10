@@ -79,9 +79,9 @@ void OsApi::init(print_func_t _print_func)
      * of the arenas instead, where they are never returned to the OS.  Setting them
      * explicitly disables that dynamic adjustment.  M_ARENA_MAX bounds how many 64MB
      * per-thread heaps can accumulate fragmentation. */
-    mallopt(M_MMAP_THRESHOLD, MMAP_THRESHOLD_BYTES);
-    mallopt(M_TRIM_THRESHOLD, TRIM_THRESHOLD_BYTES);
-    mallopt(M_ARENA_MAX, MAX_MALLOC_ARENAS);
+    mallopt(M_MMAP_THRESHOLD, MMAP_THRESHOLD_BYTES); // NOLINT(concurrency-mt-unsafe)
+    mallopt(M_TRIM_THRESHOLD, TRIM_THRESHOLD_BYTES); // NOLINT(concurrency-mt-unsafe)
+    mallopt(M_ARENA_MAX, MAX_MALLOC_ARENAS); // NOLINT(concurrency-mt-unsafe)
 
     memfd = open("/proc/meminfo", O_RDONLY);
     launch_time = OsApi::time(OsApi::SYS_CLK);

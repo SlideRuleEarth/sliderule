@@ -56,9 +56,9 @@ class S3CurlIODriver: public Asset::IODriver
         static const long READ_TIMEOUT = 600; // seconds
         static const long LOW_SPEED_LIMIT = 32768; // 32 KB/s
         static const long LOW_SPEED_TIME = 5; // seconds
-        static const long ATTEMPTS_PER_REQUEST = 3;
         static const long SSL_VERIFYPEER = 0;
         static const long SSL_VERIFYHOST = 0;
+        static const int ATTEMPTS_PER_REQUEST = 3;
         static const char* DEFAULT_IDENTITY;
         static const char* FORMAT;
 

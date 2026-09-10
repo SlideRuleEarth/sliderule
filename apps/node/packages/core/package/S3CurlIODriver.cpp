@@ -619,7 +619,9 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     };
 
     /* Issue Get Request */
+    const int64_t gps_start = TimeLib::gpstime(); // ms
     int attempts = ATTEMPTS_PER_REQUEST;
+    long previous_index = 0;
     bool rqst_complete = false;
     while(!rqst_complete && (attempts > 0))
     {
@@ -628,7 +630,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
 
         /* Build Range Header */
         const unsigned long start_byte = pos + info.index;
-        const unsigned long end_byte = pos + size - info.index - 1;
+        const unsigned long end_byte = pos + size - 1;
         const FString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
         headers = curl_slist_append(headers, rangeHeader.c_str());
 
@@ -666,17 +668,29 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                 }
                 else
                 {
-                    if(info.index > 0)
+                    /* Calculate Bytes Read */
+                    const long bytes_read = info.index - previous_index;
+                    previous_index = info.index;
+
+                    /* Handle Error Cases */
+                    if(bytes_read > 0)
                     {
-                        mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
+                        mlog(WARNING, "cURL/%d warning (%d) encountered after partial response (%ld): %s", ATTEMPTS_PER_REQUEST - attempts, res, info.index, key_ptr);
+                        attempts++; // don't count partial reads as an attempt
+                        const int64_t accumulated_read_time = TimeLib::gpstime() - gps_start;
+                        if(accumulated_read_time > (READ_TIMEOUT * 1000))
+                        {
+                            mlog(ERROR, "S3 cURL I/O driver timed out after %ld bytes reading %s", info.index, key_ptr);
+                            rqst_complete = true;
+                        }
                     }
                     else if(res == CURLE_OPERATION_TIMEDOUT)
                     {
-                        mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                        mlog(ERROR, "cURL/%d call timed out (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
                     }
                     else // unexpected issue
                     {
-                        mlog(ERROR, "cURL call failed (%d) for request: %s", res, key_ptr);
+                        mlog(ERROR, "cURL/%d call failed (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
                     }
                     OsApi::performIOTimeout();
                     break; // re-initialize headers (with potentially updated range) and try again

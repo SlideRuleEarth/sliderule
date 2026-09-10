@@ -67,8 +67,8 @@ void S3IODriver::init (void)
 Asset::IODriver* S3IODriver::create (const Asset* _asset, const char* resource)
 {
     /* Get Credentials */
-    CredentialStore::Credential c = CredentialStore::get(_asset->getIdentity());
-    Aws::Auth::AWSCredentials credentials(c.accessKeyId.value.c_str(), c.secretAccessKey.value.c_str(), c.sessionToken.value.c_str());
+    const CredentialStore::Credential c = CredentialStore::get(_asset->getIdentity());
+    const Aws::Auth::AWSCredentials credentials(c.accessKeyId.value, c.secretAccessKey.value, c.sessionToken.value);
 
     /* Get AWS Client Configuration */
     Aws::Client::ClientConfiguration config;
@@ -100,7 +100,7 @@ Asset::IODriver* S3IODriver::create (const Asset* _asset, const char* resource)
 int64_t S3IODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     if(size <= 0) return 0;
-    FString range("bytes=%lu-%lu", pos, pos + size - 1);
+    const FString range("bytes=%lu-%lu", pos, pos + size - 1);
     request.SetRange(range.c_str());
     auto outcome = client.GetObject(request);
     if(!outcome.IsSuccess())
