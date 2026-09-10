@@ -422,6 +422,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     sigma_across        (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/sigma_across").c_str(),    0, region.first_segment, region.num_segments),
     ref_azimuth         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/ref_azimuth").c_str(),     0, region.first_segment, region.num_segments),
     ref_elev            (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/ref_elev").c_str(),        0, region.first_segment, region.num_segments),
+    podppd_flag         (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geolocation/podppd_flag").c_str(),     0, region.first_segment, region.num_segments),
     geoid               (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geophys_corr/geoid").c_str(),          0, region.first_segment, region.num_segments),
     dem_h               (dataframe.hdf03, FString("%s/%s", dataframe.beam, "geophys_corr/dem_h").c_str(),          0, region.first_segment, region.num_segments),
     dist_ph_along       (dataframe.hdf03, FString("%s/%s", dataframe.beam, "heights/dist_ph_along").c_str(),       0, region.first_photon,  region.num_photons),
@@ -449,6 +450,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     sigma_across.join(dataframe.readTimeoutMs, true);
     ref_azimuth.join(dataframe.readTimeoutMs, true);
     ref_elev.join(dataframe.readTimeoutMs, true);
+    podppd_flag.join(dataframe.readTimeoutMs, true);
     geoid.join(dataframe.readTimeoutMs, true);
     dem_h.join(dataframe.readTimeoutMs, true);
     dist_ph_along.join(dataframe.readTimeoutMs, true);
@@ -541,6 +543,18 @@ void* BathyDataFrame::subsettingThread (void* parm)
                         on_boundary = true;
                         break;
                     }
+                }
+
+                /* Set and Check ATL03 POD/PPD Degradation */
+                const uint8_t podppd_flag = atl03.podppd_flag[current_segment];
+                const uint8_t podppd_mask = 1 << podppd_flag;
+                if(podppd_flag > 7)
+                {
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid POD/PPD flag: %02x", podppd_flag);
+                }
+                else if((podppd_mask & parms.podppdMask.value) == 0x00)
+                {
+                    continue;
                 }
 
                 /* Set Signal Confidence Level */

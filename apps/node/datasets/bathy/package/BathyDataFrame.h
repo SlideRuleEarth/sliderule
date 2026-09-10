@@ -161,6 +161,7 @@ class BathyDataFrame: public GeoDataFrame
                 H5Array<float>      sigma_across;
                 H5Array<float>      ref_azimuth;
                 H5Array<float>      ref_elev;
+                H5Array<int8_t>     podppd_flag; // degraded POD/PPD
                 H5Array<float>      geoid;
                 H5Array<float>      dem_h;
                 H5Array<float>      dist_ph_along;
