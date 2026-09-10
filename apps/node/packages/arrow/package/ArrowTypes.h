@@ -34,8 +34,22 @@
 
 #include <cstring>
 #include <stdexcept>
+#include <arrow/memory_pool.h>
 
 #include "OsApi.h"
+
+/*----------------------------------------------------------------------------
+* arrowPool
+*
+*   Arrow's default pool is mimalloc in this build; it holds every buffer it has
+*   ever handed out until something explicitly purges it.  The system pool goes
+*   through the process allocator instead, which is tuned in OsApi::init to hand
+*   large blocks straight back to the OS on free.
+*----------------------------------------------------------------------------*/
+inline arrow::MemoryPool* arrowPool (void)
+{
+    return arrow::system_memory_pool();
+}
 
 typedef struct WKBPoint {
     uint8_t     byteOrder;

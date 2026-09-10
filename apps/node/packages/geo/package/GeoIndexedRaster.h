@@ -74,12 +74,13 @@ class GeoIndexedRaster: public RasterObject
         typedef struct PointSample {
             OGRPoint                       point;
             int64_t                        pointIndex;    // index to the user provided list of points to sample
+            double                         epoch;         // coordinate epoch of the point (decimal year), HUGE_VAL if the point has no time
             vector<RasterSample*>     bandSample;    // vector of samples for each band
             vector<uint8_t>           bandSampleReturned; // multiple rasters may share the same sample,
                                                                // these flags are used to avoid returning the same sample, if set a copy of the sample is returned
             uint32_t                       ssErrors;      // sampling errors
 
-            PointSample(const OGRPoint& _point, int64_t _pointIndex);
+            PointSample(const OGRPoint& _point, int64_t _pointIndex, double _epoch);
             PointSample(const PointSample& ps);
 
         } point_sample_t;
@@ -140,6 +141,7 @@ class GeoIndexedRaster: public RasterObject
             OGRPoint           point;
             int64_t            pointIndex;    // index to the user provided list of points to sample
             GroupOrdering*     groupList;     // all raster groups that intersect with this point
+            double             epoch;         // coordinate epoch of the point (decimal year), HUGE_VAL if the point has no time
         } point_groups_t;
 
         /* Samples collector thread info used by batch sampling code */
@@ -276,7 +278,7 @@ class GeoIndexedRaster: public RasterObject
         static void*    samplesCollectThread(void *param);
 
         bool            createBatchReaderThreads  (uint32_t rasters2sample);
-        bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
+        bool            filterRasters       (int64_t gps_ms, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, OGRGeometry* filter);
 

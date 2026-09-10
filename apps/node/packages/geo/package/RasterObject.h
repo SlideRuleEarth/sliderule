@@ -75,7 +75,7 @@ class RasterObject: public LuaObject
         typedef struct
         {
             MathLib::point_3d_t point3d;
-            int64_t             gps;
+            int64_t             gps;        // gps time of the point in milliseconds, 0 if not set
         } point_info_t;
 
         typedef struct

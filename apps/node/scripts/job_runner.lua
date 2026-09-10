@@ -34,7 +34,7 @@ if script:find("s3://") == 1 then
     local_script_file = string.format("/tmp/script-%s.lua", aws_utils.unique_string(7))
     local script_bucket, script_file_path = script:match("^s3://([^/]+)/(.+)$")
     print(string.format("Downloading bucket=%s, file=%s", script_bucket, script_file_path))
-    local script_download_status = aws.s3download(script_bucket, script_file_path, local_script_file)
+    local script_download_status = core.s3download(script_bucket, script_file_path, local_script_file)
     if not script_download_status then
         print("Failed to download script from s3")
         return sys.quit(1) -- failure
@@ -54,7 +54,7 @@ local array_index = tonumber(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX"))
 if array_index then
     local arguments_file_path = string.format("%s/args.json", output_directory)
     local local_arguments_file = string.format("/tmp/args-%s.json", aws_utils.unique_string(7))
-    local arguments_download_status = aws.s3download(output_bucket, arguments_file_path, local_arguments_file)
+    local arguments_download_status = core.s3download(output_bucket, arguments_file_path, local_arguments_file)
     if not arguments_download_status then
         print("Failed to download arguments from s3://%s/%s", output_bucket, arguments_file_path)
         return sys.quit(1) -- failure
@@ -113,7 +113,7 @@ print(string.format("Results written to: %s", local_result_file))
 if output:find("s3://") == 1 then
     local remote_result_file = string.format("%s/result%s.json", output_directory, array_index or "")
     print(string.format("Uploading bucket=%s, file=%s", output_bucket, remote_result_file))
-    local result_upload_status = aws.s3upload(output_bucket, remote_result_file, local_result_file)
+    local result_upload_status = core.s3upload(output_bucket, remote_result_file, local_result_file)
     if not result_upload_status then
         print("Failed to upload results to s3")
         return sys.quit(1) -- failure (with cleanup)

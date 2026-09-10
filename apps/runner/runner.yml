@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::LanguageExtensions
 Description: SlideRule Job Runner
 
 Parameters:
@@ -56,6 +57,9 @@ Parameters:
   JobRunnerCIDRBlock:
     Type: String
     Default: "10.0.0.0/17"
+  SlideRuleRunnerImageTags:
+    Type: CommaDelimitedList
+    Default: "latest,unstable,atl24"
 
 Resources:
 
@@ -329,11 +333,29 @@ Resources:
       LogGroupName: !Sub "/aws/batch/${AWS::StackName}"
       RetentionInDays: 7
 
-  # Job Queue
-  BatchJobQueue:
+  # Job Queues
+  UrgentJobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
-      JobQueueName: !Sub "${AWS::StackName}-job-queue"
+      JobQueueName: !Sub "${AWS::StackName}-urgent-job-queue"
+      State: ENABLED
+      Priority: 3
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+  DefaultJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      JobQueueName: !Sub "${AWS::StackName}-default-job-queue"
+      State: ENABLED
+      Priority: 2
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+  BackgroundJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      JobQueueName: !Sub "${AWS::StackName}-background-job-queue"
       State: ENABLED
       Priority: 1
       ComputeEnvironmentOrder:
@@ -341,82 +363,85 @@ Resources:
           ComputeEnvironment: !Ref BatchComputeEnvironment
 
   # Job Definition
-  BatchJobDefinition:
-      Type: AWS::Batch::JobDefinition
-      Properties:
-        JobDefinitionName: !Sub "${AWS::StackName}-default-job-definition"
-        Type: container
-        Parameters:
-          script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
-          args: "s3://${ProjectPublicBucket}/runner/runid/args.json" # example to be overridden
-          output: !Sub "s3://${ProjectPublicBucket}/runner/runid" # example to be overridden
-        RetryStrategy:
-          Attempts: 3  # 1 initial attempt + 2 retries = 3 total
-          EvaluateOnExit:
-            - Action: EXIT
-              OnExitCode: "0"  # Don't retry on success
-            - Action: EXIT
-              OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
-            - Action: RETRY
-              OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
-        Timeout:
-          AttemptDurationSeconds: 5400  # 90 minutes
-        ContainerProperties:
-          Image: !Sub "${ContainerRegistry}/sliderule:runner"
-          ResourceRequirements:
-            - Type: VCPU
-              Value: "1"
-            - Type: MEMORY
-              Value: "4000"
-          JobRoleArn: !GetAtt JobRunnerRole.Arn
-          Command:
-            - "/usr/local/etc/sliderule/job_runner.lua"
-            - "Ref::script"
-            - "Ref::args"
-            - "Ref::output"
-          Environment:
-            - Name: LOG_FORMAT
-              Value: FMT_CLOUD
-            - Name: IPV4
-              Value: localhost
-            - Name: ENVIRONMENT_VERSION
-              Value: !Sub ${EnvironmentVersion}
-            - Name: PROJECT_BUCKET
-              Value: !Sub ${ProjectBucket}
-            - Name: PROJECT_FOLDER
-              Value: !Sub ${ProjectFolder}
-            - Name: PROJECT_REGION
-              Value: !Sub ${AWS::Region}
-            - Name: ALERT_STREAM
-              Value: !Sub ${AlertStream}
-            - Name: TELEMETRY_STREAM
-              Value: !Sub ${TelemetryStream}
-            - Name: CLUSTER
-              Value: localhost
-            - Name: DOMAIN
-              Value: !Sub ${Domain}
-            - Name: CONTAINER_REGISTRY
-              Value: !Sub ${ContainerRegistry}
-          Volumes:
-            - Name: data
-              Host:
-                SourcePath: /data
-            - Name: ssl-certs
-              Host:
-                SourcePath: /etc/ssl/certs
-          MountPoints:
-            - SourceVolume: data
-              ContainerPath: /data
-              ReadOnly: true
-            - SourceVolume: ssl-certs
-              ContainerPath: /etc/ssl/certs
-              ReadOnly: true
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref BatchJobLogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: !Ref AWS::StackName
+  'Fn::ForEach::RunnerJobDefinitions':
+    - ImageTag
+    - !Ref SlideRuleRunnerImageTags
+    - 'BatchJobDefinition&{ImageTag}':
+        Type: AWS::Batch::JobDefinition
+        Properties:
+          JobDefinitionName: !Sub "${AWS::StackName}-${ImageTag}-job-definition"
+          Type: container
+          Parameters:
+            script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
+            args: !Sub "s3://${ProjectPublicBucket}/runner/runid/args.json" # example to be overridden
+            output: !Sub "s3://${ProjectPublicBucket}/runner/runid" # example to be overridden
+          RetryStrategy:
+            Attempts: 3  # 1 initial attempt + 2 retries = 3 total
+            EvaluateOnExit:
+              - Action: EXIT
+                OnExitCode: "0"  # Don't retry on success
+              - Action: EXIT
+                OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
+              - Action: RETRY
+                OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
+          Timeout:
+            AttemptDurationSeconds: 5400  # 90 minutes
+          ContainerProperties:
+            Image: !Sub "${ContainerRegistry}/sliderule:${ImageTag}"
+            ResourceRequirements:
+              - Type: VCPU
+                Value: "1"
+              - Type: MEMORY
+                Value: "4000"
+            JobRoleArn: !GetAtt JobRunnerRole.Arn
+            Command:
+              - "/usr/local/etc/sliderule/job_runner.lua"
+              - "Ref::script"
+              - "Ref::args"
+              - "Ref::output"
+            Environment:
+              - Name: LOG_FORMAT
+                Value: FMT_CLOUD
+              - Name: IPV4
+                Value: localhost
+              - Name: ENVIRONMENT_VERSION
+                Value: !Sub ${EnvironmentVersion}
+              - Name: PROJECT_BUCKET
+                Value: !Sub ${ProjectBucket}
+              - Name: PROJECT_FOLDER
+                Value: !Sub ${ProjectFolder}
+              - Name: PROJECT_REGION
+                Value: !Sub ${AWS::Region}
+              - Name: ALERT_STREAM
+                Value: !Sub ${AlertStream}
+              - Name: TELEMETRY_STREAM
+                Value: !Sub ${TelemetryStream}
+              - Name: CLUSTER
+                Value: localhost
+              - Name: DOMAIN
+                Value: !Sub ${Domain}
+              - Name: CONTAINER_REGISTRY
+                Value: !Sub ${ContainerRegistry}
+            Volumes:
+              - Name: data
+                Host:
+                  SourcePath: /data
+              - Name: ssl-certs
+                Host:
+                  SourcePath: /etc/ssl/certs
+            MountPoints:
+              - SourceVolume: data
+                ContainerPath: /data
+                ReadOnly: true
+              - SourceVolume: ssl-certs
+                ContainerPath: /etc/ssl/certs
+                ReadOnly: true
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Ref BatchJobLogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: !Ref AWS::StackName
 
   ##
   ## Runner Lambda/Gateway
@@ -446,6 +471,7 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
+          IMAGE_TAGS: !Join [",", !Ref SlideRuleRunnerImageTags]
 
   # IAM Role
   LambdaExecutionRole:

@@ -62,9 +62,7 @@ OutputFields::OutputFields (void):
         {"with_openapi",        &withOpenApi,       "Boolean to embed the OpenAPI schema definition of the dataframe in the metadata"},
         {"asset",               &assetName,         "Name of a credentialed asset to write the file to; only used if the file is not directly returned to the user"},
         {"endpoint",            &endpoint,          "Name of the endpoint to write the file to; only used if the file is not directly returned to the user"},
-        #ifdef __aws__
         {"credentials",         &credentials,       "Write credentials for writing a file to a credentialed asset; only used if the file is not directly returned to the user"},
-        #endif
         {"ancillary",           &ancillaryFields,   "Ordered list of column names to use when writing a tabled structured output file that includes ancillary fields; p-series endpoints only"},
         {"fields",              &finalFields,       "List of columns that should be included in the final output; used to limit which columns are returned"}
     })

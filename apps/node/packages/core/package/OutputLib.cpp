@@ -41,10 +41,7 @@
 #include "OutputLib.h"
 #include "RecordObject.h"
 #include "CredentialStore.h"
-
-#ifdef __aws__
 #include "S3CurlIODriver.h"
-#endif
 
 /******************************************************************************
  * FILE DATA
@@ -297,8 +294,6 @@ bool OutputLib::send2User (const char* src_file, const string& output_path, uint
  *----------------------------------------------------------------------------*/
 bool OutputLib::send2S3 (const char* src_file, const char* dst_file, const char* endpoint, const CredentialStore::Credential& credentials, bool with_checksum, Publisher* outq)
 {
-    #ifdef __aws__
-
     bool status = true;
 
     /* Check Path */
@@ -370,11 +365,6 @@ bool OutputLib::send2S3 (const char* src_file, const char* dst_file, const char*
 
     /* Return Status */
     return status;
-
-    #else
-    alert(CRITICAL, RTE_FAILURE, outq, NULL, "Output path specifies S3, but server compiled without AWS support");
-    return false;
-    #endif
 }
 
 /*----------------------------------------------------------------------------

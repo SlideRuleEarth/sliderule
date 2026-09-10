@@ -148,7 +148,7 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
             {
                 switch(rc)
                 {
-                    case H5Coro::Future::INVALID: throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future read failure");
+                    case H5Coro::Future::INVALID: throw RunTimeException(ERROR, RTE_RESOURCE_IO_ERROR, "H5Coro::Future read failure");
                     case H5Coro::Future::TIMEOUT: throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Coro::Future read timeout");
                     default:                      throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future unknown error");
                 }

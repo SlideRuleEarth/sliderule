@@ -51,6 +51,7 @@
 #include <errno.h>
 #include <byteswap.h>
 #include <sys/sysinfo.h>
+#include <malloc.h>
 
 /******************************************************************************
  * STATIC DATA
@@ -71,6 +72,17 @@ int64_t OsApi::launch_time = 0;
  *----------------------------------------------------------------------------*/
 void OsApi::init(print_func_t _print_func)
 {
+    /* Pin the glibc allocator thresholds.  Left alone, glibc raises M_MMAP_THRESHOLD
+     * (and M_TRIM_THRESHOLD with it) every time a large mmap'ed block is freed, up to
+     * 32MB/64MB.  After the first few requests the large per-request buffers (h5coro
+     * reads, dataframe columns, arrow arrays) therefore stop being mmap'ed and come out
+     * of the arenas instead, where they are never returned to the OS.  Setting them
+     * explicitly disables that dynamic adjustment.  M_ARENA_MAX bounds how many 64MB
+     * per-thread heaps can accumulate fragmentation. */
+    mallopt(M_MMAP_THRESHOLD, MMAP_THRESHOLD_BYTES); // NOLINT(concurrency-mt-unsafe)
+    mallopt(M_TRIM_THRESHOLD, TRIM_THRESHOLD_BYTES); // NOLINT(concurrency-mt-unsafe)
+    mallopt(M_ARENA_MAX, MAX_MALLOC_ARENAS); // NOLINT(concurrency-mt-unsafe)
+
     memfd = open("/proc/meminfo", O_RDONLY);
     launch_time = OsApi::time(OsApi::SYS_CLK);
     print_func = _print_func;
@@ -82,6 +94,18 @@ void OsApi::init(print_func_t _print_func)
 void OsApi::deinit(void)
 {
     if(memfd) close(memfd);
+}
+
+/*----------------------------------------------------------------------------
+ * trimmemory
+ *
+ *  returns free heap pages back to the operating system; the allocator holds onto
+ *  them indefinitely otherwise, which makes memory usage ratchet up request over
+ *  request even when nothing is leaked
+ *----------------------------------------------------------------------------*/
+void OsApi::trimmemory(void)
+{
+    malloc_trim(0);
 }
 
 /*----------------------------------------------------------------------------

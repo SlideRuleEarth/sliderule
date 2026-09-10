@@ -22,15 +22,12 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Parameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Parameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13sParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Granule.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/Atl24IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Parameters.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/CumulusIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Parameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MeritRaster.cpp
@@ -67,15 +64,12 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Parameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl09Sampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Parameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13sParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Granule.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/Atl24IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24Parameters.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/CumulusIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Parameters.h

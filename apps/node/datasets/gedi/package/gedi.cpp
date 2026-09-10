@@ -45,7 +45,7 @@
 #include "GediParameters.h"
 #include "GediL2Parameters.h"
 #include "GediL4Parameters.h"
-#include "GediIODriver.h"
+#include "S3CurlIODriver.h"
 
 /******************************************************************************
  * DEFINES
@@ -59,9 +59,37 @@
 #define LUA_GEDI_L03_COUNTS_RASTER_NAME             "gedil3-counts"
 #define LUA_GEDI_L04B_RASTER_NAME                   "gedil4b"
 
-/******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
+#define GEDI_IO_DRIVER_FORMAT                       "s3gedi"
+
+/*----------------------------------------------------------------------------
+ * create_gedi_io_driver
+ *      /GEDI02_A.002/GEDI02_A_2023075201011_O24115_03_T08796_02_003_02_V002/GEDI02_A_2023075201011_O24115_03_T08796_02_003_02_V002.h5
+ *      /GEDI01_B.002/GEDI01_B_2023075201011_O24115_04_T08796_02_005_02_V002/GEDI01_B_2023075201011_O24115_04_T08796_02_005_02_V002.h5
+ *----------------------------------------------------------------------------*/
+Asset::IODriver* create_gedi_io_driver (const Asset* _asset, const char* resource)
+{
+    const int NUM_ELEMENTS = 10;
+    char elements[NUM_ELEMENTS][MAX_STR_SIZE];
+    char version_buffer[8];
+    char resource_buffer[57];
+
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid gedi s3 resource: %s", resource);
+
+    const char* product = elements[0];
+    const char* level = elements[1];
+    StringLib::copy(version_buffer, elements[9], 8);
+    version_buffer[4] = '\0';
+    const char* version = &version_buffer[1];
+
+    StringLib::copy(resource_buffer, resource, 57);
+    resource_buffer[54] = '\0';
+    const char* subdirectory = resource_buffer;
+
+    const FString resourcepath("%s/%s_%s.%s/%s/%s", _asset->getPath(), product, level, version, subdirectory, resource);
+
+    return new S3CurlIODriver(_asset, resourcepath.c_str());
+}
 
 /*----------------------------------------------------------------------------
  * gedi_open
@@ -100,7 +128,7 @@ void initgedi (void)
     Gedi04aReader::init();
 
     /* Register GEDI IO Driver */
-    Asset::registerDriver(GediIODriver::FORMAT, GediIODriver::create);
+    Asset::registerDriver(GEDI_IO_DRIVER_FORMAT, create_gedi_io_driver);
 
     /* Register Rasters */
     RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        GediRaster::createL3ElevationRaster);

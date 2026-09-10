@@ -296,6 +296,7 @@ void* Atl06DataFrame::subsettingThread (void* parm)
     catch(const RunTimeException& e)
     {
         alert(e.level(), e.code(), df->outQ, &df->active, "Failure on resource %s beam %s: %s", df->hdf06->name, df->beam, e.what());
+        if(e.code() != RTE_RESOURCE_EMPTY) df->inError = true;
     }
 
     /* Dataframe Complete */

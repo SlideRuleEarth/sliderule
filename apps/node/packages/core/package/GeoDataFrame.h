@@ -92,6 +92,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         typedef struct {
             uint64_t    key;
+            uint64_t    stamp; // unique
             uint32_t    type;
             uint32_t    size; // bytes
             uint32_t    encoding;

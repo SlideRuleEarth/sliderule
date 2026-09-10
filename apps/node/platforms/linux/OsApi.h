@@ -234,6 +234,10 @@ class OsApi
         static const int SYS_CLK = 0; // system clock that can be converted into civil time
         static const int CPU_CLK = 1; // processor clock that only counts ticks
 
+        static const int MMAP_THRESHOLD_BYTES = 0x20000; // 128K; allocations at or above this are mmap'ed and returned to the OS when freed
+        static const int TRIM_THRESHOLD_BYTES = 0x20000; // 128K; free space at the top of an arena above this is returned to the OS
+        static const int MAX_MALLOC_ARENAS = 8; // caps the number of per-thread heaps that can independently fragment
+
         static void         init                (print_func_t _print_func);
         static void         deinit              (void);
 
@@ -248,6 +252,7 @@ class OsApi
         static double       swaplf              (double val);
         static int          nproc               (void);
         static double       memusage            (void);
+        static void         trimmemory          (void);
         static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
 
         /* system configuration */

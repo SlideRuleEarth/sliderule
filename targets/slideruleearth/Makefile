@@ -93,6 +93,8 @@ DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
+CLI_STAGE_DIR = $(STAGE)/cli
+CLI_CLIENT_DIR = $(ROOT)/clients/cli
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
@@ -309,6 +311,14 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	sed -i 's/$${VERSION}/$(shell cat $(ROOT)/version.txt)/' $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
+
+cli: ## build and install the command line tool locally
+	pip install -e $(CLI_CLIENT_DIR)
+
+cli-publish: ## build and publish the command line tool
+	# pip install build twine
+	python -m build --outdir $(CLI_STAGE_DIR)
+	python -m twine upload $(CLI_STAGE_DIR)/*
 
 ########################
 # Docker Build Targets
@@ -730,7 +740,7 @@ runner-create: runner-build ## creates the lambda runner functions
 	aws cloudformation create-stack \
 		--stack-name 	$(RUNNER_STACKNAME) \
 		--template-body file://$(ROOT)/apps/runner/runner.yml \
-		--capabilities 	CAPABILITY_NAMED_IAM \
+		--capabilities 	CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
 		--region 		$(AWS_REGION) \
 		--parameters	ParameterKey=EnvironmentVersion,ParameterValue=$(ENVVER) \
 						ParameterKey=Domain,ParameterValue=$(DOMAIN) \
@@ -754,7 +764,9 @@ runner-describe: ## status the creation/deletion of the runner functions
 	aws cloudformation describe-stack-events --stack-name $(RUNNER_STACKNAME)
 
 runner-delete: ## deletes the lambda runner functions
-	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-urgent-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-default-job-queue --state DISABLED
+	- aws batch update-job-queue --job-queue $(RUNNER_STACKNAME)-background-job-queue --state DISABLED
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(RUNNER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(RUNNER_STACKNAME)

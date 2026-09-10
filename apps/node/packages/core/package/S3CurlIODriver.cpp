@@ -508,7 +508,7 @@ static string calculateChecksum (FILE* fd)
  ******************************************************************************/
 
 const char* S3CurlIODriver::DEFAULT_IDENTITY = "iam-role";
-const char* S3CurlIODriver::CURL_FORMAT = "s3";
+const char* S3CurlIODriver::FORMAT = "s3";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
@@ -533,7 +533,51 @@ void S3CurlIODriver::init (void)
  *----------------------------------------------------------------------------*/
 Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resource)
 {
-    return new S3CurlIODriver(_asset, resource);
+    const FString resourcepath("%s/%s", _asset->getPath(), resource);
+    return new S3CurlIODriver(_asset, resourcepath.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
+    asset(_asset)
+{
+    /*
+    * Differentiate Bucket and Key
+    *  <bucket_name>/<path_to_file>/<filename>
+    *  |             |
+    * ioBucket      ioKey
+    */
+    ioBucket = StringLib::duplicate(resource);
+    ioKey = ioBucket;
+    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
+    if(*ioKey == '/')
+    {
+        *ioKey = '\0';
+    }
+    else
+    {
+        delete [] ioBucket;
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
+    }
+    ioKey++;
+
+    /* Get Latest Credentials */
+    latestCredentials = CredentialStore::get(asset->getIdentity());
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+S3CurlIODriver::~S3CurlIODriver (void)
+{
+    /*
+     * Delete Memory Allocated for ioBucket
+     *  only ioBucket is freed because ioKey only points
+     *  into the memory allocated to ioBucket
+     */
+    delete [] ioBucket;
 }
 
 /*----------------------------------------------------------------------------
@@ -542,14 +586,6 @@ Asset::IODriver* S3CurlIODriver::create (const Asset* _asset, const char* resour
 int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
     return get(data, size, pos, ioBucket, ioKey, asset->getEndpoint(), &latestCredentials);
-}
-
-/*----------------------------------------------------------------------------
- * path
- *----------------------------------------------------------------------------*/
-string S3CurlIODriver::path (void)
-{
-    return FString("s3://%s/%s", ioBucket, ioKey).c_str();
 }
 
 /*----------------------------------------------------------------------------
@@ -583,7 +619,9 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     };
 
     /* Issue Get Request */
+    const int64_t gps_start = TimeLib::gpstime(); // ms
     int attempts = ATTEMPTS_PER_REQUEST;
+    long previous_index = 0;
     bool rqst_complete = false;
     while(!rqst_complete && (attempts > 0))
     {
@@ -592,7 +630,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
 
         /* Build Range Header */
         const unsigned long start_byte = pos + info.index;
-        const unsigned long end_byte = pos + size - info.index - 1;
+        const unsigned long end_byte = pos + size - 1;
         const FString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
         headers = curl_slist_append(headers, rangeHeader.c_str());
 
@@ -630,17 +668,29 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                 }
                 else
                 {
-                    if(info.index > 0)
+                    /* Calculate Bytes Read */
+                    const long bytes_read = info.index - previous_index;
+                    previous_index = info.index;
+
+                    /* Handle Error Cases */
+                    if(bytes_read > 0)
                     {
-                        mlog(ERROR, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
+                        mlog(WARNING, "cURL/%d warning (%d) encountered after partial response (%ld): %s", ATTEMPTS_PER_REQUEST - attempts, res, info.index, key_ptr);
+                        attempts++; // don't count partial reads as an attempt
+                        const int64_t accumulated_read_time = TimeLib::gpstime() - gps_start;
+                        if(accumulated_read_time > (READ_TIMEOUT * 1000))
+                        {
+                            mlog(ERROR, "S3 cURL I/O driver timed out after %ld bytes reading %s", info.index, key_ptr);
+                            rqst_complete = true;
+                        }
                     }
                     else if(res == CURLE_OPERATION_TIMEDOUT)
                     {
-                        mlog(ERROR, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                        mlog(ERROR, "cURL/%d call timed out (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
                     }
                     else // unexpected issue
                     {
-                        mlog(ERROR, "cURL call failed (%d) for request: %s", res, key_ptr);
+                        mlog(ERROR, "cURL/%d call failed (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
                     }
                     OsApi::performIOTimeout();
                     break; // re-initialize headers (with potentially updated range) and try again
@@ -1322,64 +1372,4 @@ int S3CurlIODriver::luaUpload(lua_State* L)
     /* Return Results */
     lua_pushboolean(L, status);
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * Constructor - for derived classes
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
-    asset(_asset)
-{
-    ioBucket = NULL;
-    ioKey = NULL;
-
-    /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getIdentity());
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
-    asset(_asset)
-{
-    const FString resourcepath("%s/%s", asset->getPath(), resource);
-
-    /* Allocate Memory */
-    ioBucket = StringLib::duplicate(resourcepath.c_str());
-
-    /*
-    * Differentiate Bucket and Key
-    *  <bucket_name>/<path_to_file>/<filename>
-    *  |             |
-    * ioBucket      ioKey
-    */
-    ioKey = ioBucket;
-    while(*ioKey != '\0' && *ioKey != '/') ioKey++;
-    if(*ioKey == '/')
-    {
-        *ioKey = '\0';
-    }
-    else
-    {
-        delete [] ioBucket;
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
-    }
-    ioKey++;
-
-    /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getIdentity());
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-S3CurlIODriver::~S3CurlIODriver (void)
-{
-    /*
-     * Delete Memory Allocated for ioBucket
-     *  only ioBucket is freed because ioKey only points
-     *  into the memory allocated to ioBucket
-     */
-    delete [] ioBucket;
 }

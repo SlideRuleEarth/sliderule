@@ -29,21 +29,26 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl24_io_driver__
-#define __atl24_io_driver__
+#ifndef __s3_io_driver__
+#define __s3_io_driver__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
 #include "Asset.h"
-#include "S3CurlIODriver.h"
+#include "CredentialStore.h"
+
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
 
 /******************************************************************************
- * S3 IO DRIVER CLASS
+ * AWS S3 CLIENT CLASS
  ******************************************************************************/
 
-class Atl24IODriver: S3CurlIODriver
+class S3IODriver: public Asset::IODriver
 {
     public:
 
@@ -51,22 +56,33 @@ class Atl24IODriver: S3CurlIODriver
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* FORMAT;
+        static const char* DEFAULT_IDENTITY;
+        static const char* DRIVER_FORMAT;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static Asset::IODriver* create  (const Asset* _asset, const char* resource);
+        static void         init            (void);
+        static IODriver*    create          (const Asset* _asset, const char* resource);
+        int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
+        int64_t             size            (void) override;
 
-    private:
+    protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        Atl24IODriver (const Asset* _asset, const char* resource);
-        ~Atl24IODriver (void) override;
+        explicit            S3IODriver  (const char* bucket, const char* key, const Aws::Auth::AWSCredentials& credentials, Aws::Client::ClientConfiguration& config);
+                            ~S3IODriver (void) override = default;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+         Aws::S3::S3Client client;
+         Aws::S3::Model::GetObjectRequest request;
 };
 
-#endif  /* __atl24_io_driver__ */
+#endif  /* __s3_io_driver__ */

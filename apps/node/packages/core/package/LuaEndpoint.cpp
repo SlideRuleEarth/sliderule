@@ -610,6 +610,9 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Clean Up */
     delete request;
 
+    /* Return Freed Heap Pages to the Operating System */
+    OsApi::trimmemory();
+
     /* Stop Trace */
     stop_trace(INFO, trace_id);
 

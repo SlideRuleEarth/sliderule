@@ -103,7 +103,7 @@ class Test3DEP_10meter:
         assert init
         assert len(gdf) == 1
         assert gdf["slope_count"].iat[0] == 25    # number of valid pixels used for spatial derivative calculation
-        assert abs(gdf["slope"].iat[0]  - 6.6170758234893) < sigma, f'{gdf["slope"].iat[0]}'
+        assert abs(gdf["slope"].iat[0]  - 7.925053124219) < sigma, f'{gdf["slope"].iat[0]}'
         assert abs(gdf["aspect"].iat[0] - 115.69728862997) < sigma, f'{gdf["aspect"].iat[0]}'
 
     def test_batch_sample(self, init):

@@ -72,10 +72,11 @@ uint32_t GeoRaster::samplePointBands(const point_info_t& pinfo, sample_list_t& s
 
     try
     {
+        const double epoch = GdalRaster::pointEpoch(pinfo.gps);
         if(oneBand)
         {
             OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
-            RasterSample* sample = raster.samplePOI(&ogrPoint, bands[0]);
+            RasterSample* sample = raster.samplePOI(&ogrPoint, bands[0], epoch);
             if(sample) slist.add(sample);
         }
         else
@@ -84,7 +85,7 @@ uint32_t GeoRaster::samplePointBands(const point_info_t& pinfo, sample_list_t& s
             {
                 /* Must create OGRPoint for each bandNum, samplePOI projects it to raster CRS */
                 OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
-                RasterSample* sample = raster.samplePOI(&ogrPoint, bandNum);
+                RasterSample* sample = raster.samplePOI(&ogrPoint, bandNum, epoch);
                 if(sample) slist.add(sample);
             }
         }

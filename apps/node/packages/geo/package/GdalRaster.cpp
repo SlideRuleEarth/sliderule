@@ -36,11 +36,9 @@
 #include "RasterSample.h"
 #include "GdalRaster.h"
 #include "RasterObject.h"
+#include "TimeLib.h"
 #include "SystemConfig.h"
-
-#ifdef __aws__
 #include "CredentialStore.h"
-#endif
 
 #include <algorithm>
 #include <uuid/uuid.h>
@@ -301,7 +299,7 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
+RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum, double epochYears)
 {
     RasterSample* sample = NULL;
 
@@ -317,10 +315,25 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
         CHECKPTR(band);
 
         const double z = poi->getZ();
-        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
-        if(poi->transform(transf) != OGRERR_NONE)
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+
+        /*
+         * Transform the point into the raster's CRS as a 4D coordinate: the point's coordinate
+         * epoch (decimal year) is passed as the time coordinate so that a time-dependent
+         * operation (e.g. dynamic ITRF -> static NAD83(2011)) is evaluated at the epoch the point
+         * was observed, not at the operation's reference epoch (2010.0 for ITRF -> NAD83(2011)).
+         * HUGE_VAL (no point time) leaves the operation at its reference epoch, which is also
+         * what the 3D OGRPoint::transform() did.
+         */
+        double x = poi->getX();
+        double y = poi->getY();
+        double zt = z;
+        double t = epochYears;
+        int ok = 0;
+        if(!transf->Transform(1, &x, &y, &zt, &t, &ok) || !ok)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for x,y,z,t (%lf, %lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ(), epochYears);
+        poi->setX(x);
+        poi->setY(y);
+        poi->setZ(zt);
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -366,6 +379,14 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
     return sample;
 }
 
+
+/*----------------------------------------------------------------------------
+ * pointEpoch
+ *----------------------------------------------------------------------------*/
+double GdalRaster::pointEpoch(int64_t gps_ms)
+{
+    return (gps_ms > 0) ? TimeLib::gps2decimalyear(gps_ms) : HUGE_VAL;
+}
 
 /*----------------------------------------------------------------------------
  * subsetAOI
@@ -671,8 +692,6 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
 {
     if(_parms->asset.asset)
     {
-#ifdef __aws__
-
         /* Set AWS_REGION for sliderule bucket */
         const FString project_path("/vsis3/%s/", SystemConfig::settings().projectBucket.value.c_str());
         const char* project_region = SystemConfig::settings().projectRegion.value.c_str();
@@ -704,7 +723,6 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
             /* same as AWS CLI option '--no-sign-request' */
             VSISetPathSpecificOption(path, "AWS_NO_SIGN_REQUEST", "YES");
         }
-#endif
     }
 }
 
@@ -1195,8 +1213,8 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
                 const double w = (r == 0 || c == 0) ? 2.0 : 1.0;   // Horn edge/corner
                 dzdx     += w * val * c;
                 dzdy     += w * val * r;
-                wsum_dx  += w * std::abs(c);    // use |c|,|r| so corner & edge sum right
-                wsum_dy  += w * std::abs(r);
+                wsum_dx  += w * c * c;          // least squares normalization, sum(w*c^2)
+                wsum_dy  += w * r * r;
             }
         }
 
@@ -1204,8 +1222,8 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
         if (wsum_dx == 0.0 || wsum_dy == 0.0)
             throw RunTimeException(DEBUG, RTE_FAILURE, "Cannot compute slope/aspect, too many no-data pixels");
 
-        dzdx /= (wsum_dx * dx * kHalf);
-        dzdy /= (wsum_dy * dy * kHalf);
+        dzdx /= (wsum_dx * dx);
+        dzdy /= (wsum_dy * dy);
 
         /* Slope & aspect */
         constexpr double RAD2DEG = 180.0 / M_PI;

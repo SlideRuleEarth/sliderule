@@ -1,6 +1,6 @@
 find_package (CURL)
 find_package (OpenSSL REQUIRED)
-find_package(AWSSDK REQUIRED COMPONENTS firehose secretsmanager)
+find_package(AWSSDK REQUIRED COMPONENTS s3 firehose secretsmanager)
 
 message (STATUS "Including aws package")
 
@@ -16,11 +16,9 @@ target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
 target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/aws.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/CredentialStore.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/FirehoseMonitor.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/S3CacheIODriver.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SecretManager.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/S3IODriver.cpp
 )
 
 target_include_directories (slideruleLib
@@ -32,11 +30,9 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/aws.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/CredentialStore.h
         ${CMAKE_CURRENT_LIST_DIR}/package/FirehoseMonitor.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/S3CacheIODriver.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SecretManager.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/S3IODriver.h
     DESTINATION
         ${INCDIR}
 )

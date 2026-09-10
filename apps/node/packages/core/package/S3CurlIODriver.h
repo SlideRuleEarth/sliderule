@@ -56,11 +56,11 @@ class S3CurlIODriver: public Asset::IODriver
         static const long READ_TIMEOUT = 600; // seconds
         static const long LOW_SPEED_LIMIT = 32768; // 32 KB/s
         static const long LOW_SPEED_TIME = 5; // seconds
-        static const long ATTEMPTS_PER_REQUEST = 3;
         static const long SSL_VERIFYPEER = 0;
         static const long SSL_VERIFYHOST = 0;
+        static const int ATTEMPTS_PER_REQUEST = 3;
         static const char* DEFAULT_IDENTITY;
-        static const char* CURL_FORMAT;
+        static const char* FORMAT;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -68,8 +68,11 @@ class S3CurlIODriver: public Asset::IODriver
 
         static void         init            (void);
         static IODriver*    create          (const Asset* _asset, const char* resource);
+        explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
+                            ~S3CurlIODriver (void) override;
+
+        // io driver overrides
         int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
-        string              path            (void) override;
         int64_t             size            (void) override;
 
         // fixed GET - memory preallocated
@@ -102,15 +105,7 @@ class S3CurlIODriver: public Asset::IODriver
         static int          luaRead         (lua_State* L);
         static int          luaUpload       (lua_State* L);
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        explicit            S3CurlIODriver  (const Asset* _asset);
-        explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
-                            ~S3CurlIODriver (void) override;
+    private:
 
         /*--------------------------------------------------------------------
          * Data

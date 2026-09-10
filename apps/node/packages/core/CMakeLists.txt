@@ -32,6 +32,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/AreaOfInterest.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/CredentialStore.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/DeduplicateRunner.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.cpp
@@ -61,6 +62,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestParameters.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.cpp
@@ -94,6 +96,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/CredentialStore.h
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/DeduplicateRunner.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Dictionary.h
@@ -133,6 +136,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestParameters.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.h

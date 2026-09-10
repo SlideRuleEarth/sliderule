@@ -316,7 +316,7 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/auto/platform.h DESTINATION ${INCDIR}
 
 # SlideRule Application #
 
-execute_process (COMMAND git --git-dir ${PROJECT_SOURCE_DIR}/.git --work-tree ${PROJECT_SOURCE_DIR} describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE COMMITINFO)
+execute_process (COMMAND git --git-dir ${PROJECT_SOURCE_DIR}/../../.git --work-tree ${PROJECT_SOURCE_DIR}/../.. describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE COMMITINFO)
 string(REGEX REPLACE "\n$" "" COMMITINFO "${COMMITINFO}")
 
 execute_process(COMMAND uname -r OUTPUT_VARIABLE OSINFO)

@@ -62,7 +62,7 @@ int H5Object::luaCreate (lua_State* L)
     {
         const char* asset_name = getLuaString(L, 1);
         const char* resource = getLuaString(L, 2);
-        const uint32_t option_flags = static_cast<uint32_t>(getLuaInteger(L, 3, true, 0));
+        const uint32_t option_flags = static_cast<uint32_t>(getLuaInteger(L, 3, true, H5Coro::Context::OPTION_USE_NAME_INDEX));
 
         _asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
         if(!_asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);

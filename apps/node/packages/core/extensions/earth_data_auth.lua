@@ -33,7 +33,7 @@ while sys.alive() do
             sys.log(core.INFO, string.format("New earthdata credentials fetched for %s, expiration: %s", identity, credential.expiration))
 
             -- store credentials for use by server
-            aws.csput(identity, credential)
+            core.csput(identity, credential)
 
             -- calculate gps times
             local now = time.gps()

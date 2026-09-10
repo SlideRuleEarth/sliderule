@@ -46,14 +46,14 @@
 /*----------------------------------------------------------------------------
  * PointSample Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::PointSample::PointSample(const OGRPoint& _point, int64_t _pointIndex):
-    point(_point), pointIndex(_pointIndex), ssErrors(SS_NO_ERRORS) {}
+GeoIndexedRaster::PointSample::PointSample(const OGRPoint& _point, int64_t _pointIndex, double _epoch):
+    point(_point), pointIndex(_pointIndex), epoch(_epoch), ssErrors(SS_NO_ERRORS) {}
 
 /*----------------------------------------------------------------------------
  * PointSample Copy Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::PointSample::PointSample(const PointSample& ps):
-    point(ps.point), pointIndex(ps.pointIndex), bandSample(ps.bandSample), ssErrors(ps.ssErrors)
+    point(ps.point), pointIndex(ps.pointIndex), epoch(ps.epoch), bandSample(ps.bandSample), ssErrors(ps.ssErrors)
 {
     bandSampleReturned = ps.bandSampleReturned;
 }
@@ -449,7 +449,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                     const bool oneBand = bands.size() == 1;
                     if(oneBand)
                     {
-                        RasterSample* sample = raster->samplePOI(&ps.point, bands[0]);
+                        RasterSample* sample = raster->samplePOI(&ps.point, bands[0], ps.epoch);
                         ps.bandSample.push_back(sample);
                         ps.bandSampleReturned.push_back(0);
                     }
@@ -463,7 +463,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                             /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
                             OGRPoint point(ps.point);
 
-                            RasterSample* sample = raster->samplePOI(&point, bandNum);
+                            RasterSample* sample = raster->samplePOI(&point, bandNum, ps.epoch);
                             ps.bandSample.push_back(sample);
                             ps.bandSampleReturned.push_back(0);
                             ps.ssErrors |= raster->getSSerror();
@@ -586,11 +586,11 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         /* Filter rasters based on POI time */
-        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
+        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0;
         gf->obj->filterRasters(gps, groupList, gf->threadFileDict);
 
         /* Add found rasters which passed the filter to pointsGroups */
-        gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList});
+        gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList, GdalRaster::pointEpoch(pinfo.gps)});
 
         /* Add raster file ids from this groupList to raster to points map */
         const GroupOrdering::Iterator iter(*groupList);
@@ -932,7 +932,7 @@ bool GeoIndexedRaster::findUniqueRasters(vector<unique_raster_t*>& uniqueRasters
                 for(const uint32_t pointIndx : pts)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
-                    ur->pointSamples.emplace_back(pg.point, pg.pointIndex);
+                    ur->pointSamples.emplace_back(pg.point, pg.pointIndex, pg.epoch);
 
                     /* Index by point index for O(1) lookup during collection */
                     if(ur->useDenseLookup)

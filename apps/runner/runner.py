@@ -18,13 +18,15 @@ ENVIRONMENT_VERSION = os.environ['ENVIRONMENT_VERSION']
 PROJECT_PUBLIC_BUCKET = os.environ["PROJECT_PUBLIC_BUCKET"]
 SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
 ALERT_EMAIL = os.environ['ALERT_EMAIL']
+IMAGE_TAGS = [tag.strip() for tag in os.environ['IMAGE_TAGS'].split(",")]
 
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
+JOB_QUEUES = ["urgent", "default", "background"]
 MAX_JOBS_TO_DESCRIBE = 100
 MAX_VCPUS = 8
 MIN_VCPUS = 1
 MAX_MEMORY = 32768
-MIN_MEMORY = 4096
+MIN_MEMORY = 4000
 API_CONCURRENCY = 10
 MAX_ARGS_ARRAY_SIZE = 10000
 
@@ -147,7 +149,7 @@ def verify_signature(path, body, username, event):
 #
 # List Jobs
 #
-def list_jobs(job_state, name, parent_job_id=None):
+def list_jobs(job_state, name, queue, parent_job_id=None):
     """
     validate parameters and list jobs that match job name
     """
@@ -166,6 +168,8 @@ def list_jobs(job_state, name, parent_job_id=None):
             raise RuntimeError(f"Invalid job state supplied: {type(job_status)}")
         elif job_status not in JOB_STATES:
             raise RuntimeError(f"Unknown job state supplied: {job_status}")
+    if queue not in JOB_QUEUES:
+        raise RuntimeError(f"Unknown job queue supplied: {queue}")
 
     # list jobs
     job_list = []
@@ -177,7 +181,7 @@ def list_jobs(job_state, name, parent_job_id=None):
             }
         else:
             parms = {
-                "jobQueue": f"{STACK_NAME}-job-queue",
+                "jobQueue": f"{STACK_NAME}-{queue}-job-queue",
                 "jobStatus": job_status
             }
         while True:
@@ -216,8 +220,17 @@ def submit_handler(body, username):
     args = body["args"]
 
     # get optional request variables
+    image = body.get("image", "sliderule:latest")
+    queue = body.get("queue", "default")
     vcpus = body.get("vcpus")
     memory = body.get("memory")
+
+    # define job parameters
+    if not isinstance(image, str):
+        raise RuntimeError(f"Invalid image specified of type: {type(image)}")
+    tag = image.split(":")[-1]
+    job_definition = f"{STACK_NAME}-{tag}-job-definition"
+    job_queue = f"{STACK_NAME}-{queue}-job-queue"
 
     # parameter validation
     if not isinstance(name, str):
@@ -228,10 +241,16 @@ def submit_handler(body, username):
         raise RuntimeError(f"Invalid arguments type: {type(args)}")
     elif isinstance(args, list) and (len(args) > MAX_ARGS_ARRAY_SIZE):
         raise RuntimeError(f"Argument array size too large: {len(args)}")
+    elif isinstance(args, list) and (len(args) == 0):
+        raise RuntimeError(f"Argument array cannot be empty")
     elif (vcpus != None) and ((not isinstance(vcpus, int)) or (vcpus < MIN_VCPUS) or (vcpus > MAX_VCPUS)):
         raise RuntimeError(f"Invalid vCPUs provided: {vcpus}")
     elif (memory != None) and ((not isinstance(memory, int)) or (memory < MIN_MEMORY) or (memory > MAX_MEMORY)):
         raise RuntimeError(f"Invalid memory provided: {memory}")
+    elif queue not in JOB_QUEUES:
+        raise RuntimeError(f"Invalid queue provided: {queue}")
+    elif tag not in IMAGE_TAGS:
+        raise RuntimeError(f"Invalid image provided: {image}")
 
     # build unique identifier
     now = datetime.now(timezone.utc).isoformat()
@@ -248,16 +267,17 @@ def submit_handler(body, username):
     state["name"] = name
     state["run_url"] = run_url
 
-    # handle array arguments
-    if isinstance(args, list):
-        args_list = args
+    # handle arguments
+    process_as_array = isinstance(args, list) and len(args) > 1
+    if process_as_array:
         args_str = f"{run_path}/args.json"
         s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_str, Body=json.dumps(args))
-    else: # is string (checked above)
+    elif isinstance(args, list): # with just one element
+        args_str = str(args[0]).strip()
+    else: # string
         args_str = args.strip()
-        if len(args_str) == 0:
-            args_str = "nil"
-        args_list = [args_str]
+    if len(args_str) == 0:
+        args_str = "nil"
 
     # load additional run files to S3
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/script.lua", Body=script)
@@ -280,8 +300,8 @@ def submit_handler(body, username):
     # submit job
     kwargs = {
         "jobName": name,
-        "jobQueue": f"{STACK_NAME}-job-queue",
-        "jobDefinition": f"{STACK_NAME}-default-job-definition",
+        "jobQueue": job_queue,
+        "jobDefinition": job_definition,
         "parameters": {
             "script": f"{run_url}/script.lua",
             "args": args_str,
@@ -289,9 +309,9 @@ def submit_handler(body, username):
         },
         "containerOverrides": container_overrides
     }
-    if isinstance(args, list):
+    if process_as_array:
         kwargs["arrayProperties"] = {
-            "size": len(args_list)
+            "size": len(args)
         }
     response = batch.submit_job(**kwargs)
     print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')
@@ -346,6 +366,7 @@ def report_queue_handler(body):
     job_state   = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
     name        = body.get("name") # string providing a single name
     job_id      = body.get("job_id") # string providing the parent job id
+    queue       = body.get("queue", "default")
     verbose     = body.get("verbose", False)
 
     # initialize response state
@@ -353,7 +374,7 @@ def report_queue_handler(body):
     if verbose: state["jobs"] = []
 
     # list jobs
-    job_list = list_jobs(job_state, name, parent_job_id=job_id)
+    job_list = list_jobs(job_state, name, queue, parent_job_id=job_id)
     for job in job_list:
         state["report"][job["status"]] += 1
         if verbose:
@@ -373,12 +394,13 @@ def cancel_handler(body):
     # get optional request variables
     job_list = body.get("job_list")
     name = body.get("name")
+    queue = body.get("queue", "default")
 
     # get jobs to delete
     if job_list:
         jobs_to_delete = job_list
     else:
-        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], name)]
+        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], name, queue)]
 
     # delete jobs
     with ThreadPoolExecutor(max_workers=API_CONCURRENCY) as executor:

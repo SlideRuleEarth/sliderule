@@ -38,6 +38,7 @@
 #include <sstream>
 #include <cmath>
 #include <cassert>
+#include <unordered_set>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -1421,6 +1422,12 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
     // massage key_space
     if(key_space == INVALID_KEY) key_space = 0;
 
+    // create unique stamp
+    // this is checked in the receive thread to catch duplicate records and guarantee a consistent set
+    // the failure case that produces duplicate records will cause those records to be separated by
+    // more than 1 microsecond of processing time
+    const uint64_t stamp = static_cast<uint64_t>(OsApi::time(OsApi::CPU_CLK));
+
     // create and send column records
     Dictionary<column_entry_t>::Iterator column_iter(columnFields.fields);
     for(int i = 0; i < column_iter.length; i++)
@@ -1443,6 +1450,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
             RecordObject gdf_rec(gdfRecType, rec_size);
             gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
             gdf_rec_data->key = key_space;
+            gdf_rec_data->stamp = stamp;
             gdf_rec_data->type = COLUMN_REC;
             gdf_rec_data->size = column_size;
             gdf_rec_data->encoding = kv.value.field->encoding | (with_openapi ? Field::HAS_DESCRIPTION : 0);
@@ -1489,6 +1497,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
             RecordObject gdf_rec(gdfRecType, rec_size);
             gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
             gdf_rec_data->key = key_space;
+            gdf_rec_data->stamp = stamp;
             gdf_rec_data->type = COLUMN_REC;
             gdf_rec_data->size = column_size;
             gdf_rec_data->encoding = kv.value.field->encoding | (with_openapi ? Field::HAS_DESCRIPTION : 0);
@@ -1532,6 +1541,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
         RecordObject gdf_rec(gdfRecType, rec_size);
         gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
         gdf_rec_data->key = key_space;
+        gdf_rec_data->stamp = stamp;
         gdf_rec_data->type = META_REC;
         gdf_rec_data->size = element_size;
         gdf_rec_data->encoding = kv.value.field->encoding | (with_openapi ? Field::HAS_DESCRIPTION : 0);
@@ -1560,6 +1570,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
         RecordObject gdf_rec(gdfRecType, rec_size);
         gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
         gdf_rec_data->key       = key_space;
+        gdf_rec_data->stamp     = stamp;
         gdf_rec_data->type      = CRS_REC;
         gdf_rec_data->size      = crs_size;
         gdf_rec_data->encoding  = Field::STRING;
@@ -1575,6 +1586,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, bool wit
         RecordObject gdf_rec(gdfRecType, rec_size);
         gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
         gdf_rec_data->key = key_space;
+        gdf_rec_data->stamp = stamp;
         gdf_rec_data->type = EOF_REC;
         gdf_rec_data->num_rows = length();
         eof_subrec_t eof_subrec = {.num_columns = static_cast<uint32_t>(columnFields.length())};
@@ -1610,6 +1622,13 @@ void* GeoDataFrame::receiveThread (void* parm)
     // create table of dataframe records
     typedef Table<vector<rec_ref_t>*> df_table_t;
     df_table_t df_table(info->num_channels);
+
+    // create set of seen keys (ignores duplicates from retries)
+    std::unordered_set<uint64_t> seen_keys;
+    seen_keys.reserve(info->num_channels);
+    long duplicate_recs = 0; // duplicate key
+    long partial_recs = 0; // unmatched stamp
+    long eof_recs = 0; // contributing dataframes
 
     try
     {
@@ -1648,6 +1667,14 @@ void* GeoDataFrame::receiveThread (void* parm)
                     gdf_rec_t* rec_data = reinterpret_cast<gdf_rec_t*>(rec.getRecordData());
                     const uint64_t key = rec_data->key;
 
+                    // handle duplicates
+                    if(seen_keys.contains(key))
+                    {
+                        duplicate_recs++;
+                        inq.dereference(ref);
+                        continue;
+                    }
+
                     // handle CRS record
                     if(rec_data->type == CRS_REC)
                     {
@@ -1681,6 +1708,12 @@ void* GeoDataFrame::receiveThread (void* parm)
                     // assemble on eof
                     if(rec_data->type == EOF_REC)
                     {
+                        // count eof rec
+                        eof_recs++;
+
+                        // pull out stamp
+                        const uint64_t stamp = rec_data->stamp;
+
                         // pull out data from eof rec
                         const eof_subrec_t eof_subrec = *reinterpret_cast<const eof_subrec_t*>(rec_data->data);
                         inq.dereference(ref); // dereference eof rec since it is not added to table of dataframe refs
@@ -1688,14 +1721,22 @@ void* GeoDataFrame::receiveThread (void* parm)
                         // append columns and metadata to dataframe
                         for(rec_ref_t& entry: *df_rec_list)
                         {
-                            info->dataframe->appendDataframe(entry.rec, source_id);
+                            if(entry.rec->stamp == stamp)
+                            {
+                                info->dataframe->appendDataframe(entry.rec, source_id);
+                            }
+                            else
+                            {
+                                partial_recs++;
+                            }
+
                             inq.dereference(entry.ref);
                         }
 
                         // check number of columns
                         if(info->dataframe->columnFields.length() < eof_subrec.num_columns)
                         {
-                            throw RunTimeException(CRITICAL, RTE_FAILURE, "incomplete number of columns received: %ld < %u", info->dataframe->length(), eof_subrec.num_columns);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "incomplete number of columns received: %ld < %u", info->dataframe->columnFields.length(), eof_subrec.num_columns);
                         }
 
                         // bump source id now that dataframe is full appended
@@ -1703,6 +1744,9 @@ void* GeoDataFrame::receiveThread (void* parm)
 
                         // remove key'ed dataframe list from table
                         df_table.remove(key);
+
+                        // mark key as seen
+                        seen_keys.insert(key);
                     }
                     else
                     {
@@ -1749,6 +1793,12 @@ void* GeoDataFrame::receiveThread (void* parm)
             key = df_table.next(NULL);
         }
     }
+
+    // status completion
+    alert(INFO, RTE_STATUS, &outq, NULL, "%s %ld x %ld dataframe (eofs=%ld, dups=%ld, ptls=%ld)",
+        info->dataframe->inError ? "Failed to receive" : "Successfuly received",
+        info->dataframe->length(), info->dataframe->columnFields.length(),
+        eof_recs, duplicate_recs, partial_recs);
 
     // mark complete and clean up
     info->dataframe->signalComplete();

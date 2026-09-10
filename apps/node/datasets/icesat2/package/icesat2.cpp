@@ -30,7 +30,7 @@
  */
 
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
 #include "LuaEngine.h"
@@ -53,19 +53,17 @@
 #include "Atl08Parameters.h"
 #include "Atl09Sampler.h"
 #include "Atl13DataFrame.h"
-#include "Atl13IODriver.h"
 #include "Atl13Reader.h"
 #include "Atl13Parameters.h"
 #include "Atl13sParameters.h"
 #include "Atl24DataFrame.h"
 #include "Atl24Granule.h"
-#include "Atl24IODriver.h"
 #include "Atl24Parameters.h"
-#include "CumulusIODriver.h"
 #include "MeritRaster.h"
 #include "PhoReal.h"
 #include "SurfaceBlanket.h"
 #include "SurfaceFitter.h"
+#include "S3CurlIODriver.h"
 #ifdef __unittesting__
 #include "UT_Atl06Dispatch.h"
 #endif
@@ -74,11 +72,106 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_ICESAT2_LIBNAME    "icesat2"
+#define LUA_ICESAT2_LIBNAME         "icesat2"
+#define ATL13_IO_DRIVER_FORMAT      "s3atl13"
+#define ATL24_IO_DRIVER_FORMAT      "s3atl24"
+#define ATLAS_IO_DRIVER_FORMAT      "s3atlas"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * create_atlas_io_driver
+ *----------------------------------------------------------------------------*/
+Asset::IODriver* create_atlas_io_driver (const Asset* _asset, const char* resource)
+{
+    const int NUM_ELEMENTS = 5;
+    char elements[NUM_ELEMENTS][MAX_STR_SIZE];
+
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid cumulus resource: %s", resource);
+
+    const char* product = elements[0];
+    const char* version = elements[3];
+    const char* date = elements[1];
+
+    char year[5];
+    memcpy(&year[0], &date[0], 5);
+    year[4] = '\0';
+
+    char month[3];
+    memcpy(&month[0], &date[4], 3);
+    month[2] = '\0';
+
+    char day[3];
+    memcpy(&day[0], &date[6], 3);
+    day[2] = '\0';
+
+    const FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", _asset->getPath(), product, version, year, month, day, resource);
+
+    return new S3CurlIODriver(_asset, resourcepath.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * create_atl24_io_driver
+ *----------------------------------------------------------------------------*/
+Asset::IODriver* create_atl24_io_driver (const Asset* _asset, const char* resource)
+{
+    const int NUM_ELEMENTS = 7;
+    char elements[NUM_ELEMENTS][MAX_STR_SIZE];
+
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid ATL24 resource: %s", resource);
+
+    const char* product = elements[0];
+    const char* version = elements[5];
+    const char* date = elements[1];
+
+    char year[5];
+    memcpy(&year[0], &date[0], 5);
+    year[4] = '\0';
+
+    char month[3];
+    memcpy(&month[0], &date[4], 3);
+    month[2] = '\0';
+
+    char day[3];
+    memcpy(&day[0], &date[6], 3);
+    day[2] = '\0';
+
+    const FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", _asset->getPath(), product, version, year, month, day, resource);
+
+    return new S3CurlIODriver(_asset, resourcepath.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * create_atl13_io_driver
+ *----------------------------------------------------------------------------*/
+Asset::IODriver* create_atl13_io_driver (const Asset* _asset, const char* resource)
+{
+    const int NUM_ELEMENTS = 5;
+    char elements[NUM_ELEMENTS][MAX_STR_SIZE];
+
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid atl13 resource: %s", resource);
+
+    const char* product = elements[0];
+    const char* version = elements[3];
+    const char* date = elements[1];
+
+    char year[5];
+    memcpy(&year[0], &date[0], 5);
+    year[4] = '\0';
+
+    char month[3];
+    memcpy(&month[0], &date[4], 3);
+    month[2] = '\0';
+
+    const FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s", _asset->getPath(), product, version, year, month, resource);
+
+    return new S3CurlIODriver(_asset, resourcepath.c_str());
+}
 
 /*----------------------------------------------------------------------------
  * icesat2_open
@@ -179,9 +272,9 @@ void initicesat2 (void)
     Atl13Reader::init();
 
     /* Register IO Drivers */
-    Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);
-    Asset::registerDriver(Atl13IODriver::FORMAT, Atl13IODriver::create);
-    Asset::registerDriver(Atl24IODriver::FORMAT, Atl24IODriver::create);
+    Asset::registerDriver(ATLAS_IO_DRIVER_FORMAT, create_atlas_io_driver);
+    Asset::registerDriver(ATL13_IO_DRIVER_FORMAT, create_atl13_io_driver);
+    Asset::registerDriver(ATL24_IO_DRIVER_FORMAT, create_atl24_io_driver);
 
     /* Register Rasters */
     RasterObject::registerRaster(MeritRaster::ASSET_NAME, MeritRaster::create);

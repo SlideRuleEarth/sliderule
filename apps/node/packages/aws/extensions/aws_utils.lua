@@ -52,7 +52,7 @@ local function config_earth_data (credentials_to_maintain)
     -- run IAM role authentication script (identity="iam-role")
     core.script("iam_role_auth"):global("RoleAuthScript")
     local iam_role_max_wait = 10
-    while not aws.csget("iam-role") do
+    while not core.csget("iam-role") do
         iam_role_max_wait = iam_role_max_wait - 1
         if iam_role_max_wait == 0 then
             sys.log(core.CRITICAL, "Failed to establish IAM role credentials at startup")
@@ -62,7 +62,7 @@ local function config_earth_data (credentials_to_maintain)
             sys.wait(1)
         end
     end
-    if aws.csget("iam-role") then
+    if core.csget("iam-role") then
         sys.log(core.CRITICAL, "IAM role established")
     end
     -- run earth data authentication scripts
@@ -91,7 +91,7 @@ end
 -- Wait for Earth Data Credentials --
 local function wait_credentials (credential, timeout)
     local seconds_remaining = timeout or 10
-    while not aws.csget(credential) do
+    while not core.csget(credential) do
         seconds_remaining = seconds_remaining - 1
         if seconds_remaining == 0 then
             sys.log(core.CRITICAL, string.format("failed to establish credentials for %s", credential))

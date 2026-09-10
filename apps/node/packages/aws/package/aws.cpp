@@ -36,17 +36,15 @@
 #include <aws/core/Aws.h>
 
 #include "OsApi.h"
-#include "CredentialStore.h"
 #include "FirehoseMonitor.h"
-#include "S3CacheIODriver.h"
-#include "S3CurlIODriver.h"
 #include "SecretManager.h"
+#include "S3IODriver.h"
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_AWS_LIBNAME         "aws"
+#define LUA_AWS_LIBNAME "aws"
 
 /******************************************************************************
  * GLOBALS
@@ -64,14 +62,6 @@
 int aws_open (lua_State *L)
 {
     static const struct luaL_Reg aws_functions[] = {
-        {"csget",       CredentialStore::luaGet},
-        {"csput",       CredentialStore::luaPut},
-        {"s3get",       S3CurlIODriver::luaGet},
-        {"s3probe",     S3CurlIODriver::luaProbe},
-        {"s3download",  S3CurlIODriver::luaDownload},
-        {"s3read",      S3CurlIODriver::luaRead},
-        {"s3upload",    S3CurlIODriver::luaUpload},
-        {"s3cache",     S3CacheIODriver::luaCreateCache},
         {"firehose",    FirehoseMonitor::luaCreate},
         {"secret",      SecretManager::luaGet},
         {NULL,          NULL}
@@ -94,11 +84,10 @@ void initaws (void)
     Aws::InitAPI(options);
 
     /* Initialize Modules */
-    S3CurlIODriver::init();
+    S3IODriver::init();
 
-    /* Register I/O Drivers */
-    Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
-    Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
+    /* Register IO Drivers */
+    Asset::registerDriver(S3IODriver::DRIVER_FORMAT, S3IODriver::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_AWS_LIBNAME, aws_open, LIBID);
