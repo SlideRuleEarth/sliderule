@@ -1212,8 +1212,8 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
                 const double w = (r == 0 || c == 0) ? 2.0 : 1.0;   // Horn edge/corner
                 dzdx     += w * val * c;
                 dzdy     += w * val * r;
-                wsum_dx  += w * std::abs(c);    // use |c|,|r| so corner & edge sum right
-                wsum_dy  += w * std::abs(r);
+                wsum_dx  += w * c * c;          // least squares normalization, sum(w*c^2)
+                wsum_dy  += w * r * r;
             }
         }
 
@@ -1221,8 +1221,8 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
         if (wsum_dx == 0.0 || wsum_dy == 0.0)
             throw RunTimeException(DEBUG, RTE_FAILURE, "Cannot compute slope/aspect, too many no-data pixels");
 
-        dzdx /= (wsum_dx * dx * kHalf);
-        dzdy /= (wsum_dy * dy * kHalf);
+        dzdx /= (wsum_dx * dx);
+        dzdy /= (wsum_dy * dy);
 
         /* Slope & aspect */
         constexpr double RAD2DEG = 180.0 / M_PI;
