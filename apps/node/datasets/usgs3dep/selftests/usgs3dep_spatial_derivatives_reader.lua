@@ -23,9 +23,9 @@ runner.unittest("3DEP 10m Slope Scale Length", function()
     local demType = "usgs3dep-10meter-dem"
 
     local expResults = {{2638.349756, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
-    local expSlopeResults = {{12.232819, 190.473626,   9},
-                             {10.796550, 169.851066,  49},
-                             {12.178059, 165.393375, 169}}
+    local expSlopeResults = {{12.232819, 259.526374,   9},
+                             {10.796550, 280.148934,  49},
+                             {12.178059, 284.606625, 169}}
 
     for sindx, scale in ipairs(scales) do
         print(string.format("slope_scale_length = %d", scale))

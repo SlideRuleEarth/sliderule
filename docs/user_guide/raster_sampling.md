@@ -88,7 +88,7 @@ The slope and aspect derivative columns added to a GeoDataFrame for each sampled
 
 - __"slope_count"__: number of pixels read to calculate slope and aspect
 - __"slope"__: the calculated slope at the location being sampled
-- __"aspect"__: the calculated aspect at the location being sampled
+- __"aspect"__: the calculated aspect at the location being sampled; the compass azimuth of the downslope direction in degrees clockwise from north, in [0, 360), and NaN where the surface is flat
 
 ## Providing your own catalog
 
