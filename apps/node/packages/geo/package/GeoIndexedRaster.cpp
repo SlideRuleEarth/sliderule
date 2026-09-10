@@ -333,7 +333,7 @@ int GeoIndexedRaster::luaCellSize(lua_State *L)
 /*----------------------------------------------------------------------------
  * filterRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::filterRasters(int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict)
+bool GeoIndexedRaster::filterRasters(int64_t gps_ms, GroupOrdering* groupList, RasterFileDictionary& dict)
 {
     /* NOTE: temporal filter is applied in openGeoIndex() */
     if(!parms->url_substring.value.empty() || parms->filter_doy_range)
@@ -389,10 +389,10 @@ bool GeoIndexedRaster::filterRasters(int64_t gps_secs, GroupOrdering* groupList,
 
     /* Closest time filter - using raster group time, not individual reaster time */
     int64_t closestGps = 0;
-    if(gps_secs > 0)
+    if(gps_ms > 0)
     {
-        /* Caller provided gps time, use it insead of time from params */
-        closestGps = gps_secs;
+        /* Caller provided gps time (milliseconds), use it instead of time from params; raster group times are in seconds */
+        closestGps = gps_ms / 1000;
     }
     else if(parms->filter_closest_time)
     {

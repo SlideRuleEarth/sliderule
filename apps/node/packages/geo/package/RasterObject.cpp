@@ -445,7 +445,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
         int64_t gps = 0;
         if(closest_time_str != NULL)
         {
-            gps = TimeLib::str2gpstime(closest_time_str) / 1000;
+            gps = TimeLib::str2gpstime(closest_time_str);
         }
 
         /* Create point_info_t vector from tables */
@@ -524,7 +524,7 @@ int RasterObject::luaSamples(lua_State *L)
         int64_t gps = 0;
         if(closest_time_str != NULL)
         {
-            gps = TimeLib::str2gpstime(closest_time_str) / 1000;
+            gps = TimeLib::str2gpstime(closest_time_str);
         }
 
         /* Get samples */
