@@ -72,7 +72,7 @@ class Tool:
                         "result": rsps
                     }
             except Exception as e:
-                result = {
+                result |= {
                     "status": JobStatus.ERROR,
                     "error": f"{e}"
                 }
