@@ -13,12 +13,7 @@
 #                 "FAILED": <x>
 #             },
 #             "complete": <true|false>,
-#             "results": [
-#               0: ...
-#               1: ...
-#               |
-#               N: ...
-#             ]
+#             "results": [ {result 1}, {result 2}, ... {result N} ]
 #         },
 #         ...
 #     }
@@ -104,3 +99,8 @@ class Database:
         with open(tmp_filename, "w") as file:
             json.dump(self.database, file, indent=2)
         os.replace(tmp_filename, filename)
+
+    # Remove database (not recoverable)
+    def remove(self):
+        if os.path.exists(self.filename):
+            os.remove(self.filename)

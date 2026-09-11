@@ -79,6 +79,11 @@ class Tool:
             results.append(result)
         return results
 
+    # Archive Database
+    def archive_database(self):
+        self.database.write(self.args.archive)
+        self.database.remove()
+
     # Submit Job
     def submit_job(self):
         # pull out arguments
@@ -109,6 +114,27 @@ class Tool:
             self.database.submissions[job_name] = rsps | {"complete": False}
             print(f"Submitted job {job_name} using script {script_file} with {len(args_list)} entries: {rsps}")
 
+    # Scrape Submissions
+    def scrape_submissions(self):
+        arg_list = []
+        for name,submission in self.database.submissions.items():
+            if self.args.name and self.args.name != name: continue
+            try:
+                if submission["complete"]:
+                    print(f"Scraping {name} ...")
+                    for result in submission["results"]:
+                        if result["status"] in self.args.status:
+                            print(f"{result["arg"]}")
+                            arg_list.append(result["arg"])
+                else:
+                    print(f"Skipping {name} because it is still pending")
+            except Exception as e:
+                print(f"Failed to scrape {name}: {e}")
+        if self.args.output:
+            with open(self.args.output, "w") as file:
+                for arg in arg_list:
+                    file.write(f"{arg}\n")
+
     # Get Status
     def get_status(self):
         queue = self.args.queue
@@ -134,24 +160,31 @@ class Tool:
         duration = {"avg": 0.0, "total": 0.0}
         processed = 0
         pending = 0
-        for job_name,submission in self.database.submissions.items():
+        errors = 0
+        for name,submission in self.database.submissions.items():
             try:
-                stats[submission["status"]] += 1
-                duration["total"] += submission["duration"]
-                processed += 1
+                if submission["complete"]:
+                    for result in submission["results"]:
+                        stats[result["status"]] += 1
+                        duration["total"] += result["duration"]
+                    processed += 1
+                else:
+                    pending += 1
             except Exception as e:
-                pending += 1
+                errors += 1
         if processed > 0:
             duration["avg"] = duration["total"] / processed
         print("Processed:", processed)
         print("Pending:", pending)
+        print("Errors:", errors)
         print("Status:", json.dumps(stats, indent=2))
         print("Duration:", json.dumps(duration, indent=2))
 
     # Finish
     def finish(self):
-        # save database
-        self.database.write()
+        if not self.args.dryrun:
+            # save database
+            self.database.write()
 
 #########################################
 # Main
@@ -164,10 +197,16 @@ def main():
     common.add_argument('--database',   type=Path,              default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
     common.add_argument('--queue',      type=QueuePriority,     default=QueuePriority.DEFAULT, choices=list(QueuePriority))
     common.add_argument('--verbose',    action='store_true',    default=False)
+    common.add_argument('--dryrun',     action='store_true',    default=False)
 
     # command line arguments
     parser = argparse.ArgumentParser(prog="sliderule-runner", description="""SlideRule Runner""")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # archive
+    archive = subparsers.add_parser("archive", parents=[common], help="save and clear the database")
+    archive.add_argument('archive', metavar="<full path to archive file>")
+    archive.set_defaults(func=Tool.archive_database)
 
     # submit
     submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
@@ -179,6 +218,13 @@ def main():
     submit.add_argument('--batch_size', type=int,                   default=10000)
     submit.add_argument('--image',      type=str,                   default="sliderule:latest")
     submit.set_defaults(func=Tool.submit_job)
+
+    # scrape
+    scrape = subparsers.add_parser("scrape", parents=[common], help="generate list of arguments from jobs with provided job status")
+    scrape.add_argument('--status',     type=JobStatus, nargs='+',  default=[JobStatus.FAILURE, JobStatus.UNSUPPORTED, JobStatus.ERROR])
+    scrape.add_argument('--name',       type=str,                   default=None) # name of submission
+    scrape.add_argument('--output',     type=str,                   default=None)
+    scrape.set_defaults(func=Tool.scrape_submissions)
 
     # status
     status = subparsers.add_parser("status", parents=[common], help="display status of submitted jobs")
@@ -197,12 +243,10 @@ def main():
     # route command
     try:
         args.func(tool)
+        tool.finish() # only execute if tool function completed successfully
     except Exception as e:
         if args.verbose: raise
         print(f"Unhandled error: {e}")
-    finally:
-        tool.finish()
-
 
 # running via direct invocation
 if __name__ == "__main__": main()
