@@ -12,7 +12,13 @@
 #                 "SUCCEEDED": <x>,
 #                 "FAILED": <x>
 #             },
-#             "complete": <true|false>
+#             "complete": <true|false>,
+#             "results": [
+#               0: ...
+#               1: ...
+#               |
+#               N: ...
+#             ]
 #         },
 #         ...
 #     }
@@ -23,7 +29,7 @@ import os
 from enum import Enum
 
 # ###############################
-# JobState
+# JobState (AWS Batch)
 # ###############################
 
 class JobState(str, Enum):
@@ -35,6 +41,21 @@ class JobState(str, Enum):
     RUNNING     = "RUNNING"
     SUCCEEDED   = "SUCCEEDED"
     FAILED      = "FAILED"
+
+    def __str__(self):
+        return self.value
+
+# ###############################
+# JobStatus (SlideRule Runner)
+# ###############################
+
+class JobStatus(str, Enum):
+
+    PENDING     = "pending"     # run has not been processed yet
+    SUCCESS     = "success"     # run completed and produced output
+    FAILURE     = "failure"     # run completed and produced no output
+    UNSUPPORTED = "unsupported" # results of run incompatible with automatic parsing
+    ERROR       = "error"       # run errored out and did not complete
 
     def __str__(self):
         return self.value

@@ -1,10 +1,11 @@
 import importlib
-import sys
+import json
+import boto3
 import random
 import string
 import argparse
 from sliderule import sliderule
-from .database import Database, JobState, QueuePriority
+from .database import Database, JobState, QueuePriority, JobStatus
 from pathlib import Path
 
 try:
@@ -28,6 +29,55 @@ class Tool:
         # create sliderule session
         self.session = sliderule.create_session(verbose=args.verbose)
         self.session.authenticate() # gives privileges to access SlideRule Runner
+        # aws clients
+        s3 = boto3.client("s3", region_name="us-west-2")
+
+    # Load Remote File from S3
+    def __load_remote_file(self, bucket, key):
+        obj = self.s3.get_object(Bucket=bucket, Key=key)
+        contents = obj["Body"].read().decode("utf-8")
+        return json.loads(contents)
+
+    # Get Results for a Job Run
+    #   output of job must include the following fields for this to work:
+    #   {
+    #       "status": <boolean status of run>,
+    #       "start": <start time in seconds of run>,
+    #       "stop": <stop time in seconds of run>,
+    #       "outputs": [<output1>, <output2>, ... <outputN>]
+    #   }
+    def __get_results(self, run_url):
+        results = []
+        bucket = run_url.split("s3://")[-1].split("/")[0]
+        prefix = "/".join(run_url.split("s3://")[-1].split("/")[1:])
+        rsps = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
+        args_list = self.__load_remote_file(bucket, rsps["args"])
+        for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
+            try:
+                result = {
+                    "file": f"{prefix}/result{i}.json",
+                    "environment": rsps["environment"],
+                    "arg": args_list[i]
+                }
+                rsps = self.__load_remote_file(bucket, f"{prefix}/result{i}.json")
+                try:
+                    result |= {
+                        "status": rsps["status"] and JobStatus.SUCCESS or JobStatus.FAILURE,
+                        "duration": rsps["status"] and (rsps["stop"] - rsps["start"]) or 0.0,
+                        "outputs": rsps["outputs"]
+                    }
+                except Exception as e:
+                    result |= {
+                        "status": JobStatus.UNSUPPORTED,
+                        "rsps": rsps
+                    }
+            except Exception as e:
+                result = {
+                    "status": JobStatus.ERROR,
+                    "error": f"{e}"
+                }
+            results.append(result)
+        return results
 
     # Submit Job
     def submit_job(self):
@@ -64,17 +114,39 @@ class Tool:
         queue = self.args.queue
         for name,job in self.database.submissions.items():
             complete = job["complete"]
-            print(f"Statusing {name} - ", end='')
+            print(f"Statusing {name} ...")
             if not complete:
-                status = self.session.runner.queue(job_id=job["job_id"], queue=queue)["report"]
-                self.database.submissions[name]["status"] = status
-                if sum([status[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]]) == 0:
+                report = self.session.runner.queue(job_id=job["job_id"], queue=queue)["report"]
+                self.database.submissions[name]["status"] = report
+                if sum([report[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]]) == 0:
+                    print(f"Job {name} complete, reading results ...")
                     self.database.submissions[name]["complete"] = True
-                    complete = True
-            print(f"{complete and 'complete' or 'incomplete'}")
+                    self.database.submissions[name]["results"] = self.__get_results(job["run_url"])
+                else:
+                    print(f"Job {name} still pending")
         print(",".join([f"{c:>30}" for c in ["NAME"]] + [f"{c:>10}" for c in list(JobState)]))
         for name,job in self.database.submissions.items():
             print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>10}" for c in [job["status"][state] for state in list(JobState)]]))
+
+    # Generate Report
+    def generate_report(self):
+        stats = {status.value: 0 for status in JobStatus}
+        duration = {"avg": 0.0, "total": 0.0}
+        processed = 0
+        pending = 0
+        for job_name,submission in self.database.submissions.items():
+            try:
+                stats[submission["status"]] += 1
+                duration["total"] += submission["duration"]
+                processed += 1
+            except Exception as e:
+                pending += 1
+        if processed > 0:
+            duration["avg"] = duration["total"] / processed
+        print("Processed:", processed)
+        print("Pending:", pending)
+        print("Status:", json.dumps(stats, indent=2))
+        print("Duration:", json.dumps(duration, indent=2))
 
     # Finish
     def finish(self):
@@ -109,8 +181,12 @@ def main():
     submit.set_defaults(func=Tool.submit_job)
 
     # status
-    status = subparsers.add_parser("status", parents=[common], help="report status of submitted jobs")
+    status = subparsers.add_parser("status", parents=[common], help="display status of submitted jobs")
     status.set_defaults(func=Tool.get_status)
+
+    # report
+    report = subparsers.add_parser("report", parents=[common], help="generate report of submitted jobs")
+    report.set_defaults(func=Tool.generate_report)
 
     # parse command line
     args = parser.parse_args()
