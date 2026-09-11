@@ -15,7 +15,9 @@ class Tool:
         self.session = sliderule.create_session(domain=args.domain, cluster=args.cluster, user_service=args.user_service, verbose=args.verbose)
 
     # display_result
-    def __display_result(self, result):
+    def __display_result(self, result, reformat=False):
+        if reformat:
+            result = json.dumps(result, indent=2)
         print(f'{self.args.cluster}.{self.args.domain} [{self.session.service}]: {result}')
 
     # whoami
@@ -39,7 +41,13 @@ class Tool:
     # version
     def version(self):
         result = sliderule.get_version(session=self.session)
-        self.__display_result(result)
+        self.__display_result(result, reformat=True)
+        return result
+
+    # defaults
+    def defaults(self):
+        result = sliderule.source("defaults", session=self.session)
+        self.__display_result(result, reformat=True)
         return result
 
 #########################################
@@ -71,6 +79,10 @@ def main():
     # version
     version = subparsers.add_parser("version", parents=[common], help="cluster version information")
     version.set_defaults(func=Tool.version)
+
+    # defaults
+    defaults = subparsers.add_parser("defaults", parents=[common], help="cluster default parameter values")
+    defaults.set_defaults(func=Tool.defaults)
 
     # parse command line
     args = parser.parse_args()

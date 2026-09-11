@@ -30,7 +30,7 @@ class Tool:
         self.session = sliderule.create_session(verbose=args.verbose)
         self.session.authenticate() # gives privileges to access SlideRule Runner
         # aws clients
-        s3 = boto3.client("s3", region_name="us-west-2")
+        self.s3 = boto3.client("s3", region_name="us-west-2")
 
     # Load Remote File from S3
     def __load_remote_file(self, bucket, key):
@@ -50,13 +50,13 @@ class Tool:
         results = []
         bucket = run_url.split("s3://")[-1].split("/")[0]
         prefix = "/".join(run_url.split("s3://")[-1].split("/")[1:])
-        rsps = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
-        args_list = self.__load_remote_file(bucket, rsps["args"])
+        receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
+        args_list = self.__load_remote_file(bucket, receipt["args"])
         for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
             try:
                 result = {
                     "file": f"{prefix}/result{i}.json",
-                    "environment": rsps["environment"],
+                    "environment": receipt["environment"],
                     "arg": args_list[i]
                 }
                 rsps = self.__load_remote_file(bucket, f"{prefix}/result{i}.json")
@@ -69,7 +69,7 @@ class Tool:
                 except Exception as e:
                     result |= {
                         "status": JobStatus.UNSUPPORTED,
-                        "rsps": rsps
+                        "result": rsps
                     }
             except Exception as e:
                 result = {
@@ -162,16 +162,17 @@ class Tool:
         pending = 0
         errors = 0
         for name,submission in self.database.submissions.items():
-            try:
-                if submission["complete"]:
-                    for result in submission["results"]:
+            if self.args.name and self.args.name != name: continue
+            if submission["complete"]:
+                for result in submission["results"]:
+                    try:
                         stats[result["status"]] += 1
                         duration["total"] += result["duration"]
-                    processed += 1
-                else:
-                    pending += 1
-            except Exception as e:
-                errors += 1
+                        processed += 1
+                    except Exception as e:
+                        errors += 1
+            else:
+                pending += 1
         if processed > 0:
             duration["avg"] = duration["total"] / processed
         print("Processed:", processed)
@@ -192,20 +193,20 @@ class Tool:
 
 def main():
 
-    # options shared by every subcommand; parents= lets them appear after the command name
-    common = argparse.ArgumentParser(add_help=False)
-    common.add_argument('--database',   type=Path,              default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
-    common.add_argument('--queue',      type=QueuePriority,     default=QueuePriority.DEFAULT, choices=list(QueuePriority))
-    common.add_argument('--verbose',    action='store_true',    default=False)
-    common.add_argument('--dryrun',     action='store_true',    default=False)
-
     # command line arguments
     parser = argparse.ArgumentParser(prog="sliderule-runner", description="""SlideRule Runner""")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    # options shared by every subcommand; parents= lets them appear after the command name
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument('--database',   type=Path,                  default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
+    common.add_argument('--queue',      type=QueuePriority,         default=QueuePriority.DEFAULT, choices=list(QueuePriority))
+    common.add_argument('--verbose',    action='store_true',        default=False)
+    common.add_argument('--dryrun',     action='store_true',        default=False)
+
     # archive
     archive = subparsers.add_parser("archive", parents=[common], help="save and clear the database")
-    archive.add_argument('archive', metavar="<full path to archive file>")
+    archive.add_argument('archive',     metavar="<full path to archive file>")
     archive.set_defaults(func=Tool.archive_database)
 
     # submit
@@ -232,6 +233,7 @@ def main():
 
     # report
     report = subparsers.add_parser("report", parents=[common], help="generate report of submitted jobs")
+    report.add_argument('--name',       type=str,                   default=None) # name of submission
     report.set_defaults(func=Tool.generate_report)
 
     # parse command line
