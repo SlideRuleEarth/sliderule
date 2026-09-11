@@ -1,3 +1,10 @@
+#
+# New releases of the 3DEP stac parquet file can be found here:
+#   https://github.com/uw-cryo/stac-3dep-1m/releases
+#
+# Once the duckdb database is generated, the db_file should be uploaded to:
+#   s3://sliderule/cf/ams/
+
 import os
 import sys
 import time
@@ -5,13 +12,12 @@ import argparse
 import tempfile
 import duckdb
 import geopandas as gpd
-from shapely.geometry import Polygon
 
 # -------------------------------------------
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""3DEP""")
-parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/3dep_catalog_v3.parquet")
+parser.add_argument('--parquet_file',   type=str,   default="/data/3DEP/3dep_catalog_v2026.09.01.parquet")
 parser.add_argument('--db_file',        type=str,   default="/data/3dep.db")
 args = parser.parse_args()
 
