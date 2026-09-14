@@ -51,6 +51,7 @@
 # The following prerequisites must be installed and configured in your environment:
 #
 #	- SlideRule Command Line Interface (sliderule-cli)
+# 		Go to the clients/python directory and execute `pip install .`
 #		Go to the clients/cli directory and execute `pip install .`
 #   - GitHub command line client (gh)
 #       See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
