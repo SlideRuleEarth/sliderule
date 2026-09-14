@@ -15,6 +15,7 @@ progress = ["tqdm"]
 
 [project.scripts]
 sliderule-cluster = "sliderule_cluster.main:main"
+sliderule-provisioner = "sliderule_provisioner.main:main"
 sliderule-runner = "sliderule_runner.main:main"
 
 [tool.setuptools.packages.find]

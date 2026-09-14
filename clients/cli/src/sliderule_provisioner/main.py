@@ -59,7 +59,7 @@ class Tool:
 
     # Report
     def report(self):
-        return {k[0]:self.__display_concise(k[1]) for k in self.session.provisioner.report(kind=self.args.report).items()}
+        return {k[0]:self.__display_concise(k[1]) for k in self.session.provisioner.report(kind=self.args.kind).items()}
 
     # Test
     def test(self):
