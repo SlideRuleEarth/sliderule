@@ -290,10 +290,6 @@ job: ## execute the job runner locally
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 	$(INSTALLDIR)/bin/sliderule $(ROOT)/apps/node/scripts/job_runner.lua $(ARGS)
 
-python: ## update python client in sliderule environment
-	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/clients/python && pip install .'
-
 selftest: ## run the self test on the node code
 	make run RUN_CMD=$(ROOT)/apps/node/scripts/test_runner.lua
 
@@ -341,8 +337,8 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	cd $(SLIDERULE_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) .
 
 sliderule-test: ## run python client tests
-	conda run -n ams --no-capture-output \
-	sh -c 'cd $(ROOT)/apps/ams && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
+	conda run -n sliderule --no-capture-output \
+	sh -c 'cd $(ROOT)/clients/python && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
 
 sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
 	make run RUN_CMD="$(ROOT)/apps/node/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
@@ -420,8 +416,7 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <$(PUBLIC_CLUSTER)-$(TIMESTAMP)>"
-	conda run -n sliderule --no-capture-output \
-	sh -c 'sliderule-provisioner --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest'
+	sliderule-provisioner --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
@@ -612,31 +607,6 @@ provisioner-update: provisioner-build ## updates the lambda provisioner function
 
 provisioner-logs: ## display logs for recent provisioner invocations
 	aws logs tail /aws/lambda/$(PROVISIONER_STACKNAME)-gateway --since 2h --format short
-
-provisioner-run: ## run local command line tool provided by provisioner
-	STACK_NAME=$(PROVISIONER_STACKNAME) \
-	VERSION=$(VERSION) \
-	IS_PUBLIC=$(IS_PUBLIC) \
-	DOMAIN=$(DOMAIN) \
-	PUBLIC_CLUSTER=$(PUBLIC_CLUSTER) \
-	CLUSTER=$(CLUSTER) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
-	DESTROY_LAMBDA_ARN=$(DESTROY_LAMBDA_ARN) \
-	SCHEDULE_LAMBDA_ARN=$(SCHEDULE_LAMBDA_ARN) \
-	NODE_CAPACITY=$(NODE_CAPACITY) \
-	TTL=$(TTL) \
-	ALERT_STREAM=$(ALERT_STREAM) \
-	TELEMETRY_STREAM=$(TELEMETRY_STREAM) \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
-	JWT_ISSUER=$(JWT_ISSUER) \
-	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
-    ALERT_EMAIL=$(ALERT_EMAIL) \
-	AWS_REGION=$(AWS_REGION) \
-	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/apps/provisioner && python provisioner.py $(ARGS)'
 
 provisioner-test: ## run provisioner tests
 	conda run -n provisioner --no-capture-output \

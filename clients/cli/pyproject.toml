@@ -7,7 +7,7 @@ name = "sliderule-cli"
 version = "0.1.0"
 description = "SlideRule command line tool"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = ["sliderule", "boto3"]
 
 [project.optional-dependencies]
