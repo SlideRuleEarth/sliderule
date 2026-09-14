@@ -181,6 +181,14 @@ class Tool:
         print("Status:", json.dumps(stats, indent=2))
         print("Duration:", json.dumps(duration, indent=2))
 
+    # Cancel Job
+    def cancel_job(self):
+        name = self.args.name
+        queue = self.args.queue
+        job_id = self.database.submissions[name]["job_id"]
+        rsps = self.session.runner.cancel(job_list=[job_id], queue=queue)
+        print(f"Cancelled submission {name}: {rsps}")
+
     # Finish
     def finish(self):
         if not self.args.dryrun:
@@ -235,6 +243,11 @@ def main():
     report = subparsers.add_parser("report", parents=[common], help="generate report of submitted jobs")
     report.add_argument('--name',       type=str,                   default=None) # name of submission
     report.set_defaults(func=Tool.generate_report)
+
+    # cancel
+    cancel = subparsers.add_parser("cancel", parents=[common], help="cancel a submitted job")
+    cancel.add_argument('--name',       type=str,                   required=True) # name of submission
+    cancel.set_defaults(func=Tool.cancel_job)
 
     # parse command line
     args = parser.parse_args()

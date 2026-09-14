@@ -418,54 +418,10 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 	docker push $(CONTAINER_REGISTRY)/monitor-agent:$(VERSION)
 	docker push $(CONTAINER_REGISTRY)/ams:$(VERSION)
 
-cluster-deploy: ## invokes the provisioner *deploy* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --is_public $(IS_PUBLIC) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --version $(VERSION) --commands deploy'
-
-cluster-extend: ## invokes the provisioner *extend* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --commands extend'
-
-cluster-expand: ## invokes the provisioner *deploy* lambda function for a user asg and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --node_capacity $(NODE_CAPACITY) --ttl $(TTL) --commands deploy --user_service'
-
-cluster-destroy: ## invokes the provisioner *destroy* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy'
-
-cluster-contract: ## invokes the provisioner *destroy* lambda function for a user asg and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands destroy --user_service'
-
-cluster-status: ## invokes the provisioner *status* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands status --concise --asjson'
-
-cluster-events: ## invokes the provisioner *events* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands events'
-
-cluster-report: ## invokes the provisioner *report* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --commands report --concise --asjson'
-
-cluster-version: ## calls the cluster version API and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands version --asjson'
-
-cluster-info: ## returns metadata associated with the user token
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands info --asjson'
-
-cluster-authenticate: ## refreshes the user's authorization token with a new authorization cycle
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands authenticate'
-
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <$(PUBLIC_CLUSTER)-$(TIMESTAMP)>"
 	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest --commands deploy'
+	sh -c 'sliderule-provisioner --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest'
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
@@ -491,30 +447,6 @@ cluster-direct-resources: ## list resources associated with cluster that are pre
 	aws cloudformation describe-stack-resources --stack-name $(CLUSTER)-cluster \
 		--query 'StackResources[?ResourceStatus!=`DELETE_COMPLETE`].[LogicalResourceId,ResourceStatus,ResourceType]' \
 		--output table
-
-########################
-# Test Runner Targets
-########################
-#	- Requires the provisioner to be created
-#	- The provisioner provides lambdas that are used to destroy the testrunner stack
-#	- The testrunner automatically destroys itself after one hour
-
-testrunner-describe: ## status the creation/deletion of the test runner
-	aws cloudformation describe-stack-events --stack-name $(TESTRUNNER_STACKNAME)
-
-testrunner-delete: ## deletes the test runner and any lingering event bridge rules (debug only)
-	aws cloudformation delete-stack --stack-name $(TESTRUNNER_STACKNAME)
-	aws cloudformation wait stack-delete-complete --stack-name $(TESTRUNNER_STACKNAME)
-	- aws events remove-targets --rule $(TESTRUNNER_STACKNAME)-auto-delete --ids 1
-	- aws events delete-rule --name $(TESTRUNNER_STACKNAME)-auto-delete
-
-testrunner-report: ## invokes the provisioner *report* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c '	python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --commands report --report tests --asjson'
-
-testrunner-run: ## invokes the provisioner *test* lambda function and displays the response
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --domain $(DOMAIN) --cluster $(CLUSTER) --branch main --commands test'
 
 ########################
 # Recorder Targets
@@ -771,34 +703,8 @@ runner-delete: ## deletes the lambda runner functions
 	aws cloudformation delete-stack --stack-name $(RUNNER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(RUNNER_STACKNAME)
 
-runner-jobs-inprogress: ## displays all inprogress jobs
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUBMITTED PENDING RUNNABLE STARTING RUNNING"'
-
-runner-jobs-finished: ## displays all finished jobs
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_queue --args "SUCCEEDED FAILED"'
-
-runner-cancel-all: ## cancels all jobs
-	conda run -n sliderule --no-capture-output \
-	sh -c 'python $(PYTHON_CLIENT_DIR)/utils/srcli.py --commands job_cancel_all'
-
 runner-logs: ## display logs from recent runner invocations
 	aws logs tail /aws/lambda/$(RUNNER_STACKNAME)-gateway --since 2h --format short
-
-runner-run: ## execute a local runner command line tool
-	STACK_NAME=$(RUNNER_STACKNAME) \
-	DOMAIN=$(DOMAIN) \
-	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	PROJECT_PUBLIC_BUCKET=$(PROJECT_PUBLIC_BUCKET) \
-	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	ENVIRONMENT_VERSION=$(ENVIRONMENT_VERSION) \
-	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
-    ALERT_EMAIL=$(ALERT_EMAIL) \
-	AWS_REGION=$(AWS_REGION) \
-	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/apps/runner && python runner.py $(ARGS)'
 
 runner-test: ## run runner tests
 	conda run -n runner --no-capture-output \
