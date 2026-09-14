@@ -96,7 +96,7 @@ def main():
     # deploy
     deploy = subparsers.add_parser("deploy", parents=[common], help="deploy a cluster (stand-alone or as user capacity)")
     deploy.add_argument('--is_public',      type=str,   default="false")
-    deploy.add_argument('--node_capacity',  type=int,   default=None)
+    deploy.add_argument('--node_capacity',  type=int,   default=1)
     deploy.add_argument('--ttl',            type=int,   default=60) # 1 hour
     deploy.add_argument('--version',        type=str,   default="unstable")
     deploy.set_defaults(func=Tool.deploy)
