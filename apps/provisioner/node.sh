@@ -27,7 +27,7 @@ systemctl start docker
 usermod -aG docker ec2-user
 
 # Install Docker Compose V2
-retry curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose
+aws s3 cp s3://$PROJECT_BUCKET/$PROJECT_FOLDER/docker-compose-v5.5.1 /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 mkdir -p /usr/local/lib/docker/cli-plugins
 ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
