@@ -1,6 +1,8 @@
 import json
+import uuid
+import tempfile
 import argparse
-from datetime import datetime
+from pathlib import Path
 from sliderule import sliderule
 
 #########################################
@@ -19,6 +21,30 @@ class Tool:
         if reformat:
             result = json.dumps(result, indent=2)
         print(f'{self.args.cluster}.{self.args.domain} [{self.session.service}]: {result}')
+
+    # get_parms
+    def __get_parms(self, parms):
+        if self.args.json:
+            with open(self.args.json, "r") as file:
+                parms = json.load(file) # override
+        return parms
+
+    # get_poly
+    def __get_poly(self):
+        if self.args.poly:
+            return sliderule.toregion(self.args.poly)["poly"]
+        elif self.args.geojson:
+            return sliderule.toregion(self.args.geojson)["poly"]
+        elif self.args.bbox:
+            return sliderule.toregion(self.args.bbox)["poly"]
+        else:
+            return None
+
+    # get_output_path
+    def __get_output_path(self):
+        outputdir = self.args.outputdir and self.args.outputdir or tempfile.gettempdir()
+        filename = self.args.filename and self.args.filename or uuid.uuid4()
+        return str(Path(outputdir) / f"{filename}.{self.args.format}")
 
     # whoami
     def whoami(self):
@@ -52,24 +78,38 @@ class Tool:
 
     # earthdata
     def earthdata(self):
-        if self.args.poly:
-            poly = sliderule.toregion(self.args.poly)["poly"]
-        elif self.args.geojson:
-            poly = sliderule.toregion(self.args.geojson)["poly"]
-        elif self.args.bbox:
-            poly = sliderule.toregion(self.args.bbox)["poly"]
-        else:
-            poly = None
-        parms = { k: v for k, v in {
+        parms = self.__get_parms({ k: v for k, v in {
             "asset": self.args.asset,
             "short_name": self.args.short_name,
-            "poly": poly,
+            "poly": self.__get_poly(),
             "t0": self.args.t0,
             "t1": self.args.t1,
             "with_meta": self.args.with_meta,
             "name_filter": self.args.name_filter,
             "max_resources": self.args.max_resources
-        }.items() if v is not None }
+        }.items() if v is not None })
+        result = sliderule.source("earthdata", parms, rethrow=True, session=self.session)
+        self.__display_result(result, reformat=True)
+        return result
+
+    # atl03x
+    def atl03x(self):
+        parms = self.__get_parms({ k: v for k, v in {
+            "asset": self.args.asset,
+            "poly": self.__get_poly(),
+            "t0": self.args.t0,
+            "t1": self.args.t1,
+            "max_resources": self.args.max_resources,
+            "rgt": self.args.rgt,
+            "cycle": self.args.cycle,
+            "region": self.args.region,
+            "resources": self.args.resources,
+            "cnf": self.args.cnf,
+            "output": {
+                "path": self.__get_output_path(),
+                "format": self.args.format
+            }
+        }.items() if v is not None })
         result = sliderule.source("earthdata", parms, rethrow=True, session=self.session)
         self.__display_result(result, reformat=True)
         return result
@@ -86,7 +126,8 @@ def main():
     common.add_argument('--cluster',        type=str,               default="sliderule")
     common.add_argument('--user_service',   action='store_true',    default=False, help="uses dedicated user capacity")
     common.add_argument('--verbose',        action='store_true',    default=False, help="turns on verbose log messages")
-    common.add_argument('--output',         type=str,               default=None, help="file name to store output of command")
+    common.add_argument('--result',         type=str,               default=None, help="file name to store result of command")
+    common.add_argument('--json',           type=Path,              default=None, help="file containing json parameters to use in request")
 
     # options used in cluster processing requests
     params = argparse.ArgumentParser(add_help=False)
@@ -96,6 +137,11 @@ def main():
     params.add_argument('--bbox',           type=float, nargs='+',  default=None, help="bounding box defining the area of interest; e.g. lon_ll lat_ll lon_ur lat_ur")
     params.add_argument('--t0',             type=str,               default=None, help="start time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t0)
     params.add_argument('--t1',             type=str,               default=None, help="stop time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t1)
+    params.add_argument('--max_resources',  type=int,               default=None, help="maximum number of resources allowed to be returned by query; queries exceeding this number return an error")
+    params.add_argument('--outputdir',      type=str,               default=None, help="directory of returning dataframe output")
+    params.add_argument('--format',         type=str,               default="geoparquet", help="format returning dataframe output")
+    params.add_argument('--filename',       type=str,               default=None, help="filename of returning dataframe output")
+    params.add_argument('--resources',      type=str, nargs='+',    default=None, help="list of resources to process")
 
     # command line arguments
     parser = argparse.ArgumentParser(prog="sliderule-cluster", description="""SlideRule Cluster""")
@@ -122,8 +168,16 @@ def main():
     earthdata.add_argument('--short_name',      type=str,               default=None, help="CMR dataset name")
     earthdata.add_argument('--with_meta',       action='store_true',    default=False, help="return metadata along with query results")
     earthdata.add_argument('--name_filter',     type=str,               default=None, help="regular expression to evaluate against resource names returned by query")
-    earthdata.add_argument('--max_resources',   type=int,               default=None, help="maximum number of resources allowed to be returned by query, queries exceeding this number return an error")
     earthdata.set_defaults(func=Tool.earthdata)
+
+    # atl03x
+    atl03x = subparsers.add_parser("atl03x", parents=[common, params], help="ATL03 photon cloud processing")
+    atl03x.add_argument('--beams',              type=str, nargs='+',    default=['gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r'], help="beams to process")
+    atl03x.add_argument('--rgt',                type=int,               default=None, help="reference ground track")
+    atl03x.add_argument('--cycle',              type=int,               default=None, help="orbit cycle")
+    atl03x.add_argument('--region',             type=int,               default=None, help="region")
+    atl03x.add_argument('--cnf',                type=int,               default=None, help="signal confidence")
+    atl03x.set_defaults(func=Tool.atl03x)
 
     # parse command line
     args = parser.parse_args()
@@ -134,8 +188,8 @@ def main():
     # route command
     try:
         result = args.func(tool)
-        if args.output:
-            with open(args.output, "w") as file:
+        if args.result:
+            with open(args.result, "w") as file:
                 file.write(result)
     except Exception as e:
         if args.verbose: raise

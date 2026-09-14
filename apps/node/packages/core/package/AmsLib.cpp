@@ -63,7 +63,7 @@ void AmsLib::deinit (void)
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-AmsLib::rsps_t AmsLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
+AmsLib::rsps_t AmsLib::request (EndpointObject::verb_t verb, const char* resource, const char* data, int timeout)
 {
     // build headers
     CurlLib::hdrs_t headers;
@@ -74,7 +74,7 @@ AmsLib::rsps_t AmsLib::request (EndpointObject::verb_t verb, const char* resourc
     rsps_t rsps;
     const FString path("%s/ams/%s", SystemConfig::settings().ams.value.c_str(), resource);
     rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size,
-                                 false, false, CurlLib::DATA_TIMEOUT, &headers);
+                                 false, false, timeout, &headers);
 
     // return response
     return rsps;
@@ -98,6 +98,7 @@ int AmsLib::luaRequest(lua_State* L)
         const char* action = LuaObject::getLuaString(L, 1);
         const char* resource = LuaObject::getLuaString(L, 2);
         const char* data = LuaObject::getLuaString(L, 3, true, NULL);
+        const int timeout = LuaObject::getLuaInteger(L, 4, true, CurlLib::DATA_TIMEOUT);
 
         // translate verb
         const EndpointObject::verb_t verb = EndpointObject::str2verb(action);
@@ -107,7 +108,7 @@ int AmsLib::luaRequest(lua_State* L)
         }
 
         // make request
-        rsps = request(verb, resource, data);
+        rsps = request(verb, resource, data, timeout);
         if(rsps.code != EndpointObject::OK)
         {
             const char* errmsg = StringLib::find(rsps.response, "<p>");

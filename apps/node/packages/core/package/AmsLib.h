@@ -66,7 +66,7 @@ class AmsLib
         static void             init                (void);
         static void             deinit              (void);
 
-        static rsps_t           request             (EndpointObject::verb_t verb, const char* resource, const char* data);
+        static rsps_t           request             (EndpointObject::verb_t verb, const char* resource, const char* data, int timeout);
         static int              luaRequest          (lua_State* L);
 };
 

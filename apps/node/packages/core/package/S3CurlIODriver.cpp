@@ -623,90 +623,89 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     int attempts = ATTEMPTS_PER_REQUEST;
     long previous_index = 0;
     bool rqst_complete = false;
-    while(!rqst_complete && (attempts > 0))
+    while(!rqst_complete && (attempts-- > 0))
     {
         /* Build Standard Headers */
         struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials);
 
         /* Build Range Header */
-        const unsigned long start_byte = pos + info.index;
-        const unsigned long end_byte = pos + size - 1;
+        const uint64_t start_byte = pos + info.index;
+        const uint64_t end_byte = pos + size - 1;
         const FString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
         headers = curl_slist_append(headers, rangeHeader.c_str());
 
         /* Initialize cURL Request */
         CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteFixed), &info);
-        if(curl)
+        if(!curl)
         {
-            while(!rqst_complete && (attempts-- > 0))
-            {
-                /* Perform Request */
-                const CURLcode res = curl_easy_perform(curl);
-                if(res == CURLE_OK)
-                {
-                    /* Get HTTP Code */
-                    long http_code = 0;
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-                    if(http_code < 300)
-                    {
-                        /* Request Succeeded */
-                        status = true;
-                    }
-                    else
-                    {
-                        /* Request Failed */
-                        if(info.index > 0)
-                        {
-                            StringLib::printify(reinterpret_cast<char*>(info.buffer), info.index);
-                            mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
-                        }
-                        mlog(ERROR, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
-                    }
+            mlog(CRITICAL, "Failed to initialize cURL; aborting request!");
+            curl_slist_free_all(headers);
+            break;
+        }
 
-                    /* Get Request Completed */
+        /* Perform Request */
+        const CURLcode res = curl_easy_perform(curl);
+        if(res == CURLE_OK) // cURL succeeded
+        {
+            long http_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if(http_code < 300)
+            {
+                /* Request Succeeded */
+                rqst_complete = true;
+                status = true;
+            }
+            else if(http_code == 429 || http_code >= 500)
+            {
+                /* Request Temporarily Failed */
+                mlog(ERROR, "S3 get/%d returned transient http error <%ld>: %s", ATTEMPTS_PER_REQUEST - attempts,http_code, key_ptr);
+                OsApi::performIOTimeout();
+            }
+            else
+            {
+                /* Request Failed */
+                if(info.index > 0)
+                {
+                    StringLib::printify(reinterpret_cast<char*>(info.buffer), info.index);
+                    mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
+                }
+                mlog(ERROR, "S3 get/%d returned fatal http error <%ld>: %s", ATTEMPTS_PER_REQUEST - attempts,http_code, key_ptr);
+                rqst_complete = true; // exit on these errors
+            }
+        }
+        else // cURL detected an error
+        {
+            /* Calculate Bytes Read */
+            const long bytes_read = info.index - previous_index;
+            previous_index = info.index;
+
+            /* Handle Error Cases */
+            if(bytes_read > 0)
+            {
+                mlog(WARNING, "cURL/%d warning (%d) encountered after partial response (%ld): %s", ATTEMPTS_PER_REQUEST - attempts, res, info.index, key_ptr);
+                attempts++; // don't count partial reads as an attempt
+                const int64_t accumulated_read_time = TimeLib::gpstime() - gps_start;
+                if(accumulated_read_time > (READ_TIMEOUT * 1000))
+                {
+                    mlog(ERROR, "S3 cURL I/O driver timed out after %ld bytes reading %s", info.index, key_ptr);
                     rqst_complete = true;
                 }
-                else
-                {
-                    /* Calculate Bytes Read */
-                    const long bytes_read = info.index - previous_index;
-                    previous_index = info.index;
-
-                    /* Handle Error Cases */
-                    if(bytes_read > 0)
-                    {
-                        mlog(WARNING, "cURL/%d warning (%d) encountered after partial response (%ld): %s", ATTEMPTS_PER_REQUEST - attempts, res, info.index, key_ptr);
-                        attempts++; // don't count partial reads as an attempt
-                        const int64_t accumulated_read_time = TimeLib::gpstime() - gps_start;
-                        if(accumulated_read_time > (READ_TIMEOUT * 1000))
-                        {
-                            mlog(ERROR, "S3 cURL I/O driver timed out after %ld bytes reading %s", info.index, key_ptr);
-                            rqst_complete = true;
-                        }
-                    }
-                    else if(res == CURLE_OPERATION_TIMEDOUT)
-                    {
-                        mlog(ERROR, "cURL/%d call timed out (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
-                    }
-                    else // unexpected issue
-                    {
-                        mlog(ERROR, "cURL/%d call failed (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
-                    }
-                    OsApi::performIOTimeout();
-                    break; // re-initialize headers (with potentially updated range) and try again
-                }
+            }
+            else if(res == CURLE_OPERATION_TIMEDOUT)
+            {
+                mlog(ERROR, "cURL/%d call timed out (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
+            }
+            else // unexpected issue
+            {
+                mlog(ERROR, "cURL/%d call failed (%d) for request: %s", ATTEMPTS_PER_REQUEST - attempts, res, key_ptr);
             }
 
-            /* Clean Up cURL */
-            curl_easy_cleanup(curl);
-        }
-        else
-        {
-            /* Decrement Attempts on Failed cURL Initialization */
-            attempts--;
+            /* Backoff */
+            OsApi::performIOTimeout();
         }
 
-        /* Clean Up Headers */
+        /* Clean Up cURL */
+        curl_easy_cleanup(curl);
         curl_slist_free_all(headers);
     }
 
@@ -716,8 +715,14 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         throw RunTimeException(ERROR, RTE_FAILURE, "cURL fixed request to S3 failed");
     }
 
-    /* Return Success */
-    return size;
+    /* Warn on Incomplete Read */
+    if(info.index != size)
+    {
+        mlog(WARNING, "Read only %ld of %ld requested bytes", info.index, size);
+    }
+
+    /* Return Bytes Read */
+    return info.index;
 }
 
 /*----------------------------------------------------------------------------

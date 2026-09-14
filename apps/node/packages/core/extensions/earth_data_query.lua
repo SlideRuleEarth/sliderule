@@ -507,7 +507,8 @@ local function ams (parms, poly, _with_meta, _short_name)
     ams_parms["region"]         = ams_parms["region"] or parms["region"] -- backwards compatibility
 
     -- make request and process response
-    local response, status = core.ams("POST", endpoint, json.encode(ams_parms))
+    local timeout = ams_parms["timeout"] or parms["timeout"]
+    local response, status = core.ams("POST", endpoint, json.encode(ams_parms), timeout)
     if status then
         local rc, data = pcall(json.decode, response)
         if rc then

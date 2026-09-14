@@ -2,7 +2,7 @@
 -- main
 -------------------------------------------------------
 local function main()
-    return core.ams("POST", _rqst.arg, arg[1])
+    return core.ams("POST", _rqst.arg, arg[1]) -- TODO: this does not pull out timeout from parameters and use it in request
 end
 
 -------------------------------------------------------
