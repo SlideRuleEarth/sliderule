@@ -12,10 +12,12 @@ dependencies = ["sliderule", "boto3"]
 
 [project.optional-dependencies]
 progress = ["tqdm"]
+recorder = ["geoip2", "pillow", "matplotlib"]
 
 [project.scripts]
 sliderule-cluster = "sliderule_cluster.main:main"
 sliderule-provisioner = "sliderule_provisioner.main:main"
+sliderule-recorder = "sliderule_recorder.main:main"
 sliderule-runner = "sliderule_runner.main:main"
 
 [tool.setuptools.packages.find]

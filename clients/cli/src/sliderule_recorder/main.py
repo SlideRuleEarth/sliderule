@@ -25,12 +25,13 @@ parser = argparse.ArgumentParser(
         "  python usage_report.py --start \"2026-01-10\"\n"
     )
 )
-parser.add_argument('--start',          type=str,   required=True, help='start is required as ISO datetime string YYYY-MM-DD HH:MM:SS)') #
-parser.add_argument('--end',            type=str,   default=f'{datetime.now()}') # optional ISO datetime string
-parser.add_argument('--grid_aoi',       type=str,   default="/data/web/sliderule_aoi_grid.png")
-parser.add_argument('--grid_usage',     type=str,   default="/data/web/sliderule_usage_grid.png")
-parser.add_argument('--geonames',       type=str,   default="/data/geopy/cities500.txt") # from http://download.geonames.org/export/dump/cities500.zip
-parser.add_argument('--country_info',   type=str,   default="/data/geopy/countryInfo.txt") # from http://download.geonames.org/export/dump/countryInfo.txt
+parser.add_argument('--start',          type=str,               required=True, help='start is required as ISO datetime string YYYY-MM-DD HH:MM:SS)') #
+parser.add_argument('--end',            type=str,               default=f'{datetime.now()}') # optional ISO datetime string
+parser.add_argument('--grid',           action='store_true',    default=False, help="generates grids")
+parser.add_argument('--grid_aoi',       type=str,               default="/data/web/sliderule_aoi_grid.png")
+parser.add_argument('--grid_usage',     type=str,               default="/data/web/sliderule_usage_grid.png")
+parser.add_argument('--geonames',       type=str,               default="/data/geopy/cities500.txt") # from http://download.geonames.org/export/dump/cities500.zip
+parser.add_argument('--country_info',   type=str,               default="/data/geopy/countryInfo.txt") # from http://download.geonames.org/export/dump/countryInfo.txt
 args = parser.parse_args()
 
 # -------------------------------------------
@@ -474,54 +475,59 @@ def display_stats(title, stats, sort_values=False):
 # -------------------------------------------
 # main
 # -------------------------------------------
+def main():
 
-# build needed athena partitions to handle request
-start_dt    = datetime.fromisoformat(args.start)
-end_dt      = datetime.fromisoformat(args.end)
-days        = pd.date_range(start_dt.date(), end_dt.date(), freq='D').date.tolist()
-expected    = [f"year={d.year:04d}/month={d.month:02d}/day={d.day:02d}" for d in days]
-ensure_partitions_for_range(TELEMETRY_TABLE, expected, 'telemetry', start_dt, end_dt)
-ensure_partitions_for_range(ALERTS_TABLE, expected, 'alerts', start_dt, end_dt)
+    # build needed athena partitions to handle request
+    start_dt    = datetime.fromisoformat(args.start)
+    end_dt      = datetime.fromisoformat(args.end)
+    days        = pd.date_range(start_dt.date(), end_dt.date(), freq='D').date.tolist()
+    expected    = [f"year={d.year:04d}/month={d.month:02d}/day={d.day:02d}" for d in days]
+    ensure_partitions_for_range(TELEMETRY_TABLE, expected, 'telemetry', start_dt, end_dt)
+    ensure_partitions_for_range(ALERTS_TABLE, expected, 'alerts', start_dt, end_dt)
 
-# query for usage statistics
-telemetry_table                 = f'"{GLUE_DATABASE}".{TELEMETRY_TABLE}'
-alerts_table                    = f'"{GLUE_DATABASE}".{ALERTS_TABLE}'
-where_clause                    = build_where_clause(start_dt, end_dt, days)
-time_stats                      = get_timespan(telemetry_table, where_clause)
-unique_ip_counts                = value_counts(telemetry_table, 'source_ip', where_clause)
-source_location_counts          = build_location_counts(unique_ip_counts)
-client_counts                   = value_counts(telemetry_table, 'client', where_clause)
-endpoint_counts                 = value_counts(telemetry_table, 'endpoint', where_clause)
-telemetry_status_code_counts    = value_counts(telemetry_table, 'code', where_clause)
-alert_status_code_counts        = value_counts(alerts_table, 'code', where_clause)
-summary = {
-    'Start':                        time_stats["start"].strftime("%Y-%m-%d %H:%M:%S"),
-    'End':                          time_stats["end"].strftime("%Y-%m-%d %H:%M:%S"),
-    'Duration':                     f'{time_stats['span'].days} days, {(time_stats['span'].total_seconds() / 3600) % 24:.2f} hours',
-    'Unique IPs':                   len(unique_ip_counts),
-    'Unique Locations':             len(source_location_counts),
-    'Total Requests':               sum_counts(endpoint_counts),
-    'Python Client Requests':       sum_counts(client_counts, match_str="python"),
-    'Web Client Requests':          sum_counts(client_counts, match_str="web"),
-    'Unknown Client Requests':      sum_counts(client_counts, match_str="unknown"),
-    'ICESat-2 Granules Processed':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
-    'ICESat-2 Proxied Requests':    sum_counts(endpoint_counts, ICESAT2_PROXY_ENDPOINTS),
-    'GEDI Granules Processed':      sum_counts(endpoint_counts, GEDI_ENDPOINTS),
-    'GEDI Proxied Requests':        sum_counts(endpoint_counts, GEDI_PROXY_ENDPOINTS)
-}
+    # query for usage statistics
+    telemetry_table                 = f'"{GLUE_DATABASE}".{TELEMETRY_TABLE}'
+    alerts_table                    = f'"{GLUE_DATABASE}".{ALERTS_TABLE}'
+    where_clause                    = build_where_clause(start_dt, end_dt, days)
+    time_stats                      = get_timespan(telemetry_table, where_clause)
+    unique_ip_counts                = value_counts(telemetry_table, 'source_ip', where_clause)
+    source_location_counts          = build_location_counts(unique_ip_counts)
+    client_counts                   = value_counts(telemetry_table, 'client', where_clause)
+    endpoint_counts                 = value_counts(telemetry_table, 'endpoint', where_clause)
+    telemetry_status_code_counts    = value_counts(telemetry_table, 'code', where_clause)
+    alert_status_code_counts        = value_counts(alerts_table, 'code', where_clause)
+    summary = {
+        'Start':                        time_stats["start"].strftime("%Y-%m-%d %H:%M:%S"),
+        'End':                          time_stats["end"].strftime("%Y-%m-%d %H:%M:%S"),
+        'Duration':                     f'{time_stats['span'].days} days, {(time_stats['span'].total_seconds() / 3600) % 24:.2f} hours',
+        'Unique IPs':                   len(unique_ip_counts),
+        'Unique Locations':             len(source_location_counts),
+        'Total Requests':               sum_counts(endpoint_counts),
+        'Python Client Requests':       sum_counts(client_counts, match_str="python"),
+        'Web Client Requests':          sum_counts(client_counts, match_str="web"),
+        'Unknown Client Requests':      sum_counts(client_counts, match_str="unknown"),
+        'ICESat-2 Granules Processed':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
+        'ICESat-2 Proxied Requests':    sum_counts(endpoint_counts, ICESAT2_PROXY_ENDPOINTS),
+        'GEDI Granules Processed':      sum_counts(endpoint_counts, GEDI_ENDPOINTS),
+        'GEDI Proxied Requests':        sum_counts(endpoint_counts, GEDI_PROXY_ENDPOINTS)
+    }
 
-# display usage statistics
-display_stats('Source Locations', source_location_counts, True)
-display_stats('Clients', client_counts, True)
-display_stats('Endpoints', endpoint_counts, True)
-display_stats('Request Codes', telemetry_status_code_counts, True)
-display_stats('Alert Codes', alert_status_code_counts, True)
-display_stats('Summary', summary, False)
+    # display usage statistics
+    display_stats('Source Locations', source_location_counts, True)
+    display_stats('Clients', client_counts, True)
+    display_stats('Endpoints', endpoint_counts, True)
+    display_stats('Request Codes', telemetry_status_code_counts, True)
+    display_stats('Alert Codes', alert_status_code_counts, True)
+    display_stats('Summary', summary, False)
 
-# grid requests
-usage_grid(source_location_counts, args.grid_usage)
-aoi_sql_grid(telemetry_table, where_clause, args.grid_aoi)
-display_stats('Globe', {
-    'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
-    'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
-}, False)
+    # grid requests
+    if args.grid:
+        usage_grid(source_location_counts, args.grid_usage)
+        aoi_sql_grid(telemetry_table, where_clause, args.grid_aoi)
+        display_stats('Globe', {
+            'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
+            'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
+        }, False)
+
+# running via direct invocation
+if __name__ == "__main__": main()
