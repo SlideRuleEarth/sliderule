@@ -30,7 +30,7 @@ return {
     parms = parms,
     name = "CASALS 1B Dataframe",
     description = "Spatially and temporally subsets CASALS 1B waveforms (x-series)",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

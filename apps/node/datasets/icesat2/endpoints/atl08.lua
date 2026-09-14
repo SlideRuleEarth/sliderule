@@ -31,7 +31,7 @@ return {
     parms = parms,
     name = "ATL08 PhoReal Vegetation Metrics",
     description = "Generates ATL08-like vegetation metrics using user supplied processing parameters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

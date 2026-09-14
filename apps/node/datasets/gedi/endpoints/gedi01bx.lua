@@ -33,7 +33,7 @@ return {
     parms = parms,
     name = "GEDI 1B Dataframe",
     description = "Spatially and temporally subsets waveforms from multiple GEDI 1B granules with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

@@ -70,7 +70,7 @@ class LuaObject
 
         static const char* BASE_OBJECT_TYPE;
         static const int SIGNAL_COMPLETE = 0;
-        static const int DEFAULT_WAIT_INTERVAL = 10000;
+        static const int DEFAULT_WAIT_INTERVAL = 30000;
 
         /*--------------------------------------------------------------------
          * Typedefs

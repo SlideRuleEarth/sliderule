@@ -22,7 +22,7 @@ return {
     parms = parms,
     name = "ATL06-SR Parallel",
     description = "Generates ATL06 elevations using user supplied processing parameters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

@@ -66,7 +66,7 @@ return {
     parms = parms,
     name = "Raster Sampler",
     description = "Return samples from a raster dataset given a (set of) latitude(s) and longitude(s)",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

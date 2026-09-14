@@ -48,7 +48,7 @@ return {
     parms = parms,
     name = "Events",
     description = "List system events that occur for given duration",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {"member", "owner"},
     signed = false,
     inputs = {"json"},

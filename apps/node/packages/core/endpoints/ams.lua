@@ -13,7 +13,7 @@ return {
     parms = nil,
     name = "Asset Metadata Service",
     description = "Pass-through to Asset Metadata Service API",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

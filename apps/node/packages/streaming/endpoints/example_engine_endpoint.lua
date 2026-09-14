@@ -23,7 +23,7 @@ return {
     parms = parms,
     name = "Example Binary Endpoint",
     description = "Used by http_server selftest",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

@@ -31,7 +31,7 @@ return {
     parms = parms,
     name = "H5Coro Dataset Read",
     description = "Read values from an HDF5 object using an H5Coro streaming dataset reader",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

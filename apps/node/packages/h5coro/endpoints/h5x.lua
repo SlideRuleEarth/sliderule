@@ -103,7 +103,7 @@ return {
     parms = parms,
     name = "H5Coro Dataframe",
     description = "Read values from an HDF5 object using an H5Coro dataframe reader",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

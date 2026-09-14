@@ -46,7 +46,7 @@ return {
     parms = parms,
     name = "ATL08 Dataframe",
     description = "Spatially and temporally subsets ATL08 granules vegetation metrics with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

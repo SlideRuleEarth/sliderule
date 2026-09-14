@@ -33,7 +33,7 @@ return {
     parms = parms,
     name = "GEDI 4A Dataframe",
     description = "Spatially and temporally subsets above ground biomass density from multiple GEDI 4A granules with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

@@ -22,7 +22,7 @@ return {
     parms = parms,
     name = "GEDI 2A Parallel Subsetter",
     description = "Spatially and temporally subsets elevations from multiple GEDI 2A granules with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

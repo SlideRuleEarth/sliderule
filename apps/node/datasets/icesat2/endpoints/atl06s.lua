@@ -29,7 +29,7 @@ return {
     parms = parms,
     name = "ATL06 Subsetter",
     description = "Spatially and temporally subsets single ATL06 granule elevations with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

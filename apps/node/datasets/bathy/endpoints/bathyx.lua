@@ -43,7 +43,7 @@ return {
     parms = parms,
     name = "Bathymetry Dataframe",
     description = "Generate custom bathymetry data using parameters supplied in the request (x-series)",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

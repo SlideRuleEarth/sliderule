@@ -63,7 +63,7 @@ return {
     parms = parms,
     name = "ATL13 Dataframe",
     description = "Spatially and temporally subsets ATL13 granule lake metrics with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

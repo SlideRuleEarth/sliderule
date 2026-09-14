@@ -52,7 +52,7 @@ return {
     parms = parms,
     name = "ATL03 Indexer",
     description = "Generate spatial/temporal index records for a set of ATL03 granules",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

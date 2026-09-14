@@ -29,7 +29,7 @@ return {
     parms = parms,
     name = "ATL03 Subsetter",
     description = "Spatially and temporally subsets single ATL03 photon cloud with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

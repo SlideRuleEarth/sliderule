@@ -34,7 +34,7 @@ local function config_leap_seconds ()
     local leap_seconds_service = "https://data.iana.org/time-zones/tzdb/leap-seconds.list"
     core.download(leap_seconds_service, leap_seconds_file)
     if sys.upleap(leap_seconds_file) then
-        sys.log(core.CRITICAL, "Successfully updated leap seconds from "..leap_seconds_service)
+        sys.log(core.INFO, "Successfully updated leap seconds from "..leap_seconds_service)
     end
 end
 
@@ -58,12 +58,12 @@ local function config_earth_data (credentials_to_maintain)
             sys.log(core.CRITICAL, "Failed to establish IAM role credentials at startup")
             break
         else
-            sys.log(core.CRITICAL, "Waiting to establish IAM role...")
+            sys.log(core.INFO, "Waiting to establish IAM role...")
             sys.wait(1)
         end
     end
     if core.csget("iam-role") then
-        sys.log(core.CRITICAL, "IAM role established")
+        sys.log(core.INFO, "IAM role established")
     end
     -- run earth data authentication scripts
     if sys.getcfg("authenticate_to_nsidc") then
@@ -97,7 +97,7 @@ local function wait_credentials (credential, timeout)
             sys.log(core.CRITICAL, string.format("failed to establish credentials for %s", credential))
             return false
         end
-        sys.log(core.CRITICAL, string.format("waiting to establish credentials for %s ... %d remaining", credential, seconds_remaining))
+        sys.log(core.WARNING, string.format("waiting to establish credentials for %s ... %d remaining", credential, seconds_remaining))
         sys.wait(1)
     end
     return true

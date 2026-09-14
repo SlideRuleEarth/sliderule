@@ -28,7 +28,7 @@ return {
     parms = parms,
     name = "H5Coro File Read",
     description = "Read values from an HDF5 object using an H5Coro file reader",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

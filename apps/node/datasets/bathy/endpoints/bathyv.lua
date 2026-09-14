@@ -26,7 +26,7 @@ return {
     parms = parms,
     name = "Bathymetry Viewer",
     description = "Return number of photons in ATL03 granule within a bathymetry mask (s-series)",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},
@@ -52,4 +52,3 @@ return {
         } ]]
     }
 }
-

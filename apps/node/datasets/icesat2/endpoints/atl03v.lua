@@ -29,7 +29,7 @@ return {
     parms = parms,
     name = "ATL03 Viewer",
     description = "Spatially and temporally subsets single ATL03 granule segments with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},
@@ -52,4 +52,3 @@ return {
         } ]]
     }
 }
-

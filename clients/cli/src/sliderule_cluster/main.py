@@ -23,9 +23,9 @@ class Tool:
         print(f'{self.args.cluster}.{self.args.domain} [{self.session.service}]: {result}')
 
     # get_parms
-    def __get_parms(self, parms):
-        if self.args.json:
-            with open(self.args.json, "r") as file:
+    def __get_parms(self, parms=None):
+        if self.args.parms:
+            with open(self.args.parms, "r") as file:
                 parms = json.load(file) # override
         return parms
 
@@ -39,12 +39,6 @@ class Tool:
             return sliderule.toregion(self.args.bbox)["poly"]
         else:
             return None
-
-    # get_output_path
-    def __get_output_path(self):
-        outputdir = self.args.outputdir and self.args.outputdir or tempfile.gettempdir()
-        filename = self.args.filename and self.args.filename or uuid.uuid4()
-        return str(Path(outputdir) / f"{filename}.{self.args.format}")
 
     # whoami
     def whoami(self):
@@ -92,25 +86,37 @@ class Tool:
         self.__display_result(result, reformat=True)
         return result
 
-    # atl03x
-    def atl03x(self):
-        parms = self.__get_parms({ k: v for k, v in {
-            "asset": self.args.asset,
-            "poly": self.__get_poly(),
-            "t0": self.args.t0,
-            "t1": self.args.t1,
-            "max_resources": self.args.max_resources,
-            "rgt": self.args.rgt,
-            "cycle": self.args.cycle,
-            "region": self.args.region,
-            "resources": self.args.resources,
-            "cnf": self.args.cnf,
-            "output": {
-                "path": self.__get_output_path(),
-                "format": self.args.format
+    # run
+    def run(self):
+        # get request parameters
+        if self.args.parms.startswith('"') or self.args.parms.startswith('{'):
+            parms = self.args.parms
+        else:
+            parms = self.__get_parms()
+        # build output parameters (if not supplied in request)
+        if "output" not in parms:
+            output_format = "geoparquet"
+            output_path = str(Path(tempfile.gettempdir()) / f"{uuid.uuid4()}.{output_format}")
+            parms |= {
+                "output": {
+                    "path": output_path,
+                    "format": output_format
+                }
             }
-        }.items() if v is not None })
-        result = sliderule.source("earthdata", parms, rethrow=True, session=self.session)
+        elif "path" in parms["output"]:
+            output_path = parms["output"]["path"]
+        else:
+            output_path = None # will need to look for it later
+        # make request
+        rsps = sliderule.source(self.args.api, {"parms": parms}, stream=True, session=self.session)
+        # find remote output path (if not already set)
+        if not output_path:
+            for rsp in rsps:
+                if 'arrowrec.remote' == rsp['__rectype']:
+                    output_path = rsp['url']
+                    break
+        # set and return results
+        result = output_path
         self.__display_result(result, reformat=True)
         return result
 
@@ -127,21 +133,6 @@ def main():
     common.add_argument('--user_service',   action='store_true',    default=False, help="uses dedicated user capacity")
     common.add_argument('--verbose',        action='store_true',    default=False, help="turns on verbose log messages")
     common.add_argument('--result',         type=str,               default=None, help="file name to store result of command")
-    common.add_argument('--json',           type=Path,              default=None, help="file containing json parameters to use in request")
-
-    # options used in cluster processing requests
-    params = argparse.ArgumentParser(add_help=False)
-    params.add_argument('--asset',          type=str,               default="icesat2", help="SlideRule asset name")
-    params.add_argument('--poly',           type=float, nargs='+',  default=None, help="closed counter-clockwise list of latitude longitude pairs defining the area of interest; e.g. lon1 lat1 lon2 lat2 lon3 lat3 ... lon1 lat1")
-    params.add_argument('--geojson',        type=str,               default=None, help="geojson filename defining the area of interest")
-    params.add_argument('--bbox',           type=float, nargs='+',  default=None, help="bounding box defining the area of interest; e.g. lon_ll lat_ll lon_ur lat_ur")
-    params.add_argument('--t0',             type=str,               default=None, help="start time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t0)
-    params.add_argument('--t1',             type=str,               default=None, help="stop time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t1)
-    params.add_argument('--max_resources',  type=int,               default=None, help="maximum number of resources allowed to be returned by query; queries exceeding this number return an error")
-    params.add_argument('--outputdir',      type=str,               default=None, help="directory of returning dataframe output")
-    params.add_argument('--format',         type=str,               default="geoparquet", help="format returning dataframe output")
-    params.add_argument('--filename',       type=str,               default=None, help="filename of returning dataframe output")
-    params.add_argument('--resources',      type=str, nargs='+',    default=None, help="list of resources to process")
 
     # command line arguments
     parser = argparse.ArgumentParser(prog="sliderule-cluster", description="""SlideRule Cluster""")
@@ -164,20 +155,24 @@ def main():
     defaults.set_defaults(func=Tool.defaults)
 
     # earthdata
-    earthdata = subparsers.add_parser("earthdata", parents=[common, params], help="earthdata search")
+    earthdata = subparsers.add_parser("earthdata", parents=[common], help="earthdata search")
+    earthdata.add_argument('--asset',           type=str,               default="icesat2", help="SlideRule asset name")
+    earthdata.add_argument('--poly',            type=float, nargs='+',  default=None, help="closed counter-clockwise list of latitude longitude pairs defining the area of interest; e.g. lon1 lat1 lon2 lat2 lon3 lat3 ... lon1 lat1")
+    earthdata.add_argument('--geojson',         type=str,               default=None, help="geojson filename defining the area of interest")
+    earthdata.add_argument('--bbox',            type=float, nargs='+',  default=None, help="bounding box defining the area of interest; e.g. lon_ll lat_ll lon_ur lat_ur")
+    earthdata.add_argument('--t0',              type=str,               default=None, help="start time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t0)
+    earthdata.add_argument('--t1',              type=str,               default=None, help="stop time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t1)
+    earthdata.add_argument('--max_resources',   type=int,               default=None, help="maximum number of resources allowed to be returned by query; queries exceeding this number return an error")
     earthdata.add_argument('--short_name',      type=str,               default=None, help="CMR dataset name")
     earthdata.add_argument('--with_meta',       action='store_true',    default=False, help="return metadata along with query results")
     earthdata.add_argument('--name_filter',     type=str,               default=None, help="regular expression to evaluate against resource names returned by query")
     earthdata.set_defaults(func=Tool.earthdata)
 
-    # atl03x
-    atl03x = subparsers.add_parser("atl03x", parents=[common, params], help="ATL03 photon cloud processing")
-    atl03x.add_argument('--beams',              type=str, nargs='+',    default=['gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r'], help="beams to process")
-    atl03x.add_argument('--rgt',                type=int,               default=None, help="reference ground track")
-    atl03x.add_argument('--cycle',              type=int,               default=None, help="orbit cycle")
-    atl03x.add_argument('--region',             type=int,               default=None, help="region")
-    atl03x.add_argument('--cnf',                type=int,               default=None, help="signal confidence")
-    atl03x.set_defaults(func=Tool.atl03x)
+    # run
+    run = subparsers.add_parser("run", parents=[common], help="execute dataframe based api request")
+    run.add_argument('api',     type=str,   metavar="<api>", help="endpoint being called")
+    run.add_argument('--parms', type=str,   required=True, help="string or filename containing json parameters to use in request")
+    run.set_defaults(func=Tool.run)
 
     # parse command line
     args = parser.parse_args()

@@ -71,7 +71,7 @@ return {
     parms = parms,
     name = "ATL03 Dataframe",
     description = "Spatially and temporally subsets ATL03 photon cloud with additional filters and ancillary fields (x-series)",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

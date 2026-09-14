@@ -15,7 +15,7 @@ return {
     parms = nil,
     name = "List Containers",
     description = "List available docker images that can be executed by a user",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {"member", "owner"},
     signed = true,
     inputs = nil,

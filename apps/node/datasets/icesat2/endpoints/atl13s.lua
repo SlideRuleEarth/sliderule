@@ -29,7 +29,7 @@ return {
     parms = parms,
     name = "ATL13 Subsetter",
     description = "Spatially and temporally subsets single ATL13 granule lake metrics with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

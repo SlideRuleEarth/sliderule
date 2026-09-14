@@ -29,7 +29,7 @@ return {
     parms = parms,
     name = "SWOT L2 Subsetter",
     description = "Spatially and temporally subsets single SWOT L2 granule with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

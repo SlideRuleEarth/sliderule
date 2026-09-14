@@ -52,7 +52,7 @@ return {
     parms = parms,
     name = "ATL24 Dataframe",
     description = "Spatially and temporally subsets ATL24 granule bathemtry data with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

@@ -29,7 +29,7 @@ return {
     parms = parms,
     name = "GEDI 1B Subsetter",
     description = "Spatially and temporally subsets single GEDI 1B granule waveforms with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

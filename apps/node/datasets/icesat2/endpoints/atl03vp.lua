@@ -22,7 +22,7 @@ return {
     parms = parms,
     name = "ATL03 Parallel Viewer",
     description = "Spatially and temporally subsets segments from multiple ATL03 granules with additional filters",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

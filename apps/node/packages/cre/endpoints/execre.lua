@@ -65,7 +65,7 @@ return {
     parms = parms,
     name = "Execute Container Runtime Environment",
     description = "Execute a user specified docker image",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {"member", "owner"},
     signed = true,
     inputs = {"json"},

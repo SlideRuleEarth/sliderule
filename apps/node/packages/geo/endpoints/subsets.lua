@@ -41,7 +41,7 @@ return {
     parms = parms,
     name = "Raster Subsetter",
     description = "Return a subset from a raster dataset given an extent",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {},
     signed = false,
     inputs = {"json"},

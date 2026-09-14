@@ -22,7 +22,7 @@ return {
     parms = nil,
     name = "Arbitrary Code Execution",
     description = "Execute user supplied lua code",
-    logging = core.CRITICAL,
+    logging = core.INFO,
     roles = {"member", "owner"},
     signed = true,
     inputs = {"text"},
