@@ -68,6 +68,8 @@
 # 		$ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
 #   - GitHub credentials
 #       $ gh auth login
+#   - NPM credentials (for publishing the nodejs client; it is not a part of standard release process but is run manually)
+#.      $ npm login
 #
 ROOT = $(shell realpath $(shell pwd)/../..)
 BUILD = $(ROOT)/build
@@ -354,14 +356,19 @@ cli-publish: cli ## build and publish the command line tool
 	esac;
 	cd $(CLI_CLIENT_DIR) && python -m twine upload --verbose $(CLI_STAGE_DIR)/*
 
-nodejs-publish: ## build and publish the nodejs client (requires nvm use 22)
-	npm login
+nodejs-publish: ## build and publish the nodejs client (requires: npm login)
 	-rm -Rf $(NODEJS_STAGE_DIR)
 	mkdir -p $(NODEJS_STAGE_DIR)
 	cp -R $(NODEJS_CLIENT_DIR)/sliderule $(NODEJS_STAGE_DIR)
 	cp $(NODEJS_CLIENT_DIR)/utils/modpkg.js $(NODEJS_STAGE_DIR)
 	cd $(NODEJS_STAGE_DIR) && node modpkg.js
 	cd $(NODEJS_STAGE_DIR)/sliderule && npm publish --access public
+
+nodejs-test: ## run nodejs client unit tests against public cluster
+	DOMAIN=$(DOMAIN) \
+	ORGANIZATION=$(CLUSTER) \
+	jest $(NODEJS_CLIENT_DIR)/sliderule/tests \
+	--setupFiles $(NODEJS_CLIENT_DIR)/sliderule/tests/test.config.js
 
 ########################
 # Docker Build Targets
