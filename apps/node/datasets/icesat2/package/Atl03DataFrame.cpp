@@ -595,11 +595,13 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         /* Perform ATL24 Classification (if requested) */
         atl24.classify(df, aoi, atl03);
 
-        /* Initialize Indices */
+        /* Initialize Loop Variables */
         int32_t current_photon = -1;
         int32_t current_segment = 0;
         int32_t current_count = 0; // number of photons in current segment already accounted for
         int32_t background_index = 0;
+        bool first_podppd_filter = true;
+
 
         /* Traverse All Photons In Dataset */
         while(df->active.load() && (++current_photon < atl03.dist_ph_along.size))
@@ -682,6 +684,11 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 }
                 else if((podppd_mask & parms.podppdMask.value) == 0x00)
                 {
+                    if(first_podppd_filter)
+                    {
+                        first_podppd_filter = false;
+                        alert(INFO, RTE_STATUS, df->outQ, &df->active, "Degraded POD/PPD detected in resource %s beam %s", df->hdf03->name, df->beam);
+                    }
                     continue;
                 }
             }

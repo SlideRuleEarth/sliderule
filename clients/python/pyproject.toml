@@ -12,8 +12,8 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["requests", "numpy", "geopandas", "shapely", "pyarrow"]
 
-[tool.setuptools.packages.find]
-where = ["sliderule"]
+[tool.setuptools]
+packages = ["sliderule"]
 
 [tool.setuptools_scm]
 root = "../.."
