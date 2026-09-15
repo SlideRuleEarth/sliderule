@@ -62,16 +62,16 @@ make selftest
 
 * Run the `provisioner` PyTests. The provisioner application has its own set of pytests that run under the `sliderule` conda environment and test the basic functionality and APIs of the *provisioner* lambdas.
 
-From `sliderule/apps/provisioner`
+From `sliderule/targets/slideruleearth`
 ```bash
-pytest
+make provisioner-test
 ```
 
 * Run the `ams` PyTests. The Asset Metadata Service (AMS) application has its own set of pytests that run under the `ams` conda environment and test the basic functionality and APIs of the *ams* container.
 
-From `sliderule/apps/ams`
+From `sliderule/targets/slideruleearth`
 ```bash
-make test
+make ams-test
 ```
 
 #### (2) Test Local Deployment (Pytests and Jest)
@@ -93,24 +93,21 @@ make run
 
 * Run the pytest suite of tests against it, which checks for memory leaks and invalid memory access across the entire pytest suite.  Note that tests involving the provisioning system will fail when running against a locally running instance of sliderule.
 
-From `sliderule/clients/python` in a new terminal window
+From `sliderule/targets/slideruleearth` in a new terminal window
 ```bash
-conda activate sliderule
-pip install .
-pytest --domain localhost --organization None
+make python test
 ```
 
 * Run the Node.js client suite of tests using `jest`, which test the client and also try to test some of the functionality needed by the web client.  Note that the authentication tests will fail when running against a locally running instance of sliderule.
 
-From `sliderule/clients/nodejs`
+From `sliderule/targets/slideruleearth`
 ```bash
-nvm use 20
-ORGANIZATION=null make test
+CLUSTER=null make nodejs-test
 ```
 
 #### (3) Test Deployment to Private Cluster
 
-Prior to a full release, it is good to test the full deployment to a private cluster.  This catches issues related to the infrastructure in AWS and errors that don't surface in a local environment but do surface when run as a cluster in the cloud.  The cluster can also be deployed using the `--desired_nodes` and `--time_to_live` parameters of the pytests, see below for where to use them.
+Prior to a full release, it is good to test the full deployment to a private cluster.  This catches issues related to the infrastructure in AWS and errors that don't surface in a local environment but do surface when run as a cluster in the cloud.  The cluster can also be deployed using the `--desired_nodes` and `--time_to_live` parameters of the pytests, or by using the `sliderule-provisioner` command line tool.
 
 * Build the latest code base and deploy it to a private cluster (typically `developers`).
 
@@ -118,23 +115,21 @@ From `sliderule/targets/slideruleearth`
 ```bash
 make cluster-docker
 make cluster-docker-push
+sliderule-provisioner deploy --node_capacity 3 --ttl 120
 ```
 
 * Execute the pytest tests against the deployed private cluster.
 
-From `sliderule/clients/python`
+From `sliderule/targets/slideruleearth`
 ```bash
-conda activate sliderule
-pip install .
-pytest --organization developers # --desired_nodes 7 --time_to_live 120
+CLUSTER=developers make python-test
 ```
 
 * Execute the jest tests against the deployed private cluster.
 
-From `sliderule/clients/nodejs`
+From `sliderule/targets/slideruleearth`
 ```bash
-nvm use 20
-ORGANIZATION=developers make test
+CLUSTER=developers make nodejs-test
 ```
 
 * Run benchmarks and baseline
@@ -193,26 +188,19 @@ pip install .
 pytest --organization sliderule-<timestamp>
 ```
 
-From `sliderule/clients/nodejs`
-```bash
-nvm use 20
-ORGANIZATION=sliderule-<timestamp> make test
-```
-
 * Switch to the _new_ cluster by pointing the `sliderule.slideruleearth.io` domain to the newly deployed cluster.  The `<ip>` address supplied in the command is the public ip address of the `ilb` from the deployment of the _new_ cluster.
 
 From `sliderule/targets/slideruleearth/`
 ```bash
-make public-cluster-go-live PUBLIC_IP=<ip>
+make cluster-go-live PUBLIC_IP=<ip>
 ```
 
 * Wait 30 minutes. This will allow DNS caches to flush and any active requests on the old cluster to complete.
 
 * Destroy the _old_ cluster. The `<old-timestamp>` is the timestamp of the old cluster that we want to now destroy.
 
-from `sliderule/targets/slideruleearth/`
 ```bash
-make cluster-destroy CLUSTER=sliderule-<old-timestamp>
+sliderule-provisioner destroy --cluster sliderule-<old-timestamp>
 ```
 
 #### (6) Update the Documentation
