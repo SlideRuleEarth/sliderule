@@ -316,9 +316,17 @@ cli: ## build and install the command line tool locally
 	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
 	python -m pip install $(CLI_STAGE_DIR)/sliderule_cli-*.whl
 
-cli-publish: cli ## build and publish the command line tool
-#	cd $(CLI_CLIENT_DIR) && python -m twine upload $(CLI_STAGE_DIR)/*
-	cd $(CLI_CLIENT_DIR) && python -m twine upload --repository testpypi $(CLI_STAGE_DIR)/*
+cli-publish: # cli ## build and publish the command line tool
+#	cd $(CLI_CLIENT_DIR) && python -m twine upload --verbose $(CLI_STAGE_DIR)/*
+	@version=$$(cd $(CLI_CLIENT_DIR) && python -m setuptools_scm); \
+	@echo "Publishing sliderule-cli $$version"; \
+	case "$$version" in \
+		*.dev*) \
+			echo "ERROR: refusing to publish development version $$version"; \
+			exit 1; \
+			;; \
+	esac; \
+	cd $(CLI_CLIENT_DIR) && python -m twine upload --repository testpypi --verbose $(CLI_STAGE_DIR)/*
 
 ########################
 # Docker Build Targets
