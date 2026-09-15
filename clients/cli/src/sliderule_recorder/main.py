@@ -322,9 +322,9 @@ def aoi_sql_grid(table, where_clause, filename):
             CAST(FLOOR((aoi_y + 90.0)  / 0.25) AS INTEGER) AS grid_y,
             COUNT(*) AS point_count
         FROM "recorder-database"."telemetry"
-        WHERE aoi_x IS NOT NULL
-        AND aoi_y IS NOT NULL
-        AND {where_clause}
+        WHERE aoi_x BETWEEN -180.0 AND 180.0
+          AND aoi_y BETWEEN -90.0 AND 90.0
+          AND ({where_clause})
         GROUP BY
             FLOOR((aoi_x + 180.0) / 0.25),
             FLOOR((aoi_y + 90.0)  / 0.25)
@@ -341,7 +341,7 @@ def aoi_sql_grid(table, where_clause, filename):
         if(x < 1440 and x > 0 and y < 720 and y > 0): # 0,0 is an unfortunate artifact of not being populated
             grid[y, x] = row["point_count"]
         else:
-            print(f"Not gridding {y},{x} => {row["point_count"]}")
+            print(f"Not gridding {y},{x} => {row['point_count']}")
     generate_map(grid, filename)
 
 # -------------------------------------------
@@ -499,7 +499,7 @@ def main():
     summary = {
         'Start':                        time_stats["start"].strftime("%Y-%m-%d %H:%M:%S"),
         'End':                          time_stats["end"].strftime("%Y-%m-%d %H:%M:%S"),
-        'Duration':                     f'{time_stats['span'].days} days, {(time_stats['span'].total_seconds() / 3600) % 24:.2f} hours',
+        'Duration':                     f"{time_stats['span'].days} days, {(time_stats['span'].total_seconds() / 3600) % 24:.2f} hours",
         'Unique IPs':                   len(unique_ip_counts),
         'Unique Locations':             len(source_location_counts),
         'Total Requests':               sum_counts(endpoint_counts),
@@ -512,6 +512,11 @@ def main():
         'GEDI Proxied Requests':        sum_counts(endpoint_counts, GEDI_PROXY_ENDPOINTS)
     }
 
+    # grid requests
+    if args.grid:
+        usage_grid(source_location_counts, args.grid_usage)
+        aoi_sql_grid(telemetry_table, where_clause, args.grid_aoi)
+
     # display usage statistics
     display_stats('Source Locations', source_location_counts, True)
     display_stats('Clients', client_counts, True)
@@ -519,15 +524,10 @@ def main():
     display_stats('Request Codes', telemetry_status_code_counts, True)
     display_stats('Alert Codes', alert_status_code_counts, True)
     display_stats('Summary', summary, False)
-
-    # grid requests
-    if args.grid:
-        usage_grid(source_location_counts, args.grid_usage)
-        aoi_sql_grid(telemetry_table, where_clause, args.grid_aoi)
-        display_stats('Globe', {
-            'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
-            'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
-        }, False)
+    display_stats('Globe', {
+        'icesat2':  sum_counts(endpoint_counts, ICESAT2_ENDPOINTS),
+        'gedi':     sum_counts(endpoint_counts, GEDI_ENDPOINTS),
+    }, False)
 
 # running via direct invocation
 if __name__ == "__main__": main()
