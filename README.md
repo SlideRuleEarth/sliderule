@@ -19,6 +19,7 @@ apps/runner/        # Job runner Lambda (Python)
 apps/authenticator/ # GitHub OAuth Lambda (Python)
 clients/python/     # pip-installable Python client
 clients/nodejs/     # npm package @sliderule/sliderule
+clients/cli/        # pip-installable command line tools (sliderule-cluster|runner|provisioner|recorder)
 targets/slideruleearth/  # THE primary Makefile — all developer commands live here
 build/sliderule/    # CMake out-of-tree build output
 stage/sliderule/    # CMake install destination (staged for Docker)
@@ -94,7 +95,7 @@ Once the shared object is built, the build system must copy the shared object in
 For the cluster node tests, start the server locally via `make run`, then:
 
 ```bash
-make sliderule-test
+make python-test
 ```
 
 For all the microservice tests, they are executed as standalone tests. From the same makefile in `targets/slideruleearth/` that builds the cluster node, run:
