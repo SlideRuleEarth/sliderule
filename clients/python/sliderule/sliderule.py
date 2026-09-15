@@ -28,6 +28,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import copy
 import logging
 import warnings
 import numpy
@@ -465,6 +466,7 @@ def run(api, parms, aoi=None, resources=None, session=None):
         result of executing the request endpoint
     '''
     session = checksession(session)
+    parms = copy.deepcopy(parms)
 
     # add region
     if aoi != None:
@@ -803,7 +805,7 @@ def procoutputfile(parm, rsps, session=None):
             else:
                 raise RuntimeError(f'unsupported format - {output["format"]}')
         except Exception as e:
-            session.logger.debug(f'Failed to open {path}: {e}')
+            session.logger.error(f'Failed to open {path}: {e}')
             local_file = None
 
         # Only read Parquet metadata for Parquet or GeoParquet
@@ -822,7 +824,7 @@ def procoutputfile(parm, rsps, session=None):
                     local_file.attrs[key.decode('ascii')] = json.loads(metadata_str)
             except Exception as e:
                 # could fail for a multitude of reasons; just log and move on
-                session.logger.debug(f'Failed to read metadata from {path}: {e}')
+                session.logger.warning(f'Failed to read metadata from {path}: {e}')
 
     # Return back to caller either path or opened dataframe
     return local_file

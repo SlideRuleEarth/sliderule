@@ -324,6 +324,7 @@ python: ## build and install the python client locally
 	- rm -Rf $(PYTHON_STAGE_DIR)
 	cd $(PYTHON_CLIENT_DIR) && python -m build --outdir $(PYTHON_STAGE_DIR)
 	python -m pip install --force-reinstall --no-deps $(PYTHON_STAGE_DIR)/sliderule-*.whl
+	conda run -n sliderule --no-capture-output sh -c 'python -m pip install --force-reinstall --no-deps $(PYTHON_STAGE_DIR)/sliderule-*.whl'
 
 python-publish: python ## build and publish the python client
 	@version=$$(cd $(PYTHON_CLIENT_DIR) && python -m setuptools_scm); \
@@ -344,6 +345,7 @@ cli: ## build and install the command line tool locally
 	- rm -Rf $(CLI_STAGE_DIR)
 	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
 	python -m pip install --force-reinstall --no-deps $(CLI_STAGE_DIR)/sliderule_cli-*.whl
+	conda run -n sliderule --no-capture-output sh -c 'python -m pip install --force-reinstall --no-deps $(CLI_STAGE_DIR)/sliderule_cli-*.whl'
 
 cli-publish: cli ## build and publish the command line tool
 	@version=$$(cd $(CLI_CLIENT_DIR) && python -m setuptools_scm); \
