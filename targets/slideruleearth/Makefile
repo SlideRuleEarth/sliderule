@@ -316,8 +316,8 @@ cli: ## build and install the command line tool locally
 
 cli-publish: ## build and publish the command line tool
 	# pip install build twine
-	python -m build --outdir $(CLI_STAGE_DIR)
-	python -m twine upload $(CLI_STAGE_DIR)/*
+	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
+#	cd $(CLI_CLIENT_DIR) && python -m twine upload $(CLI_STAGE_DIR)/*
 
 ########################
 # Docker Build Targets
