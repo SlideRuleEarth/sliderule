@@ -96,6 +96,7 @@ DOCUMENTATION_ASSET_DIR = /data/web
 PYTHON_STAGE_DIR = $(STAGE)/python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
+NODEJS_STAGE_DIR = $(STAGE)/nodejs
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 CLI_STAGE_DIR = $(STAGE)/cli
 CLI_CLIENT_DIR = $(ROOT)/clients/cli
@@ -305,6 +306,11 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	make runner-openapi
 	make provisioner-openapi
 
+sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
+	make run RUN_CMD="$(ROOT)/apps/node/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
+	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
+
 %-openapi: ## bundle and lint openapi docs
 	mkdir -p $(INSTALLDIR)/etc/sliderule/openapi/$*
 	cp -R $(ROOT)/apps/$*/openapi/* $(INSTALLDIR)/etc/sliderule/openapi/$*
@@ -328,6 +334,10 @@ python-publish: python ## build and publish the python client
 	esac;
 	cd $(PYTHON_CLIENT_DIR) && python -m twine upload --verbose $(PYTHON_STAGE_DIR)/*
 
+python-test: ## run python client tests
+	conda run -n sliderule --no-capture-output \
+	sh -c 'cd $(ROOT)/clients/python && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
+
 cli: ## build and install the command line tool locally
 	- rm -Rf $(CLI_STAGE_DIR)
 	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
@@ -343,6 +353,15 @@ cli-publish: cli ## build and publish the command line tool
 			;; \
 	esac;
 	cd $(CLI_CLIENT_DIR) && python -m twine upload --verbose $(CLI_STAGE_DIR)/*
+
+nodejs-publish: ## build and publish the nodejs client (requires nvm use 22)
+	npm login
+	-rm -Rf $(NODEJS_STAGE_DIR)
+	mkdir -p $(NODEJS_STAGE_DIR)
+	cp -R $(NODEJS_CLIENT_DIR)/sliderule $(NODEJS_STAGE_DIR)
+	cp $(NODEJS_CLIENT_DIR)/utils/modpkg.js $(NODEJS_STAGE_DIR)
+	cd $(NODEJS_STAGE_DIR) && node modpkg.js
+	cd $(NODEJS_STAGE_DIR)/sliderule && npm publish --access public
 
 ########################
 # Docker Build Targets
@@ -363,15 +382,6 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/docker-entrypoint.sh $(SLIDERULE_STAGE_DIR)/
 	cd $(SLIDERULE_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:$(VERSION) .
-
-sliderule-test: ## run python client tests
-	conda run -n sliderule --no-capture-output \
-	sh -c 'cd $(ROOT)/clients/python && coverage run -m pytest --domain $(DOMAIN) --organization $(CLUSTER) $(ARGS) && coverage report -m'
-
-sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
-	make run RUN_CMD="$(ROOT)/apps/node/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
-	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
-	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -971,6 +981,8 @@ release: ## tag and release sliderule; needs RELEASE
 	git tag -a $(RELEASE) -m "Version $(RELEASE)"
 	git push --tags && git push
 	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://docs.slideruleearth.io/developer-guide/release-notes/"
+	make python-publish
+	make cli-publish
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
 	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
@@ -993,6 +1005,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
+	- cd $(NODEJS_CLIENT_DIR) && ./clean.sh
 	- cd $(ROOT)/apps/ams && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf

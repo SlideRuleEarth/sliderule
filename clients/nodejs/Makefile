@@ -5,14 +5,7 @@ ORGANIZATION ?= sliderule
 test: ## run unit tests against public cluster
 	cd sliderule; DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/test.config.js
 
-publish: ## publish package to npm registry
-	cd sliderule; npm publish --access public
-
-publish-dry-run: ## test publishing package to npm registry
-	cd sliderule; npm publish --access public --dry-run
-
 login: ## login to npm registry
-	npm login --scope sliderule --auth-type legacy
 
 update: ## update project (updates dependencies in package-lock.json file)
 	cd sliderule; npm install && npm audit fix
@@ -21,8 +14,10 @@ init: ## initialize project
 	cd sliderule; npm init --scope sliderule
 
 release: ## release a new version of the package
+	npm login
 	node utils/modpkg.js $(RELEASE)
 	git add sliderule/package.json
+	cd sliderule; npm publish --access public
 
 distclean: ## fully remove all non-version controlled files and directories
 	-rm -Rf sliderule/node_modules/

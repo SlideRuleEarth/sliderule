@@ -1,16 +1,23 @@
-let version = process.argv[2];
-if (version == undefined) {
-    throw new Error("Must supply version as command line argument");
+// modpkg.js
+const { execSync } = require('child_process');
+const fs = require('fs');
+
+function getVersionFromGit() {
+    // Exact tag match -> "v5.6.0". Otherwise -> "v5.6.0-3-gabcdef" (3 commits past tag)
+    const raw = execSync('git describe --tags --always --dirty').toString().trim();
+    const m = raw.match(/^v(\d+\.\d+\.\d+)(?:-(\d+)-g([0-9a-f]+))?(-dirty)?$/);
+    if (!m) {
+        throw new Error(`Unable to parse git describe output: ${raw}`);
+    }
+    const [, base, distance, sha, dirty] = m;
+    if (!distance) return base;                       // exact release tag
+    return `${base}-dev.${distance}+${sha}${dirty ? '.dirty' : ''}`; // semver-legal prerelease
 }
-else if ((!version.includes(".")) || (version[0] != 'v')) {
-    throw new Error("Version is not in the correct format (vX.Y.Z): ", version);
-}
-version = version.substring(1);
-console.log("Setting version: ", version);
-const fs = require('fs')
-const pkgfile = __dirname + '/../sliderule/package.json';
-const pkgdata = fs.readFileSync(pkgfile, { encoding: 'utf8', flag: 'r' });
-let pkgjson = JSON.parse(pkgdata);
-pkgjson["version"] = version;
-const pkgout = JSON.stringify(pkgjson, null, 2);
-fs.writeFileSync(pkgfile, pkgout);
+
+const version = getVersionFromGit();
+console.log("Setting version:", version);
+
+const pkgfile = __dirname + '/sliderule/package.json';
+const pkgjson = JSON.parse(fs.readFileSync(pkgfile, 'utf8'));
+pkgjson.version = version;
+fs.writeFileSync(pkgfile, JSON.stringify(pkgjson, null, 2) + '\n');

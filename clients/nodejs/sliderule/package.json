@@ -1,7 +1,7 @@
 {
   "name": "@sliderule/sliderule",
   "description": "client for the SlideRule on-demand science data processing service",
-  "version": "5.2.1",
+  "version": "0.0.0",
   "keywords": [
     "sliderule"
   ],
@@ -40,5 +40,8 @@
   "author": "",
   "directories": {
     "test": "tests"
+  },
+  "volta": {
+    "node": "22.23.2"
   }
 }
