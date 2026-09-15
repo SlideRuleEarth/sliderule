@@ -16,10 +16,10 @@ Basic functionality of sliderule-python depends on `requests`, `numpy`, and `geo
 
 ```python
 # import
-from sliderule import icesat2
+from sliderule import sliderule, icesat2
 
 # initialize
-icesat2.init("slideruleearth.io", verbose=False)
+sliderule.init(verbose=False)
 
 # region of interest
 region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},
@@ -34,12 +34,12 @@ parms = {
     "srt": icesat2.SRT_LAND,
     "cnf": icesat2.CNF_SURFACE_HIGH,
     "len": 40.0,
-    "res": 20.0
+    "res": 20.0,
+    "fit": {}
 }
 
 # make request
-rsps = icesat2.atl06p(parms, "icesat2")
-print(f"{rsps}")
+gdf = sliderule.run("atl03x", parms)
 ```
 
 ## III. Reference and User's Guide

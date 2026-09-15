@@ -1,11 +1,13 @@
 [build-system]
-requires = ["setuptools>=68", "setuptools-scm"]
+requires = ["setuptools>=77.0.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "sliderule-cli"
 dynamic = ["version"]
-description = "SlideRule command line tool"
+description = "SlideRule Command Line Tool"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["sliderule", "boto3"]
@@ -25,3 +27,4 @@ where = ["src"]
 
 [tool.setuptools_scm]
 root = "../.."
+local_scheme = "no-local-version"

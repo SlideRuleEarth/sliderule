@@ -93,6 +93,7 @@ DOCUMENTATION_HTML_DIR = $(DOCUMENTATION_STAGE_DIR)/_build/html
 # kept outside the myst project root, otherwise myst resolves the /openapi links and copies the specs into its own build
 DOCUMENTATION_OPENAPI_DIR = $(STAGE)/openapi
 DOCUMENTATION_ASSET_DIR = /data/web
+PYTHON_STAGE_DIR = $(STAGE)/python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
@@ -311,22 +312,37 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/$*/openapi.yml -o $(INSTALLDIR)/etc/sliderule/openapi/$*.json --ext json
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
 
-cli: ## build and install the command line tool locally
-	- rm -Rf $(CLI_STAGE_DIR)
-	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
-	python -m pip install $(CLI_STAGE_DIR)/sliderule_cli-*.whl
+python: ## build and install the python client locally
+	- rm -Rf $(PYTHON_STAGE_DIR)
+	cd $(PYTHON_CLIENT_DIR) && python -m build --outdir $(PYTHON_STAGE_DIR)
+	python -m pip install $(PYTHON_STAGE_DIR)/sliderule-*.whl
 
-cli-publish: # cli ## build and publish the command line tool
-#	cd $(CLI_CLIENT_DIR) && python -m twine upload --verbose $(CLI_STAGE_DIR)/*
-	@version=$$(cd $(CLI_CLIENT_DIR) && python -m setuptools_scm); \
-	@echo "Publishing sliderule-cli $$version"; \
+python-publish: python ## build and publish the python client
+	@version=$$(cd $(PYTHON_CLIENT_DIR) && python -m setuptools_scm); \
+	@echo "Publishing the sliderule python client $$version"; \
 	case "$$version" in \
 		*.dev*) \
 			echo "ERROR: refusing to publish development version $$version"; \
 			exit 1; \
 			;; \
-	esac; \
-	cd $(CLI_CLIENT_DIR) && python -m twine upload --repository testpypi --verbose $(CLI_STAGE_DIR)/*
+	esac;
+	cd $(PYTHON_CLIENT_DIR) && python -m twine upload --verbose $(PYTHON_STAGE_DIR)/*
+
+cli: ## build and install the command line tool locally
+	- rm -Rf $(CLI_STAGE_DIR)
+	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
+	python -m pip install $(CLI_STAGE_DIR)/sliderule_cli-*.whl
+
+cli-publish: cli ## build and publish the command line tool
+	@version=$$(cd $(CLI_CLIENT_DIR) && python -m setuptools_scm); \
+	@echo "Publishing the sliderule command line tool $$version"; \
+	case "$$version" in \
+		*.dev*) \
+			echo "ERROR: refusing to publish development version $$version"; \
+			exit 1; \
+			;; \
+	esac;
+	cd $(CLI_CLIENT_DIR) && python -m twine upload --verbose $(CLI_STAGE_DIR)/*
 
 ########################
 # Docker Build Targets
@@ -947,7 +963,6 @@ release: ## tag and release sliderule; needs RELEASE
 	make sliderule-buildenv-docker
 	make ams-lock
 	echo $(RELEASE) > $(ROOT)/version.txt
-	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml

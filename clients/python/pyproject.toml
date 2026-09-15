@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77.0.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sliderule"
+dynamic = ["version"]
+description = "SlideRule Python Client"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests", "numpy", "geopandas", "shapely", "pyarrow"]
+
+[tool.setuptools.packages.find]
+where = ["sliderule"]
+
+[tool.setuptools_scm]
+root = "../.."
+local_scheme = "no-local-version"
