@@ -312,12 +312,13 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	- npx --yes @redocly/cli lint --config $(INSTALLDIR)/etc/sliderule/openapi/$*/redocly.yml $(INSTALLDIR)/etc/sliderule/openapi/$*.json
 
 cli: ## build and install the command line tool locally
-	pip install -e $(CLI_CLIENT_DIR)
-
-cli-publish: ## build and publish the command line tool
-	# pip install build twine
+	- rm -Rf $(CLI_STAGE_DIR)
 	cd $(CLI_CLIENT_DIR) && python -m build --outdir $(CLI_STAGE_DIR)
+	python -m pip install $(CLI_STAGE_DIR)/sliderule_cli-*.whl
+
+cli-publish: cli ## build and publish the command line tool
 #	cd $(CLI_CLIENT_DIR) && python -m twine upload $(CLI_STAGE_DIR)/*
+	cd $(CLI_CLIENT_DIR) && python -m twine upload --repository testpypi $(CLI_STAGE_DIR)/*
 
 ########################
 # Docker Build Targets
