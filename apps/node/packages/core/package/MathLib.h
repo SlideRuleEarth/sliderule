@@ -118,6 +118,9 @@ class MathLib
         static uint32_t     hashlittle          (const void *key, size_t length, uint32_t initval);
         static void         hashlittle2         (const void *key, size_t length, uint32_t *pc, uint32_t *pb);
         static uint32_t     hashbig             (const void *key, size_t length, uint32_t initval);
+
+        static vector<point_t> convexHull       (vector<point_t>& pts);
+        static vector<point_t> boundingRectangle(vector<point_t>& pts);
 };
 
 #endif /* __math_lib__ */

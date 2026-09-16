@@ -49,6 +49,7 @@
 #include "MsgQ.h"
 #include "Table.h"
 #include "EventLib.h"
+#include "MathLib.h"
 #include "SystemConfig.h"
 
 /******************************************************************************
@@ -1314,6 +1315,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "inerror",    luaInError);
     LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
     LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
+    LuaEngine::setAttrFunc(L, "bbox",       luaBoundingBox);
     LuaEngine::setAttrFunc(L, "export",     luaExport);
     LuaEngine::setAttrFunc(L, "describe",   luaDescribe);
     LuaEngine::setAttrFunc(L, "send",       luaSend);
@@ -1955,6 +1957,91 @@ int GeoDataFrame::luaNumColumns (lua_State* L)
     }
 
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaBoundingBox - bbox(rotated)
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaBoundingBox (lua_State* L)
+{
+    try
+    {
+        const GeoDataFrame* df = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const bool rotated = getLuaBoolean(L, 2, true, false);
+
+        // check dataframe
+        if(df->length() <= 0)
+        {
+            throw RunTimeException(DEBUG, RTE_FAILURE, "dataframe empty");
+        }
+
+        // check geometry columns
+        if((df->xColumn->length() != df->length()) || (df->yColumn->length() != df->length()))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid geometry columns: %ld %ld", df->xColumn->length(), df->yColumn->length());
+        }
+
+        if(!rotated)
+        {
+            // calculate minimum and maximum values
+            double min_x = (*df->xColumn)[0];
+            double min_y = (*df->yColumn)[0];
+            double max_x = min_x;
+            double max_y = min_y;
+            for(long i = 1; i < df->length(); i++)
+            {
+                double cur_x = (*df->xColumn)[i];
+                double cur_y = (*df->yColumn)[i];
+                if(cur_x < min_x) min_x = cur_x;
+                if(cur_x > max_x) max_x = cur_x;
+                if(cur_y < min_y) min_y = cur_y;
+                if(cur_y > max_y) max_y = cur_y;
+            }
+
+            // push bounding box
+            lua_pushnumber(L, min_x);
+            lua_pushnumber(L, min_y);
+            lua_pushnumber(L, max_x);
+            lua_pushnumber(L, max_y);
+
+            // return four numbers of bounding box
+            return 4;
+        }
+        else // push rotated rectanble
+        {
+            // populate vector of points
+            vector<MathLib::point_t> pts;
+            pts.reserve(df->length());
+            for(long i = 0; i < df->length(); i++)
+            {
+                pts[i] = {(*df->xColumn)[i], (*df->yColumn)[i]};
+            }
+
+            // get rotated bounding box
+            vector<MathLib::point_t> rectangle = MathLib::boundingRectangle(pts);
+            if(rectangle.size() != 4)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid rectangle size of %lu", rectangle.size());
+            }
+
+            // push rectangle
+            for(const MathLib::point_t& vertex: rectangle)
+            {
+                lua_pushnumber(L, vertex.x);
+                lua_pushnumber(L, vertex.y);
+            }
+
+            // push eight numbers of rotated rectangle
+            return 8;
+        }
+
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error determining bounding box of dataframe: %s", e.what());
+        lua_pushnil(L);
+        return 1;
+    }
 }
 
 /*----------------------------------------------------------------------------

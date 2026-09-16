@@ -35,7 +35,6 @@ local function populate_catalogs(rqst, q, userlog)
                     userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> returned %d resources for %s", q, rsps and rsps["features"] and #rsps["features"] or 0, dataset))
                 elseif rc ~= RC_UNSUPPORTED then
                     userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to get catalog for %s <%d>: %s", q, dataset, rc, rsps))
-                    rqst[geo.PARMS][dataset]["catalog"] = {}
                 end
             end
         end

@@ -119,14 +119,6 @@ void GdalRaster::open(void)
         return;
     }
 
-    /*
-     *   - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
-     *       Prevents GDAL from listing the containing "directory" (a LIST/GET
-     *       sibling-file probe) when opening a single remote file. This
-     *       avoids an extra network round trip per open.
-     */
-    CPLSetThreadLocalConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR");
-
     try
     {
         dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));

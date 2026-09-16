@@ -41,6 +41,9 @@
 
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <vector>
+#include <limits>
+#include <algorithm>
 #include <openssl/evp.h>
 #include <openssl/bio.h>
 #include <openssl/pem.h>
@@ -1106,6 +1109,120 @@ uint32_t MathLib::hashbig( const void *key, size_t length, uint32_t initval)
 
   final(a,b,c);
   return c;
+}
+
+/*----------------------------------------------------------------------------
+ * convexHull
+ *
+ * Andrew's monotone chain. Returns hull in CCW order, no duplicate closing point.
+ *----------------------------------------------------------------------------*/
+vector<MathLib::point_t> MathLib::convexHull (vector<point_t>& pts)
+{
+    auto cross = [&](const MathLib::point_t& O, const MathLib::point_t& A, const MathLib::point_t& B) -> double {
+        return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+    };
+
+    size_t n = pts.size(), k = 0;
+    if (n < 3) return pts;
+    std::sort(pts.begin(), pts.end(), [](const point_t& a, const point_t& b) {
+        return a.x < b.x || (a.x == b.x && a.y < b.y);
+    });
+    vector<point_t> hull(2 * n);
+    for (size_t i = 0; i < n; ++i) {
+        while (k >= 2 && cross(hull[k-2], hull[k-1], pts[i]) <= 0) k--;
+        hull[k++] = pts[i];
+    }
+    for (size_t i = n - 1, t = k + 1; i-- > 0; ) {
+        while (k >= t && cross(hull[k-2], hull[k-1], pts[i]) <= 0) k--;
+        hull[k++] = pts[i];
+    }
+    hull.resize(k - 1);
+    return hull;
+}
+
+/*----------------------------------------------------------------------------
+ * boundingRectangle (i.e. rotated bounding box)
+ *----------------------------------------------------------------------------*/
+vector<MathLib::point_t> MathLib::boundingRectangle (vector<point_t>& pts)
+{
+    std::vector<point_t> hull = convexHull(pts);
+    size_t n = hull.size();
+
+    if (n == 0) {
+      return vector<point_t>(); // empty
+    }
+    else if (n <= 2) {
+        point_t a = hull.front();
+        point_t b = hull.back();
+        return vector<point_t>({a, b, b, a});
+    }
+
+    auto edgeDir = [&](size_t i, double& ux, double& uy) {
+        point_t p0 = hull[i], p1 = hull[(i + 1) % n];
+        double dx = p1.x - p0.x, dy = p1.y - p0.y;
+        double len = std::hypot(dx, dy);
+        ux = (len > 1e-12) ? dx / len : 1.0;
+        uy = (len > 1e-12) ? dy / len : 0.0;
+    };
+
+    double ux, uy;
+    edgeDir(0, ux, uy);
+    double vx = -uy, vy = ux;
+
+    auto dotDir = [&](const MathLib::point_t& p, double dx, double dy) -> double {
+      return p.x * dx + p.y * dy;
+    };
+
+    // One-time O(n) init of the four support pointers, for edge 0's orientation.
+    size_t R = 0, L = 0, T = 0, B = 0; // argmax(u), argmin(u), argmax(v), argmin(v)
+    for (size_t k = 1; k < n; ++k) {
+        if (dotDir(hull[k], ux, uy) > dotDir(hull[R], ux, uy)) R = k;
+        if (dotDir(hull[k], ux, uy) < dotDir(hull[L], ux, uy)) L = k;
+        if (dotDir(hull[k], vx, vy) > dotDir(hull[T], vx, vy)) T = k;
+        if (dotDir(hull[k], vx, vy) < dotDir(hull[B], vx, vy)) B = k;
+    }
+
+    vector<MathLib::point_t> best_corners(4);
+    double best_area = std::numeric_limits<double>::max();
+    const double EPS = 1e-12; // 1e-9;
+
+    // Amortized O(1) per call: over the whole i=0..n-1 loop, each pointer
+    // advances forward through at most n vertices total (never backward).
+    auto advance = [&](size_t& ptr, double dx, double dy) {
+        while (true) {
+            size_t next = (ptr + 1) % n;
+            if (dotDir(hull[next], dx, dy) > dotDir(hull[ptr], dx, dy) + EPS)
+                ptr = next;
+            else
+                break;
+        }
+    };
+
+    for (size_t i = 0; i < n; ++i) {
+        edgeDir(i, ux, uy);
+        vx = -uy; vy = ux;
+
+        advance(R, ux, uy);
+        advance(L, -ux, -uy);
+        advance(T, vx, vy);
+        advance(B, -vx, -vy);
+
+        double minU = dotDir(hull[L], ux, uy), maxU = dotDir(hull[R], ux, uy);
+        double minV = dotDir(hull[B], vx, vy), maxV = dotDir(hull[T], vx, vy);
+
+        double area = (maxU - minU) * (maxV - minV);
+        if (area < best_area) {
+            best_area = area;
+            auto toXY = [&](double u, double v) -> point_t {
+                return { u * ux + v * vx, u * uy + v * vy };
+            };
+            best_corners[0] = toXY(minU, minV);
+            best_corners[1] = toXY(maxU, minV);
+            best_corners[2] = toXY(maxU, maxV);
+            best_corners[3] = toXY(minU, maxV);
+        }
+    }
+    return best_corners;
 }
 
 #pragma GCC diagnostic pop

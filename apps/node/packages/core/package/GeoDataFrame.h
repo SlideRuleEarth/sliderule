@@ -281,6 +281,7 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaInError          (lua_State* L);
         static int      luaNumRows          (lua_State* L);
         static int      luaNumColumns       (lua_State* L);
+        static int      luaBoundingBox      (lua_State* L);
         static int      luaExport           (lua_State* L); // to Lua
         static int      luaDescribe         (lua_State* L); // to OpenAPI
         static int      luaSend             (lua_State* L);
