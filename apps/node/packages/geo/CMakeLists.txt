@@ -27,6 +27,7 @@ target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/geo.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/DataFrameSampler.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/DataFrameSetSampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GdalRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.cpp
@@ -56,6 +57,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/geo.h
         ${CMAKE_CURRENT_LIST_DIR}/package/DataFrameSampler.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/DataFrameSetSampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GdalRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.h

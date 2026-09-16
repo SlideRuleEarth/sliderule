@@ -379,7 +379,6 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
                 }
                 lua_pop(L, 1);
             }
-
         }
     }
 }

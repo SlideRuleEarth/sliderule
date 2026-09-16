@@ -80,7 +80,12 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         -- Create Dataframes and Runners
         local dataframes, runners = create(userlog)
         local node_timeout = parms["node_timeout"]
-        local sender = core.framesender(parms, rspq)
+
+        -- (Optionally) Create Frame Sender
+        local sender = nil
+        if parms:withsamplers() then
+            sender = core.framesender(parms, rspq)
+        end
 
         -- Add Runners to Dataframes
         for _, df in pairs(dataframes) do
@@ -88,12 +93,11 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
             for _, runner in ipairs(runners) do
                 df:run(runner)
             end
-            -- Add Sampler Runner
+            -- (Optionally) Add Frame Sender
             if parms:withsamplers() then
-                df:run(geo.framesampler(parms))
+                df:run(sender)
             end
             -- Add Default Runners
-            df:run(sender)
             df:run(core.TERMINATE)
         end
 
@@ -107,6 +111,14 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
                 userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> - %s/%s generated %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
             else
                 userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> - %s/%s timed out waiting to complete", rspq, parms["resource"], key))
+            end
+        end
+
+        -- With Sampler
+        if parms:withsamplers() then
+            geo.dfsampler(parms, dataframes)
+            for _, df in pairs(dataframes) do
+                df:send(rspq, parms["key_space"] + (df:key() << 32))
             end
         end
 

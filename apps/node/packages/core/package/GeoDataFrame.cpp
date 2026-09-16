@@ -1313,6 +1313,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
 {
     // set lua functions
     LuaEngine::setAttrFunc(L, "inerror",    luaInError);
+    LuaEngine::setAttrFunc(L, "key",        luaKey);
     LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
     LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
     LuaEngine::setAttrFunc(L, "bbox",       luaBoundingBox);
@@ -1915,6 +1916,25 @@ int GeoDataFrame::luaInError (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error determining state of dataframe: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaKey - key()
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaKey (lua_State* L)
+{
+    try
+    {
+        const GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->getKey());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting dataframe key: %s", e.what());
         lua_pushnil(L);
     }
 

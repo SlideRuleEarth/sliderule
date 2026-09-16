@@ -279,6 +279,7 @@ class GeoDataFrame: public LuaObject, public Field
         void            fromLua             (lua_State* L, int index) override;
 
         static int      luaInError          (lua_State* L);
+        static int      luaKey              (lua_State* L);
         static int      luaNumRows          (lua_State* L);
         static int      luaNumColumns       (lua_State* L);
         static int      luaBoundingBox      (lua_State* L);
