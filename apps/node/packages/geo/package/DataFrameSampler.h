@@ -111,7 +111,7 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
          * Data
          *--------------------------------------------------------------------*/
 
-         RequestParameters*             parms;
+         RequestParameters*         parms;
          vector<point_info_t>       points;
          vector<sampler_info_t*>    samplers;
          Dictionary<uint16_t>       bandIndex;
