@@ -42,11 +42,7 @@
 
 #include <algorithm>
 #include <uuid/uuid.h>
-
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
+#include <cpl_conv.h>
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -122,6 +118,14 @@ void GdalRaster::open(void)
         mlog(DEBUG, "Raster already opened: %s", fileName.c_str());
         return;
     }
+
+    /*
+     *   - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+     *       Prevents GDAL from listing the containing "directory" (a LIST/GET
+     *       sibling-file probe) when opening a single remote file. This
+     *       avoids an extra network round trip per open.
+     */
+    CPLSetThreadLocalConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR");
 
     try
     {

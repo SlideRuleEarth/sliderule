@@ -128,7 +128,8 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     end
 
     -- Check Request Constraints
-    if #resources <= 0 then
+    local num_resources = #resources
+    if num_resources <= 0 then
         userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> has no resources to process", rspq))
         return RC_NO_RESOURCES
     end
@@ -139,8 +140,8 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
     -- Create Receiving DataFrame
     local rqst_str = json.encode(rqst)
-    local df = core.dataframe({}, {endpoint=endpoint, request=rqst_str})
-    local expected_concurrent_channels = #resources * channels
+    local df = core.dataframe({}, {endpoint=endpoint, num_resources=num_resources})
+    local expected_concurrent_channels = num_resources * channels
     df:receive(proxyq_name, rspq, expected_concurrent_channels, parms["rqst_timeout"] * 1000)
 
     -- Proxy Request
@@ -166,22 +167,27 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     local rc = RC_SUCCESS
     local result = nil
     if parms:withlas() then
+
+        -- Create LAS DataFrame
         local las_dataframe = las.dataframe(parms, df)
         if not las_dataframe then
             userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to create LAS dataframe", rspq))
             return RC_LAS_FAILURE
         end
 
+        -- Write DataFrame to LAS File
         local las_filename = las_dataframe:export()
         if not las_filename then
             userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to export LAS/LAZ output", rspq))
             return RC_LAS_FAILURE
         end
 
-        -- Send Las File to User
+        -- Send LAS File to User
         local status = core.send2user(las_filename, rspq, parms)
         if not status then rc = RC_SEND_FAILURE end
+
     elseif parms:witharrow() then
+
         -- Create Arrow DataFrame
         local arrow_dataframe = arrow.dataframe(parms, df)
         if not arrow_dataframe then
@@ -199,9 +205,12 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         -- Send Parquet File to User
         local status = core.send2user(arrow_filename, rspq, parms)
         if not status then rc = RC_SEND_FAILURE end
+
     else
+
         -- Return Dataframe back to User
         result = df
+
     end
 
     -- Return Code --
