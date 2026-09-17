@@ -67,6 +67,7 @@ EndpointObject::Request::Request (const char* _id):
     length      (0),
     trace_id    (ORIGIN),
     content_type(UNKNOWN),
+    stop_watch  (NULL),
     id          (StringLib::duplicate(_id)),
     rspq        (id)
 {
@@ -77,6 +78,7 @@ EndpointObject::Request::Request (const char* _id):
  *----------------------------------------------------------------------------*/
 EndpointObject::Request::~Request (void)
 {
+    delete stop_watch;
     delete [] body;
     delete [] resource;
     delete [] version;

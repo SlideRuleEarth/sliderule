@@ -504,6 +504,7 @@ RequestParameters::RequestParameters(lua_State* L, uint64_t key_space, const cha
     addParameter("sliderule_version",   &slideruleVersion,      "Version of the SlideRule software running on the servers; output only");
     addParameter("build_information",   &buildInformation,      "Version information of the environment used to build the SlideRule software running on the servers; output only");
     addParameter("environment_version", &environmentVersion,    "Version of the infrastructure used to deploy the SlideRule software running ont he servers; output only");
+    addParameter("jit_catalog",         &jitCatalog,            "Generate raster sampling catalog just-in-time using the bounding box of the data to be sampled");
     addParameter(OutputFields::PARMS,   &output,                "Configuration structure that controls how the results are returned; typically used to write the output as a GeoParquet file");
 #ifdef __geo__
     addParameter(GeoFields::PARMS,      &samplers,              "Configuration structure that defines raster sampling operations the servers are to perform and append to the results");

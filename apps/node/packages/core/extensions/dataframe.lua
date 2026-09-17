@@ -24,14 +24,18 @@ local RC_LAS_FAILURE = -7
 --
 -- populate_catalogs
 --
-local function populate_catalogs(rqst, q, userlog)
+local function populate_catalogs(rqst, q, userlog, poly, parms)
     if rqst[geo.PARMS] then
         for dataset,raster_parms in pairs(rqst[geo.PARMS]) do
             if not raster_parms["catalog"] then
                 userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy <%s> querying resources for %s", q, dataset))
-                local rc, rsps = earthdata.search(raster_parms, rqst["poly"])
+                local rc, rsps = earthdata.search(raster_parms, poly)
                 if rc == RC_SUCCESS then
-                    rqst[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
+                    if parms then
+                        parms:setcatalog(dataset, json.encode(rsps))
+                    else
+                        rqst[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
+                    end
                     userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy <%s> returned %d resources for %s", q, rsps and rsps["features"] and #rsps["features"] or 0, dataset))
                 elseif rc ~= RC_UNSUPPORTED then
                     userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("<%s> failed to get catalog for %s <%d>: %s", q, dataset, rc, rsps))
@@ -59,6 +63,30 @@ local function get_resources(rqst, q, userlog)
 end
 
 --
+-- poly_from_bbox
+--
+local function poly_from_dataframes(dataframes)
+    local min_x = 180.0
+    local min_y = 90.0
+    local max_x = -180.0
+    local max_y = -90.0
+    for _, df in pairs(dataframes) do
+        local df_min_x, df_min_y, df_max_x, df_max_y = df:bbox()
+        if df_min_x < min_x then min_x = df_min_x end
+        if df_min_y < min_y then min_y = df_min_y end
+        if df_max_x > max_x then max_x = df_max_x end
+        if df_max_y > max_y then max_y = df_max_y end
+    end
+    return {
+        {lat = min_y, lon = min_x},
+        {lat = min_y, lon = max_x},
+        {lat = max_y, lon = max_x},
+        {lat = max_y, lon = min_x},
+        {lat = min_y, lon = min_x}
+    }
+end
+
+--
 -- Function: proxy
 --
 --  fanout request to multiple nodes and assemble results
@@ -71,7 +99,9 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
     -- Populate Catalogs on Initial User Request
     if parms["key_space"] == core.INVALID_KEY then
-        populate_catalogs(rqst, rspq, userlog)
+        if not parms["jit_catalog"] then
+            populate_catalogs(rqst, rspq, userlog, rqst["poly"])
+        end
     end
 
     -- Check if Resource Already Set
@@ -116,6 +146,10 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
         -- With Sampler
         if parms:withsamplers() then
+            if parms["jit_catalog"] then
+                local poly = poly_from_dataframes(dataframes)
+                populate_catalogs(rqst, rspq, userlog, poly, parms)
+            end
             local status, errmsg = geo.multisampler(parms, dataframes)
             if status then
                 for _, df in pairs(dataframes) do

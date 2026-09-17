@@ -119,6 +119,7 @@ class EndpointObject: public LuaObject
                 long                length; // of body
                 uint32_t            trace_id;
                 content_t           content_type;
+                Thread*             stop_watch;
                 const char*         id; // must be unique
                 Publisher           rspq;
 

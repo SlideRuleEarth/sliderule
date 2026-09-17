@@ -163,6 +163,7 @@ class RequestParameters: public LuaObject, public FieldMap<Field>
         FieldElement<string>                slideruleVersion    {LIBID, Field::READ_ONLY};
         FieldElement<string>                buildInformation    {BUILDINFO, Field::READ_ONLY};
         FieldElement<string>                environmentVersion  {SystemConfig::settings().environmentVersion.value, Field::READ_ONLY};
+        FieldElement<bool>                  jitCatalog          {false};
         OutputFields                        output;
 
         #ifdef __geo__

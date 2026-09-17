@@ -116,6 +116,7 @@ bool LuaEndpoint::defaultHandler (Request* request, LuaEngine* engine, const end
     if(request->content_type == BINARY)
     {
         sendHeader(OK, content2str(BINARY), &request->rspq);
+        request->stop_watch = new Thread(stopWatchThread, request); // kicks off stop watch
     }
 
     /* Execute Main Function */
@@ -559,7 +560,6 @@ bool LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, const en
 void* LuaEndpoint::requestThread (void* parm)
 {
     EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
-    Thread* stop_watch = new Thread(stopWatchThread, request); // kicks off stop watch
     const double start = TimeLib::latchtime();
     bool terminate = true;
 
@@ -607,9 +607,6 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Generate Telemetry */
     tlm.duration = static_cast<float>(TimeLib::latchtime() - start);
     telemeter(INFO, tlm);
-
-    /* Join Stop Watch */
-    delete stop_watch;
 
     /* Clean Up */
     delete request;
