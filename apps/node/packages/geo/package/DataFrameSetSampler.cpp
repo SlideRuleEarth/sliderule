@@ -44,7 +44,121 @@
 #include "LuaObject.h"
 
 /******************************************************************************
- * METHODS
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* DataFrameSetSampler::Runner::OBJECT_TYPE   = "DataFrameSetSamplerRunner";
+const char* DataFrameSetSampler::Runner::LUA_META_NAME = "DataFrameSetSamplerRunner";
+const struct luaL_Reg DataFrameSetSampler::Runner::LUA_META_TABLE[] = {
+    {NULL,          NULL}
+};
+
+/******************************************************************************
+ * RUNNER METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreate - framesampler(parms)
+ *----------------------------------------------------------------------------*/
+int DataFrameSetSampler::Runner::luaCreate(lua_State* L)
+{
+    RequestParameters* _parms = NULL;
+    try
+    {
+        _parms  = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
+        return createLuaObject(L, new DataFrameSetSampler::Runner(L, _parms));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        if(_parms) _parms->releaseLuaObject();
+        return returnLuaStatus(L, false);
+    }
+}
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+DataFrameSetSampler::Runner::Runner(lua_State* L, RequestParameters* _parms):
+    FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
+    parms(_parms)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor  -
+ *----------------------------------------------------------------------------*/
+DataFrameSetSampler::Runner::~Runner(void)
+{
+    parms->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ * run
+ *----------------------------------------------------------------------------*/
+bool DataFrameSetSampler::Runner::run (GeoDataFrame* dataframe)
+{
+    vector<GeoDataFrame*>   dataframes;
+    vector<point_info_t>    points;
+    vector<sampler_info_t*> samplers;
+    Dictionary<uint16_t>    band_index;
+
+    try
+    {
+        // for each raster dataset that needs to be sampled
+        buildSamplers(parms, samplers, band_index);
+
+        // get and check crs
+        const string& frame_crs = dataframe->getCRS();
+        if(frame_crs.empty())
+        {
+            mlog(WARNING, "DataFrameSetSampler: incoming dataframe missing CRS");
+        }
+
+        // populate points vector
+        populatePoints(points, dataframe, 0);
+
+        // get samples for all user RasterObjects
+        for(sampler_info_t* sampler: samplers)
+        {
+            sampler->robj->setCRS(frame_crs);
+
+            // sample the rasters
+            sampler->robj->getSamples(points, sampler->samples);
+
+            // put samples into dataframe columns
+            if(sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_NA)
+            {
+                populateColumns(sampler, band_index, dataframe, 0);
+            }
+            else
+            {
+                populateMultiColumns(sampler, band_index, dataframe, 0);
+            }
+
+            // add file id table metadata
+            populateFileIds(sampler, dataframe);
+
+            // release since not needed anymore
+            sampler->samples.clear();
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error sampling dataframe: %s", e.what());
+    }
+
+    // clean up samplers
+    for(sampler_info_t* sampler: samplers)
+    {
+        sampler->robj->stopSampling();
+        delete sampler;
+    }
+
+    return true;
+}
+
+/******************************************************************************
+ * BASE CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -79,34 +193,7 @@ int DataFrameSetSampler::luaSample(lua_State* L)
         }
 
         // for each raster dataset that needs to be sampled
-        uint16_t index = 0;
-        FieldMap<GeoFields>::entry_t geo_fields;
-        const char* key = parms->samplers.fields.first(&geo_fields);
-        while(key != NULL)
-        {
-            // build sampler
-            RasterObject* robj = RasterObject::cppCreate(parms, key);
-            if(robj)
-            {
-                sampler_info_t* sampler = new sampler_info_t(key, robj, parms->samplers[key]);
-                samplers.push_back(sampler);
-                LuaObject::referenceLuaObject(robj);
-            }
-            else
-            {
-                mlog(CRITICAL, "Failed to create raster <%s>", key);
-            }
-
-            // create band index
-            for(int i = 0; i < geo_fields.field->bands.length(); i++)
-            {
-                band_index.add(geo_fields.field->bands[i].c_str(), index);
-                index++;
-            }
-
-            // go to next raster to sample
-            key = parms->samplers.fields.next(NULL);
-        }
+        buildSamplers(parms, samplers, band_index);
 
         // get and check crs
         const string& frame_crs = dataframes[0]->getCRS();
@@ -176,6 +263,36 @@ int DataFrameSetSampler::luaSample(lua_State* L)
     // return back to lua
     lua_pushboolean(L, status);
     return 1;
+}
+/*----------------------------------------------------------------------------
+ * buildSamplers
+ *----------------------------------------------------------------------------*/
+void DataFrameSetSampler::buildSamplers (RequestParameters* parms, vector<sampler_info_t*>& samplers, Dictionary<uint16_t>& band_index)
+{
+    uint16_t index = 0;
+    FieldMap<GeoFields>::entry_t geo_fields;
+    const char* key = parms->samplers.fields.first(&geo_fields);
+    while(key != NULL)
+    {
+        // create raster object
+        RasterObject* robj = RasterObject::cppCreate(parms, key);
+        if(robj) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create raster <%s>", key);
+
+        // build sampler
+        sampler_info_t* sampler = new sampler_info_t(key, robj, parms->samplers[key]);
+        samplers.push_back(sampler);
+        LuaObject::referenceLuaObject(robj);
+
+        // create band index
+        for(int i = 0; i < geo_fields.field->bands.length(); i++)
+        {
+            band_index.add(geo_fields.field->bands[i].c_str(), index);
+            index++;
+        }
+
+        // go to next raster to sample
+        key = parms->samplers.fields.next(NULL);
+    }
 }
 
 /*----------------------------------------------------------------------------

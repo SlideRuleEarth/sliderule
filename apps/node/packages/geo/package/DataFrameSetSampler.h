@@ -55,6 +55,7 @@ class DataFrameSetSampler
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
         typedef RasterObject::sample_list_t sample_list_t;
         typedef RasterObject::point_info_t point_info_t;
 
@@ -79,15 +80,38 @@ class DataFrameSetSampler
         };
 
         /*--------------------------------------------------------------------
+         * Frame Runner Subclass
+         *--------------------------------------------------------------------*/
+
+        class Runner: public GeoDataFrame::FrameRunner
+        {
+            public:
+
+                static const char* OBJECT_TYPE;
+                static const char* LUA_META_NAME;
+                static const struct luaL_Reg LUA_META_TABLE[];
+
+                static int luaCreate (lua_State* L);
+
+            private:
+
+                Runner (lua_State* L, RequestParameters* _parms);
+                ~Runner (void) override;
+                bool run (GeoDataFrame* dataframe) override;
+
+                RequestParameters* parms;
+        };
+
+         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int  luaSample               (lua_State* L);
+        static void buildSamplers           (RequestParameters* parms, vector<sampler_info_t*>& samplers, Dictionary<uint16_t>& band_index);
         static long populatePoints          (vector<point_info_t>& points, GeoDataFrame* dataframe, long start_i);
         static long populateMultiColumns    (sampler_info_t* sampler, const Dictionary<uint16_t>& bandIndex, GeoDataFrame* dataframe, long start_i);
         static long populateColumns         (sampler_info_t* sampler, const Dictionary<uint16_t>& bandIndex, GeoDataFrame* dataframe, long start_i);
         static void populateFileIds         (sampler_info_t* sampler, GeoDataFrame* dataframe);
-
 };
 
 #endif  /* __dataframe_set_sampler__*/

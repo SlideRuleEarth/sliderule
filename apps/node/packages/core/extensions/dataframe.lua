@@ -116,7 +116,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
         -- With Sampler
         if parms:withsamplers() then
-            geo.dfsampler(parms, dataframes)
+            geo.multisampler(parms, dataframes)
             for _, df in pairs(dataframes) do
                 df:send(rspq, parms["key_space"] + (df:key() << 32))
             end

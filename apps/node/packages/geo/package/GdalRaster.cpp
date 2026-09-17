@@ -122,8 +122,7 @@ void GdalRaster::open(void)
     try
     {
         dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
-        if(dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open raster: %s:", fileName.c_str());
+        if(dset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open raster: %s:", fileName.c_str());
 
         mlog(DEBUG, "Opened %s", fileName.c_str());
 
@@ -150,7 +149,6 @@ void GdalRaster::open(void)
             if (bandName && StringLib::size(bandName) > 0)
             {
                 bandMap[string(bandName)] = i;
-                mlog(DEBUG, "Band %d: %s", i, bandName);
             }
         }
 
@@ -229,19 +227,21 @@ void GdalRaster::open(void)
         bbox.lat_max = geoTransform[3];
         bbox.lat_min = geoTransform[3] + ysize * geoTransform[5];
 
-        mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
-
         cellSize = geoTransform[1];
 
         /* Check sampling radius */
         const int sr = parms->sampling_radius.value;
         if(sr < 0 || sr > 1000)
+        {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Sampling radius %d out of range, must be between 0 and 1000 meters", sr);
+        }
 
         /* Check slope_scale_length */
         const int ss = parms->slope_scale_length.value;
         if(ss < 0 || ss > 1000)
+        {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Slope scale length %d out of range, must be between 0 and 1000 meters", ss);
+        }
 
         /* Create coordinates transform for raster */
         createTransform();
@@ -256,8 +256,7 @@ void GdalRaster::open(void)
         if(haveCRS)
         {
             isGeographic = targetCRS.IsGeographic();
-            if(!isGeographic)
-                unitScale = targetCRS.GetLinearUnits();
+            if(!isGeographic) unitScale = targetCRS.GetLinearUnits();
         }
         else
         {
