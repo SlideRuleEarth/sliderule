@@ -106,8 +106,8 @@ class DataFrameSampler
         static int  luaSample               (lua_State* L);
         static void buildSamplers           (RequestParameters* parms, vector<sampler_info_t*>& samplers, Dictionary<uint16_t>& band_index);
         static long populatePoints          (vector<point_info_t>& points, GeoDataFrame* dataframe, long start_i);
-        static long populateMultiColumns    (sampler_info_t* sampler, const Dictionary<uint16_t>& bandIndex, GeoDataFrame* dataframe, long start_i);
-        static long populateColumns         (sampler_info_t* sampler, const Dictionary<uint16_t>& bandIndex, GeoDataFrame* dataframe, long start_i);
+        static long populateMultiColumns    (sampler_info_t* sampler, const Dictionary<uint16_t>& band_index, GeoDataFrame* dataframe, long start_i);
+        static long populateColumns         (sampler_info_t* sampler, const Dictionary<uint16_t>& band_index, GeoDataFrame* dataframe, long start_i);
         static void populateFileIds         (sampler_info_t* sampler, GeoDataFrame* dataframe);
 };
 

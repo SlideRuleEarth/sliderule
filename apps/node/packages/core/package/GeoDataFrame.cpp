@@ -2010,8 +2010,8 @@ int GeoDataFrame::luaBoundingBox (lua_State* L)
             double max_y = min_y;
             for(long i = 1; i < df->length(); i++)
             {
-                double cur_x = (*df->xColumn)[i];
-                double cur_y = (*df->yColumn)[i];
+                const double cur_x = (*df->xColumn)[i];
+                const double cur_y = (*df->yColumn)[i];
                 if(cur_x < min_x) min_x = cur_x;
                 if(cur_x > max_x) max_x = cur_x;
                 if(cur_y < min_y) min_y = cur_y;
@@ -2038,7 +2038,7 @@ int GeoDataFrame::luaBoundingBox (lua_State* L)
             }
 
             // get rotated bounding box
-            vector<MathLib::point_t> rectangle = MathLib::boundingRectangle(pts);
+            const vector<MathLib::point_t> rectangle = MathLib::boundingRectangle(pts);
             if(rectangle.size() != 4)
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid rectangle size of %lu", rectangle.size());

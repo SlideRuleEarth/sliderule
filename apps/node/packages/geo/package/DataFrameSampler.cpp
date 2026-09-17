@@ -97,7 +97,6 @@ DataFrameSampler::Runner::~Runner(void)
  *----------------------------------------------------------------------------*/
 bool DataFrameSampler::Runner::run (GeoDataFrame* dataframe)
 {
-    vector<GeoDataFrame*>   dataframes;
     vector<point_info_t>    points;
     vector<sampler_info_t*> samplers;
     Dictionary<uint16_t>    band_index;
@@ -244,7 +243,7 @@ int DataFrameSampler::luaSample (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        FString errmsg("Error sampling dataframe: %s", e.what());
+        const FString errmsg("Error sampling dataframe: %s", e.what());
         mlog(e.level(), "%s", errmsg.c_str());
 
         // return failure
@@ -360,7 +359,7 @@ long DataFrameSampler::populatePoints (vector<point_info_t>& points, GeoDataFram
 long DataFrameSampler::populateMultiColumns (sampler_info_t* sampler, const Dictionary<uint16_t>& band_index, GeoDataFrame* dataframe, long start_i)
 {
     // set ending index
-    long end_i = start_i + dataframe->length();
+    const long end_i = start_i + dataframe->length();
 
     // create standard columns
     FieldColumn<FieldList<double>>* value_column = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);

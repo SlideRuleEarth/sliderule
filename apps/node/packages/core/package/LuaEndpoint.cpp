@@ -631,7 +631,7 @@ void* LuaEndpoint::stopWatchThread (void* parm)
 {
     EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
     const double start = TimeLib::latchtime();
-    double interval = DEFAULT_WAIT_INTERVAL / 1000;
+    const double interval = DEFAULT_WAIT_INTERVAL / 1000;
     OsApi::sleep(interval);
     while(request->rspq.getSubCnt() > 0)
     {
