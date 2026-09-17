@@ -74,7 +74,7 @@ ASSETS = {
         endpoint    = "s3.us-west-2.amazonaws.com",
         provider    = "NSIDC_CPRD",
         version     = "002",
-        api         = "ams",
+        api         = "cmr",
         formats     = {".h5"},
     },
     ["icesat2-atl24v1"] = {

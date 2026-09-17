@@ -159,12 +159,13 @@ class GeoDataFrame: public LuaObject, public Field
             static const struct luaL_Reg LUA_META_TABLE[];
 
             static int luaCreate (lua_State* L);
-            FrameSender(lua_State* L, RequestParameters* _parms, const char* _rspq, int _timeout);
+            FrameSender(lua_State* L, RequestParameters* _parms, const char* _rspq, const char* _name, int _timeout);
             ~FrameSender(void) override;
             bool run(GeoDataFrame* dataframe) override;
 
             RequestParameters* parms;
             const char* rspq;
+            const char* name;
             int timeout;
         };
 

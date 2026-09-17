@@ -113,8 +113,8 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
         -- (Optionally) Create Frame Sender
         local sender = nil
-        if parms:withsamplers() then
-            sender = core.framesender(parms, rspq)
+        if not parms:withsamplers() then
+            sender = core.framesender(parms, rspq, parms["resource"])
         end
 
         -- Add Runners to Dataframes
@@ -123,11 +123,8 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
             for _, runner in ipairs(runners) do
                 df:run(runner)
             end
-            -- (Optionally) Add Frame Sender
-            if not parms:withsamplers() then
-                df:run(sender)
-            end
             -- Add Default Runners
+            df:run(sender)
             df:run(core.TERMINATE)
         end
 
@@ -152,8 +149,8 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
             end
             local status, errmsg = geo.multisampler(parms, dataframes)
             if status then
-                for _, df in pairs(dataframes) do
-                    df:send(rspq, parms["key_space"] + (df:key() << 32))
+                for beam, df in pairs(dataframes) do
+                    df:send(rspq, parms["key_space"] + (df:key() << 32), parms["resource"].."/"..beam)
                 end
             else
                 userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("<%s> %s processing aborted: %s", rspq, parms["resource"], errmsg))

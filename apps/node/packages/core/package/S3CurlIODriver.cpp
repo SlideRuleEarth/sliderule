@@ -715,12 +715,6 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         throw RunTimeException(ERROR, RTE_FAILURE, "cURL fixed request to S3 failed");
     }
 
-    /* Warn on Incomplete Read */
-    if(info.index != size)
-    {
-        mlog(WARNING, "Read only %ld of %ld requested bytes", info.index, size);
-    }
-
     /* Return Bytes Read */
     return info.index;
 }

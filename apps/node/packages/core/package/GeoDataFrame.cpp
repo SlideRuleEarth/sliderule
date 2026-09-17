@@ -430,20 +430,21 @@ void GeoDataFrame::FrameRunner::updateRunTime(double duration)
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::FrameSender::luaCreate(lua_State* L)
 {
-    RequestParameters* _parms = NULL;
+    RequestParameters* parms = NULL;
 
     try
     {
-        _parms              = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
+        parms               = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
         const char* rspq    = getLuaString(L, 2);
-        const int   timeout = getLuaInteger(L, 3, true, SYS_TIMEOUT);
+        const char* name    = getLuaString(L, 3);
+        const int   timeout = getLuaInteger(L, 4, true, SYS_TIMEOUT);
 
-        return createLuaObject(L, new FrameSender(L, _parms, rspq, timeout));
+        return createLuaObject(L, new FrameSender(L, parms, rspq, name, timeout));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        if(_parms) _parms->releaseLuaObject();
+        if(parms) parms->releaseLuaObject();
     }
 
     return returnLuaStatus(L, false);
@@ -452,10 +453,11 @@ int GeoDataFrame::FrameSender::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * FrameSender: Constructor -
  *----------------------------------------------------------------------------*/
-GeoDataFrame::FrameSender::FrameSender(lua_State* L, RequestParameters* _parms, const char* _rspq, int _timeout):
+GeoDataFrame::FrameSender::FrameSender(lua_State* L, RequestParameters* _parms, const char* _rspq, const char* _name, int _timeout):
     FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     rspq(StringLib::duplicate(_rspq)),
+    name(StringLib::duplicate(_name)),
     timeout(_timeout)
 {
 }
@@ -466,6 +468,7 @@ GeoDataFrame::FrameSender::FrameSender(lua_State* L, RequestParameters* _parms, 
 GeoDataFrame::FrameSender::~FrameSender(void)
 {
     delete [] rspq;
+    delete [] name;
     parms->releaseLuaObject();
 }
 
@@ -486,7 +489,7 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     catch (const RunTimeException& e)
     {
         Publisher pubq(rspq);
-        alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "<%s> failed to send dataframe: %s", rspq, e.what());
+        alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "Failed to send data in %s: %s", name, e.what());
     }
 
     /* Update Run Time */
@@ -2115,6 +2118,7 @@ int GeoDataFrame::luaDescribe (lua_State* L)
 int GeoDataFrame::luaSend(lua_State* L)
 {
     bool status = true;
+    const char* name = "undefined";
 
     try
     {
@@ -2122,14 +2126,15 @@ int GeoDataFrame::luaSend(lua_State* L)
         GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char*     rspq        = getLuaString(L, 2);
         const uint64_t  key_space   = getLuaInteger(L, 3, true, INVALID_KEY);
-        const int       timeout     = getLuaInteger(L, 4, true, SYS_TIMEOUT);
+                        name        = getLuaString(L, 4, true, "unknown");
+        const int       timeout     = getLuaInteger(L, 5, true, SYS_TIMEOUT);
 
         // send dataframe
         dataframe->sendDataframe(rspq, key_space, false, timeout);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error sending dataframe: %s", e.what());
+        mlog(e.level(), "Failed to send data in %s: %s", name, e.what());
         status = false;
     }
 
