@@ -18,7 +18,7 @@ local function main()
         for _, beam in ipairs(parms["beams"]) do
             dataframes[beam] = gedi.gedi04ax(beam, parms, gedi04ah5, _rqst.rspq)
             if not dataframes[beam] then
-                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("<%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
             end
         end
         return dataframes, {}

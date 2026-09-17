@@ -559,6 +559,7 @@ bool LuaEndpoint::executeEndpoint (Request* request, LuaEngine* engine, const en
 void* LuaEndpoint::requestThread (void* parm)
 {
     EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
+    Thread* stop_watch = new Thread(stopWatchThread, request); // kicks off stop watch
     const double start = TimeLib::latchtime();
     bool terminate = true;
 
@@ -607,6 +608,9 @@ void* LuaEndpoint::requestThread (void* parm)
     tlm.duration = static_cast<float>(TimeLib::latchtime() - start);
     telemeter(INFO, tlm);
 
+    /* Join Stop Watch */
+    delete stop_watch;
+
     /* Clean Up */
     delete request;
 
@@ -617,5 +621,23 @@ void* LuaEndpoint::requestThread (void* parm)
     stop_trace(INFO, trace_id);
 
     /* Return */
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * stopWatchThread
+ *----------------------------------------------------------------------------*/
+void* LuaEndpoint::stopWatchThread (void* parm)
+{
+    EndpointObject::Request* request = static_cast<EndpointObject::Request*>(parm);
+    const double start = TimeLib::latchtime();
+    double interval = DEFAULT_WAIT_INTERVAL / 1000;
+    OsApi::sleep(interval);
+    while(request->rspq.getSubCnt() > 0)
+    {
+        const double duration = TimeLib::latchtime() - start;
+        alert(INFO, RTE_TIMEOUT, &request->rspq, NULL, "<%s> running %ld seconds", request->rspq.getName(), static_cast<long>(duration));
+        OsApi::sleep(interval);
+    }
     return NULL;
 }

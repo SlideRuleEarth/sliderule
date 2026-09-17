@@ -110,7 +110,7 @@ class LuaEndpoint: public EndpointObject
         static bool         executeEndpoint     (Request* request, LuaEngine* engine, const endpoint_t& endpoint, const LuaEngine::script_t& script);
 
         static void*        requestThread       (void* parm);
-        static void*        asyncThread         (void* parm);
+        static void*        stopWatchThread     (void* parm);
 
         /*--------------------------------------------------------------------
          * Data

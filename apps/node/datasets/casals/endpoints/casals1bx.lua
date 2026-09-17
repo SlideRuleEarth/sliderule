@@ -16,7 +16,7 @@ local function main()
         local casals1bh5 = h5coro.object(parms["asset"], resource)
         local df = casals.casals1bx(parms, casals1bh5, _rqst.rspq)
         if not df then
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe", _rqst.id, resource))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("<%s> on %s failed to create dataframe", _rqst.id, resource))
         end
         return {swath=df}, {}
     end)

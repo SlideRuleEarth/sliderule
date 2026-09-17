@@ -20,7 +20,7 @@ local function main()
 
     -- alert helper function
     local function status_to_client(lvl, code, message)
-        userlog:alert(lvl, code, string.format("request <%s> for %s: %s", _rqst.rspq, resource, message))
+        userlog:alert(lvl, code, string.format("<%s> for %s: %s", _rqst.rspq, resource, message))
         if code == core.RTE_FAILURE then error(message) end
     end
 

@@ -151,6 +151,7 @@ bool DataFrameSampler::Runner::run (GeoDataFrame* dataframe)
     for(sampler_info_t* sampler: samplers)
     {
         sampler->robj->stopSampling();
+        delete sampler->robj;
         delete sampler;
     }
 
@@ -162,11 +163,10 @@ bool DataFrameSampler::Runner::run (GeoDataFrame* dataframe)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaSample(parms, dfs)
+ * luaSample(parms, dataframes)
  *----------------------------------------------------------------------------*/
-int DataFrameSampler::luaSample(lua_State* L)
+int DataFrameSampler::luaSample (lua_State* L)
 {
-    bool                    status = true;
     RequestParameters*      parms = NULL;
     vector<GeoDataFrame*>   dataframes;
     vector<point_info_t>    points;
@@ -237,17 +237,26 @@ int DataFrameSampler::luaSample(lua_State* L)
             // release since not needed anymore
             sampler->samples.clear();
         }
+
+        // return success
+        lua_pushboolean(L, true);
+        lua_pushnil(L); // nil error message
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error sampling dataframe: %s", e.what());
-        status = false;
+        FString errmsg("Error sampling dataframe: %s", e.what());
+        mlog(e.level(), "%s", errmsg.c_str());
+
+        // return failure
+        lua_pushboolean(L, false);
+        lua_pushstring(L, errmsg.c_str());
     }
 
     // clean up samplers
     for(sampler_info_t* sampler: samplers)
     {
         sampler->robj->stopSampling();
+        delete sampler->robj;
         delete sampler;
     }
 
@@ -261,8 +270,7 @@ int DataFrameSampler::luaSample(lua_State* L)
     }
 
     // return back to lua
-    lua_pushboolean(L, status);
-    return 1;
+    return 2;
 }
 /*----------------------------------------------------------------------------
  * buildSamplers
@@ -276,12 +284,11 @@ void DataFrameSampler::buildSamplers (RequestParameters* parms, vector<sampler_i
     {
         // create raster object
         RasterObject* robj = RasterObject::cppCreate(parms, key);
-        if(robj) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create raster <%s>", key);
+        if(!robj) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create raster <%s>", key);
 
         // build sampler
         sampler_info_t* sampler = new sampler_info_t(key, robj, parms->samplers[key]);
         samplers.push_back(sampler);
-        LuaObject::referenceLuaObject(robj);
 
         // create band index
         for(int i = 0; i < geo_fields.field->bands.length(); i++)

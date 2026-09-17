@@ -280,11 +280,14 @@ class Session:
                 # Success
                 complete = True
 
+            except requests.ReadTimeout as e:
+                rsps = 'Timed-out waiting for response'
+
+            except requests.ConnectTimeout as e:
+                rsps = 'Timed-out connecting'
+
             except requests.ConnectionError as e:
                 rsps = 'Connection error'
-
-            except requests.Timeout as e:
-                rsps = 'Timed-out waiting for response'
 
             except requests.exceptions.ChunkedEncodingError as e:
                 rsps = 'Unexpected termination of response'
@@ -310,7 +313,7 @@ class Session:
 
             # Log Reason for Not Completing
             if not complete:
-                self.logger.debug(f'{rsps}... {retry_status(remaining_attempts)}')
+                self.logger.warning(f'{rsps}... {retry_status(remaining_attempts)}')
 
         # Check Complete
         if not complete:

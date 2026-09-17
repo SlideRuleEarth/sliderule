@@ -47,7 +47,7 @@ local function main()
         for _, beam in ipairs(parms["beams"]) do
             dataframes[beam] = icesat2.atl13x(beam, parms, h5obj, _rqst.rspq)
             if not dataframes[beam] then
-                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("<%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
             end
         end
 

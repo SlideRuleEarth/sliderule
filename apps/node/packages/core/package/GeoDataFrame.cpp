@@ -486,7 +486,7 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     catch (const RunTimeException& e)
     {
         Publisher pubq(rspq);
-        alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "request <%s> failed to send dataframe: %s", rspq, e.what());
+        alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "<%s> failed to send dataframe: %s", rspq, e.what());
     }
 
     /* Update Run Time */
@@ -2412,18 +2412,17 @@ int GeoDataFrame::luaWaitComplete(lua_State* L)
                 {
                     if(pub.getSubCnt() <= 0)
                     {
-                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> terminated while waiting", rspq);
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "<%s> terminated while waiting", rspq);
                         break;
                     }
                     else if(duration >= timeout)
                     {
-                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, timeout);
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "<%s> timed-out after %d seconds", rspq, timeout);
                         break;
                     }
                     else
                     {
                         duration += interval;
-                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... running %d of %d seconds", rspq, duration / 1000, timeout / 1000);
                     }
                 }
             }

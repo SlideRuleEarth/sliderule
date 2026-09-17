@@ -748,18 +748,17 @@ int LuaObject::luaWaitOn(lua_State* L)
                 {
                     if(pub.getSubCnt() <= 0)
                     {
-                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> terminated while waiting", rspq);
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "<%s> terminated while waiting", rspq);
                         break;
                     }
                     else if(duration >= timeout)
                     {
-                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, timeout);
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "<%s> timed-out after %d seconds", rspq, timeout);
                         break;
                     }
                     else
                     {
                         duration += interval;
-                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... %s still running after %d seconds", rspq, lua_obj->getName(), duration / 1000);
                     }
                 }
             }

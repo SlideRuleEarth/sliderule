@@ -71,12 +71,9 @@ class DataFrameSampler
             List<sample_list_t*> samples;
             vector<std::pair<uint64_t, const char*>> filemap;
             sampler_info_t (const char* _rkey, RasterObject* _robj, const GeoFields& _geoparms):
-                rkey(StringLib::duplicate(_rkey)),
+                rkey(_rkey),
                 robj(_robj),
                 geoparms(_geoparms) {};
-            ~sampler_info_t (void) {
-                delete [] rkey;
-                robj->releaseLuaObject(); };
         };
 
         /*--------------------------------------------------------------------
