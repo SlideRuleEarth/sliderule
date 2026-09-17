@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __dataframe_sampler__
-#define __dataframe_sampler__
+#ifndef __dataframe_set_sampler__
+#define __dataframe_set_sampler__
 
 /******************************************************************************
  * INCLUDES
@@ -39,6 +39,7 @@
 #include "GeoDataFrame.h"
 #include "RequestParameters.h"
 #include "RasterObject.h"
+#include "LuaObject.h"
 #include "OsApi.h"
 
 #include <set>
@@ -47,20 +48,14 @@
  * CLASS
  ******************************************************************************/
 
-class DataFrameSampler: public GeoDataFrame::FrameRunner
+class DataFrameSampler
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-        static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
         typedef RasterObject::sample_list_t sample_list_t;
         typedef RasterObject::point_info_t point_info_t;
 
@@ -72,14 +67,12 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
         struct sampler_info_t {
             const char* rkey;
             RasterObject* robj;
-            DataFrameSampler* obj;
             const GeoFields& geoparms;
             List<sample_list_t*> samples;
             vector<std::pair<uint64_t, const char*>> filemap;
-            sampler_info_t (const char* _rkey, RasterObject* _robj, DataFrameSampler* _obj, const GeoFields& _geoparms):
+            sampler_info_t (const char* _rkey, RasterObject* _robj, const GeoFields& _geoparms):
                 rkey(StringLib::duplicate(_rkey)),
                 robj(_robj),
-                obj(_obj),
                 geoparms(_geoparms) {};
             ~sampler_info_t (void) {
                 delete [] rkey;
@@ -87,34 +80,38 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
         };
 
         /*--------------------------------------------------------------------
+         * Frame Runner Subclass
+         *--------------------------------------------------------------------*/
+
+        class Runner: public GeoDataFrame::FrameRunner
+        {
+            public:
+
+                static const char* OBJECT_TYPE;
+                static const char* LUA_META_NAME;
+                static const struct luaL_Reg LUA_META_TABLE[];
+
+                static int luaCreate (lua_State* L);
+
+            private:
+
+                Runner (lua_State* L, RequestParameters* _parms);
+                ~Runner (void) override;
+                bool run (GeoDataFrame* dataframe) override;
+
+                RequestParameters* parms;
+        };
+
+         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate           (lua_State* L);
+        static int  luaSample               (lua_State* L);
+        static void buildSamplers           (RequestParameters* parms, vector<sampler_info_t*>& samplers, Dictionary<uint16_t>& band_index);
+        static long populatePoints          (vector<point_info_t>& points, GeoDataFrame* dataframe, long start_i);
+        static long populateMultiColumns    (sampler_info_t* sampler, const Dictionary<uint16_t>& bandIndex, GeoDataFrame* dataframe, long start_i);
+        static long populateColumns         (sampler_info_t* sampler, const Dictionary<uint16_t>& bandIndex, GeoDataFrame* dataframe, long start_i);
+        static void populateFileIds         (sampler_info_t* sampler, GeoDataFrame* dataframe);
+};
 
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                    DataFrameSampler        (lua_State* L, RequestParameters* _parms);
-                    ~DataFrameSampler       (void) override;
-
-        bool        run                     (GeoDataFrame* dataframe) override;
-        bool        populatePoints          (GeoDataFrame* dataframe);
-        static bool populateMultiColumns    (GeoDataFrame* dataframe, sampler_info_t* sampler);
-        static bool populateColumns         (GeoDataFrame* dataframe, sampler_info_t* sampler);
-        static bool populateFileIds         (GeoDataFrame* dataframe, sampler_info_t* sampler);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-         RequestParameters*         parms;
-         vector<point_info_t>       points;
-         vector<sampler_info_t*>    samplers;
-         Dictionary<uint16_t>       bandIndex;
-     };
-
-#endif  /* __dataframe_sampler__*/
+#endif  /* __dataframe_set_sampler__*/

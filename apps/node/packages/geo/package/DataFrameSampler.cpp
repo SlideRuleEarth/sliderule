@@ -41,31 +41,32 @@
 #include "TimeLib.h"
 #include "RasterObject.h"
 #include "DataFrameSampler.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* DataFrameSampler::OBJECT_TYPE   = "DataFrameSampler";
-const char* DataFrameSampler::LUA_META_NAME = "DataFrameSampler";
-const struct luaL_Reg DataFrameSampler::LUA_META_TABLE[] = {
+const char* DataFrameSampler::Runner::OBJECT_TYPE   = "DataFrameSamplerRunner";
+const char* DataFrameSampler::Runner::LUA_META_NAME = "DataFrameSamplerRunner";
+const struct luaL_Reg DataFrameSampler::Runner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
 /******************************************************************************
- * METHODS
+ * RUNNER METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * luaCreate - framesampler(parms)
  *----------------------------------------------------------------------------*/
-int DataFrameSampler::luaCreate(lua_State* L)
+int DataFrameSampler::Runner::luaCreate(lua_State* L)
 {
     RequestParameters* _parms = NULL;
     try
     {
         _parms  = dynamic_cast<RequestParameters*>(getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
-        return createLuaObject(L, new DataFrameSampler(L, _parms));
+        return createLuaObject(L, new DataFrameSampler::Runner(L, _parms));
     }
     catch(const RunTimeException& e)
     {
@@ -74,37 +75,219 @@ int DataFrameSampler::luaCreate(lua_State* L)
         return returnLuaStatus(L, false);
     }
 }
-
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-DataFrameSampler::DataFrameSampler(lua_State* L, RequestParameters* _parms):
+DataFrameSampler::Runner::Runner(lua_State* L, RequestParameters* _parms):
     FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
-    uint16_t band_index = 0;
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor  -
+ *----------------------------------------------------------------------------*/
+DataFrameSampler::Runner::~Runner(void)
+{
+    parms->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ * run
+ *----------------------------------------------------------------------------*/
+bool DataFrameSampler::Runner::run (GeoDataFrame* dataframe)
+{
+    vector<GeoDataFrame*>   dataframes;
+    vector<point_info_t>    points;
+    vector<sampler_info_t*> samplers;
+    Dictionary<uint16_t>    band_index;
+
+    try
+    {
+        // for each raster dataset that needs to be sampled
+        buildSamplers(parms, samplers, band_index);
+
+        // get and check crs
+        const string& frame_crs = dataframe->getCRS();
+        if(frame_crs.empty())
+        {
+            mlog(WARNING, "DataFrameSampler: incoming dataframe missing CRS");
+        }
+
+        // populate points vector
+        populatePoints(points, dataframe, 0);
+
+        // get samples for all user RasterObjects
+        for(sampler_info_t* sampler: samplers)
+        {
+            sampler->robj->setCRS(frame_crs);
+
+            // sample the rasters
+            sampler->robj->getSamples(points, sampler->samples);
+
+            // put samples into dataframe columns
+            if(sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_NA)
+            {
+                populateColumns(sampler, band_index, dataframe, 0);
+            }
+            else
+            {
+                populateMultiColumns(sampler, band_index, dataframe, 0);
+            }
+
+            // add file id table metadata
+            populateFileIds(sampler, dataframe);
+
+            // release since not needed anymore
+            sampler->samples.clear();
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error sampling dataframe: %s", e.what());
+    }
+
+    // clean up samplers
+    for(sampler_info_t* sampler: samplers)
+    {
+        sampler->robj->stopSampling();
+        delete sampler;
+    }
+
+    return true;
+}
+
+/******************************************************************************
+ * BASE CLASS METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaSample(parms, dfs)
+ *----------------------------------------------------------------------------*/
+int DataFrameSampler::luaSample(lua_State* L)
+{
+    bool                    status = true;
+    RequestParameters*      parms = NULL;
+    vector<GeoDataFrame*>   dataframes;
+    vector<point_info_t>    points;
+    vector<sampler_info_t*> samplers;
+    Dictionary<uint16_t>    band_index;
+
+    try
+    {
+        // get parameters
+        parms = dynamic_cast<RequestParameters*>(LuaObject::getLuaObject(L, 1, RequestParameters::OBJECT_TYPE));
+
+        // get table of dataframes
+        lua_pushnil(L);
+        while(lua_next(L, 2) != 0)
+        {
+            dataframes.push_back(dynamic_cast<GeoDataFrame*>(LuaObject::getLuaObject(L, -1, GeoDataFrame::OBJECT_TYPE)));
+            lua_pop(L, 1);
+        }
+
+        // check empty
+        if(dataframes.empty())
+        {
+            throw RunTimeException(INFO, RTE_STATUS, "no dataframes");
+        }
+
+        // for each raster dataset that needs to be sampled
+        buildSamplers(parms, samplers, band_index);
+
+        // get and check crs
+        const string& frame_crs = dataframes[0]->getCRS();
+        if(frame_crs.empty())
+        {
+            mlog(WARNING, "DataFrameSampler: incoming dataframe missing CRS");
+        }
+
+        // populate points vector
+        long start_i = 0;
+        for(GeoDataFrame* dataframe: dataframes)
+        {
+            start_i += populatePoints(points, dataframe, start_i);
+        }
+
+        // get samples for all user RasterObjects
+        for(sampler_info_t* sampler: samplers)
+        {
+            sampler->robj->setCRS(frame_crs);
+
+            // sample the rasters
+            sampler->robj->getSamples(points, sampler->samples);
+
+            // put samples into dataframe columns
+            start_i = 0;
+            for(GeoDataFrame* dataframe: dataframes)
+            {
+                if(sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_NA)
+                {
+                    start_i += populateColumns(sampler, band_index, dataframe, start_i);
+                }
+                else
+                {
+                    start_i += populateMultiColumns(sampler, band_index, dataframe, start_i);
+                }
+            }
+
+            // add file id table metadata
+            populateFileIds(sampler, dataframes[0]);
+
+            // release since not needed anymore
+            sampler->samples.clear();
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error sampling dataframe: %s", e.what());
+        status = false;
+    }
+
+    // clean up samplers
+    for(sampler_info_t* sampler: samplers)
+    {
+        sampler->robj->stopSampling();
+        delete sampler;
+    }
+
+    // clean up parms
+    parms->releaseLuaObject();
+
+    // clean up dataframes
+    for(GeoDataFrame* dataframe: dataframes)
+    {
+        dataframe->releaseLuaObject();
+    }
+
+    // return back to lua
+    lua_pushboolean(L, status);
+    return 1;
+}
+/*----------------------------------------------------------------------------
+ * buildSamplers
+ *----------------------------------------------------------------------------*/
+void DataFrameSampler::buildSamplers (RequestParameters* parms, vector<sampler_info_t*>& samplers, Dictionary<uint16_t>& band_index)
+{
+    uint16_t index = 0;
     FieldMap<GeoFields>::entry_t geo_fields;
     const char* key = parms->samplers.fields.first(&geo_fields);
     while(key != NULL)
     {
-        // build samplers
+        // create raster object
         RasterObject* robj = RasterObject::cppCreate(parms, key);
-        if(robj)
-        {
-            sampler_info_t* sampler = new sampler_info_t(key, robj, this, parms->samplers[key]);
-            samplers.push_back(sampler);
-            referenceLuaObject(robj);
-        }
-        else
-        {
-            mlog(CRITICAL, "Failed to create raster <%s>", key);
-        }
+        if(robj) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create raster <%s>", key);
+
+        // build sampler
+        sampler_info_t* sampler = new sampler_info_t(key, robj, parms->samplers[key]);
+        samplers.push_back(sampler);
+        LuaObject::referenceLuaObject(robj);
 
         // create band index
         for(int i = 0; i < geo_fields.field->bands.length(); i++)
         {
-            bandIndex.add(geo_fields.field->bands[i].c_str(), band_index);
-            band_index++;
+            band_index.add(geo_fields.field->bands[i].c_str(), index);
+            index++;
         }
 
         // go to next raster to sample
@@ -113,73 +296,9 @@ DataFrameSampler::DataFrameSampler(lua_State* L, RequestParameters* _parms):
 }
 
 /*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-DataFrameSampler::~DataFrameSampler(void)
-{
-    for(sampler_info_t* sampler: samplers)
-    {
-        sampler->robj->stopSampling();
-        delete sampler;
-    }
-    parms->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * run
- *----------------------------------------------------------------------------*/
-bool DataFrameSampler::run (GeoDataFrame* dataframe)
-{
-    // get and check crs
-    const string& frame_crs = dataframe->getCRS();
-    if(frame_crs.empty())
-    {
-        mlog(WARNING, "DataFrameSampler: incoming dataframe missing CRS");
-    }
-
-    // populate points vector
-    if(!populatePoints(dataframe))
-    {
-        mlog(CRITICAL, "Failed to populate points for sampling");
-        return false;
-    }
-
-    // get samples for all user RasterObjects
-    for(sampler_info_t* sampler: samplers)
-    {
-        sampler->robj->setCRS(frame_crs);
-
-        // sample the rasters
-        sampler->robj->getSamples(sampler->obj->points, sampler->samples);
-
-        // put samples into dataframe columns
-        if(sampler->geoparms.force_single_sample.value != GeoFields::SINGLE_SAMPLE_NA)
-        {
-            populateColumns(dataframe, sampler);
-        }
-        else
-        {
-            populateMultiColumns(dataframe, sampler);
-        }
-
-        // add file id table metadata
-        if(!populateFileIds(dataframe, sampler))
-        {
-            mlog(CRITICAL, "Faled to populate file id table");
-        }
-
-        // release since not needed anymore
-        sampler->samples.clear();
-    }
-
-    // return success
-    return true;
-}
-
-/*----------------------------------------------------------------------------
  * populatePoints
  *----------------------------------------------------------------------------*/
-bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
+long DataFrameSampler::populatePoints (vector<point_info_t>& points, GeoDataFrame* dataframe, long start_i)
 {
     // get columns
     const FieldColumn<time8_t>*  t_column = dataframe->getTimeColumn();
@@ -190,8 +309,7 @@ bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
     // chech columns
     if(!x_column || !y_column)
     {
-        mlog(CRITICAL, "Missing x and/or y columns (%d,%d)", x_column == NULL, y_column == NULL);
-        return false;
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Missing x and/or y columns (%d,%d)", x_column == NULL, y_column == NULL);
     }
 
     // initialize list of points
@@ -203,8 +321,8 @@ bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
     // populate x and y
     for(long i = 0; i < dataframe->length(); i++)
     {
-        points[i].point3d.x = (*x_column)[i];
-        points[i].point3d.y = (*y_column)[i];
+        points[start_i + i].point3d.x = (*x_column)[i];
+        points[start_i + i].point3d.y = (*y_column)[i];
     }
 
     // populate z (optionally)
@@ -212,7 +330,7 @@ bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
     {
         for(long i = 0; i < dataframe->length(); i++)
         {
-            points[i].point3d.z = static_cast<double>((*z_column)[i]);
+            points[start_i + i].point3d.z = static_cast<double>((*z_column)[i]);
         }
     }
 
@@ -221,19 +339,22 @@ bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
     {
         for(long i = 0; i < dataframe->length(); i++)
         {
-            points[i].gps = TimeLib::sysex2gpstime((*t_column)[i]);
+            points[start_i + i].gps = TimeLib::sysex2gpstime((*t_column)[i]);
         }
     }
 
-    // success
-    return true;
+    // return number of points added
+    return dataframe->length();
 }
 
 /*----------------------------------------------------------------------------
  * populateMultiColumns
  *----------------------------------------------------------------------------*/
-bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_info_t* sampler)
+long DataFrameSampler::populateMultiColumns (sampler_info_t* sampler, const Dictionary<uint16_t>& band_index, GeoDataFrame* dataframe, long start_i)
 {
+    // set ending index
+    long end_i = start_i + dataframe->length();
+
     // create standard columns
     FieldColumn<FieldList<double>>* value_column = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
     FieldColumn<FieldList<time8_t>>* time_column = new FieldColumn<FieldList<time8_t>>(Field::NESTED_LIST);
@@ -278,7 +399,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     }
 
     // iterate over each sample in a vector of lists of samples
-    for(int i = 0; i < sampler->samples.length(); i++)
+    for(int i = start_i; i < end_i; i++)
     {
         sample_list_t* slist = sampler->samples[i];
 
@@ -298,7 +419,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
             if(band_column)
             {
                 uint16_t index = 0xFFFF;
-                sampler->obj->bandIndex.find(sample->bandName.c_str(), &index);
+                band_index.find(sample->bandName.c_str(), &index);
                 band_list.append(index);
             }
         }
@@ -374,15 +495,18 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column,   "The calculated slope at the location being sampled");
     if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled; the compass azimuth of the downslope direction in degrees clockwise from north, NaN where the surface is flat");
 
-    // success
-    return true;
+    // return number of values added
+    return dataframe->length();
 }
 
 /*----------------------------------------------------------------------------
  * populateColumns
  *----------------------------------------------------------------------------*/
-bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t* sampler)
+long DataFrameSampler::populateColumns (sampler_info_t* sampler, const Dictionary<uint16_t>& band_index, GeoDataFrame* dataframe, long start_i)
 {
+    // set ending index
+    const long end_i = start_i + dataframe->length();
+
     // create standard columns
     FieldColumn<double>* value_column = new FieldColumn<double>;
     FieldColumn<time8_t>* time_column = new FieldColumn<time8_t>;
@@ -427,7 +551,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     }
 
     // iterate over each sample in a vector of lists of samples
-    for(int i = 0; i < sampler->samples.length(); i++)
+    for(int i = start_i; i < end_i; i++)
     {
         sample_list_t* slist = sampler->samples[i];
 
@@ -506,7 +630,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
             if(band_column)
             {
                 uint16_t index = 0xFFFF;
-                sampler->obj->bandIndex.find(sample->bandName.c_str(), &index);
+                band_index.find(sample->bandName.c_str(), &index);
                 band_column->append(index);
             }
 
@@ -621,14 +745,14 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column,   "The calculated slope at the location being sampled");
     if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column,  "The calculated aspect at the location being sampled; the compass azimuth of the downslope direction in degrees clockwise from north, NaN where the surface is flat");
 
-    // success
-    return true;
+    // return number of values added
+    return dataframe->length();
 }
 
 /*----------------------------------------------------------------------------
  * populateFileIds
  *----------------------------------------------------------------------------*/
-bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t* sampler)
+void DataFrameSampler::populateFileIds (sampler_info_t* sampler, GeoDataFrame* dataframe)
 {
     FieldMap<Field> file_id_table;
     const std::set<uint64_t>& file_ids = sampler->robj->fileDictGetSampleIds();
@@ -646,8 +770,7 @@ bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t*
         if(!file_id_table.add(key.c_str(), field, NULL, true))
         {
             delete field;
-            mlog(ERROR, "Failed to add metadata field <%s> to <%s>", key.c_str(), sampler->rkey);
-            return false;
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add metadata field <%s> to <%s>", key.c_str(), sampler->rkey);
         }
     }
 
@@ -660,10 +783,7 @@ bool DataFrameSampler::populateFileIds (GeoDataFrame* dataframe, sampler_info_t*
     if(!dataframe->addMetaData(key.c_str(), field, StringLib::duplicate("File ID table"), true))
     {
         delete field;
-        mlog(ERROR, "Failed to file id table for <%s> to dataframe metadata", key.c_str());
-        return false;
-    }
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to file id table for <%s> to dataframe metadata", key.c_str());
 
-    // success
-    return true;
+    }
 }

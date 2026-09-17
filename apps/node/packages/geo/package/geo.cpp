@@ -36,7 +36,6 @@
 #include "geo.h"
 
 #include "DataFrameSampler.h"
-#include "DataFrameSetSampler.h"
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
@@ -268,8 +267,8 @@ int geo_open (lua_State* L)
         {"raster",          RasterObject::luaCreate},
         {"factories",       RasterObject::luaFatories},
         {"sampler",         RasterSampler::luaCreate},
-        {"framesampler",    DataFrameSetSampler::Runner::luaCreate},
-        {"multisampler",    DataFrameSetSampler::luaSample},
+        {"framesampler",    DataFrameSampler::Runner::luaCreate},
+        {"multisampler",    DataFrameSampler::luaSample},
         {"parms",           GeoFields::luaCreate},
         {"calcutm",         GeoLib::luaCalcUTM},
         {"tiff",            GeoLib::TIFFImage::luaCreate},
