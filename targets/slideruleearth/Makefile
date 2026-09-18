@@ -982,6 +982,7 @@ release: ## tag and release sliderule; needs RELEASE
 	make sliderule-buildenv-docker
 	make ams-lock
 	echo $(RELEASE) > $(ROOT)/version.txt
+	git add $(ROOT)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
