@@ -124,7 +124,7 @@ class Tool:
                     print(f"Scraping {name} ...")
                     for result in submission["results"]:
                         if result["status"] in self.args.status:
-                            print(f"{result["arg"]}")
+                            print(f'{result["arg"]}')
                             arg_list.append(result["arg"])
                 else:
                     print(f"Skipping {name} because it is still pending")
@@ -144,7 +144,9 @@ class Tool:
             if not complete:
                 report = self.session.runner.queue(job_id=job["job_id"], queue=queue)["report"]
                 self.database.submissions[name]["status"] = report
-                if sum([report[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]]) == 0:
+                jobs_in_progress = sum([report[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]])
+                jobs_complete = sum([report[s] for s in [JobState.SUCCEEDED, JobState.FAILED]])
+                if jobs_in_progress == 0 and jobs_complete > 0:
                     print(f"Job {name} complete, reading results ...")
                     self.database.submissions[name]["complete"] = True
                     self.database.submissions[name]["results"] = self.__get_results(job["run_url"])
