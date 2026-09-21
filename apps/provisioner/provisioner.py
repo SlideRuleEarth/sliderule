@@ -39,21 +39,10 @@ JWT_ISSUER = os.environ.get('JWT_ISSUER')
 ALERT_STREAM = os.environ.get('ALERT_STREAM')
 TELEMETRY_STREAM = os.environ.get('TELEMETRY_STREAM')
 ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
-AFFILIATES_FILENAME = os.environ.get('AFFILIATES_FILENAME')
 SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL')
 ALERT_EMAIL = os.environ.get('ALERT_EMAIL')
 
 SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','sliderule','monitor']
-
-MAX_NODES = {
-    "owner": 100,
-    "member": 50
-}
-
-MAX_TTL = {
-    "owner": 525600, # 1 year
-    "member": 720 # 12 hours
-}
 
 MIN_TTL = 15 # minutes, for autoshutdown
 
@@ -251,21 +240,6 @@ def send_email(title, message):
         return False
 
 #
-# Get User Affiliation
-#
-def get_affiliation(username):
-    """
-    Retrieve and return dictionary of affiliation attributes for provided user
-    """
-    try:
-        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=f"{PROJECT_FOLDER}/{AFFILIATES_FILENAME}")
-        data = json.load(response['Body']).get(username, {})
-        return data.get("active", False) and data or None
-    except Exception as e:
-        print(f"Failed to get the affiliates file: {e}")
-        return None
-
-#
 # Populate User Data
 #
 def populate_user_data(script, rqst, service, parms=None):
@@ -337,42 +311,16 @@ def verify_signature(path, body, username, event):
         return False
 
 #
-# Max Nodes
-#
-def get_max_nodes(org_roles):
-    max_nodes = 0
-    if 'owner' in org_roles:
-        max_nodes = MAX_NODES["owner"]
-    elif 'member' in org_roles:
-        max_nodes = MAX_NODES["member"]
-    return max_nodes
-
-#
-# Max TTL
-#
-def get_max_ttl(org_roles):
-    max_ttl = 0
-    if 'owner' in org_roles:
-        max_ttl = MAX_TTL["owner"]
-    elif 'member' in org_roles:
-        max_ttl = MAX_TTL["member"]
-    return max_ttl
-
-#
 # Get User Info
 #
 def get_user_info(claims):
     username = claims.get('sub', '<anonymous>')
+    max_nodes = claims.get('max_nodes', 0)
+    max_ttl = claims.get('max_ttl', 0)
     org_roles = parse_claim_array(claims.get('org_roles', "[]"))
     audiences = parse_claim_array(claims.get('aud', "[]"))
     deployable_clusters = {audience for audience in audiences if (valid_cluster_name(audience) or audience == '*')}
     known_clusters = deployable_clusters - {'*'} | {'sliderule'}
-    max_nodes = get_max_nodes(org_roles)
-    max_ttl = get_max_ttl(org_roles)
-    if 'affiliate' in org_roles:
-        affiliation = get_affiliation(username) or {}
-        max_nodes = affiliation.get('max_nodes', max_nodes)
-        max_ttl = affiliation.get('max_ttl', max_nodes)
     return {
         'username': username,
         'orgRoles': org_roles,

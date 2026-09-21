@@ -160,7 +160,7 @@ ALERT_STREAM = recorder-firehose-alerts
 TELEMETRY_STREAM = recorder-firehose-telemetry
 
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
-AFFILIATES_FILENAME = affiliates.json
+USERS_FILENAME = users.json
 GITHUB_ORG ?= SlideRuleEarth
 GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
 TRUSTED_REDIRECT_HOSTS ?= "$(DOMAIN) localhost 127.0.0.1"
@@ -547,7 +547,7 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 						ParameterKey=TrustedRedirectHosts,ParameterValue=$(TRUSTED_REDIRECT_HOSTS) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=AffiliatesFilename,ParameterValue=$(PROJECT_FOLDER)/$(AFFILIATES_FILENAME) \
+						ParameterKey=UsersFilename,ParameterValue=$(PROJECT_FOLDER)/$(USERS_FILENAME) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
 	aws cloudformation wait stack-create-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
@@ -582,7 +582,7 @@ authenticator-test: ## run authenticator tests
 	GITHUB_API_URL=http://localhost:9083/api \
 	JWT_SIGNING_KEY_ARN=$(JWT_SIGNING_KEY_ARN) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	AFFILIATES_FILENAME=$(PROJECT_FOLDER)/$(AFFILIATES_FILENAME) \
+	USERS_FILENAME=$(PROJECT_FOLDER)/$(USERS_FILENAME) \
 	coverage run -m pytest $(ARGS) && \
 	coverage report -m'
 
@@ -632,7 +632,6 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \
-						ParameterKey=AffiliatesFilename,ParameterValue=$(AFFILIATES_FILENAME) \
 						ParameterKey=SupportEmail,ParameterValue=$(SUPPORT_EMAIL) \
 						ParameterKey=AlertEmail,ParameterValue=$(ALERT_EMAIL) \
 						ParameterKey=LambdaZipFile,ParameterValue=$(PROJECT_FOLDER)/$(PROVISIONER_ZIPFILE)
@@ -662,7 +661,6 @@ provisioner-test: ## run provisioner tests
 	PUBLIC_CLUSTER=$(PUBLIC_CLUSTER) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
 	PROJECT_FOLDER=$(PROJECT_FOLDER) \
-	AFFILIATES_FILENAME=$(AFFILIATES_FILENAME) \
     SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
 	coverage run -m pytest $(ARGS) && \
 	coverage report -m'
@@ -1029,7 +1027,7 @@ distclean: ## fully remove all non-version controlled files and directories
 ########################
 
 update-cf-env: ## update cloud formation environment for public deployment
-	aws s3 cp /data/$(AFFILIATES_FILENAME) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
+	aws s3 cp /data/$(USERS_FILENAME) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 
 init-dev-env: ## one-time setup of development environment for running locally
 	mkdir -p /data

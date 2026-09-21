@@ -33,12 +33,29 @@ HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager 
 TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(' ')) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
-AFFILIATES_FILENAME = os.environ["AFFILIATES_FILENAME"]
+USERS_FILENAME = os.environ["USERS_FILENAME"]
 
-# Scopes for project services
-GUEST_SCOPES = {"sliderule:access", "monitor:access"}
-MEMBER_SCOPES = GUEST_SCOPES | {"provisioner:access", "runner:access"} #
-OWNER_SCOPES = MEMBER_SCOPES | {"sliderule:admin"}
+# Scopes for org roles
+ALLOWED_SCOPES = {
+    "guest":        {"sliderule:access", "monitor:access"},
+    "affiliate":    {"sliderule:access", "monitor:access", "provisioner:access"},
+    "member":       {"sliderule:access", "monitor:access", "provisioner:access", "runner:access"},
+    "owner":        {"sliderule:access", "monitor:access", "provisioner:access", "runner:access", "sliderule:admin"},
+}
+
+# Default maximum nodes for org roles
+DEFAULT_MAX_NODES = {
+    "affiliate":    5,
+    "member":       10,
+    "owner":        100
+}
+
+# Default maximum ttl for org roles
+DEFAULT_MAX_TTL = {
+    "affliaite":    720,
+    "member":       720,
+    "owner":        525600
+}
 
 # GitHub OAuth endpoints (from the environment only for testing)
 GITHUB_AUTHORIZE_URL = os.environ.get('GITHUB_AUTHORIZE_URL','https://github.com/login/oauth/authorize')
@@ -222,17 +239,17 @@ def get_s3_client():
     return _s3_client
 
 
-def get_affiliation(username):
+def get_user_file(username):
     """
-    Retrieve and return dictionary of affiliation attributes for provided user
+    Retrieve and return dictionary of user attributes for provided user
     """
     s3 = get_s3_client()
     try:
-        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=AFFILIATES_FILENAME)
+        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=USERS_FILENAME)
         data = json.load(response['Body']).get(username, {})
         return data.get("active", False) and data or None
     except Exception as e:
-        print(f"Failed to get the affiliates file: {e}")
+        print(f"Failed to get the user file: {e}")
         return None
 
 
@@ -471,119 +488,6 @@ def get_github_user(authorization_str):
     return response.json()
 
 
-def get_user_role(authorization_str, username):
-    """
-    Return users role in organization
-    Raises:
-        Exception: If GitHub API returns an unexpected error (5xx, 429, etc.)
-                   This prevents silently degrading users to non-member status
-                   during GitHub outages.
-    """
-    # Initialize return values
-    is_org_owner = False
-    is_org_member = False
-
-    # Try to get the user's membership in the org
-    response = requests.get(
-        f"{GITHUB_API_URL}/orgs/{GITHUB_ORG}/memberships/{username}",
-        headers={
-            'Authorization': authorization_str,
-            'Accept': 'application/vnd.github.v3+json'
-        },
-        timeout=HTTP_TIMEOUT_SECONDS
-    )
-
-    if response.status_code == 200:
-        data = response.json()
-        state = data.get('state', '')
-        role = data.get('role', '')
-        # User must have 'active' state to be considered a member
-        is_org_member = state == 'active'
-        is_org_owner = is_org_member and role == 'admin'
-    elif response.status_code == 404:
-        # User is not a member of the organization - this is expected for non-members
-        pass
-    elif response.status_code == 429:
-        # Rate limit exceeded - don't silently degrade, surface the error
-        raise Exception("GitHub API rate limit exceeded. Please try again later.")
-    elif response.status_code >= 500:
-        # GitHub API error - don't silently degrade, surface the error
-        raise Exception(f"GitHub API is unavailable (status {response.status_code}). Please try again later.")
-    else:
-        # Other unexpected errors - fail explicitly rather than silently degrading
-        print(f"Unexpected response checking org membership: {response.status_code} {response.text}")
-        raise Exception(f"Failed to verify organization membership: GitHub returned status {response.status_code}")
-
-    # Return user role
-    if is_org_owner:
-        return 'owner'
-    elif is_org_member:
-        return 'member'
-    else:
-        return None
-
-
-def get_user_teams(authorization_str, org_roles):
-    """
-    Get all teams the user belongs to in the SlideRuleEarth organization.
-
-    Uses the /user/teams endpoint which works for all authenticated users,
-    unlike /orgs/{org}/teams which requires admin permissions.
-
-    Returns a list of team slugs
-    """
-    # Initialize teams
-    teams = []
-
-    # Early check if not a member
-    if 'member' not in org_roles:
-        return teams
-
-    # Use /user/teams which lists teams for the authenticated user
-    # This works for all users, unlike /orgs/{org}/teams which requires admin
-    page = 1
-    per_page = 100
-
-    while True:
-        # Make request to GitHub
-        response = requests.get(
-            f"{GITHUB_API_URL}/user/teams",
-            headers={
-                'Authorization': authorization_str,
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            params={
-                'page': page,
-                'per_page': per_page
-            },
-            timeout=HTTP_TIMEOUT_SECONDS
-        )
-
-        # Check valid response
-        if response.status_code != 200:
-            print(f"Failed to get user teams: {response.status_code} {response.text}")
-            break
-
-        # Pull out teams
-        user_teams = response.json()
-        for team in user_teams:
-            org = team.get('organization', {})
-            if org.get('login') == GITHUB_ORG:
-                team_slug = team.get('slug')
-                if team_slug:
-                    teams.append(team_slug)
-
-        # Check if there are more pages
-        if not user_teams:
-            break
-        if len(user_teams) < per_page:
-            break
-        page += 1
-
-    # Return teams
-    return teams
-
-
 # =============================================================================
 # Business Logic for Generating Tokens and Metadata
 # =============================================================================
@@ -606,29 +510,25 @@ def get_public_cluster():
     return None
 
 
-def generate_audience_list(username, clusters, org_roles, scope):
+def generate_audience_list(clusters, org_roles, scope):
     """
     Returns a list of services user has access to.
     """
     # Initialize allowed services
     audiences = []
 
-    # Get scopes
-    scopes = {s.split(":")[0] for s in scope}
-
     # Provide member services
-    if ('member' in org_roles) or ('affiliate' in org_roles): # member/affiliate only access
-        if 'provisioner' in scopes: # access to provisioner
-            audiences.append('provisioner')
-        if 'runner' in scopes: # access to runner
-            audiences.append('runner')
-        if 'monitor' in scopes: # access to cluster monitor
-            audiences.append('monitor')
-        if 'sliderule' in scopes: # access to cluster
-            if clusters: # all members can access services at subdomains tied to these clusters
-                audiences.extend(clusters)
-            if 'owner' in org_roles: # owners can access all clusters
-                audiences.append('*')
+    if 'provisioner:access' in scope: # access to provisioner
+        audiences.append('provisioner')
+    if 'runner:access' in scope: # access to runner
+        audiences.append('runner')
+    if 'monitor:access' in scope: # access to cluster monitor
+        audiences.append('monitor')
+    if 'sliderule:access' in scope: # access to cluster
+        if clusters: # all members can access services at subdomains tied to these clusters
+            audiences.extend(clusters)
+        if ('owner' in org_roles) and ('sliderule:admin' in scope): # owners can access all clusters
+            audiences.append('*')
 
     # Return list of audiences
     return audiences
@@ -671,39 +571,31 @@ def authorize_user(authorization_str, scope):
     Build the authorization token and metadata for the user
     """
     # get username (JWT claim)
-    user_info = get_github_user(authorization_str)
-    username = user_info.get('login')
+    github_account = get_github_user(authorization_str)
+    username = github_account.get('login')
     if not username:
         raise RuntimeError('Could not get GitHub username')
 
-    # initialize claims
-    org_roles = []
-    clusters = []
+    # get user info (USERS_FILENAME)
+    user_info = get_user_file(username)
+    if not user_info:
+        raise RuntimeError('Could not get user info')
 
-    # get affiliation (JWT claims)
-    affiliation = get_affiliation(username)
-    if affiliation:
-        scope = intersection_of_scope(scope, affiliation["allowed_scopes"]) # restrict scope to those allowed
-        org_roles += ['affiliate'] # append affiliate to organization roles
-        clusters += affiliation['clusters'] # append affiliate's clusters to clusters
+    # get organizational roles
+    org_roles = user_info['org_roles']
+    primary_role = org_roles[0]
 
-    # get organizational roles (JWT claim)
-    user_role = get_user_role(authorization_str, username)
-    if (user_role == 'owner') and ('sliderule:admin' in scope): # must be owner AND requesting admin
-        org_roles += ['owner', 'member']
-    elif (user_role == 'owner') or (user_role == 'member'): # owners not requesting admin and regular members
-        org_roles += ['member']
+    # restrict scope to those allowed
+    scope = intersection_of_scope(scope, ALLOWED_SCOPES[primary_role])
 
-    # get team clusters (match one-to-one to user's teams)
-    clusters += get_user_teams(authorization_str, org_roles)
-
-    # get public cluster
+    # get allowed clusters
+    clusters = user_info['clusters']
     public_cluster_name = get_public_cluster()
     if public_cluster_name and isinstance(public_cluster_name, str):
         clusters += [public_cluster_name]
 
     # build audience list (JWT claim)
-    audience_list = generate_audience_list(username, clusters, org_roles, scope)
+    audience_list = generate_audience_list(clusters, org_roles, scope)
 
     # token expiration based on JWT_EXPIRATION_HOURS config (JWT claim)
     now = datetime.now(timezone.utc)
@@ -717,7 +609,9 @@ def authorize_user(authorization_str, scope):
         'org': GITHUB_ORG,
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
-        'iss': f"https://{AUTHENTICATOR_HOSTNAME}"
+        'iss': f"https://{AUTHENTICATOR_HOSTNAME}",
+        'max_nodes': user_info.get("max_nodes", DEFAULT_MAX_NODES.get(primary_role, 0)),
+        'max_ttl': user_info.get("max_ttl", DEFAULT_MAX_TTL.get(primary_role, 0))
     }
 
     # Create minimal signed JWT token (only server-essential fields)
@@ -751,7 +645,7 @@ def handle_register(event: dict) -> dict:
     response_types      = parms.get('response_types', ['code']) # defaults to ["code"] per RFC 7591; must be ["code"] for OAuth 2.1 as ["token"] (implicit) is not allowed
     auth_method         = parms.get('token_endpoint_auth_method', 'none')
     challenge_method    = parms.get('code_challenge_method', 'S256')
-    scope               = parms.get('scope', ' '.join(GUEST_SCOPES)) # optional per the standard
+    scope               = parms.get('scope', ' '.join(ALLOWED_SCOPES["guest"])) # optional per the standard
 
     # check redirect_uris
     if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
@@ -809,7 +703,7 @@ def handle_register(event: dict) -> dict:
             'error': 'invalid_client_metadata',
             'error_description': 'scope must be a space-separated string'
         })
-    elif not contains_scope(scope.split(), MEMBER_SCOPES, check="all"):
+    elif not contains_scope(scope.split(), ALLOWED_SCOPES["member"], check="all"):
         return json_response(400, {
             'error': 'invalid_client_metadata',
             'error_description': 'invalid scope'
@@ -985,7 +879,7 @@ def handle_callback(event):
 
         # check rules for scope and redirect
         if contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            if not contains_scope(scope, MEMBER_SCOPES, check="all"):
+            if not contains_scope(scope, ALLOWED_SCOPES["member"], check="all"):
                 raise RuntimeError(f"Invalid scope: {scope}")
         else: # redirect not allowed
             raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
@@ -1340,7 +1234,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata (device flow supports all scopes)
-        scope = parms.get('scope', ' '.join(OWNER_SCOPES)).split()
+        scope = parms.get('scope', ' '.join(ALLOWED_SCOPES["owner"])).split()
         token, metadata = authorize_user(f'Bearer {access_token}', scope)
 
         # Response with a successful authentication
@@ -1406,7 +1300,7 @@ def handle_pat_login(event):
             })
 
         # Token is valid! Authenticate user to get your own session token/metadata
-        token, metadata = authorize_user(f'token {pat}', MEMBER_SCOPES)
+        token, metadata = authorize_user(f'token {pat}', ALLOWED_SCOPES["member"])
         return json_response(200, {
             'status': 'success',
             'token': token,
@@ -1477,7 +1371,7 @@ def basic_callback(code, redirect_uri):
     try:
         # Authenticate user (gets token and ignores metadata)
         access_token = exchange_code_for_token(code)
-        token, _ = authorize_user(f'Bearer {access_token}', GUEST_SCOPES)
+        token, _ = authorize_user(f'Bearer {access_token}', ALLOWED_SCOPES["guest"])
 
         # check redirect_uri against only the trusted redirect hosts
         # (since this is the basic authorization flow)
@@ -1640,7 +1534,7 @@ def handle_authorization_server(event: dict) -> dict:
         "authorization_endpoint": f"{base_url}/auth/github/login", # Used by client as log in destination. Required for authorization_code grant.
         "token_endpoint": f"{base_url}/auth/github/token", # Used by client for POSTs to exchange a code for a token.
         "response_types_supported": ["code"], # Required — the response types this AS can produce. Only "code" for OAuth 2.1 (implicit/"token" is removed).
-        "scopes_supported": list(MEMBER_SCOPES), # only support member-level and third-party scopes for dynamically registered clients
+        "scopes_supported": list(ALLOWED_SCOPES["member"]), # only support member-level and third-party scopes for dynamically registered clients
         "token_endpoint_auth_methods_supported": ["none"], # "none" means no client_secret — authentication is handled by PKCE instead
         "code_challenge_methods_supported": ["S256"], # S256 only — "plain" is removed in OAuth 2.1
         "registration_endpoint": f"{base_url}/auth/github/register", # Dynamic client registration (RFC 7591)

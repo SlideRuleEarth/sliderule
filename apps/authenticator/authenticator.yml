@@ -22,7 +22,7 @@ Parameters:
     Type: CommaDelimitedList
   ProjectBucket:
     Type: String
-  AffiliatesFilename:
+  UsersFilename:
     Type: String
   LambdaZipFile:
     Type: String
@@ -117,7 +117,7 @@ Resources:
               - Effect: Allow
                 Action: ["s3:GetObject"]
                 Resource:
-                  - !Sub "arn:aws:s3:::${ProjectBucket}/${AffiliatesFilename}"
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${UsersFilename}"
 
   # Lambda Function
   GitHubOAuthLambda:
@@ -145,7 +145,7 @@ Resources:
           TRUSTED_REDIRECT_HOSTS: !Ref TrustedRedirectHosts
           SESSION_TABLE: !Sub '${AWS::StackName}-store'
           PROJECT_BUCKET: !Ref ProjectBucket
-          AFFILIATES_FILENAME: !Ref AffiliatesFilename
+          USERS_FILENAME: !Ref UsersFilename
 
   # DynamoDB Table
   OauthStore:
