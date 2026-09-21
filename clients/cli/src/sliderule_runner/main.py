@@ -216,7 +216,7 @@ class Tool:
 
     # Finish
     def finish(self):
-        if not self.args.dryrun:
+        if not self.args.dryrun and "archive" not in self.args:
             # save database
             self.database.write()
 

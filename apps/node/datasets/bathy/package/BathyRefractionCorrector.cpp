@@ -247,37 +247,51 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double dE = dY * sin(static_cast<double>(df.ref_az[i]));          // UTM offsets
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
-            /* Calculate UTM Coordinates */
-            const GeoLib::point_t coord = utm_transform.calculateCoordinates(df.lat_ph[i], df.lon_ph[i]);
-            if(utm_transform.in_error)
-            {
-                if(first_transform_error)
-                {
-                    first_transform_error = false;
-                    mlog(CRITICAL, "Unable to convert %lf,%lf to UTM zone %d", df.lat_ph[i], df.lon_ph[i], utm_transform.zone);
-                }
-                df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
-            }
-
-            /* Correct Latitude and Longitude */
-            const double corr_x_ph = coord.x + dE;
-            const double corr_y_ph = coord.y + dN;
-            const GeoLib::point_t point = wgs84_transform.calculateCoordinates(corr_x_ph, corr_y_ph);
-            if(wgs84_transform.in_error)
-            {
-                if(first_transform_error)
-                {
-                    first_transform_error = false;
-                    mlog(CRITICAL, "Unable to convert %lf,%lf to WSG84 coordinates", corr_x_ph, corr_y_ph);
-                }
-                df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
-            }
-
-            /* Apply Refraction Correction */
+            /* Apply Depth Correction */
             df.geoid_corr_h[i] += dZ;
             df.ellipse_h[i] += dZ;
-            df.lat_ph[i] = point.x;
-            df.lon_ph[i] = point.y;
+
+            try
+            {
+                /* Calculate UTM Coordinates */
+                const GeoLib::point_t coord = utm_transform.calculateCoordinates(df.lat_ph[i], df.lon_ph[i]);
+                if(utm_transform.in_error)
+                {
+                    if(first_transform_error)
+                    {
+                        first_transform_error = false;
+                        mlog(CRITICAL, "Unable to convert %lf,%lf to UTM zone %d", df.lat_ph[i], df.lon_ph[i], utm_transform.zone);
+                    }
+                    df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
+                }
+
+                /* Correct Latitude and Longitude */
+                const double corr_x_ph = coord.x + dE;
+                const double corr_y_ph = coord.y + dN;
+                const GeoLib::point_t point = wgs84_transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+                if(wgs84_transform.in_error)
+                {
+                    if(first_transform_error)
+                    {
+                        first_transform_error = false;
+                        mlog(CRITICAL, "Unable to convert %lf,%lf to WSG84 coordinates", corr_x_ph, corr_y_ph);
+                    }
+                    df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
+                }
+
+                /* Apply Refraction Correction */
+                df.lat_ph[i] = point.x;
+                df.lon_ph[i] = point.y;
+            }
+            catch (const std::exception& e)
+            {
+                if(first_transform_error)
+                {
+                    first_transform_error = false;
+                    mlog(CRITICAL, "Unhandled error correcting photon %ld", i);
+                }
+                df.processing_flags[i] |= BathyParameters::TRANSFORM_ERROR_FLAG;
+            }
         }
     }
 

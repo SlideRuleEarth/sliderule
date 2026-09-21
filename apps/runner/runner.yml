@@ -321,7 +321,7 @@ Resources:
       ComputeResources:
         Type: SPOT
         MinvCpus: 0
-        MaxvCpus: 1024
+        MaxvCpus: 4096
         DesiredvCpus: 0
         InstanceTypes:
           - default_arm64
@@ -394,7 +394,7 @@ Resources:
               - Action: RETRY
                 OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
           Timeout:
-            AttemptDurationSeconds: 5400  # 90 minutes
+            AttemptDurationSeconds: 10800  # 3 hours
           ContainerProperties:
             Image: !Sub "${ContainerRegistry}/sliderule:${ImageTag}"
             ResourceRequirements:
