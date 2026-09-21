@@ -463,7 +463,7 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <$(PUBLIC_CLUSTER)-$(TIMESTAMP)>"
-	sliderule-provisioner --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest
+	sliderule-provisioner deploy --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 7 --ttl 525600 --version latest
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \
@@ -719,6 +719,10 @@ runner-delete: ## deletes the lambda runner functions
 	aws s3 rm s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 	aws cloudformation delete-stack --stack-name $(RUNNER_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(RUNNER_STACKNAME)
+
+runner-update: runner-build ## updates the lambda runner functions
+	aws s3 cp $(RUNNER_STAGE_DIR)/$(RUNNER_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
+	aws lambda update-function-code --function-name $(RUNNER_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(RUNNER_ZIPFILE)
 
 runner-logs: ## display logs from recent runner invocations
 	aws logs tail /aws/lambda/$(RUNNER_STACKNAME)-gateway --since 2h --format short

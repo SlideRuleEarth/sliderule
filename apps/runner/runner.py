@@ -34,6 +34,7 @@ batch = boto3.client("batch")
 ses = boto3.client('ses')
 s3 = boto3.client("s3")
 sm = boto3.client('secretsmanager')
+logs = boto3.client("logs")
 
 _pubkey_cache = {}
 
@@ -378,7 +379,7 @@ def report_queue_handler(body):
     for job in job_list:
         state["report"][job["status"]] += 1
         if verbose:
-            state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "status": job["status"]})
+            state["jobs"].append({"job_id": job["jobId"], "name": job["jobName"], "index": job["arrayProperties"]["index"], "status": job["status"]})
 
     # success
     return json_response(200, state)
@@ -411,6 +412,46 @@ def cancel_handler(body):
 
     # success
     return json_response(200, state)
+
+#
+# Job Logs
+#
+def logs_handler(body):
+
+    # get request parameters
+    job_id = body.get("job_id") # string providing the (child) job id
+
+    # get job attributes
+    response = batch.describe_jobs(jobs=[job_id])
+    if not response["jobs"]:
+        raise RuntimeError(f"Job not found: {job_id}")
+
+    # get log stream name
+    job = response["jobs"][0]
+    log_stream = job["container"].get("logStreamName")
+    if not log_stream:
+        raise RuntimeError(f"Logs not found: {job_id}")
+
+    # get log events
+    events = []
+    token = None
+    while True:
+        kwargs = {
+            "logGroupName": f"/aws/batch/{STACK_NAME}",
+            "logStreamName": log_stream,
+            "startFromHead": True,
+        }
+        if token is not None:
+            kwargs["nextToken"] = token
+        response = logs.get_log_events(**kwargs)
+        events.extend(event["message"] for event in response["events"])
+        next_token = response["nextForwardToken"]
+        if next_token == token:
+            break  # no progress made -> end of stream
+        token = next_token
+
+    # success
+    return json_response(200, events)
 
 # ###############################
 # Lambda: Gateway Handler
@@ -452,6 +493,8 @@ def lambda_gateway(event, context):
             return report_queue_handler(body)
         elif path == '/cancel': # cancel a submitted job
             return cancel_handler(body)
+        elif path == '/logs': # get log events for a job
+            return logs_handler(body)
 
         # invalid path
         return json_response(404, {'error': 'not found'})
@@ -460,80 +503,3 @@ def lambda_gateway(event, context):
 
         # unhandled exception
         return exception_reponse(e)
-
-# ###############################
-# Main: Local Test Environment
-# ###############################
-
-if __name__ == '__main__':
-
-    # imports
-    import sliderule
-    import argparse
-
-    # command line arguments
-    parser = argparse.ArgumentParser(description="""Provisioner Command Line""")
-    parser.add_argument('--api',        type=str,               default=None)
-    parser.add_argument('--name',       type=str,               default=None)
-    parser.add_argument('--job_id',     type=str,               default=None)
-    parser.add_argument('--script',     type=str,               default=None)
-    parser.add_argument('--arg',        type=str,               default=None)
-    parser.add_argument('--args',       type=str, nargs='*',    default=None)
-    parser.add_argument('--vcpus',      type=int,               default=None)
-    parser.add_argument('--memory',     type=int,               default=None)
-    parser.add_argument('--verbose',    action='store_true',    default=False)
-    args = parser.parse_args()
-
-    # sliderule python client session
-    session = sliderule.create_session(domain=DOMAIN)
-    session.authenticate()
-
-    # request parameters
-    body_dict = {}
-    if args.name: body_dict["name"] = args.name
-    if args.job_id: body_dict["job_id"] = args.job_id
-    if args.arg: body_dict["args"] = args.arg
-    if args.args: body_dict["args"] = json.dumps(args.args)
-    if args.vcpus: body_dict["vcpus"] = args.vcpus
-    if args.memory: body_dict["memory"] = args.memory
-    if args.verbose: body_dict["verbose"] = args.verbose
-    if args.script:
-        with open(args.script, "r") as file:
-            body_dict["script"] = base64.b64encode(file.read().encode()).decode()
-    body = json.dumps(body_dict)
-
-    # sign request
-    headers = {}
-    session._Session__signrequest(headers, f"{DOMAIN}{args.api}", body)
-
-    # build request
-    rqst = {
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "org_roles": f'[{" ".join(session.ps_metadata["org_roles"])}]',
-                        "aud": f'[{" ".join(session.ps_metadata["aud"])}]',
-                        "sub": f'{session.ps_metadata["sub"]}'
-                    }
-                }
-            }
-        },
-        "headers": {
-            "host": DOMAIN,
-            "x-sliderule-timestamp": headers["x-sliderule-timestamp"],
-            "x-sliderule-signature": headers["x-sliderule-signature"],
-        },
-        "rawPath": args.api,
-        "body": body
-    }
-
-    # make request
-    rsps = lambda_gateway(rqst, None)
-
-    # display response
-    if rsps.get("statusCode") == 200:
-        content = json.loads(rsps["body"])
-        print(json.dumps(content, indent=2))
-    else:
-        print(json.dumps(rsps, indent=2))

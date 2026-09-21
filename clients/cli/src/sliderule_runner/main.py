@@ -122,9 +122,10 @@ class Tool:
             try:
                 if submission["complete"]:
                     print(f"Scraping {name} ...")
-                    for result in submission["results"]:
+                    for i in range(len(submission["results"])):
+                        result = submission["results"][i]
                         if result["status"] in self.args.status:
-                            print(f'{result["arg"]}')
+                            print(f'{i:-5d}: {result["arg"]}')
                             arg_list.append(result["arg"])
                 else:
                     print(f"Skipping {name} because it is still pending")
@@ -142,7 +143,14 @@ class Tool:
             complete = job["complete"]
             print(f"Statusing {name} ...")
             if not complete:
-                report = self.session.runner.queue(job_id=job["job_id"], queue=queue)["report"]
+                queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=True)
+                # jobs
+                child_jobs = queue_status["jobs"]
+                self.database.submissions[name]["jobs"] = {}
+                for child_job in child_jobs:
+                    self.database.submissions[name]["jobs"][int(child_job["index"])] = child_job
+                # report
+                report = queue_status["report"]
                 self.database.submissions[name]["status"] = report
                 jobs_in_progress = sum([report[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]])
                 jobs_complete = sum([report[s] for s in [JobState.SUCCEEDED, JobState.FAILED]])
@@ -152,9 +160,15 @@ class Tool:
                     self.database.submissions[name]["results"] = self.__get_results(job["run_url"])
                 else:
                     print(f"Job {name} still pending")
-        print(",".join([f"{c:>30}" for c in ["NAME"]] + [f"{c:>10}" for c in list(JobState)]))
-        for name,job in self.database.submissions.items():
-            print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>10}" for c in [job["status"][state] for state in list(JobState)]]))
+        if self.args.verbose:
+            print(",".join([f"{c:>30}" for c in ["NAME"]] + [f"{c:>10}" for c in ["INDEX", "STATUS"]]))
+            for name,job in self.database.submissions.items():
+                for index, child_job in job["jobs"].items():
+                    print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>10}" for c in [index, child_job["status"]]]))
+        else:
+            print(",".join([f"{c:>30}" for c in ["NAME"]] + [f"{c:>10}" for c in list(JobState)]))
+            for name,job in self.database.submissions.items():
+                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>10}" for c in [job["status"][state] for state in list(JobState)]]))
 
     # Generate Report
     def generate_report(self):
@@ -190,6 +204,15 @@ class Tool:
         job_id = self.database.submissions[name]["job_id"]
         rsps = self.session.runner.cancel(job_list=[job_id], queue=queue)
         print(f"Cancelled submission {name}: {rsps}")
+
+    # Get Logs
+    def get_logs(self):
+        name = self.args.name
+        index = self.args.index
+        job_id = self.database.submissions[name]["jobs"][str(index)]["job_id"]
+        events = self.session.runner.logs(job_id=job_id)
+        for event in events:
+            print(event)
 
     # Finish
     def finish(self):
@@ -250,6 +273,12 @@ def main():
     cancel = subparsers.add_parser("cancel", parents=[common], help="cancel a submitted job")
     cancel.add_argument('--name',       type=str,                   required=True) # name of submission
     cancel.set_defaults(func=Tool.cancel_job)
+
+    # logs
+    logs = subparsers.add_parser("logs", parents=[common], help="get log messages for a child job")
+    logs.add_argument('--name',       type=str,                     required=True) # name of submission
+    logs.add_argument('--index',      type=int,                     required=True) # job index
+    logs.set_defaults(func=Tool.get_logs)
 
     # parse command line
     args = parser.parse_args()

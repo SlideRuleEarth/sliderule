@@ -591,17 +591,20 @@ class Session:
             return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args": args} | optional_args)
         def jobs (self, *, job_list):
             return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
-        def queue (self, *, job_state=None, name=None, job_id=None, queue=None):
+        def queue (self, *, job_state=None, name=None, job_id=None, queue=None, verbose=None):
             data = {}
             if job_state: data["job_state"] = job_state
             if name: data["name"] = name
             if job_id: data["job_id"] = job_id
             if queue: data["queue"] = queue
+            if verbose: data["verbose"] = verbose
             return self.session.gateway_request("report/queue", subdomain="runner", data=data)
         def cancel (self, *, job_list):
             return self.session.gateway_request("cancel", subdomain="runner", data={"job_list": job_list})
         def cancel_all (self):
             return self.session.gateway_request("cancel", subdomain="runner")
+        def logs (self, *, job_id):
+            return self.session.gateway_request("logs", subdomain="runner", data={"job_id": job_id})
 
     #
     # __Authenticator

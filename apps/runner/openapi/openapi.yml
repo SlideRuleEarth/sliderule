@@ -26,6 +26,8 @@ paths:
     $ref: 'paths/report_queue.yml'
   /cancel:
     $ref: 'paths/cancel.yml'
+  /logs:
+    $ref: 'paths/logs.yml'
 
 components:
   securitySchemes:

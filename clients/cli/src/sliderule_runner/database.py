@@ -14,6 +14,7 @@
 #             },
 #             "complete": <true|false>,
 #             "results": [ {result 1}, {result 2}, ... {result N} ]
+#             "jobs": { <child_job_id>: {child job status} }
 #         },
 #         ...
 #     }

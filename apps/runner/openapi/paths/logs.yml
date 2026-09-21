@@ -1,0 +1,25 @@
+post:
+  operationId: logs
+  summary: Retrieve event logs for a (child) job
+  description: >
+    Returns a list of logged events for a given job_id; the job must either be a child job or a regular job because parent jobs do not have logs.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/LogsRequest.yml'
+  responses:
+    '200':
+      description: List of events
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/LogsResponse.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

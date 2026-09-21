@@ -1,0 +1,9 @@
+type: object
+properties:
+  job_id:
+    type: string
+    description: >
+      Job id for a batch array job processing request.
+      Only regular jobs or child jobs have log streams.  So if a batch array job
+      has been submitted (which is the normal type of job used by this system)
+      then only child job ids of that parent job can be supplied here.
