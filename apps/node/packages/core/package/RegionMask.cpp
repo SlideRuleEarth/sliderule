@@ -109,14 +109,14 @@ void RegionMask::decodeB16mask(RegionMask& image)
     uint32_t k = 0;
     for(uint32_t i = 0; i < bytes_decoded; i++)
     {
-        image.data[k++] = bit_array[i] & 0x80;
-        image.data[k++] = bit_array[i] & 0x40;
-        image.data[k++] = bit_array[i] & 0x20;
-        image.data[k++] = bit_array[i] & 0x10;
-        image.data[k++] = bit_array[i] & 0x08;
-        image.data[k++] = bit_array[i] & 0x04;
-        image.data[k++] = bit_array[i] & 0x02;
-        image.data[k++] = bit_array[i] & 0x01;
+        for(uint32_t j = 0; j < 8; j++)
+        {
+            if(bit_array[i] & (0x80 >> j))
+            {
+                image.data[k] = PIXEL_ON;
+            }
+            k++;
+        }
     }
 
     // clean up

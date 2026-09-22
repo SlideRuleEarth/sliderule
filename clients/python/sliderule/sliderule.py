@@ -614,10 +614,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None)
             warnings.simplefilter("ignore", rasterio.errors.NotGeoreferencedWarning)
             with rasterio.open(source) as dataset:
                 data = dataset.read(1)
-                if "flipup" in tif_parms and tif_parms["flipup"]:
+                if tif_parms.get("flipup", False):
                     data = numpy.flipud(data)
-                if "fliplr" in tif_parms and tif_parms["fliplr"]:
-                    data = numpy.flipud(data)
+                if tif_parms.get("fliplr", False):
+                    data = numpy.fliplr(data)
                 bits = numpy.packbits((data.flatten() != tif_parms["off"]).astype(numpy.uint8))
                 raster = {"b16mask": bits.tobytes().hex()}
                 if dataset.crs is not None:
