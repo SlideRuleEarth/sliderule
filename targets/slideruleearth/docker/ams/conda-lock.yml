@@ -465,17 +465,17 @@ package:
   category: main
   optional: false
 - name: coverage
-  version: 7.16.0
+  version: 7.16.1
   manager: conda
   platform: linux-aarch64
   dependencies:
     python: ''
     libgcc: '>=15'
     python_abi: 3.14.*
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/coverage-7.16.0-py314ha6eade7_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/coverage-7.16.1-py314ha6eade7_0.conda
   hash:
-    md5: 1d103fc807ac97f5882878bfeca4f4e6
-    sha256: 9046364008ed2f4c08f065b09769fa87f0f9bb7f17213bffbfdb9e6747fb36be
+    md5: 3709e88b3cd83d552206a587ac8db30d
+    sha256: 15efcac23ab4fd5fbecc39a24b82ae1798a3c594e6c2f5353cabb07b92fda193
   category: main
   optional: false
 - name: exceptiongroup
@@ -603,15 +603,15 @@ package:
   category: main
   optional: false
 - name: idna
-  version: '3.19'
+  version: '3.20'
   manager: conda
   platform: linux-aarch64
   dependencies:
     python: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/idna-3.19-pyhcf101f3_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/idna-3.20-pyh5ded981_0.conda
   hash:
-    md5: a39ae05027e9b707742e41b30d296b75
-    sha256: 1c35a59c1545ad0fdaddf1fbde7bcfa6ef41a8d68c3a2b0b4a291be00676163e
+    md5: ee73be987f9de9ea5c2fdaeefa7b6491
+    sha256: e044b1ec829e2e24f971fa3f3408eb26f1db836e521a58f08b0fd9a03fee47be
   category: main
   optional: false
 - name: iniconfig
@@ -1008,15 +1008,15 @@ package:
   category: main
   optional: false
 - name: libexpat
-  version: 2.8.1
+  version: 2.8.4
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libgcc: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libexpat-2.8.1-hfae3067_1.conda
+    libgcc: '>=15'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libexpat-2.8.4-h4154aff_0.conda
   hash:
-    md5: fac3b65a605cd253037fdf3daf2de8d9
-    sha256: 20a5726bc8705d91437c9e6ef83b30da64a1719b869656d20a1ee818333ea5ac
+    md5: 302ba252ec108f1b0ef6252f0721c3c5
+    sha256: af168b3070c57d33187faad47da0b98251c255f7369399b4ffce408f4305d530
   category: main
   optional: false
 - name: libffi
@@ -1410,15 +1410,15 @@ package:
   category: main
   optional: false
 - name: libuuid
-  version: 2.42.3
+  version: 2.42.4
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=15'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.3-hd6fdeab_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42.4-hd6fdeab_0.conda
   hash:
-    md5: b759892402ee563731fbbb43860cae00
-    sha256: 3530c720c8b9dbb5aba0712d77fbb158e98d7a533ba1cf4968d42a98c41b7f24
+    md5: 9d63e86dc027166aaaeb0c99a0a90fd7
+    sha256: 4d94770cc7c47eb4a0d7b92f16d7a450506d1a82406d63c987d6208ab2fb8a16
   category: main
   optional: false
 - name: libxml2
@@ -1759,10 +1759,10 @@ package:
     typing-extensions: '>=4.6.0,!=4.7.0'
     libgcc: '>=15'
     python_abi: 3.14.*
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pydantic-core-2.46.5-py314h231d840_1.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pydantic-core-2.46.5-py314h231d840_2.conda
   hash:
-    md5: 49645032e1993df32d67dfaab734feb4
-    sha256: 672937e1040e8c1991e2b320f24d41233314ec7104e5aacb2fba108ae51a6feb
+    md5: 445e62799e9fc901451e3613597a4365
+    sha256: d977025563a6b0f0894e00d27797c9093ef7ef942c97b542c2c645925a9037ab
   category: main
   optional: false
 - name: pydantic-settings
@@ -2031,12 +2031,12 @@ package:
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libgcc: '>=14'
-    libstdcxx: '>=14'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/snappy-1.2.2-he774c54_1.conda
+    libgcc: '>=15'
+    libstdcxx: '>=15'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/snappy-1.2.2-h7d29b6f_2.conda
   hash:
-    md5: 3dec912091fb88614afa0af2712c1362
-    sha256: a8a79c53852fb07286407907402caa5a96b6e22b518c4f010be40647f9ee3726
+    md5: 44dd050d47b0fdc23fe38493fca3079c
+    sha256: 195f2b5df5607b117aab69817cc1610ac61be09b73f33af05bd44dc7711dbd53
   category: main
   optional: false
 - name: tk
