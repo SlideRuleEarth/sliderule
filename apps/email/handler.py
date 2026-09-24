@@ -25,17 +25,13 @@ AUTO_REPLY          = True
 UNSUBSCRIBE_FOOTER_TEXT = (
     "\n\n"
     "-- \n"
-    "You are receiving this email because you subscribed to SlideRule\n"
-    f"announcements. To unsubscribe, email {SUPPORT_EMAIL} with UNSUBSCRIBE\n"
-    "in the subject line\n"
+    f"To stop receiving SlideRule announcements, email {SUPPORT_EMAIL} with UNSUBSCRIBE in the subject line.\n"
 )
 UNSUBSCRIBE_FOOTER_HTML = (
     '<div style="margin-top:24px;padding-top:12px;'
     'border-top:1px solid #cccccc;font-family:Arial,Helvetica,sans-serif;'
     'font-size:12px;color:#888888;">'
-    "You are receiving this email because you subscribed to SlideRule "
-    f'announcements. To unsubscribe, email {SUPPORT_EMAIL} with UNSUBSCRIBE'
-    "in the subject line.</div>"
+    f"To stop receiving SlideRule announcements, email {SUPPORT_EMAIL} with UNSUBSCRIBE in the subject line.</div>"
 )
 
 

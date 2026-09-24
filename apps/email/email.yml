@@ -136,7 +136,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: support-permissions
+        - PolicyName: !Sub "${AWS::StackName}-support-permissions"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -175,7 +175,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: users-permissions
+        - PolicyName: !Sub "${AWS::StackName}-users-permissions"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -198,6 +198,14 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub '${UsersLogGroup.Arn}:*'
+        - PolicyName: !Sub "${AWS::StackName}-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource:
+                  - !Sub "arn:aws:s3:::${ProjectBucket}/${UsersFilename}"
 
   # =========================================================================
   # Lambda functions
@@ -245,6 +253,7 @@ Resources:
           SUPPORT_EMAILS: !Join [',', !Ref SupportEmails]
           SUPPORT_EMAIL: !Ref SupportEmail
           USERS_EMAIL: !Ref UsersEmail
+          USERS_FILENAME: !Ref UsersFilename
           PROJECT_BUCKET: !Ref ProjectBucket
           S3_PREFIX: !Ref UsersS3Prefix
 
