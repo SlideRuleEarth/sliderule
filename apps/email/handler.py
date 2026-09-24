@@ -10,12 +10,12 @@ from typing import Any, Sequence
 # Globals
 # ###############################
 
-USERS_EMAIL         = mail.normalize_address(os.environ['USERS_EMAIL'])
-SUPPORT_EMAIL       = mail.normalize_address(os.environ['SUPPORT_EMAIL'])
-SUPPORT_EMAILS      = list({e.strip().lower() for e in os.environ['SUPPORT_EMAILS'].split(",")}) # recipients of support email
-PROJECT_BUCKET      = os.environ['PROJECT_BUCKET']
-USERS_FILENAME      = os.environ["USERS_FILENAME"]
-S3_PREFIX           = os.environ["S3_PREFIX"]
+USERS_EMAIL         = mail.normalize_address(os.environ.get('USERS_EMAIL'))
+SUPPORT_EMAIL       = mail.normalize_address(os.environ.get('SUPPORT_EMAIL'))
+SUPPORT_EMAILS      = list({e.strip().lower() for e in os.environ.get('SUPPORT_EMAILS').split(",")}) # recipients of support email
+PROJECT_BUCKET      = os.environ.get('PROJECT_BUCKET')
+USERS_FILENAME      = os.environ.get('USERS_FILENAME')
+S3_PREFIX           = os.environ.get('S3_PREFIX')
 
 REJECT_SPAM         = True
 MAX_MESSAGE_SIZE    = 5 * 1048576 # 5MB
