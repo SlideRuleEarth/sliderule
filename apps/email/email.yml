@@ -36,6 +36,10 @@ Parameters:
       deployment package. SES is granted least-privilege write access to the
       email prefixes within this bucket.
 
+  UsersFilename:
+    Type: String
+    Description: Filename of user database file in S3
+
   LambdaZipFile:
     Type: String
     Description: S3 key (within ProjectBucket) of the Lambda deployment .zip.
@@ -43,16 +47,6 @@ Parameters:
   # ----------------------------------
   # Constants
   # ----------------------------------
-
-  ContactListName:
-    Type: String
-    Default: sliderule-users
-    Description: Name of the SES Contact List holding subscribers.
-
-  ContactListTopic:
-    Type: String
-    Default: broadcast
-    Description: Topic within the Contact List (enables List-Unsubscribe headers).
 
   SupportS3Prefix:
     Type: String
@@ -109,21 +103,6 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:s3:::${ProjectBucket}/${SupportS3Prefix}*'
                   - !Sub 'arn:aws:s3:::${ProjectBucket}/${UsersS3Prefix}*'
-
-  # =========================================================================
-  # SES Contact List (subscriber storage). Subscription management is added
-  # later; for now this holds the OPT_IN contacts the users Lambda reads.
-  # =========================================================================
-  UsersContactList:
-    Type: AWS::SES::ContactList
-    Properties:
-      ContactListName: !Ref ContactListName
-      Description: SlideRule users broadcast subscribers.
-      Topics:
-        - TopicName: !Ref ContactListTopic
-          DisplayName: SlideRule Announcements
-          DefaultSubscriptionStatus: OPT_IN
-          Description: Broadcast announcements to SlideRule users.
 
   # =========================================================================
   # CloudWatch Log Groups (created explicitly so retention is managed as code
@@ -183,7 +162,6 @@ Resources:
 
   # =========================================================================
   # IAM -- least-privilege execution role for the USERS Lambda.
-  # Adds read access to the SES Contact List on top of the support permissions.
   # =========================================================================
   UsersLambdaRole:
     Type: AWS::IAM::Role
@@ -214,13 +192,6 @@ Resources:
                 Condition:
                   StringEquals:
                     ses:FromAddress: !Ref SupportEmail
-              - Sid: ReadContactList
-                Effect: Allow
-                Action:
-                  - ses:ListContacts
-                  - ses:GetContact
-                  - ses:GetContactList
-                Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:contact-list/${ContactListName}'
               - Sid: WriteLogs
                 Effect: Allow
                 Action:
@@ -252,8 +223,6 @@ Resources:
           SUPPORT_EMAIL: !Ref SupportEmail
           USERS_EMAIL: !Ref UsersEmail
           PROJECT_BUCKET: !Ref ProjectBucket
-          CONTACT_LIST_NAME: !Ref ContactListName
-          CONTACT_LIST_TOPIC: !Ref ContactListTopic
           S3_PREFIX: !Ref SupportS3Prefix
 
   UsersLambda:
@@ -277,8 +246,6 @@ Resources:
           SUPPORT_EMAIL: !Ref SupportEmail
           USERS_EMAIL: !Ref UsersEmail
           PROJECT_BUCKET: !Ref ProjectBucket
-          CONTACT_LIST_NAME: !Ref ContactListName
-          CONTACT_LIST_TOPIC: !Ref ContactListTopic
           S3_PREFIX: !Ref UsersS3Prefix
 
   # =========================================================================
@@ -378,7 +345,3 @@ Outputs:
   UsersLambdaName:
     Description: Users Lambda function name.
     Value: !Ref UsersLambda
-
-  ContactListNameOut:
-    Description: SES Contact List holding subscribers.
-    Value: !Ref ContactListName

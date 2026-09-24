@@ -19,8 +19,6 @@ Parameters:
     Type: String
   ProjectBucket:
     Type: String
-  ProjectFolder:
-    Type: String
   ProjectPublicBucket:
     Type: String
   ContainerRegistry:
@@ -44,9 +42,9 @@ Parameters:
 
 Resources:
 
-  ##
-  ## Manager
-  ##
+  ############################
+  # Lambda Functions
+  ############################
 
   # Schedule Lambda Function
   ScheduleLambda:
@@ -55,7 +53,7 @@ Resources:
       FunctionName: !Sub '${AWS::StackName}-schedule'
       Runtime: python3.13
       Handler: scheduler.lambda_schedule
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt GatewayRole.Arn
       Architectures:
         - arm64
       Timeout: 60
@@ -68,7 +66,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-destroy'
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt GatewayRole.Arn
       Architectures:
         - arm64
       Runtime: python3.13
@@ -80,22 +78,18 @@ Resources:
         S3Bucket: !Ref ProjectBucket
         S3Key: !Ref LambdaZipFile
 
-  ##
-  ## Provisioner
-  ##
-
   # Gateway Lambda Function
   GatewayLambda:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-gateway'
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt GatewayRole.Arn
       Architectures:
         - arm64
       Runtime: python3.13
       MemorySize: 256 # MB
       Timeout: 300 # seconds
-      Handler: provisioner.lambda_gateway
+      Handler: provisioner.lambda_handler
       Description: Routes requests based on path
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -107,7 +101,6 @@ Resources:
           DOMAIN: !Ref Domain
           PUBLIC_CLUSTER: !Ref PublicCluster
           PROJECT_BUCKET: !Ref ProjectBucket
-          PROJECT_FOLDER: !Ref ProjectFolder
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile
@@ -117,8 +110,36 @@ Resources:
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
 
-  ## IAM Role
-  LambdaExecutionRole:
+  # S3 Access Lambda Function
+  S3AccessLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-s3access'
+      Role: !GetAtt S3AccessRole.Arn
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      MemorySize: 256 # MB
+      Timeout: 300 # seconds
+      Handler: provisioner.lambda_handler
+      Description: Provides temporary credentials to access public bucket
+      Code:
+        S3Bucket: !Ref ProjectBucket
+        S3Key: !Ref LambdaZipFile
+      Environment:
+        Variables:
+          STACK_NAME: !Ref AWS::StackName
+          DOMAIN: !Ref Domain
+          PUBLIC_CLUSTER: !Ref PublicCluster
+          PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
+          FEDERATED_S3_ACCESS_ARN: !GetAtt FederatedS3AccessRole.Arn
+
+  ############################
+  # IAM Roles
+  ############################
+
+  ## Gateway Lambda IAM Role
+  GatewayRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -213,6 +234,57 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
 
+  ## S3 Access Lambda IAM Role
+  S3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-s3-credential-vendor"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: assume-federated-s3-role
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-federated-s3-access"
+
+  ## S3 Access Assumed IAM Role
+  FederatedS3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-federated-s3-access"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt S3AccessRole.Arn
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: s3-read-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}"
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+
+  ############################
+  # HTTP API
+  ############################
+
   # API Gateway HTTP API
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -245,25 +317,6 @@ Resources:
           - provisioner
         Issuer: !Ref JwtIssuer
 
-  # API Gateway Integration with Lambda
-  LambdaIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref HttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt GatewayLambda.Arn
-      PayloadFormatVersion: '2.0'
-
-  # API Gateway Routes
-  ApiRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'POST /{proxy+}'
-      AuthorizationType: JWT
-      AuthorizerId: !Ref JwtAuthorizer
-      Target: !Sub 'integrations/${LambdaIntegration}'
-
   # API Gateway Stage
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
@@ -274,15 +327,6 @@ Resources:
       DefaultRouteSettings:
         ThrottlingBurstLimit: 10
         ThrottlingRateLimit: 5
-
-  # Lambda Permission for API Gateway
-  LambdaApiGatewayPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref GatewayLambda
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
 
   # API Gateway Custom Domain Name
   ApiCustomDomain:
@@ -300,7 +344,7 @@ Resources:
     Properties:
       DomainName: !Ref ApiCustomDomain
       ApiId: !Ref HttpApi
-      Stage: $default
+      Stage: !Ref ApiStage
 
   # Route53 Alias Record
   ApiDnsRecord:
@@ -313,6 +357,66 @@ Resources:
         DNSName: !GetAtt ApiCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt ApiCustomDomain.RegionalHostedZoneId
         EvaluateTargetHealth: false
+
+  ############################
+  # Lambda Integrations
+  ############################
+
+  # Gateway Integration with Lambda
+  GatewayIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt GatewayLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  # Gateway API Routes
+  GatewayApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'POST /{proxy+}'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${GatewayIntegration}'
+
+  # Gateway API Lambda Permission
+  GatewayApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GatewayLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*'
+
+  # S3 Access Integration with Lambda
+  S3AccessIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt S3AccessLambda.Arn
+      PayloadFormatVersion: '2.0'
+
+  # S3 Access API Routes
+  S3AccessApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'GET /s3access'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub 'integrations/${S3AccessIntegration}'
+
+  # S3 Access API Lambda Permission
+  S3AccessApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref S3AccessLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/s3access'
 
 Outputs:
 

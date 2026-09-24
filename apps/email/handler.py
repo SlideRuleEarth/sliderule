@@ -14,8 +14,7 @@ USERS_EMAIL         = mail.normalize_address(os.environ['USERS_EMAIL'])
 SUPPORT_EMAIL       = mail.normalize_address(os.environ['SUPPORT_EMAIL'])
 SUPPORT_EMAILS      = list({e.strip().lower() for e in os.environ['SUPPORT_EMAILS'].split(",")}) # recipients of support email
 PROJECT_BUCKET      = os.environ['PROJECT_BUCKET']
-CONTACT_LIST_NAME   = os.environ['CONTACT_LIST_NAME']
-CONTACT_LIST_TOPIC  = os.environ['CONTACT_LIST_TOPIC']
+USERS_FILENAME      = os.environ["USERS_FILENAME"]
 S3_PREFIX           = os.environ["S3_PREFIX"]
 
 REJECT_SPAM         = True
@@ -100,7 +99,7 @@ def fetch_raw_email(bucket: str, key: str) -> bytes:
 #
 # Send a raw email
 #
-def send_raw_email(*, raw_message: bytes, source: str, destinations: Sequence[str], contact_list_name: str = "", topic_name: str = "") -> str:
+def send_raw_email(*, raw_message: bytes, source: str, destinations: Sequence[str]) -> str:
     """
     Send a raw MIME message and return the SES message id.
 
@@ -112,53 +111,32 @@ def send_raw_email(*, raw_message: bytes, source: str, destinations: Sequence[st
         Envelope ``From`` -- must be a verified SES identity.
     destinations:
         Envelope recipients (the true delivery targets).
-    contact_list_name / topic_name:
-        When both are supplied, SES adds standards-compliant
-        ``List-Unsubscribe`` headers via its list-management feature.
     """
     request: dict[str, Any] = {
         "FromEmailAddress": source,
         "Destination": {"ToAddresses": list(destinations)},
         "Content": {"Raw": {"Data": raw_message}},
     }
-    if contact_list_name and topic_name:
-        request["ListManagementOptions"] = {
-            "ContactListName": contact_list_name,
-            "TopicName": topic_name,
-        }
     response = ses.send_email(**request)
     return str(response.get("MessageId", ""))
 
 #
-# Get list of contacts opted in to a topic
+# Get subscribed user emails
 #
-def list_opted_in_contacts(contact_list_name: str) -> list[Contact]:
-    """Return every ``OPT_IN`` contact from *contact_list_name*.
-    Handles pagination transparently.  Only contacts whose subscription
-    status resolves to ``OPT_IN`` are returned.
+def get_subscribed_users():
     """
-    contacts: list[Contact] = []
-    next_token: str | None = None
-    while True:
-        kwargs: dict[str, Any] = {
-            "ContactListName": contact_list_name,
-            # Server-side filter to opted-in subscribers only.
-            "Filter": {"FilteredStatus": "OPT_IN"},
-            "PageSize": 100,
-        }
-        if next_token:
-            kwargs["NextToken"] = next_token
-        response = ses.list_contacts(**kwargs)
-        for entry in response.get("Contacts", []):
-            email = str(entry.get("EmailAddress", "")).strip().lower()
-            if not email:
-                continue
-            contacts.append(Contact(email=email, opted_in=True))
-        next_token = response.get("NextToken")
-        if not next_token:
-            break
-    return contacts
-
+    Retrieve and return list of emails of subscribed users
+    """
+    emails = []
+    try:
+        response = s3.get_object(Bucket=PROJECT_BUCKET, Key=USERS_FILENAME)
+        data = json.load(response['Body'])
+        for user,info in data.items():
+            if info.get("subscribed", False):
+                emails.append(info["email"])
+    except Exception as e:
+        print(f"Failed to read the user file: {e}")
+    return emails
 
 # ###############################
 # Handle Lambdas
@@ -257,15 +235,13 @@ def users_email_processor(parsed: mail.ParsedEmail, notification_message_id: str
     )
 
     # send email to each subscriber from the SES Contact List that has opted in
-    recipients = [contact.email for contact in list_opted_in_contacts(CONTACT_LIST_NAME)]
+    recipients = get_subscribed_users()
     for recipient in recipients:
         try:
             send_raw_email(
                 raw_message=forwarded,
                 source=SUPPORT_EMAIL,
-                destinations=[recipient],
-                contact_list_name=CONTACT_LIST_NAME,
-                topic_name=CONTACT_LIST_TOPIC,
+                destinations=[recipient]
             )
         except Exception as e:
             log("broadcast send failed", {
@@ -280,9 +256,7 @@ def users_email_processor(parsed: mail.ParsedEmail, notification_message_id: str
         "sender": parsed.from_address,
         "subject": parsed.subject,
         "attachments": parsed.attachment_count,
-        "recipients": len(recipients),
-        "contact_list_name": CONTACT_LIST_NAME,
-        "contact_list_topic": CONTACT_LIST_TOPIC
+        "recipients": len(recipients)
     })
 
 #

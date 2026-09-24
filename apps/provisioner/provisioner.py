@@ -21,6 +21,7 @@ cf = boto3.client("cloudformation")
 ev = boto3.client('events')
 ses = boto3.client('ses')
 sm = boto3.client('secretsmanager')
+sts = boto3.client("sts")
 
 _pubkey_cache = {}
 
@@ -32,7 +33,6 @@ STACK_NAME = os.environ.get("STACK_NAME")
 DOMAIN = os.environ.get("DOMAIN")
 PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
-PROJECT_FOLDER = os.environ.get("PROJECT_FOLDER")
 PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
 CONTAINER_REGISTRY = os.environ.get('CONTAINER_REGISTRY')
 JWT_ISSUER = os.environ.get('JWT_ISSUER')
@@ -41,6 +41,7 @@ TELEMETRY_STREAM = os.environ.get('TELEMETRY_STREAM')
 ENVIRONMENT_VERSION = os.environ.get('ENVIRONMENT_VERSION')
 SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL')
 ALERT_EMAIL = os.environ.get('ALERT_EMAIL')
+FEDERATED_S3_ACCESS_ARN = os.environ.get('FEDERATED_S3_ACCESS_ARN')
 
 SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','sliderule','monitor']
 
@@ -80,7 +81,7 @@ def build_user_asg_stack_name(cluster_stack_name, username):
     if not isinstance(cluster_stack_name, str):
         return None
     elif valid_cluster_name(cluster_stack_name):
-        return f'{cluster_stack_name}-{username}-asg'
+        return f'{cluster_stack_name}-{username}'
     else:
         raise RuntimeError(f"Invalid cluster stack name: {cluster_stack_name}")
 
@@ -351,11 +352,6 @@ def validate_request(event, info):
         if not verify_signature(path, body_raw, info["username"], event):
             return None
 
-    # check organization membership
-    if ('member' not in info["orgRoles"]) and ('affiliate' not in info["orgRoles"]):
-        print(f'Access denied to {info["username"]}, organization roles: {info["orgRoles"]}')
-        return None
-
     # get public cluster (only for user services)
     public_cluster_name = None
     path_components = path.split("/")
@@ -396,6 +392,7 @@ def validate_request(event, info):
         "path": path,
         "username": info["username"],
         "member": 'member' in info["orgRoles"],
+        "affiliate": 'affiliate' in info["orgRoles"],
         "cluster": cluster,
         "node_capacity": node_capacity,
         "ttl": ttl,
@@ -514,9 +511,9 @@ def extend_handler(rqst, kind):
     # get rule name
     cluster_stack_name = build_cluster_stack_name(rqst["cluster"])
     if kind == 'cluster':
-        rule_name = f'{cluster_stack_name}-auto-shutdown'
+        rule_name = f'{cluster_stack_name}-shutdown'
     elif kind == 'user':
-        rule_name = f'{build_user_asg_stack_name(cluster_stack_name, rqst["username"])}-auto-shutdown'
+        rule_name = f'{build_user_asg_stack_name(cluster_stack_name, rqst["username"])}-shutdown'
 
     # calculate new shutdown time
     new_shutdown_time = datetime.now(timezone.utc) + timedelta(minutes=rqst["ttl"])
@@ -557,7 +554,7 @@ def lambda_destroy(event, context):
             info = state[stack_name]
 
             # delete eventbridge target and rule
-            rule_name = f'{stack_name}-auto-shutdown'
+            rule_name = f'{stack_name}-shutdown'
             print(f'Delete initiated for {rule_name}')
             try:
                 ev.remove_targets(Rule=rule_name, Ids=["1"])
@@ -668,6 +665,53 @@ def events_handler(rqst, kind):
     return json_response(200, response)
 
 #
+# S3 Access Handler
+#
+def s3access_handler(rqst):
+
+    # initialize policy statement
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": []
+    }
+
+    # allow GetObject access
+    if rqst["member"] or rqst["affiliate"]:
+        policy["Statement"].append({
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": f"arn:aws:s3:::{PROJECT_PUBLIC_BUCKET}/*"
+        })
+
+    # allow ListBucket access
+    if rqst["member"]:
+        policy["Statement"].append({
+            "Effect": "Allow",
+            "Action": "s3:ListBucket",
+            "Resource": f"arn:aws:s3:::{PROJECT_PUBLIC_BUCKET}"
+        })
+
+    # check for no access
+    if not policy["Statement"]:
+        return json_response(403, {'error': 'organizational role insufficient to access s3'})
+
+    # get temporary credentials
+    credentials = sts.assume_role(
+        RoleArn=FEDERATED_S3_ACCESS_ARN,
+        RoleSessionName=f's3access-{rqst["username"]}',
+        Policy=json.dumps(policy),
+        DurationSeconds=3600 # hardcoded to maximum allowed
+    )["Credentials"]
+
+    # return success
+    return json_response(200, {
+        "access_key_id": credentials["AccessKeyId"],
+        "secret_access_key": credentials["SecretAccessKey"],
+        "session_token": credentials["SessionToken"],
+        "expiration": credentials["Expiration"].isoformat()
+    })
+
+#
 # Cluster Report
 #
 def report_clusters_handler(cluster):
@@ -725,52 +769,46 @@ def report_tests_handler(rqst):
 #
 def deploy_test_handler(rqst):
 
-    try:
-        # initialize response status
-        state = {}
+    # initialize response status
+    state = {}
 
-        # get arns for auto-shutdown
-        resp = cf.describe_stacks(StackName=STACK_NAME)
-        outputs = resp["Stacks"][0].get("Outputs", [])
-        destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
-        scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
+    # get arns for auto-shutdown
+    resp = cf.describe_stacks(StackName=STACK_NAME)
+    outputs = resp["Stacks"][0].get("Outputs", [])
+    destroy_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "DestroyLambdaArn")
+    scheduler_lambda_arn = next(output["OutputValue"] for output in outputs if output["OutputKey"] == "ScheduleLambdaArn")
 
-        # get user data for instance
-        deploy_date = datetime.now().strftime("%Y%m%d%H%M%S")
-        test_runner_user_data = populate_user_data("test.sh", rqst, rqst["cluster"], {
-            "BRANCH": rqst["branch"],
-            "DEPLOY_DATE": deploy_date
-        })
+    # get user data for instance
+    deploy_date = datetime.now().strftime("%Y%m%d%H%M%S")
+    test_runner_user_data = populate_user_data("test.sh", rqst, rqst["cluster"], {
+        "BRANCH": rqst["branch"],
+        "DEPLOY_DATE": deploy_date
+    })
 
-        # build parameters for stack creation
-        state["parms"] = [
-            {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
-            {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
-            {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
-            {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
-            {"ParameterKey": "DeployDate", "ParameterValue": deploy_date},
-            {"ParameterKey": "TestRunnerUserData", "ParameterValue": test_runner_user_data}
-        ]
+    # build parameters for stack creation
+    state["parms"] = [
+        {"ParameterKey": "ProjectBucket", "ParameterValue": PROJECT_BUCKET},
+        {"ParameterKey": "ProjectPublicBucket", "ParameterValue": PROJECT_PUBLIC_BUCKET},
+        {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
+        {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": scheduler_lambda_arn},
+        {"ParameterKey": "DeployDate", "ParameterValue": deploy_date},
+        {"ParameterKey": "TestRunnerUserData", "ParameterValue": test_runner_user_data}
+    ]
 
-        # read template
-        templateBody = open("testrunner.yml").read()
+    # read template
+    templateBody = open("testrunner.yml").read()
 
-        # create stack (default to hardcoded stack name so only one can run at a time)
-        state["response"] = cf.create_stack(StackName='testrunner', TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
+    # create stack (default to hardcoded stack name so only one can run at a time)
+    state["response"] = cf.create_stack(StackName='testrunner', TemplateBody=templateBody, Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=state["parms"])
 
-        # success
-        return json_response(200, state)
-
-    except Exception as e:
-
-        # failure
-        return exception_reponse(e)
+    # success
+    return json_response(200, state)
 
 # ###############################
-# Lambda: Gateway Handler
+# Lambda: Handler
 # ###############################
 
-def lambda_gateway(event, context):
+def lambda_handler(event, context):
     """
     Route requests based on path
     """
@@ -816,6 +854,9 @@ def lambda_gateway(event, context):
 
         elif rqst["path"] == f'/events/{rqst["username"]}': # returns cloudformation stack events for a user asg connected to a cluster deployment
             return events_handler(rqst, 'user')
+
+        elif rqst["path"] == f'/s3access': # returns temporary credentials for accessing the public bucket
+            return s3access_handler(rqst)
 
         elif rqst["member"]: # member only APIs
 

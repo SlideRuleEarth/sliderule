@@ -20,7 +20,7 @@ _http = urllib3.PoolManager()
 # Convention for deriving rule name from stack name
 #
 def build_rule_name(stack_name):
-    return f'{stack_name}-auto-shutdown'
+    return f'{stack_name}-shutdown'
 
 #
 # Cloud Formation Response
@@ -182,4 +182,3 @@ def lambda_schedule(event, context):
         # acknowledge hook error back to cloudformation
         print(f'Error in custom scheduler: {e}')
         cfn_send(event, context, "FAILED", {'Error': str(e)})
-

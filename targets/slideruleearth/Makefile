@@ -624,7 +624,6 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=ProvisionerHostname,ParameterValue=$(PROVISIONER_HOSTNAME) \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
-						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
@@ -835,8 +834,7 @@ email-test: ## run email tests
 	SUPPORT_EMAIL=$(SUPPORT_EMAIL) \
 	USERS_EMAIL=$(USERS_EMAIL) \
 	PROJECT_BUCKET=$(PROJECT_BUCKET) \
-	CONTACT_LIST_NAME="test-name" \
-	CONTACT_LIST_TOPIC="test-topic" \
+	USERS_FILENAME=$(USERS_FILENAME) \
 	S3_PREFIX="test/" \
 	coverage run -m pytest $(ARGS) && \
 	coverage report -m'
