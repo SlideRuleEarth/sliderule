@@ -392,7 +392,6 @@ def validate_request(event, info):
         "path": path,
         "username": info["username"],
         "member": 'member' in info["orgRoles"],
-        "affiliate": 'affiliate' in info["orgRoles"],
         "cluster": cluster,
         "node_capacity": node_capacity,
         "ttl": ttl,
@@ -665,53 +664,6 @@ def events_handler(rqst, kind):
     return json_response(200, response)
 
 #
-# S3 Access Handler
-#
-def s3access_handler(rqst):
-
-    # initialize policy statement
-    policy = {
-        "Version": "2012-10-17",
-        "Statement": []
-    }
-
-    # allow GetObject access
-    if rqst["member"] or rqst["affiliate"]:
-        policy["Statement"].append({
-            "Effect": "Allow",
-            "Action": "s3:GetObject",
-            "Resource": f"arn:aws:s3:::{PROJECT_PUBLIC_BUCKET}/*"
-        })
-
-    # allow ListBucket access
-    if rqst["member"]:
-        policy["Statement"].append({
-            "Effect": "Allow",
-            "Action": "s3:ListBucket",
-            "Resource": f"arn:aws:s3:::{PROJECT_PUBLIC_BUCKET}"
-        })
-
-    # check for no access
-    if not policy["Statement"]:
-        return json_response(403, {'error': 'organizational role insufficient to access s3'})
-
-    # get temporary credentials
-    credentials = sts.assume_role(
-        RoleArn=FEDERATED_S3_ACCESS_ARN,
-        RoleSessionName=f's3access-{rqst["username"]}',
-        Policy=json.dumps(policy),
-        DurationSeconds=3600 # hardcoded to maximum allowed
-    )["Credentials"]
-
-    # return success
-    return json_response(200, {
-        "access_key_id": credentials["AccessKeyId"],
-        "secret_access_key": credentials["SecretAccessKey"],
-        "session_token": credentials["SessionToken"],
-        "expiration": credentials["Expiration"].isoformat()
-    })
-
-#
 # Cluster Report
 #
 def report_clusters_handler(cluster):
@@ -805,10 +757,70 @@ def deploy_test_handler(rqst):
     return json_response(200, state)
 
 # ###############################
-# Lambda: Handler
+# Lambda: S3 Access
+# ###############################
+def lambda_s3access(event, context):
+
+    try:
+        # process request
+        claims = event["requestContext"]["authorizer"]["jwt"]["claims"] # get JWT claims (validated by API Gateway)
+        username = claims.get('sub', '<anonymous>')
+        org_roles = parse_claim_array(claims.get('org_roles', "[]"))
+        is_affiliate = 'affiliate' in org_roles
+        is_member = 'member' in org_roles
+
+        # initialize policy statement
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": []
+        }
+
+        # allow GetObject access
+        if is_member or is_affiliate:
+            policy["Statement"].append({
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": f"arn:aws:s3:::{PROJECT_PUBLIC_BUCKET}/*"
+            })
+
+        # allow ListBucket access
+        if is_member:
+            policy["Statement"].append({
+                "Effect": "Allow",
+                "Action": "s3:ListBucket",
+                "Resource": f"arn:aws:s3:::{PROJECT_PUBLIC_BUCKET}"
+            })
+
+        # check for no access
+        if not policy["Statement"]:
+            return json_response(403, {'error': 'organizational role insufficient to access s3'})
+
+        # get temporary credentials
+        credentials = sts.assume_role(
+            RoleArn=FEDERATED_S3_ACCESS_ARN,
+            RoleSessionName=f's3access-{username}',
+            Policy=json.dumps(policy),
+            DurationSeconds=3600 # hardcoded to maximum allowed
+        )["Credentials"]
+
+        # return success
+        return json_response(200, {
+            "access_key_id": credentials["AccessKeyId"],
+            "secret_access_key": credentials["SecretAccessKey"],
+            "session_token": credentials["SessionToken"],
+            "expiration": credentials["Expiration"].isoformat()
+        })
+
+    except Exception as e:
+
+        # unhandled exception
+        return exception_reponse(e)
+
+# ###############################
+# Lambda: Gateway
 # ###############################
 
-def lambda_handler(event, context):
+def lambda_gateway(event, context):
     """
     Route requests based on path
     """
@@ -820,7 +832,7 @@ def lambda_handler(event, context):
 
         # route request
         if rqst == None: # check request
-            return json_response(403, {'error': 'access denied'})
+            return json_response(403, {'error': 'internal validation error'})
 
         elif rqst["path"] == '/info': # only uses info, but still requires validated rqst
             return json_response(200, info)
@@ -854,9 +866,6 @@ def lambda_handler(event, context):
 
         elif rqst["path"] == f'/events/{rqst["username"]}': # returns cloudformation stack events for a user asg connected to a cluster deployment
             return events_handler(rqst, 'user')
-
-        elif rqst["path"] == f'/s3access': # returns temporary credentials for accessing the public bucket
-            return s3access_handler(rqst)
 
         elif rqst["member"]: # member only APIs
 

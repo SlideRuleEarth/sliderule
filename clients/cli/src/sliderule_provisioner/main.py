@@ -69,6 +69,14 @@ class Tool:
     def info(self):
         return self.session.provisioner.info()
 
+    # S3 Access
+    def s3access(self):
+        credentials = self.session.provisioner.s3access()
+        print(f'export AWS_ACCESS_KEY_ID={credentials["access_key_id"]}')
+        print(f'export AWS_SECRET_ACCESS_KEY={credentials["secret_access_key"]}')
+        print(f'export AWS_SESSION_TOKEN={credentials["session_token"]}')
+        print(f'export AWS_CREDENTIAL_EXPIRATION={credentials["expiration"]}')
+
     # Authenticate
     def authenticate(self):
         return self.session.authenticate(force_login=True)
@@ -132,6 +140,10 @@ def main():
     info = subparsers.add_parser("info", parents=[common], help="display information about provisioner")
     info.set_defaults(func=Tool.info)
 
+    # s3access
+    s3access = subparsers.add_parser("s3access", parents=[common], help="sets AWS credentials by outputting shell commands to 'eval' into current environment")
+    s3access.set_defaults(func=Tool.s3access)
+
     # authenticate
     authenticate = subparsers.add_parser("authenticate", parents=[common], help="force re-authentication of user account")
     authenticate.set_defaults(func=Tool.authenticate)
@@ -145,7 +157,8 @@ def main():
     # route command
     try:
         result = args.func(tool)
-        print(f'{json.dumps(result, indent=2)}')
+        if result:
+            print(f'{json.dumps(result, indent=2)}')
     except Exception as e:
         if args.verbose: raise
         print(f"Unhandled error: {e}")

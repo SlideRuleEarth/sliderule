@@ -89,7 +89,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 256 # MB
       Timeout: 300 # seconds
-      Handler: provisioner.lambda_handler
+      Handler: provisioner.lambda_gateway
       Description: Routes requests based on path
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -121,7 +121,7 @@ Resources:
       Runtime: python3.13
       MemorySize: 256 # MB
       Timeout: 300 # seconds
-      Handler: provisioner.lambda_handler
+      Handler: provisioner.lambda_s3access
       Description: Provides temporary credentials to access public bucket
       Code:
         S3Bucket: !Ref ProjectBucket
@@ -129,8 +129,6 @@ Resources:
       Environment:
         Variables:
           STACK_NAME: !Ref AWS::StackName
-          DOMAIN: !Ref Domain
-          PUBLIC_CLUSTER: !Ref PublicCluster
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           FEDERATED_S3_ACCESS_ARN: !GetAtt FederatedS3AccessRole.Arn
 
@@ -249,7 +247,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: assume-federated-s3-role
+        - PolicyName: !Sub "${AWS::StackName}-assume-federated-role"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -404,7 +402,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: 'GET /s3access'
+      RouteKey: 'POST /s3access'
       AuthorizationType: JWT
       AuthorizerId: !Ref JwtAuthorizer
       Target: !Sub 'integrations/${S3AccessIntegration}'
@@ -416,7 +414,7 @@ Resources:
       FunctionName: !Ref S3AccessLambda
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/s3access'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/POST/s3access'
 
 Outputs:
 

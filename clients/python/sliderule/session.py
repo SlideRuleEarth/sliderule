@@ -503,14 +503,14 @@ class Session:
             url = f'https://{path}'
             body = json.dumps(data)
             self.__signrequest(headers, path, body) # (optionally) sign request
-            def do_post():
+            def perform_request():
                 return self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
-            data = do_post()
+            data = perform_request()
             if data.status_code == 401: # AWS API Gateway will often return a 401 on a cold request
                 retry_delay = 1 # seconds
                 self.logger.info(f"Retrying gateway post after {retry_delay} seconds ...")
                 time.sleep(retry_delay)
-                data = do_post()
+                data = perform_request()
 
             # Parse Response
             stream_source = self.__StreamSource(data)
@@ -579,6 +579,8 @@ class Session:
             return self.session.gateway_request(f"report/{kind}", subdomain="provisioner", data={})
         def info (self):
             return self.session.gateway_request(f"info", subdomain="provisioner", data={})
+        def s3access (self):
+            return self.session.gateway_request(f"s3access", subdomain="provisioner", data={})
 
     #
     # __Runner
