@@ -1,0 +1,21 @@
+post:
+  operationId: s3access
+  summary: Get temporary credentials to access public sliderule bucket
+  description: >
+    Returns temporary credentials for S3 access based on user organizational roles.
+    Members receive ListObjects and GetObject permission.  Affliates receive only
+    GetObject permission.
+  parameters:
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleTimestamp'
+    - $ref: '../components/parameters/SignatureHeaders.yml#/XSlideruleSignature'
+  responses:
+    '200':
+      description: S3 access credentials
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/S3AccessCredentials.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/InternalError.yml'

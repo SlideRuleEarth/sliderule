@@ -51,6 +51,8 @@ paths:
     $ref: 'paths/report_tests.yml'
   /test:
     $ref: 'paths/test.yml'
+  /s3access:
+    $ref: 'paths/s3access.yml'
 
 components:
   securitySchemes:
