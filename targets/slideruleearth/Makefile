@@ -753,7 +753,7 @@ pysr-docker: ## build pysr docker image; uses VERSION
 	cd $(PYSR_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/pysr:$(VERSION) .
 
 pysr-docker-push: ## push pysr docker image; uses VERSION
-	docker push $(CONTAINER_REGISTRY)/pysr:latest
+	docker push $(CONTAINER_REGISTRY)/pysr:$(VERSION)
 
 ########################
 # Certbot Targets

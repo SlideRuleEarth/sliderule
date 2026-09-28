@@ -59,7 +59,7 @@ Parameters:
     Default: "10.0.0.0/17"
   SlideRuleRunnerImages:
     Type: CommaDelimitedList
-    Default: "sliderule:latest,sliderule:unstable,sliderule:atl24,pysr:latest"
+    Default: "sliderule:latest,sliderule:unstable,sliderule:atl24,pysr:latest,pysr:unstable"
 
 Resources:
 
