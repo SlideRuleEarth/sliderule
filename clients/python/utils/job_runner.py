@@ -95,6 +95,8 @@ try:
         if args.output.startswith("s3://"):
             output_bucket, output_directory = parse_url(args.output)
             remote_result = f"{output_directory}/result{array_index}.json"
+            if remote_result.startswith("/"):
+                remote_result = remote_result[1:]
             print(f"Uploading {local_result} to {remote_result}")
             s3.upload_file(local_result, output_bucket, remote_result)
             os.remove(local_result)

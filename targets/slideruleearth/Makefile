@@ -752,17 +752,8 @@ pysr-docker: ## build pysr docker image; uses VERSION
 	cp $(PYTHON_CLIENT_DIR)/utils/job_runner.py $(PYSR_STAGE_DIR)
 	cd $(PYSR_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/pysr:$(VERSION) .
 
-pysr-job: ## execute the job runner locally
-	docker run \
-		$(DOCKEROPTS) \
-		--network host \
-		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
-		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
-		-e CLUSTER=localhost \
-		-e DOMAIN=localhost \
-		--rm \
-		--name pysr \
-		$(CONTAINER_REGISTRY)/pysr:$(VERSION) s3://sliderule-public/hello.py noargs /tmp
+pysr-docker-push: ## push pysr docker image; uses VERSION
+	docker push $(CONTAINER_REGISTRY)/pysr:latest
 
 ########################
 # Certbot Targets
@@ -945,18 +936,23 @@ documentation-delete: ## deletes the documentation stack
 
 release: ## tag and release sliderule; needs RELEASE
 	make sliderule-buildenv-docker
+	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
 	make ams-lock
-	echo $(RELEASE) > $(ROOT)/version.txt
-	git add $(ROOT)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
+	make pysr-lock
+	git add $(ROOT)/targets/slideruleearth/docker/pysr/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth/docker/pysr/conda-lock.yml
+	echo $(RELEASE) > $(ROOT)/version.txt
+	git add $(ROOT)/version.txt
 	git commit -m "Version $(RELEASE)"
 	git tag -a $(RELEASE) -m "Version $(RELEASE)"
 	git push --tags && git push
 	gh release create $(RELEASE) -t $(RELEASE) --notes "see https://docs.slideruleearth.io/developer-guide/release-notes/"
 	make python-publish
 	make cli-publish
+	make pysr-docker VERSION=latest
+	make pysr-docker-push VERSION=latest
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
 	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
