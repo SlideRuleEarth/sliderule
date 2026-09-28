@@ -13,9 +13,9 @@ try:
     # ########################
 
     parser = argparse.ArgumentParser(description="""sliderule python job runner""")
-    parser.add_argument('script',       type=str,   required=True,  description="url of script to execute")
-    parser.add_argument('arguments',    type=str,   required=True,  description="url of argument file OR argument string")
-    parser.add_argument('output',       type=str,   required=True,  description="url of output directory")
+    parser.add_argument('script',       type=str) # url of script to execute
+    parser.add_argument('arguments',    type=str) # url of argument file OR argument string
+    parser.add_argument('output',       type=str) # url of output directory
     args = parser.parse_args()
 
     # ########################
@@ -71,7 +71,7 @@ try:
 
     # build array of arguments to pass to subprocess
     run_array = [sys.executable, local_script]
-    for argument in arguments_array.split(' '):
+    for argument in arguments.split(' '):
         run_array.append(argument)
 
     # add local result file to subprocess arguments

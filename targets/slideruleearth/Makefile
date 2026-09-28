@@ -102,6 +102,7 @@ NODEJS_STAGE_DIR = $(STAGE)/nodejs
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 CLI_STAGE_DIR = $(STAGE)/cli
 CLI_CLIENT_DIR = $(ROOT)/clients/cli
+PYSR_STAGE_DIR = $(STAGE)/pysr
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 DOCKEROPTS ?= # --progress=plain --no-cache
@@ -734,6 +735,34 @@ runner-test: ## run runner tests
     ALERT_EMAIL=$(ALERT_EMAIL) \
 	coverage run -m pytest $(ARGS) && \
 	coverage report -m'
+
+########################
+# PySR Targets
+########################
+
+pysr-lock: ## update dependencies of pysr
+	cd docker/pysr && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/pysr && conda-lock render -p linux-$(ARCH)
+
+pysr-docker: ## build pysr docker image; uses VERSION
+	-rm -Rf $(PYSR_STAGE_DIR)
+	mkdir -p $(PYSR_STAGE_DIR)
+	cp docker/pysr/Dockerfile.$(ARCH) $(PYSR_STAGE_DIR)/Dockerfile
+	cp docker/pysr/conda-* $(PYSR_STAGE_DIR)
+	cp $(PYTHON_CLIENT_DIR)/utils/job_runner.py $(PYSR_STAGE_DIR)
+	cd $(PYSR_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/pysr:$(VERSION) .
+
+pysr-job: ## execute the job runner locally
+	docker run \
+		$(DOCKEROPTS) \
+		--network host \
+		-e PROJECT_BUCKET=$(PROJECT_BUCKET) \
+		-e PROJECT_FOLDER=$(PROJECT_FOLDER) \
+		-e CLUSTER=localhost \
+		-e DOMAIN=localhost \
+		--rm \
+		--name pysr \
+		$(CONTAINER_REGISTRY)/pysr:$(VERSION) s3://sliderule-public/hello.py noargs /tmp
 
 ########################
 # Certbot Targets
