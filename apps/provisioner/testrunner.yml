@@ -136,15 +136,6 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:s3:::${ProjectBucket}/testrunner/*"
                   - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
-        - PolicyName: !Sub "${AWS::StackName}-ec2-access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ec2:DescribeInstances
-                  - ec2:TerminateInstances
-                Resource: "*"
         - PolicyName: !Sub "${AWS::StackName}-secret-access"
           PolicyDocument:
             Version: "2012-10-17"

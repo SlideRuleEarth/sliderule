@@ -212,7 +212,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - ec2:DescribeInstances
-                  - ec2:TerminateInstances
                 Resource: "*"
         - PolicyName: !Sub "${Cluster}-firehose-access"
           PolicyDocument:

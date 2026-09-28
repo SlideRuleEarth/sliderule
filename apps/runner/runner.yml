@@ -57,9 +57,9 @@ Parameters:
   JobRunnerCIDRBlock:
     Type: String
     Default: "10.0.0.0/17"
-  SlideRuleRunnerImageTags:
+  SlideRuleRunnerImages:
     Type: CommaDelimitedList
-    Default: "latest,unstable,atl24"
+    Default: "sliderule:latest,sliderule:unstable,sliderule:atl24,pysr:latest"
 
 Resources:
 
@@ -220,15 +220,6 @@ Resources:
                 Action: ["s3:PutObject"]
                 Resource:
                   - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
-        - PolicyName: !Sub "${AWS::StackName}-ec2-access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ec2:DescribeInstances
-                  - ec2:TerminateInstances
-                Resource: "*"
         - PolicyName: !Sub "${AWS::StackName}-firehose-access"
           PolicyDocument:
             Version: "2012-10-17"
@@ -248,15 +239,6 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
-        - PolicyName: !Sub "${AWS::StackName}-logs-access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:GetLogEvents
-                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/batch/${AWS::StackName}:log-stream:${AWS::StackName}/*
-
 
   # ECS Instance Profile
   InstanceProfile:
@@ -373,12 +355,12 @@ Resources:
 
   # Job Definition
   'Fn::ForEach::RunnerJobDefinitions':
-    - ImageTag
-    - !Ref SlideRuleRunnerImageTags
-    - 'BatchJobDefinition&{ImageTag}':
+    - ImageName
+    - !Ref SlideRuleRunnerImages
+    - 'BatchJobDefinition&{ImageName}':
         Type: AWS::Batch::JobDefinition
         Properties:
-          JobDefinitionName: !Sub "${AWS::StackName}-${ImageTag}-job-definition"
+          JobDefinitionName: !Sub "${AWS::StackName}-&{ImageName}-job-definition"
           Type: container
           Parameters:
             script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
@@ -396,7 +378,7 @@ Resources:
           Timeout:
             AttemptDurationSeconds: 10800  # 3 hours
           ContainerProperties:
-            Image: !Sub "${ContainerRegistry}/sliderule:${ImageTag}"
+            Image: !Sub "${ContainerRegistry}/${ImageName}"
             ResourceRequirements:
               - Type: VCPU
                 Value: "1"
@@ -480,7 +462,7 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
-          IMAGE_TAGS: !Join [",", !Ref SlideRuleRunnerImageTags]
+          IMAGE_TAGS: !Join [",", !Ref SlideRuleRunnerImages]
 
   # IAM Role
   LambdaExecutionRole:
@@ -548,6 +530,14 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
+        - PolicyName: !Sub "${AWS::StackName}-logs-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:GetLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/batch/${AWS::StackName}:log-stream:${AWS::StackName}/*
 
   # API Gateway HTTP API
   HttpApi:

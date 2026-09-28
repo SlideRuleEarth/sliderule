@@ -51,7 +51,9 @@ class Tool:
         bucket = run_url.split("s3://")[-1].split("/")[0]
         prefix = "/".join(run_url.split("s3://")[-1].split("/")[1:])
         receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
-        args_list = self.__load_remote_file(bucket, receipt["args"])
+        args_bucket = receipt["args"].split("s3://")[-1].split("/")[0]
+        args_file = "/".join(run_url.split("s3://")[-1].split("/")[1:])
+        args_list = self.__load_remote_file(args_bucket, args_file)
         for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
             try:
                 result = {

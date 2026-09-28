@@ -1,6 +1,7 @@
 local json = require("json")
 local aws_utils = require("aws_utils")
 local script = arg[1]
+local arguments = arg[2]
 local output = arg[#arg] -- directory
 
 --------------------------------------------------
@@ -49,14 +50,13 @@ print(string.format("Running script: %s", local_script_file))
 -- Get Arguments
 --------------------------------------------------
 
-local output_bucket, output_directory = output:match("^s3://([^/]+)/(.+)$")
 local array_index = tonumber(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX"))
 if array_index then
-    local arguments_file_path = string.format("%s/args.json", output_directory)
+    local arguments_bucket, arguments_file_path = arguments:match("^s3://([^/]+)/(.+)$")
     local local_arguments_file = string.format("/tmp/args-%s.json", aws_utils.unique_string(7))
-    local arguments_download_status = core.s3download(output_bucket, arguments_file_path, local_arguments_file)
+    local arguments_download_status = core.s3download(arguments_bucket, arguments_file_path, local_arguments_file)
     if not arguments_download_status then
-        print("Failed to download arguments from s3://%s/%s", output_bucket, arguments_file_path)
+        print("Failed to download arguments from s3://%s/%s", arguments_bucket, arguments_file_path)
         return sys.quit(1) -- failure
     end
     local f, err = io.open(local_arguments_file, "r")
@@ -111,6 +111,7 @@ print(string.format("Results written to: %s", local_result_file))
 --------------------------------------------------
 
 if output:find("s3://") == 1 then
+    local output_bucket, output_directory = output:match("^s3://([^/]+)/(.+)$")
     local remote_result_file = string.format("%s/result%s.json", output_directory, array_index or "")
     print(string.format("Uploading bucket=%s, file=%s", output_bucket, remote_result_file))
     local result_upload_status = core.s3upload(output_bucket, remote_result_file, local_result_file)

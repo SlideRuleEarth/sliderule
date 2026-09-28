@@ -229,8 +229,7 @@ def submit_handler(body, username):
     # define job parameters
     if not isinstance(image, str):
         raise RuntimeError(f"Invalid image specified of type: {type(image)}")
-    tag = image.split(":")[-1]
-    job_definition = f"{STACK_NAME}-{tag}-job-definition"
+    job_definition = f"{STACK_NAME}-{image.replace(":","")}-job-definition"
     job_queue = f"{STACK_NAME}-{queue}-job-queue"
 
     # parameter validation
@@ -250,7 +249,7 @@ def submit_handler(body, username):
         raise RuntimeError(f"Invalid memory provided: {memory}")
     elif queue not in JOB_QUEUES:
         raise RuntimeError(f"Invalid queue provided: {queue}")
-    elif tag not in IMAGE_TAGS:
+    elif image not in IMAGE_TAGS:
         raise RuntimeError(f"Invalid image provided: {image}")
 
     # build unique identifier
@@ -271,8 +270,9 @@ def submit_handler(body, username):
     # handle arguments
     process_as_array = isinstance(args, list) and len(args) > 1
     if process_as_array:
-        args_str = f"{run_path}/args.json"
-        s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_str, Body=json.dumps(args))
+        args_path = f"{run_path}/args.json"
+        args_str = f"s3://{PROJECT_PUBLIC_BUCKET}/{args_path}" # url
+        s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_path, Body=json.dumps(args))
     elif isinstance(args, list): # with just one element
         args_str = str(args[0]).strip()
     else: # string
