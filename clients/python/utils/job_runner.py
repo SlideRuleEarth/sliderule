@@ -83,7 +83,7 @@ try:
     print(f"Running: {args.script} {arguments}")
     result = subprocess.run(run_array, check=False)
     if result.returncode > 0: # uncaught exception
-        raise RuntimeError(f"unhandled exception: {result.stderr}")
+        raise RuntimeError(f"unhandled exception")
     elif result.returncode < 0:
         raise RuntimeError(f"script failed execution: {result.returncode}")
 
