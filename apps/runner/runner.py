@@ -263,7 +263,9 @@ def submit_handler(body, username):
     run_path = f"{STACK_NAME}/{run_id}"
     run_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{run_path}"
     args_path = f"{run_path}/args.json"
-    args_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{args_path}" # url
+    args_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{args_path}"
+    script_path = f"{run_path}/script"
+    script_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{script_path}"
 
     # populate validated initial info
     state["name"] = name
@@ -280,7 +282,7 @@ def submit_handler(body, username):
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_path, Body=args_contents)
 
     # load additional run files to S3
-    s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/script.lua", Body=script)
+    s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=script_path, Body=script)
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/receipt.json", Body=json.dumps({
         "name": name,
         "username": username,
@@ -303,7 +305,7 @@ def submit_handler(body, username):
         "jobQueue": job_queue,
         "jobDefinition": job_definition,
         "parameters": {
-            "script": f"{run_url}/script.lua",
+            "script": script_url,
             "args": args_url,
             "output": run_url
         },

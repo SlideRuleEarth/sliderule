@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import argparse
 import boto3
 import string
@@ -23,6 +24,7 @@ try:
     # ########################
 
     s3 = boto3.client("s3")
+    unique = ''.join(random.choices(string.ascii_lowercase, k=7))
 
     # ########################
     # Helper Functions
@@ -39,10 +41,9 @@ try:
     # ########################
 
     if args.script.startswith("s3://"):
-        unique = ''.join(random.choices(string.ascii_lowercase, k=7))
         local_script = f"/tmp/script-{unique}.py"
         script_bucket, script_key = parse_url(args.script)
-        print(f"Downloading script: {args.script}")
+        print(f"Downloading {args.script} to {local_script}")
         s3.download_file(script_bucket, script_key, local_script)
     else:
         local_script = args.script
@@ -52,19 +53,17 @@ try:
     # ########################
 
     if args.arguments.startswith("s3://"):
-        unique = ''.join(random.choices(string.ascii_lowercase, k=7))
-        local_arguments = f"/tmp/args-{unique}.py"
+        local_arguments = f"/tmp/args-{unique}.json"
         arguments_bucket, arguments_key = parse_url(args.arguments)
         print(f"Downloading {args.arguments} to {local_arguments}")
         s3.download_file(arguments_bucket, arguments_key, local_arguments)
     else:
         local_arguments = args.arguments
 
-
     array_index = os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")
     if array_index:
         with open(local_arguments, "r") as file:
-            arguments_array = [argument for argument in file.readlines() if argument.strip()]
+            arguments_array = json.load(file)
             arguments = arguments_array[int(array_index)]
     else:
         with open(local_arguments, "r") as file:
@@ -80,12 +79,11 @@ try:
         run_array.append(argument)
 
     # add local result file to subprocess arguments
-    unique = ''.join(random.choices(string.ascii_lowercase, k=7))
     local_result = f"/tmp/result-{unique}.json"
     run_array.append(local_result)
 
     # execute subprocess
-    print(f"Running: {args.script} {arguments}")
+    print(f"Running script: {arguments}")
     result = subprocess.run(run_array, check=False)
     if result.returncode > 0: # uncaught exception
         raise RuntimeError(f"unhandled exception")
