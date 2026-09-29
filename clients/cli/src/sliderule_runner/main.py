@@ -4,6 +4,7 @@ import boto3
 import random
 import string
 import argparse
+import traceback
 from sliderule import sliderule
 from .database import Database, JobState, QueuePriority, JobStatus
 from pathlib import Path
@@ -55,7 +56,7 @@ class Tool:
         prefix = "/".join(run_url.split("s3://")[-1].split("/")[1:])
         receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
         args_bucket = receipt["args"].split("s3://")[-1].split("/")[0]
-        args_file = "/".join(run_url.split("s3://")[-1].split("/")[1:])
+        args_file = "/".join(receipt["args"].split("s3://")[-1].split("/")[1:])
         args_content = self.__load_remote_file(args_bucket, args_file)
         if isinstance(args_content, list):
             args_list = args_content
@@ -99,7 +100,8 @@ class Tool:
         # pull out arguments
         name = self.args.name
         script_file = self.args.script
-        arguments_file = self.args.arguments
+        arguments_input = self.args.arguments
+        arg_as_str = self.args.arg_as_str
         batch_size = self.args.batch_size
         vcpus = self.args.vcpus
         memory = self.args.memory
@@ -109,9 +111,12 @@ class Tool:
         with open(script_file, "r") as file:
             script = file.read()
         # read arguments
-        with open(arguments_file, "r") as file:
-            arguments = [line.strip() for line in file.readlines()]
-        # process job in batches
+        if arg_as_str:
+            arguments = [str(arguments_input)]
+        else:
+            with open(arguments_input, "r") as file:
+                arguments = [line.strip() for line in file.readlines()]
+            # process job in batches
         for i in range(0, len(arguments), batch_size):
             # build and check name
             job_name = f"{name}_{i}"
@@ -121,7 +126,7 @@ class Tool:
             # submit & save job
             args_list = arguments[i:i+batch_size]
             rsps = self.session.runner.submit(name=job_name, script=script, args=args_list, optional_args={"vcpus":vcpus, "memory":memory, "image":image, "queue":queue})
-            self.database.submissions[job_name] = rsps | {"complete": False}
+            self.database.submissions[job_name] = rsps | {"complete": False, "job_size": len(args_list)}
             print(f"Submitted job {job_name} using script {script_file} with {len(args_list)} entries: {rsps}")
 
     # Scrape Submissions
@@ -157,12 +162,14 @@ class Tool:
             complete = job["complete"]
             print(f"Statusing {name} ...")
             if not complete:
-                queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=True)
-                # jobs
-                child_jobs = queue_status["jobs"]
-                self.database.submissions[name]["jobs"] = {}
-                for child_job in child_jobs:
-                    self.database.submissions[name]["jobs"][int(child_job["index"])] = child_job
+                if job["job_size"] > 1: # array processing, use parent job id
+                    queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=True)
+                    child_jobs = queue_status["jobs"]
+                    self.database.submissions[name]["jobs"] = {}
+                    for child_job in child_jobs:
+                        self.database.submissions[name]["jobs"][int(child_job["index"])] = child_job
+                else: # single job, use name
+                    queue_status = self.session.runner.queue(name=name, queue=queue, verbose=False)
                 # report
                 report = queue_status["report"]
                 self.database.submissions[name]["status"] = report
@@ -223,7 +230,10 @@ class Tool:
     def get_logs(self):
         name = self.args.name
         index = self.args.index
-        job_id = self.database.submissions[name]["jobs"][str(index)]["job_id"]
+        if index:
+            job_id = self.database.submissions[name]["jobs"][str(index)]["job_id"]
+        else:
+            job_id = self.database.submissions[name]["job_id"]
         events = self.session.runner.logs(job_id=job_id)
         for event in events:
             print(event)
@@ -261,6 +271,7 @@ def main():
     submit.add_argument('name',         metavar="<name>")
     submit.add_argument('script',       metavar="<script.lua>",     type=Path)
     submit.add_argument('arguments',    metavar="<arguments.txt>",  type=Path)
+    submit.add_argument('--arg_as_str', action='store_true',        default=False) # changes arguments to be just a string instead of a file
     submit.add_argument('--vcpus',      type=int,                   default=4)
     submit.add_argument('--memory',     type=int,                   default=16000)
     submit.add_argument('--batch_size', type=int,                   default=10000)
@@ -291,7 +302,7 @@ def main():
     # logs
     logs = subparsers.add_parser("logs", parents=[common], help="get log messages for a child job")
     logs.add_argument('--name',       type=str,                     required=True) # name of submission
-    logs.add_argument('--index',      type=int,                     required=True) # job index
+    logs.add_argument('--index',      type=int,                     default=None) # job index
     logs.set_defaults(func=Tool.get_logs)
 
     # parse command line
@@ -307,6 +318,7 @@ def main():
     except Exception as e:
         if args.verbose: raise
         print(f"Unhandled error: {e}")
+        traceback.print_exc()
 
 # running via direct invocation
 if __name__ == "__main__": main()
