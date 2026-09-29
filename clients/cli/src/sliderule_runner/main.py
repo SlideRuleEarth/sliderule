@@ -193,30 +193,22 @@ class Tool:
 
     # Generate Report
     def generate_report(self):
-        stats = {status.value: 0 for status in JobStatus}
-        duration = {"avg": 0.0, "total": 0.0}
-        processed = 0
-        pending = 0
-        errors = 0
+        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in ["processed", "exceptions"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
         for name,submission in self.database.submissions.items():
             if self.args.name and self.args.name != name: continue
+            stats = {status.value: 0 for status in JobStatus}
+            duration = {"avg": 0.0, "total": 0.0}
+            processed = 0
+            exceptions = 0
             if submission["complete"]:
                 for result in submission["results"]:
-                    try:
-                        stats[result["status"]] += 1
+                    stats[result["status"]] += 1
+                    if "duration" in result:
                         duration["total"] += result["duration"]
                         processed += 1
-                    except Exception as e:
-                        errors += 1
-            else:
-                pending += 1
-        if processed > 0:
-            duration["avg"] = duration["total"] / processed
-        print("Processed:", processed)
-        print("Pending:", pending)
-        print("Errors:", errors)
-        print("Status:", json.dumps(stats, indent=2))
-        print("Duration:", json.dumps(duration, indent=2))
+                if processed > 0:
+                    duration["avg"] = duration["total"] / processed
+                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [processed, exceptions]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
 
     # Cancel Job
     def cancel_job(self):
@@ -290,7 +282,7 @@ def main():
     status.set_defaults(func=Tool.get_status)
 
     # report
-    report = subparsers.add_parser("report", parents=[common], help="generate report of submitted jobs")
+    report = subparsers.add_parser("report", parents=[common], help="generate report of completed jobs")
     report.add_argument('--name',       type=str,                   default=None) # name of submission
     report.set_defaults(func=Tool.generate_report)
 
