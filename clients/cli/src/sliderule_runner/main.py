@@ -236,7 +236,7 @@ class Tool:
             job_id = self.database.submissions[name]["job_id"]
         events = self.session.runner.logs(job_id=job_id)
         for event in events:
-            print(event)
+            print("->", event)
 
     # Finish
     def finish(self):

@@ -59,7 +59,10 @@ Parameters:
     Default: "10.0.0.0/17"
   SlideRuleRunnerImages:
     Type: CommaDelimitedList
-    Default: "sliderule-latest,sliderule-unstable,sliderule-atl24,pysr-latest,pysr-unstable"
+    Default: "sliderule-latest,sliderule-unstable,sliderule-atl24"
+  PySRRunnerImages:
+    Type: CommaDelimitedList
+    Default: "pysr-latest,pysr-unstable"
 
 Resources:
 
@@ -353,8 +356,8 @@ Resources:
         - Order: 1
           ComputeEnvironment: !Ref BatchComputeEnvironment
 
-  # Job Definition
-  'Fn::ForEach::RunnerJobDefinitions':
+  # SlideRule Job Definition
+  'Fn::ForEach::SlideRuleJobDefinitions':
     - ImageName
     - !Ref SlideRuleRunnerImages
     - 'BatchJobDefinition&{ImageName}':
@@ -363,9 +366,9 @@ Resources:
           JobDefinitionName: !Sub "${AWS::StackName}-${ImageName}-job-definition"
           Type: container
           Parameters:
-            script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
-            args: !Sub "s3://${ProjectPublicBucket}/runner/runid/args.json" # example to be overridden
-            output: !Sub "s3://${ProjectPublicBucket}/runner/runid" # example to be overridden
+            script: ""
+            args: ""
+            output: ""
           RetryStrategy:
             Attempts: 3  # 1 initial attempt + 2 retries = 3 total
             EvaluateOnExit:
@@ -440,6 +443,78 @@ Resources:
                 awslogs-region: !Ref AWS::Region
                 awslogs-stream-prefix: !Ref AWS::StackName
 
+  # PySR Job Definition
+  'Fn::ForEach::PySRJobDefinitions':
+    - ImageName
+    - !Ref PySRRunnerImages
+    - 'BatchJobDefinition&{ImageName}':
+        Type: AWS::Batch::JobDefinition
+        Properties:
+          JobDefinitionName: !Sub "${AWS::StackName}-${ImageName}-job-definition"
+          Type: container
+          Parameters:
+            script: ""
+            args: ""
+            output: ""
+          RetryStrategy:
+            Attempts: 3  # 1 initial attempt + 2 retries = 3 total
+            EvaluateOnExit:
+              - Action: EXIT
+                OnExitCode: "0"  # Don't retry on success
+              - Action: EXIT
+                OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
+              - Action: RETRY
+                OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
+          Timeout:
+            AttemptDurationSeconds: 10800  # 3 hours
+          ContainerProperties:
+            Image: !Join # replace '-' with ':'
+              - ""
+              - - !Ref ContainerRegistry
+                - "/"
+                - !Select [0, !Split ["-", !Sub "${ImageName}"]]
+                - ":"
+                - !Select [1, !Split ["-", !Sub "${ImageName}"]]
+            ResourceRequirements:
+              - Type: VCPU
+                Value: "1"
+              - Type: MEMORY
+                Value: "4000"
+            JobRoleArn: !GetAtt JobRunnerRole.Arn
+            Command:
+              - "Ref::script"
+              - "Ref::args"
+              - "Ref::output"
+            Environment:
+              - Name: PROJECT_PUBLIC_BUCKET
+                Value: !Sub ${ProjectPublicBucket}
+              - Name: PROJECT_BUCKET
+                Value: !Sub ${ProjectBucket}
+              - Name: PROJECT_FOLDER
+                Value: !Sub ${ProjectFolder}
+              - Name: DOMAIN
+                Value: !Sub ${Domain}
+            Volumes:
+              - Name: data
+                Host:
+                  SourcePath: /data
+              - Name: ssl-certs
+                Host:
+                  SourcePath: /etc/ssl/certs
+            MountPoints:
+              - SourceVolume: data
+                ContainerPath: /data
+                ReadOnly: true
+              - SourceVolume: ssl-certs
+                ContainerPath: /etc/ssl/certs
+                ReadOnly: true
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Ref BatchJobLogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: !Ref AWS::StackName
+
   ##
   ## Runner Lambda/Gateway
   ##
@@ -468,7 +543,10 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
-          IMAGE_TAGS: !Join [",", !Ref SlideRuleRunnerImages]
+          IMAGE_TAGS: !Join
+            - ","
+            - - !Join [",", !Ref SlideRuleRunnerImages]
+              - !Join [",", !Ref PySRRunnerImages]
 
   # IAM Role
   LambdaExecutionRole:
