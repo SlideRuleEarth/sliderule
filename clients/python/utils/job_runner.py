@@ -61,7 +61,7 @@ try:
         local_arguments = args.arguments
 
     array_index = os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")
-    if array_index:
+    if array_index != None:
         with open(local_arguments, "r") as file:
             arguments_array = json.load(file)
             arguments = arguments_array[int(array_index)]
