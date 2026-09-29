@@ -66,7 +66,7 @@ class Tool:
             result_file = f"{prefix}/result{len(args_list) > 1 and i or ''}.json"
             try:
                 result = {
-                    "file": result_file,
+                    "file": f"{bucket}/{result_file}",
                     "environment": receipt["environment"],
                     "arg": args_list[i]
                 }
@@ -142,7 +142,7 @@ class Tool:
                         if result["status"] in self.args.status:
                             if self.args.verbose:
                                 print(f'{i:-5d}: {result}\n')
-                                output_list.append(result)
+                                output_list.append(json.dumps(result))
                             else:
                                 print(f'{i:-5d}: {result["arg"]}')
                                 output_list.append(result["arg"])
