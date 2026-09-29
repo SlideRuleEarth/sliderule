@@ -36,7 +36,10 @@ class Tool:
     def __load_remote_file(self, bucket, key):
         obj = self.s3.get_object(Bucket=bucket, Key=key)
         contents = obj["Body"].read().decode("utf-8")
-        return json.loads(contents)
+        try:
+            return json.loads(contents)
+        except Exception:
+            return contents
 
     # Get Results for a Job Run
     #   output of job must include the following fields for this to work:
@@ -53,15 +56,20 @@ class Tool:
         receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
         args_bucket = receipt["args"].split("s3://")[-1].split("/")[0]
         args_file = "/".join(run_url.split("s3://")[-1].split("/")[1:])
-        args_list = self.__load_remote_file(args_bucket, args_file)
+        args_content = self.__load_remote_file(args_bucket, args_file)
+        if isinstance(args_content, list):
+            args_list = args_content
+        elif isinstance(args_content, dict) or isinstance(args_content, str):
+            args_list = [args_content]
         for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
+            result_file = f"{prefix}/result{len(args_list) > 1 and i or ''}.json"
             try:
                 result = {
-                    "file": f"{prefix}/result{i}.json",
+                    "file": result_file,
                     "environment": receipt["environment"],
                     "arg": args_list[i]
                 }
-                rsps = self.__load_remote_file(bucket, f"{prefix}/result{i}.json")
+                rsps = self.__load_remote_file(bucket, result_file)
                 try:
                     result |= {
                         "status": rsps["status"] and JobStatus.SUCCESS or JobStatus.FAILURE,
@@ -118,7 +126,7 @@ class Tool:
 
     # Scrape Submissions
     def scrape_submissions(self):
-        arg_list = []
+        output_list = []
         for name,submission in self.database.submissions.items():
             if self.args.name and self.args.name != name: continue
             try:
@@ -127,16 +135,20 @@ class Tool:
                     for i in range(len(submission["results"])):
                         result = submission["results"][i]
                         if result["status"] in self.args.status:
-                            print(f'{i:-5d}: {result["arg"]}')
-                            arg_list.append(result["arg"])
+                            if self.args.verbose:
+                                print(f'{i:-5d}: {result}\n')
+                                output_list.append(result)
+                            else:
+                                print(f'{i:-5d}: {result["arg"]}')
+                                output_list.append(result["arg"])
                 else:
                     print(f"Skipping {name} because it is still pending")
             except Exception as e:
                 print(f"Failed to scrape {name}: {e}")
         if self.args.output:
             with open(self.args.output, "w") as file:
-                for arg in arg_list:
-                    file.write(f"{arg}\n")
+                for output in output_list:
+                    file.write(f"{output}\n")
 
     # Get Status
     def get_status(self):

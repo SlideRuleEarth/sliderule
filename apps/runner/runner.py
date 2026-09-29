@@ -221,7 +221,7 @@ def submit_handler(body, username):
     args = body["args"]
 
     # get optional request variables
-    image = body.get("image", "sliderule:latest")
+    image = body.get("image", "sliderule:latest").replace(":","-")
     queue = body.get("queue", "default")
     vcpus = body.get("vcpus")
     memory = body.get("memory")
@@ -229,7 +229,7 @@ def submit_handler(body, username):
     # define job parameters
     if not isinstance(image, str):
         raise RuntimeError(f"Invalid image specified of type: {type(image)}")
-    job_definition = f"{STACK_NAME}-{image.replace(":","")}-job-definition"
+    job_definition = f"{STACK_NAME}-{image}-job-definition"
     job_queue = f"{STACK_NAME}-{queue}-job-queue"
 
     # parameter validation
@@ -237,7 +237,7 @@ def submit_handler(body, username):
         raise RuntimeError(f"Invalid name supplied of type {type(name)}")
     elif len(script) <= 0:
         raise RuntimeError(f"Empty script provided")
-    elif (not isinstance(args, list)) and (not isinstance(args, str)):
+    elif (not isinstance(args, list)) and (not isinstance(args, dict)) and (not isinstance(args, str)):
         raise RuntimeError(f"Invalid arguments type: {type(args)}")
     elif isinstance(args, list) and (len(args) > MAX_ARGS_ARRAY_SIZE):
         raise RuntimeError(f"Argument array size too large: {len(args)}")
@@ -262,6 +262,8 @@ def submit_handler(body, username):
     run_id = f"run-{clean_username}-{clean_name}-{final_hash}"
     run_path = f"{STACK_NAME}/{run_id}"
     run_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{run_path}"
+    args_path = f"{run_path}/args.json"
+    args_url = f"s3://{PROJECT_PUBLIC_BUCKET}/{args_path}" # url
 
     # populate validated initial info
     state["name"] = name
@@ -269,23 +271,20 @@ def submit_handler(body, username):
 
     # handle arguments
     process_as_array = isinstance(args, list) and len(args) > 1
-    if process_as_array:
-        args_path = f"{run_path}/args.json"
-        args_str = f"s3://{PROJECT_PUBLIC_BUCKET}/{args_path}" # url
-        s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_path, Body=json.dumps(args))
-    elif isinstance(args, list): # with just one element
-        args_str = str(args[0]).strip()
+    if process_as_array or isinstance(args, dict):
+        args_contents = json.dumps(args)
+    elif isinstance(args, list) and len(args) == 1:
+        args_contents = str(args[0]).strip()
     else: # string
-        args_str = args.strip()
-    if len(args_str) == 0:
-        args_str = "nil"
+        args_contents = args.strip()
+    s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_path, Body=args_contents)
 
     # load additional run files to S3
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/script.lua", Body=script)
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=f"{run_path}/receipt.json", Body=json.dumps({
         "name": name,
         "username": username,
-        "args": args_str,
+        "args": args_url,
         "environment": ENVIRONMENT_VERSION
     }, indent=2))
 
@@ -305,7 +304,7 @@ def submit_handler(body, username):
         "jobDefinition": job_definition,
         "parameters": {
             "script": f"{run_url}/script.lua",
-            "args": args_str,
+            "args": args_url,
             "output": run_url
         },
         "containerOverrides": container_overrides

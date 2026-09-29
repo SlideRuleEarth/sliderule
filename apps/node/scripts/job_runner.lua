@@ -1,7 +1,7 @@
 local json = require("json")
 local aws_utils = require("aws_utils")
 local script = arg[1]
-local arguments = arg[2]
+local args_url = arg[2]
 local output = arg[#arg] -- directory
 
 --------------------------------------------------
@@ -50,33 +50,44 @@ print(string.format("Running script: %s", local_script_file))
 -- Get Arguments
 --------------------------------------------------
 
-local array_index = tonumber(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX"))
-if array_index then
-    local arguments_bucket, arguments_file_path = arguments:match("^s3://([^/]+)/(.+)$")
-    local local_arguments_file = string.format("/tmp/args-%s.json", aws_utils.unique_string(7))
+-- get local arguments file
+local local_arguments_file = nil
+if args_url:find("s3://") == 1 then
+    local_arguments_file = string.format("/tmp/args-%s.json", aws_utils.unique_string(7))
+    local arguments_bucket, arguments_file_path = args_url:match("^s3://([^/]+)/(.+)$")
+    print(string.format("Downloading bucket=%s, file=%s", arguments_bucket, arguments_file_path))
     local arguments_download_status = core.s3download(arguments_bucket, arguments_file_path, local_arguments_file)
     if not arguments_download_status then
-        print("Failed to download arguments from s3://%s/%s", arguments_bucket, arguments_file_path)
+        print("Failed to download arguments from s3")
         return sys.quit(1) -- failure
     end
-    local f, err = io.open(local_arguments_file, "r")
-    if not f then
-        print("Failed to open arguments from s3: ", err)
-        return sys.quit(1) -- failure
-    end
-    local content = f:read("*a")
-    f:close()
-    local rc, local_arguments = pcall(json.decode, content)
-    if (not rc) or (type(local_arguments) ~= 'table') then
+else
+    local_arguments_file = args_url
+end
+
+-- get arguments file content
+local args_f, args_err = io.open(local_arguments_file, "r")
+if not args_f then
+    print("Failed to open arguments file: ", args_err)
+    return sys.quit(1) -- failure
+end
+local args_content = args_f:read("*a")
+args_f:close()
+
+-- get arguments for script
+local array_index = tonumber(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX"))
+if array_index then -- args as array
+    local args_rc, args_json = pcall(json.decode, args_content)
+    if (not args_rc) or (type(args_json) ~= 'table') then
         print("Failed to parse arguments from s3")
         return sys.quit(1) -- failure
-    elseif #local_arguments < array_index then
-        print(string.format("Argument array index is out of bounds, %d < %d", #local_arguments, array_index))
+    elseif #args_json < array_index then
+        print(string.format("Argument array index is out of bounds, %d < %d", #args_json, array_index))
         return sys.quit(1) -- failure
     end
-    Arguments = local_arguments[array_index + 1]
+    Arguments = args_json[array_index + 1]
 else
-    Arguments = arg[2]
+    Arguments = args_content
 end
 
 --------------------------------------------------
@@ -91,18 +102,18 @@ end
 
 local local_result_file = nil
 if output:find("s3://") == 1 then
-    local_result_file = string.format("/tmp/result-%s.json", aws_utils.unique_string(7))
+    local_result_file = string.format("/tmp/result%s.json", aws_utils.unique_string(7))
 else
     local_result_file = string.format("%s/result.json", output)
 end
 
-local f, err = io.open(local_result_file, "w")
-if not f then
-    print("Failed to open local result file: ", err)
+local result_f, result_err = io.open(local_result_file, "w")
+if not result_f then
+    print("Failed to open local result file: ", result_err)
     return sys.quit(1) -- failure
 end
-f:write(script_result)
-f:close()
+result_f:write(script_result)
+result_f:close()
 
 print(string.format("Results written to: %s", local_result_file))
 

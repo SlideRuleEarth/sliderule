@@ -59,7 +59,7 @@ Parameters:
     Default: "10.0.0.0/17"
   SlideRuleRunnerImages:
     Type: CommaDelimitedList
-    Default: "sliderule:latest,sliderule:unstable,sliderule:atl24,pysr:latest,pysr:unstable"
+    Default: "sliderule-latest,sliderule-unstable,sliderule-atl24,pysr-latest,pysr-unstable"
 
 Resources:
 
@@ -360,7 +360,7 @@ Resources:
     - 'BatchJobDefinition&{ImageName}':
         Type: AWS::Batch::JobDefinition
         Properties:
-          JobDefinitionName: !Sub "${AWS::StackName}-&{ImageName}-job-definition"
+          JobDefinitionName: !Sub "${AWS::StackName}-${ImageName}-job-definition"
           Type: container
           Parameters:
             script: !Sub "s3://${ProjectPublicBucket}/runner/runid/script.lua" # example to be overridden
@@ -378,7 +378,13 @@ Resources:
           Timeout:
             AttemptDurationSeconds: 10800  # 3 hours
           ContainerProperties:
-            Image: !Sub "${ContainerRegistry}/${ImageName}"
+            Image: !Join # replace '-' with ':'
+              - ""
+              - - !Ref ContainerRegistry
+                - "/"
+                - !Select [0, !Split ["-", !Sub "${ImageName}"]]
+                - ":"
+                - !Select [1, !Split ["-", !Sub "${ImageName}"]]
             ResourceRequirements:
               - Type: VCPU
                 Value: "1"

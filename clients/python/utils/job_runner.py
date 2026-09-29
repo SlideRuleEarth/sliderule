@@ -51,19 +51,24 @@ try:
     # Get Arguments
     # ########################
 
-    array_index = os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")
-    if array_index:
+    if args.arguments.startswith("s3://"):
         unique = ''.join(random.choices(string.ascii_lowercase, k=7))
         local_arguments = f"/tmp/args-{unique}.py"
         arguments_bucket, arguments_key = parse_url(args.arguments)
         print(f"Downloading {args.arguments} to {local_arguments}")
         s3.download_file(arguments_bucket, arguments_key, local_arguments)
+    else:
+        local_arguments = args.arguments
+
+
+    array_index = os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")
+    if array_index:
         with open(local_arguments, "r") as file:
             arguments_array = [argument for argument in file.readlines() if argument.strip()]
             arguments = arguments_array[int(array_index)]
     else:
-        array_index = ""
-        arguments = args.arguments
+        with open(local_arguments, "r") as file:
+            arguments = file.read()
 
     # ########################
     # Execute Script
@@ -94,7 +99,7 @@ try:
     if os.path.exists(local_result):
         if args.output.startswith("s3://"):
             output_bucket, output_directory = parse_url(args.output)
-            remote_result = f"{output_directory}/result{array_index}.json"
+            remote_result = f"{output_directory}/result{array_index and str(array_index) or ""}.json"
             if remote_result.startswith("/"):
                 remote_result = remote_result[1:]
             print(f"Uploading {local_result} to {remote_result}")
