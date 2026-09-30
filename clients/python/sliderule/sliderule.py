@@ -583,8 +583,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None)
             lons = [source[0], source[2], source[2], source[0], source[0]]
             lats = [source[1], source[1], source[3], source[3], source[1]]
         elif len(source) > 4: # polygon list
-            lons = [source[i] for i in range(1,len(source),2)]
-            lats = [source[i] for i in range(0,len(source),2)]
+            lons = [source[i] for i in range(0,len(source),2)]
+            lats = [source[i] for i in range(1,len(source),2)]
         p = Polygon([point for point in zip(lons, lats)])
         gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
 

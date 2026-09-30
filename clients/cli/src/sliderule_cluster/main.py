@@ -1,3 +1,4 @@
+import sys
 import json
 import uuid
 import tempfile
@@ -42,10 +43,9 @@ class Tool:
 
     # whoami
     def whoami(self):
-        rsps = self.session.source("whoami", parm={}, path="/discovery", retries=0, rethrow=True)
-        result = json.dumps(rsps)
-        self.__display_result(result)
-        return result
+        result = self.session.source("whoami", parm={}, path="/discovery", retries=0, rethrow=True)
+        self.__display_result(result, reformat=True)
+        return json.dumps(result)
 
     # status
     def status(self):
@@ -53,22 +53,21 @@ class Tool:
             parm = {"service":self.session.service}
         else:
             parm = {}
-        rsps = self.session.source("status", parm=parm, path="/discovery", retries=0, rethrow=True)
-        result = json.dumps(rsps)
-        self.__display_result(result)
-        return result
+        result = self.session.source("status", parm=parm, path="/discovery", retries=0, rethrow=True)
+        self.__display_result(result, reformat=True)
+        return json.dumps(result)
 
     # version
     def version(self):
         result = sliderule.get_version(session=self.session)
         self.__display_result(result, reformat=True)
-        return result
+        return json.dumps(result)
 
     # defaults
     def defaults(self):
         result = sliderule.source("defaults", session=self.session)
         self.__display_result(result, reformat=True)
-        return result
+        return json.dumps(result)
 
     # earthdata
     def earthdata(self):
@@ -84,13 +83,13 @@ class Tool:
         }.items() if v is not None })
         result = sliderule.source("earthdata", parms, rethrow=True, session=self.session)
         self.__display_result(result, reformat=True)
-        return result
+        return json.dumps(result)
 
     # run
     def run(self):
         # get request parameters
-        if self.args.parms.startswith('"') or self.args.parms.startswith('{'):
-            parms = self.args.parms
+        if self.args.parms.startswith('{'):
+            parms = json.loads(self.args.parms)
         else:
             parms = self.__get_parms()
         # build output parameters (if not supplied in request)
@@ -117,7 +116,7 @@ class Tool:
                     break
         # set and return results
         result = output_path
-        self.__display_result(result, reformat=True)
+        self.__display_result(result, reformat=False)
         return result
 
 #########################################
@@ -157,7 +156,7 @@ def main():
     # earthdata
     earthdata = subparsers.add_parser("earthdata", parents=[common], help="earthdata search")
     earthdata.add_argument('--asset',           type=str,               default="icesat2", help="SlideRule asset name")
-    earthdata.add_argument('--poly',            type=float, nargs='+',  default=None, help="closed counter-clockwise list of latitude longitude pairs defining the area of interest; e.g. lon1 lat1 lon2 lat2 lon3 lat3 ... lon1 lat1")
+    earthdata.add_argument('--poly',            type=float, nargs='+',  default=None, help="closed counter-clockwise list of longitude/latitude pairs defining the area of interest; e.g. lon1 lat1 lon2 lat2 lon3 lat3 ... lon1 lat1")
     earthdata.add_argument('--geojson',         type=str,               default=None, help="geojson filename defining the area of interest")
     earthdata.add_argument('--bbox',            type=float, nargs='+',  default=None, help="bounding box defining the area of interest; e.g. lon_ll lat_ll lon_ur lat_ur")
     earthdata.add_argument('--t0',              type=str,               default=None, help="start time as an ISO datetime string YYYY-MM-DDTHH:MM:SSZ") # datetime.fromisoformat(args.t0)
@@ -166,6 +165,7 @@ def main():
     earthdata.add_argument('--short_name',      type=str,               default=None, help="CMR dataset name")
     earthdata.add_argument('--with_meta',       action='store_true',    default=False, help="return metadata along with query results")
     earthdata.add_argument('--name_filter',     type=str,               default=None, help="regular expression to evaluate against resource names returned by query")
+    earthdata.add_argument('--parms',           type=str,               default=None, help="string or filename containing json parameters to use in request")
     earthdata.set_defaults(func=Tool.earthdata)
 
     # run
@@ -189,6 +189,7 @@ def main():
     except Exception as e:
         if args.verbose: raise
         print(f"Unhandled error: {e}")
+        sys.exit(1) # returns error back to system
 
 # running via direct invocation
 if __name__ == "__main__": main()

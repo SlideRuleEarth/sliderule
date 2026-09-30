@@ -12,6 +12,16 @@ In order to run the [example notebooks](Examples.md), we provide an [environment
 conda env create -f environment.yml
 ```
 
+## Command Line Interface
+
+The `sliderule-cli` command line tools are built on top of the SlideRule Python client and are maintained in a separate package and must be installed manually.  To install the full suite of command line tools use PyPI to install the tools into the same environment that you installed the SlideRule Python client.
+
+```bash
+pip install sliderule-cli
+```
+
+See the ***Python CLI Reference*** to see which tools are available and for a full description of each tool.
+
 ## JuypterLab
 
 To install and setup JupyterLab to run the provided example notebooks, you must first install JupyterLab.

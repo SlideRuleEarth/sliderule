@@ -42,6 +42,12 @@ project:
         - file: api_reference/earthdata.md
         - file: api_reference/h5.md
         - file: api_reference/raster.md
+    - title: Python CLI Reference
+      children:
+        - file: cli_reference/sliderule-cluster.md
+        - file: cli_reference/sliderule-provisioner.md
+        - file: cli_reference/sliderule-recorder.md
+        - file: cli_reference/sliedrule-runner.md
     - title: Developers Guide
       children:
         - file: developer_guide/project_map.md
