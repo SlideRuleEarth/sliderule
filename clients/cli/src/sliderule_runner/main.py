@@ -66,7 +66,7 @@ class Tool:
             result_file = f"{prefix}/result{len(args_list) > 1 and i or ''}.json"
             try:
                 result = {
-                    "file": f"{bucket}/{result_file}",
+                    "file": f"s3://{bucket}/{result_file}",
                     "environment": receipt["environment"],
                     "arg": args_list[i]
                 }
