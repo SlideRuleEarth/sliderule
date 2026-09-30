@@ -161,7 +161,7 @@ https://conda.anaconda.org/conda-forge/noarch/xyzservices-2026.9.1-pyhd8ed1ab_0.
 https://conda.anaconda.org/conda-forge/linux-aarch64/aws-c-s3-0.12.8-h681413d_1.conda#da4fba448cece5e841abcc238e47ba9f
 https://conda.anaconda.org/conda-forge/linux-aarch64/azure-identity-cpp-1.13.3-hd0001b6_2.conda#c30d9e466e546970b50fbbcd335b60a0
 https://conda.anaconda.org/conda-forge/linux-aarch64/azure-storage-common-cpp-12.14.0-hacd5e5f_1.conda#40cef89c86e33d5d58822827bd9e82a6
-https://conda.anaconda.org/conda-forge/linux-aarch64/fonttools-4.66.0-py314h96efe57_0.conda#18faa594b09c63ca77470553fbb12a53
+https://conda.anaconda.org/conda-forge/linux-aarch64/fonttools-4.66.1-py314h96efe57_0.conda#9c9175473b703ba714bc4cb2a7a49e80
 https://conda.anaconda.org/conda-forge/noarch/h2-4.4.1-pyhcf101f3_0.conda#e652ac7756069c456d0da2a922cd7df5
 https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.6-pyhcf101f3_1.conda#04558c96691bed63104678757beb4f8d
 https://conda.anaconda.org/conda-forge/noarch/joblib-1.6.0-pyhcf101f3_0.conda#4ebc70ef1af2e21cdc8edb1bfa1ec28d
@@ -185,7 +185,7 @@ https://conda.anaconda.org/conda-forge/noarch/urllib3-2.8.0-pyhd8ed1ab_0.conda#4
 https://conda.anaconda.org/conda-forge/linux-aarch64/aws-sdk-cpp-1.11.833-h1131a43_9.conda#2fea7699a12af3e193214e0d820128ec
 https://conda.anaconda.org/conda-forge/linux-aarch64/azure-storage-files-datalake-cpp-12.16.0-hde34f15_1.conda#e8a075a1e6067cc8e59d7e408c284851
 https://conda.anaconda.org/conda-forge/noarch/botocore-1.43.102-pyhd8ed1ab_0.conda#f7556cc721b1b2b472fbec8c310f7029
-https://conda.anaconda.org/conda-forge/noarch/geopandas-base-1.1.4-pyha770c72_0.conda#6e31007c02f361338281bb78c5b84e7c
+https://conda.anaconda.org/conda-forge/noarch/geopandas-base-1.2.0-pyha770c72_0.conda#9b99d8df91a5d477372858fa9dd94a25
 https://conda.anaconda.org/conda-forge/linux-aarch64/libgoogle-cloud-storage-3.8.0-h66d5b86_0.conda#cb08cd8e8e0a333ba40e9ceb6e1f33b8
 https://conda.anaconda.org/conda-forge/linux-aarch64/matplotlib-base-3.11.2-py314h01f4b6b_1.conda#2256a322ddd5635e1e9e18ac768654a3
 https://conda.anaconda.org/conda-forge/linux-aarch64/pyogrio-0.13.0-py314h0dd3294_0.conda#2591f6e68ba6299e7f722830eef776fb
@@ -196,7 +196,7 @@ https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-25.0.0-hf28620a_4_
 https://conda.anaconda.org/conda-forge/noarch/mapclassify-2.11.0-pyhd8ed1ab_0.conda#0323c95182d828bb1bcf708c4077db3b
 https://conda.anaconda.org/conda-forge/noarch/s3transfer-0.19.2-pyhd8ed1ab_0.conda#5548801d61c206d492b85613a02a87e3
 https://conda.anaconda.org/conda-forge/noarch/boto3-1.43.102-pyhd8ed1ab_0.conda#50441706b60133b5ea660413bd83bb9a
-https://conda.anaconda.org/conda-forge/noarch/geopandas-1.1.4-pyhd8ed1ab_0.conda#99d77e0f92f7b0b977f77cfb49c7eaf6
+https://conda.anaconda.org/conda-forge/noarch/geopandas-1.2.0-pyhd8ed1ab_0.conda#676ee32e43cfbac783986c54ae489949
 https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-compute-25.0.0-hdd99842_4_cpu.conda#3afdcc262669ce23e9759369ddbbc0e4
 https://conda.anaconda.org/conda-forge/linux-aarch64/libparquet-25.0.0-h87079af_4_cpu.conda#757d3d2ec299ae9058326a96aaaec7a0
 https://conda.anaconda.org/conda-forge/linux-aarch64/libarrow-acero-25.0.0-hb326ee9_4_cpu.conda#9cb586c768b6eb486d1a356334629bef
