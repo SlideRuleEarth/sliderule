@@ -53,7 +53,7 @@ sliderule-cluster <command> [options]
   - Purpose
 * - [`whoami`](#cmd-whoami)
   - Self-identification of the cluster; returns the cluster name
-* - [`status`](#cmd-status)
+* - [`status`](#cluster-cmd-status)
   - Registration status of the cluster
 * - [`version`](#cmd-version)
   - Cluster version information
@@ -67,7 +67,6 @@ sliderule-cluster <command> [options]
 
 Run `sliderule-cluster --help` for a list of commands, or `sliderule-cluster <command> --help` for the options of a specific command.
 
-(common-options)=
 # Common Options
 
 The following options are accepted by **every** command. They are attached to each subcommand, so they must appear **after** the command name:
@@ -89,7 +88,7 @@ The following options are accepted by **every** command. They are attached to ea
   - Use dedicated user capacity rather than the public cluster.
 * - `--verbose`
   - False
-  - Turn on verbose log messages. Also causes errors to be raised with a full traceback (see [Error Handling](#error-handling)).
+  - Turn on verbose log messages. Also causes errors to be raised with a full traceback (see [Error Handling](#cluster-error-handling)).
 * - `--result <file>`
   - None
   - Write the command's result to the named file in addition to printing it.
@@ -117,7 +116,7 @@ sliderule-cluster whoami
 sliderule-cluster whoami --domain testsliderule.org --cluster sliderule
 ```
 
-(cmd-status)=
+(cluster-cmd-status)=
 ## `status`
 ```{code-block} text
 sliderule-cluster status [common options]
@@ -280,7 +279,7 @@ sliderule-cluster run atl06p --parms request.json --result output_path.txt
 
 # Additional Topics
 
-(error-handling)=
+(cluster-error-handling)=
 ### Error Handling
 
 By default, errors are caught and reported as a single line:

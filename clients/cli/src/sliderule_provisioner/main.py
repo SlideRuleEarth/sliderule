@@ -89,7 +89,7 @@ class Tool:
 def main():
 
     # command line arguments
-    parser = argparse.ArgumentParser(prog="sliderule-runner", description="""SlideRule Runner""")
+    parser = argparse.ArgumentParser(prog="sliderule-provisioner", description="""SlideRule Provisioner""")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # options shared by every subcommand; parents= lets them appear after the command name
@@ -97,7 +97,6 @@ def main():
     common.add_argument('--domain',         type=str,               default="slideruleearth.io")
     common.add_argument('--cluster',        type=str,               default="developers")
     common.add_argument('--user_service',   action='store_true',    default=False)
-    common.add_argument('--concise',        action='store_true',    default=False)
     common.add_argument('--verbose',        action='store_true',    default=False)
     common.add_argument('--timezone',       type=str,               default="America/New_York")
 
@@ -128,7 +127,7 @@ def main():
 
     # report
     report = subparsers.add_parser("report", parents=[common], help="report metadata of active clusters")
-    report.add_argument('--kind',   type=str,   default="clusters", help="'cluster' for cluster report, 'test' for test report")
+    report.add_argument('--kind',   type=str,   default="cluster", help="'cluster' for cluster report, 'test' for test report")
     report.set_defaults(func=Tool.report)
 
     # test

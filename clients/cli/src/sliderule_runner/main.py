@@ -28,7 +28,7 @@ class Tool:
         # open database
         self.database = Database(args.database)
         # create sliderule session
-        self.session = sliderule.create_session(verbose=args.verbose)
+        self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose)
         self.session.authenticate() # gives privileges to access SlideRule Runner
         # aws clients
         self.s3 = boto3.client("s3", region_name="us-west-2")
@@ -63,7 +63,7 @@ class Tool:
         elif isinstance(args_content, dict) or isinstance(args_content, str):
             args_list = [args_content]
         for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
-            result_file = f"{prefix}/result{len(args_list) > 1 and i or ''}.json"
+            result_file = f"{prefix}/result{len(args_list) > 1 and str(i) or ''}.json"
             try:
                 result = {
                     "file": f"s3://{bucket}/{result_file}",
@@ -193,13 +193,12 @@ class Tool:
 
     # Generate Report
     def generate_report(self):
-        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in ["processed", "exceptions"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
+        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in ["processed"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
         for name,submission in self.database.submissions.items():
             if self.args.name and self.args.name != name: continue
             stats = {status.value: 0 for status in JobStatus}
             duration = {"avg": 0.0, "total": 0.0}
             processed = 0
-            exceptions = 0
             if submission["complete"]:
                 for result in submission["results"]:
                     stats[result["status"]] += 1
@@ -208,7 +207,7 @@ class Tool:
                         processed += 1
                 if processed > 0:
                     duration["avg"] = duration["total"] / processed
-                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [processed, exceptions]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
+                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [processed]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
 
     # Cancel Job
     def cancel_job(self):
@@ -222,7 +221,7 @@ class Tool:
     def get_logs(self):
         name = self.args.name
         index = self.args.index
-        if index:
+        if index is not None:
             job_id = self.database.submissions[name]["jobs"][str(index)]["job_id"]
         else:
             job_id = self.database.submissions[name]["job_id"]
@@ -248,6 +247,7 @@ def main():
 
     # options shared by every subcommand; parents= lets them appear after the command name
     common = argparse.ArgumentParser(add_help=False)
+    common.add_argument('--domain',     type=str,                   default="slideruleearth.io")
     common.add_argument('--database',   type=Path,                  default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
     common.add_argument('--queue',      type=QueuePriority,         default=QueuePriority.DEFAULT, choices=list(QueuePriority))
     common.add_argument('--verbose',    action='store_true',        default=False)

@@ -47,7 +47,7 @@ project:
         - file: cli_reference/sliderule-cluster.md
         - file: cli_reference/sliderule-provisioner.md
         - file: cli_reference/sliderule-recorder.md
-        - file: cli_reference/sliedrule-runner.md
+        - file: cli_reference/sliderule-runner.md
     - title: Developers Guide
       children:
         - file: developer_guide/project_map.md
