@@ -491,7 +491,7 @@ Resources:
               - Name: PROJECT_PUBLIC_BUCKET
                 Value: !Sub ${ProjectPublicBucket}
               - Name: SECRETS_TABLE
-                Value: !Sub '${AWS::StackName}-job-secrets'
+                Value: !Ref OauthStore
               - Name: DOMAIN
                 Value: !Sub ${Domain}
             Volumes:
@@ -534,7 +534,7 @@ Resources:
           DOMAIN: !Ref Domain
           STACK_NAME: !Ref AWS::StackName
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
-          SECRETS_TABLE: !Sub '${AWS::StackName}-job-secrets'
+          SECRETS_TABLE: !Ref OauthStore
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail

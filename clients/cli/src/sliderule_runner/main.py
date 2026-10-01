@@ -107,6 +107,7 @@ class Tool:
         memory = self.args.memory
         image = self.args.image
         queue = self.args.queue
+        secrets_file = self.args.secrets
         # read script
         with open(script_file, "r") as file:
             script = file.read()
@@ -116,7 +117,13 @@ class Tool:
         else:
             with open(arguments_input, "r") as file:
                 arguments = [line.strip() for line in file.readlines()]
-            # process job in batches
+        # read secrets
+        if secrets_file:
+            with open(secrets_file, "r") as file:
+                secret_values = json.load(file)
+        else:
+            secret_values = None
+        # process job in batches
         for i in range(0, len(arguments), batch_size):
             # build and check name
             job_name = f"{name}_{i}"
@@ -125,7 +132,7 @@ class Tool:
                 job_name = f"{name}_{unique}_{i}"
             # submit & save job
             args_list = arguments[i:i+batch_size]
-            rsps = self.session.runner.submit(name=job_name, script=script, args=args_list, optional_args={"vcpus":vcpus, "memory":memory, "image":image, "queue":queue})
+            rsps = self.session.runner.submit(name=job_name, script=script, args=args_list, optional_args={"vcpus":vcpus, "memory":memory, "image":image, "queue":queue}, secret_values=secret_values)
             self.database.submissions[job_name] = rsps | {"complete": False, "job_size": len(args_list)}
             print(f"Submitted job {job_name} using script {script_file} with {len(args_list)} entries: {rsps}")
 
@@ -260,14 +267,15 @@ def main():
 
     # submit
     submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
-    submit.add_argument('name',         metavar="<name>")
-    submit.add_argument('script',       metavar="<script.lua>",     type=Path)
-    submit.add_argument('arguments',    metavar="<arguments.txt>",  type=Path)
+    submit.add_argument('name',         type=str,                   metavar="<name>")
+    submit.add_argument('script',       type=str,                   metavar="<script.lua>")
+    submit.add_argument('arguments',    type=str,                   metavar="<arguments.txt>")
     submit.add_argument('--arg_as_str', action='store_true',        default=False) # changes arguments to be just a string instead of a file
     submit.add_argument('--vcpus',      type=int,                   default=4)
     submit.add_argument('--memory',     type=int,                   default=16000)
     submit.add_argument('--batch_size', type=int,                   default=10000)
     submit.add_argument('--image',      type=str,                   default="sliderule:latest")
+    submit.add_argument('--secrets',    type=Path,                  default=None) # contents of file must be json
     submit.set_defaults(func=Tool.submit_job)
 
     # scrape

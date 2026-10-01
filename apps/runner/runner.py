@@ -18,6 +18,7 @@ DOMAIN = os.environ["DOMAIN"]
 STACK_NAME = os.environ["STACK_NAME"]
 ENVIRONMENT_VERSION = os.environ['ENVIRONMENT_VERSION']
 PROJECT_PUBLIC_BUCKET = os.environ["PROJECT_PUBLIC_BUCKET"]
+SECRETS_TABLE = os.environ["SECRETS_TABLE"]
 SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
 ALERT_EMAIL = os.environ['ALERT_EMAIL']
 IMAGE_TAGS = [tag.strip() for tag in os.environ['IMAGE_TAGS'].split(",")]
@@ -306,7 +307,7 @@ def submit_handler(body, username, secret_values):
     # build secret key and (if secrets present) load secrets into database
     secret_key = secrets.token_hex(16) # 32 hexadecimal characters
     if secret_values:
-        table = dynamodb.Table("job-secrets")
+        table = dynamodb.Table(SECRETS_TABLE)
         table.put_item(
             Item={
                 "id": secret_key,

@@ -82,9 +82,16 @@ try:
     # ########################
 
     # retrieve secrets from database
-    table = dynamodb.Table("job-secrets")
-    response = table.get_item(Key={"id": args.secret_key})
-    secrets = response.get("Item", {}).get("value", {})
+    secrets = {}
+    secrets_table = os.environ.get("SECRETS_TABLE")
+    if secrets_table:
+        table = dynamodb.Table(secrets_table)
+        response = table.get_item(Key={"id": args.secret_key})
+        item = response.get("Item")
+        if item:
+            secrets = item["value"]
+        else:
+            print("Warning: secret was not found")
 
     # write secrets to file
     local_secrets = f"/tmp/secrets-{unique}.json"

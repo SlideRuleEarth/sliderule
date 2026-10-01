@@ -37,6 +37,7 @@ import time
 import logging
 import numpy
 import base64
+import copy
 from pathlib import Path
 from datetime import datetime, timezone
 from urllib import parse as urllib_parse
@@ -588,9 +589,13 @@ class Session:
     class __Runner:
         def __init__ (self, session):
             self.session = session
-        def submit (self, *, name, script, args, optional_args=None):
-            if optional_args == None: optional_args = {}
-            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args": args} | optional_args)
+        def submit (self, *, name, script, args, optional_args=None, secret_values=None):
+            parms = {}
+            if isinstance(optional_args, dict):
+                parms = copy.deepcopy(optional_args)
+            if isinstance(secret_values, dict):
+                parms |= {"secrets": secret_values}
+            return self.session.gateway_request("submit", subdomain="runner", data={"name": name, "script": base64.b64encode(script.encode()).decode(), "args": args} | parms)
         def jobs (self, *, job_list):
             return self.session.gateway_request("report/jobs", subdomain="runner", data={"job_list": job_list})
         def queue (self, *, job_state=None, name=None, job_id=None, queue=None, verbose=None):
