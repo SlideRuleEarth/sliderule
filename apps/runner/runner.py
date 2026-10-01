@@ -2,7 +2,9 @@ import os
 import json
 import base64
 import boto3
+import time
 import hashlib
+import secrets
 import botocore.exceptions
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,12 +31,14 @@ MAX_MEMORY = 32768
 MIN_MEMORY = 4000
 API_CONCURRENCY = 10
 MAX_ARGS_ARRAY_SIZE = 10000
+SECRET_EXPIRATION_HOURS = 24
 
 batch = boto3.client("batch")
 ses = boto3.client('ses')
 s3 = boto3.client("s3")
 sm = boto3.client('secretsmanager')
 logs = boto3.client("logs")
+dynamodb = boto3.resource("dynamodb")
 
 _pubkey_cache = {}
 
@@ -210,7 +214,7 @@ def cancel_job(job_id):
 #
 # Submit Job
 #
-def submit_handler(body, username):
+def submit_handler(body, username, secret_values):
 
     # initialize response state
     state = {}
@@ -299,7 +303,19 @@ def submit_handler(body, username):
         if memory != None:
             container_overrides["resourceRequirements"].append({"type": "MEMORY", "value": str(memory)})
 
-    # submit job
+    # build secret key and (if secrets present) load secrets into database
+    secret_key = secrets.token_hex(16) # 32 hexadecimal characters
+    if secret_values:
+        table = dynamodb.Table("job-secrets")
+        table.put_item(
+            Item={
+                "id": secret_key,
+                "value": secret_values,
+                "ttl": int(time.time()) + SECRET_EXPIRATION_HOURS * 3600
+            }
+        )
+
+    # initial parameters for job
     kwargs = {
         "jobName": name,
         "jobQueue": job_queue,
@@ -311,10 +327,18 @@ def submit_handler(body, username):
         },
         "containerOverrides": container_overrides
     }
+
+    # set array processing parameter
     if process_as_array:
         kwargs["arrayProperties"] = {
             "size": len(args)
         }
+
+    # set secret key parameter
+    if secret_values:
+        kwargs["parameters"]["secret_key"] = secret_key
+
+    # submit job
     response = batch.submit_job(**kwargs)
     print(f'Job <{name}> submitted, aws batch job id = {response["jobId"]}, sliderule runner run id = {run_id}')
     state["job_id"] = response["jobId"]
@@ -475,6 +499,11 @@ def lambda_gateway(event, context):
             body = json.loads(body_raw)
         else:
             body = {}
+
+        # get secrets (if provided)
+        secret_values = body.pop("secrets", None)
+
+        # log request
         print(f'Received request: {path} {body}')
 
         # check signature (for all requests)
@@ -487,7 +516,7 @@ def lambda_gateway(event, context):
 
         # route request
         if path == '/submit': # submits batch runner job
-            return submit_handler(body, username)
+            return submit_handler(body, username, secret_values)
         elif path == '/report/jobs': # returns status report on batch runner jobs
             return report_jobs_handler(body)
         elif path == '/report/queue': # returns report on all the jobs submitted

@@ -2,7 +2,7 @@ local json = require("json")
 local aws_utils = require("aws_utils")
 local script = arg[1]
 local args_url = arg[2]
-local output = arg[#arg] -- directory
+local output = arg[3] -- directory
 
 --------------------------------------------------
 -- Validation

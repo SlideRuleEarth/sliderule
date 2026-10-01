@@ -15,8 +15,9 @@ try:
 
     parser = argparse.ArgumentParser(description="""sliderule python job runner""")
     parser.add_argument('script',       type=str) # url of script to execute
-    parser.add_argument('arguments',    type=str) # url of argument file OR argument string
+    parser.add_argument('arguments',    type=str) # url of argument file
     parser.add_argument('output',       type=str) # url of output directory
+    parser.add_argument('secret_key',   type=str) # key to retrieve secrets
     args = parser.parse_args()
 
     # ########################
@@ -24,6 +25,7 @@ try:
     # ########################
 
     s3 = boto3.client("s3")
+    dynamodb = boto3.client("dynamodb")
     unique = ''.join(random.choices(string.ascii_lowercase, k=7))
 
     # ########################
@@ -70,6 +72,26 @@ try:
             arguments = file.read()
 
     # ########################
+    # Set Results
+    # ########################
+
+    local_result = f"/tmp/result-{unique}.json"
+
+    # ########################
+    # Get Secrets
+    # ########################
+
+    # retrieve secrets from database
+    table = dynamodb.Table("job-secrets")
+    response = table.get_item(Key={"id": args.secret_key})
+    secrets = response.get("Item", {}).get("value", {})
+
+    # write secrets to file
+    local_secrets = f"/tmp/secrets-{unique}.json"
+    with open(local_secrets, "w") as file:
+        json.dump(secrets, file)
+
+    # ########################
     # Execute Script
     # ########################
 
@@ -77,12 +99,11 @@ try:
     run_array = [sys.executable, local_script]
     for argument in arguments.split(' '):
         run_array.append(argument)
-
-    # add local result file to subprocess arguments
-    local_result = f"/tmp/result-{unique}.json"
     run_array.append(local_result)
+    run_array.append(local_secrets)
 
     # execute subprocess
+    #   e.g. python /tmp/script-<unique>.py arg1 arg2 .. argN /tmp/result-<unique>.json /tmp/secrets-<unique>.json
     print(f"Running script: {arguments}")
     result = subprocess.run(run_array, check=False)
     if result.returncode > 0: # uncaught exception

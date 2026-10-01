@@ -456,6 +456,7 @@ Resources:
             script: ""
             args: ""
             output: ""
+            secret_key: ""
           RetryStrategy:
             Attempts: 3  # 1 initial attempt + 2 retries = 3 total
             EvaluateOnExit:
@@ -485,26 +486,19 @@ Resources:
               - "Ref::script"
               - "Ref::args"
               - "Ref::output"
+              - "Ref::secret_key"
             Environment:
               - Name: PROJECT_PUBLIC_BUCKET
                 Value: !Sub ${ProjectPublicBucket}
-              - Name: PROJECT_BUCKET
-                Value: !Sub ${ProjectBucket}
-              - Name: PROJECT_FOLDER
-                Value: !Sub ${ProjectFolder}
+              - Name: SECRETS_TABLE
+                Value: !Sub '${AWS::StackName}-job-secrets'
               - Name: DOMAIN
                 Value: !Sub ${Domain}
             Volumes:
-              - Name: data
-                Host:
-                  SourcePath: /data
               - Name: ssl-certs
                 Host:
                   SourcePath: /etc/ssl/certs
             MountPoints:
-              - SourceVolume: data
-                ContainerPath: /data
-                ReadOnly: true
               - SourceVolume: ssl-certs
                 ContainerPath: /etc/ssl/certs
                 ReadOnly: true
@@ -540,6 +534,7 @@ Resources:
           DOMAIN: !Ref Domain
           STACK_NAME: !Ref AWS::StackName
           ENVIRONMENT_VERSION: !Ref EnvironmentVersion
+          SECRETS_TABLE: !Sub '${AWS::StackName}-job-secrets'
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
@@ -547,6 +542,22 @@ Resources:
             - ","
             - - !Join [",", !Ref SlideRuleRunnerImages]
               - !Join [",", !Ref PySRRunnerImages]
+
+  # DynamoDB Table
+  OauthStore:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-job-secrets'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   # IAM Role
   LambdaExecutionRole:
