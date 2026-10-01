@@ -32,7 +32,7 @@ MAX_MEMORY = 32768
 MIN_MEMORY = 4000
 API_CONCURRENCY = 10
 MAX_ARGS_ARRAY_SIZE = 10000
-SECRET_EXPIRATION_HOURS = 24
+SECRET_EXPIRATION_HOURS = 72
 
 batch = boto3.client("batch")
 ses = boto3.client('ses')
@@ -311,7 +311,7 @@ def submit_handler(body, username, secret_values):
         table.put_item(
             Item={
                 "id": secret_key,
-                "value": secret_values,
+                "value": json.dumps(secret_values),
                 "ttl": int(time.time()) + SECRET_EXPIRATION_HOURS * 3600
             }
         )

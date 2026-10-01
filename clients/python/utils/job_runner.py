@@ -25,7 +25,7 @@ try:
     # ########################
 
     s3 = boto3.client("s3")
-    dynamodb = boto3.client("dynamodb")
+    dynamodb = boto3.resource("dynamodb")
     unique = ''.join(random.choices(string.ascii_lowercase, k=7))
 
     # ########################
@@ -84,12 +84,12 @@ try:
     # retrieve secrets from database
     secrets = {}
     secrets_table = os.environ.get("SECRETS_TABLE")
-    if secrets_table:
+    if secrets_table and args.secret_key:
         table = dynamodb.Table(secrets_table)
         response = table.get_item(Key={"id": args.secret_key})
         item = response.get("Item")
         if item:
-            secrets = item["value"]
+            secrets = json.loads(item["value"])
         else:
             print("Warning: secret was not found")
 
@@ -137,3 +137,4 @@ try:
 except Exception as e:
 
     print(f"Job runner failed: {e}")
+    sys.exit(1)
