@@ -61,7 +61,7 @@ class Tool:
         args_content = self.__load_remote_file(args_bucket, args_file)
         if isinstance(args_content, list):
             args_list = args_content
-        elif isinstance(args_content, dict) or isinstance(args_content, str):
+        else:
             args_list = [args_content]
         for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
             result_file = f"{prefix}/result{len(args_list) > 1 and str(i) or ''}.json"
@@ -170,14 +170,14 @@ class Tool:
             complete = job["complete"]
             print(f"Statusing {name} ...")
             if not complete:
-                if job["job_size"] > 1: # array processing, use parent job id
+                if job["job_size"] > 1: # array processing
                     queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=True)
                     child_jobs = queue_status["jobs"]
                     self.database.submissions[name]["jobs"] = {}
                     for child_job in child_jobs:
                         self.database.submissions[name]["jobs"][int(child_job["index"])] = child_job
-                else: # single job, use name
-                    queue_status = self.session.runner.queue(name=name, queue=queue, verbose=False)
+                else: # single job
+                    queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=False)
                 # report
                 report = queue_status["report"]
                 self.database.submissions[name]["status"] = report
@@ -185,8 +185,8 @@ class Tool:
                 jobs_complete = sum([report[s] for s in [JobState.SUCCEEDED, JobState.FAILED]])
                 if jobs_in_progress == 0 and jobs_complete > 0:
                     print(f"Job {name} complete, reading results ...")
-                    self.database.submissions[name]["complete"] = True
                     self.database.submissions[name]["results"] = self.__get_results(job["run_url"])
+                    self.database.submissions[name]["complete"] = True
                 else:
                     print(f"Job {name} still pending")
         if self.args.verbose:
@@ -274,7 +274,7 @@ def main():
     submit.add_argument('--vcpus',      type=int,                   default=4)
     submit.add_argument('--memory',     type=int,                   default=16000)
     submit.add_argument('--batch_size', type=int,                   default=10000)
-    submit.add_argument('--image',      type=str,                   default="sliderule:latest")
+    submit.add_argument('--image',      type=str,                   default="pysr:latest")
     submit.add_argument('--secrets',    type=Path,                  default=None) # contents of file must be json
     submit.set_defaults(func=Tool.submit_job)
 
@@ -312,14 +312,18 @@ def main():
     tool = Tool(args)
 
     # route command
+    exit_status = 0
     try:
         args.func(tool)
-        tool.finish() # only execute if tool function completed successfully
     except Exception as e:
-        if args.verbose: raise
         print(f"Unhandled error: {e}")
         traceback.print_exc()
-        sys.exit(1)
+        exit_status = 1
+    finally:
+        tool.finish()
+
+    # return back to caller
+    sys.exit(exit_status)
 
 # running via direct invocation
 if __name__ == "__main__": main()

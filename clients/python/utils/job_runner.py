@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import shlex
 import argparse
 import boto3
 import string
@@ -104,7 +105,7 @@ try:
 
     # build array of arguments to pass to subprocess
     run_array = [sys.executable, local_script]
-    for argument in arguments.split():
+    for argument in shlex.split(arguments):
         run_array.append(argument)
     run_array.append(local_result)
     run_array.append(local_secrets)
@@ -112,7 +113,7 @@ try:
     # execute subprocess
     #   e.g. python /tmp/script-<unique>.py arg1 arg2 .. argN /tmp/result-<unique>.json /tmp/secrets-<unique>.json
     print(f"Running script: {arguments}")
-    result = subprocess.run(run_array, check=False, flush=True)
+    result = subprocess.run(run_array, check=False)
     if result.returncode > 0: # uncaught exception
         raise RuntimeError(f"unhandled exception")
     elif result.returncode < 0:

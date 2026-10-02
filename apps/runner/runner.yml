@@ -438,6 +438,8 @@ Resources:
                 OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
               - Action: RETRY
                 OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
+              - Action: EXIT
+                OnReason: "*"
           Timeout:
             AttemptDurationSeconds: 10800  # 3 hours
           ContainerProperties:
@@ -641,19 +643,8 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: ["s3:ListBucket"]
-                Resource:
-                  - !Sub "arn:aws:s3:::${ProjectBucket}"
-                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}"
-              - Effect: Allow
-                Action: ["s3:GetObject"]
-                Resource:
-                  - !Sub "arn:aws:s3:::${ProjectBucket}/*"
-                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
-              - Effect: Allow
                 Action: ["s3:PutObject"]
-                Resource:
-                  - !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}/${AWS::StackName}/*"
         - PolicyName: !Sub "${AWS::StackName}-gateway-batch-access"
           PolicyDocument:
             Version: "2012-10-17"
@@ -706,7 +697,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
-                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/pubkeys*
         - PolicyName: !Sub "${AWS::StackName}-dynamodb-access"
           PolicyDocument:
             Version: "2012-10-17"
@@ -714,7 +705,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - dynamodb:PutItem
-                  - dynamodb:GetItem
                 Resource: !GetAtt OauthStore.Arn
         - PolicyName: !Sub "${AWS::StackName}-logs-access"
           PolicyDocument:
@@ -741,6 +731,8 @@ Resources:
         AllowHeaders:
           - Content-Type
           - Authorization
+          - x-sliderule-timestamp
+          - x-sliderule-signature
         MaxAge: 300
 
   # JWT Authorizer (Native API Gateway)
@@ -784,7 +776,7 @@ Resources:
       StageName: '$default'
       AutoDeploy: true
       DefaultRouteSettings:
-        ThrottlingBurstLimit: 1
+        ThrottlingBurstLimit: 5
         ThrottlingRateLimit: 1
 
   # Lambda Permission for API Gateway
