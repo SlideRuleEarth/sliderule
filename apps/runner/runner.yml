@@ -26,8 +26,6 @@ Parameters:
     Type: String
   CorsAllowOrigins:
     Type: CommaDelimitedList
-  HostedZoneId:
-    Type: String
   CertificateArn:
     Type: String
   AlertStream:
@@ -177,8 +175,8 @@ Resources:
   ## Job Runner IAM Roles
   ##
 
-  # Job Runner Role
-  JobRunnerRole:
+  # Instance Role (ECS agent, image pulls, awslogs driver, user data)
+  InstanceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -186,14 +184,36 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - ec2.amazonaws.com
-                - ecs-tasks.amazonaws.com
+              Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
-        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-instance-s3-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:ListBucket"]
+                Resource: !Sub "arn:aws:s3:::${ProjectBucket}"
+                Condition:
+                  StringLike:
+                    s3:prefix: !Sub "${ProjectFolder}/server/*"
+              - Effect: Allow
+                Action: ["s3:GetObject"]
+                Resource: !Sub "arn:aws:s3:::${ProjectBucket}/${ProjectFolder}/server/*"
+
+  # SlideRule Job Role
+  SlideRuleJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
         - PolicyName: !Sub "${AWS::StackName}-job-s3-access"
           PolicyDocument:
@@ -242,21 +262,45 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Domain}/*
-        - PolicyName: !Sub "${AWS::StackName}-dynamodb-access"
+
+  # PySR Job Role (runs user supplied code)
+  PySRJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-pysr-s3-access"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action:
-                  - dynamodb:PutItem
-                  - dynamodb:GetItem
+                Action: ["s3:ListBucket"]
+                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}"
+                Condition:
+                  StringLike:
+                    s3:prefix: !Sub "${AWS::StackName}/*"
+              - Effect: Allow
+                Action: ["s3:GetObject", "s3:PutObject"]
+                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}/${AWS::StackName}/*"
+        - PolicyName: !Sub "${AWS::StackName}-pysr-dynamodb-access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["dynamodb:GetItem"]
                 Resource: !GetAtt OauthStore.Arn
 
   # ECS Instance Profile
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      Roles: [!Ref JobRunnerRole]
+      Roles: [!Ref InstanceRole]
 
   ##
   ## Job Runner Batch
@@ -281,6 +325,10 @@ Resources:
     Properties:
       LaunchTemplateData:
         ImageId: !Sub '{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id}}'
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpTokens: required
+          HttpPutResponseHopLimit: 1 # IMDS unreachable from bridge-mode containers
         TagSpecifications:
           - ResourceType: instance
             Tags:
@@ -301,6 +349,9 @@ Resources:
             Content-Type: text/x-shellscript; charset="us-ascii"
 
             #!/bin/bash
+            # block bridge-mode containers from IMDS; chain is pre-created in case docker hasn't started yet
+            iptables -N DOCKER-USER 2>/dev/null || true
+            iptables -I DOCKER-USER 1 -i docker+ -d 169.254.169.254/32 -j DROP
             mkdir -p /data
             aws s3 cp s3://${ProjectBucket}/${ProjectFolder}/server/ /data/ --recursive
 
@@ -402,7 +453,7 @@ Resources:
                 Value: "1"
               - Type: MEMORY
                 Value: "4000"
-            JobRoleArn: !GetAtt JobRunnerRole.Arn
+            JobRoleArn: !GetAtt SlideRuleJobRole.Arn
             Command:
               - "/usr/local/etc/sliderule/job_runner.lua"
               - "Ref::script"
@@ -490,13 +541,15 @@ Resources:
                 Value: "1"
               - Type: MEMORY
                 Value: "4000"
-            JobRoleArn: !GetAtt JobRunnerRole.Arn
+            JobRoleArn: !GetAtt PySRJobRole.Arn
             Command:
               - "Ref::script"
               - "Ref::args"
               - "Ref::output"
               - "Ref::secret_key"
             Environment:
+              - Name: AWS_DEFAULT_REGION
+                Value: !Sub ${AWS::Region}
               - Name: PROJECT_PUBLIC_BUCKET
                 Value: !Sub ${ProjectPublicBucket}
               - Name: SECRETS_TABLE
@@ -604,13 +657,32 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # these actions do not support resource-level permissions
               - Effect: Allow
                 Action:
-                  - batch:SubmitJob
                   - batch:DescribeJobs
                   - batch:ListJobs
-                  - batch:CancelJob
                 Resource: "*"
+              - Effect: Allow
+                Action: batch:SubmitJob
+                Resource:
+                  - !Ref UrgentJobQueue
+                  - !Ref DefaultJobQueue
+                  - !Ref BackgroundJobQueue
+                  - !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/${AWS::StackName}-*-job-definition:*"
+              - Effect: Allow
+                Action: batch:TagResource
+                Resource: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job/*"
+                Condition:
+                  StringEquals:
+                    batch:CreateAction: SubmitJob
+                    aws:RequestTag/stack: !Ref AWS::StackName
+              - Effect: Allow
+                Action: batch:CancelJob
+                Resource: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job/*"
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/stack: !Ref AWS::StackName
         - PolicyName: !Sub "${AWS::StackName}-ses-restricted-send-policy"
           PolicyDocument:
             Version: "2012-10-17"

@@ -698,7 +698,6 @@ runner-create: runner-build ## creates the lambda runner functions
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
-						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
 						ParameterKey=AlertStream,ParameterValue=$(ALERT_STREAM) \
 						ParameterKey=TelemetryStream,ParameterValue=$(TELEMETRY_STREAM) \

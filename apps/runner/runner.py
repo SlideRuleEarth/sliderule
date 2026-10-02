@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import base64
 import boto3
@@ -23,6 +24,7 @@ SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
 ALERT_EMAIL = os.environ['ALERT_EMAIL']
 IMAGE_TAGS = [tag.strip() for tag in os.environ['IMAGE_TAGS'].split(",")]
 
+JOB_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
 JOB_QUEUES = ["urgent", "default", "background"]
 MAX_JOBS_TO_DESCRIBE = 100
@@ -74,7 +76,7 @@ def json_response(status_code, body):
 #
 # Boto3 Error Handling
 #
-def exception_reponse(e):
+def exception_response(e):
     print(f'Exception: {e}')
     if isinstance(e, botocore.exceptions.ClientError) and (e.response['Error']['Code'] == 'ValidationError'):
         return json_response(404, {'error': 'not found', 'error_description': 'failure in request'})
@@ -102,7 +104,6 @@ def send_email(title, message):
             raise RuntimeError(f"Failed to send email: {response}")
     except Exception as e:
         print(f"Error sending email from {SUPPORT_EMAIL} to {ALERT_EMAIL}: {e}")
-        return False
 
 #
 # Verify Signature (on Request)
@@ -155,41 +156,30 @@ def verify_signature(path, body, username, event):
 #
 # List Jobs
 #
-def list_jobs(job_state, name, queue, parent_job_id=None):
+def list_jobs(job_states, queue, job_id):
     """
-    validate parameters and list jobs that match job name
+    create a list of jobs depending on the parameters
+    ALL JOBS - if job_id is None
+    CHILD JOBS - if job_id is a parent job
+    SINGLE JOB - if job_id is a single job
     """
-    # get job states list
-    job_states = None
-    if isinstance(job_state, list):
-        job_states = job_state
-    elif isinstance(job_state, str):
-        job_states = [job_state]
-    else:
-        raise RuntimeError(f"Invalid job states supplied: {type(job_state)}")
+    # check for single job
+    if job_id:
+        job = batch.describe_jobs(jobs=[job_id]).get("jobs",[None])[0]
+        is_singleton = "size" not in job.get("arrayProperties", {})
+        if is_singleton:
+            if job["status"] in job_states:
+                return [job]
+            else:
+                return []
 
-    # validate parameters
-    for job_status in job_states:
-        if not isinstance(job_status, str):
-            raise RuntimeError(f"Invalid job state supplied: {type(job_status)}")
-        elif job_status not in JOB_STATES:
-            raise RuntimeError(f"Unknown job state supplied: {job_status}")
-    if queue not in JOB_QUEUES:
-        raise RuntimeError(f"Unknown job queue supplied: {queue}")
-
-    # list jobs
+    # either list child jobs (job_id provided) or list all jobs (only queue name provided)
     job_list = []
     for job_status in job_states:
-        if parent_job_id:
-            parms = {
-                "arrayJobId": parent_job_id,
-                "jobStatus": job_status
-            }
+        if job_id:
+            parms = { "arrayJobId": job_id, "jobStatus": job_status }
         else:
-            parms = {
-                "jobQueue": f"{STACK_NAME}-{queue}-job-queue",
-                "jobStatus": job_status
-            }
+            parms = {"jobQueue": f"{STACK_NAME}-{queue}-job-queue", "jobStatus": job_status}
         while True:
             response = batch.list_jobs(**parms)
             job_list.extend(response["jobSummaryList"])
@@ -197,8 +187,6 @@ def list_jobs(job_state, name, queue, parent_job_id=None):
             if not next_token:
                 break
             parms["nextToken"] = next_token
-    if name:
-        job_list = [job for job in job_list if job["jobName"] == name]
     return job_list
 
 #
@@ -207,6 +195,21 @@ def list_jobs(job_state, name, queue, parent_job_id=None):
 def cancel_job(job_id):
     batch.cancel_job(jobId=job_id, reason="Canceled by user")
     return job_id
+
+#
+# Get Job Owner
+#
+def get_job_owner(job_id):
+    """
+    returns the user tag of the submitted job, or None if not found
+    """
+    if not isinstance(job_id, str):
+        return None
+    # array child job ids are "<parent id>:<index>" and the tag lives on the parent
+    jobs = batch.describe_jobs(jobs=[job_id.split(":")[0]])["jobs"]
+    if not jobs:
+        return None
+    return jobs[0].get("tags", {}).get("user")
 
 # ###############################
 # Path Handlers
@@ -226,20 +229,18 @@ def submit_handler(body, username, secret_values):
     args = body["args"]
 
     # get optional request variables
-    image = body.get("image", "sliderule:latest").replace(":","-")
+    image = body.get("image", "sliderule:latest")
     queue = body.get("queue", "default")
     vcpus = body.get("vcpus")
     memory = body.get("memory")
 
-    # define job parameters
+    # parameter validation
     if not isinstance(image, str):
         raise RuntimeError(f"Invalid image specified of type: {type(image)}")
-    job_definition = f"{STACK_NAME}-{image}-job-definition"
-    job_queue = f"{STACK_NAME}-{queue}-job-queue"
-
-    # parameter validation
-    if not isinstance(name, str):
+    elif not isinstance(name, str):
         raise RuntimeError(f"Invalid name supplied of type {type(name)}")
+    elif not JOB_NAME.fullmatch(name):
+        raise RuntimeError(f"Invalid name supplied: {name}")
     elif len(script) <= 0:
         raise RuntimeError(f"Empty script provided")
     elif (not isinstance(args, list)) and (not isinstance(args, dict)) and (not isinstance(args, str)):
@@ -252,9 +253,10 @@ def submit_handler(body, username, secret_values):
         raise RuntimeError(f"Invalid vCPUs provided: {vcpus}")
     elif (memory != None) and ((not isinstance(memory, int)) or (memory < MIN_MEMORY) or (memory > MAX_MEMORY)):
         raise RuntimeError(f"Invalid memory provided: {memory}")
-    elif queue not in JOB_QUEUES:
-        raise RuntimeError(f"Invalid queue provided: {queue}")
-    elif image not in IMAGE_TAGS:
+
+    # sanitize and check image
+    image = image.replace(":","-")
+    if image not in IMAGE_TAGS:
         raise RuntimeError(f"Invalid image provided: {image}")
 
     # build unique identifier
@@ -319,14 +321,15 @@ def submit_handler(body, username, secret_values):
     # initial parameters for job
     kwargs = {
         "jobName": name,
-        "jobQueue": job_queue,
-        "jobDefinition": job_definition,
+        "jobQueue": f"{STACK_NAME}-{queue}-job-queue",
+        "jobDefinition": f"{STACK_NAME}-{image}-job-definition",
         "parameters": {
             "script": script_url,
             "args": args_url,
             "output": run_url
         },
-        "containerOverrides": container_overrides
+        "containerOverrides": container_overrides,
+        "tags": {"user": username, "stack": STACK_NAME}
     }
 
     # set array processing parameter
@@ -391,17 +394,32 @@ def report_queue_handler(body):
 
     # get optional request variables
     job_state   = body.get("job_state", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"])
-    name        = body.get("name") # string providing a single name
-    job_id      = body.get("job_id") # string providing the parent job id
+    job_id      = body.get("job_id") # string providing the job id
     queue       = body.get("queue", "default")
     verbose     = body.get("verbose", False)
+
+    # get job states list
+    job_states = None
+    if isinstance(job_state, list):
+        job_states = job_state
+    elif isinstance(job_state, str):
+        job_states = [job_state]
+    else:
+        raise RuntimeError(f"Invalid job states supplied: {type(job_state)}")
+
+    # validate job states list
+    for state in job_states:
+        if not isinstance(state, str):
+            raise RuntimeError(f"Invalid job state supplied: {type(state)}")
+        elif state not in JOB_STATES:
+            raise RuntimeError(f"Unknown job state supplied: {state}")
 
     # initialize response state
     state = {"report": {js: 0 for js in job_state}}
     if verbose: state["jobs"] = []
 
     # list jobs
-    job_list = list_jobs(job_state, name, queue, parent_job_id=job_id)
+    job_list = list_jobs(job_states, queue, job_id)
     for job in job_list:
         state["report"][job["status"]] += 1
         if verbose:
@@ -413,21 +431,22 @@ def report_queue_handler(body):
 #
 # Job Cancel
 #
-def cancel_handler(body):
+def cancel_handler(body, org_roles):
 
     # initialize response state
     state = []
 
     # get optional request variables
     job_list = body.get("job_list")
-    name = body.get("name")
     queue = body.get("queue", "default")
 
     # get jobs to delete
     if job_list:
         jobs_to_delete = job_list
+    elif "owner" in org_roles:
+        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], queue, None)]
     else:
-        jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], name, queue)]
+        raise RuntimeError("Insufficient permissions to cancel all jobs")
 
     # delete jobs
     with ThreadPoolExecutor(max_workers=API_CONCURRENCY) as executor:
@@ -515,6 +534,13 @@ def lambda_gateway(event, context):
         if 'member' not in org_roles:
             return json_response(403, {'error': 'access denied', 'error_description': 'not a member'})
 
+        if "queue" in body and body["queue"] not in JOB_QUEUES:
+            return json_response(400, {'error': 'invalid request', 'error_description': f'{body["queue"]} not a valid queue'})
+
+        # check job ownership (404 so the existence of other users' jobs isn't revealed)
+        if "job_id" in body and get_job_owner(body["job_id"]) != username:
+            return json_response(404, {'error': 'not found', 'error_description': 'job not found'})
+
         # route request
         if path == '/submit': # submits batch runner job
             return submit_handler(body, username, secret_values)
@@ -523,7 +549,7 @@ def lambda_gateway(event, context):
         elif path == '/report/queue': # returns report on all the jobs submitted
             return report_queue_handler(body)
         elif path == '/cancel': # cancel a submitted job
-            return cancel_handler(body)
+            return cancel_handler(body, org_roles)
         elif path == '/logs': # get log events for a job
             return logs_handler(body)
 
@@ -533,4 +559,4 @@ def lambda_gateway(event, context):
     except Exception as e:
 
         # unhandled exception
-        return exception_reponse(e)
+        return exception_response(e)

@@ -1,4 +1,5 @@
 import importlib
+import sys
 import json
 import boto3
 import random
@@ -28,7 +29,7 @@ class Tool:
         # open database
         self.database = Database(args.database)
         # create sliderule session
-        self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose)
+        self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose, rethrow=True)
         self.session.authenticate() # gives privileges to access SlideRule Runner
         # aws clients
         self.s3 = boto3.client("s3", region_name="us-west-2")
@@ -116,7 +117,7 @@ class Tool:
             arguments = [str(arguments_input)]
         else:
             with open(arguments_input, "r") as file:
-                arguments = [line.strip() for line in file.readlines()]
+                arguments = [line.strip() for line in file.readlines() if line.strip()]
         # read secrets
         if secrets_file:
             with open(secrets_file, "r") as file:
@@ -238,7 +239,7 @@ class Tool:
 
     # Finish
     def finish(self):
-        if not self.args.dryrun and "archive" not in self.args:
+        if "archive" not in self.args:
             # save database
             self.database.write()
 
@@ -258,7 +259,6 @@ def main():
     common.add_argument('--database',   type=Path,                  default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
     common.add_argument('--queue',      type=QueuePriority,         default=QueuePriority.DEFAULT, choices=list(QueuePriority))
     common.add_argument('--verbose',    action='store_true',        default=False)
-    common.add_argument('--dryrun',     action='store_true',        default=False)
 
     # archive
     archive = subparsers.add_parser("archive", parents=[common], help="save and clear the database")
@@ -268,8 +268,8 @@ def main():
     # submit
     submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
     submit.add_argument('name',         type=str,                   metavar="<name>")
-    submit.add_argument('script',       type=str,                   metavar="<script.lua>")
-    submit.add_argument('arguments',    type=str,                   metavar="<arguments.txt>")
+    submit.add_argument('script',       type=str,                   metavar="<script file>")
+    submit.add_argument('arguments',    type=str,                   metavar="<arguments file>")
     submit.add_argument('--arg_as_str', action='store_true',        default=False) # changes arguments to be just a string instead of a file
     submit.add_argument('--vcpus',      type=int,                   default=4)
     submit.add_argument('--memory',     type=int,                   default=16000)
@@ -319,6 +319,7 @@ def main():
         if args.verbose: raise
         print(f"Unhandled error: {e}")
         traceback.print_exc()
+        sys.exit(1)
 
 # running via direct invocation
 if __name__ == "__main__": main()
