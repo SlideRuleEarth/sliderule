@@ -40,21 +40,21 @@ ALLOWED_SCOPES = {
     "guest":        {"sliderule:access", "monitor:access"},
     "affiliate":    {"sliderule:access", "monitor:access", "provisioner:access"},
     "member":       {"sliderule:access", "monitor:access", "provisioner:access", "runner:access"},
-    "owner":        {"sliderule:access", "monitor:access", "provisioner:access", "runner:access", "sliderule:admin"},
+    "developer":        {"sliderule:access", "monitor:access", "provisioner:access", "runner:access", "sliderule:admin"},
 }
 
 # Default maximum nodes for org roles
 DEFAULT_MAX_NODES = {
     "affiliate":    5,
     "member":       10,
-    "owner":        100
+    "developer":        100
 }
 
 # Default maximum ttl for org roles
 DEFAULT_MAX_TTL = {
     "affliaite":    720,
     "member":       720,
-    "owner":        525600
+    "developer":        525600
 }
 
 # GitHub OAuth endpoints (from the environment only for testing)
@@ -527,7 +527,7 @@ def generate_audience_list(clusters, org_roles, scope):
     if 'sliderule:access' in scope: # access to cluster
         if clusters: # all members can access services at subdomains tied to these clusters
             audiences.extend(clusters)
-        if ('owner' in org_roles) and ('sliderule:admin' in scope): # owners can access all clusters
+        if ("developer" in org_roles) and ('sliderule:admin' in scope): # developers can access all clusters
             audiences.append('*')
 
     # Return list of audiences
@@ -982,7 +982,7 @@ def handle_token(event):
         info = {
             'username': metadata['sub'],
             'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
-            'isOrgOwner': 'true' if ('owner' in metadata["org_roles"]) else 'false',
+            'isOrgOwner': 'true' if ("developer" in metadata["org_roles"]) else 'false',
             'org': metadata['org'],
             'orgRoles': ','.join(metadata['org_roles']),
             'tokenIssuedAt': str(metadata['iat']),
@@ -1234,7 +1234,7 @@ def handle_device_poll(event):
             })
 
         # Authenticate user to get token and metadata (device flow supports all scopes)
-        scope = parms.get('scope', ' '.join(ALLOWED_SCOPES["owner"])).split()
+        scope = parms.get('scope', ' '.join(ALLOWED_SCOPES["developer"])).split()
         token, metadata = authorize_user(f'Bearer {access_token}', scope)
 
         # Response with a successful authentication

@@ -222,7 +222,7 @@ local function security_schema(endpoint)
     local roles = global.set(endpoint["roles"])
     if roles then
         if roles["member"] then oauth_block = "\"OAuth2\": [\"sliderule:access\"]" end
-        if roles["owner"] then oauth_block = "\"OAuth2\": [\"sliderule:admin\"]" end
+        if roles["developer"] then oauth_block = "\"OAuth2\": [\"sliderule:admin\"]" end
     end
     if endpoint["signed"] then signature_block = "\"SignatureAuth\":[]" end
     if oauth_block and signature_block then
@@ -328,7 +328,7 @@ local function specification_root()
                             "tokenUrl": "https://login.slideruleearth.io/auth/github/token",
                             "scopes": {
                                 "sliderule:access": "Member role access",
-                                "sliderule:admin": "Owner role access"
+                                "sliderule:admin": "Developer role access"
                             }
                         }
                     }

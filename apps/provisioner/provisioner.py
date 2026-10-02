@@ -347,8 +347,8 @@ def validate_request(event, info):
         body = {}
     print(f'Received request: {path} {body}') # diagnostic
 
-    # check signature (for owners only)
-    if ("owner" in info["orgRoles"]) or ('*' in info["deployableClusters"]):
+    # check signature (for developers only)
+    if ("developer" in info["orgRoles"]) or ('*' in info["deployableClusters"]):
         if not verify_signature(path, body_raw, info["username"], event):
             return None
 

@@ -6,7 +6,7 @@ info:
     API for deploying, managing, and monitoring SlideRule processing clusters.
     Supports cluster lifecycle management (deploy, extend, destroy, status),
     user auto-scaling groups, and test runner deployments.
-    All endpoints require JWT authentication; owner-level operations additionally
+    All endpoints require JWT authentication; developer-level operations additionally
     require request signature verification.
   version: ${VERSION}
   license:

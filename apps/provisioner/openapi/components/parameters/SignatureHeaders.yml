@@ -4,7 +4,7 @@ XSlideruleTimestamp:
   required: false
   description: >
     Unix timestamp (seconds since epoch) of when the request was signed.
-    Required for owner-level operations.
+    Required for developer-level operations.
   schema:
     type: string
 
@@ -14,6 +14,6 @@ XSlideruleSignature:
   required: false
   description: >
     Base64-encoded signature of the canonical request string.
-    Required for owner-level operations.
+    Required for developer-level operations.
   schema:
     type: string

@@ -444,7 +444,7 @@ def cancel_handler(body, org_roles):
     # get jobs to delete
     if job_list:
         jobs_to_delete = job_list
-    elif "owner" in org_roles:
+    elif "developer" in org_roles:
         jobs_to_delete = [job["jobId"] for job in list_jobs(["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"], queue, None)]
     else:
         raise RuntimeError("Insufficient permissions to cancel all jobs")
@@ -536,7 +536,7 @@ def lambda_gateway(event, context):
             return json_response(403, {'error': 'access denied', 'error_description': 'not a member'})
 
         # check protected images
-        if ("owner" not in org_roles) and ("image" in body) and (body["image"] in PROTECTED_IMAGE_TAGS):
+        if ("developer" not in org_roles) and ("image" in body) and (body["image"] in PROTECTED_IMAGE_TAGS):
             return json_response(403, {'error': 'access denied', 'error_description': f'insufficient privelege to execute image {body["image"]}'})
 
         # check for valid queue

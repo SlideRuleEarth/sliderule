@@ -23,7 +23,7 @@ return {
     name = "Arbitrary Code Execution",
     description = "Execute user supplied lua code",
     logging = core.INFO,
-    roles = {"owner"},
+    roles = {"developer"},
     signed = true,
     inputs = {"text"},
     outputs = {"text"},

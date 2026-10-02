@@ -66,7 +66,7 @@ return {
     name = "Execute Container Runtime Environment",
     description = "Execute a user specified docker image",
     logging = core.INFO,
-    roles = {"member", "owner"},
+    roles = {"member", "developer"},
     signed = true,
     inputs = {"json"},
     outputs = {"json", "async"},
