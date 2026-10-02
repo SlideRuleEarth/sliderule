@@ -258,7 +258,7 @@ def submit_handler(body, username, org_roles, secret_values):
         raise ValidationError(f"Invalid name supplied: {name}")
     elif len(script) <= 0:
         raise ValidationError(f"Empty script provided")
-    elif (not isinstance(args, list)) and (not isinstance(args, dict)) and (not isinstance(args, str)):
+    elif (not isinstance(args, list)) and (not isinstance(args, str)):
         raise ValidationError(f"Invalid arguments type: {type(args)}")
     elif isinstance(args, list) and (len(args) > MAX_ARGS_ARRAY_SIZE):
         raise ValidationError(f"Argument array size too large: {len(args)}")
@@ -297,12 +297,12 @@ def submit_handler(body, username, org_roles, secret_values):
 
     # handle arguments
     process_as_array = isinstance(args, list) and len(args) > 1
-    if process_as_array or isinstance(args, dict):
-        args_contents = json.dumps(args)
+    if process_as_array:
+        args_contents = json.dumps(args) # array of strings
     elif isinstance(args, list) and len(args) == 1:
-        args_contents = str(args[0]).strip()
-    else: # string
-        args_contents = args.strip()
+        args_contents = str(args[0]).strip() # string
+    else:
+        args_contents = args.strip() # string
     s3.put_object(Bucket=PROJECT_PUBLIC_BUCKET, Key=args_path, Body=args_contents)
 
     # load additional run files to S3
@@ -426,7 +426,7 @@ def report_queue_handler(body, username, org_roles):
 
     # validate job states list
     for js in job_states:
-        if not isinstance(state, str):
+        if not isinstance(js, str):
             raise ValidationError(f"Invalid job state supplied: {type(js)}")
         elif js not in JOB_STATES:
             raise ValidationError(f"Unknown job state supplied: {js}")
@@ -577,7 +577,7 @@ def lambda_gateway(event, context):
     except ValidationError as e:
 
         # invalid path
-        return json_response(400, {'error': 'not found', 'error_description': f'{e}'})
+        return json_response(400, {'error': 'invalid request', 'error_description': f'{e}'})
 
     except Exception as e:
 

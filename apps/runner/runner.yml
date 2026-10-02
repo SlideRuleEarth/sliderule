@@ -528,6 +528,8 @@ Resources:
                 OnStatusReason: "Cancelled*" # Don't retry on explicit user cancellation
               - Action: RETRY
                 OnStatusReason: "Host EC2*"  # Retry on EC2 host issues
+              - Action: EXIT
+                OnReason: "*"
           Timeout:
             AttemptDurationSeconds: 10800  # 3 hours
           ContainerProperties:
