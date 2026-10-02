@@ -600,6 +600,7 @@ Resources:
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           SUPPORT_EMAIL: !Ref SupportEmail
           ALERT_EMAIL: !Ref AlertEmail
+          PROTECTED_IMAGE_TAGS: !Join [",", !Ref SlideRuleRunnerImages]
           IMAGE_TAGS: !Join
             - ","
             - - !Join [",", !Ref SlideRuleRunnerImages]

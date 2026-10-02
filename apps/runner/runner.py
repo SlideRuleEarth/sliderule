@@ -23,6 +23,7 @@ SECRETS_TABLE = os.environ["SECRETS_TABLE"]
 SUPPORT_EMAIL = os.environ['SUPPORT_EMAIL']
 ALERT_EMAIL = os.environ['ALERT_EMAIL']
 IMAGE_TAGS = [tag.strip() for tag in os.environ['IMAGE_TAGS'].split(",")]
+PROTECTED_IMAGE_TAGS = [tag.strip() for tag in os.environ['PROTECTED_IMAGE_TAGS'].split(",")]
 
 JOB_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 JOB_STATES = ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING", "SUCCEEDED", "FAILED"]
@@ -531,14 +532,19 @@ def lambda_gateway(event, context):
             return json_response(403, {'error': 'access denied', 'error_description': 'invalid signature'})
 
         # check organization membership
-        if 'member' not in org_roles:
+        if "member" not in org_roles:
             return json_response(403, {'error': 'access denied', 'error_description': 'not a member'})
 
-        if "queue" in body and body["queue"] not in JOB_QUEUES:
+        # check protected images
+        if ("owner" not in org_roles) and ("image" in body) and (body["image"] in PROTECTED_IMAGE_TAGS):
+            return json_response(403, {'error': 'access denied', 'error_description': f'insufficient privelege to execute image {body["image"]}'})
+
+        # check for valid queue
+        if ("queue" in body) and (body["queue"] not in JOB_QUEUES):
             return json_response(400, {'error': 'invalid request', 'error_description': f'{body["queue"]} not a valid queue'})
 
         # check job ownership (404 so the existence of other users' jobs isn't revealed)
-        if "job_id" in body and get_job_owner(body["job_id"]) != username:
+        if ("job_id" in body) and (get_job_owner(body["job_id"]) != username):
             return json_response(404, {'error': 'not found', 'error_description': 'job not found'})
 
         # route request
