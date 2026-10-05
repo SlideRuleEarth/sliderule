@@ -7,6 +7,7 @@ import string
 import argparse
 import traceback
 from sliderule import sliderule
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from .database import Database, JobState, QueuePriority, JobStatus
 from pathlib import Path
 
@@ -34,16 +35,25 @@ class Tool:
         # aws clients
         self.s3 = boto3.client("s3", region_name="us-west-2")
 
+    # Split out bucket and key from url
+    def __parse_url(self, url):
+        path = url.split("s3://")[-1]
+        bucket = path.split("/")[0]
+        key = '/'.join(path.split("/")[1:])
+        return bucket, key
+
     # Load Remote File from S3
-    def __load_remote_file(self, bucket, key):
+    def __load_remote_file(self, bucket, key, parse_json=True):
         obj = self.s3.get_object(Bucket=bucket, Key=key)
         contents = obj["Body"].read().decode("utf-8")
-        try:
-            return json.loads(contents)
-        except Exception:
-            return contents
+        if parse_json:
+            try:
+                return json.loads(contents)
+            except Exception:
+                pass
+        return contents
 
-    # Get Results for a Job Run
+    # Get Result for a Job Run
     #   output of job must include the following fields for this to work:
     #   {
     #       "status": <boolean status of run>,
@@ -51,44 +61,51 @@ class Tool:
     #       "stop": <stop time in seconds of run>,
     #       "outputs": [<output1>, <output2>, ... <outputN>]
     #   }
-    def __get_results(self, run_url):
-        results = []
-        bucket = run_url.split("s3://")[-1].split("/")[0]
-        prefix = "/".join(run_url.split("s3://")[-1].split("/")[1:])
+    def __get_result(self, results, i):
+        result = results[i]
+        bucket, result_file = self.__parse_url(result["file"])
+        try:
+            rsps = self.__load_remote_file(bucket, result_file)
+            try:
+                result |= {
+                    "status": rsps["status"] and JobStatus.SUCCESS or JobStatus.FAILURE,
+                    "duration": rsps["status"] and (rsps["stop"] - rsps["start"]) or 0.0,
+                    "outputs": rsps["outputs"]
+                }
+            except Exception as e:
+                result |= {
+                    "status": JobStatus.UNSUPPORTED,
+                    "result": rsps,
+                    "error": f"{e}"
+                }
+        except Exception as e:
+            result |= {
+                "status": JobStatus.ERROR,
+                "error": f"{e}"
+            }
+
+    # Get all results for a submission
+    def __get_results(self, run_url, job_size):
+        bucket, prefix = self.__parse_url(run_url)
         receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
-        args_bucket = receipt["args"].split("s3://")[-1].split("/")[0]
-        args_file = "/".join(receipt["args"].split("s3://")[-1].split("/")[1:])
-        args_content = self.__load_remote_file(args_bucket, args_file)
+        args_bucket, args_file = self.__parse_url(receipt["args"])
+        args_content = self.__load_remote_file(args_bucket, args_file, job_size > 1)
         if isinstance(args_content, list):
             args_list = args_content
         else:
             args_list = [args_content]
-        for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
-            result_file = f"{prefix}/result{len(args_list) > 1 and str(i) or ''}.json"
-            try:
-                result = {
-                    "file": f"s3://{bucket}/{result_file}",
-                    "environment": receipt["environment"],
-                    "arg": args_list[i]
-                }
-                rsps = self.__load_remote_file(bucket, result_file)
-                try:
-                    result |= {
-                        "status": rsps["status"] and JobStatus.SUCCESS or JobStatus.FAILURE,
-                        "duration": rsps["status"] and (rsps["stop"] - rsps["start"]) or 0.0,
-                        "outputs": rsps["outputs"]
-                    }
-                except Exception as e:
-                    result |= {
-                        "status": JobStatus.UNSUPPORTED,
-                        "result": rsps
-                    }
-            except Exception as e:
-                result |= {
-                    "status": JobStatus.ERROR,
-                    "error": f"{e}"
-                }
-            results.append(result)
+        if len(args_list) != job_size:
+            print(f"Incorrect number of arguments {len(args_list)}, expected {job_size}")
+            return None
+        results = [{
+            "file": f"s3://{bucket}/{prefix}/result{len(args_list) > 1 and str(i) or ''}.json",
+            "environment": receipt["environment"],
+            "arg": args_list[i]
+        } for i in range(len(args_list))]
+        with ThreadPoolExecutor(max_workers=self.args.concurrency) as executor:
+            futures = [executor.submit(self.__get_result, results, i) for i in range(len(results))]
+            for future in tqdm(as_completed(futures), total=len(results), desc=f"{run_url}", unit="job"):
+                future.result()
         return results
 
     # Archive Database
@@ -168,7 +185,8 @@ class Tool:
         queue = self.args.queue
         for name,job in self.database.submissions.items():
             complete = job["complete"]
-            print(f"Statusing {name} ...")
+            sys.stdout.write(f"Statusing {name} ... ")
+            sys.stdout.flush()
             if not complete:
                 if job["job_size"] > 1: # array processing
                     queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=True)
@@ -184,11 +202,15 @@ class Tool:
                 jobs_in_progress = sum([report[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]])
                 jobs_complete = sum([report[s] for s in [JobState.SUCCEEDED, JobState.FAILED]])
                 if jobs_in_progress == 0 and jobs_complete > 0:
-                    print(f"Job {name} complete, reading results ...")
-                    self.database.submissions[name]["results"] = self.__get_results(job["run_url"])
-                    self.database.submissions[name]["complete"] = True
+                    print("complete")
+                    results = self.__get_results(job["run_url"], self.database.submissions[name]["job_size"])
+                    if results:
+                        self.database.submissions[name]["results"] = results
+                        self.database.submissions[name]["complete"] = True
                 else:
-                    print(f"Job {name} still pending")
+                    print(f"still pending")
+            else:
+                print("") # flush with new line
         if self.args.verbose:
             print(",".join([f"{c:>30}" for c in ["NAME"]] + [f"{c:>10}" for c in ["INDEX", "STATUS"]]))
             for name,job in self.database.submissions.items():
@@ -201,21 +223,20 @@ class Tool:
 
     # Generate Report
     def generate_report(self):
-        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in ["processed"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
+        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
         for name,submission in self.database.submissions.items():
             if self.args.name and self.args.name != name: continue
             stats = {status.value: 0 for status in JobStatus}
-            duration = {"avg": 0.0, "total": 0.0}
-            processed = 0
+            duration = {"avg": 0.0, "total": 0.0, "cnt": 0}
             if submission["complete"]:
                 for result in submission["results"]:
                     stats[result["status"]] += 1
-                    if "duration" in result:
+                    if ("duration" in result) and (result["status"] == JobStatus.SUCCESS):
                         duration["total"] += result["duration"]
-                        processed += 1
-                if processed > 0:
-                    duration["avg"] = duration["total"] / processed
-                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [processed]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
+                        duration["cnt"] += 1
+                if duration["cnt"] > 0:
+                    duration["avg"] = duration["total"] / duration["cnt"]
+                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
 
     # Cancel Job
     def cancel_job(self):
@@ -287,6 +308,7 @@ def main():
 
     # status
     status = subparsers.add_parser("status", parents=[common], help="display status of submitted jobs")
+    status.add_argument('--concurrency',type=int,                   default=20)
     status.set_defaults(func=Tool.get_status)
 
     # report
@@ -301,8 +323,8 @@ def main():
 
     # logs
     logs = subparsers.add_parser("logs", parents=[common], help="get log messages for a child job")
-    logs.add_argument('--name',       type=str,                     required=True) # name of submission
-    logs.add_argument('--index',      type=int,                     default=None) # job index
+    logs.add_argument('--name',         type=str,                   required=True) # name of submission
+    logs.add_argument('--index',        type=int,                   default=None) # job index
     logs.set_defaults(func=Tool.get_logs)
 
     # parse command line
