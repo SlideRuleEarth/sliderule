@@ -139,12 +139,15 @@ Submits a job that runs a script once for each entry in an arguments file. If th
 * - `--secrets <filename>`
   - `None`
   - File containing secrets to be passed to running script; must be formatted as json.
+* - `--dups_ok`
+  - `False`
+  - Allows duplicate submission names to be provided; the code will automatically append a unique three letter identifier to the duplicate submission name to distinguish it from the other submissions with that name.
 ```
 
 (job-names)=
 ### Job names
 
-Each job is named `<name>_<i>`, where `<i>` is the position in the arguments file of the first entry in that batch. For example, submitting `my_job` with 25,000 entries and the default batch size creates `my_job_0`, `my_job_10000` and `my_job_20000`. If a name is already in your local database, three random letters are added (e.g. `my_job_xqf_0`) so that existing records are not overwritten.
+Each job is named `<name>_<i>`, where `<i>` is the position in the arguments file of the first entry in that batch. For example, submitting `my_job` with 25,000 entries and the default batch size creates `my_job_0`, `my_job_10000` and `my_job_20000`. If a name is already in your local database, the submission request will be skipped unless the `--dups_ok` option is provided, in which case three random letters are added (e.g. `my_job_xqf_0`) so that existing records can be distinguished.
 
 ```{important}
 The other commands (`status` aside) refer to a submission by its full job name, such as `my_job_0`, not by the base name you supplied to `submit`. Job names are printed when the jobs are submitted, and `status` lists them.
@@ -379,6 +382,28 @@ Saves the contents of the local database to an archive file and then clears the 
 ### Examples
 ```{code-block} bash
 sliderule-runner archive ~/sliderule_archives/2026-09-runs.json
+```
+
+(cmd-prune)=
+## `prune`
+```{code-block} text
+sliderule-runner prune <name> [common options]
+```
+
+Prunes (removes) the named submission from the database.  Useful when a submission has been cancelled.
+
+```{list-table}
+:header-rows: 1
+
+* - Argument
+  - Description
+* - `<name>`
+  - *(required)* Name of the submission to be pruned from the database.
+```
+
+### Examples
+```{code-block} bash
+sliderule-runner prune myjob
 ```
 
 ---

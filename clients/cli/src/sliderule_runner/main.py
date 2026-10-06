@@ -113,6 +113,15 @@ class Tool:
         self.database.write(self.args.archive)
         self.database.remove()
 
+    # Prune Database
+    def prune_database(self):
+        name = self.args.name
+        if name in self.database.submissions:
+            print(f"Pruning submission {name} from database")
+            del self.database.submissions[name]
+        else:
+            print(f"Unable to find submission {name} in database")
+
     # Submit Job
     def submit_job(self):
         # pull out arguments
@@ -146,8 +155,12 @@ class Tool:
             # build and check name
             job_name = f"{name}_{i}"
             if job_name in self.database.submissions:
-                unique = ''.join(random.choices(string.ascii_lowercase, k=3))
-                job_name = f"{name}_{unique}_{i}"
+                if self.args.dups_ok:
+                    unique = ''.join(random.choices(string.ascii_lowercase, k=3))
+                    job_name = f"{name}_{unique}_{i}"
+                else:
+                    print(f"Skipping duplicate submission: {job_name}")
+                    continue
             # submit & save job
             args_list = arguments[i:i+batch_size]
             rsps = self.session.runner.submit(name=job_name, script=script, args=args_list, optional_args={"vcpus":vcpus, "memory":memory, "image":image, "queue":queue}, secret_values=secret_values)
@@ -286,12 +299,18 @@ def main():
     archive.add_argument('archive',     metavar="<full path to archive file>")
     archive.set_defaults(func=Tool.archive_database)
 
+    # prune
+    prune = subparsers.add_parser("prune", parents=[common], help="remove a submission from the database")
+    prune.add_argument('name',          type=str,                   metavar="<name>")
+    prune.set_defaults(func=Tool.prune_database)
+
     # submit
     submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
     submit.add_argument('name',         type=str,                   metavar="<name>")
     submit.add_argument('script',       type=str,                   metavar="<script file>")
     submit.add_argument('arguments',    type=str,                   metavar="<arguments file>")
     submit.add_argument('--arg_as_str', action='store_true',        default=False) # changes arguments to be just a string instead of a file
+    submit.add_argument('--dups_ok',    action='store_true',        default=False) # allow a duplicate submission (will provide random unique qualitfier to name)
     submit.add_argument('--vcpus',      type=int,                   default=4)
     submit.add_argument('--memory',     type=int,                   default=16000)
     submit.add_argument('--batch_size', type=int,                   default=10000)
