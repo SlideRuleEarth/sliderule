@@ -30,8 +30,9 @@ class Tool:
         # open database
         self.database = Database(args.database)
         # create sliderule session
-        self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose, rethrow=True)
-        self.session.authenticate() # gives privileges to access SlideRule Runner
+        if args.net:
+            self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose, rethrow=True)
+            self.session.authenticate() # gives privileges to access SlideRule Runner
         # aws clients
         self.s3 = boto3.client("s3", region_name="us-west-2")
 
@@ -273,7 +274,7 @@ class Tool:
 
     # Finish
     def finish(self):
-        if "archive" not in self.args:
+        if not self.args.ro:
             # save database
             self.database.write()
 
@@ -282,6 +283,14 @@ class Tool:
 #########################################
 
 def main():
+
+    # ----------------------------------------------------------------------------
+    # The sliderule-runner has a set of commands along with common options.  Each
+    # command has three attributes:
+    #   func - the function to call when that subcommand is issued
+    #   ro - "read-only", i.e. is the database written to or only read from
+    #   net - "network", i.e. does a sliderule session need to be created
+    # ----------------------------------------------------------------------------
 
     # command line arguments
     parser = argparse.ArgumentParser(prog="sliderule-runner", description="""SlideRule Runner""")
@@ -297,12 +306,12 @@ def main():
     # archive
     archive = subparsers.add_parser("archive", parents=[common], help="save and clear the database")
     archive.add_argument('archive',     metavar="<full path to archive file>")
-    archive.set_defaults(func=Tool.archive_database)
+    archive.set_defaults(func=Tool.archive_database, ro=True, net=False)
 
     # prune
     prune = subparsers.add_parser("prune", parents=[common], help="remove a submission from the database")
     prune.add_argument('name',          type=str,                   metavar="<name>")
-    prune.set_defaults(func=Tool.prune_database)
+    prune.set_defaults(func=Tool.prune_database, ro=False, net=False)
 
     # submit
     submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
@@ -316,35 +325,35 @@ def main():
     submit.add_argument('--batch_size', type=int,                   default=10000)
     submit.add_argument('--image',      type=str,                   default="pysr:latest")
     submit.add_argument('--secrets',    type=Path,                  default=None) # contents of file must be json
-    submit.set_defaults(func=Tool.submit_job)
+    submit.set_defaults(func=Tool.submit_job, ro=False, net=True)
 
     # scrape
     scrape = subparsers.add_parser("scrape", parents=[common], help="generate list of arguments from jobs with provided job status")
     scrape.add_argument('--status',     type=JobStatus, nargs='+',  default=[JobStatus.FAILURE, JobStatus.UNSUPPORTED, JobStatus.ERROR])
     scrape.add_argument('--name',       type=str,                   default=None) # name of submission
     scrape.add_argument('--output',     type=str,                   default=None)
-    scrape.set_defaults(func=Tool.scrape_submissions)
+    scrape.set_defaults(func=Tool.scrape_submissions, ro=True, net=False)
 
     # status
     status = subparsers.add_parser("status", parents=[common], help="display status of submitted jobs")
     status.add_argument('--concurrency',type=int,                   default=20)
-    status.set_defaults(func=Tool.get_status)
+    status.set_defaults(func=Tool.get_status, ro=False, net=True)
 
     # report
     report = subparsers.add_parser("report", parents=[common], help="generate report of completed jobs")
     report.add_argument('--name',       type=str,                   default=None) # name of submission
-    report.set_defaults(func=Tool.generate_report)
+    report.set_defaults(func=Tool.generate_report, ro=True, net=False)
 
     # cancel
     cancel = subparsers.add_parser("cancel", parents=[common], help="cancel a submitted job")
     cancel.add_argument('--name',       type=str,                   required=True) # name of submission
-    cancel.set_defaults(func=Tool.cancel_job)
+    cancel.set_defaults(func=Tool.cancel_job, ro=True, net=True)
 
     # logs
     logs = subparsers.add_parser("logs", parents=[common], help="get log messages for a child job")
     logs.add_argument('--name',         type=str,                   required=True) # name of submission
     logs.add_argument('--index',        type=int,                   default=None) # job index
-    logs.set_defaults(func=Tool.get_logs)
+    logs.set_defaults(func=Tool.get_logs, ro=True, net=True)
 
     # parse command line
     args = parser.parse_args()
