@@ -113,7 +113,7 @@ def select_row_groups(cover_ids, file_meta, range_level=ROW_GROUP_RANGE_S2_CELL_
     return [i for i, (mn, mx) in enumerate(rg_bounds) if any(lo <= mx and mn <= hi for lo, hi in exact_ranges)]
 
 # trim geodataframe to area of interest
-def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level=SEGMENT_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
+def trim_to_aoi(gdf, connection, range_cover_ids, exact=True, segment_level=SEGMENT_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
     # cells fully inside the polygon are kept at their level; cells crossing its edge are split down to the segment level
     interior, cells = [], range_cover_ids
     for lvl in range(range_level, segment_level+1):
@@ -146,8 +146,22 @@ def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level
         ).fetchnumpy()["inside"]
     else:
         keep |= np.isin(ids, boundary)
-    # return mask to trim gdf
-    return keep
+    # return masked gdf
+    return gdf[keep]
+
+# filter geodataframe with time range
+def filter_time(gdf, start, end, time_column="time_ns"):
+    if start is None and end is None:
+        return gdf
+    times = gdf[time_column]
+    def to_timestamp(t):
+        # naive inputs are taken as UTC; result matches the column's tz-awareness so comparisons work
+        ts = gpd.pd.Timestamp(t)
+        ts = ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
+        return ts if times.dt.tz is not None else ts.tz_localize(None)
+    t0 = to_timestamp(start if start is not None else "2018-10-01")
+    t1 = to_timestamp(end if end is not None else gpd.pd.Timestamp.now(tz="UTC"))
+    return gdf[times.between(t0, t1, inclusive="both")]
 
 # #####################################
 # Command Functions
@@ -208,7 +222,7 @@ def write_atl06_tiles(bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
             os.remove(local_parquet_file)
 
 # read ATL06 tiles
-def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
+def read_atl06_tiles(aoi, start, end, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
     connection = duckdb.connect()
     connection.sql("INSTALL geography FROM community; LOAD geography;")
     # get set of S2 cells that cover area of interest
@@ -243,8 +257,8 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
             print(" - empty")
             continue
         gdf = _arrow_to_geopandas(pf.read_row_groups(row_groups, use_pandas_metadata=True))
-        keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
-        gdf = gdf[keep]
+        gdf = filter_time(gdf, start, end)
+        gdf = trim_to_aoi(gdf, connection, range_cover_ids, exact)
         print(f" - {len(gdf)} rows")
         gdfs.append(gdf)
     # build final gdf and trim to area of interest
@@ -282,4 +296,4 @@ if __name__ == "__main__":
     if args.query:          query_cmr(args.aoi, args.aoi_output, args.domain, args.cluster, args.verbose)
     elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
     elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
-    elif args.read:         print(read_atl06_tiles(args.aoi, args.output_bucket, args.output_prefix, args.exact))
+    elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact))
