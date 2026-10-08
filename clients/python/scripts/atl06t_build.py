@@ -124,11 +124,12 @@ def gen_optimized_range_filter(cover_ids, tile_url, range_level=ROW_GROUP_RANGE_
             read_ranges[-1][1] = hi
         else:
             read_ranges.append([lo, hi])
-    # build range filter
+    # build and return range filter
     f = ds.field("cell_id")
     range_flt = functools.reduce(operator.or_, [
         (f >= pa.scalar(lo, pa.uint64())) & (f <= pa.scalar(hi, pa.uint64())) for lo, hi in read_ranges
     ])
+    return range_flt
 
 # trim geodataframe to area of interest
 def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level=SEGMENT_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
@@ -243,13 +244,18 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
             ORDER BY cell_id
         """, [wkt]).fetchnumpy()["cell_id"]
         tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
-        range_flt = gen_optimized_range_filter(range_cover_ids, tile_url)
+        try:
+            range_flt = gen_optimized_range_filter(range_cover_ids, tile_url)
+        except FileNotFoundError:
+            continue
         gdf = gpd.read_parquet(tile_url, filters=range_flt)
-        gdfs.append(gdf)
+        keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
+        gdfs.append(gdf[keep])
     # build final gdf and trim to area of interest
-    gdf = gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
-    keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
-    return gdf[keep]
+    if len(gdfs) > 0:
+        return gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
+    else:
+        return None
 
 # #####################################
 # Main
