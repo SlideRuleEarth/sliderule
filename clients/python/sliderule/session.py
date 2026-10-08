@@ -503,7 +503,8 @@ class Session:
             path = f'{subdomain}.{self.domain}/{api}'
             url = f'https://{path}'
             body = json.dumps(data)
-            self.__signrequest(headers, path, body) # (optionally) sign request
+            if (subdomain == "runner") or (self.ps_metadata and "developer" in self.ps_metadata.get("org_roles", {})):
+                self.__signrequest(headers, path, body) # (optionally) sign request
             def perform_request():
                 return self.session.post(url, data=body, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
             data = perform_request()
