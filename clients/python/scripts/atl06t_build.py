@@ -198,43 +198,67 @@ def query_cmr(aoi, output, domain, cluster, verbose):
     else:
         print(f"Failed query for granules: {granules}")
 
-# write S2 partitioned parquets
-def write_s2_partitions(atl06_granules_file, bucket, prefix, domain, cluster, verbose, level=TILE_S2_CELL_LEVEL):
-    session = sliderule.create_session(domain=domain, cluster=cluster, verbose=verbose)
-    with open(atl06_granules_file, "r") as file:
-        granules = json.load(file)
-    for i in range(len(granules[:20])):
-        granule = granules[i]
-        print(f"Partitioning [{i}/{len(granules)}] {granule}")
+# partition one granule into S2 cells; returns status
+def write_s2_partition(session, granule, bucket, prefix, level=TILE_S2_CELL_LEVEL):
+    try:
         gdf = sliderule.run("atl06x", {}, resources=[granule], session=session)
+        if gdf is None or len(gdf) == 0:
+            return "no data"
         gdf["cell_id"] = assign_cell_ids(gdf, level)
         gdf = gdf.reset_index().set_index("cell_id").sort_index(kind="stable")
-        for cell_id in gdf.index.unique():
+        cell_ids = gdf.index.unique()
+        for cell_id in cell_ids:
             l7_gdf = gdf[gdf.index == cell_id]
             local_parquet_file = f"/tmp/{granule.replace('.h5', '')}.S{cell_id:016X}.parquet"
             remote_parquet_file = f"{prefix}/partitions/S{cell_id:016X}/{granule.replace('.h5', '.parquet')}"
             l7_gdf.to_parquet(local_parquet_file, index=False)
             s3.upload_file(local_parquet_file, bucket, remote_parquet_file)
             os.remove(local_parquet_file)
+        return f"{len(gdf)} rows in {len(cell_ids)} partitions"
+    except Exception as e:
+        return f"failed: {e}"
 
-# write ATL06 tiles
-def write_atl06_tiles(bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
-    subfolders = list_subfolders(f"s3://{bucket}/{prefix}/partitions/")
-    for i in range(len(subfolders)):
-        subfolder = subfolders[i]
+# write S2 partitioned parquets
+def write_s2_partitions(atl06_granules_file, bucket, prefix, domain, cluster, verbose, max_workers=8, level=TILE_S2_CELL_LEVEL):
+    with open(atl06_granules_file, "r") as file:
+        granules = json.load(file)[:20]
+    # install once up front so worker threads only load the extension
+    duckdb.connect().sql("INSTALL geography FROM community;")
+    session = sliderule.create_session(domain=domain, cluster=cluster, verbose=verbose)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = executor.map(lambda granule: write_s2_partition(session, granule, bucket, prefix, level), granules)
+        for i, (granule, status) in enumerate(zip(granules, results)):
+            print(f"Partitioned [{i+1}/{len(granules)}] {granule} - {status}")
+
+# build one tile from all of its partition files; returns status
+def write_atl06_tile(subfolder, bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
+    try:
         cell_id_str = subfolder.split("/")[-2]
         filenames = list_bucket(f"s3://{subfolder}")
-        print(f"Tiling [{i}/{len(subfolders)}] {cell_id_str} with {len(filenames)} files")
         gdfs = [gpd.read_parquet(f"s3://{filename}") for filename in filenames]
-        if len(gdfs) > 0:
-            gdf = gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
-            gdf["cell_id"] = assign_cell_ids(gdf, level)
-            gdf = gdf.set_index("cell_id").sort_index(kind="stable")
-            local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
-            remote_parquet_file = f"{prefix}/tiles/ATL06T_{cell_id_str}.parquet"
-            write_optimized_parquet(gdf, local_parquet_file)
-            s3.upload_file(local_parquet_file, bucket, remote_parquet_file)
-            os.remove(local_parquet_file)
+        if len(gdfs) == 0:
+            return "no files"
+        gdf = gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
+        gdf["cell_id"] = assign_cell_ids(gdf, level)
+        gdf = gdf.set_index("cell_id").sort_index(kind="stable")
+        local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
+        remote_parquet_file = f"{prefix}/tiles/ATL06T_{cell_id_str}.parquet"
+        write_optimized_parquet(gdf, local_parquet_file)
+        s3.upload_file(local_parquet_file, bucket, remote_parquet_file)
+        os.remove(local_parquet_file)
+        return f"{len(gdf)} rows from {len(filenames)} files"
+    except Exception as e:
+        return f"failed: {e}"
+
+# write ATL06 tiles
+def write_atl06_tiles(bucket, prefix, max_workers=8, level=SEGMENT_S2_CELL_LEVEL):
+    subfolders = list_subfolders(f"s3://{bucket}/{prefix}/partitions/")
+    # install once up front so worker threads only load the extension
+    duckdb.connect().sql("INSTALL geography FROM community;")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = executor.map(lambda subfolder: write_atl06_tile(subfolder, bucket, prefix, level), subfolders)
+        for i, (subfolder, status) in enumerate(zip(subfolders, results)):
+            print(f"Tiled [{i+1}/{len(subfolders)}] {subfolder.split('/')[-2]} - {status}")
 
 # read the rows of one tile inside the area of interest; returns (gdf or None, status)
 def read_atl06_tile(connection, s3_fs, tile_id, bucket, prefix, start, end, exact, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
@@ -309,8 +333,9 @@ if __name__ == "__main__":
     parser.add_argument('--start',          type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
     parser.add_argument('--end',            type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
     parser.add_argument('--exact',          action='store_true',    default=False)
-    parser.add_argument('--signed',         action='store_true',    default=False) # read tiles with AWS credentials instead of anonymously
+    parser.add_argument('--anonymous',      action='store_true',    default=False) # for accessing a public bucket
     parser.add_argument('--verbose',        action='store_true',    default=False)
+    parser.add_argument('--workers',        type=int,               default=8) # number of threads for partitioning, tiling, and reading
     parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and writes atl06_granules)
     parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (reads atl06_granules)
     parser.add_argument('--tile',           action='store_true',    default=False) # tile partitions back into new tiled granules
@@ -319,6 +344,6 @@ if __name__ == "__main__":
 
     # route command
     if args.query:          query_cmr(args.aoi, args.aoi_output, args.domain, args.cluster, args.verbose)
-    elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
-    elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
-    elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact, anonymous=not args.signed))
+    elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose, max_workers=args.workers)
+    elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix, max_workers=args.workers)
+    elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact, anonymous=args.anonymous, max_workers=args.workers))
