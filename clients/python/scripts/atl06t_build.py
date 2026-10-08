@@ -111,7 +111,10 @@ def gen_optimized_range_filter(cover_ids, tile_url, range_level=ROW_GROUP_RANGE_
         else:
             exact_ranges.append([c - half, c + half])
     # query metadata for row group boundaries
-    file_meta = pq.ParquetFile(tile_url).metadata
+    try:
+        file_meta = pq.ParquetFile(tile_url).metadata
+    except FileNotFoundError:
+        return None
     cid = file_meta.schema.to_arrow_schema().get_field_index("cell_id")
     rg_bounds = [(file_meta.row_group(i).column(cid).statistics.min, file_meta.row_group(i).column(cid).statistics.max)
                 for i in range(file_meta.num_row_groups)]
@@ -124,6 +127,8 @@ def gen_optimized_range_filter(cover_ids, tile_url, range_level=ROW_GROUP_RANGE_
             read_ranges[-1][1] = hi
         else:
             read_ranges.append([lo, hi])
+    if not read_ranges:
+        return None
     # build and return range filter
     f = ds.field("cell_id")
     range_flt = functools.reduce(operator.or_, [
@@ -144,7 +149,7 @@ def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level
         """).fetchnumpy()
         interior.append(res["c"][res["inside"]])
         cells = res["c"][res["touches"] & ~res["inside"]]
-        if lvl < 18:
+        if lvl < segment_level:
             lsb = cells & (~cells + np.uint64(1))
             cells = np.sort(np.concatenate([cells - lsb + (lsb >> np.uint64(2)) * np.uint64(2 * k + 1) for k in range(4)]))
     interior = np.sort(np.concatenate(interior))
@@ -164,6 +169,8 @@ def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level
         keep[on_boundary] = connection.sql(
             "SELECT s2_contains(p.g, s2_cellfromlonlat(lon, lat)::GEOGRAPHY) AS inside FROM pts, poly_geog p"
         ).fetchnumpy()["inside"]
+    else:
+        keep |= np.isin(ids, boundary)
     # return mask to trim gdf
     return keep
 
@@ -214,7 +221,7 @@ def write_atl06_tiles(bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
         if len(gdfs) > 0:
             gdf = gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
             gdf["cell_id"] = assign_cell_ids(gdf, level)
-            gdf = gdf.reset_index().set_index("cell_id").sort_index(kind="stable")
+            gdf = gdf.set_index("cell_id").sort_index(kind="stable")
             local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
             remote_parquet_file = f"{prefix}/tiles/ATL06T_{cell_id_str}.parquet"
             write_optimized_parquet(gdf, local_parquet_file)
@@ -226,8 +233,11 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
     connection = duckdb.connect()
     connection.sql("INSTALL geography FROM community; LOAD geography;")
     # get set of S2 cells that cover area of interest
-    region = sliderule.toregion(aoi)
-    wkt = "POLYGON((" + ", ".join(f"{p['lon']} {p['lat']}" for p in region["poly"]) + "))"
+    # region["poly"] is only the convex hull, so use the full geometry
+    aoi_gdf = sliderule.toregion(aoi)["gdf"]
+    if aoi_gdf.crs is not None:
+        aoi_gdf = aoi_gdf.to_crs("EPSG:4326")
+    wkt = aoi_gdf.union_all().wkt
     tile_cover_ids = [row[0] for row in connection.execute(
         f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {tile_level}))::UBIGINT", [wkt]).fetchall()
     ]
@@ -244,9 +254,8 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
             ORDER BY cell_id
         """, [wkt]).fetchnumpy()["cell_id"]
         tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
-        try:
-            range_flt = gen_optimized_range_filter(range_cover_ids, tile_url)
-        except FileNotFoundError:
+        range_flt = gen_optimized_range_filter(range_cover_ids, tile_url)
+        if range_flt is None:
             continue
         gdf = gpd.read_parquet(tile_url, filters=range_flt)
         keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
@@ -283,7 +292,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # route command
-    if args.query:          query_cmr(args.aoi, args.output, args.domain, args.cluster, args.verbose)
+    if args.query:          query_cmr(args.aoi, args.aoi_output, args.domain, args.cluster, args.verbose)
     elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
     elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
     elif args.read:         print(read_atl06_tiles(args.aoi, args.output_bucket, args.output_prefix, args.exact))
