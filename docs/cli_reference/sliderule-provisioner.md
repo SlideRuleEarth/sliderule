@@ -321,13 +321,35 @@ sliderule-provisioner info
 (cmd-s3access)=
 ## `s3access`
 ```{code-block} text
-sliderule-provisioner s3access [common options]
+sliderule-provisioner s3access [--shell <bash|powershell|cmd>] [common options]
 ```
 
-Obtains temporary AWS credentials and prints them as shell `export` commands. Rather than reading the output, use `eval` to set the credentials in your current shell environment:
+Obtains temporary AWS credentials and prints them as commands for the selected shell. Rather than reading the output, evaluate it to set the credentials in your current shell environment:
+
+```{list-table}
+:header-rows: 1
+
+* - Option
+  - Default
+  - Description
+* - `--shell <str>`
+  - `bash`
+  - Shell syntax to output: `bash` (also zsh/sh), `powershell`, or `cmd`.
+```
 
 ```{code-block} bash
+# bash / zsh
 eval "$(sliderule-provisioner s3access)"
+```
+
+```{code-block} powershell
+# PowerShell
+sliderule-provisioner s3access --shell powershell | Out-String | Invoke-Expression
+```
+
+```{code-block} bat
+:: cmd.exe (use %%i instead of %i inside a .bat file)
+for /f "delims=" %i in ('sliderule-provisioner s3access --shell cmd') do %i
 ```
 
 The following environment variables are set:
@@ -387,7 +409,7 @@ Results are printed to standard output as indented JSON. Commands that have noth
 (provisioner-error-handling)=
 ### Error Handling
 
-By default, errors are caught and reported as a single line:
+By default, errors are caught and reported as a single line on standard error:
 
 ```{code-block} text
 Unhandled error: <message>
