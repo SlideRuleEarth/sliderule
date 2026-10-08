@@ -221,7 +221,7 @@ def write_s2_partition(session, granule, bucket, prefix, level=TILE_S2_CELL_LEVE
 # write S2 partitioned parquets
 def write_s2_partitions(atl06_granules_file, bucket, prefix, domain, cluster, verbose, max_workers=8, level=TILE_S2_CELL_LEVEL):
     with open(atl06_granules_file, "r") as file:
-        granules = json.load(file)[:20]
+        granules = json.load(file)
     # install once up front so worker threads only load the extension
     duckdb.connect().sql("INSTALL geography FROM community;")
     session = sliderule.create_session(domain=domain, cluster=cluster, verbose=verbose)
