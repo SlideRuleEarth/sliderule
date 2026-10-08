@@ -14,24 +14,6 @@ from geopandas.io.arrow import _geopandas_to_arrow
 from sliderule import sliderule
 
 # #####################################
-# Command Line Arguments
-# #####################################
-
-parser = argparse.ArgumentParser(description="""ATL24 Platinum Run""")
-parser.add_argument('--domain',         type=str,               default="localhost")
-parser.add_argument('--cluster',        type=str,               default=None)
-parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules_greenland.json")
-parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
-parser.add_argument('--output_prefix',  type=str,               default="atl06t")
-parser.add_argument('--aoi',            type=str,               default="/data/ATL06/greenland.geojson")
-parser.add_argument('--aoi_output',     type=str,               default="/data/ATL06/atl06_granules.json")
-parser.add_argument('--verbose',        action='store_true',    default=False)
-parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and atl06_granules)
-parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (uses atl06_granules)
-parser.add_argument('--tile',           action='store_true',    default=False) # tile partitions back into new tiled granules
-args = parser.parse_args()
-
-# #####################################
 # Globals
 # #####################################
 
@@ -43,9 +25,6 @@ ROW_GROUP_TARGET_SIZE_MB = 5 # MB
 
 # create S3 client
 s3 = boto3.client("s3")
-
-# initialize SlideRule client
-session = sliderule.create_session(domain=args.domain, cluster=args.cluster, verbose=args.verbose, rqst_timeout=(10,300))
 
 # #####################################
 # Functions
@@ -188,23 +167,25 @@ def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level
     return keep
 
 # query cmr for granules
-def query_cmr():
-    region = sliderule.toregion(args.aoi)
+def query_cmr(aoi, output, domain, cluster, verbose):
+    session = sliderule.create_session(domain=domain, cluster=cluster, verbose=verbose, rqst_timeout=(10,300))
+    region = sliderule.toregion(aoi)
     granules = session.source("earthdata", {
         "asset": "icesat2-atl06",
         "poly": region["poly"],
         "max_resources": 500000,
     }, rethrow=True)
     if isinstance(granules, list) and len(granules) > 0:
-        print(f"Writing {len(granules)} granules to {args.aoi_output}")
-        with open(args.aoi_output, "w") as file:
+        print(f"Writing {len(granules)} granules to {output}")
+        with open(output, "w") as file:
             json.dump(granules, file)
     else:
         print(f"Failed query for granules: {granules}")
 
 # write S2 partitioned parquets
-def write_s2_partitions(level=TILE_S2_CELL_LEVEL):
-    with open(args.atl06_granules, "r") as file:
+def write_s2_partitions(atl06_granules_file, bucket, prefix, domain, cluster, verbose, level=TILE_S2_CELL_LEVEL):
+    session = sliderule.create_session(domain=domain, cluster=cluster, verbose=verbose)
+    with open(atl06_granules_file, "r") as file:
         granules = json.load(file)
     for i in range(len(granules[:20])):
         granule = granules[i]
@@ -215,14 +196,14 @@ def write_s2_partitions(level=TILE_S2_CELL_LEVEL):
         for cell_id in gdf.index.unique():
             l7_gdf = gdf[gdf.index == cell_id]
             local_parquet_file = f"/tmp/{granule.replace('.h5', '')}.S{cell_id:016X}.parquet"
-            remote_parquet_file = f"{args.output_prefix}/partitions/S{cell_id:016X}/{granule.replace('.h5', '.parquet')}"
+            remote_parquet_file = f"{prefix}/partitions/S{cell_id:016X}/{granule.replace('.h5', '.parquet')}"
             l7_gdf.to_parquet(local_parquet_file, index=False)
-            s3.upload_file(local_parquet_file, args.output_bucket, remote_parquet_file)
+            s3.upload_file(local_parquet_file, bucket, remote_parquet_file)
             os.remove(local_parquet_file)
 
 # write ATL06 tiles
-def write_atl06_tiles(level=SEGMENT_S2_CELL_LEVEL):
-    subfolders = list_subfolders(f"s3://{args.output_bucket}/{args.output_prefix}/partitions/")
+def write_atl06_tiles(bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
+    subfolders = list_subfolders(f"s3://{bucket}/{prefix}/partitions/")
     for i in range(len(subfolders)):
         subfolder = subfolders[i]
         cell_id_str = subfolder.split("/")[-2]
@@ -234,16 +215,16 @@ def write_atl06_tiles(level=SEGMENT_S2_CELL_LEVEL):
             gdf["cell_id"] = assign_cell_ids(gdf, level)
             gdf = gdf.reset_index().set_index("cell_id").sort_index(kind="stable")
             local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
-            remote_parquet_file = f"{args.output_prefix}/tiles/ATL06T_{cell_id_str}.parquet"
+            remote_parquet_file = f"{prefix}/tiles/ATL06T_{cell_id_str}.parquet"
             write_optimized_parquet(gdf, local_parquet_file)
-            s3.upload_file(local_parquet_file, args.output_bucket, remote_parquet_file)
+            s3.upload_file(local_parquet_file, bucket, remote_parquet_file)
             os.remove(local_parquet_file)
 
 # read ATL06 tiles
-def read_atl06_tiles(tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
+def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
     connection = duckdb.connect()
     # get set of S2 cells that cover area of interest
-    region = sliderule.toregion(args.aoi)
+    region = sliderule.toregion(aoi)
     wkt = "POLYGON((" + ", ".join(f"{p['lon']} {p['lat']}" for p in region["poly"]) + "))"
     tile_cover_ids = [row[0] for row in connection.execute(
         f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext({wkt}), {tile_level}))::UBIGINT").fetchall()
@@ -252,7 +233,7 @@ def read_atl06_tiles(tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_
     gdfs = []
     for i in range(len(tile_cover_ids)):
         tile_id = tile_cover_ids[i]
-        tile_url = f"s3://{args.output_prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
+        tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
         range_cover_ids = connection.execute(f"""
             WITH tile AS (SELECT {tile_id}::UBIGINT::S2_CELL AS cell)
             SELECT c::UBIGINT AS cell_id
@@ -265,7 +246,7 @@ def read_atl06_tiles(tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_
         gdfs.append(gdf)
     # build final gdf and trim to area of interest
     gdf = gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
-    keep = trim_to_aoi(gdf, range_cover_ids)
+    keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
     return gdf[keep]
 
 
@@ -273,6 +254,27 @@ def read_atl06_tiles(tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_
 # Main
 # #####################################
 
-if args.query:          query_cmr()
-elif args.partition:    write_s2_partitions()
-elif args.tile:         write_atl06_tiles()
+# command line arguments
+parser = argparse.ArgumentParser(description="""ATL24 Platinum Run""")
+parser.add_argument('--domain',         type=str,               default="localhost")
+parser.add_argument('--cluster',        type=str,               default=None)
+parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules_greenland.json")
+parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
+parser.add_argument('--output_prefix',  type=str,               default="atl06t")
+parser.add_argument('--aoi',            type=str,               default="/data/ATL06/greenland.geojson")
+parser.add_argument('--aoi_output',     type=str,               default="/data/ATL06/atl06_granules.json")
+parser.add_argument('--start',          type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
+parser.add_argument('--end',            type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
+parser.add_argument('--exact',          action='store_true',    default=False)
+parser.add_argument('--verbose',        action='store_true',    default=False)
+parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and atl06_granules)
+parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (uses atl06_granules)
+parser.add_argument('--tile',           action='store_true',    default=False) # tile partitions back into new tiled granules
+parser.add_argument('--read',           action='store_true',    default=False) # read tiled granules
+args = parser.parse_args()
+
+# route command
+if args.query:          query_cmr(args.aoi, args.output, args.domain, args.cluster, args.verbose)
+elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
+elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
+elif args.read:         read_atl06_tiles(args.aoi, args.output_bucket, args.output_prefix, args.exact)
