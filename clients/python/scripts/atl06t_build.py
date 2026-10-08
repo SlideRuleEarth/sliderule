@@ -3,14 +3,11 @@ import json
 import argparse
 import duckdb
 import boto3
-import functools
-import operator
 import numpy as np
 import pyarrow as pa
-import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import geopandas as gpd
-from geopandas.io.arrow import _geopandas_to_arrow
+from geopandas.io.arrow import _geopandas_to_arrow, _arrow_to_geopandas
 from sliderule import sliderule
 
 # #####################################
@@ -27,7 +24,7 @@ ROW_GROUP_TARGET_SIZE_MB = 5 # MB
 s3 = boto3.client("s3")
 
 # #####################################
-# Functions
+# Helper Functions
 # #####################################
 
 # Split out bucket and key from url
@@ -100,8 +97,8 @@ def write_optimized_parquet(gdf, output_file, target_bytes=ROW_GROUP_TARGET_SIZE
                 rows = max(1, int((end - start) * target_bytes / max(1, sink.tell() - before)))
                 start = end
 
-# generate optimal range filter
-def gen_optimized_range_filter(cover_ids, tile_url, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
+# select row groups that hold any descendant of the cover cells
+def select_row_groups(cover_ids, file_meta, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
     # every child level descendant of a parent level cell c lies in [c - half, c + half]
     half = (1 << (2 * (30 - range_level))) - 1
     exact_ranges = []
@@ -110,35 +107,13 @@ def gen_optimized_range_filter(cover_ids, tile_url, range_level=ROW_GROUP_RANGE_
             exact_ranges[-1][1] = c + half
         else:
             exact_ranges.append([c - half, c + half])
-    # query metadata for row group boundaries
-    try:
-        file_meta = pq.ParquetFile(tile_url).metadata
-    except FileNotFoundError:
-        return None
     cid = file_meta.schema.to_arrow_schema().get_field_index("cell_id")
     rg_bounds = [(file_meta.row_group(i).column(cid).statistics.min, file_meta.row_group(i).column(cid).statistics.max)
                 for i in range(file_meta.num_row_groups)]
-    # merge across a gap unless a whole row group sits inside it, so merging never adds a row group to the read
-    read_ranges = []
-    def row_groups_hit(ranges):
-        return [i for i, (mn, mx) in enumerate(rg_bounds) if any(lo <= mx and mn <= hi for lo, hi in ranges)]
-    for lo, hi in (r for r in exact_ranges if row_groups_hit([r])):
-        if read_ranges and not any(read_ranges[-1][1] < mn and mx < lo for mn, mx in rg_bounds):
-            read_ranges[-1][1] = hi
-        else:
-            read_ranges.append([lo, hi])
-    if not read_ranges:
-        return None
-    # build and return range filter
-    f = ds.field("cell_id")
-    range_flt = functools.reduce(operator.or_, [
-        (f >= pa.scalar(lo, pa.uint64())) & (f <= pa.scalar(hi, pa.uint64())) for lo, hi in read_ranges
-    ])
-    return range_flt
+    return [i for i, (mn, mx) in enumerate(rg_bounds) if any(lo <= mx and mn <= hi for lo, hi in exact_ranges)]
 
 # trim geodataframe to area of interest
 def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level=SEGMENT_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
-    connection.execute("CREATE OR REPLACE TEMP TABLE poly_geog AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
     # cells fully inside the polygon are kept at their level; cells crossing its edge are split down to the segment level
     interior, cells = [], range_cover_ids
     for lvl in range(range_level, segment_level+1):
@@ -173,6 +148,10 @@ def trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact=True, segment_level
         keep |= np.isin(ids, boundary)
     # return mask to trim gdf
     return keep
+
+# #####################################
+# Command Functions
+# #####################################
 
 # query cmr for granules
 def query_cmr(aoi, output, domain, cluster, verbose):
@@ -233,11 +212,11 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
     connection = duckdb.connect()
     connection.sql("INSTALL geography FROM community; LOAD geography;")
     # get set of S2 cells that cover area of interest
-    # region["poly"] is only the convex hull, so use the full geometry
     aoi_gdf = sliderule.toregion(aoi)["gdf"]
     if aoi_gdf.crs is not None:
         aoi_gdf = aoi_gdf.to_crs("EPSG:4326")
     wkt = aoi_gdf.union_all().wkt
+    connection.execute("CREATE OR REPLACE TEMP TABLE poly_geog AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
     tile_cover_ids = [row[0] for row in connection.execute(
         f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {tile_level}))::UBIGINT", [wkt]).fetchall()
     ]
@@ -245,7 +224,6 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
     gdfs = []
     for i in range(len(tile_cover_ids)):
         tile_id = tile_cover_ids[i]
-        print(f"Reading [{i}/{len(tile_cover_ids)}] tile {tile_id:016X}")
         range_cover_ids = connection.execute(f"""
             WITH tile AS (SELECT {tile_id}::UBIGINT::S2_CELL AS cell)
             SELECT c::UBIGINT AS cell_id
@@ -254,12 +232,21 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
             ORDER BY cell_id
         """, [wkt]).fetchnumpy()["cell_id"]
         tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
-        range_flt = gen_optimized_range_filter(range_cover_ids, tile_url)
-        if range_flt is None:
+        print(f"Reading [{i}/{len(tile_cover_ids)}] tile {tile_id:016X}", end="")
+        try:
+            pf = pq.ParquetFile(tile_url)
+        except FileNotFoundError:
+            print(" - not found")
             continue
-        gdf = gpd.read_parquet(tile_url, filters=range_flt)
+        row_groups = select_row_groups(range_cover_ids, pf.metadata, range_level)
+        if not row_groups:
+            print(" - empty")
+            continue
+        gdf = _arrow_to_geopandas(pf.read_row_groups(row_groups, use_pandas_metadata=True))
         keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
-        gdfs.append(gdf[keep])
+        gdf = gdf[keep]
+        print(f" - {len(gdf)} rows")
+        gdfs.append(gdf)
     # build final gdf and trim to area of interest
     if len(gdfs) > 0:
         return gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
