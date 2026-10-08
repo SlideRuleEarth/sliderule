@@ -5,8 +5,10 @@ import duckdb
 import boto3
 import numpy as np
 import pyarrow as pa
+import pyarrow.fs as pafs
 import pyarrow.parquet as pq
 import geopandas as gpd
+from concurrent.futures import ThreadPoolExecutor
 from geopandas.io.arrow import _geopandas_to_arrow, _arrow_to_geopandas
 from sliderule import sliderule
 
@@ -17,8 +19,8 @@ from sliderule import sliderule
 # constants
 TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
-ROW_GROUP_RANGE_S2_CELL_LEVEL = 13 # 1.27 km^2
-ROW_GROUP_TARGET_SIZE_MB = 5 # MB
+ROW_GROUP_TARGET_SIZE_MB = 2 # MB
+S3_REGION = "us-west-2"
 
 # create S3 client
 s3 = boto3.client("s3")
@@ -86,8 +88,15 @@ def write_optimized_parquet(gdf, output_file, target_bytes=ROW_GROUP_TARGET_SIZE
     table = _geopandas_to_arrow(gdf, index=True)
     cell_idx = table.schema.get_field_index("cell_id")
     cell_ids = gdf.index
+    floats = [f.name for f in table.schema if pa.types.is_floating(f.type)]
     with pa.OSFile(output_file, "wb") as sink:
-        with pq.ParquetWriter(sink, table.schema, sorting_columns=[pq.SortingColumn(cell_idx)]) as writer:
+        with pq.ParquetWriter(sink, table.schema,
+                              sorting_columns=[pq.SortingColumn(cell_idx)],
+                              compression="zstd",
+                              # byte_stream_split only takes effect on columns without dictionary encoding
+                              use_dictionary=[name for name in table.column_names if name not in floats],
+                              use_byte_stream_split=floats,
+                              write_statistics=["cell_id", "time_ns"]) as writer:
             start, rows = 0, 50_000
             while start < table.num_rows:
                 end = min(start + rows, table.num_rows)
@@ -97,28 +106,26 @@ def write_optimized_parquet(gdf, output_file, target_bytes=ROW_GROUP_TARGET_SIZE
                 rows = max(1, int((end - start) * target_bytes / max(1, sink.tell() - before)))
                 start = end
 
-# select row groups that hold any descendant of the cover cells
-def select_row_groups(cover_ids, file_meta, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
-    # every child level descendant of a parent level cell c lies in [c - half, c + half]
-    half = (1 << (2 * (30 - range_level))) - 1
-    exact_ranges = []
-    for c in map(int, cover_ids):
-        if exact_ranges and c - half <= exact_ranges[-1][1] + 2:  # Hilbert-adjacent cells form one range
-            exact_ranges[-1][1] = c + half
-        else:
-            exact_ranges.append([c - half, c + half])
-    cid = file_meta.schema.to_arrow_schema().get_field_index("cell_id")
-    rg_bounds = [(file_meta.row_group(i).column(cid).statistics.min, file_meta.row_group(i).column(cid).statistics.max)
-                for i in range(file_meta.num_row_groups)]
-    return [i for i, (mn, mx) in enumerate(rg_bounds) if any(lo <= mx and mn <= hi for lo, hi in exact_ranges)]
+# [lo, hi] range of cell ids covered by each cell (any level)
+def cell_ranges(cells):
+    ext = (cells & (~cells + np.uint64(1))) - np.uint64(1)
+    return cells - ext, cells + ext
 
-# trim geodataframe to area of interest
-def trim_to_aoi(gdf, connection, range_cover_ids, exact=True, segment_level=SEGMENT_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
-    # cells fully inside the polygon are kept at their level; cells crossing its edge are split down to the segment level
-    interior, cells = [], range_cover_ids
-    for lvl in range(range_level, segment_level+1):
-        connection.register("cells", gpd.pd.DataFrame({"c": cells}))
-        res = connection.sql("""
+# mask of ids inside any of the sorted, disjoint [lo, hi] ranges
+def in_ranges(ids, lo, hi):
+    if len(lo) == 0:
+        return np.zeros(len(ids), bool)
+    k = np.searchsorted(lo, ids, side="right") - 1
+    return (k >= 0) & (ids <= hi[np.maximum(k, 0)])
+
+# split a tile into cells fully inside the aoi (mixed levels) and segment level cells crossing its edge
+def classify_cells(cursor, tile_id, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
+    interior, cells = [], np.array([tile_id], dtype=np.uint64)
+    for lvl in range(tile_level, segment_level + 1):
+        if len(cells) == 0:
+            break
+        cursor.register("cells", gpd.pd.DataFrame({"c": cells}))
+        res = cursor.sql("""
             SELECT c, s2_contains(p.g, c::S2_CELL::GEOGRAPHY) AS inside, s2_intersects(p.g, c::S2_CELL::GEOGRAPHY) AS touches
             FROM cells, poly_geog p
         """).fetchnumpy()
@@ -127,26 +134,34 @@ def trim_to_aoi(gdf, connection, range_cover_ids, exact=True, segment_level=SEGM
         if lvl < segment_level:
             lsb = cells & (~cells + np.uint64(1))
             cells = np.sort(np.concatenate([cells - lsb + (lsb >> np.uint64(2)) * np.uint64(2 * k + 1) for k in range(4)]))
-    interior = np.sort(np.concatenate(interior))
-    boundary = cells
-    # build rows to keep
+    return np.sort(np.concatenate(interior)), cells
+
+# select row groups whose cell_id min/max overlaps any of the sorted, disjoint [lo, hi] ranges
+def select_row_groups(lo, hi, file_meta):
+    cid = file_meta.schema.to_arrow_schema().get_field_index("cell_id")
+    stats = [file_meta.row_group(i).column(cid).statistics for i in range(file_meta.num_row_groups)]
+    rg_min = np.array([s.min for s in stats], dtype=np.uint64)
+    rg_max = np.array([s.max for s in stats], dtype=np.uint64)
+    # first range ending at or after the row group's min; they overlap if that range starts before the row group's max
+    k = np.searchsorted(hi, rg_min, side="left")
+    hit = k < len(hi)
+    hit[hit] = lo[k[hit]] <= rg_max[hit]
+    return np.flatnonzero(hit).tolist()
+
+# trim geodataframe to area of interest
+def trim_to_aoi(gdf, cursor, interior, boundary, exact=True):
     ids = gdf.index.to_numpy()
-    keep = np.zeros(len(ids), bool)
-    if len(interior):
-        ext = (interior & (~interior + np.uint64(1))) - np.uint64(1)  # each cell spans [c - ext, c + ext]
-        k = np.searchsorted(interior - ext, ids, side="right") - 1
-        keep = (k >= 0) & (ids <= (interior + ext)[np.maximum(k, 0)])
-    # only points in segment level cells crossing the polygon edge need an exact point-in-polygon test
-    if exact:
-        on_boundary = np.isin(ids, boundary)
+    keep = in_ranges(ids, *cell_ranges(interior))
+    on_boundary = np.isin(ids, boundary)
+    if not exact:
+        keep |= on_boundary
+    elif on_boundary.any():
+        # only points in segment level cells crossing the polygon edge need an exact point-in-polygon test
         ll = gdf.geometry[on_boundary].to_crs("EPSG:4326")
-        connection.register("pts", gpd.pd.DataFrame({"lon": ll.x.to_numpy(), "lat": ll.y.to_numpy()}))
-        keep[on_boundary] = connection.sql(
+        cursor.register("pts", gpd.pd.DataFrame({"lon": ll.x.to_numpy(), "lat": ll.y.to_numpy()}))
+        keep[on_boundary] = cursor.sql(
             "SELECT s2_contains(p.g, s2_cellfromlonlat(lon, lat)::GEOGRAPHY) AS inside FROM pts, poly_geog p"
         ).fetchnumpy()["inside"]
-    else:
-        keep |= np.isin(ids, boundary)
-    # return masked gdf
     return gdf[keep]
 
 # filter geodataframe with time range
@@ -221,8 +236,33 @@ def write_atl06_tiles(bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
             s3.upload_file(local_parquet_file, bucket, remote_parquet_file)
             os.remove(local_parquet_file)
 
+# read the rows of one tile inside the area of interest; returns (gdf or None, status)
+def read_atl06_tile(connection, s3_fs, tile_id, bucket, prefix, start, end, exact, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
+    try:
+        # pre_buffer coalesces the selected column chunks into a few concurrent range requests
+        pf = pq.ParquetFile(f"{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet", filesystem=s3_fs, pre_buffer=True)
+    except FileNotFoundError:
+        return None, "not found"
+    # duckdb connections are not thread safe; a cursor is a separate connection to the same database
+    cursor = connection.cursor()
+    try:
+        interior, boundary = classify_cells(cursor, tile_id, tile_level, segment_level)
+        lo, hi = cell_ranges(np.sort(np.concatenate([interior, boundary])))
+        row_groups = select_row_groups(lo, hi, pf.metadata)
+        if not row_groups:
+            return None, "empty"
+        gdf = _arrow_to_geopandas(pf.read_row_groups(row_groups, use_pandas_metadata=True))
+        gdf = filter_time(gdf, start, end)
+        gdf = trim_to_aoi(gdf, cursor, interior, boundary, exact)
+        return gdf, f"{len(gdf)} rows from {len(row_groups)}/{pf.metadata.num_row_groups} row groups"
+    finally:
+        cursor.close()
+        pf.close()
+
 # read ATL06 tiles
-def read_atl06_tiles(aoi, start, end, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
+def read_atl06_tiles(aoi, start, end, bucket, prefix, exact, anonymous=True, max_workers=8, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
+    # anonymous reads skip credential lookup, and a fixed region skips per-file region resolution
+    s3_fs = pafs.S3FileSystem(region=S3_REGION, anonymous=anonymous)
     connection = duckdb.connect()
     connection.sql("INSTALL geography FROM community; LOAD geography;")
     # get set of S2 cells that cover area of interest
@@ -230,38 +270,22 @@ def read_atl06_tiles(aoi, start, end, bucket, prefix, exact, tile_level=TILE_S2_
     if aoi_gdf.crs is not None:
         aoi_gdf = aoi_gdf.to_crs("EPSG:4326")
     wkt = aoi_gdf.union_all().wkt
-    connection.execute("CREATE OR REPLACE TEMP TABLE poly_geog AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
+    # a regular (not TEMP) table so the per-thread cursors can see it
+    connection.execute("CREATE OR REPLACE TABLE poly_geog AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
     tile_cover_ids = [row[0] for row in connection.execute(
         f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {tile_level}))::UBIGINT", [wkt]).fetchall()
     ]
     # read all tiles corresponding to an S2 cell in the area of interest
     gdfs = []
-    for i in range(len(tile_cover_ids)):
-        tile_id = tile_cover_ids[i]
-        range_cover_ids = connection.execute(f"""
-            WITH tile AS (SELECT {tile_id}::UBIGINT::S2_CELL AS cell)
-            SELECT c::UBIGINT AS cell_id
-            FROM tile, UNNEST(s2_covering_fixed_level(s2_intersection(s2_geogfromtext(?), tile.cell::GEOGRAPHY), {range_level})) AS t(c)
-            WHERE c::UBIGINT BETWEEN s2_cell_range_min(tile.cell)::UBIGINT AND s2_cell_range_max(tile.cell)::UBIGINT
-            ORDER BY cell_id
-        """, [wkt]).fetchnumpy()["cell_id"]
-        tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
-        print(f"Reading [{i}/{len(tile_cover_ids)}] tile {tile_id:016X}", end="")
-        try:
-            pf = pq.ParquetFile(tile_url)
-        except FileNotFoundError:
-            print(" - not found")
-            continue
-        row_groups = select_row_groups(range_cover_ids, pf.metadata, range_level)
-        if not row_groups:
-            print(" - empty")
-            continue
-        gdf = _arrow_to_geopandas(pf.read_row_groups(row_groups, use_pandas_metadata=True))
-        gdf = filter_time(gdf, start, end)
-        gdf = trim_to_aoi(gdf, connection, range_cover_ids, exact)
-        print(f" - {len(gdf)} rows")
-        gdfs.append(gdf)
-    # build final gdf and trim to area of interest
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = executor.map(
+            lambda tile_id: read_atl06_tile(connection, s3_fs, tile_id, bucket, prefix, start, end, exact, tile_level, segment_level),
+            tile_cover_ids)
+        for i, (tile_id, (gdf, status)) in enumerate(zip(tile_cover_ids, results)):
+            print(f"Read [{i+1}/{len(tile_cover_ids)}] tile {tile_id:016X} - {status}")
+            if gdf is not None:
+                gdfs.append(gdf)
+    # combine tiles
     if len(gdfs) > 0:
         return gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
     else:
@@ -285,6 +309,7 @@ if __name__ == "__main__":
     parser.add_argument('--start',          type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
     parser.add_argument('--end',            type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
     parser.add_argument('--exact',          action='store_true',    default=False)
+    parser.add_argument('--signed',         action='store_true',    default=False) # read tiles with AWS credentials instead of anonymously
     parser.add_argument('--verbose',        action='store_true',    default=False)
     parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and writes atl06_granules)
     parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (reads atl06_granules)
@@ -296,4 +321,4 @@ if __name__ == "__main__":
     if args.query:          query_cmr(args.aoi, args.aoi_output, args.domain, args.cluster, args.verbose)
     elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
     elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
-    elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact))
+    elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact, anonymous=not args.signed))
