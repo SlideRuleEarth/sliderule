@@ -223,24 +223,26 @@ def write_atl06_tiles(bucket, prefix, level=SEGMENT_S2_CELL_LEVEL):
 # read ATL06 tiles
 def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, range_level=ROW_GROUP_RANGE_S2_CELL_LEVEL):
     connection = duckdb.connect()
+    connection.sql("INSTALL geography FROM community; LOAD geography;")
     # get set of S2 cells that cover area of interest
     region = sliderule.toregion(aoi)
     wkt = "POLYGON((" + ", ".join(f"{p['lon']} {p['lat']}" for p in region["poly"]) + "))"
     tile_cover_ids = [row[0] for row in connection.execute(
-        f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext({wkt}), {tile_level}))::UBIGINT").fetchall()
+        f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {tile_level}))::UBIGINT", [wkt]).fetchall()
     ]
     # read all tiles corresponding to an S2 cell in the area of interest
     gdfs = []
     for i in range(len(tile_cover_ids)):
         tile_id = tile_cover_ids[i]
-        tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
+        print(f"Reading [{i}/{len(tile_cover_ids)}] tile {tile_id:016X}")
         range_cover_ids = connection.execute(f"""
             WITH tile AS (SELECT {tile_id}::UBIGINT::S2_CELL AS cell)
             SELECT c::UBIGINT AS cell_id
-            FROM tile, UNNEST(s2_covering_fixed_level(s2_intersection(s2_geogfromtext({wkt}), tile.cell::GEOGRAPHY), {range_level})) AS t(c)
+            FROM tile, UNNEST(s2_covering_fixed_level(s2_intersection(s2_geogfromtext(?), tile.cell::GEOGRAPHY), {range_level})) AS t(c)
             WHERE c::UBIGINT BETWEEN s2_cell_range_min(tile.cell)::UBIGINT AND s2_cell_range_max(tile.cell)::UBIGINT
             ORDER BY cell_id
-        """).fetchnumpy()["cell_id"]
+        """, [wkt]).fetchnumpy()["cell_id"]
+        tile_url = f"s3://{bucket}/{prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
         range_flt = gen_optimized_range_filter(range_cover_ids, tile_url)
         gdf = gpd.read_parquet(tile_url, filters=range_flt)
         gdfs.append(gdf)
@@ -249,32 +251,33 @@ def read_atl06_tiles(aoi, bucket, prefix, exact, tile_level=TILE_S2_CELL_LEVEL, 
     keep = trim_to_aoi(gdf, connection, wkt, range_cover_ids, exact)
     return gdf[keep]
 
-
 # #####################################
 # Main
 # #####################################
 
-# command line arguments
-parser = argparse.ArgumentParser(description="""ATL24 Platinum Run""")
-parser.add_argument('--domain',         type=str,               default="localhost")
-parser.add_argument('--cluster',        type=str,               default=None)
-parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules_greenland.json")
-parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
-parser.add_argument('--output_prefix',  type=str,               default="atl06t")
-parser.add_argument('--aoi',            type=str,               default="/data/ATL06/greenland.geojson")
-parser.add_argument('--aoi_output',     type=str,               default="/data/ATL06/atl06_granules.json")
-parser.add_argument('--start',          type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
-parser.add_argument('--end',            type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
-parser.add_argument('--exact',          action='store_true',    default=False)
-parser.add_argument('--verbose',        action='store_true',    default=False)
-parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and atl06_granules)
-parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (uses atl06_granules)
-parser.add_argument('--tile',           action='store_true',    default=False) # tile partitions back into new tiled granules
-parser.add_argument('--read',           action='store_true',    default=False) # read tiled granules
-args = parser.parse_args()
+if __name__ == "__main__":
 
-# route command
-if args.query:          query_cmr(args.aoi, args.output, args.domain, args.cluster, args.verbose)
-elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
-elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
-elif args.read:         read_atl06_tiles(args.aoi, args.output_bucket, args.output_prefix, args.exact)
+    # command line arguments
+    parser = argparse.ArgumentParser(description="""ATL06 Tile Builder""")
+    parser.add_argument('--domain',         type=str,               default="localhost")
+    parser.add_argument('--cluster',        type=str,               default=None)
+    parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules_greenland.json")
+    parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
+    parser.add_argument('--output_prefix',  type=str,               default="atl06t")
+    parser.add_argument('--aoi',            type=str,               default="/data/ATL06/greenland.geojson")
+    parser.add_argument('--aoi_output',     type=str,               default="/data/ATL06/atl06_granules.json")
+    parser.add_argument('--start',          type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
+    parser.add_argument('--end',            type=str,               default=None) # YYYY-MM-DDTHH:MM:SS
+    parser.add_argument('--exact',          action='store_true',    default=False)
+    parser.add_argument('--verbose',        action='store_true',    default=False)
+    parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and writes atl06_granules)
+    parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (reads atl06_granules)
+    parser.add_argument('--tile',           action='store_true',    default=False) # tile partitions back into new tiled granules
+    parser.add_argument('--read',           action='store_true',    default=False) # read tiled granules
+    args = parser.parse_args()
+
+    # route command
+    if args.query:          query_cmr(args.aoi, args.output, args.domain, args.cluster, args.verbose)
+    elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose)
+    elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix)
+    elif args.read:         print(read_atl06_tiles(args.aoi, args.output_bucket, args.output_prefix, args.exact))
