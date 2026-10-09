@@ -316,8 +316,8 @@ def verify_signature(path, body, username, event):
 #
 def get_user_info(claims):
     username = claims.get('sub', '<anonymous>')
-    max_nodes = claims.get('max_nodes', 0)
-    max_ttl = claims.get('max_ttl', 0)
+    max_nodes = int(claims.get('max_nodes', 0))
+    max_ttl = int(claims.get('max_ttl', 0))
     org_roles = parse_claim_array(claims.get('org_roles', "[]"))
     audiences = parse_claim_array(claims.get('aud', "[]"))
     deployable_clusters = {audience for audience in audiences if (valid_cluster_name(audience) or audience == '*')}
