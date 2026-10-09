@@ -347,3 +347,4 @@ if __name__ == "__main__":
     elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose, max_workers=args.workers)
     elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix, max_workers=args.workers)
     elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact, anonymous=args.anonymous, max_workers=args.workers))
+    elif args.inspect:      pass # ... inspect a tile and provide things like row stats, number of row groups, number of unique cell ids, size of file, etc.
