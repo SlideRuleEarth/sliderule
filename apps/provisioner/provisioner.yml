@@ -19,6 +19,8 @@ Parameters:
     Type: String
   ProjectBucket:
     Type: String
+  ProjectFolder:
+    Type: String
   ProjectPublicBucket:
     Type: String
   ContainerRegistry:
@@ -101,6 +103,7 @@ Resources:
           DOMAIN: !Ref Domain
           PUBLIC_CLUSTER: !Ref PublicCluster
           PROJECT_BUCKET: !Ref ProjectBucket
+          PROJECT_FOLDER: !Ref ProjectFolder
           PROJECT_PUBLIC_BUCKET: !Ref ProjectPublicBucket
           CONTAINER_REGISTRY: !Ref ContainerRegistry
           LAMBDA_ZIP_FILE: !Ref LambdaZipFile

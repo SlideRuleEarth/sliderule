@@ -33,6 +33,7 @@ STACK_NAME = os.environ.get("STACK_NAME")
 DOMAIN = os.environ.get("DOMAIN")
 PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 PROJECT_BUCKET = os.environ.get("PROJECT_BUCKET")
+PROJECT_FOLDER = os.environ.get("PROJECT_FOLDER") # used implicitly when populating the user data
 PROJECT_PUBLIC_BUCKET = os.environ.get("PROJECT_PUBLIC_BUCKET")
 CONTAINER_REGISTRY = os.environ.get('CONTAINER_REGISTRY')
 JWT_ISSUER = os.environ.get('JWT_ISSUER')

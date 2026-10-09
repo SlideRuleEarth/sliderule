@@ -625,6 +625,7 @@ provisioner-create: provisioner-build ## creates the lambda provisioner function
 						ParameterKey=ProvisionerHostname,ParameterValue=$(PROVISIONER_HOSTNAME) \
 						ParameterKey=JwtIssuer,ParameterValue=$(JWT_ISSUER) \
 						ParameterKey=ProjectBucket,ParameterValue=$(PROJECT_BUCKET) \
+						ParameterKey=ProjectFolder,ParameterValue=$(PROJECT_FOLDER) \
 						ParameterKey=ProjectPublicBucket,ParameterValue=$(PROJECT_PUBLIC_BUCKET) \
 						ParameterKey=ContainerRegistry,ParameterValue=$(CONTAINER_REGISTRY) \
 						ParameterKey=CorsAllowOrigins,ParameterValue=$(CORS_ALLOW_ORIGINS) \
