@@ -1,5 +1,5 @@
 --
--- Maintains up-to-date credentials for IAM role access from an EC2 instance
+-- Maintains up-to-date credentials for IAM role access from an ECS task or EC2 instance
 --
 
 local json = require("json")
@@ -7,6 +7,7 @@ local parm = json.decode(arg[1] or "{}")
 
 local aws_token_url = "http://169.254.169.254/latest/api/token"
 local aws_meta_url = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
+local ecs_credentials_url = "http://169.254.170.2"
 local identity = parm["identity"] or "iam-role"
 
 -- make aws api request
@@ -22,11 +23,31 @@ local function aws_api_rqst(url)
     return rsp, (status1 and status2)
 end
 
--- get current EC2 role
-local role, status = aws_api_rqst(aws_meta_url)
-if not status then
-    sys.log(core.CRITICAL, "Unable to fetch IAM security credentials!")
-    do return false end
+-- make ecs container credentials request
+local function ecs_api_rqst(url)
+    local rsp, status = core.get(url, "")
+    if not status then
+        sys.log(core.CRITICAL, "Unable to make ECS container credentials request")
+    end
+    return rsp, status
+end
+
+-- select credential source; ECS task role takes precedence over the EC2 instance role
+local api_rqst, credential_url, role
+local container_uri = os.getenv("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI")
+if container_uri and #container_uri > 0 then
+    api_rqst = ecs_api_rqst
+    credential_url = ecs_credentials_url..container_uri
+    role = "ecs-task-role"
+else
+    local status
+    api_rqst = aws_api_rqst
+    role, status = aws_api_rqst(aws_meta_url)
+    if not status then
+        sys.log(core.CRITICAL, "Unable to fetch IAM security credentials!")
+        do return false end
+    end
+    credential_url = aws_meta_url.."/"..role
 end
 
 -- maintain aws credentials
@@ -34,7 +55,7 @@ while sys.alive() do
     sys.log(core.DEBUG, "Fetching IAM role credentials...")
 
     -- get new credentials
-    local response, api_status = aws_api_rqst(aws_meta_url.."/"..role)
+    local response, api_status = api_rqst(credential_url)
 
     -- convert reponse to credential table
     if api_status then

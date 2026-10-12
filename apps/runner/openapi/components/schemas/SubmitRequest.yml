@@ -30,7 +30,6 @@ properties:
     description: Optional memory (MB) override per job container.
   image:
     type: string
-    default: sliderule:latest
     description: Optional container image override for the job.
     example: sliderule:latest
   queue:

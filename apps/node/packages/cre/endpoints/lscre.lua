@@ -16,7 +16,7 @@ return {
     name = "List Containers",
     description = "List available docker images that can be executed by a user",
     logging = core.INFO,
-    roles = {"member", "owner"},
+    roles = {"member", "developer"},
     signed = true,
     inputs = nil,
     outputs = {"json"},

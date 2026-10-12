@@ -49,7 +49,7 @@ return {
     name = "Events",
     description = "List system events that occur for given duration",
     logging = core.INFO,
-    roles = {"member", "owner"},
+    roles = {"member", "developer"},
     signed = false,
     inputs = {"json"},
     outputs = {"binary"},

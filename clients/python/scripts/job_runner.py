@@ -102,16 +102,10 @@ try:
     # Execute Script
     # ########################
 
-    # build array of arguments to pass to subprocess
-    run_array = [sys.executable, local_script]
-    for argument in arguments.split(' '):
-        run_array.append(argument)
-    run_array.append(local_result)
-    run_array.append(local_secrets)
-
     # execute subprocess
-    #   e.g. python /tmp/script-<unique>.py arg1 arg2 .. argN /tmp/result-<unique>.json /tmp/secrets-<unique>.json
+    #   e.g. python /tmp/script-<unique>.py args /tmp/result-<unique>.json /tmp/secrets-<unique>.json
     print(f"Running script: {arguments}")
+    run_array = [sys.executable, local_script, arguments, local_result, local_secrets]
     result = subprocess.run(run_array, check=False)
     if result.returncode > 0: # uncaught exception
         raise RuntimeError(f"unhandled exception")

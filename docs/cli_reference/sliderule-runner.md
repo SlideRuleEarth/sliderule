@@ -88,13 +88,6 @@ The following options are accepted by **every** command. They are attached to ea
 * - `--verbose`
   - False
   - Turn on verbose log messages. Also shows more detail in `status` and `scrape`, and causes errors to be raised without being caught (see [Error Handling](#error-handling)).
-* - `--dryrun`
-  - False
-  - Do not save changes to the local database when the command finishes.
-```
-
-```{warning}
-`--dryrun` only prevents the local database from being updated. A `submit` with `--dryrun` still submits its jobs, and `cancel` still cancels them, but the tool will have no record of what happened. `archive` also still clears the database.
 ```
 
 ```{note}
@@ -122,10 +115,10 @@ Submits a job that runs a script once for each entry in an arguments file. If th
 * - `<name>`
   - *(required)*
   - Base name for the submission. See [Job names](#job-names).
-* - `<script.lua>`
+* - `<script file>`
   - *(required)*
   - Path to the script to run for each entry.
-* - `<arguments.txt>`
+* - `<arguments file>`
   - *(required)*
   - Path to a file containing one entry per line. With `--arg_as_str` this is instead treated as a single entry.
 * - `--arg_as_str`
@@ -143,18 +136,28 @@ Submits a job that runs a script once for each entry in an arguments file. If th
 * - `--image <str>`
   - `sliderule:latest`
   - Container image used to run the job.
+* - `--secrets <filename>`
+  - `None`
+  - File containing secrets to be passed to running script; must be formatted as json.
+* - `--dups_ok`
+  - `False`
+  - Allows duplicate submission names to be provided; the code will automatically append a unique three letter identifier to the duplicate submission name to distinguish it from the other submissions with that name.
 ```
 
 (job-names)=
 ### Job names
 
-Each job is named `<name>_<i>`, where `<i>` is the position in the arguments file of the first entry in that batch. For example, submitting `my_job` with 25,000 entries and the default batch size creates `my_job_0`, `my_job_10000` and `my_job_20000`. If a name is already in your local database, three random letters are added (e.g. `my_job_xqf_0`) so that existing records are not overwritten.
+Each job is named `<name>_<i>`, where `<i>` is the position in the arguments file of the first entry in that batch. For example, submitting `my_job` with 25,000 entries and the default batch size creates `my_job_0`, `my_job_10000` and `my_job_20000`. If a name is already in your local database, the submission request will be skipped unless the `--dups_ok` option is provided, in which case three random letters are added (e.g. `my_job_xqf_0`) so that existing records can be distinguished.
 
 ```{important}
 The other commands (`status` aside) refer to a submission by its full job name, such as `my_job_0`, not by the base name you supplied to `submit`. Job names are printed when the jobs are submitted, and `status` lists them.
 ```
 
-Examples:
+### Secrets
+
+Secrets live for at least 72 hours, after which they are lazily deleted; therefore, jobs that require secrets must complete within 72 hours.
+
+### Examples
 ```{code-block} bash
 # run script.lua on every entry in granules.txt
 sliderule-runner submit my_job script.lua granules.txt
@@ -201,16 +204,13 @@ With `--verbose`, the table instead has one row per child job, showing the submi
 For runs that have only a single job, there are no child jobs and therefore the `--verbose` option is invalid and will result in an exception.
 ```
 
-Examples:
+### Examples
 ```{code-block} bash
 # check on all submitted jobs
 sliderule-runner status
 
 # show the status of each individual job in each submission
 sliderule-runner status --verbose
-
-# look at the status without saving any updates to the local database
-sliderule-runner status --dryrun
 ```
 
 (runner-cmd-report)=
@@ -251,7 +251,7 @@ The report has one row per completed submission with the following columns:
   - Average duration per processed entry, in seconds.
 ```
 
-Examples:
+### Examples
 ```{code-block} bash
 # report on all completed submissions
 sliderule-runner report
@@ -287,7 +287,7 @@ Generates a list of the original entries whose results have one of the given sta
 
 Each selected entry is printed with its position in the submission. With `--verbose`, the complete result record for each entry is printed (and written to `--output`) instead of just the entry.
 
-Examples:
+### Examples
 ```{code-block} bash
 # list everything that did not succeed across all completed submissions
 sliderule-runner scrape
@@ -321,7 +321,7 @@ Prints the log messages for a job. Each message is printed on its own line, prec
   - Index of a single child job within the submission, as shown by `status --verbose`. If omitted, the messages for the submission's parent job are printed.
 ```
 
-Examples:
+### Examples
 ```{code-block} bash
 # find the index of the job you are interested in
 sliderule-runner status --verbose
@@ -357,7 +357,7 @@ Cancels a submitted job. For a submission made up of many entries, this cancels 
 `cancel` does not update the local database; run `status` afterwards to see the effect.
 ```
 
-Examples:
+### Examples
 ```{code-block} bash
 sliderule-runner cancel --name my_job_0
 ```
@@ -379,9 +379,31 @@ Saves the contents of the local database to an archive file and then clears the 
   - *(required)* Where to save a copy of the database before it is cleared.
 ```
 
-Examples:
+### Examples
 ```{code-block} bash
 sliderule-runner archive ~/sliderule_archives/2026-09-runs.json
+```
+
+(cmd-prune)=
+## `prune`
+```{code-block} text
+sliderule-runner prune <name> [common options]
+```
+
+Prunes (removes) the named submission from the database.  Useful when a submission has been cancelled.
+
+```{list-table}
+:header-rows: 1
+
+* - Argument
+  - Description
+* - `<name>`
+  - *(required)* Name of the submission to be pruned from the database.
+```
+
+### Examples
+```{code-block} bash
+sliderule-runner prune myjob
 ```
 
 ---
@@ -394,7 +416,6 @@ sliderule-runner archive ~/sliderule_archives/2026-09-runs.json
 The tool keeps a JSON database of your submissions at `~/.cache/sliderule/runner_database.json` (change it with `--database`). For each submission it records what was returned when the job was submitted, the number of entries, the latest status, the child jobs, and, once the submission is complete, the results for every entry.
 
 - The database is written when a command finishes successfully. If a command fails part way through, none of its changes are saved.
-- Use `--dryrun` to run a command without saving changes to the database.
 - Use [`archive`](#cmd-archive) to save a copy and start with an empty database.
 - Use `--database` to keep separate sets of work in separate databases.
 

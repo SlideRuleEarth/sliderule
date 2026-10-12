@@ -11,10 +11,6 @@ properties:
           type: string
           enum: [SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED]
     description: One or more job states to query.
-  name:
-    type: string
-    description: Only jobs with the provided name are reported.
-    example: my-processing-job
   job_id:
     type: string
     description: >

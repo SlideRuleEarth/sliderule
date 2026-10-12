@@ -1,3 +1,4 @@
+import sys
 import json
 import argparse
 from datetime import datetime
@@ -72,10 +73,16 @@ class Tool:
     # S3 Access
     def s3access(self):
         credentials = self.session.provisioner.s3access()
-        print(f'export AWS_ACCESS_KEY_ID={credentials["access_key_id"]}')
-        print(f'export AWS_SECRET_ACCESS_KEY={credentials["secret_access_key"]}')
-        print(f'export AWS_SESSION_TOKEN={credentials["session_token"]}')
-        print(f'export AWS_CREDENTIAL_EXPIRATION={credentials["expiration"]}')
+        fmt = {
+            "bash":       "export {}='{}'",
+            "powershell": "$env:{}='{}'",
+            "cmd":        'set "{}={}"',
+        }[self.args.shell]
+        for name, key in [("AWS_ACCESS_KEY_ID", "access_key_id"),
+                          ("AWS_SECRET_ACCESS_KEY", "secret_access_key"),
+                          ("AWS_SESSION_TOKEN", "session_token"),
+                          ("AWS_CREDENTIAL_EXPIRATION", "expiration")]:
+            print(fmt.format(name, credentials[key]))
 
     # Authenticate
     def authenticate(self):
@@ -141,6 +148,7 @@ def main():
 
     # s3access
     s3access = subparsers.add_parser("s3access", parents=[common], help="sets AWS credentials by outputting shell commands to 'eval' into current environment")
+    s3access.add_argument('--shell',  type=str,   default="bash", choices=["bash", "powershell", "cmd"])
     s3access.set_defaults(func=Tool.s3access)
 
     # authenticate
@@ -160,7 +168,7 @@ def main():
             print(f'{json.dumps(result, indent=2)}')
     except Exception as e:
         if args.verbose: raise
-        print(f"Unhandled error: {e}")
+        print(f"Unhandled error: {e}", file=sys.stderr)
 
 # running via direct invocation
 if __name__ == "__main__": main()

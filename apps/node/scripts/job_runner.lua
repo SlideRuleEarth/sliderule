@@ -81,7 +81,7 @@ if array_index then -- args as array
     if (not args_rc) or (type(args_json) ~= 'table') then
         print("Failed to parse arguments from s3")
         return sys.quit(1) -- failure
-    elseif #args_json < array_index then
+    elseif #args_json <= array_index then
         print(string.format("Argument array index is out of bounds, %d < %d", #args_json, array_index))
         return sys.quit(1) -- failure
     end

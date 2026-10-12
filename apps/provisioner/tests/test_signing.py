@@ -24,7 +24,7 @@ def test_key_signing(username):
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": "[member owner]",
+                        "org_roles": "[member developer]",
                         "aud": "[*]",
                         "sub": username
                     }
@@ -54,7 +54,7 @@ def test_sliderule_key_signing(username):
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": "[member owner]",
+                        "org_roles": "[member developer]",
                         "aud": "[*]",
                         "sub": username
                     }
@@ -70,4 +70,3 @@ def test_sliderule_key_signing(username):
         "body": ""
     }, None)
     assert rsps['statusCode'] == 200
-

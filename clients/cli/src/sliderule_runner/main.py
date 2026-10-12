@@ -1,4 +1,5 @@
 import importlib
+import sys
 import json
 import boto3
 import random
@@ -6,6 +7,7 @@ import string
 import argparse
 import traceback
 from sliderule import sliderule
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from .database import Database, JobState, QueuePriority, JobStatus
 from pathlib import Path
 
@@ -28,21 +30,31 @@ class Tool:
         # open database
         self.database = Database(args.database)
         # create sliderule session
-        self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose)
-        self.session.authenticate() # gives privileges to access SlideRule Runner
+        if args.net:
+            self.session = sliderule.create_session(domain=args.domain, verbose=args.verbose, rethrow=True)
+            self.session.authenticate() # gives privileges to access SlideRule Runner
         # aws clients
         self.s3 = boto3.client("s3", region_name="us-west-2")
 
+    # Split out bucket and key from url
+    def __parse_url(self, url):
+        path = url.split("s3://")[-1]
+        bucket = path.split("/")[0]
+        key = '/'.join(path.split("/")[1:])
+        return bucket, key
+
     # Load Remote File from S3
-    def __load_remote_file(self, bucket, key):
+    def __load_remote_file(self, bucket, key, parse_json=True):
         obj = self.s3.get_object(Bucket=bucket, Key=key)
         contents = obj["Body"].read().decode("utf-8")
-        try:
-            return json.loads(contents)
-        except Exception:
-            return contents
+        if parse_json:
+            try:
+                return json.loads(contents)
+            except Exception:
+                pass
+        return contents
 
-    # Get Results for a Job Run
+    # Get Result for a Job Run
     #   output of job must include the following fields for this to work:
     #   {
     #       "status": <boolean status of run>,
@@ -50,50 +62,66 @@ class Tool:
     #       "stop": <stop time in seconds of run>,
     #       "outputs": [<output1>, <output2>, ... <outputN>]
     #   }
-    def __get_results(self, run_url):
-        results = []
-        bucket = run_url.split("s3://")[-1].split("/")[0]
-        prefix = "/".join(run_url.split("s3://")[-1].split("/")[1:])
-        receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
-        args_bucket = receipt["args"].split("s3://")[-1].split("/")[0]
-        args_file = "/".join(receipt["args"].split("s3://")[-1].split("/")[1:])
-        args_content = self.__load_remote_file(args_bucket, args_file)
-        if isinstance(args_content, list):
-            args_list = args_content
-        elif isinstance(args_content, dict) or isinstance(args_content, str):
-            args_list = [args_content]
-        for i in tqdm(range(len(args_list)), total=len(args_list), desc=f"{run_url}", unit="granule"):
-            result_file = f"{prefix}/result{len(args_list) > 1 and str(i) or ''}.json"
+    def __get_result(self, results, i):
+        result = results[i]
+        bucket, result_file = self.__parse_url(result["file"])
+        try:
+            rsps = self.__load_remote_file(bucket, result_file)
             try:
-                result = {
-                    "file": f"s3://{bucket}/{result_file}",
-                    "environment": receipt["environment"],
-                    "arg": args_list[i]
+                result |= {
+                    "status": rsps["status"] and JobStatus.SUCCESS or JobStatus.FAILURE,
+                    "duration": rsps["status"] and (rsps["stop"] - rsps["start"]) or 0.0,
+                    "outputs": rsps["outputs"]
                 }
-                rsps = self.__load_remote_file(bucket, result_file)
-                try:
-                    result |= {
-                        "status": rsps["status"] and JobStatus.SUCCESS or JobStatus.FAILURE,
-                        "duration": rsps["status"] and (rsps["stop"] - rsps["start"]) or 0.0,
-                        "outputs": rsps["outputs"]
-                    }
-                except Exception as e:
-                    result |= {
-                        "status": JobStatus.UNSUPPORTED,
-                        "result": rsps
-                    }
             except Exception as e:
                 result |= {
-                    "status": JobStatus.ERROR,
+                    "status": JobStatus.UNSUPPORTED,
+                    "result": rsps,
                     "error": f"{e}"
                 }
-            results.append(result)
+        except Exception as e:
+            result |= {
+                "status": JobStatus.ERROR,
+                "error": f"{e}"
+            }
+
+    # Get all results for a submission
+    def __get_results(self, run_url, job_size):
+        bucket, prefix = self.__parse_url(run_url)
+        receipt = self.__load_remote_file(bucket, f"{prefix}/receipt.json") # {"name": ..., "username": ... "args": <path to arg file>, "environment": ...}
+        args_bucket, args_file = self.__parse_url(receipt["args"])
+        args_content = self.__load_remote_file(args_bucket, args_file, job_size > 1)
+        if isinstance(args_content, list):
+            args_list = args_content
+        else:
+            args_list = [args_content]
+        if len(args_list) != job_size:
+            print(f"Incorrect number of arguments {len(args_list)}, expected {job_size}")
+            return None
+        results = [{
+            "file": f"s3://{bucket}/{prefix}/result{len(args_list) > 1 and str(i) or ''}.json",
+            "environment": receipt["environment"],
+            "arg": args_list[i]
+        } for i in range(len(args_list))]
+        with ThreadPoolExecutor(max_workers=self.args.concurrency) as executor:
+            futures = [executor.submit(self.__get_result, results, i) for i in range(len(results))]
+            for future in tqdm(as_completed(futures), total=len(results), desc=f"{run_url}", unit="job"):
+                future.result()
         return results
 
     # Archive Database
     def archive_database(self):
         self.database.write(self.args.archive)
         self.database.remove()
+
+    # Prune Database
+    def prune_database(self):
+        name = self.args.name
+        if name in self.database.submissions:
+            print(f"Pruning submission {name} from database")
+            del self.database.submissions[name]
+        else:
+            print(f"Unable to find submission {name} in database")
 
     # Submit Job
     def submit_job(self):
@@ -116,7 +144,7 @@ class Tool:
             arguments = [str(arguments_input)]
         else:
             with open(arguments_input, "r") as file:
-                arguments = [line.strip() for line in file.readlines()]
+                arguments = [line.strip() for line in file.readlines() if line.strip()]
         # read secrets
         if secrets_file:
             with open(secrets_file, "r") as file:
@@ -128,8 +156,12 @@ class Tool:
             # build and check name
             job_name = f"{name}_{i}"
             if job_name in self.database.submissions:
-                unique = ''.join(random.choices(string.ascii_lowercase, k=3))
-                job_name = f"{name}_{unique}_{i}"
+                if self.args.dups_ok:
+                    unique = ''.join(random.choices(string.ascii_lowercase, k=3))
+                    job_name = f"{name}_{unique}_{i}"
+                else:
+                    print(f"Skipping duplicate submission: {job_name}")
+                    continue
             # submit & save job
             args_list = arguments[i:i+batch_size]
             rsps = self.session.runner.submit(name=job_name, script=script, args=args_list, optional_args={"vcpus":vcpus, "memory":memory, "image":image, "queue":queue}, secret_values=secret_values)
@@ -167,27 +199,32 @@ class Tool:
         queue = self.args.queue
         for name,job in self.database.submissions.items():
             complete = job["complete"]
-            print(f"Statusing {name} ...")
+            sys.stdout.write(f"Statusing {name} ... ")
+            sys.stdout.flush()
             if not complete:
-                if job["job_size"] > 1: # array processing, use parent job id
+                if job["job_size"] > 1: # array processing
                     queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=True)
                     child_jobs = queue_status["jobs"]
                     self.database.submissions[name]["jobs"] = {}
                     for child_job in child_jobs:
                         self.database.submissions[name]["jobs"][int(child_job["index"])] = child_job
-                else: # single job, use name
-                    queue_status = self.session.runner.queue(name=name, queue=queue, verbose=False)
+                else: # single job
+                    queue_status = self.session.runner.queue(job_id=job["job_id"], queue=queue, verbose=False)
                 # report
                 report = queue_status["report"]
                 self.database.submissions[name]["status"] = report
                 jobs_in_progress = sum([report[s] for s in [JobState.SUBMITTED, JobState.PENDING, JobState.RUNNABLE, JobState.STARTING, JobState.RUNNING]])
                 jobs_complete = sum([report[s] for s in [JobState.SUCCEEDED, JobState.FAILED]])
                 if jobs_in_progress == 0 and jobs_complete > 0:
-                    print(f"Job {name} complete, reading results ...")
-                    self.database.submissions[name]["complete"] = True
-                    self.database.submissions[name]["results"] = self.__get_results(job["run_url"])
+                    print("complete")
+                    results = self.__get_results(job["run_url"], self.database.submissions[name]["job_size"])
+                    if results:
+                        self.database.submissions[name]["results"] = results
+                        self.database.submissions[name]["complete"] = True
                 else:
-                    print(f"Job {name} still pending")
+                    print(f"still pending")
+            else:
+                print("") # flush with new line
         if self.args.verbose:
             print(",".join([f"{c:>30}" for c in ["NAME"]] + [f"{c:>10}" for c in ["INDEX", "STATUS"]]))
             for name,job in self.database.submissions.items():
@@ -200,21 +237,20 @@ class Tool:
 
     # Generate Report
     def generate_report(self):
-        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in ["processed"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
+        print(",".join([f"{c:>30}" for c in ["name"]] + [f"{c:>12}" for c in list(JobStatus)] + [f"{c:>12}" for c in ["duration"]]))
         for name,submission in self.database.submissions.items():
             if self.args.name and self.args.name != name: continue
             stats = {status.value: 0 for status in JobStatus}
-            duration = {"avg": 0.0, "total": 0.0}
-            processed = 0
+            duration = {"avg": 0.0, "total": 0.0, "cnt": 0}
             if submission["complete"]:
                 for result in submission["results"]:
                     stats[result["status"]] += 1
-                    if "duration" in result:
+                    if ("duration" in result) and (result["status"] == JobStatus.SUCCESS):
                         duration["total"] += result["duration"]
-                        processed += 1
-                if processed > 0:
-                    duration["avg"] = duration["total"] / processed
-                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [processed]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
+                        duration["cnt"] += 1
+                if duration["cnt"] > 0:
+                    duration["avg"] = duration["total"] / duration["cnt"]
+                print(",".join([f"{c:>30}" for c in [name]] + [f"{c:>12}" for c in [stats[status] for status in list(JobStatus)]] + [f"{c:>12.3}" for c in [duration["avg"]]]))
 
     # Cancel Job
     def cancel_job(self):
@@ -238,7 +274,7 @@ class Tool:
 
     # Finish
     def finish(self):
-        if not self.args.dryrun and "archive" not in self.args:
+        if not self.args.ro:
             # save database
             self.database.write()
 
@@ -247,6 +283,14 @@ class Tool:
 #########################################
 
 def main():
+
+    # ----------------------------------------------------------------------------
+    # The sliderule-runner has a set of commands along with common options.  Each
+    # command has three attributes:
+    #   func - the function to call when that subcommand is issued
+    #   ro - "read-only", i.e. is the database written to or only read from
+    #   net - "network", i.e. does a sliderule session need to be created
+    # ----------------------------------------------------------------------------
 
     # command line arguments
     parser = argparse.ArgumentParser(prog="sliderule-runner", description="""SlideRule Runner""")
@@ -258,52 +302,58 @@ def main():
     common.add_argument('--database',   type=Path,                  default=Path.home() / ".cache" / "sliderule" / "runner_database.json")
     common.add_argument('--queue',      type=QueuePriority,         default=QueuePriority.DEFAULT, choices=list(QueuePriority))
     common.add_argument('--verbose',    action='store_true',        default=False)
-    common.add_argument('--dryrun',     action='store_true',        default=False)
 
     # archive
     archive = subparsers.add_parser("archive", parents=[common], help="save and clear the database")
     archive.add_argument('archive',     metavar="<full path to archive file>")
-    archive.set_defaults(func=Tool.archive_database)
+    archive.set_defaults(func=Tool.archive_database, ro=True, net=False)
+
+    # prune
+    prune = subparsers.add_parser("prune", parents=[common], help="remove a submission from the database")
+    prune.add_argument('name',          type=str,                   metavar="<name>")
+    prune.set_defaults(func=Tool.prune_database, ro=False, net=False)
 
     # submit
     submit = subparsers.add_parser("submit", parents=[common], help="submit a job")
     submit.add_argument('name',         type=str,                   metavar="<name>")
-    submit.add_argument('script',       type=str,                   metavar="<script.lua>")
-    submit.add_argument('arguments',    type=str,                   metavar="<arguments.txt>")
+    submit.add_argument('script',       type=str,                   metavar="<script file>")
+    submit.add_argument('arguments',    type=str,                   metavar="<arguments file>")
     submit.add_argument('--arg_as_str', action='store_true',        default=False) # changes arguments to be just a string instead of a file
+    submit.add_argument('--dups_ok',    action='store_true',        default=False) # allow a duplicate submission (will provide random unique qualitfier to name)
     submit.add_argument('--vcpus',      type=int,                   default=4)
     submit.add_argument('--memory',     type=int,                   default=16000)
     submit.add_argument('--batch_size', type=int,                   default=10000)
-    submit.add_argument('--image',      type=str,                   default="sliderule:latest")
+    submit.add_argument('--image',      type=str,                   default="pysr:latest")
     submit.add_argument('--secrets',    type=Path,                  default=None) # contents of file must be json
-    submit.set_defaults(func=Tool.submit_job)
+    submit.set_defaults(func=Tool.submit_job, ro=False, net=True)
 
     # scrape
     scrape = subparsers.add_parser("scrape", parents=[common], help="generate list of arguments from jobs with provided job status")
     scrape.add_argument('--status',     type=JobStatus, nargs='+',  default=[JobStatus.FAILURE, JobStatus.UNSUPPORTED, JobStatus.ERROR])
     scrape.add_argument('--name',       type=str,                   default=None) # name of submission
     scrape.add_argument('--output',     type=str,                   default=None)
-    scrape.set_defaults(func=Tool.scrape_submissions)
+    scrape.set_defaults(func=Tool.scrape_submissions, ro=True, net=False)
 
     # status
     status = subparsers.add_parser("status", parents=[common], help="display status of submitted jobs")
-    status.set_defaults(func=Tool.get_status)
+    status.add_argument('--concurrency',type=int,                   default=20)
+    status.set_defaults(func=Tool.get_status, ro=False, net=True)
 
     # report
     report = subparsers.add_parser("report", parents=[common], help="generate report of completed jobs")
     report.add_argument('--name',       type=str,                   default=None) # name of submission
-    report.set_defaults(func=Tool.generate_report)
+    report.set_defaults(func=Tool.generate_report, ro=True, net=False)
 
     # cancel
     cancel = subparsers.add_parser("cancel", parents=[common], help="cancel a submitted job")
     cancel.add_argument('--name',       type=str,                   required=True) # name of submission
-    cancel.set_defaults(func=Tool.cancel_job)
+    cancel.set_defaults(func=Tool.cancel_job, ro=True, net=True)
 
     # logs
     logs = subparsers.add_parser("logs", parents=[common], help="get log messages for a child job")
-    logs.add_argument('--name',       type=str,                     required=True) # name of submission
-    logs.add_argument('--index',      type=int,                     default=None) # job index
-    logs.set_defaults(func=Tool.get_logs)
+    logs.add_argument('--name',         type=str,                   required=True) # name of submission
+    logs.add_argument('--index',        type=int,                   default=None) # job index
+    logs.set_defaults(func=Tool.get_logs, ro=True, net=True)
 
     # parse command line
     args = parser.parse_args()
@@ -312,13 +362,18 @@ def main():
     tool = Tool(args)
 
     # route command
+    exit_status = 0
     try:
         args.func(tool)
-        tool.finish() # only execute if tool function completed successfully
     except Exception as e:
-        if args.verbose: raise
         print(f"Unhandled error: {e}")
         traceback.print_exc()
+        exit_status = 1
+    finally:
+        tool.finish()
+
+    # return back to caller
+    sys.exit(exit_status)
 
 # running via direct invocation
 if __name__ == "__main__": main()
