@@ -126,7 +126,7 @@ def get_github_client(key):
     """Retrieve GitHub client secret from AWS Secrets Manager."""
     if 'github_client' not in _secrets_cache:
         if not GITHUB_CLIENT_SECRET_NAME:
-            raise ValueError("GITHUB_CLIENT_SECRET_NAME environment variable not set")
+            raise RuntimeError("GITHUB_CLIENT_SECRET_NAME environment variable not set")
         _secrets_cache['github_client'] = json.loads(get_secret(GITHUB_CLIENT_SECRET_NAME))
     return _secrets_cache['github_client'][key]
 
@@ -139,7 +139,7 @@ def get_hmac_signing_key():
     """
     if 'hmac_signing_key' not in _secrets_cache:
         if not HMAC_SIGNING_KEY_ARN:
-            raise ValueError("HMAC_SIGNING_KEY_ARN environment variable not set")
+            raise RuntimeError("HMAC_SIGNING_KEY_ARN environment variable not set")
         _secrets_cache['hmac_signing_key'] = get_secret(HMAC_SIGNING_KEY_ARN)
     return _secrets_cache['hmac_signing_key']
 
@@ -426,9 +426,9 @@ def verify_signed_state(state):
         payload string
     """
     # Parse state into components
-    parts = state.split(':')
+    parts = state.split(':') if isinstance(state, str) else []
     if len(parts) < 4:
-        raise RuntimeError("Invalid state format")
+        raise OAuthError(400, "invalid_request", "missing or malformed state")
     nonce = parts[0]
     timestamp_str = parts[1]
     payload = ":".join(parts[2:-1])
@@ -443,14 +443,14 @@ def verify_signed_state(state):
         hashlib.sha256
     ).hexdigest()
 
-    if not hmac.compare_digest(provided_signature, expected_signature):
-        raise RuntimeError(f"Invalid state signature")
+    if not hmac.compare_digest(provided_signature.encode(), expected_signature.encode()):
+        raise OAuthError(400, "invalid_request", "invalid state signature")
 
     # Check timestamp expiration
     timestamp = int(timestamp_str)
     now = int(datetime.now(timezone.utc).timestamp())
     if now - timestamp > STATE_EXPIRATION_SECONDS:
-        raise RuntimeError("State has expired")
+        raise OAuthError(400, "invalid_request", "expired state")
 
     # Success
     return payload
@@ -656,12 +656,15 @@ def handle_register(event):
     Validate and store client metadata (RFC 7591 requires a JSON body)
     """
     # get request parameters
-    body = event.get('body') or '{}'
-    if event.get("isBase64Encoded"):
-        body = base64.b64decode(body).decode("utf-8")
-    parms = json.loads(body)
+    try:
+        body = event.get('body') or '{}'
+        if event.get("isBase64Encoded"):
+            body = base64.b64decode(body).decode("utf-8")
+        parms = json.loads(body)
+    except ValueError as e:
+        raise OAuthError(400, 'invalid_client_metadata', 'request body must be a JSON object') from e
     if not isinstance(parms, dict):
-        raise ValueError("not a JSON object")
+        raise OAuthError(400, 'invalid_client_metadata', 'request body must be a JSON object')
 
     # pull out the individual parameters
     redirect_uris       = parms.get('redirect_uris', [])
@@ -674,7 +677,7 @@ def handle_register(event):
 
     # check redirect_uris
     if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
-        raise OAuthError(400, 'invalid_redirect_uris', 'redirect_uris must be a non-empty array')
+        raise OAuthError(400, 'invalid_redirect_uri', 'redirect_uris must be a non-empty array')
 
     # check each redirect uri
     for uri in redirect_uris:
@@ -777,28 +780,31 @@ def handle_login(event):
             raise RedirectError(redirect_uri, "invalid_scope", f"invalid scope: {s}", client_state)
 
     # store the code challenge associated with session
-    session_store(f"{client_id}/challenge", {
-        "code_challenge": code_challenge,
-        "redirect_uri": redirect_uri,
-        "scope": requested_scope
-    })
+    try:
+        session_store(f"{client_id}/challenge", {
+            "code_challenge": code_challenge,
+            "redirect_uri": redirect_uri,
+            "scope": requested_scope
+        })
 
-    # Relay to GitHub
+        # Relay to GitHub
 
-    # Create HMAC-signed state for CSRF protection
-    # the state includes the redirect_uri securely encoded
-    # and the original state provided by the client
-    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-    github_state = create_signed_state(f"{client_id}:{redirect_uri_b64}:{client_state}")
+        # Create HMAC-signed state for CSRF protection
+        # the state includes the redirect_uri securely encoded
+        # and the original state provided by the client
+        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+        github_state = create_signed_state(f"{client_id}:{redirect_uri_b64}:{client_state}")
 
-    # Build GitHub authorization URL
-    github_parms = {
-        'client_id': get_github_client("id"),
-        'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
-        'scope': 'read:org',
-        'state': github_state
-    }
-    auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+        # Build GitHub authorization URL
+        github_parms = {
+            'client_id': get_github_client("id"),
+            'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
+            'scope': 'read:org',
+            'state': github_state
+        }
+        auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+    except Exception as e:
+        raise RedirectError(redirect_uri, "server_error", "error processing login", client_state) from e
 
     # Return response
     return json_response(302, None, headers={
@@ -824,7 +830,7 @@ def handle_callback(event):
     client_id, redirect_uri_b64, client_state = payload.split(":", 2)
     redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
     if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-        raise OAuthError(400, "bad_request", f"Invalid redirect uri: {redirect_uri}")
+        raise OAuthError(400, "invalid_request", f"Invalid redirect uri: {redirect_uri}")
 
     # check OAuth errors from GitHub
     if error:
@@ -839,30 +845,36 @@ def handle_callback(event):
         return basic_callback(github_code, redirect_uri)
 
     # get session challenge (and delete so it cannot be reused)
-    session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
+    try:
+        session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
+    except Exception as e:
+        raise RedirectError(redirect_uri, "server_error", "unknown or already used authorization request", client_state) from e
 
     # check redirect_uri (should match because we are the ones that stored it both places)
     if redirect_uri != session_challenge["redirect_uri"]:
-        raise RedirectError(redirect_uri, "bad_redirect", f"Mismatched redirect uri: {redirect_uri}", client_state)
+        raise RedirectError(redirect_uri, "invalid_request", f"Mismatched redirect uri: {redirect_uri}", client_state)
 
     # construct scope of authorization request
     scope = session_challenge["scope"]
 
     # check rules for scope
     if not contains_scope(scope, ALLOWED_SCOPES["member"], check="all"):
-        raise RedirectError(redirect_uri, "bad_scope", f"Invalid scope: {scope}", client_state)
+        raise RedirectError(redirect_uri, "invalid_scope", f"Invalid scope: {scope}", client_state)
 
     # generate unique code to return back to client
     client_code = str(uuid.uuid4())
 
     # store token and metadata associated with session
-    session_store(f"{client_id}/{client_code}", {
-        "github_code": github_code,
-        "scope": scope,
-        "code_challenge": session_challenge["code_challenge"],
-        "redirect_uri": redirect_uri,
-        "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
-    })
+    try:
+        session_store(f"{client_id}/{client_code}", {
+            "github_code": github_code,
+            "scope": scope,
+            "code_challenge": session_challenge["code_challenge"],
+            "redirect_uri": redirect_uri,
+            "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
+        })
+    except Exception as e:
+        raise RedirectError(redirect_uri, "server_error", "error during callback", client_state) from e
 
     # redirect to frontend with code in parameters
     callback_parms = {'code': client_code}
@@ -1264,7 +1276,7 @@ def basic_callback(code, redirect_uri):
     # check redirect_uri against only the trusted redirect hosts
     # (since this is the basic authorization flow)
     if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
-        raise OAuthError(400, "invalid_redirect", f"Invalid redirect uri: {redirect_uri}")
+        raise OAuthError(400, "invalid_request", f"Invalid redirect uri: {redirect_uri}")
 
     # Redirect to frontend with JWT in cookie
     return redirect_to_frontend(redirect_uri, cookie=token)
@@ -1447,11 +1459,19 @@ def lambda_gateway(event, context):
                 'error': 'Not found'
             })
 
+    # Upstream Errors (checked before ValueError since requests' JSONDecodeError subclasses it)
+    except requests.exceptions.RequestException as e:
+        traceback.print_exc()
+        return json_response(502, {
+            'error': 'upstream_error',
+            'error_description': 'error communicating with upstream service'
+        })
+
     # Parameter Errors
     except ValueError as e:
         traceback.print_exc()
         return json_response(400, {
-            'error': 'invalid_parameters',
+            'error': 'invalid_request',
             'error_description': f'request contained invalid parameters'
         })
 
