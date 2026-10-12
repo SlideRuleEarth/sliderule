@@ -260,6 +260,13 @@ def write_atl06_tiles(bucket, prefix, max_workers=8, level=SEGMENT_S2_CELL_LEVEL
         for i, (subfolder, status) in enumerate(zip(subfolders, results)):
             print(f"Tiled [{i+1}/{len(subfolders)}] {subfolder.split('/')[-2]} - {status}")
 
+# list ATL06 tiles
+def list_atl06_tiles(bucket, prefix, output):
+    subfolders = list_subfolders(f"s3://{bucket}/{prefix}/partitions/")
+    with open(output, "w") as file:
+        for subfolder in subfolders:
+            file.write(f"{subfolder}\n")
+
 # read the rows of one tile inside the area of interest; returns (gdf or None, status)
 def read_atl06_tile(connection, s3_fs, tile_id, bucket, prefix, start, end, exact, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
     try:
@@ -326,6 +333,7 @@ if __name__ == "__main__":
     parser.add_argument('--domain',         type=str,               default="localhost")
     parser.add_argument('--cluster',        type=str,               default=None)
     parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules_greenland.json")
+    parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles_greenland.txt")
     parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
     parser.add_argument('--output_prefix',  type=str,               default="atl06t")
     parser.add_argument('--aoi',            type=str,               default="/data/ATL06/greenland.geojson")
@@ -339,12 +347,15 @@ if __name__ == "__main__":
     parser.add_argument('--query',          action='store_true',    default=False) # create list of granules to process (uses aoi and writes atl06_granules)
     parser.add_argument('--partition',      action='store_true',    default=False) # partition granules into cells (reads atl06_granules)
     parser.add_argument('--tile',           action='store_true',    default=False) # tile partitions back into new tiled granules
+    parser.add_argument('--list_tiles',     action='store_true',    default=False) # list all partitions
     parser.add_argument('--read',           action='store_true',    default=False) # read tiled granules
+    parser.add_argument('--inspect',        action='store_true',    default=False) # inspect a tile and provide things like row stats, number of row groups, number of unique cell ids, size of file, etc.
     args = parser.parse_args()
 
     # route command
     if args.query:          query_cmr(args.aoi, args.aoi_output, args.domain, args.cluster, args.verbose)
     elif args.partition:    write_s2_partitions(args.atl06_granules, args.output_bucket, args.output_prefix, args.domain, args.cluster, args.verbose, max_workers=args.workers)
     elif args.tile:         write_atl06_tiles(args.output_bucket, args.output_prefix, max_workers=args.workers)
+    elif args.list_tiles:   list_atl06_tiles(args.output_bucket, args.output_prefix, args.atl06_tiles)
     elif args.read:         print(read_atl06_tiles(args.aoi, args.start, args.end, args.output_bucket, args.output_prefix, args.exact, anonymous=args.anonymous, max_workers=args.workers))
-    elif args.inspect:      pass # ... inspect a tile and provide things like row stats, number of row groups, number of unique cell ids, size of file, etc.
+    elif args.inspect:      pass
