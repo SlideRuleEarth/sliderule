@@ -8,8 +8,6 @@ Parameters:
     Type: String
   AuthenticatorHostname:
     Type: String
-  GitHubOrg:
-    Type: String
   GitHubClientSecretName:
     Type: String
   HostedZoneId:
