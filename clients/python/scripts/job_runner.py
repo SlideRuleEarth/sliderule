@@ -84,7 +84,7 @@ try:
     # retrieve secrets from database
     secrets = {}
     secrets_table = os.environ.get("SECRETS_TABLE")
-    if secrets_table and args.secret_key:
+    if secrets_table and args.secret_key and args.secret_key != "none":
         table = dynamodb.Table(secrets_table)
         response = table.get_item(Key={"id": args.secret_key})
         item = response.get("Item")
@@ -104,7 +104,7 @@ try:
 
     # execute subprocess
     #   e.g. python /tmp/script-<unique>.py args /tmp/result-<unique>.json /tmp/secrets-<unique>.json
-    print(f"Running script: {arguments}")
+    print(f"Running script on {arguments}")
     run_array = [sys.executable, local_script, arguments, local_result, local_secrets]
     result = subprocess.run(run_array, check=False)
     if result.returncode > 0: # uncaught exception

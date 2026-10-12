@@ -750,7 +750,7 @@ pysr-docker: ## build pysr docker image; uses VERSION
 	mkdir -p $(PYSR_STAGE_DIR)
 	cp docker/pysr/Dockerfile.$(ARCH) $(PYSR_STAGE_DIR)/Dockerfile
 	cp docker/pysr/conda-* $(PYSR_STAGE_DIR)
-	cp $(PYTHON_CLIENT_DIR)/utils/job_runner.py $(PYSR_STAGE_DIR)
+	cp $(PYTHON_CLIENT_DIR)/scripts/job_runner.py $(PYSR_STAGE_DIR)
 	cd $(PYSR_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/pysr:$(VERSION) .
 
 pysr-docker-push: ## push pysr docker image; uses VERSION

@@ -527,7 +527,7 @@ class Session:
             return rsps
 
         except Exception as e:
-            self.logger.error(f'Failed to make request to {url}: {e}')
+            self.logger.error(f'Failed to make request to {url}: {e}\n{rsps}')
 
             # Authorization Error
             if e.response.status_code == 403 or e.response.status_code == 401:

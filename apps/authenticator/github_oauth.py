@@ -8,6 +8,7 @@ Supports two flows:
 
 import base64
 import hashlib
+import traceback
 import hmac
 import json
 import os
@@ -166,9 +167,6 @@ def sign_with_kms(message_bytes):
     Returns:
         The signature as bytes
     """
-    if not JWT_SIGNING_KEY_ARN:
-        raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
-
     kms = get_kms_client()
     response = kms.sign(
         KeyId=JWT_SIGNING_KEY_ARN,
@@ -284,18 +282,30 @@ def json_response(status_code, body, headers=None):
 
 
 class OAuthError(Exception):
-    """OAuth protocol error reported back to the client"""
     def __init__(self, status, error, description):
         super().__init__(f"{error}: {description}")
         self.status = status
         self.error = error
         self.description = description
-
     def response(self):
         return json_response(self.status, {
             'error': self.error,
             'error_description': self.description
         })
+
+
+class RedirectError(Exception):
+    def __init__(self, redirect, error, description, state):
+        super().__init__(f"{error}: {description}")
+        self.redirect = redirect
+        self.error = error
+        self.description = description
+        self.state = state
+    def response(self):
+        parms = {'error': self.error, 'error_description': self.description}
+        if self.state:
+            parms['state'] = self.state
+        return redirect_to_frontend(self.redirect, parms=parms)
 
 
 def load_client(client_id):
@@ -646,18 +656,12 @@ def handle_register(event):
     Validate and store client metadata (RFC 7591 requires a JSON body)
     """
     # get request parameters
-    try:
-        body = event.get('body') or '{}'
-        if event.get("isBase64Encoded"):
-            body = base64.b64decode(body).decode("utf-8")
-        parms = json.loads(body)
-        if not isinstance(parms, dict):
-            raise ValueError("not a JSON object")
-    except ValueError as e:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': f'request body must be a JSON object: {e}'
-        })
+    body = event.get('body') or '{}'
+    if event.get("isBase64Encoded"):
+        body = base64.b64decode(body).decode("utf-8")
+    parms = json.loads(body)
+    if not isinstance(parms, dict):
+        raise ValueError("not a JSON object")
 
     # pull out the individual parameters
     redirect_uris       = parms.get('redirect_uris', [])
@@ -670,72 +674,44 @@ def handle_register(event):
 
     # check redirect_uris
     if not isinstance(redirect_uris, list) or len(redirect_uris) == 0:
-        return json_response(400, {
-            'error': 'invalid_redirect_uris',
-            'error_description': 'redirect_uris must be a non-empty array'
-        })
+        raise OAuthError(400, 'invalid_redirect_uris', 'redirect_uris must be a non-empty array')
 
     # check each redirect uri
     for uri in redirect_uris:
         parsed = urllib.parse.urlparse(uri) if isinstance(uri, str) else None
         if not parsed or not parsed.hostname or not ((parsed.scheme == 'https') or (parsed.scheme == 'http' and parsed.hostname in LOOPBACK_HOSTS)):
-            return json_response(400, {
-                'error': 'invalid_redirect_uri',
-                'error_description': f'redirect_uri "{uri}" must be https or http on a loopback host'
-            })
+            raise OAuthError(400, 'invalid_redirect_uri', f'redirect_uri "{uri}" must be https or http on a loopback host')
 
     # check client_name
     if not isinstance(client_name, str) or len(client_name) > 200:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': 'client_name must be a string under 200 chars'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', 'client_name must be a string under 200 chars')
 
     # check grant_types
     if not isinstance(grant_types, list) or not all(isinstance(g, str) for g in grant_types) or len(set(grant_types) - ALLOWED_GRANT_TYPES - IGNORED_GRANT_TYPES) > 0:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': f'invalid grant types: {grant_types}'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', f'invalid grant types: {grant_types}')
+
+    # build grant types
     grant_types = [g for g in grant_types if g in ALLOWED_GRANT_TYPES]
     if not grant_types:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': f'grant types must include: {sorted(ALLOWED_GRANT_TYPES)}'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', f'grant types must include: {sorted(ALLOWED_GRANT_TYPES)}')
 
     # check response_types
     if not isinstance(response_types, list) or not all(isinstance(r, str) for r in response_types) or len(set(response_types) - ALLOWED_RESPONSE_TYPES) > 0:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': f'invalid response types: {response_types}'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', f'invalid response types: {response_types}')
 
     # check token_endpoint_auth_method
     if auth_method not in ALLOWED_AUTH_METHODS:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': f'Unsupported token_endpoint_auth_method: {auth_method}'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', f'Unsupported token_endpoint_auth_method: {auth_method}')
 
     # check code_challenge_method
     if challenge_method not in ALLOWED_CHALLENGE_METHODS:
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': f'Unsupported code_challenge_method: {challenge_method}, only S256 is supported'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', f'Unsupported code_challenge_method: {challenge_method}, only S256 is supported')
 
     # check scope
     if not isinstance(scope, str):
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': 'scope must be a space-separated string'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', 'scope must be a space-separated string')
     elif not contains_scope(scope.split(), ALLOWED_SCOPES["member"], check="all"):
-        return json_response(400, {
-            'error': 'invalid_client_metadata',
-            'error_description': 'invalid scope'
-        })
+        raise OAuthError(400, 'invalid_client_metadata', 'invalid scope')
 
     # generate client credentials
     client_id = str(uuid.uuid4()) # stable, unique, and unguessable
@@ -755,14 +731,7 @@ def handle_register(event):
     }
 
     # store client record
-    try:
-        session_store(client_id, client_record)
-    except Exception as e:
-        print(f"Error in storing session: {e}")
-        return json_response(500, {
-            'error': 'internal_error',
-            'error_description': 'error storing session'
-        })
+    session_store(client_id, client_record)
 
     # 201 Created — not 200.  RFC 7591 is explicit about this.
     return json_response(201, client_record, headers={
@@ -786,77 +755,56 @@ def handle_login(event):
     code_challenge_method   = parms.get("code_challenge_method")
 
     # errors cannot be redirected until the client and redirect uri are validated (RFC 6749 4.1.2.1)
-    try:
-        session = load_client(client_id)
-        if (redirect_uri not in session["redirect_uris"]) or (not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS)):
-            raise OAuthError(400, "invalid_request", "invalid redirect_uri")
-    except OAuthError as e:
-        print(f"Error in login: {e}")
-        return e.response()
-    except Exception as e:
-        print(f"Error in login: {e}")
-        return json_response(500, {
-            'status': 'error',
-            'error': 'internal_error',
-            'error_description': 'Error processing login'
-        })
+    session = load_client(client_id)
+    if (redirect_uri not in session["redirect_uris"]) or (not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS)):
+        raise OAuthError(400, "invalid_request", "invalid redirect_uri")
 
-    try:
-        # check response type
-        if response_type not in session["response_types"]:
-            raise OAuthError(400, "unsupported_response_type", f"invalid response type: {response_type}")
+    # check response type
+    if response_type not in session["response_types"]:
+        raise RedirectError(redirect_uri, "unsupported_response_type", f"invalid response type: {response_type}", client_state)
 
-        # check code challenge
-        if code_challenge_method != session["code_challenge_method"]:
-            raise OAuthError(400, "invalid_request", f"invalid code challenge method: {code_challenge_method}")
-        if not isinstance(code_challenge, str) or not CODE_CHALLENGE_PATTERN.fullmatch(code_challenge):
-            raise OAuthError(400, "invalid_request", "missing or malformed code_challenge")
+    # check code challenge
+    if code_challenge_method != session["code_challenge_method"]:
+        raise RedirectError(redirect_uri, "invalid_request", f"invalid code challenge method: {code_challenge_method}", client_state)
+    if not isinstance(code_challenge, str) or not CODE_CHALLENGE_PATTERN.fullmatch(code_challenge):
+        raise RedirectError(redirect_uri, "invalid_request", "missing or malformed code_challenge", client_state)
 
-        # check scope (defaults to registered scope)
-        registered_scope = session["scope"].split()
-        requested_scope = scope.split() or registered_scope
-        for s in requested_scope:
-            if s not in registered_scope:
-                raise OAuthError(400, "invalid_scope", f"invalid scope: {s}")
+    # check scope (defaults to registered scope)
+    registered_scope = session["scope"].split()
+    requested_scope = scope.split() or registered_scope
+    for s in requested_scope:
+        if s not in registered_scope:
+            raise RedirectError(redirect_uri, "invalid_scope", f"invalid scope: {s}", client_state)
 
-        # store the code challenge associated with session
-        session_store(f"{client_id}/challenge", {
-            "code_challenge": code_challenge,
-            "redirect_uri": redirect_uri,
-            "scope": requested_scope
-        })
+    # store the code challenge associated with session
+    session_store(f"{client_id}/challenge", {
+        "code_challenge": code_challenge,
+        "redirect_uri": redirect_uri,
+        "scope": requested_scope
+    })
 
-        # -----------------
-        # Relay to GitHub
-        # -----------------
+    # Relay to GitHub
 
-        # Create HMAC-signed state for CSRF protection
-        # the state includes the redirect_uri securely encoded
-        # and the original state provided by the client
-        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-        github_state = create_signed_state(f"{client_id}:{redirect_uri_b64}:{client_state}")
+    # Create HMAC-signed state for CSRF protection
+    # the state includes the redirect_uri securely encoded
+    # and the original state provided by the client
+    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+    github_state = create_signed_state(f"{client_id}:{redirect_uri_b64}:{client_state}")
 
-        # Build GitHub authorization URL
-        github_parms = {
-            'client_id': get_github_client("id"),
-            'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
-            'scope': 'read:org',
-            'state': github_state
-        }
-        auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+    # Build GitHub authorization URL
+    github_parms = {
+        'client_id': get_github_client("id"),
+        'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
+        'scope': 'read:org',
+        'state': github_state
+    }
+    auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
 
-        # Return response
-        return json_response(302, None, headers={
-            'Location': auth_url,
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
-        })
-
-    except OAuthError as e:
-        print(f"Error in login: {e}")
-        return redirect_error(redirect_uri, e.error, e.description, client_state)
-    except Exception as e:
-        print(f"Error in login: {e}")
-        return redirect_error(redirect_uri, "server_error", "error processing login", client_state)
+    # Return response
+    return json_response(302, None, headers={
+        'Location': auth_url,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    })
 
 
 def handle_callback(event):
@@ -872,156 +820,133 @@ def handle_callback(event):
     error_description   = parms.get('error_description')
 
     # errors cannot be redirected until the state and redirect uri are validated
-    try:
-        payload = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
-        client_id, redirect_uri_b64, client_state = payload.split(":", 2)
-        redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
-        if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
-    except Exception as e:
-        print(f"Invalid state in OAuth2.1 callback: {e}")
-        return json_response(400, {
-            'error': 'invalid_request',
-            'error_description': 'invalid or expired state'
-        })
+    payload = verify_signed_state(github_state) # verify state parameter FIRST (CSRF protection)
+    client_id, redirect_uri_b64, client_state = payload.split(":", 2)
+    redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
+    if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
+        raise OAuthError(400, "bad_request", f"Invalid redirect uri: {redirect_uri}")
 
-    try:
-        # check OAuth errors from GitHub
-        if error:
-            return redirect_error(redirect_uri, error, error_description or error, client_state)
+    # check OAuth errors from GitHub
+    if error:
+        return redirect_error(redirect_uri, error, error_description or error, client_state)
 
-        # check code was returned by GitHub
-        if not github_code:
-            return redirect_error(redirect_uri, "server_error", "no authorization code received", client_state)
+    # check code was returned by GitHub
+    if not github_code:
+        return redirect_error(redirect_uri, "server_error", "no authorization code received", client_state)
 
-        # check and branch to basic flow (processing will not come back here)
-        if client_id == BASIC_CLIENT_ID:
-            return basic_callback(github_code, redirect_uri)
+    # check and branch to basic flow (processing will not come back here)
+    if client_id == BASIC_CLIENT_ID:
+        return basic_callback(github_code, redirect_uri)
 
-        # get session challenge (and delete so it cannot be reused)
-        session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
+    # get session challenge (and delete so it cannot be reused)
+    session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
 
-        # check redirect_uri (should match because we are the ones that stored it both places)
-        if redirect_uri != session_challenge["redirect_uri"]:
-            raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
+    # check redirect_uri (should match because we are the ones that stored it both places)
+    if redirect_uri != session_challenge["redirect_uri"]:
+        raise RedirectError(redirect_uri, "bad_redirect", f"Mismatched redirect uri: {redirect_uri}", client_state)
 
-        # construct scope of authorization request
-        scope = session_challenge["scope"]
+    # construct scope of authorization request
+    scope = session_challenge["scope"]
 
-        # check rules for scope
-        if not contains_scope(scope, ALLOWED_SCOPES["member"], check="all"):
-            raise RuntimeError(f"Invalid scope: {scope}")
+    # check rules for scope
+    if not contains_scope(scope, ALLOWED_SCOPES["member"], check="all"):
+        raise RedirectError(redirect_uri, "bad_scope", f"Invalid scope: {scope}", client_state)
 
-        # generate unique code to return back to client
-        client_code = str(uuid.uuid4())
+    # generate unique code to return back to client
+    client_code = str(uuid.uuid4())
 
-        # store token and metadata associated with session
-        session_store(f"{client_id}/{client_code}", {
-            "github_code": github_code,
-            "scope": scope,
-            "code_challenge": session_challenge["code_challenge"],
-            "redirect_uri": redirect_uri,
-            "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
-        })
+    # store token and metadata associated with session
+    session_store(f"{client_id}/{client_code}", {
+        "github_code": github_code,
+        "scope": scope,
+        "code_challenge": session_challenge["code_challenge"],
+        "redirect_uri": redirect_uri,
+        "expiration": int(datetime.now().timestamp()) + CODE_EXPIRATION_SECONDS
+    })
 
-        # redirect to frontend with code in parameters
-        callback_parms = {'code': client_code}
-        if client_state:
-            callback_parms['state'] = client_state
-        return redirect_to_frontend(redirect_uri, parms=callback_parms)
-
-    except Exception as e:
-        print(f"Exception in OAuth2.1 callback: {e}")
-        return redirect_error(redirect_uri, "server_error", "error during callback", client_state)
+    # redirect to frontend with code in parameters
+    callback_parms = {'code': client_code}
+    if client_state:
+        callback_parms['state'] = client_state
+    return redirect_to_frontend(redirect_uri, parms=callback_parms)
 
 
 def handle_token(event):
     """
     Final stage of authorization where client exchanges code for token.
     """
-    try:
-        # Get request body
-        body = event.get('body', '{}')
-        if event.get('isBase64Encoded', False):
-            body = base64.b64decode(body).decode('utf-8')
+    # Get request body
+    body = event.get('body', '{}')
+    if event.get('isBase64Encoded', False):
+        body = base64.b64decode(body).decode('utf-8')
 
-        # get request parameters
-        parms = dict(urllib.parse.parse_qsl(body))
-        if not parms:
-            parms = event.get('queryStringParameters')
+    # get request parameters
+    parms = dict(urllib.parse.parse_qsl(body))
+    if not parms:
+        parms = event.get('queryStringParameters')
 
-        # pull out individual parameters
-        grant_type      = parms.get('grant_type')
-        client_code     = parms.get('code')
-        redirect_uri    = parms.get('redirect_uri')
-        client_id       = parms.get('client_id')
-        code_verifier   = parms.get('code_verifier')
+    # pull out individual parameters
+    grant_type      = parms.get('grant_type')
+    client_code     = parms.get('code')
+    redirect_uri    = parms.get('redirect_uri')
+    client_id       = parms.get('client_id')
+    code_verifier   = parms.get('code_verifier')
 
-        # get sessions
-        session = load_client(client_id)
-        session_code = session_load(f"{client_id}/{client_code}", with_delete=True)
+    # get sessions
+    session = load_client(client_id)
+    session_code = session_load(f"{client_id}/{client_code}", with_delete=True)
 
-        # check code expiration
-        now = int(datetime.now().timestamp())
-        expiration = int(session_code["expiration"])
-        if now > expiration:
-            raise RuntimeError(f"Code has expired: {expiration} {now}")
+    # check code expiration
+    now = int(datetime.now().timestamp())
+    expiration = int(session_code["expiration"])
+    if now > expiration:
+        raise RuntimeError(f"Code has expired: {expiration} {now}")
 
-        # check grant type
-        if grant_type not in session["grant_types"]:
-            raise RuntimeError(f"Invalid grant type: {grant_type}")
+    # check grant type
+    if grant_type not in session["grant_types"]:
+        raise RuntimeError(f"Invalid grant type: {grant_type}")
 
-        # verify redirect uri
-        if session_code["redirect_uri"] != redirect_uri:
-            raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
+    # verify redirect uri
+    if session_code["redirect_uri"] != redirect_uri:
+        raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
 
-        # recheck redirect uri against allowed redirect hosts
-        if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+    # recheck redirect uri against allowed redirect hosts
+    if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
+        raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
 
-        # verify challenge
-        if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
-            raise RuntimeError("Failed to verify code challenge")
+    # verify challenge
+    if not verify_code_challenge(code_verifier, session_code["code_challenge"]):
+        raise RuntimeError("Failed to verify code challenge")
 
-        # grant token
-        if grant_type == "authorization_code":
-            # authenticate user (gets token and metadata)
-            # note that scope is created in the above callback and verified there
-            access_token = exchange_code_for_token(session_code["github_code"])
-            token, metadata = authorize_user(f'Bearer {access_token}', session_code["scope"])
-        else:
-            raise RuntimeError(f"unhandled grant type: {grant_type}")
+    # grant token
+    if grant_type == "authorization_code":
+        # authenticate user (gets token and metadata)
+        # note that scope is created in the above callback and verified there
+        access_token = exchange_code_for_token(session_code["github_code"])
+        token, metadata = authorize_user(f'Bearer {access_token}', session_code["scope"])
+    else:
+        raise RuntimeError(f"unhandled grant type: {grant_type}")
 
-        # build user interface hints
-        info = {
-            'username': metadata['sub'],
-            'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
-            'isOrgOwner': 'true' if ("developer" in metadata["org_roles"]) else 'false',
-            'org': metadata['org'],
-            'orgRoles': ','.join(metadata['org_roles']),
-            'tokenIssuedAt': str(metadata['iat']),
-            'tokenExpiresAt': str(metadata['exp']),
-            'tokenIssuer': metadata['iss']
-        }
+    # build user interface hints
+    info = {
+        'username': metadata['sub'],
+        'isOrgMember': 'true' if ('member' in metadata["org_roles"]) else 'false',
+        'isOrgOwner': 'true' if ("developer" in metadata["org_roles"]) else 'false',
+        'org': metadata['org'],
+        'orgRoles': ','.join(metadata['org_roles']),
+        'tokenIssuedAt': str(metadata['iat']),
+        'tokenExpiresAt': str(metadata['exp']),
+        'tokenIssuer': metadata['iss']
+    }
 
-        # redirect to frontend with JWT in parameters
-        return json_response(200, {
-            "access_token": token,
-            "token_type": "Bearer",
-            "expires_in": JWT_EXPIRATION_HOURS * 60 * 60,
-            "scope": " ".join(session_code["scope"]),
-            "info": info
-        })
-
-    except OAuthError as e:
-        print(f"Exception in OAuth token: {e}")
-        return e.response()
-    except Exception as e:
-        print(f"Exception in OAuth token: {e}")
-        return json_response(500, {
-            'error': 'token_error',
-            'error_description': 'error in token'
-        })
+    # redirect to frontend with JWT in parameters
+    return json_response(200, {
+        "access_token": token,
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRATION_HOURS * 60 * 60,
+        "scope": " ".join(session_code["scope"]),
+        "info": info
+    })
 
 
 def exchange_code_for_token(code):
@@ -1047,16 +972,16 @@ def exchange_code_for_token(code):
     )
 
     if response.status_code != 200:
-        raise Exception(f"Failed to exchange code for token: {response.text}")
+        raise RuntimeError(f"Failed to exchange code for token: {response.text}")
 
     data = response.json()
 
     if 'error' in data:
-        raise Exception(f"GitHub OAuth error: {data.get('error_description', data['error'])}")
+        raise RuntimeError(f"GitHub OAuth error: {data.get('error_description', data['error'])}")
 
     access_token = data.get('access_token')
     if not access_token:
-        raise Exception("No access token in response")
+        raise RuntimeError("No access token in response")
 
     return access_token
 
@@ -1115,6 +1040,7 @@ def redirect_error(redirect_uri, error, description, state):
         parms['state'] = state
     return redirect_to_frontend(redirect_uri, parms=parms)
 
+
 # =============================================================================
 # Device Flow handlers (for CLI/Python clients)
 # =============================================================================
@@ -1126,51 +1052,43 @@ def handle_device_code_request(event):
 
     POST /auth/github/device
     """
-    try:
-        # Request device code from GitHub
-        response = requests.post(
-            GITHUB_DEVICE_CODE_URL,
-            headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            data={
-                'client_id': get_github_client("id"),
-                'scope': 'read:org'
-            },
-            timeout=HTTP_TIMEOUT_SECONDS
-        )
+    # Request device code from GitHub
+    response = requests.post(
+        GITHUB_DEVICE_CODE_URL,
+        headers={
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data={
+            'client_id': get_github_client("id"),
+            'scope': 'read:org'
+        },
+        timeout=HTTP_TIMEOUT_SECONDS
+    )
 
-        if response.status_code != 200:
-            print(f"GitHub device code request failed: {response.status_code} {response.text}")
-            return json_response(500, {
-                'error': 'device_code_request_failed',
-                'error_description': f"GitHub returned status {response.status_code}"
-            })
-
-        data = response.json()
-        if 'error' in data:
-            return json_response(400, {
-                'error': data.get('error'),
-                'error_description': data.get('error_description', 'Unknown error')
-            })
-
-        # Return the device code info to the client
-        return json_response(200, {
-            'device_code': data.get('device_code'),
-            'user_code': data.get('user_code'),
-            'verification_uri': data.get('verification_uri'),
-            'verification_uri_complete': data.get('verification_uri_complete'),
-            'expires_in': data.get('expires_in'),
-            'interval': data.get('interval', 5)
-        })
-
-    except Exception as e:
-        print(f"Error in device code request: {e}")
+    if response.status_code != 200:
+        print(f"GitHub device code request failed: {response.status_code} {response.text}")
         return json_response(500, {
-            'error': 'internal_error',
-            'error_description': 'error in device code request'
+            'error': 'device_code_request_failed',
+            'error_description': f"GitHub returned status {response.status_code}"
         })
+
+    data = response.json()
+    if 'error' in data:
+        return json_response(400, {
+            'error': data.get('error'),
+            'error_description': data.get('error_description', 'Unknown error')
+        })
+
+    # Return the device code info to the client
+    return json_response(200, {
+        'device_code': data.get('device_code'),
+        'user_code': data.get('user_code'),
+        'verification_uri': data.get('verification_uri'),
+        'verification_uri_complete': data.get('verification_uri_complete'),
+        'expires_in': data.get('expires_in'),
+        'interval': data.get('interval', 5)
+    })
 
 
 def handle_device_poll(event):
@@ -1186,99 +1104,79 @@ def handle_device_poll(event):
     - 202 with authorization_pending if user hasn't authorized yet
     - 400 with error if authorization failed or expired
     """
+    # Get request body
+    body = event.get('body', '{}')
+    if event.get('isBase64Encoded', False):
+        body = base64.b64decode(body).decode('utf-8')
+
+    # Parse request body
     try:
-        # Get request body
-        body = event.get('body', '{}')
-        if event.get('isBase64Encoded', False):
-            body = base64.b64decode(body).decode('utf-8')
+        # Try JSON-encoded format
+        parms = json.loads(body) if body else {}
+    except json.JSONDecodeError:
+        # Try URL-encoded format
+        parms = dict(urllib.parse.parse_qsl(body))
 
-        # Parse request body
-        try:
-            # Try JSON-encoded format
-            parms = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            # Try URL-encoded format
-            parms = dict(urllib.parse.parse_qsl(body))
+    # Retrieve device code
+    device_code = parms.get('device_code')
+    if not device_code:
+        raise OAuthError(400, 'missing_device_code', 'device_code is required')
 
-        # Retrieve device code
-        device_code = parms.get('device_code')
-        if not device_code:
-            return json_response(400, {
-                'error': 'missing_device_code',
-                'error_description': 'device_code is required'
-            })
+    # Poll GitHub for access token
+    data = requests.post(
+        GITHUB_TOKEN_URL,
+        headers={
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data={
+            'client_id': get_github_client("id"),
+            'client_secret': get_github_client("secret"),
+            'device_code': device_code,
+            'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'
+        },
+        timeout=HTTP_TIMEOUT_SECONDS
+    ).json()
 
-        # Poll GitHub for access token
-        data = requests.post(
-            GITHUB_TOKEN_URL,
-            headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            data={
-                'client_id': get_github_client("id"),
-                'client_secret': get_github_client("secret"),
-                'device_code': device_code,
-                'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'
-            },
-            timeout=HTTP_TIMEOUT_SECONDS
-        ).json()
+    # Handle errors (not all are fatal)
+    if 'error' in data:
+        error = data.get('error')
 
-        # Handle errors (not all are fatal)
-        if 'error' in data:
-            error = data.get('error')
-
-            # authorization_pending means user hasn't authorized yet - keep polling
-            if error == 'authorization_pending':
-                return json_response(202, {
-                    'status': 'pending',
-                    'error': error,
-                    'error_description': data.get('error_description', 'Waiting for user authorization')
-                })
-
-            # slow_down means client is polling too fast
-            if error == 'slow_down':
-                return json_response(202, {
-                    'status': 'pending',
-                    'error': error,
-                    'error_description': data.get('error_description', 'Polling too fast'),
-                    'interval': data.get('interval', 10)
-                })
-
-            # Other errors are terminal
-            return json_response(400, {
-                'status': 'error',
+        # authorization_pending means user hasn't authorized yet - keep polling
+        if error == 'authorization_pending':
+            return json_response(202, {
+                'status': 'pending',
                 'error': error,
-                'error_description': data.get('error_description', 'Authorization failed')
+                'error_description': data.get('error_description', 'Waiting for user authorization')
             })
 
-        # Success; we have an access token
-        access_token = data.get('access_token')
-        if not access_token:
-            return json_response(500, {
-                'status': 'error',
-                'error': 'no_access_token',
-                'error_description': 'No access token in response'
+        # slow_down means client is polling too fast
+        if error == 'slow_down':
+            return json_response(202, {
+                'status': 'pending',
+                'error': error,
+                'error_description': data.get('error_description', 'Polling too fast'),
+                'interval': data.get('interval', 10)
             })
 
-        # Authenticate user to get token and metadata (device flow supports all scopes)
-        scope = parms.get('scope', ' '.join(ALLOWED_SCOPES["developer"])).split()
-        token, metadata = authorize_user(f'Bearer {access_token}', scope)
-
-        # Response with a successful authentication
-        return json_response(200, {
-            "status": "success",
-            "token": token,
-            "metadata": metadata
-        })
-
-    except Exception as e:
-        print(f"Error in device poll: {e}")
-        return json_response(500, {
+        # Other errors are terminal
+        return json_response(400, {
             'status': 'error',
-            'error': 'internal_error',
-            'error_description': 'error in device poll'
+            'error': error,
+            'error_description': data.get('error_description', 'Authorization failed')
         })
+
+    # Authenticate user to get token and metadata (device flow supports all scopes)
+    access_token = data['access_token'] # throws unhandled exception if not present
+    scope = parms.get('scope', ' '.join(ALLOWED_SCOPES["developer"])).split()
+    token, metadata = authorize_user(f'Bearer {access_token}', scope)
+
+    # Response with a successful authentication
+    return json_response(200, {
+        "status": "success",
+        "token": token,
+        "metadata": metadata
+    })
 
 
 # =============================================================================
@@ -1293,40 +1191,27 @@ def handle_pat_login(event):
     POST /auth/github/pat
     Body: { "pat": "..." }
     """
+    # Parse request body
+    body = event.get('body', '{}')
+    if event.get('isBase64Encoded', False):
+        body = base64.b64decode(body).decode('utf-8')
 
     try:
-        # Parse request body
-        body = event.get('body', '{}')
-        if event.get('isBase64Encoded', False):
-            body = base64.b64decode(body).decode('utf-8')
+        parms = json.loads(body) if body else {}
+    except json.JSONDecodeError:
+        parms = dict(urllib.parse.parse_qsl(body))
 
-        try:
-            parms = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            parms = dict(urllib.parse.parse_qsl(body))
+    pat = parms.get('pat')
+    if not pat:
+        raise OAuthError(400, 'missing_pat', 'Personal Access Token (pat) is required')
 
-        pat = parms.get('pat')
-        if not pat:
-            return json_response(400, {
-                'error': 'missing_pat',
-                'error_description': 'Personal Access Token (pat) is required'
-            })
-
-        # Authenticate user to get your own session token/metadata
-        token, metadata = authorize_user(f'token {pat}', ALLOWED_SCOPES["member"])
-        return json_response(200, {
-            'status': 'success',
-            'token': token,
-            'metadata': metadata
-        })
-
-    except Exception as e:
-        print(f"Error in PAT login: {e}")
-        return json_response(500, {
-            'status': 'error',
-            'error': 'internal_error',
-            'error_description': 'Error processing login'
-        })
+    # Authenticate user to get your own session token/metadata
+    token, metadata = authorize_user(f'token {pat}', ALLOWED_SCOPES["member"])
+    return json_response(200, {
+        'status': 'success',
+        'token': token,
+        'metadata': metadata
+    })
 
 
 # =============================================================================
@@ -1338,45 +1223,33 @@ def handle_basic_login(event):
     Initiate basic GitHub OAuth 2.0 flow.
     Scope is limited to access only; used by HAProxy/Grafana
     """
-    try:
-        # Get query parameters
-        parms = event.get('queryStringParameters') or {}
-        redirect_uri = parms.get('redirect_uri')
+    # Get query parameters
+    parms = event.get('queryStringParameters') or {}
+    redirect_uri = parms.get('redirect_uri')
 
-        # check redirect_uri against only the trusted redirect hosts
-        # (since this is the basic authorization flow)
-        if not redirect_uri or not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
-            return json_response(400, {
-                'error': 'invalid_request',
-                'error_description': 'missing or invalid redirect_uri'
-            })
+    # check redirect_uri against only the trusted redirect hosts
+    # (since this is the basic authorization flow)
+    if not redirect_uri or not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
+        raise OAuthError(400, 'invalid_request', 'missing or invalid redirect_uri')
 
-        # Create HMAC-signed state for CSRF protection (basic flow has no client state)
-        redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
-        github_state = create_signed_state(f"{BASIC_CLIENT_ID}:{redirect_uri_b64}:")
+    # Create HMAC-signed state for CSRF protection (basic flow has no client state)
+    redirect_uri_b64 = base64.urlsafe_b64encode(redirect_uri.encode()).decode()
+    github_state = create_signed_state(f"{BASIC_CLIENT_ID}:{redirect_uri_b64}:")
 
-        # Build GitHub authorization URL
-        github_parms = {
-            'client_id': get_github_client("id"),
-            'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
-            'scope': 'read:org',
-            'state': github_state
-        }
-        auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
+    # Build GitHub authorization URL
+    github_parms = {
+        'client_id': get_github_client("id"),
+        'redirect_uri': f"https://{AUTHENTICATOR_HOSTNAME}/auth/github/callback",
+        'scope': 'read:org',
+        'state': github_state
+    }
+    auth_url = f"{GITHUB_AUTHORIZE_URL}?{urllib.parse.urlencode(github_parms)}"
 
-        # Return response
-        return json_response(302, None, headers={
-            'Location': auth_url,
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
-        })
-
-    except Exception as e:
-        print(f"Error in basic login: {e}")
-        return json_response(500, {
-            'status': 'error',
-            'error': 'internal_error',
-            'error_description': 'Error processing basic login'
-        })
+    # Return response
+    return json_response(302, None, headers={
+        'Location': auth_url,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+    })
 
 
 def basic_callback(code, redirect_uri):
@@ -1384,25 +1257,17 @@ def basic_callback(code, redirect_uri):
     Handle basic GitHub OAuth 2.0 callback.
     Exchange code for token and redirect to frontend with token in cookie
     """
-    try:
-        # Authenticate user (gets token and ignores metadata)
-        access_token = exchange_code_for_token(code)
-        token, _ = authorize_user(f'Bearer {access_token}', ALLOWED_SCOPES["guest"])
+    # Authenticate user (gets token and ignores metadata)
+    access_token = exchange_code_for_token(code)
+    token, _ = authorize_user(f'Bearer {access_token}', ALLOWED_SCOPES["guest"])
 
-        # check redirect_uri against only the trusted redirect hosts
-        # (since this is the basic authorization flow)
-        if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
-            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+    # check redirect_uri against only the trusted redirect hosts
+    # (since this is the basic authorization flow)
+    if not contains_redirect(redirect_uri, TRUSTED_REDIRECT_HOSTS):
+        raise OAuthError(400, "invalid_redirect", f"Invalid redirect uri: {redirect_uri}")
 
-        # Redirect to frontend with JWT in cookie
-        return redirect_to_frontend(redirect_uri, cookie=token)
-
-    except Exception as e:
-        print(f"Exception in OAuth2.0 callback: {e}")
-        return json_response(500, {
-            'error': 'internal_error',
-            'error_description': 'error during callback'
-        })
+    # Redirect to frontend with JWT in cookie
+    return redirect_to_frontend(redirect_uri, cookie=token)
 
 
 # =============================================================================
@@ -1411,14 +1276,7 @@ def basic_callback(code, redirect_uri):
 
 def handle_refresh(event):
     """Handle JWT refresh requests"""
-    try:
-        raise RuntimeError("not supported at this time")
-    except Exception as e:
-        print(f"Token refresh failed: {e}")
-        return json_response(401, {
-            'error': 'token_refresh_failed',
-            'error_description': 'failed to refresh token'
-        })
+    raise OAuthError(401, "token_refresh_failed", "refresh is not supported at this time")
 
 # =============================================================================
 # Public Key / JWKS endpoints (for JWT verification)
@@ -1428,34 +1286,21 @@ def handle_pem(event):
     """
     Return the public key in PEM format (needed by HAProxy).
     """
-    try:
+    # get public key from kms
+    kms = get_kms_client()
+    response = kms.get_public_key(KeyId=JWT_SIGNING_KEY_ARN)
+    der = response["PublicKey"]
+    parsed = parse_rsa_public_key_spki(der)
 
-        # check for signing key
-        if not JWT_SIGNING_KEY_ARN:
-            raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
-
-        # get public key from kms
-        kms = get_kms_client()
-        response = kms.get_public_key(KeyId=JWT_SIGNING_KEY_ARN)
-        der = response["PublicKey"]
-        parsed = parse_rsa_public_key_spki(der)
-
-        # return response (must be manually returned because pem is NOT json)
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Content-Type": "text/plain",
-                "Cache-Control": "public, max-age=3600"
-            },
-            "body": parsed["pem"]
-        }
-
-    except Exception as e:
-        print(f"Error generating PEM: {e}")
-        return json_response(500, {
-            'error': 'pem_error',
-            'error_description': 'error generating PEM'
-        })
+    # return response (must be manually returned because pem is NOT json)
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "text/plain",
+            "Cache-Control": "public, max-age=3600"
+        },
+        "body": parsed["pem"]
+    }
 
 
 def handle_jwks(event):
@@ -1471,37 +1316,24 @@ def handle_jwks(event):
     def b64url_uint(n):
         return base64.urlsafe_b64encode(n.to_bytes((n.bit_length() + 7) // 8, "big")).rstrip(b"=").decode()
 
-    try:
+    # get public key from kms
+    kms = get_kms_client()
+    response = kms.get_public_key(KeyId=JWT_SIGNING_KEY_ARN)
+    der = response["PublicKey"]
+    parsed = parse_rsa_public_key_spki(der)
+    jwk = {
+        "kty": "RSA",
+        "alg": "RS256",
+        "use": "sig",
+        "kid": response["KeyId"].split("/")[-1], # JWKS kid = key UUID
+        "n": b64url_uint(parsed["n"]),
+        "e": b64url_uint(parsed["e"]),
+    }
 
-        # check for signing key
-        if not JWT_SIGNING_KEY_ARN:
-            raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
-
-        # get public key from kms
-        kms = get_kms_client()
-        response = kms.get_public_key(KeyId=JWT_SIGNING_KEY_ARN)
-        der = response["PublicKey"]
-        parsed = parse_rsa_public_key_spki(der)
-        jwk = {
-            "kty": "RSA",
-            "alg": "RS256",
-            "use": "sig",
-            "kid": response["KeyId"].split("/")[-1], # JWKS kid = key UUID
-            "n": b64url_uint(parsed["n"]),
-            "e": b64url_uint(parsed["e"]),
-        }
-
-        # return response
-        return json_response(200, {"keys": [jwk]}, headers={
-            "Cache-Control": "public, max-age=3600"
-        })
-
-    except Exception as e:
-        print(f"Error generating JWKS: {e}")
-        return json_response(500, {
-            'error': 'jwks_error',
-            'error_description': 'error generating JWKS'
-        })
+    # return response
+    return json_response(200, {"keys": [jwk]}, headers={
+        "Cache-Control": "public, max-age=3600"
+    })
 
 
 # =============================================================================
@@ -1512,32 +1344,24 @@ def handle_openid(event):
     """
     Return standard compliant discovery response
     """
-    try:
-        # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
-        issuer = f"https://{AUTHENTICATOR_HOSTNAME}"
+    # Build issuer URL from API host (for JWKS discovery at {iss}/.well-known/jwks.json)
+    issuer = f"https://{AUTHENTICATOR_HOSTNAME}"
 
-        # build response body
-        body = {
-            "issuer": issuer,
-            "jwks_uri": f"{issuer}/.well-known/jwks.json",
-            "authorization_endpoint": f"{issuer}/auth/github/login",
-            "token_endpoint": f"{issuer}/auth/github/token",
-            "response_types_supported": ["code"],
-            "subject_types_supported": ["public"],
-            "id_token_signing_alg_values_supported": ["RS256"]
-        }
+    # build response body
+    body = {
+        "issuer": issuer,
+        "jwks_uri": f"{issuer}/.well-known/jwks.json",
+        "authorization_endpoint": f"{issuer}/auth/github/login",
+        "token_endpoint": f"{issuer}/auth/github/token",
+        "response_types_supported": ["code"],
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["RS256"]
+    }
 
-        # return response
-        return json_response(200, body, headers={
-            "Cache-Control": "public, max-age=3600"
-        })
-
-    except Exception as e:
-        print(f"Error in openid discovery: {e}")
-        return json_response(500, {
-            'error': 'openid_error',
-            'error_description': 'error in openid discovery'
-        })
+    # return response
+    return json_response(200, body, headers={
+        "Cache-Control": "public, max-age=3600"
+    })
 
 
 def handle_authorization_server(event: dict) -> dict:
@@ -1575,49 +1399,76 @@ def lambda_gateway(event, context):
     method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
     print(f"Received request: {method} {path}")
 
-    # Web OAuth2.1 Flow
-    if path == '/auth/github/register':
-        return handle_register(event)
-    elif path == '/auth/github/login':
-        return handle_login(event)
-    elif path == '/auth/github/callback':
-        return handle_callback(event)
-    elif path == '/auth/github/token':
-        return handle_token(event)
+    try:
+        # Web OAuth2.1 Flow
+        if path == '/auth/github/register':
+            return handle_register(event)
+        elif path == '/auth/github/login':
+            return handle_login(event)
+        elif path == '/auth/github/callback':
+            return handle_callback(event)
+        elif path == '/auth/github/token':
+            return handle_token(event)
 
-    # Device Flow (for CLI/Python Clients)
-    elif path == '/auth/github/device':
-        return handle_device_code_request(event)
-    elif path == '/auth/github/device/poll':
-        return handle_device_poll(event)
+        # Device Flow (for CLI/Python Clients)
+        elif path == '/auth/github/device':
+            return handle_device_code_request(event)
+        elif path == '/auth/github/device/poll':
+            return handle_device_poll(event)
 
-    # PAT Key Flow
-    elif path == '/auth/github/pat':
-        return handle_pat_login(event)
+        # PAT Key Flow
+        elif path == '/auth/github/pat':
+            return handle_pat_login(event)
 
-    # Web Basic Flow
-    elif path == '/auth/github/basic/login':
-        return handle_basic_login(event)
+        # Web Basic Flow
+        elif path == '/auth/github/basic/login':
+            return handle_basic_login(event)
 
-    # Refresh token (for CLI/Python Clients)
-    elif path == '/auth/refresh':
-        return handle_refresh(event)
-    # Public key endpoint for JWT verification (PEM)
-    elif path == '/auth/pem':
-        return handle_pem(event)
+        # Refresh token (for CLI/Python Clients)
+        elif path == '/auth/refresh':
+            return handle_refresh(event)
+        # Public key endpoint for JWT verification (PEM)
+        elif path == '/auth/pem':
+            return handle_pem(event)
 
-    # Public key endpoint for JWT verification (JWKS)
-    elif path == '/.well-known/jwks.json':
-        return handle_jwks(event)
-    # OpenID Configuration Discovery
-    elif path == '/.well-known/openid-configuration':
-        return handle_openid(event)
-    # OAuth 2.1 Service Metadata
-    elif path == '/.well-known/oauth-authorization-server':
-        return handle_authorization_server(event)
+        # Public key endpoint for JWT verification (JWKS)
+        elif path == '/.well-known/jwks.json':
+            return handle_jwks(event)
+        # OpenID Configuration Discovery
+        elif path == '/.well-known/openid-configuration':
+            return handle_openid(event)
+        # OAuth 2.1 Service Metadata
+        elif path == '/.well-known/oauth-authorization-server':
+            return handle_authorization_server(event)
 
-    # Unknown path
-    else:
-        return json_response(404, {
-            'error': 'Not found'
+        # Unknown path
+        else:
+            return json_response(404, {
+                'error': 'Not found'
+            })
+
+    # Parameter Errors
+    except ValueError as e:
+        traceback.print_exc()
+        return json_response(400, {
+            'error': 'invalid_parameters',
+            'error_description': f'request contained invalid parameters'
+        })
+
+    # OAuth Errors
+    except OAuthError as e:
+        traceback.print_exc()
+        return e.response()
+
+    # Redirect Errors
+    except RedirectError as e:
+        traceback.print_exc()
+        return e.response()
+
+    # Unhandled Errors
+    except Exception as e:
+        traceback.print_exc()
+        return json_response(500, {
+            'error': 'internal_error',
+            'error_description': 'unhandled exception'
         })

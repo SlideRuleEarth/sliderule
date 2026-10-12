@@ -323,18 +323,6 @@ def submit_handler(body, username, org_roles, secret_values):
         if memory != None:
             container_overrides["resourceRequirements"].append({"type": "MEMORY", "value": str(memory)})
 
-    # build secret key and (if secrets present) load secrets into database
-    secret_key = secrets.token_hex(16) # 32 hexadecimal characters
-    if secret_values:
-        table = dynamodb.Table(SECRETS_TABLE)
-        table.put_item(
-            Item={
-                "id": secret_key,
-                "value": json.dumps(secret_values),
-                "ttl": int(time.time()) + SECRET_EXPIRATION_HOURS * 3600
-            }
-        )
-
     # initial parameters for job
     kwargs = {
         "jobName": name,
@@ -357,7 +345,16 @@ def submit_handler(body, username, org_roles, secret_values):
 
     # set secret key parameter
     if secret_values:
+        secret_key = secrets.token_hex(16) # 32 hexadecimal characters
         kwargs["parameters"]["secret_key"] = secret_key
+        table = dynamodb.Table(SECRETS_TABLE)
+        table.put_item(
+            Item={
+                "id": secret_key,
+                "value": json.dumps(secret_values),
+                "ttl": int(time.time()) + SECRET_EXPIRATION_HOURS * 3600
+            }
+        )
 
     # submit job
     response = batch.submit_job(**kwargs)

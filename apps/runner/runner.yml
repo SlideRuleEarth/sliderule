@@ -282,12 +282,13 @@ Resources:
               - Effect: Allow
                 Action: ["s3:ListBucket"]
                 Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}"
-                Condition:
-                  StringLike:
-                    s3:prefix: !Sub "${AWS::StackName}/*"
+#                Condition:
+#                  StringLike:
+#                    s3:prefix: !Sub "${AWS::StackName}/*"
               - Effect: Allow
                 Action: ["s3:GetObject", "s3:PutObject"]
-                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}/${AWS::StackName}/*"
+                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}/*"
+#                Resource: !Sub "arn:aws:s3:::${ProjectPublicBucket}/${AWS::StackName}/*"
         - PolicyName: !Sub "${AWS::StackName}-pysr-dynamodb-access"
           PolicyDocument:
             Version: "2012-10-17"
@@ -518,7 +519,7 @@ Resources:
             script: ""
             args: ""
             output: ""
-            secret_key: ""
+            secret_key: "none"
           RetryStrategy:
             Attempts: 3  # 1 initial attempt + 2 retries = 3 total
             EvaluateOnExit:
@@ -663,13 +664,27 @@ Resources:
                   - !Ref UrgentJobQueue
                   - !Ref DefaultJobQueue
                   - !Ref BackgroundJobQueue
+                  - !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/${AWS::StackName}-*-job-definition"
                   - !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/${AWS::StackName}-*-job-definition:*"
+              # tag-on-create is authorized against the job, job definition, and job queue
               - Effect: Allow
                 Action: batch:TagResource
                 Resource: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job/*"
                 Condition:
                   StringEquals:
                     batch:CreateAction: SubmitJob
+                    aws:RequestTag/stack: !Ref AWS::StackName
+              # batch:CreateAction is not set when the job definition and queue are evaluated
+              - Effect: Allow
+                Action: batch:TagResource
+                Resource:
+                  - !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/${AWS::StackName}-*-job-definition"
+                  - !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/${AWS::StackName}-*-job-definition:*"
+                  - !Ref UrgentJobQueue
+                  - !Ref DefaultJobQueue
+                  - !Ref BackgroundJobQueue
+                Condition:
+                  StringEquals:
                     aws:RequestTag/stack: !Ref AWS::StackName
               - Effect: Allow
                 Action: batch:CancelJob
