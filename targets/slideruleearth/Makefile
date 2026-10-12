@@ -162,7 +162,6 @@ TELEMETRY_STREAM = recorder-firehose-telemetry
 
 JWT_ISSUER = https://$(AUTHENTICATOR_HOSTNAME)
 USERS_FILENAME = users.json
-GITHUB_ORG ?= SlideRuleEarth
 GITHUB_CLIENT_SECRET_NAME ?= $(DOMAIN)/github-oauth-client
 TRUSTED_REDIRECT_HOSTS ?= "$(DOMAIN) localhost 127.0.0.1"
 
@@ -541,7 +540,6 @@ authenticator-create: authenticator-build  ## creates the lambda authenticator f
 		--parameters	ParameterKey=Domain,ParameterValue=$(DOMAIN) \
 						ParameterKey=PublicCluster,ParameterValue=$(PUBLIC_CLUSTER) \
 						ParameterKey=AuthenticatorHostname,ParameterValue=$(AUTHENTICATOR_HOSTNAME) \
-						ParameterKey=GitHubOrg,ParameterValue=$(GITHUB_ORG) \
 						ParameterKey=GitHubClientSecretName,ParameterValue=$(GITHUB_CLIENT_SECRET_NAME) \
 						ParameterKey=HostedZoneId,ParameterValue=$(HOSTED_ZONE_ID) \
 						ParameterKey=CertificateArn,ParameterValue=$(CERTIFICATE_ARN) \
@@ -572,7 +570,6 @@ authenticator-test: ## run authenticator tests
 	DOMAIN=localhost \
 	PUBLIC_CLUSTER=localhost \
 	AUTHENTICATOR_HOSTNAME=localhost \
-	GITHUB_ORG=myorg \
 	GITHUB_CLIENT_SECRET_NAME=$(DOMAIN)/github-oauth-client \
 	HMAC_SIGNING_KEY_ARN=$(DOMAIN)/github-oauth-hmac-key \
 	TRUSTED_REDIRECT_HOSTS=localhost \

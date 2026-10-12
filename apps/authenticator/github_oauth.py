@@ -26,11 +26,10 @@ import requests
 DOMAIN = os.environ.get('DOMAIN')
 PUBLIC_CLUSTER = os.environ.get('PUBLIC_CLUSTER')
 AUTHENTICATOR_HOSTNAME = os.environ.get('AUTHENTICATOR_HOSTNAME')
-GITHUB_ORG = os.environ.get('GITHUB_ORG')
 GITHUB_CLIENT_SECRET_NAME = os.environ.get('GITHUB_CLIENT_SECRET_NAME')
 JWT_SIGNING_KEY_ARN = os.environ.get('JWT_SIGNING_KEY_ARN') # KMS key ARN for JWT signing (RS256 asymmetric)
 HMAC_SIGNING_KEY_ARN = os.environ.get('HMAC_SIGNING_KEY_ARN') # Secrets Manager ARN for HMAC key (OAuth state signing)
-TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split(' ')) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
+TRUSTED_REDIRECT_HOSTS = set(os.environ.get('TRUSTED_REDIRECT_HOSTS', '').split()) # Validated against the redirect_uri to prevent attackers from redirecting tokens to malicious sites
 SESSION_TABLE = os.environ.get('SESSION_TABLE') # DynamoDB
 PROJECT_BUCKET = os.environ["PROJECT_BUCKET"]
 USERS_FILENAME = os.environ["USERS_FILENAME"]
@@ -47,14 +46,14 @@ ALLOWED_SCOPES = {
 DEFAULT_MAX_NODES = {
     "affiliate":    5,
     "member":       10,
-    "developer":        100
+    "developer":    100
 }
 
 # Default maximum ttl for org roles
 DEFAULT_MAX_TTL = {
-    "affliaite":    720,
+    "affiliate":    720,
     "member":       720,
-    "developer":        525600
+    "developer":    525600
 }
 
 # GitHub OAuth endpoints (from the environment only for testing)
@@ -89,7 +88,7 @@ SESSION_EXPIRATION_HOURS = 12 # hours
 CODE_EXPIRATION_SECONDS = 120 # seconds
 
 # OAuth state expiration (seconds) - state tokens older than this are rejected
-STATE_EXPIRATION_SECONDS = 60 # seconds
+STATE_EXPIRATION_SECONDS = 120 # seconds
 
 # Cache for secrets (Lambda container reuse)
 _secrets_cache = {}
@@ -220,13 +219,16 @@ def session_load(key, with_delete=False):
     # check response
     if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
         raise RuntimeError(f"Failed to load {key}: {response}")
+    # check presence
+    if ("ttl" not in item) or ("value" not in item):
+        raise RuntimeError(f"Missing session: {key}")
     # check time to live
     now = int(datetime.now().timestamp())
-    expiration = item.get("ttl", 0)
+    expiration = item["ttl"]
     if now > expiration:
         raise RuntimeError(f"Expired value for {key}: {expiration}")
     # return value
-    return item.get("value")
+    return item["value"]
 
 
 def get_s3_client():
@@ -406,31 +408,6 @@ def verify_signed_state(state):
     return payload
 
 
-def verify_with_kms(message_bytes, signature):
-    """
-    Verify a signature using KMS public key.
-    Returns True if signature is valid, False otherwise
-    """
-    try:
-        if not JWT_SIGNING_KEY_ARN:
-            raise ValueError("JWT_SIGNING_KEY_ARN environment variable not set")
-
-        kms = get_kms_client()
-        response = kms.verify(
-            KeyId=JWT_SIGNING_KEY_ARN,
-            Message=message_bytes,
-            MessageType='RAW',
-            Signature=signature,
-            SigningAlgorithm='RSASSA_PKCS1_V1_5_SHA_256'
-        )
-
-        return response.get('SignatureValid', False)
-
-    except Exception as e:
-        print(f"KMS verification error: {e}")
-        return False
-
-
 def verify_code_challenge(code_verifier, code_challenge):
     """
     PCKE verification of code challenge
@@ -606,7 +583,7 @@ def authorize_user(authorization_str, scope):
         'org_roles': org_roles,
         'sub': username,
         'aud': audience_list,
-        'org': GITHUB_ORG,
+        'org': "SlideRuleEarth",
         'iat': int(now.timestamp()),
         'exp': int(expiration.timestamp()),
         'iss': f"https://{AUTHENTICATOR_HOSTNAME}",
@@ -635,8 +612,7 @@ def handle_register(event: dict) -> dict:
         parms = event.get('body', '{}')
         if event.get("isBase64Encoded"):
             parms = base64.b64decode(parms).decode("utf-8")
-        else:
-            parms = json.loads(parms)
+        parms = json.loads(parms)
 
     # pull out the individual parameters
     redirect_uris       = parms.get('redirect_uris', [])
@@ -656,7 +632,7 @@ def handle_register(event: dict) -> dict:
 
     # check each redirect uri
     for uri in redirect_uris:
-        if not isinstance(uri, str) or not uri.startswith(('https://', 'http://localhost')):
+        if not isinstance(uri, str) or not (uri.startswith('https://') or (uri == 'http://localhost')):
             return json_response(400, {
                 'error': 'invalid_redirect_uri',
                 'error_description': f'redirect_uri "{uri}" must be https or http://localhost'
@@ -750,14 +726,10 @@ def handle_login(event):
         scope                   = parms.get("scope", "") # optional per the standard
         code_challenge          = parms.get("code_challenge")
         code_challenge_method   = parms.get("code_challenge_method")
-        resource                = parms.get("resource", "") # optional per our implementation
+        resource                = parms.get("resource", "") # ignored
 
         # get session
         session = session_load(client_id)
-
-        # check session
-        if not session:
-            raise RuntimeError(f"Unable to locate session: {client_id}")
 
         # check session expiration
         now = int(datetime.now().timestamp())
@@ -782,21 +754,11 @@ def handle_login(event):
             if s not in session["scope"].split():
                 raise RuntimeError(f"Invalid scope: {scope}")
 
-        # check resource (must be fully specified URL, e.g. https://service.domain/api)
-        if resource:
-            parsed_resource = urllib.parse.urlparse(resource)
-            parsed_base_domain = ".".join(parsed_resource.hostname.split(".")[1:])
-            if parsed_resource.scheme != "https":
-                raise RuntimeError(f"Invalid resource scheme: {parsed_resource.scheme}")
-            if parsed_base_domain != DOMAIN:
-                raise RuntimeError(f"Invalid resource domain: {parsed_base_domain}")
-
         # store the code challenge associated with session
         session_store(f"{client_id}/challenge", {
             "code_challenge": code_challenge,
             "redirect_uri": redirect_uri,
-            "scope": scope.split(),
-            "resource": resource
+            "scope": scope.split()
         })
 
         # -----------------
@@ -851,6 +813,10 @@ def handle_callback(event):
         client_id, redirect_uri_b64, client_state = payload.split(":", 2)
         redirect_uri = base64.urlsafe_b64decode(redirect_uri_b64.encode()).decode()
 
+        # redirect not allowed
+        if not contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
+            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+
         # check OAuth errors from GitHub
         if error:
             return redirect_to_frontend(redirect_uri, parms={'error': error_description or error})
@@ -866,10 +832,6 @@ def handle_callback(event):
         # get session challenge (and delete so it cannot be reused)
         session_challenge = session_load(f"{client_id}/challenge", with_delete=True)
 
-        # check session
-        if not session_challenge:
-            raise RuntimeError(f"Unable to locate session challenge: {client_id}")
-
         # check redirect_uri (should match because we are the ones that stored it both places)
         if redirect_uri != session_challenge["redirect_uri"]:
             raise RuntimeError(f"Mismatched redirect uri: {redirect_uri}")
@@ -877,12 +839,9 @@ def handle_callback(event):
         # construct scope of authorization request
         scope = session_challenge["scope"]
 
-        # check rules for scope and redirect
-        if contains_redirect(redirect_uri, ALLOWED_REDIRECT_HOSTS):
-            if not contains_scope(scope, ALLOWED_SCOPES["member"], check="all"):
-                raise RuntimeError(f"Invalid scope: {scope}")
-        else: # redirect not allowed
-            raise RuntimeError(f"Invalid redirect uri: {redirect_uri}")
+        # check rules for scope
+        if not contains_scope(scope, ALLOWED_SCOPES["member"], check="all"):
+            raise RuntimeError(f"Invalid scope: {scope}")
 
         # generate unique code to return back to client
         client_code = uuid.uuid4()
@@ -935,14 +894,6 @@ def handle_token(event):
         # get sessions
         session = session_load(client_id)
         session_code = session_load(f"{client_id}/{client_code}", with_delete=True)
-
-        # check session
-        if not session:
-            raise RuntimeError(f"Unable to locate session: {client_id}")
-
-        # check session code
-        if not session_code:
-            raise RuntimeError(f"Unable to locate session code: {client_id}")
 
         # check code expiration
         now = int(datetime.now().timestamp())
@@ -1079,7 +1030,7 @@ def redirect_to_frontend(redirect_uri, parms=None, cookie=None):
         return json_response(302, None, headers={
             'Location': f"{redirect_uri}",
             'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Set-Cookie': f'token={cookie}; Domain=.{DOMAIN}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=86400'
+            'Set-Cookie': f'token={cookie}; Domain=.{DOMAIN}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age={int(JWT_EXPIRATION_HOURS * 60 * 60)}'
         })
     else:
         return json_response(302, None, headers={
@@ -1284,22 +1235,7 @@ def handle_pat_login(event):
                 'error_description': 'Personal Access Token (pat) is required'
             })
 
-        # Verify token by calling GitHub API
-        user_resp = requests.get(
-            f'{GITHUB_API_URL}/user',
-            headers={
-                'Authorization': f'token {pat}',
-                'Accept': 'application/json'
-            },
-            timeout=HTTP_TIMEOUT_SECONDS
-        )
-        if user_resp.status_code != 200:
-            return json_response(400, {
-                'error': 'invalid_token',
-                'error_description': 'GitHub token invalid or insufficient scope'
-            })
-
-        # Token is valid! Authenticate user to get your own session token/metadata
+        # Authenticate user to get your own session token/metadata
         token, metadata = authorize_user(f'token {pat}', ALLOWED_SCOPES["member"])
         return json_response(200, {
             'status': 'success',
@@ -1428,7 +1364,7 @@ def handle_pem(event):
         return {
             "statusCode": 200,
             "headers": {
-                "Content-Type": "application/json",
+                "Content-Type": "text/plain",
                 "Cache-Control": "public, max-age=3600"
             },
             "body": parsed["pem"]

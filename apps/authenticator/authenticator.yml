@@ -138,7 +138,6 @@ Resources:
           DOMAIN: !Ref Domain
           PUBLIC_CLUSTER: !Ref PublicCluster
           AUTHENTICATOR_HOSTNAME: !Ref AuthenticatorHostname
-          GITHUB_ORG: !Ref GitHubOrg
           GITHUB_CLIENT_SECRET_NAME: !Ref GitHubClientSecretName
           HMAC_SIGNING_KEY_ARN: !Ref HMACSigningKeySecret
           JWT_SIGNING_KEY_ARN: !GetAtt JWTSigningKey.Arn
