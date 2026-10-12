@@ -25,7 +25,7 @@ parms = {
 # Test Nominal
 #
 def test_nominal():
-    rqst = build_query_request('/auth/github/register', parms)
+    rqst = build_body_request('/auth/github/register', parms)
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 201
     assert check_dictionary(rsps['headers'], {
@@ -53,19 +53,19 @@ def test_nominal():
 #
 def test_invalid_redirect():
     # invalid type
-    rqst = build_query_request('/auth/github/register', parms | {"redirect_uris": {}})
+    rqst = build_body_request('/auth/github/register', parms | {"redirect_uris": {}})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
     # empty
-    rqst = build_query_request('/auth/github/register', parms | {"redirect_uris": []})
+    rqst = build_body_request('/auth/github/register', parms | {"redirect_uris": []})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
     # invalid entry - not https
-    rqst = build_query_request('/auth/github/register', parms | {"redirect_uris": ["http://mydomain.com"]})
+    rqst = build_body_request('/auth/github/register', parms | {"redirect_uris": ["http://mydomain.com"]})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
     # invalid entry - type
-    rqst = build_query_request('/auth/github/register', parms | {"redirect_uris": [1234]})
+    rqst = build_body_request('/auth/github/register', parms | {"redirect_uris": [1234]})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
 
@@ -74,11 +74,11 @@ def test_invalid_redirect():
 #
 def test_invalid_client_name():
     # invalid type
-    rqst = build_query_request('/auth/github/register', parms | {"client_name": {}})
+    rqst = build_body_request('/auth/github/register', parms | {"client_name": {}})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
     # too long
-    rqst = build_query_request('/auth/github/register', parms | {"client_name": "long"*100})
+    rqst = build_body_request('/auth/github/register', parms | {"client_name": "long"*100})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
 
@@ -87,11 +87,11 @@ def test_invalid_client_name():
 #
 def test_invalid_grant_types():
     # invalid type
-    rqst = build_query_request('/auth/github/register', parms | {"grant_types": {}})
+    rqst = build_body_request('/auth/github/register', parms | {"grant_types": {}})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
     # not allowed
-    rqst = build_query_request('/auth/github/register', parms | {"grant_types": "my grant"})
+    rqst = build_body_request('/auth/github/register', parms | {"grant_types": "my grant"})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
 
@@ -100,11 +100,11 @@ def test_invalid_grant_types():
 #
 def test_invalid_response_types():
     # invalid type
-    rqst = build_query_request('/auth/github/register', parms | {"response_types": {}})
+    rqst = build_body_request('/auth/github/register', parms | {"response_types": {}})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
     # not allowed
-    rqst = build_query_request('/auth/github/register', parms | {"response_types": "my response"})
+    rqst = build_body_request('/auth/github/register', parms | {"response_types": "my response"})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
 
@@ -113,7 +113,7 @@ def test_invalid_response_types():
 #
 def test_invalid_auth_method():
     # not allowed
-    rqst = build_query_request('/auth/github/register', parms | {"token_endpoint_auth_method": "my auth"})
+    rqst = build_body_request('/auth/github/register', parms | {"token_endpoint_auth_method": "my auth"})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
 
@@ -122,7 +122,7 @@ def test_invalid_auth_method():
 #
 def test_invalid_challenge_method():
     # not allowed
-    rqst = build_query_request('/auth/github/register', parms | {"code_challenge_method": "my challenge"})
+    rqst = build_body_request('/auth/github/register', parms | {"code_challenge_method": "my challenge"})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400
 
@@ -131,6 +131,6 @@ def test_invalid_challenge_method():
 #
 def test_invalid_scope():
     # invalid type
-    rqst = build_query_request('/auth/github/register', parms | {"scope": 5})
+    rqst = build_body_request('/auth/github/register', parms | {"scope": 5})
     rsps = lambda_gateway(rqst, None)
     assert rsps['statusCode'] == 400

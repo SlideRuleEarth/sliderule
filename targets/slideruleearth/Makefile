@@ -561,6 +561,10 @@ authenticator-delete: ## deletes the lambda authenticator functions
 	aws cloudformation delete-stack --stack-name $(AUTHENTICATOR_STACKNAME)
 	aws cloudformation wait stack-delete-complete --stack-name $(AUTHENTICATOR_STACKNAME)
 
+authenticator-update: authenticator-build ## updates the lambda authenticator functions
+	authenticator s3 cp $(AUTHENTICATOR_STAGE_DIR)/$(AUTHENTICATOR_ZIPFILE) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
+	aws lambda update-function-code --function-name $(AUTHENTICATOR_STACKNAME)-gateway --s3-bucket $(PROJECT_BUCKET) --s3-key $(PROJECT_FOLDER)/$(AUTHENTICATOR_ZIPFILE)
+
 authenticator-logs:
 	aws logs tail /aws/lambda/$(AUTHENTICATOR_STACKNAME)-gateway --since 2h --format short
 

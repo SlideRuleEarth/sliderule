@@ -9,7 +9,7 @@ import json
 
 redirect_uri = "https://localhost/myapp"
 
-register_rqst = build_query_request('/auth/github/register', {
+register_rqst = build_body_request('/auth/github/register', {
     "redirect_uris": [redirect_uri],
     "client_name": 'Unknown Client',
     "grant_types": ['authorization_code'],
