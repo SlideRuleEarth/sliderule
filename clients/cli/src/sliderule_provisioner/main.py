@@ -127,7 +127,7 @@ def main():
 
     # report
     report = subparsers.add_parser("report", parents=[common], help="report metadata of active clusters")
-    report.add_argument('--kind',   type=str,   default="cluster", help="'cluster' for cluster report, 'test' for test report")
+    report.add_argument('--kind',   type=str,   default="clusters", help="'clusters' for cluster report, 'test' for test report")
     report.set_defaults(func=Tool.report)
 
     # test

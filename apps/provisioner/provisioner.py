@@ -4,6 +4,7 @@ import json
 import base64
 import gzip
 import socket
+import traceback
 import boto3
 import botocore.exceptions
 from string import Template
@@ -815,6 +816,7 @@ def lambda_s3access(event, context):
     except Exception as e:
 
         # unhandled exception
+        traceback.print_exc()
         return exception_reponse(e)
 
 # ###############################
@@ -888,4 +890,5 @@ def lambda_gateway(event, context):
     except Exception as e:
 
         # unhandled exception
+        traceback.print_exc()
         return exception_reponse(e)
