@@ -640,22 +640,9 @@ def authorize_user(authorization_str, scope):
 # GitHub Oauth 2.1 Login Flow
 # =============================================================================
 
-def handle_register(event: dict) -> dict:
+def handle_register(event):
     """
     Dynamic Client Registration endpoint per RFC 7591.
-    """
-    try:
-        return register_client(event)
-    except Exception as e:
-        print(f"Error in register: {e}")
-        return json_response(500, {
-            'error': 'internal_error',
-            'error_description': 'error processing registration'
-        })
-
-
-def register_client(event):
-    """
     Validate and store client metadata (RFC 7591 requires a JSON body)
     """
     # get request parameters
@@ -768,7 +755,14 @@ def register_client(event):
     }
 
     # store client record
-    session_store(client_id, client_record)
+    try:
+        session_store(client_id, client_record)
+    except Exception as e:
+        print(f"Error in storing session: {e}")
+        return json_response(500, {
+            'error': 'internal_error',
+            'error_description': 'error storing session'
+        })
 
     # 201 Created — not 200.  RFC 7591 is explicit about this.
     return json_response(201, client_record, headers={
