@@ -6,7 +6,7 @@ dependencies:
   - boto3
   - duckdb
   - geopandas
-  - pyarrow
+  - pyarrow=24
   - shapely
   - sliderule
   - pip
