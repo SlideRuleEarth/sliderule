@@ -578,7 +578,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1, tif_parms=None)
         gdf = geopandas.GeoDataFrame(geometry=[source], crs=DEFAULT_CRS)
 
     # bounding box as [lon lat lon lat]
-    elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
+    elif isinstance(source, list) and (len(source) == 4) and not isinstance(source[0], dict):
         if len(source) == 4: # bounding box
             lons = [source[0], source[2], source[2], source[0], source[0]]
             lats = [source[1], source[1], source[3], source[3], source[1]]
