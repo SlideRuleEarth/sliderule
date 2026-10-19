@@ -269,7 +269,7 @@ class Icesat2Parameters: public RequestParameters
                         Icesat2Parameters   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual         ~Icesat2Parameters  (void) override = default;
 
-        void            geoCorrect          (int beam, float& height, double& latitude, double& longitude) const;
+        bool            geoCorrect          (int beam, float& height, double& latitude, double& longitude) const;
         static int      luaStage            (lua_State* L);
 
         /*--------------------------------------------------------------------

@@ -40,7 +40,6 @@
 #include "AmsLib.h"
 
 #include <rapidjson/document.h>
-#include <limits>
 
 /******************************************************************************
  * STATIC DATA
@@ -215,74 +214,75 @@ void Icesat2Parameters::fromLua (lua_State* L, int index)
 {
     RequestParameters::fromLua(L, index);
 
-    // parse resource name
+    // get resource related parameters
     if(!resource.value.empty())
     {
+        // parse resource for granule fields
         granuleFields.parseResource(resource.value.c_str());
+
+        // handle geolocation correction values
+        if(geolocFields.correction.value == GeolocCorrFields::CONUS)
+        {
+            stages[STAGE_GEOLOC] = true;
+            FString path("ATL03/geoloc_corr/%s", resource.value.c_str());
+            AmsLib::rsps_t rsps = AmsLib::request(EndpointObject::GET, path.c_str(), NULL, timeout.value);
+            if(rsps.code == EndpointObject::OK)
+            {
+                if(rsps.size > 0)
+                {
+                    try
+                    {
+                        rapidjson::Document json;
+                        json.Parse(rsps.response);
+                        for(int i = 0; i < GeolocCorrFields::NUM_BEAMS; i++)
+                        {
+                            const auto beam_itr = json.FindMember(GeolocCorrFields::beams[i]);
+                            if(beam_itr != json.MemberEnd() && beam_itr->value.IsObject())
+                            {
+                                const auto get_double = [&](const char* key) -> double {
+                                    const auto itr = beam_itr->value.FindMember(key);
+                                    if(itr == beam_itr->value.MemberEnd() || !itr->value.IsNumber())
+                                    {
+                                        throw RunTimeException(CRITICAL, RTE_FAILURE, "missing or invalid %s for %s", key, GeolocCorrFields::beams[i]);
+                                    }
+                                    return itr->value.GetDouble();
+                                };
+                                geolocFields.N[i] = get_double("shift_N_m");
+                                geolocFields.E[i] = get_double("shift_E_m");
+                                geolocFields.U[i] = get_double("shift_U_m");
+                                geolocFields.provided[i] = true;
+                            }
+                        }
+                    }
+                    catch(const std::exception& e)
+                    {
+                        mlog(CRITICAL, "Failed to parse AMS geolocation correction response <%s>: %s", e.what(), rsps.response);
+                    }
+                }
+                else
+                {
+                    mlog(CRITICAL, "Empty response from AMS geolocation correction");
+                }
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed in request to AMS geolocation correction: %ld", rsps.code);
+            }
+        }
+        else if(geolocFields.correction.value == GeolocCorrFields::MANUAL)
+        {
+            stages[STAGE_GEOLOC] = true;
+            for(int i = 0; i < GeolocCorrFields::NUM_BEAMS; i++)
+            {
+                geolocFields.provided[i] = true;
+            }
+        }
     }
 
     // handle atl09 sampline options
     if(atl09Fields.length() > 0)
     {
         stages[STAGE_ATL09] = true;
-    }
-
-    // handle geolocation correction values
-    if(geolocFields.correction.value == GeolocCorrFields::CONUS)
-    {
-        FString path("/ams/ATL03/geoloc_corr/%s", resource.value.c_str());
-        AmsLib::rsps_t rsps = AmsLib::request(EndpointObject::GET, path.c_str(), NULL, timeout.value);
-        if(rsps.code == EndpointObject::OK)
-        {
-            if(rsps.size > 0)
-            {
-                try
-                {
-                    rapidjson::Document json;
-                    json.Parse(rsps.response);
-                    for(int i = 0; i < GeolocCorrFields::NUM_BEAMS; i++)
-                    {
-                        const auto beam_itr = json.FindMember(GeolocCorrFields::beams[i]);
-                        if(beam_itr != json.MemberEnd() && beam_itr->value.IsObject())
-                        {
-                            const auto get_double = [&](const char* key) -> double {
-                                const auto itr = beam_itr->value.FindMember(key);
-                                if(itr == beam_itr->value.MemberEnd() || !itr->value.IsNumber())
-                                {
-                                    throw RunTimeException(CRITICAL, RTE_FAILURE, "missing or invalid %s for %s", key, GeolocCorrFields::beams[i]);
-                                }
-                                return itr->value.GetDouble();
-                            };
-                            geolocFields.N[i] = get_double("N");
-                            geolocFields.E[i] = get_double("E");
-                            geolocFields.U[i] = get_double("U");
-                            geolocFields.provided[i] = true;
-                        }
-                    }
-                    stages[STAGE_GEOLOC] = true;
-                }
-                catch(const std::exception& e)
-                {
-                    mlog(CRITICAL, "Failed to parse AMS geolocation correction response: %s", rsps.response);
-                }
-            }
-            else
-            {
-                mlog(CRITICAL, "Empty response from AMS geolocation correction");
-            }
-        }
-        else
-        {
-            mlog(CRITICAL, "Failed in request to AMS geolocation correction: %ld", rsps.code);
-        }
-    }
-    else if(geolocFields.correction.value == GeolocCorrFields::MANUAL)
-    {
-        for(int i = 0; i < GeolocCorrFields::NUM_BEAMS; i++)
-        {
-            geolocFields.provided[i] = true;
-        }
-        stages[STAGE_GEOLOC] = true;
     }
 
     // handle track selection override of beams
@@ -345,6 +345,7 @@ Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const cha
     addParameter("track",               &track,                 "Reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0) to process; note that when provided, this is combined with the beam selection as a union of the two");
     addParameter("atl09_fields",        &atl09Fields,           "Ancillary fields in the ATL09 granule to include in the response (e.g. low_rate/cal_c); supported by all x-series endpoints");
     addParameter("granule",             &granuleFields,         "Versioning, ground track, and date information pulled from the granule processed; output only");
+    addParameter("geoloc_corr",         &geolocFields,          "Geolocation corrections");
 
     // add additional functions
     LuaEngine::setAttrFunc(L, "stage", luaStage);
@@ -362,8 +363,10 @@ Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const cha
  *   lon_new = lon + shift_E_m / ((N + h) * cos(lat))
  *     h_new = h + shift_U_m
  *----------------------------------------------------------------------------*/
-void Icesat2Parameters::geoCorrect (int beam, float& height, double& latitude, double& longitude) const
+bool Icesat2Parameters::geoCorrect (int beam, float& height, double& latitude, double& longitude) const
 {
+    bool status = false;
+
     // check beam index
     if(beam < 0 || beam >= GeolocCorrFields::NUM_BEAMS)
     {
@@ -407,13 +410,12 @@ void Icesat2Parameters::geoCorrect (int beam, float& height, double& latitude, d
         {
             longitude += 360.0;
         }
+
+        // set success
+        status = true;
     }
-    else // indicate correction requested but not applied
-    {
-        height = std::numeric_limits<float>::quiet_NaN();
-        latitude = std::numeric_limits<double>::quiet_NaN();
-        longitude = std::numeric_limits<double>::quiet_NaN();
-    }
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------

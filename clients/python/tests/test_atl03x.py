@@ -398,3 +398,31 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert gdf is None # signal_class_ph not present before release 007
+
+    def test_geoloc_corr(self, init):
+        resource = "ATL03_20181014203635_02480102_007_01.h5"
+        aoi = [
+            { "lat": 30.75, "lon": -80.00 },
+            { "lat": 31.00, "lon": -80.00 },
+            { "lat": 31.00, "lon": -76.00 },
+            { "lat": 30.75, "lon": -76.00 },
+            { "lat": 30.75, "lon": -80.00 }
+        ]
+        gdf = sliderule.run("atl03x", {
+            "beam": "gtl1",
+            "cnf": 4
+        }, aoi=aoi, resources=[resource])
+        gdf_corr1 = sliderule.run("atl03x", {
+            "beam": "gtl1",
+            "cnf": 4,
+            "geoloc_corr": {
+                "correction": "conus"
+            }
+        }, aoi=aoi, resources=[resource])
+        assert init
+        assert len(gdf) == 183086
+        assert (len(gdf) - len(gdf_corr1)) == 69630
+        assert len(list(gdf_corr1["gt"].value_counts().keys())) == 2
+        assert abs(gdf_corr1.geometry.x.describe()["mean"] - -77.29863656553168) < 0.00001
+        assert abs(gdf_corr1.geometry.y.describe()["mean"] - 30.873894172040597) < 0.00001
+        assert abs(gdf_corr1.height.describe()["mean"] - -41.26692199707031) < 0.00001

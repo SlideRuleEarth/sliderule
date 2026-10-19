@@ -787,6 +787,17 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 }
             }
 
+            /* Apply Geolocation Corrections */
+            float height = atl03.h_ph[current_photon];
+            double latitude = atl03.lat_ph[current_photon];
+            double longitude = atl03.lon_ph[current_photon];
+            if(parms.stages[Icesat2Parameters::STAGE_GEOLOC])
+            {
+                const int beam = static_cast<int>(df->gt.value / 10) - 1;
+                const bool status = parms.geoCorrect(beam, height, latitude, longitude);
+                if(!status) continue;
+            }
+
             /* Calculate Spacecraft Velocity */
             const int32_t sc_v_offset = current_segment * 3;
             const double sc_v1 = atl03.velocity_sc[sc_v_offset + 0];
@@ -799,16 +810,6 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                   (atl03.bckgrd_delta_time[background_index + 1] <= atl03.segment_delta_time[current_segment]))
             {
                 background_index++;
-            }
-
-            /* Apply Geolocation Corrections */
-            float height = atl03.h_ph[current_photon];
-            double latitude = atl03.lat_ph[current_photon];
-            double longitude = atl03.lon_ph[current_photon];
-            if(parms.stages[Icesat2Parameters::STAGE_GEOLOC])
-            {
-                int beam = static_cast<int>(df->gt / 10) - 1;
-                parms.geoCorrect(beam, height, latitude, longitude);
             }
 
             /* Apply Geoid Correction */
