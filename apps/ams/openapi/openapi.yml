@@ -17,6 +17,8 @@ servers:
 security: []
 
 paths:
+  /ams/ATL03/geoloc_corr/{name}:
+    $ref: 'paths/atl03_geoloc_corr.yml'
   /ams/ATL13:
     $ref: 'paths/atl13.yml'
   /ams/ATL24:
@@ -55,6 +57,8 @@ components:
   responses:
     BadRequest:
       $ref: 'components/responses/BadRequest.yml'
+    ATL03GeolocCorrResponse:
+      $ref: 'components/responses/ATL03GeolocCorrResponse.yml'
     ATL13Response:
       $ref: 'components/responses/ATL13Response.yml'
     ATL24Response:

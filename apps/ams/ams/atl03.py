@@ -49,20 +49,21 @@ def geoloc_corr_route(name):
         granule = "ATL03" + name[5:36] + ".h5"
         # execute query
         db = __get_atl03()
-        table = db.execute(f"""
+        table = db.execute("""
             SELECT *
             FROM atl03db
-            WHERE granule == '{granule}'
-        """).to_arrow_table()
+            WHERE granule == ?
+              AND shift_N_m IS NOT NULL
+              AND shift_E_m IS NOT NULL
+              AND shift_U_m IS NOT NULL
+        """, [granule]).to_arrow_table()
         # build response
         response = {}
-        for i in range(len(table)):
-            row = table.slice(i, i+1)
-            beam = str(row.column("beam")[0])
-            response[beam] = {
-                "shift_N_m": float(row.column("shift_N_m")[0]),
-                "shift_E_m": float(row.column("shift_E_m")[0]),
-                "shift_U_m": float(row.column("shift_U_m")[0])
+        for row in table.to_pylist():
+            response[row["beam"]] = {
+                "shift_N_m": row["shift_N_m"],
+                "shift_E_m": row["shift_E_m"],
+                "shift_U_m": row["shift_U_m"]
             }
         # return response
         return json.dumps(response)

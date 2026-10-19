@@ -8,6 +8,7 @@ os.environ["VALIDATE_OPENAPI"] = "true"
 def app():
     app = create_app({
         'TESTING': True,
+        'ATL03_DB': '/data/atl03.db',
         'ATL13_DB': '/data/atl13r7.db',
         'ATL24_DB': '/data/atl24r2.db',
         'USGS3DEP_DB': '/data/3dep.db',

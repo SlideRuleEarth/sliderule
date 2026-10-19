@@ -987,7 +987,17 @@ distclean: ## fully remove all non-version controlled files and directories
 ########################
 
 update-cf-env: ## update cloud formation environment for public deployment
+	aws s3 cp /data/docker-compose-v5.5.1 s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
 	aws s3 cp /data/$(USERS_FILENAME) s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/
+	aws s3 cp /data/3dep.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/atl03.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/atl13r7.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/atl24r2.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/casals1b.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/casals1b.geojson s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/is2gt.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/ATL24_Mask_v5_Raster.tif s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/server/
+	aws s3 cp /data/cop_rep_ANNUAL_meanRI_d00.tif s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/server/
 
 init-dev-env: ## one-time setup of development environment for running locally
 	mkdir -p /data

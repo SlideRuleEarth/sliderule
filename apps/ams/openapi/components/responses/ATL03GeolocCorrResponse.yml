@@ -1,0 +1,21 @@
+description: Successful geolocation correction response
+content:
+  application/json:
+    schema:
+      type: object
+      description: >
+        A map of beam name to geolocation correction for the requested granule.
+        Beams without an available correction are omitted.
+      additionalProperties:
+        type: object
+        required: [shift_N_m, shift_E_m, shift_U_m]
+        properties:
+          shift_N_m:
+            type: number
+            description: Northward shift in meters
+          shift_E_m:
+            type: number
+            description: Eastward shift in meters
+          shift_U_m:
+            type: number
+            description: Upward shift in meters

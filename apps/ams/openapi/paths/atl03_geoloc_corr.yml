@@ -1,0 +1,22 @@
+get:
+  operationId: ATL03GeolocCorr
+  summary: Get ATL03 geolocation corrections
+  description: >
+    Retrieve per-beam geolocation corrections (north, east, and up shifts in meters)
+    for an ATL03 granule. The name may be any ICESat-2 granule name that follows the
+    standard naming convention (e.g. an ATL06 or ATL24 granule); it is converted on a
+    best-effort basis to the corresponding ATL03 granule name. An unknown granule
+    returns an empty object.
+  parameters:
+    - name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The granule name
+      example: ATL03_20181014113520_02420106_007_01.h5
+  responses:
+    '200':
+      $ref: '../components/responses/ATL03GeolocCorrResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
