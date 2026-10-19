@@ -37,6 +37,10 @@
 #include "Icesat2Parameters.h"
 #include "FieldMap.h"
 #include "LuaObject.h"
+#include "AmsLib.h"
+
+#include <rapidjson/document.h>
+#include <limits>
 
 /******************************************************************************
  * STATIC DATA
@@ -59,6 +63,17 @@ Atl03GranuleFields::Atl03GranuleFields():
                       {"cycle",     &cycle,     "ICESat-2 Cycle Number"},
                       {"region",    &region,    "ICESat-2 Region (0 to 14, see ATL03 ATBD)"},
                       {"version",   &version,   "ICESat-2 Standard Data Product Version"} })
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - GeolocCorrFields
+ *----------------------------------------------------------------------------*/
+GeolocCorrFields::GeolocCorrFields():
+    FieldMap<Field>({ {"correction",    &correction,    "Source of geolocation correction"},
+                      {"N",             &N,             "Local northern correction in meters"},
+                      {"E",             &E,             "Local eastern correction in meters"},
+                      {"U",             &U,             "Upward correction in meters"} })
 {
 }
 
@@ -212,6 +227,64 @@ void Icesat2Parameters::fromLua (lua_State* L, int index)
         stages[STAGE_ATL09] = true;
     }
 
+    // handle geolocation correction values
+    if(geolocFields.correction.value == GeolocCorrFields::CONUS)
+    {
+        FString path("/ams/ATL03/geoloc_corr/%s", resource.value.c_str());
+        AmsLib::rsps_t rsps = AmsLib::request(EndpointObject::GET, path.c_str(), NULL, timeout.value);
+        if(rsps.code == EndpointObject::OK)
+        {
+            if(rsps.size > 0)
+            {
+                try
+                {
+                    rapidjson::Document json;
+                    json.Parse(rsps.response);
+                    for(int i = 0; i < GeolocCorrFields::NUM_BEAMS; i++)
+                    {
+                        const auto beam_itr = json.FindMember(GeolocCorrFields::beams[i]);
+                        if(beam_itr != json.MemberEnd() && beam_itr->value.IsObject())
+                        {
+                            const auto get_double = [&](const char* key) -> double {
+                                const auto itr = beam_itr->value.FindMember(key);
+                                if(itr == beam_itr->value.MemberEnd() || !itr->value.IsNumber())
+                                {
+                                    throw RunTimeException(CRITICAL, RTE_FAILURE, "missing or invalid %s for %s", key, GeolocCorrFields::beams[i]);
+                                }
+                                return itr->value.GetDouble();
+                            };
+                            geolocFields.N[i] = get_double("N");
+                            geolocFields.E[i] = get_double("E");
+                            geolocFields.U[i] = get_double("U");
+                            geolocFields.provided[i] = true;
+                        }
+                    }
+                    stages[STAGE_GEOLOC] = true;
+                }
+                catch(const std::exception& e)
+                {
+                    mlog(CRITICAL, "Failed to parse AMS geolocation correction response: %s", rsps.response);
+                }
+            }
+            else
+            {
+                mlog(CRITICAL, "Empty response from AMS geolocation correction");
+            }
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed in request to AMS geolocation correction: %ld", rsps.code);
+        }
+    }
+    else if(geolocFields.correction.value == GeolocCorrFields::MANUAL)
+    {
+        for(int i = 0; i < GeolocCorrFields::NUM_BEAMS; i++)
+        {
+            geolocFields.provided[i] = true;
+        }
+        stages[STAGE_GEOLOC] = true;
+    }
+
     // handle track selection override of beams
     if(track.value != ALL_TRACKS)
     {
@@ -275,6 +348,72 @@ Icesat2Parameters::Icesat2Parameters(lua_State* L, uint64_t key_space, const cha
 
     // add additional functions
     LuaEngine::setAttrFunc(L, "stage", luaStage);
+}
+
+/*----------------------------------------------------------------------------
+ * geoCorrect -
+ *   all angles in radians
+ *   with  M = a(1 - e2) / (1 - e2 sin²lat)^1.5
+ *         N = a / (1 - e2 sin²lat)^0.5,
+ *         a = 6378137 m,
+ *        e2 = 0.00669438,
+ *         h = ellipsoidal height
+ *   lat_new = lat + shift_N_m / (M + h)
+ *   lon_new = lon + shift_E_m / ((N + h) * cos(lat))
+ *     h_new = h + shift_U_m
+ *----------------------------------------------------------------------------*/
+void Icesat2Parameters::geoCorrect (int beam, float& height, double& latitude, double& longitude) const
+{
+    // check beam index
+    if(beam < 0 || beam >= GeolocCorrFields::NUM_BEAMS)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %d", beam);
+    }
+
+    // correct geolocation
+    if(geolocFields.provided[beam])
+    {
+        static const double a = 6378137; // meters
+        static const double e2 = 0.00669438;
+        double lat_rad = (latitude * M_PI) / 180.0;
+        double lon_rad = (longitude * M_PI) / 180.0;
+        const double sin2lat = pow(sin(lat_rad), 2.0);
+        const double M = (a * (1 - e2)) / pow(1 - (e2 * sin2lat), 1.5);
+        const double N = a / pow(1 - (e2 * sin2lat), 0.5);
+        lon_rad += geolocFields.E[beam] / ((N + height) * cos(lat_rad));
+        lat_rad += geolocFields.N[beam] / (M + height);
+        height += geolocFields.U[beam];
+        latitude = (lat_rad * 180.0) / M_PI;
+        longitude = (lon_rad * 180.0) / M_PI;
+
+        // check latitude bounds
+        if(latitude > 90.0)
+        {
+            latitude = 180.0 - latitude;
+            longitude += 180.0;
+        }
+        else if(latitude < -90.0)
+        {
+            latitude = -180.0 - latitude;
+            longitude += 180.0;
+        }
+
+        // check longitude bounds
+        if(longitude > 180.0)
+        {
+            longitude -= 360.0;
+        }
+        else if(longitude < -180.0)
+        {
+            longitude += 360.0;
+        }
+    }
+    else // indicate correction requested but not applied
+    {
+        height = std::numeric_limits<float>::quiet_NaN();
+        latitude = std::numeric_limits<double>::quiet_NaN();
+        longitude = std::numeric_limits<double>::quiet_NaN();
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -863,5 +1002,58 @@ void convertFromLua(lua_State* L, int index, Icesat2Parameters::surface_type_t& 
     else if(!lua_isnil(L, index))
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "surface type is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - corr_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const GeolocCorrFields::corr_t& v)
+{
+    switch(v)
+    {
+        case GeolocCorrFields::NONE:    return "\"none\"";
+        case GeolocCorrFields::MANUAL:  return "\"manual\"";
+        case GeolocCorrFields::CONUS:   return "\"conus\"";
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid geolocation correction: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - corr_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const GeolocCorrFields::corr_t& v)
+{
+    switch(v)
+    {
+        case GeolocCorrFields::NONE:    lua_pushstring(L, "none");      break;
+        case GeolocCorrFields::MANUAL:  lua_pushstring(L, "manual");    break;
+        case GeolocCorrFields::CONUS:   lua_pushstring(L, "conus");     break;
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid geolocation correction: %d", static_cast<int>(v));
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - corr_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, GeolocCorrFields::corr_t& v)
+{
+    if(lua_isinteger(L, index))
+    {
+        v = static_cast<GeolocCorrFields::corr_t>(LuaObject::getLuaInteger(L, index));
+    }
+    else if(lua_isstring(L, index))
+    {
+        const char* str = LuaObject::getLuaString(L, index);
+        if     (StringLib::match(str, "none"))      v = GeolocCorrFields::NONE;
+        else if(StringLib::match(str, "manual"))    v = GeolocCorrFields::MANUAL;
+        else if(StringLib::match(str, "conus"))     v = GeolocCorrFields::CONUS;
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "geolocation correction is an invalid value: %s", str);
+    }
+    else if(!lua_isnil(L, index))
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "geolocation correction is an invalid type: %d", lua_type(L, index));
     }
 }

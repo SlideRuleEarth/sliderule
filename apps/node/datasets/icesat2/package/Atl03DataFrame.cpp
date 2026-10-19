@@ -801,15 +801,24 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 background_index++;
             }
 
-            /* Calculate Height */
+            /* Apply Geolocation Corrections */
             float height = atl03.h_ph[current_photon];
+            double latitude = atl03.lat_ph[current_photon];
+            double longitude = atl03.lon_ph[current_photon];
+            if(parms.stages[Icesat2Parameters::STAGE_GEOLOC])
+            {
+                int beam = static_cast<int>(df->gt / 10) - 1;
+                parms.geoCorrect(beam, height, latitude, longitude);
+            }
+
+            /* Apply Geoid Correction */
             if(df->useGeoid) height -= atl03.geoid[current_segment];
 
             /* Add Photon to DataFrame */
             df->addRow();
             df->time_ns.append(Icesat2Parameters::deltatime2timestamp(atl03.delta_time[current_photon]));
-            df->latitude.append(atl03.lat_ph[current_photon]);
-            df->longitude.append(atl03.lon_ph[current_photon]);
+            df->latitude.append(latitude);
+            df->longitude.append(longitude);
             df->segment_id.append(atl03.segment_id[current_segment]);
             df->x_atc.append(atl03.dist_ph_along[current_photon] + atl03.segment_dist_x[current_segment]);
             df->y_atc.append(atl03.dist_ph_across[current_photon]);

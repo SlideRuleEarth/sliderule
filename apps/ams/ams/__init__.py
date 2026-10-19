@@ -43,6 +43,11 @@ def create_app(test_config=None):
     db.execute("INSTALL spatial;")
     db.close()
 
+    # initialize ATL03
+    from . import atl03
+    atl03.init_app(app)
+    app.register_blueprint(atl03.atl03)
+
     # initialize ATL13
     from . import atl13
     atl13.init_app(app)

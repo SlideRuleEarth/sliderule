@@ -70,6 +70,30 @@ struct Atl03GranuleFields: public FieldMap<Field>
     void parseResource (const char* resource);
 };
 
+/*********************************/
+/* Geolocation Correction Fields */
+/*********************************/
+struct GeolocCorrFields: public FieldMap<Field>
+{
+    typedef enum {
+        NONE = 0,
+        MANUAL = 1,
+        CONUS = 2
+    } corr_t;
+
+    static const int NUM_BEAMS = 6;
+    static constexpr std::array<const char*, NUM_BEAMS> beams = {"gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"};
+
+    FieldElement<corr_t> correction {NONE, 0, {NONE, MANUAL, CONUS}};
+    FieldArray<bool, NUM_BEAMS> provided {false, false, false, false, false, false};
+    FieldArray<double, NUM_BEAMS> N {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    FieldArray<double, NUM_BEAMS> E {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    FieldArray<double, NUM_BEAMS> U {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    GeolocCorrFields(void);
+    ~GeolocCorrFields(void) override = default;
+};
+
 /***********************/
 /* ICESat-2 Parameters */
 /***********************/
@@ -217,14 +241,15 @@ class Icesat2Parameters: public RequestParameters
 
         /* Algorithm Stages */
         typedef enum {
-            STAGE_FITTER = 0,    // surface fit
+            STAGE_FITTER = 0,   // surface fit
             STAGE_ATL08 = 1,    // use ATL08 photon classifications
             STAGE_YAPC = 2,     // yet another photon classifier
             STAGE_PHOREAL = 3,  // atl08 vegetation science
             STAGE_ATL24 = 4,    // atl24 vegetation science
             STAGE_ATL09 = 5,    // sample atmospheric data
             STAGE_BLANKET = 6,  // surface blanket
-            NUM_STAGES = 7
+            STAGE_GEOLOC = 7,   // geolocation corrections
+            NUM_STAGES = 8
         } stages_t;
 
         /* Ancillary Field Types */
@@ -244,6 +269,7 @@ class Icesat2Parameters: public RequestParameters
                         Icesat2Parameters   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const char* lua_meta_name = LUA_META_NAME);
         virtual         ~Icesat2Parameters  (void) override = default;
 
+        void            geoCorrect          (int beam, float& height, double& latitude, double& longitude) const;
         static int      luaStage            (lua_State* L);
 
         /*--------------------------------------------------------------------
@@ -409,8 +435,9 @@ class Icesat2Parameters: public RequestParameters
         FieldElement<int>                       track {ALL_TRACKS};                             // reference pair track number (1, 2, 3, or 0 for all tracks)
         FieldList<string>                       atl09Fields;                                    // list of ATL09 fields used by Atl09Sampler
         Atl03GranuleFields                      granuleFields;                                  // ATL03 granule attributes
+        GeolocCorrFields                        geolocFields;                                   // geolocation corrections
 
-        bool stages[NUM_STAGES] = {false, false, false, false, false};
+        bool stages[NUM_STAGES] = {false, false, false, false, false, false, false, false};
 };
 
 /******************************************************************************
@@ -457,6 +484,11 @@ string convertToJson(const Icesat2Parameters::surface_type_t& v);
 int convertToLua(lua_State* L, const Icesat2Parameters::surface_type_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Parameters::surface_type_t& v);
 
+string convertToJson(const GeolocCorrFields::corr_t& v);
+int convertToLua(lua_State* L, const GeolocCorrFields::corr_t& v);
+void convertFromLua(lua_State* L, int index, GeolocCorrFields::corr_t& v);
+
+inline uint32_t toEncoding(GeolocCorrFields::corr_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::surface_type_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::spot_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Parameters::gt_t& v) { (void)v; return Field::INT32; }
