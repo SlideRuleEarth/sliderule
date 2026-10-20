@@ -601,7 +601,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         int32_t current_count = 0; // number of photons in current segment already accounted for
         int32_t background_index = 0;
         bool first_podppd_filter = true;
-
+        bool first_geoloc_corr_failure = true;
 
         /* Traverse All Photons In Dataset */
         while(df->active.load() && (++current_photon < atl03.dist_ph_along.size))
@@ -795,7 +795,15 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             {
                 const int beam = static_cast<int>(df->gt.value / 10) - 1;
                 const bool status = parms.geoCorrect(beam, height, latitude, longitude);
-                if(!status) continue;
+                if(!status)
+                {
+                    if(first_geoloc_corr_failure)
+                    {
+                        first_geoloc_corr_failure = false;
+                        alert(INFO, RTE_FAILURE, df->outQ, &df->active, "Failed to correct geolocation for resource %s beam %s", df->hdf03->name, df->beam);
+                    }
+                    continue;
+                }
             }
 
             /* Calculate Spacecraft Velocity */
