@@ -6,7 +6,7 @@ channels:
 dependencies:
   - boto3
   - cryptography
-  - duckdb
+  - python-duckdb
   - geojson
   - geopandas
   - h5coro

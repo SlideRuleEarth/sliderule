@@ -13,7 +13,7 @@ requires-python = ">=3.9"
 dependencies = ["requests", "numpy", "geopandas", "shapely", "pyarrow"]
 
 [project.optional-dependencies]
-tile = ["duckdb"]
+tile = ["python-duckdb"]
 sign = ["cryptography"]
 
 [tool.setuptools]

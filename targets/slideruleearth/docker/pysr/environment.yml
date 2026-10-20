@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - boto3
-  - duckdb
+  - python-duckdb
   - geopandas
   - pyarrow=24
   - shapely
