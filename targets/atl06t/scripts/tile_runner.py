@@ -18,7 +18,7 @@ result_file = sys.argv[2]
 SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
 ROW_GROUP_TARGET_SIZE_MB = 2 # MB
 OUTPUT_BUCKET = "sliderule-public"
-OUTPUT_PREFIX = "atl06t"
+OUTPUT_PREFIX = "atl06tv2"
 
 # create S3 client
 s3 = boto3.client("s3")
