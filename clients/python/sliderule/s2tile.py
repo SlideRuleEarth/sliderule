@@ -189,7 +189,7 @@ class Reader:
     #
     # read tiles
     #
-    def read_tiles(self, aoi, start=None, end=None, exact=True):
+    def read_tiles(self, aoi, start=None, end=None, exact=True, verbose=False):
         # get set of S2 cells that cover area of interest
         aoi_gdf = sliderule.toregion(aoi)["gdf"]
         if aoi_gdf.crs is not None:
@@ -207,7 +207,7 @@ class Reader:
                 lambda tile_id: self.read_tile(tile_id, start, end, exact),
                 tile_cover_ids)
             for i, (tile_id, (gdf, status)) in enumerate(zip(tile_cover_ids, results)):
-                print(f"Read [{i+1}/{len(tile_cover_ids)}] tile {tile_id:016X} - {status}")
+                if verbose: print(f"Read [{i+1}/{len(tile_cover_ids)}] tile {tile_id:016X} - {status}")
                 if gdf is not None:
                     gdfs.append(gdf)
         # combine tiles
