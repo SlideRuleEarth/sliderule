@@ -21,7 +21,9 @@ OUTPUT_PREFIX = "atl06tv2"
 s3 = boto3.client("s3")
 
 # create sliderule session
-session = sliderule.create_session(domain="localhost", cluster=None)
+domain = "slideruleearth.io" # "localhost"
+cluster = "sliderule" # None
+session = sliderule.create_session(domain=domain, cluster=cluster)
 
 # build geodataframe
 def build_gdf(granule):

@@ -102,11 +102,9 @@ result = {
 try:
 
     cell_id_str = partition.split("/")[-2]
-    local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
-    remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
-
     filenames = list_bucket(f"s3://{partition}")
     gdfs = [gpd.read_parquet(f"s3://{filename}") for filename in filenames]
+
 
     if len(gdfs) > 0:
 
@@ -115,6 +113,8 @@ try:
         gdf["cell_id"] = assign_cell_ids(gdf, SEGMENT_S2_CELL_LEVEL)
         gdf = gdf.set_index("cell_id").sort_index(kind="stable")
 
+        local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
+        remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
         write_optimized_parquet(gdf, local_parquet_file)
         s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
         result["outputs"].append(remote_parquet_file)
