@@ -88,7 +88,7 @@ end)
 
 -- (6) Integer Fields Supplied As Floats
 
-runner.unittest("Request Parameters Integer Fields Supplied As Floats", function()
+runner.unittest("Integer Fields Supplied As Floats", function()
     -- a float with an exact integer representation is accepted (json decodes 9.0 as a float)
     local parms = core.parms({cluster_size_hint=9.0})
     local ptable = parms:export()
