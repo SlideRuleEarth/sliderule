@@ -27,17 +27,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
 import json
+import uuid
 import duckdb
-import boto3
 import numpy as np
 import pyarrow as pa
 import pyarrow.fs as pafs
 import pyarrow.parquet as pq
 import geopandas as gpd
-from concurrent.futures import ThreadPoolExecutor
-from geopandas.io.arrow import _geopandas_to_arrow, _arrow_to_geopandas
+from concurrent.futures import Future, ThreadPoolExecutor
+from threading import Lock
 from sliderule import sliderule
 
 ###############################################################################
@@ -46,8 +45,8 @@ from sliderule import sliderule
 
 TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
-ROW_GROUP_TARGET_SIZE_MB = 2 # MB
 S3_REGION = "us-west-2"
+TIME_UNIT_NS = {"s": 1_000_000_000, "ms": 1_000_000, "us": 1_000, "ns": 1}
 
 ###############################################################################
 # CLASSES
@@ -66,10 +65,30 @@ class Reader:
         self.prefix = prefix
         self.s3_fs = pafs.S3FileSystem(region=region, anonymous=anonymous)
         self.connection = duckdb.connect()
-        self.connection.sql("INSTALL geography FROM community; LOAD geography;")
+        try:
+            # only go to the network to install the extension when it is not already available locally
+            try:
+                self.connection.sql("LOAD geography;")
+            except duckdb.Error:
+                self.connection.sql("INSTALL geography FROM community; LOAD geography;")
+        except Exception:
+            self.connection.close()
+            raise
         self.max_workers = max_workers
         self.tile_level = tile_level
         self.segment_level = segment_level
+
+    #
+    # resource management
+    #
+    def close(self):
+        self.connection.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     #
     # [lo, hi] range of cell ids covered by each cell (any level)
@@ -93,98 +112,173 @@ class Reader:
     # split a tile into cells fully inside the aoi (mixed levels) and segment level cells crossing its edge
     #
     @staticmethod
-    def classify_cells(cursor, tile_id, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
+    def classify_cells(cursor, poly_table, tile_id, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
         interior, cells = [], np.array([tile_id], dtype=np.uint64)
         for lvl in range(tile_level, segment_level + 1):
             if len(cells) == 0:
                 break
             cursor.register("cells", gpd.pd.DataFrame({"c": cells}))
-            res = cursor.sql("""
-                SELECT c, s2_contains(p.g, c::S2_CELL::GEOGRAPHY) AS inside, s2_intersects(p.g, c::S2_CELL::GEOGRAPHY) AS touches
-                FROM cells, poly_geog p
+            # CASE evaluates the intersects test only for cells that are not already fully inside
+            res = cursor.sql(f"""
+                SELECT c, CASE WHEN s2_contains(p.g, cg) THEN 2 WHEN s2_intersects(p.g, cg) THEN 1 ELSE 0 END AS rel
+                FROM (SELECT c, c::S2_CELL::GEOGRAPHY AS cg FROM cells), {poly_table} p
             """).fetchnumpy()
-            interior.append(res["c"][res["inside"]])
-            cells = res["c"][res["touches"] & ~res["inside"]]
+            interior.append(res["c"][res["rel"] == 2])
+            cells = res["c"][res["rel"] == 1]
             if lvl < segment_level:
                 lsb = cells & (~cells + np.uint64(1))
                 cells = np.sort(np.concatenate([cells - lsb + (lsb >> np.uint64(2)) * np.uint64(2 * k + 1) for k in range(4)]))
         return np.sort(np.concatenate(interior)), cells
 
     #
-    # select row groups whose cell_id min/max overlaps any of the sorted, disjoint [lo, hi] ranges
+    # leaf column index of a top level parquet column (differs from the arrow field index when nested columns are present)
     #
     @staticmethod
-    def select_row_groups(lo, hi, file_meta):
-        cid = file_meta.schema.to_arrow_schema().get_field_index("cell_id")
-        stats = [file_meta.row_group(i).column(cid).statistics for i in range(file_meta.num_row_groups)]
-        rg_min = np.array([s.min for s in stats], dtype=np.uint64)
-        rg_max = np.array([s.max for s in stats], dtype=np.uint64)
+    def column_index(file_meta, name):
+        for j in range(file_meta.num_columns):
+            if file_meta.schema.column(j).path == name:
+                return j
+        raise KeyError(f"column {name} not found in parquet file")
+
+    #
+    # raw (physical int64) min/max statistics of a column per row group, and whether they are present
+    #
+    @staticmethod
+    def column_bounds(file_meta, name):
+        j = Reader.column_index(file_meta, name)
+        n = file_meta.num_row_groups
+        rg_min, rg_max, valid = np.zeros(n, np.int64), np.zeros(n, np.int64), np.zeros(n, bool)
+        for i in range(n):
+            stats = file_meta.row_group(i).column(j).statistics
+            if stats is not None and stats.has_min_max:
+                rg_min[i], rg_max[i], valid[i] = stats.min_raw, stats.max_raw, True
+        return rg_min, rg_max, valid
+
+    #
+    # convert a utc time range to the raw int64 units of the time column
+    #
+    @staticmethod
+    def raw_time_range(field_type, t0, t1):
+        scale = TIME_UNIT_NS[field_type.unit] if pa.types.is_timestamp(field_type) else 1
+        return -(-t0.value // scale), t1.value // scale
+
+    #
+    # select row groups whose cell_id min/max overlaps any of the sorted, disjoint [lo, hi] ranges
+    # and, if provided, whose time min/max overlaps the raw [t0, t1] time range
+    #
+    @staticmethod
+    def select_row_groups(lo, hi, file_meta, time_range=None, time_column="time_ns"):
+        rg_min, rg_max, valid = Reader.column_bounds(file_meta, "cell_id")
+        rg_min, rg_max = rg_min.view(np.uint64), rg_max.view(np.uint64)
         # first range ending at or after the row group's min; they overlap if that range starts before the row group's max
         k = np.searchsorted(hi, rg_min, side="left")
         hit = k < len(hi)
         hit[hit] = lo[k[hit]] <= rg_max[hit]
+        # row groups without statistics cannot be ruled out
+        hit |= ~valid
+        if time_range is not None:
+            t_min, t_max, t_valid = Reader.column_bounds(file_meta, time_column)
+            hit &= ~t_valid | ((t_max >= time_range[0]) & (t_min <= time_range[1]))
         return np.flatnonzero(hit).tolist()
 
     #
-    # trim geodataframe to area of interest
+    # convert a geoparquet arrow table (wkb encoded geometry) to a geodataframe
     #
     @staticmethod
-    def trim_to_aoi(gdf, cursor, interior, boundary, exact=True):
-        ids = gdf.index.to_numpy()
-        keep = Reader.in_ranges(ids, *Reader.cell_ranges(interior))
-        on_boundary = np.isin(ids, boundary)
-        if not exact:
-            keep |= on_boundary
-        elif on_boundary.any():
-            # only points in segment level cells crossing the polygon edge need an exact point-in-polygon test
-            ll = gdf.geometry[on_boundary].to_crs("EPSG:4326")
-            cursor.register("pts", gpd.pd.DataFrame({"lon": ll.x.to_numpy(), "lat": ll.y.to_numpy()}))
-            keep[on_boundary] = cursor.sql(
-                "SELECT s2_contains(p.g, s2_cellfromlonlat(lon, lat)::GEOGRAPHY) AS inside FROM pts, poly_geog p"
-            ).fetchnumpy()["inside"]
-        return gdf[keep]
+    def to_geodataframe(table):
+        geo = json.loads(table.schema.metadata[b"geo"])
+        name = geo["primary_column"]
+        column_meta = geo["columns"][name]
+        encoding = column_meta.get("encoding", "WKB")
+        if encoding.upper() != "WKB":
+            raise ValueError(f"unsupported geometry encoding: {encoding}")
+        # per the geoparquet spec a missing crs means OGC:CRS84 and a null crs means unknown
+        crs = column_meta.get("crs", "OGC:CRS84")
+        if isinstance(crs, dict):
+            crs = json.dumps(crs)
+        df = table.drop_columns([name]).to_pandas()
+        geometry = gpd.GeoSeries.from_wkb(table.column(name).to_numpy(zero_copy_only=False), index=df.index, crs=crs)
+        df.insert(min(table.column_names.index(name), len(df.columns)), name, geometry)
+        return gpd.GeoDataFrame(df, geometry=name, crs=crs)
 
     #
-    # filter geodataframe with time range
+    # exact point in polygon test
     #
-    @staticmethod
-    def filter_time(gdf, start, end, time_column="time_ns"):
-        if start is None and end is None:
-            return gdf
-        times = gdf[time_column]
-        def to_timestamp(t):
-            # naive inputs are taken as UTC; result matches the column's tz-awareness so comparisons work
-            ts = gpd.pd.Timestamp(t)
-            ts = ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
-            return ts if times.dt.tz is not None else ts.tz_localize(None)
-        t0 = to_timestamp(start if start is not None else "2018-10-01")
-        t1 = to_timestamp(end if end is not None else gpd.pd.Timestamp.now(tz="UTC"))
-        return gdf[times.between(t0, t1, inclusive="both")]
+    def points_inside(self, geometry, poly_table):
+        ll = geometry.to_crs("EPSG:4326")
+        with self.connection.cursor() as cursor:
+            cursor.register("pts", gpd.pd.DataFrame({"lon": ll.x.to_numpy(), "lat": ll.y.to_numpy()}))
+            return cursor.sql(
+                f"SELECT s2_contains(p.g, s2_cellfromlonlat(lon, lat)::GEOGRAPHY) AS inside FROM pts, {poly_table} p"
+            ).fetchnumpy()["inside"]
+
+    #
+    # cell id ranges of a tile: (interior ranges, boundary ranges, combined ranges)
+    #
+    def tile_ranges(self, cell, poly_table):
+        # duckdb connections are not thread safe; a cursor is a separate connection to the same database
+        with self.connection.cursor() as cursor:
+            interior, boundary = Reader.classify_cells(cursor, poly_table, cell, self.tile_level, self.segment_level)
+        return Reader.cell_ranges(interior), Reader.cell_ranges(boundary), Reader.cell_ranges(np.sort(np.concatenate([interior, boundary])))
+
+    #
+    # tile ranges are the same for every year, so compute them once per cell and share them across threads
+    #
+    def cached_tile_ranges(self, cache, lock, cell, poly_table):
+        with lock:
+            future = cache.get(cell)
+            owner = future is None
+            if owner:
+                future = cache[cell] = Future()
+        if owner:
+            try:
+                future.set_result(self.tile_ranges(cell, poly_table))
+            except BaseException as e:
+                future.set_exception(e)
+        return future.result()
 
     #
     # read the rows of one tile inside the area of interest; returns (gdf or None, status)
     #
-    def read_tile(self, tile_id, start, end, exact):
+    def read_tile(self, tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, time_column="time_ns"):
+        year, cell = tile_id
         try:
             # pre_buffer coalesces the selected column chunks into a few concurrent range requests
-            pf = pq.ParquetFile(f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{tile_id:016X}.parquet", filesystem=self.s3_fs, pre_buffer=True)
+            if year:
+                tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_{year}_S{cell:016X}.parquet"
+            else:
+                tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{cell:016X}.parquet"
+            pf = pq.ParquetFile(tile_name, filesystem=self.s3_fs, pre_buffer=True)
         except FileNotFoundError:
             return None, "not found"
-        # duckdb connections are not thread safe; a cursor is a separate connection to the same database
-        cursor = self.connection.cursor()
-        try:
-            interior, boundary = Reader.classify_cells(cursor, tile_id, self.tile_level, self.segment_level)
-            lo, hi = Reader.cell_ranges(np.sort(np.concatenate([interior, boundary])))
-            row_groups = Reader.select_row_groups(lo, hi, pf.metadata)
+        except OSError as e:
+            # e.g. a missing key read anonymously is reported as access denied; don't abort the remaining tiles
+            return None, f"unable to open - {e}"
+        with pf:
+            (interior_lo, interior_hi), (boundary_lo, boundary_hi), (lo, hi) = get_ranges(cell)
+            time_range = Reader.raw_time_range(pf.schema_arrow.field(time_column).type, t0, t1) if enable_time_filter else None
+            row_groups = Reader.select_row_groups(lo, hi, pf.metadata, time_range, time_column)
             if not row_groups:
                 return None, "empty"
-            gdf = _arrow_to_geopandas(pf.read_row_groups(row_groups, use_pandas_metadata=True))
-            gdf = Reader.filter_time(gdf, start, end)
-            gdf = Reader.trim_to_aoi(gdf, cursor, interior, boundary, exact)
+            table = pf.read_row_groups(row_groups, use_pandas_metadata=True)
+            # filter on the raw columns before paying for geometry decoding and pandas conversion
+            ids = table.column("cell_id").to_numpy().view(np.uint64)
+            interior = Reader.in_ranges(ids, interior_lo, interior_hi)
+            boundary = Reader.in_ranges(ids, boundary_lo, boundary_hi)
+            if time_range is not None:
+                times = table.column(time_column).to_numpy().view(np.int64)
+                in_time = (times >= time_range[0]) & (times <= time_range[1])
+                interior &= in_time
+                boundary &= in_time
+            candidates = interior | boundary
+            gdf = Reader.to_geodataframe(table.filter(pa.array(candidates)))
+            boundary = boundary[candidates]
+            if exact and boundary.any():
+                # only points in segment level cells crossing the polygon edge need an exact point-in-polygon test
+                keep = ~boundary
+                keep[boundary] = self.points_inside(gdf.geometry[boundary], poly_table)
+                gdf = gdf[keep]
             return gdf, f"{len(gdf)} rows from {len(row_groups)}/{pf.metadata.num_row_groups} row groups"
-        finally:
-            cursor.close()
-            pf.close()
 
     #
     # read tiles
@@ -195,23 +289,38 @@ class Reader:
         if aoi_gdf.crs is not None:
             aoi_gdf = aoi_gdf.to_crs("EPSG:4326")
         wkt = aoi_gdf.union_all().wkt
-        # a regular (not TEMP) table so the per-thread cursors can see it
-        self.connection.execute("CREATE OR REPLACE TABLE poly_geog AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
-        tile_cover_ids = [row[0] for row in self.connection.execute(
-            f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {self.tile_level}))::UBIGINT", [wkt]).fetchall()
-        ]
-        # read all tiles corresponding to an S2 cell in the area of interest
-        gdfs = []
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            results = executor.map(
-                lambda tile_id: self.read_tile(tile_id, start, end, exact),
-                tile_cover_ids)
-            for i, (tile_id, (gdf, status)) in enumerate(zip(tile_cover_ids, results)):
-                if verbose: print(f"Read [{i+1}/{len(tile_cover_ids)}] tile {tile_id:016X} - {status}")
-                if gdf is not None:
-                    gdfs.append(gdf)
+        # a regular (not TEMP) table so the per-thread cursors can see it; uniquely named so concurrent calls don't collide
+        poly_table = f"poly_geog_{uuid.uuid4().hex}"
+        self.connection.execute(f"CREATE TABLE {poly_table} AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
+        try:
+            cells = [row[0] for row in self.connection.execute(
+                f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {self.tile_level}))::UBIGINT", [wkt]).fetchall()
+            ]
+            # get times
+            enable_time_filter = (start is not None) or (end is not None)
+            t0 = gpd.pd.to_datetime(start, utc=True) if start is not None else gpd.pd.to_datetime("2018-10-01", utc=True)
+            t1 = gpd.pd.to_datetime(end, utc=True) if end is not None else gpd.pd.Timestamp.now(tz="UTC")
+            if self.prefix == "atl06tv2":
+                years = range(t0.year, t1.year + 1)
+            else:
+                years = [None]
+            tiles = [(year, cell) for year in years for cell in cells]
+            # read all tiles corresponding to an S2 cell in the area of interest
+            cache, lock = {}, Lock()
+            get_ranges = lambda cell: self.cached_tile_ranges(cache, lock, cell, poly_table)
+            gdfs = []
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                results = executor.map(
+                    lambda tile_id: self.read_tile(tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact),
+                    tiles)
+                for i, ((year, cell), (gdf, status)) in enumerate(zip(tiles, results)):
+                    if verbose: print(f"Read [{i+1}/{len(tiles)}] tile {year} {cell:016X} - {status}")
+                    if gdf is not None:
+                        gdfs.append(gdf)
+        finally:
+            self.connection.execute(f"DROP TABLE IF EXISTS {poly_table}")
         # combine tiles
         if len(gdfs) > 0:
-            return gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
+            return gpd.GeoDataFrame(gpd.pd.concat(gdfs), crs=gdfs[0].crs)
         else:
             return None
