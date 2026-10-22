@@ -173,7 +173,12 @@ def SlideRuleSubset(domain, cluster, name, region, start_time=None, end_time=Non
 #
 def S2TileSubset(reader, name, aoi, start_time=None, end_time=None):
     start = time.time()
-    gdf = reader.read_tiles(aoi, start_time, end_time)
+    gdf = reader.read_tiles(aoi, start_time, end_time, columns=[
+        'time_ns', 'tide_ocean', 'region', 'gt', 'n_fit_photons',
+        'w_surface_window_final', 'atl06_quality_summary', 'rgt', 'r_eff',
+        'seg_azimuth', 'bsnow_h', 'h_robust_sprd', 'sigma_geo_h', 'h_li_sigma',
+        'dh_fit_dx', 'x_atc', 'spot', 'y_atc', 'srcid', 'bsnow_conf', 'cycle',
+        'h_li', 'segment_id', 'geometry'])
     print(f"S2TileReader subsetted {name} / {len(gdf)} rows in {time.time() - start:.2f} seconds")
 
 #
