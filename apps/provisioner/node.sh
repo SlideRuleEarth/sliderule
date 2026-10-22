@@ -83,8 +83,8 @@ services:
       test: curl -f -X GET -d "{}" http://localhost:9081/source/health
       interval: 30s
       timeout: 10s
-      retries: 1
-      start_period: 30s
+      retries: 3
+      start_period: 60s
     labels:
       - autoheal=true
   ams:
@@ -129,3 +129,26 @@ EOF
 
 # Start services
 docker compose -p cluster up --detach
+
+# Hourly watchdog: start any services left stopped (e.g. after a failed autoheal restart)
+cat > /etc/systemd/system/compose-watchdog.service << EOF
+[Unit]
+Description=Start stopped compose services
+After=docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=$(pwd)
+ExecStart=/usr/bin/docker compose -p cluster up --detach --no-recreate --pull never
+EOF
+cat > /etc/systemd/system/compose-watchdog.timer << EOF
+[Unit]
+Description=Hourly compose watchdog
+[Timer]
+OnBootSec=1h
+OnUnitActiveSec=1h
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now compose-watchdog.timer
