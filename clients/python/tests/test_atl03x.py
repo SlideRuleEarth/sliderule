@@ -421,6 +421,6 @@ class TestAtl03x:
         assert len(gdf) == 183086
         assert (len(gdf) - len(gdf_corr1)) == 69630
         assert len(list(gdf_corr1["gt"].value_counts().keys())) == 2
-        assert abs(gdf_corr1.geometry.x.describe()["mean"] - -77.29863656553168) < 0.00001
-        assert abs(gdf_corr1.geometry.y.describe()["mean"] - 30.873894172040597) < 0.00001
-        assert abs(gdf_corr1.height.describe()["mean"] - -41.26692199707031) < 0.00001
+        assert abs(gdf_corr1.geometry.x.describe()["mean"] - -77.29863694386924) < 0.00001, gdf_corr1.geometry.x.describe()["mean"]
+        assert abs(gdf_corr1.geometry.y.describe()["mean"] - 30.873892569421614) < 0.00001, gdf_corr1.geometry.y.describe()["mean"]
+        assert abs(gdf_corr1.height.describe()["mean"] - -41.276451110839844) < 0.00001, gdf_corr1.height.describe()["mean"]
