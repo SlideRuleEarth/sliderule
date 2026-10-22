@@ -409,11 +409,9 @@ class TestAtl03x:
             { "lat": 30.75, "lon": -80.00 }
         ]
         gdf = sliderule.run("atl03x", {
-            "beam": "gtl1",
             "cnf": 4
         }, aoi=aoi, resources=[resource])
         gdf_corr1 = sliderule.run("atl03x", {
-            "beam": "gtl1",
             "cnf": 4,
             "geoloc_corr": {
                 "correction": "conus"

@@ -9,6 +9,11 @@ aws_utils.config_monitoring() -- logs (stdout, firehose)
 aws_utils.config_leap_seconds() -- leap seconds
 aws_utils.config_earth_data() -- assets and credentials
 
+-- wait up to 10 seconds for nsidc only
+if sys.getcfg("authenticate_to_nsidc") then
+    aws_utils.wait_credentials("nsidc-cloud", 10)
+end
+
 --------------------------------------------------
 -- Application Server
 --------------------------------------------------

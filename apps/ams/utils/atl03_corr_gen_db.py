@@ -9,7 +9,7 @@ import geopandas as gpd
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""ATL03 Corrections""")
-parser.add_argument('--csv_file',   type=str,   default="/data/ATL03/conus_perbeam_corrections_draft.csv")
+parser.add_argument('--csv_file',   type=str,   default="/data/ATL03/conus_perbeam_corrections_draft2.csv")
 parser.add_argument('--db_file',    type=str,   default="/data/atl03.db")
 args = parser.parse_args()
 
