@@ -12,7 +12,7 @@ list-partitions:
 	python scripts/build.py --list_tiles
 
 tile:
-	python scripts/build.py --tile
+	python scripts/build.py --tile --workers 4
 
 tile-runner:
 	sliderule-runner submit atl06t_tile scripts/tile_runner.py /data/ATL06/atl06_tiles.txt --image pysr:latest
