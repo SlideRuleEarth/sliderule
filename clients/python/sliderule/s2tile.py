@@ -33,7 +33,7 @@ import duckdb
 import numpy as np
 import pyarrow as pa
 import pyarrow.fs as pafs
-import pyarrow.parquet as pq
+import pyarrow.dataset as ds
 import geopandas as gpd
 from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Lock
@@ -47,6 +47,11 @@ TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
 S3_REGION = "us-west-2"
 TIME_UNIT_NS = {"s": 1_000_000_000, "ms": 1_000_000, "us": 1_000, "ns": 1}
+
+# pre-buffer the selected column chunks, coalescing ranges separated by holes up to 1MB; reading a little
+# extra data is far cheaper than issuing a separate S3 request for every column chunk when only some columns are read
+PARQUET_FORMAT = ds.ParquetFileFormat(default_fragment_scan_options=ds.ParquetFragmentScanOptions(
+    pre_buffer=True, cache_options=pa.CacheOptions(hole_size_limit=1 << 20, range_size_limit=64 << 20, lazy=False)))
 
 ###############################################################################
 # CLASSES
@@ -240,50 +245,61 @@ class Reader:
     #
     # read the rows of one tile inside the area of interest; returns (gdf or None, status)
     #
-    def read_tile(self, tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, time_column="time_ns"):
+    def read_tile(self, tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns=None, time_column="time_ns"):
         year, cell = tile_id
+        if year:
+            tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_{year}_S{cell:016X}.parquet"
+        else:
+            tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{cell:016X}.parquet"
         try:
-            # pre_buffer coalesces the selected column chunks into a few concurrent range requests
-            if year:
-                tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_{year}_S{cell:016X}.parquet"
-            else:
-                tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{cell:016X}.parquet"
-            pf = pq.ParquetFile(tile_name, filesystem=self.s3_fs, pre_buffer=True)
+            fragment = PARQUET_FORMAT.make_fragment(tile_name, filesystem=self.s3_fs)
+            metadata = fragment.metadata # reads the footer
         except FileNotFoundError:
             return None, "not found"
         except OSError as e:
             # e.g. a missing key read anonymously is reported as access denied; don't abort the remaining tiles
             return None, f"unable to open - {e}"
-        with pf:
-            (interior_lo, interior_hi), (boundary_lo, boundary_hi), (lo, hi) = get_ranges(cell)
-            time_range = Reader.raw_time_range(pf.schema_arrow.field(time_column).type, t0, t1) if enable_time_filter else None
-            row_groups = Reader.select_row_groups(lo, hi, pf.metadata, time_range, time_column)
-            if not row_groups:
-                return None, "empty"
-            table = pf.read_row_groups(row_groups, use_pandas_metadata=True)
-            # filter on the raw columns before paying for geometry decoding and pandas conversion
-            ids = table.column("cell_id").to_numpy().view(np.uint64)
-            interior = Reader.in_ranges(ids, interior_lo, interior_hi)
-            boundary = Reader.in_ranges(ids, boundary_lo, boundary_hi)
-            if time_range is not None:
-                times = table.column(time_column).to_numpy().view(np.int64)
-                in_time = (times >= time_range[0]) & (times <= time_range[1])
-                interior &= in_time
-                boundary &= in_time
-            candidates = interior | boundary
-            gdf = Reader.to_geodataframe(table.filter(pa.array(candidates)))
-            boundary = boundary[candidates]
-            if exact and boundary.any():
-                # only points in segment level cells crossing the polygon edge need an exact point-in-polygon test
-                keep = ~boundary
-                keep[boundary] = self.points_inside(gdf.geometry[boundary], poly_table)
-                gdf = gdf[keep]
-            return gdf, f"{len(gdf)} rows from {len(row_groups)}/{pf.metadata.num_row_groups} row groups"
+        schema = fragment.physical_schema
+        (interior_lo, interior_hi), (boundary_lo, boundary_hi), (lo, hi) = get_ranges(cell)
+        time_range = Reader.raw_time_range(schema.field(time_column).type, t0, t1) if enable_time_filter else None
+        row_groups = Reader.select_row_groups(lo, hi, metadata, time_range, time_column)
+        if not row_groups:
+            return None, "empty"
+        read_columns = None
+        if columns is not None:
+            missing = [c for c in columns if c not in schema.names]
+            if missing:
+                raise ValueError(f"columns not found in tile: {missing}")
+            # the geometry, cell id, and (when filtering) time columns are needed to build and trim the result
+            required = [json.loads(schema.metadata[b"geo"])["primary_column"], "cell_id", time_column]
+            read_columns = list(dict.fromkeys([*columns, *required]))
+        table = fragment.subset(row_group_ids=row_groups).to_table(columns=read_columns)
+        # filter on the raw columns before paying for geometry decoding and pandas conversion
+        ids = table.column("cell_id").to_numpy().view(np.uint64)
+        interior = Reader.in_ranges(ids, interior_lo, interior_hi)
+        boundary = Reader.in_ranges(ids, boundary_lo, boundary_hi)
+        if time_range is not None:
+            times = table.column(time_column).to_numpy().view(np.int64)
+            in_time = (times >= time_range[0]) & (times <= time_range[1])
+            interior &= in_time
+            boundary &= in_time
+        candidates = interior | boundary
+        table = table.filter(pa.array(candidates))
+        gdf = Reader.to_geodataframe(table)
+        boundary = boundary[candidates]
+        if exact and boundary.any():
+            # only points in segment level cells crossing the polygon edge need an exact point-in-polygon test
+            keep = ~boundary
+            keep[boundary] = self.points_inside(gdf.geometry[boundary], poly_table)
+            gdf = gdf[keep]
+        return gdf, f"{len(gdf)} rows from {len(row_groups)}/{metadata.num_row_groups} row groups"
 
     #
-    # read tiles
+    # read tiles; columns is an optional list of columns to return (default all), the geometry column is always included
     #
-    def read_tiles(self, aoi, start=None, end=None, exact=True, verbose=False):
+    def read_tiles(self, aoi, start=None, end=None, exact=True, verbose=False, columns=None):
+        if isinstance(columns, str):
+            columns = [columns]
         # get set of S2 cells that cover area of interest
         aoi_gdf = sliderule.toregion(aoi)["gdf"]
         if aoi_gdf.crs is not None:
@@ -311,7 +327,7 @@ class Reader:
             gdfs = []
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 results = executor.map(
-                    lambda tile_id: self.read_tile(tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact),
+                    lambda tile_id: self.read_tile(tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns),
                     tiles)
                 for i, ((year, cell), (gdf, status)) in enumerate(zip(tiles, results)):
                     if verbose: print(f"Read [{i+1}/{len(tiles)}] tile {year} {cell:016X} - {status}")
