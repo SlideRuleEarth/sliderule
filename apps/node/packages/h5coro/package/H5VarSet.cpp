@@ -140,7 +140,6 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
         }
         else
         {
-
             size = array->elementSize();
             if(!nodata) data_ptr = array->referenceElement(element);
         }
@@ -161,13 +160,29 @@ long H5VarSet::addToGDF(GeoDataFrame* gdf) const
     Dictionary<H5DArray*>::Iterator iter(variables);
     for(int i = 0; i < iter.length; i++)
     {
+        long dataset_rows = 0;
         const char* dataset_name = iter[i].key;
         H5DArray* array = iter[i].value;
         const bool multidim = array->numDimensions() > 1;
-        const uint32_t encoding = multidim ?
-                                  (Field::NESTED_LIST | static_cast<uint32_t>(array->elementType())) :
-                                  static_cast<uint32_t>(array->elementType());
-        const long dataset_rows = gdf->appendFromBuffer(dataset_name, array->h5f->info.data, array->h5f->info.datasize, encoding, false);
+        if(multidim)
+        {
+            const uint32_t encoding = Field::NESTED_LIST | static_cast<uint32_t>(array->elementType());
+            long bytes_in_row = array->h5f->info.typesize;
+            for(int d = 1; d < array->numDimensions(); d++)
+            {
+                bytes_in_row *= array->h5f->info.shape[d];
+            }
+            for(uint64_t offset = 0; offset < array->h5f->info.datasize; offset += bytes_in_row)
+            {
+                dataset_rows = gdf->appendFromBuffer(dataset_name, array->h5f->info.data + offset, bytes_in_row, encoding, false);
+            }
+        }
+        else // single dimension
+        {
+            const uint32_t encoding = static_cast<uint32_t>(array->elementType());
+            dataset_rows = gdf->appendFromBuffer(dataset_name, array->h5f->info.data, array->h5f->info.datasize, encoding, false);
+        }
+
         if(dataset_rows == 0)
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add array data for <%s>", dataset_name);

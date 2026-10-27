@@ -302,7 +302,7 @@ uint64_t H5Dataset::readPackedField (int64_t size, uint64_t* pos)
     return value;
 }
 
-    /*----------------------------------------------------------------------------
+/*----------------------------------------------------------------------------
  * readDataset
  *----------------------------------------------------------------------------*/
 void H5Dataset::readDataset (info_t* info)
@@ -574,6 +574,14 @@ void H5Dataset::readDataset (info_t* info)
                 }
             }
         }
+
+        /* Handle Endianness */
+        #ifndef __be__
+        if(metaData.bigendian)
+        {
+
+        }
+        #endif
     }
 }
 
@@ -1212,6 +1220,8 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
             for(int s = 0; s < metaData.ndims; s++) print2term("%lu ", (unsigned long)curr_node.slice[s]);
             print2term("| ");
             for(int s = 0; s < metaData.ndims; s++) print2term("%lu ", (unsigned long)next_node.slice[s]);
+            print2term(">> ");
+            for(int s = 0; s < metaData.ndims; s++) print2term("%lu %lu", (unsigned long)node_slice[s].r0, (unsigned long)node_slice[s].r1);
             print2term("\n");
             print2term("Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }
@@ -2305,7 +2315,7 @@ int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             num_elements *= metaData.dimensions[d];
             if(H5CORO_VERBOSE)
             {
-                print2term("Dimension %d:                                                     %lu\n", (int)metaData.ndims, (unsigned long)metaData.dimensions[d]);
+                print2term("Dimension %d:                                                     %lu\n", d, (unsigned long)metaData.dimensions[d]);
             }
         }
 
@@ -2455,6 +2465,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         case FIXED_POINT_TYPE:
         {
             metaData.signedval = ((databits & 0x08) >> 3) == 1;
+            metaData.bigendian = (databits & 0x1) == 0x1;
 
             if(!H5CORO_VERBOSE)
             {
@@ -2462,13 +2473,12 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             }
             else
             {
-                const unsigned int byte_order = databits & 0x1;
                 const unsigned int pad_type   = (databits & 0x06) >> 1;
 
                 const uint16_t bit_offset     = (uint16_t)readField(2, &pos);
                 const uint16_t bit_precision  = (uint16_t)readField(2, &pos);
 
-                print2term("Byte Order:                                                      %d\n", (int)byte_order);
+                print2term("Byte Order:                                                      %d\n", (int)metaData.bigendian);
                 print2term("Pading Type:                                                     %d\n", (int)pad_type);
                 print2term("Signed Value:                                                    %d\n", (int)metaData.signedval);
                 print2term("Bit Offset:                                                      %d\n", (int)bit_offset);
@@ -2479,13 +2489,14 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case FLOATING_POINT_TYPE:
         {
+            metaData.bigendian = (databits & 0x1) == 0x1;
+
             if(!H5CORO_VERBOSE)
             {
                 pos += 12;
             }
             else
             {
-                const unsigned int byte_order = ((databits & 0x40) >> 5) | (databits & 0x1);
                 const unsigned int pad_type = (databits & 0x0E) >> 1;
                 const unsigned int mant_norm = (databits & 0x30) >> 4;
                 const unsigned int sign_loc = (databits & 0xFF00) >> 8;
@@ -2498,7 +2509,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 const uint8_t  mant_size      =  (uint8_t)readField(1, &pos);
                 const uint32_t exp_bias       = (uint32_t)readField(4, &pos);
 
-                print2term("Byte Order:                                                      %d\n", (int)byte_order);
+                print2term("Byte Order:                                                      %d\n", (int)metaData.bigendian);
                 print2term("Pading Type:                                                     %d\n", (int)pad_type);
                 print2term("Mantissa Normalization:                                          %d\n", (int)mant_norm);
                 print2term("Sign Location:                                                   %d\n", (int)sign_loc);

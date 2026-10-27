@@ -222,6 +222,7 @@ class H5Dataset
             fill_t                  fill;
             bool                    filter[NUM_FILTERS]; // true if enabled for dataset
             bool                    signedval; // is the value a signed or not
+            bool                    bigendian;
             int                     typesize;
             int                     fillsize;
             int                     ndims;
