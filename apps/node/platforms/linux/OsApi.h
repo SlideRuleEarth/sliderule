@@ -245,9 +245,9 @@ class OsApi
         static void         dupstr              (const char** dst, const char* src);
         static int64_t      time                (int clkid);
         static int64_t      timeres             (int clkid); // returns the resolution of the clock
-        static uint16_t     swaps               (uint16_t val);
-        static uint32_t     swapl               (uint32_t val);
-        static uint64_t     swapll              (uint64_t val);
+        static uint16_t     swaps               (uint16_t val) { return __builtin_bswap16(val); }
+        static uint32_t     swapl               (uint32_t val) { return __builtin_bswap32(val); }
+        static uint64_t     swapll              (uint64_t val) { return __builtin_bswap64(val); }
         static float        swapf               (float val);
         static double       swaplf              (double val);
         static int          nproc               (void);

@@ -134,6 +134,7 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
             metaData.typesize       = UNKNOWN_VALUE;
             metaData.fill.fill_ll   = 0LL;
             metaData.fillsize       = 0;
+            metaData.bigendian      = false;
             metaData.ndims          = UNKNOWN_VALUE;
             metaData.chunkelements  = 0;
             metaData.elementsize    = 0;
@@ -577,9 +578,47 @@ void H5Dataset::readDataset (info_t* info)
 
         /* Handle Endianness */
         #ifndef __be__
-        if(metaData.bigendian)
+        if(metaData.bigendian && info->data && info->typesize > 1)
         {
-
+            uint8_t* data = info->data;
+            const uint64_t typesize = info->typesize;
+            const uint64_t num_swaps = info->datasize / typesize;
+            switch(typesize)
+            {
+                case 2:
+                {
+                    for(uint64_t i = 0; i < num_swaps; i++)
+                    {
+                        uint16_t v;
+                        memcpy(&v, &data[i * 2], 2);
+                        v = OsApi::swaps(v);
+                        memcpy(&data[i * 2], &v, 2);
+                    }
+                    break;
+                }
+                case 4:
+                {
+                    for(uint64_t i = 0; i < num_swaps; i++)
+                    {
+                        uint32_t v;
+                        memcpy(&v, &data[i * 4], 4);
+                        v = OsApi::swapl(v);
+                        memcpy(&data[i * 4], &v, 4);
+                    }
+                    break;
+                }
+                case 8:
+                {
+                    for(uint64_t i = 0; i < num_swaps; i++)
+                    {
+                        uint64_t v;
+                        memcpy(&v, &data[i * 8], 8);
+                        v = OsApi::swapll(v);
+                        memcpy(&data[i * 8], &v, 8);
+                    }
+                    break;
+                }
+            }
         }
         #endif
     }
