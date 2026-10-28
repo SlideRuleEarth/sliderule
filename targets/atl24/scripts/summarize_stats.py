@@ -73,7 +73,6 @@ def worker(output):
 
 # read in outputs to process
 outputs = [json.loads(line) for line in open(args.result_output, "r") if line.strip()]
-outputs = outputs[:2]
 
 # execute workers to build summary
 summary = {}
