@@ -11,7 +11,7 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 # ########################
 
 parser = argparse.ArgumentParser(description="""sliderule python job runner""")
-parser.add_argument('--result_output',  type=str,               default="/tmp/summary.txt")
+parser.add_argument('--result_output',  type=str,               default="/tmp/atl24r3_stats.txt")
 parser.add_argument('--summary_file',   type=str,               default="/data/ATL24/atl24_v3_granule_collection.csv")
 parser.add_argument('--fresh_start',    action='store_true',    default=False) # overwrites summary_file
 parser.add_argument('--concurrency',    type=int,               default=20)
@@ -73,6 +73,7 @@ def worker(output):
 
 # read in outputs to process
 outputs = [json.loads(line) for line in open(args.result_output, "r") if line.strip()]
+outputs = outputs[:2]
 
 # execute workers to build summary
 summary = {}
@@ -80,14 +81,10 @@ with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
     futures = [executor.submit(worker, output) for output in outputs]
     for future in as_completed(futures):
         result = future.result()
-        if "granule" in result:
-            granule = result["granule"]["name"]
-            for spot in ["1","2","3","4","5","6"]:
-                if spot in result:
-                    summary = add_result(summary, result[spot])
-            print(f"Added {granule}")
-        else:
-            print(f"Skipped: {result}")
+        for spot in ["1","2","3","4","5","6"]:
+            if spot in result:
+                summary = add_result(summary, result[spot] | result["granule"])
+        print(f"Added {result["granule"]["name"]}")
 
 # write summary out to csv
 write_csv_file(summary, args.summary_file)

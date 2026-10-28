@@ -10,9 +10,9 @@ from shapely.geometry import Polygon
 # command line arguments
 # -------------------------------------------
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--collection_file',    type=str,   default="/data/ATL24/atl24_v2_granule_collection.csv")
-parser.add_argument('--parquet_file',       type=str,   default="/data/ATL24/atl24r2.parquet")
-parser.add_argument('--db_file',            type=str,   default="/data/atl24r2.db")
+parser.add_argument('--collection_file',    type=str,   default="/data/ATL24/atl24_v3_granule_collection.csv")
+parser.add_argument('--parquet_file',       type=str,   default="/data/ATL24/atl24r3.parquet")
+parser.add_argument('--db_file',            type=str,   default="/data/atl24r3.db")
 args = parser.parse_args()
 
 # -------------------------------------------
