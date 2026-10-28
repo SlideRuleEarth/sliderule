@@ -194,12 +194,12 @@ class Tool:
                 for output in output_list:
                     file.write(f"{output}\n")
 
-    # Get Status
-    def get_status(self):
+    # Fetch
+    def fetch(self):
         queue = self.args.queue
         for name,job in self.database.submissions.items():
             complete = job["complete"]
-            sys.stdout.write(f"Statusing {name} ... ")
+            sys.stdout.write(f"Fetching {name} ... ")
             sys.stdout.flush()
             if not complete:
                 if job["job_size"] > 1: # array processing
@@ -334,10 +334,10 @@ def main():
     scrape.add_argument('--output',     type=str,                   default=None)
     scrape.set_defaults(func=Tool.scrape_submissions, ro=True, net=False)
 
-    # status
-    status = subparsers.add_parser("status", parents=[common], help="display status of submitted jobs")
-    status.add_argument('--concurrency',type=int,                   default=20)
-    status.set_defaults(func=Tool.get_status, ro=False, net=True)
+    # fetch
+    fetch = subparsers.add_parser("fetch", parents=[common], help="fetch and display status of submitted jobs")
+    fetch.add_argument('--concurrency',type=int,                   default=20)
+    fetch.set_defaults(func=Tool.fetch, ro=False, net=True)
 
     # report
     report = subparsers.add_parser("report", parents=[common], help="generate report of completed jobs")

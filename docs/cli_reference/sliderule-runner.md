@@ -12,7 +12,7 @@ description: User guide and reference for the sliderule-runner command line tool
 sliderule-runner submit my_job script.lua granules.txt
 
 # Check on progress
-sliderule-runner status
+sliderule-runner fetch
 
 # Summarize the results of completed jobs
 sliderule-runner report
@@ -49,8 +49,8 @@ sliderule-runner <command> [options]
   - Purpose
 * - [`submit`](#cmd-submit)
   - Submit a job
-* - [`status`](#cmd-status)
-  - Display the status of submitted jobs
+* - [`fetch`](#cmd-fetch)
+  - Fetch and display the status of submitted jobs
 * - [`report`](#runner-cmd-report)
   - Generate a report of completed jobs
 * - [`scrape`](#cmd-scrape)
@@ -84,14 +84,14 @@ The following options are accepted by **every** command. They are attached to ea
   - Location of the local database that tracks your submissions (see [The Job Database](#job-database)).
 * - `--queue <priority>`
   - `default`
-  - Priority queue that jobs are submitted to and looked up in. Valid values are `urgent`, `default`, and `background`. Used by the commands `submit`, `status` and `cancel`; accepted but ignored by the other commands.
+  - Priority queue that jobs are submitted to and looked up in. Valid values are `urgent`, `default`, and `background`. Used by the commands `submit`, `fetch` and `cancel`; accepted but ignored by the other commands.
 * - `--verbose`
   - False
-  - Turn on verbose log messages. Also shows more detail in `status` and `scrape`, and causes errors to be raised without being caught (see [Error Handling](#error-handling)).
+  - Turn on verbose log messages. Also shows more detail in `fetch` and `scrape`, and causes errors to be raised without being caught (see [Error Handling](#error-handling)).
 ```
 
 ```{note}
-Every command connects to the SlideRule service and authenticates you before it runs, so network access is needed even for commands like `report` that work from the local database. Commands that read results (`status`) also need AWS credentials that can read the job output in S3.
+Every command connects to the SlideRule service and authenticates you before it runs, so network access is needed even for commands like `report` that work from the local database. Commands that read results (`fetch`) also need AWS credentials that can read the job output in S3.
 ```
 
 ---
@@ -150,7 +150,7 @@ Submits a job that runs a script once for each entry in an arguments file. If th
 Each job is named `<name>_<i>`, where `<i>` is the position in the arguments file of the first entry in that batch. For example, submitting `my_job` with 25,000 entries and the default batch size creates `my_job_0`, `my_job_10000` and `my_job_20000`. If a name is already in your local database, the submission request will be skipped unless the `--dups_ok` option is provided, in which case three random letters are added (e.g. `my_job_xqf_0`) so that existing records can be distinguished.
 
 ```{important}
-The other commands (`status` aside) refer to a submission by its full job name, such as `my_job_0`, not by the base name you supplied to `submit`. Job names are printed when the jobs are submitted, and `status` lists them.
+The other commands (`fetch` aside) refer to a submission by its full job name, such as `my_job_0`, not by the base name you supplied to `submit`. Job names are printed when the jobs are submitted, and `fetch` lists them.
 ```
 
 ### Secrets
@@ -172,15 +172,15 @@ sliderule-runner submit one_off script.lua "ATL03_20230601000000_10011901_006_01
 sliderule-runner submit my_job script.lua granules.txt --queue <priority> --image sliderule:my-branch
 ```
 
-(cmd-status)=
-## `status`
+(cmd-fetch)=
+## `fetch`
 ```{code-block} text
-sliderule-runner status [common options]
+sliderule-runner fetch [common options]
 ```
 
 Checks on every submission in the local database that is not yet complete, updates the database, and prints a table of the current state of every submission. When all of the work in a submission has finished, the tool reads its results from S3 and marks the submission as complete, after which it is available to `report` and `scrape`.
 
-Because the tool does not run in the background, `status` needs to be run again to pick up progress.
+Because the tool does not run in the background, `fetch` needs to be run again to pick up progress.
 
 By default, the table has one row per submission and one column for each job state:
 
@@ -207,10 +207,10 @@ For runs that have only a single job, there are no child jobs and therefore the 
 ### Examples
 ```{code-block} bash
 # check on all submitted jobs
-sliderule-runner status
+sliderule-runner fetch
 
 # show the status of each individual job in each submission
-sliderule-runner status --verbose
+sliderule-runner fetch --verbose
 ```
 
 (runner-cmd-report)=
@@ -318,20 +318,20 @@ Prints the log messages for a job. Each message is printed on its own line, prec
   - Full job name of the submission.
 * - `--index <int>`
   - none
-  - Index of a single child job within the submission, as shown by `status --verbose`. If omitted, the messages for the submission's parent job are printed.
+  - Index of a single child job within the submission, as shown by `fetch --verbose`. If omitted, the messages for the submission's parent job are printed.
 ```
 
 ### Examples
 ```{code-block} bash
 # find the index of the job you are interested in
-sliderule-runner status --verbose
+sliderule-runner fetch --verbose
 
 # get the logs for child job 17 of the submission
 sliderule-runner logs --name my_job_0 --index 17
 ```
 
 ```{note}
-Run `status` at least once after submitting before requesting logs for a specific `--index`, since the child jobs are recorded in the local database by running the `status` command.
+Run `fetch` at least once after submitting before requesting logs for a specific `--index`, since the child jobs are recorded in the local database by running the `fetch` command.
 ```
 
 (cmd-cancel)=
@@ -354,7 +354,7 @@ Cancels a submitted job. For a submission made up of many entries, this cancels 
 ```
 
 ```{note}
-`cancel` does not update the local database; run `status` afterwards to see the effect.
+`cancel` does not update the local database; run `fetch` afterwards to see the effect.
 ```
 
 ### Examples
@@ -476,13 +476,13 @@ Run `sliderule-provisioner s3access` to get credentials to download results.
 sliderule-runner submit my_job script.lua granules.txt
 
 # 2. monitor until everything is complete (repeat as needed)
-sliderule-runner status
+sliderule-runner fetch
 
 # 3. summarize
 sliderule-runner report
 
 # 4. investigate anything that went wrong
-sliderule-runner status --verbose
+sliderule-runner fetch --verbose
 sliderule-runner logs --name my_job_0 --index 17
 
 # 5. collect what did not succeed and resubmit it
@@ -495,7 +495,7 @@ sliderule-runner archive ~/sliderule_archives/my_job.json
 
 ### Output Format
 
-`status`, `report` and `scrape` print their results to standard output. `status` and `report` print tables of comma-separated, right-aligned columns with a header row. Progress bars are shown while results are being read if the optional `tqdm` package is installed; if it is not, a message is printed when the tool starts and progress is not reported.
+`fetch`, `report` and `scrape` print their results to standard output. `fetch` and `report` print tables of comma-separated, right-aligned columns with a header row. Progress bars are shown while results are being read if the optional `tqdm` package is installed; if it is not, a message is printed when the tool starts and progress is not reported.
 
 (error-handling)=
 ### Error Handling
