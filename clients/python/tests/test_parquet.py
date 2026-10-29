@@ -406,7 +406,7 @@ class TestParquet:
                 "compact": False,
             }
         }
-        gdf = sliderule.run("atl24x", parms, resources=["ATL24_20181014001920_02350103_006_02_001_01.h5"])
+        gdf = sliderule.run("atl24x", parms, resources=["ATL24_20181014001920_02350103_007_01_003_01.h5"])
         assert gdf.attrs["meta"]["endpoint"] == "atl24x"
         assert gdf.attrs["meta"]["request"]["atl24"]["compact"] == False
         assert gdf.attrs["recordinfo"]["time"] == "time_ns"

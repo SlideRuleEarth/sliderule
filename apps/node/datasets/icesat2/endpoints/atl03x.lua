@@ -46,7 +46,7 @@ local function main()
         -- atl24
         local atl24h5 = nil
         if parms:stage(icesat2.ATL24) then
-            local atl24_filename = resource:gsub("ATL03", "ATL24"):gsub(".h5", "_002_01.h5")
+            local atl24_filename = resource:gsub("ATL03", "ATL24"):gsub(".h5", "_003_01.h5")
             atl24h5 = h5coro.object("icesat2-atl24", atl24_filename)
         end
 

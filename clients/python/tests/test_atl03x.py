@@ -1,6 +1,7 @@
 """Tests for atl03x"""
 
 import os
+import pytest
 import logging
 import numpy as np
 from pathlib import Path
@@ -166,7 +167,7 @@ class TestAtl03x:
         assert len(gdf.keys()) == 18
 
     def test_atl24(self, init):
-        resource = "ATL03_20181014001920_02350103_006_02.h5"
+        resource = "ATL03_20181014001920_02350103_007_01.h5"
         parms = {
             "track": 1,
             "cnf": 0,
@@ -174,10 +175,10 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
-        assert len(gdf) == 49548
+        assert len(gdf) == 42695
         assert len(gdf.keys()) == 19
-        assert gdf["atl24_class"].value_counts()[41] == 49523
-        assert abs(gdf["atl24_confidence"].max() - 0.8872309) < 0.0001, gdf["atl24_confidence"].max()
+        assert gdf["atl24_class"].value_counts()[41] == 42668
+        assert gdf["atl24_confidence"].max() == pytest.approx(0.8259626)
 
     def test_polygon_track_pair(self, init):
         poly = [

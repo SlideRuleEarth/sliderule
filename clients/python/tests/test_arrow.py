@@ -40,13 +40,13 @@ class TestArrow:
     def test_atl24x(self, domain, organization):
         df = make_rqst("atl24x", domain, organization, {
             "output": {"format": "parquet"},
-            "resources": ["ATL24_20181014001920_02350103_006_02_001_01.h5"]
+            "resources": ["ATL24_20181014001920_02350103_007_01_003_01.h5"]
         })
         if organization == None or organization == sliderule.session.Session.PUBLIC_DOMAIN: # otherwise need to build authentication headers
             assert isinstance(df, pandas.DataFrame) or isinstance(df, pandas.core.frame.DataFrame)
-            assert len(df) == 63
-            assert len(df.keys()) == 14 # this is not a GDF, so there is one more column since lat and lon are not combined into geometry
-            assert df["gt"].sum() == 2160
+            assert len(df) == 72
+            assert len(df.keys()) == 15 # this is not a GDF, so there is one more column since lat and lon are not combined into geometry
+            assert df["gt"].sum() == 2750
 
     def test_atl03x(self, domain, organization):
         df = make_rqst("atl03x", domain, organization, {

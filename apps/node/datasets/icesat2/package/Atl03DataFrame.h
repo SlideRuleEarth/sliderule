@@ -206,8 +206,8 @@ class Atl03DataFrame: public GeoDataFrame
 
                 /* Read Data */
                 H5Array<int32_t>    atl24_index_ph;
-                H5Array<int8_t>     atl24_class_ph;
-                H5Array<double>     atl24_confidence;
+                H5Array<int32_t>    atl24_class_ph;
+                H5Array<float>      atl24_confidence;
         };
 
         /*--------------------------------------------------------------------
