@@ -992,7 +992,7 @@ update-cf-env: ## update cloud formation environment for public deployment
 	aws s3 cp /data/3dep.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
 	aws s3 cp /data/atl03.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
 	aws s3 cp /data/atl13r7.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
-	aws s3 cp /data/atl24r2.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
+	aws s3 cp /data/atl24r3.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
 	aws s3 cp /data/casals1b.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
 	aws s3 cp /data/casals1b.geojson s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/
 	aws s3 cp /data/is2gt.db s3://$(PROJECT_BUCKET)/$(PROJECT_FOLDER)/ams/

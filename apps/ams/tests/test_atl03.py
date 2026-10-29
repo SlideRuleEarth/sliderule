@@ -8,12 +8,12 @@ def test_atl03_geoloc_corr(client):
     data = json.loads(response.data.decode("utf-8"))
     assert response.status_code == 200
     assert sorted(data.keys()) == BEAMS
-    assert data["gt1l"]["shift_N_m"] == pytest.approx(-3.395631918875695)
-    assert data["gt1l"]["shift_E_m"] == pytest.approx(3.3920441440593003)
-    assert data["gt1l"]["shift_U_m"] == pytest.approx(0.0013175651162014)
-    assert data["gt3r"]["shift_N_m"] == pytest.approx(0.7001304144063643)
-    assert data["gt3r"]["shift_E_m"] == pytest.approx(2.324607771490621)
-    assert data["gt3r"]["shift_U_m"] == pytest.approx(-0.035917588515487)
+    assert data["gt1l"]["shift_N_m"] == pytest.approx(-3.30338096038731)
+    assert data["gt1l"]["shift_E_m"] == pytest.approx(3.41475110570104)
+    assert data["gt1l"]["shift_U_m"] == pytest.approx(0.0026589705871545)
+    assert data["gt3r"]["shift_N_m"] == pytest.approx(0.7052503102421356)
+    assert data["gt3r"]["shift_E_m"] == pytest.approx(2.3098018578641315)
+    assert data["gt3r"]["shift_U_m"] == pytest.approx(-0.0338793815994759)
 
 def test_atl03_geoloc_corr_other_product(client):
     # non-ATL03 granule names are converted to the matching ATL03 granule

@@ -14,10 +14,16 @@ content:
             type: integer
           bathy_mean_depth:
             type: number
+            nullable: true
+            description: Null when the beam has no bathymetry photons.
           bathy_min_depth:
             type: number
+            nullable: true
+            description: Null when the beam has no bathymetry photons.
           bathy_max_depth:
             type: number
+            nullable: true
+            description: Null when the beam has no bathymetry photons.
           begin_time:
             type: string
             format: date-time

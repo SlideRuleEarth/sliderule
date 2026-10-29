@@ -56,15 +56,15 @@ def atl24_route():
             FROM atl24db
             {dbutils.build_time_query(state, data)}
             {dbutils.build_matching_query(state, data, "season", "season")}
-            {dbutils.build_range_query(state, data, "bathy_photons", "photons0", "photons1")}
-            {dbutils.build_range_query(state, data, "bathy_mean_depth", "meandepth0", "meandepth1")}
-            {dbutils.build_range_query(state, data, "bathy_min_depth", "mindepth0", "mindepth1")}
-            {dbutils.build_range_query(state, data, "bathy_max_depth", "maxdepth0", "maxdepth1")}
+            {dbutils.build_range_query(state, data, "class_bathymetry", "photons0", "photons1")}
+            {dbutils.build_range_query(state, data, "bathy_depth_mean", "meandepth0", "meandepth1")}
+            {dbutils.build_range_query(state, data, "bathy_depth_min", "mindepth0", "mindepth1")}
+            {dbutils.build_range_query(state, data, "bathy_depth_max", "maxdepth0", "maxdepth1")}
             {dbutils.build_name_filter(state, name_filter)}
             {dbutils.build_polygon_query(state, data)}
         """).to_arrow_table()
         hits = len(table)
-        granules_column = table.column("granule")
+        granules_column = table.column("name")
         unique_granules = pyarrow.compute.unique(granules_column)
         response = {"hits": hits, "granules":unique_granules.to_pylist()}
         return json.dumps(response)
@@ -81,23 +81,21 @@ def granule_route(name):
     try:
         # execute query
         db = __get_atl24()
-        table = db.execute(f"""
-            SELECT *
+        table = db.execute("""
+            SELECT beam, season, class_bathymetry, bathy_depth_mean, bathy_depth_min, bathy_depth_max, begin_time
             FROM atl24db
-            WHERE granule == '{name}'
-        """).to_arrow_table()
+            WHERE name = ?
+        """, [name]).to_arrow_table()
         # build response
         response = {}
-        for i in range(len(table)):
-            row = table.slice(i, i+1)
-            beam = str(row.column("beam")[0])
-            response[beam] = {
-                "season": int(row.column("season")[0]),
-                "bathy_photons": int(row.column("bathy_photons")[0]),
-                "bathy_mean_depth": float(row.column("bathy_mean_depth")[0]),
-                "bathy_min_depth": float(row.column("bathy_min_depth")[0]),
-                "bathy_max_depth": float(row.column("bathy_max_depth")[0]),
-                "begin_time": row.column("begin_time")[0].as_py().isoformat() + "Z"
+        for row in table.to_pylist():
+            response[row["beam"]] = {
+                "season": row["season"],
+                "bathy_photons": row["class_bathymetry"],
+                "bathy_mean_depth": row["bathy_depth_mean"],
+                "bathy_min_depth": row["bathy_depth_min"],
+                "bathy_max_depth": row["bathy_depth_max"],
+                "begin_time": row["begin_time"].isoformat() + "Z"
             }
         # return response
         return json.dumps(response)
