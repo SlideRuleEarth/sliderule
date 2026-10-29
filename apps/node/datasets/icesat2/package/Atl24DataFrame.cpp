@@ -96,6 +96,7 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Atl24Paramet
         {"lat_ph",          &lat_ph,        "Latitude (EPSG:9989)"},
         {"lon_ph",          &lon_ph,        "Longitude (EPSG:9989)"},
         {"ortho_h",         &ortho_h,       "Height (in meters) of photon as measured from geoid of Earth (EGM08)"},
+        {"quality_ph",      &quality_ph,    "Indicates the quality of the associated photon. A value of 0 means nominal. See ATL03 ATBD: ATLAS Saturation for description of non-nominal values."},
         {"surface_h",       &surface_h,     "Orthometric height (in meters) of the sea surface at the location of the photon based on the EGM08 geoid model"},
         {"x_atc",           &x_atc,         "Along-track x-coordinate of the segment (in meters), measured parallel to the RGT, measured from the ascending node of the equatorial crossing of a given RGT"},
         {"y_atc",           &y_atc,         "Along-track y-coordinate of the segment (in meters), relative to the RGT, measured along the perpendicular to the RGT, positive to the right of the RGT"},
@@ -123,13 +124,11 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Atl24Paramet
     if(!parms->atl24.compact.value)
     {
         addColumn("ellipse_h",              &ellipse_h,             "Ellipsiodal height (in meters) of photon", false);
-        addColumn("invalid_kd",             &invalid_kd,            "Photon classification performed without a valid Kd measurement", false);
-        addColumn("invalid_wind_speed",     &invalid_wind_speed,    "Photon classification performed without a valid wind speed measurement", false);
-        addColumn("low_confidence_flag",    &low_confidence_flag,   "Photon classified as bathymetry but is suspected to be a false positive", false);
+        addColumn("kd",                     &kd,                    "Turbidity of water column calculated using only ICESat-2 photons", false);
         addColumn("night_flag",             &night_flag,            "Photon collected at night", false);
-        addColumn("sensor_depth_exceeded",  &sensor_depth_exceeded, "Photon classification performed at a depth that exceeds the sensors known detection capabilities", false);
         addColumn("sigma_thu",              &sigma_thu,             "Total horizontal uncertainty", false);
         addColumn("sigma_tvu",              &sigma_tvu,             "Total vertical uncertainty", false);
+        addColumn("surface_roughness",      &surface_roughness,     "Measure of wave heights and proxy for wind speed in uncertainty calculation", false);
     }
 
     /* Set MetaData from Parameters */
@@ -181,15 +180,14 @@ Atl24DataFrame::Atl24Data::Atl24Data (Atl24DataFrame* df, const AreaOfInterest<d
     confidence              (                 df->hdf24, FString("%s/%s", df->beam, "confidence").c_str(),              0, aoi.first_index, aoi.count),
     delta_time              (                 df->hdf24, FString("%s/%s", df->beam, "delta_time").c_str(),              0, aoi.first_index, aoi.count),
     ellipse_h               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "ellipse_h").c_str(),               0, aoi.first_index, aoi.count),
-    invalid_kd              (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "invalid_kd").c_str(),              0, aoi.first_index, aoi.count),
-    invalid_wind_speed      (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "invalid_wind_speed").c_str(),      0, aoi.first_index, aoi.count),
-    low_confidence_flag     (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "low_confidence_flag").c_str(),     0, aoi.first_index, aoi.count),
+    kd                      (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "kd").c_str(),                      0, aoi.first_index, aoi.count),
     night_flag              (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "night_flag").c_str(),              0, aoi.first_index, aoi.count),
     ortho_h                 (                 df->hdf24, FString("%s/%s", df->beam, "ortho_h").c_str(),                 0, aoi.first_index, aoi.count),
-    sensor_depth_exceeded   (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "sensor_depth_exceeded").c_str(),   0, aoi.first_index, aoi.count),
+    quality_ph              (                 df->hdf24, FString("%s/%s", df->beam, "quality_ph").c_str(),              0, aoi.first_index, aoi.count),
     sigma_thu               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "sigma_thu").c_str(),               0, aoi.first_index, aoi.count),
     sigma_tvu               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "sigma_tvu").c_str(),               0, aoi.first_index, aoi.count),
     surface_h               (                 df->hdf24, FString("%s/%s", df->beam, "surface_h").c_str(),               0, aoi.first_index, aoi.count),
+    surface_roughness       (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "surface_roughness").c_str(),       0, aoi.first_index, aoi.count),
     x_atc                   (                 df->hdf24, FString("%s/%s", df->beam, "x_atc").c_str(),                   0, aoi.first_index, aoi.count),
     y_atc                   (                 df->hdf24, FString("%s/%s", df->beam, "y_atc").c_str(),                   0, aoi.first_index, aoi.count),
     anc_data                (                 df->parms->atl24.anc_fields, df->hdf24, FString("%s", df->beam).c_str(),  0, aoi.first_index, aoi.count)
@@ -200,15 +198,14 @@ Atl24DataFrame::Atl24Data::Atl24Data (Atl24DataFrame* df, const AreaOfInterest<d
     confidence.join(df->readTimeoutMs, true);
     delta_time.join(df->readTimeoutMs, true);
     if(!compact) ellipse_h.join(df->readTimeoutMs, true);
-    if(!compact) invalid_kd.join(df->readTimeoutMs, true);
-    if(!compact) invalid_wind_speed.join(df->readTimeoutMs, true);
-    if(!compact) low_confidence_flag.join(df->readTimeoutMs, true);
+    if(!compact) kd.join(df->readTimeoutMs, true);
     if(!compact) night_flag.join(df->readTimeoutMs, true);
     ortho_h.join(df->readTimeoutMs, true);
-    if(!compact) sensor_depth_exceeded.join(df->readTimeoutMs, true);
+    quality_ph.join(df->readTimeoutMs, true);
     if(!compact) sigma_thu.join(df->readTimeoutMs, true);
     if(!compact) sigma_tvu.join(df->readTimeoutMs, true);
     surface_h.join(df->readTimeoutMs, true);
+    if(!compact) surface_roughness.join(df->readTimeoutMs, true);
     x_atc.join(df->readTimeoutMs, true);
     y_atc.join(df->readTimeoutMs, true);
 
@@ -261,27 +258,22 @@ void* Atl24DataFrame::subsettingThread (void* parm)
             /* Check Confidence */
             if(atl24.confidence[current_photon] < parms.atl24.confidence_threshold.value) continue;
 
+            /* Check ATL03 Photon Quality Level */
+            const Icesat2Parameters::quality_ph_t quality_ph = static_cast<Icesat2Parameters::quality_ph_t>(atl24.quality_ph[current_photon]);
+            if(quality_ph < Icesat2Parameters::QUALITY_NOMINAL || quality_ph >= Icesat2Parameters::NUM_PHOTON_QUALITY)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 photon quality: %d", quality_ph);
+            }
+            else if(!parms.qualityPh[quality_ph])
+            {
+                continue;
+            }
+
             if(!parms.atl24.compact.value)
             {
-                /* Check Invalid Kd */
-                const Atl24Fields::flag_t invalid_kd_flag = static_cast<Atl24Fields::flag_t>(atl24.invalid_kd[current_photon]);
-                if(!parms.atl24.invalid_kd[invalid_kd_flag]) continue;
-
-                /* Check Invalid Wind Speed */
-                const Atl24Fields::flag_t invalid_wind_speed_flag = static_cast<Atl24Fields::flag_t>(atl24.invalid_wind_speed[current_photon]);
-                if(!parms.atl24.invalid_wind_speed[invalid_wind_speed_flag]) continue;
-
-                /* Check Low Confidence */
-                const Atl24Fields::flag_t low_confidence_flag = static_cast<Atl24Fields::flag_t>(atl24.low_confidence_flag[current_photon]);
-                if(!parms.atl24.low_confidence[low_confidence_flag]) continue;
-
                 /* Check Night */
                 const Atl24Fields::flag_t night_flag = static_cast<Atl24Fields::flag_t>(atl24.night_flag[current_photon]);
                 if(!parms.atl24.night[night_flag]) continue;
-
-                /* Check Night */
-                const Atl24Fields::flag_t sensor_depth_exceeded_flag = static_cast<Atl24Fields::flag_t>(atl24.sensor_depth_exceeded[current_photon]);
-                if(!parms.atl24.sensor_depth_exceeded[sensor_depth_exceeded_flag]) continue;
             }
 
             /* Add Photon to DataFrame */
@@ -292,19 +284,18 @@ void* Atl24DataFrame::subsettingThread (void* parm)
             df->lat_ph.append(aoi.latitude[current_photon]);
             df->lon_ph.append(aoi.longitude[current_photon]);
             df->ortho_h.append(atl24.ortho_h[current_photon]);
+            df->quality_ph.append(atl24.quality_ph[current_photon]);
             df->surface_h.append(atl24.surface_h[current_photon]);
             df->x_atc.append(atl24.x_atc[current_photon]);
             df->y_atc.append(atl24.y_atc[current_photon]);
             if(!parms.atl24.compact)
             {
                 df->ellipse_h.append(atl24.ellipse_h[current_photon]);
-                df->invalid_kd.append(atl24.invalid_kd[current_photon]);
-                df->invalid_wind_speed.append(atl24.invalid_wind_speed[current_photon]);
-                df->low_confidence_flag.append(atl24.low_confidence_flag[current_photon]);
+                df->kd.append(atl24.kd[current_photon]);
                 df->night_flag.append(atl24.night_flag[current_photon]);
-                df->sensor_depth_exceeded.append(atl24.sensor_depth_exceeded[current_photon]);
                 df->sigma_thu.append(atl24.sigma_thu[current_photon]);
                 df->sigma_tvu.append(atl24.sigma_tvu[current_photon]);
+                df->surface_roughness.append(atl24.surface_roughness[current_photon]);
             }
 
             /* Add Ancillary Elements */

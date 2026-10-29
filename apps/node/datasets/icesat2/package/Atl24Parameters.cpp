@@ -49,6 +49,37 @@ const char* Atl24Parameters::LUA_META_NAME = "Atl24Parameters";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Constructor - Atl24Fields
+ *----------------------------------------------------------------------------*/
+Atl24Fields::Atl24Fields():
+    FieldMap<Field>({ {"compact",               &compact,               "Boolean flag indicating that only a compact set of fields should be returned"},
+                      {"class_ph",              &class_ph,              "List of ATL24 photon classifications that are to be included in the response"},
+                      {"confidence_threshold",  &confidence_threshold,  "Minimum confidence value of bathymetry photons to be returned (0.0 to 1.0)"},
+                      {"night",                 &night,                 "Boolean flag controlling whether photons collected at night should be returned"},
+                      {"anc_fields",            &anc_fields,            "Ancillary fields from the source granules to include in the response"} }),
+    provided(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - Atl24Fields
+ *----------------------------------------------------------------------------*/
+void Atl24Fields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldMap<Field>::fromLua(L, index);
+
+        if(night.anyDisabled())
+        {
+            compact = false;
+        }
+
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void Atl24Parameters::fromLua (lua_State* L, int index)
@@ -63,4 +94,5 @@ Atl24Parameters::Atl24Parameters(lua_State* L, uint64_t key_space, const char* a
     Icesat2Parameters (L, key_space, asset_name, _resource, lua_meta_name)
 {
     addParameter("atl24", &atl24, "Configuration structure for the 'atl24x' dataset construction");
+    addParameter("quality_ph", &qualityPh, "Quality classification based on an ATL03 algorithms that attempt to identify instrumental artifacts, can be supplied as a single value (which means the classification must be exactly that), or a list (which means the classification must be in the list)");
 }

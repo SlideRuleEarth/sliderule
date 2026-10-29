@@ -50,13 +50,13 @@ class TestAMS:
         ]
         granules = earthdata.search({"asset": "icesat2-atl24", "poly": poly, "api": "ams"})
         assert init
-        assert len(granules) == 68
+        assert len(granules) == 85
 
     def test_atl24_meta(self, init):
-        response = earthdata.search({"asset": "icesat2-atl24", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True, "api": "ams"})
+        response = earthdata.search({"asset": "icesat2-atl24", "atl24": {"photons0":100}, "t0":"2019-09-30", "t1":"2019-10-02", "with_meta": True})
         assert init
-        assert response["hits"] == 859
-        assert len(response["granules"]) == 204
+        assert response["hits"] == 1091
+        assert len(response["granules"]) == 228
 
 #
 # CMR

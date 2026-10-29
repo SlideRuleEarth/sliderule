@@ -1,29 +1,29 @@
-"""Tests for sliderule icesat2 atl06-sr algorithm."""
+"""Tests for sliderule icesat2 atl24"""
 
 import pytest
 from pathlib import Path
 from sliderule import sliderule
 
 TESTDIR = Path(__file__).parent
-RESOURCES = ["ATL24_20181014001920_02350103_006_02_001_01.h5"]
+RESOURCES = ["ATL24_20181014001920_02350103_007_01_003_01.h5"]
 
 class TestAtl24x:
     def test_nominal(self, init):
         gdf = sliderule.run("atl24x", {}, resources=RESOURCES)
         assert init
-        assert len(gdf) == 63
-        assert len(gdf.keys()) == 13
-        assert gdf["gt"].sum() == 2160
-        assert gdf["spot"].sum() == 225
+        assert len(gdf) == 72
+        assert len(gdf.keys()) == 14
+        assert gdf["gt"].sum() == 2750
+        assert gdf["spot"].sum() == 229
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["class_ph"].value_counts()[40] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert abs(gdf["surface_h"].mean() - -0.36007485) < 0.001, gdf["surface_h"].mean()
-        assert abs(gdf["ortho_h"].mean() - -16.937626) < 0.001, gdf["ortho_h"].mean()
-        assert abs(gdf["confidence"].mean() - 0.6413109983716693) < 0.001, gdf["confidence"].mean()
-        assert abs(gdf["x_atc"].mean() - 7699727.727301021) < 0.001, gdf["x_atc"].mean()
-        assert abs(gdf["y_atc"].mean() - -662.6006) < 0.001, gdf["y_atc"].mean()
+        assert gdf["surface_h"].mean() == pytest.approx(-0.34916523)
+        assert gdf["ortho_h"].mean() == pytest.approx(-12.123074)
+        assert gdf["confidence"].mean() == pytest.approx(0.6852407)
+        assert gdf["x_atc"].mean() == pytest.approx(7713100.06817151)
+        assert gdf["y_atc"].mean() == pytest.approx(-1317.7193874782986)
 
     def test_not_compact(self, init):
         parms = {
@@ -33,46 +33,46 @@ class TestAtl24x:
         }
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
-        assert len(gdf) == 63
-        assert len(gdf.keys()) == 21
-        assert gdf["gt"].sum() == 2160
-        assert gdf["spot"].sum() == 225
+        assert len(gdf) == 72
+        assert len(gdf.keys()) == 20
+        assert gdf["gt"].sum() == 2750
+        assert gdf["spot"].sum() == 229
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["class_ph"].value_counts()[40] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert abs(gdf["surface_h"].mean() - -0.36007485) < 0.001, gdf["surface_h"].mean()
-        assert abs(gdf["ortho_h"].mean() - -16.937626) < 0.001, gdf["ortho_h"].mean()
-        assert abs(gdf["confidence"].mean() - 0.6413109983716693) < 0.001, gdf["confidence"].mean()
-        assert abs(gdf["x_atc"].mean() - 7699727.727301021) < 0.001, gdf["x_atc"].mean()
-        assert abs(gdf["y_atc"].mean() - -662.6006) < 0.001, gdf["y_atc"].mean()
-        assert abs(gdf["ellipse_h"].min() - -28.466719) < 0.0001, gdf["ellipse_h"].min()
-        assert gdf["sensor_depth_exceeded"].value_counts()[0] == len(gdf)
-        assert gdf["night_flag"].value_counts()[0] == 59
-        assert gdf["night_flag"].value_counts()[1] == 4
-        assert abs(gdf["sigma_tvu"].max() - 0.3883379) < 0.0001, gdf["sigma_tvu"].max()
-        assert abs(gdf["sigma_thu"].max() - 7.0713573) < 0.0001, gdf["sigma_thu"].max()
-        assert gdf["invalid_wind_speed"].value_counts()[0] == len(gdf)
-        assert gdf["invalid_kd"].value_counts()[1] == len(gdf)
-        assert gdf["low_confidence_flag"].value_counts()[0] == 35
-        assert gdf["low_confidence_flag"].value_counts()[1] == 28
+        assert gdf["surface_h"].mean() == pytest.approx(-0.34916523)
+        assert gdf["ortho_h"].mean() == pytest.approx(-12.123074)
+        assert gdf["confidence"].mean() == pytest.approx(0.6852407)
+        assert gdf["x_atc"].mean() == pytest.approx(7713100.06817151)
+        assert gdf["y_atc"].mean() == pytest.approx(-1317.7193874782986)
+        assert gdf["ellipse_h"].min() == pytest.approx(-29.296494)
+        assert gdf["night_flag"].value_counts()[0] == 55
+        assert gdf["night_flag"].value_counts()[1] == 17
+        assert gdf["sigma_tvu"].max() == pytest.approx(0.22828312)
+        assert gdf["sigma_thu"].max() == pytest.approx(7.9573226)
+        assert gdf["kd"].max() == pytest.approx(0.046218622)
+        assert gdf["surface_roughness"].max() == pytest.approx(2.220303)
+        assert gdf["quality_ph"].max() == 12
 
     def test_all_photons(self, init):
         parms = {
             "atl24": {
-                "class_ph": ["unclassified", "bathymetry", "sea_surface"],
+                "class_ph": ["unclassified", "i_dont_know", "ground", "bathymetry", "sea_surface"],
             }
         }
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
-        assert len(gdf) == 241597
-        assert len(gdf.keys()) == 13
-        assert gdf["gt"].sum() == 7959140
-        assert gdf["spot"].sum() == 895265
+        assert len(gdf) == 242777
+        assert len(gdf.keys()) == 14
+        assert gdf["gt"].sum() == 7982320
+        assert gdf["spot"].sum() == 901207
         assert gdf["region"].value_counts()[3] == len(gdf)
-        assert gdf["class_ph"].value_counts()[0] == 157275
-        assert gdf["class_ph"].value_counts()[40] == 63
-        assert gdf["class_ph"].value_counts()[41] == 84259
+        assert gdf["class_ph"].value_counts()[0] == 154911
+        assert gdf["class_ph"].value_counts()[1] == 3014
+        assert gdf["class_ph"].value_counts()[2] == 4
+        assert gdf["class_ph"].value_counts()[40] == 72
+        assert gdf["class_ph"].value_counts()[41] == 84776
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
 
@@ -84,8 +84,8 @@ class TestAtl24x:
         }
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
-        assert len(gdf) == 35
-        assert len(gdf.keys()) == 13
+        assert len(gdf) == 52
+        assert len(gdf.keys()) == 14
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
@@ -95,53 +95,19 @@ class TestAtl24x:
     def test_flags(self, init):
         parms = {
             "atl24": {
-                "invalid_kd": True,
-                "invalid_wind_speed": False,
-                "sensor_depth_exceeded": False,
-                "night": ["on", "off"],
+                "night": ["on"],
             }
         }
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
-        assert len(gdf) == 63
-        assert len(gdf.keys()) == 21 # automatically makes non-compact
+        assert len(gdf) == 17
+        assert len(gdf.keys()) == 20 # automatically makes non-compact
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert len(gdf["gt"].value_counts()) == 6
-        assert len(gdf["spot"].value_counts()) == 6
-        assert gdf["night_flag"].value_counts()[0] == 59
-        assert gdf["night_flag"].value_counts()[1] == 4
-
-    def test_night(self, init):
-        parms = {
-            "atl24": {
-                "night": False,
-            }
-        }
-        gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
-        assert init
-        assert len(gdf) == 59
-        assert len(gdf.keys()) == 21 # automatically makes non-compact
-        assert gdf["region"].value_counts()[3] == len(gdf)
-        assert gdf["rgt"].value_counts()[235] == len(gdf)
-        assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert gdf["night_flag"].value_counts()[0] == len(gdf)
-
-    def test_high_confidence(self, init):
-        parms = {
-            "atl24": {
-                "low_confidence": False,
-            }
-        }
-        gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
-        assert init
-        assert len(gdf) == 35
-        assert len(gdf.keys()) == 21 # automatically makes non-compact
-        assert gdf["region"].value_counts()[3] == len(gdf)
-        assert gdf["rgt"].value_counts()[235] == len(gdf)
-        assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert gdf["low_confidence_flag"].value_counts()[0] == len(gdf)
+        assert len(gdf["gt"].value_counts()) == 3
+        assert len(gdf["spot"].value_counts()) == 3
+        assert gdf["night_flag"].value_counts()[1] == 17
 
     def test_ancillary(self, init):
         parms = {
@@ -151,13 +117,13 @@ class TestAtl24x:
         }
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
-        assert len(gdf) == 63
-        assert len(gdf.keys()) == 15
+        assert len(gdf) == 72
+        assert len(gdf.keys()) == 16
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert gdf["index_seg"].median() == 53168
-        assert gdf["index_ph"].median() == 12949300
+        assert gdf["index_seg"].median() == 53622.0
+        assert gdf["index_ph"].median() == 12997263.0
 
     def test_poly_subset(self, init):
         # Full run
@@ -185,15 +151,13 @@ class TestAtl24x:
 
         assert lat_series_poly.between(lat_min, lat_max).all()
         assert lon_series_poly.between(lon_min, lon_max).all()
-        assert len(gdf_poly) == 19, f"poly_len={len(gdf_poly)} expected_len=19"
+        assert len(gdf_poly) == 22, f"poly_len={len(gdf_poly)} expected_len=19"
         assert gdf_poly["class_ph"].value_counts().iloc[0] == len(gdf_poly)
         assert gdf_poly["region"].value_counts().iloc[0] == len(gdf_poly)
         # Per-beam counts for this resource/poly
         expected_gt_counts = {
-            10: 1,  # gt1l
-            20: 16, # gt2r
-            40: 1,  # gt2l
-            50: 1,  # gt3l
+            20: 20, # gt2r
+            60: 2,  # gt3l
         }
         actual_gt_counts = gdf_poly["gt"].value_counts().to_dict()
         assert actual_gt_counts == expected_gt_counts, f"gt counts changed: {actual_gt_counts}"
@@ -203,14 +167,10 @@ class TestAtl24x:
             assert poly_count <= full_count, f"poly count exceeds full for gt {gt_val}: {poly_count} > {full_count}"
 
         # Anchor min/max coordinates for regression
-        expected_lat_min =   68.95691287431000
-        expected_lat_max =   69.02783394800493
-        expected_lon_min = -136.81647349295903
-        expected_lon_max = -136.65514419526238
-        assert abs(lat_series_poly.min() - expected_lat_min) < 1e-9
-        assert abs(lat_series_poly.max() - expected_lat_max) < 1e-9
-        assert abs(lon_series_poly.min() - expected_lon_min) < 1e-9
-        assert abs(lon_series_poly.max() - expected_lon_max) < 1e-9
+        assert lat_series_poly.min() == pytest.approx(68.99866305632777)
+        assert lat_series_poly.max() == pytest.approx(69.14499697426314)
+        assert lon_series_poly.min() == pytest.approx(-136.85487198172936)
+        assert lon_series_poly.max() == pytest.approx(-136.6947175790759)
 
     def test_empty_poly(self, init):
         empty_poly = [
@@ -246,4 +206,4 @@ class TestAtl24x:
             }
         })
         assert init
-        assert len(gdf) == 27923
+        assert len(gdf) == 42749

@@ -4,13 +4,8 @@
 local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
+local parms = icesat2.parms24(rqst["parms"], rqst["key_space"], "icesat2-atl24", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
-local default_asset = "icesat2-atl24" -- determine default asset
-local rqst_resource = rqst["resource"]
-if rqst_resource and (string.sub(rqst_resource, 38, 40) == "001") then
-    default_asset = "icesat2-atl24v1"
-end
-local parms = icesat2.parms24(rqst["parms"], rqst["key_space"], default_asset, rqst_resource)
 
 -------------------------------------------------------
 -- main

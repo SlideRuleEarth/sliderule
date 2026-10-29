@@ -52,9 +52,11 @@ struct Atl24Fields: public FieldMap<Field>
 {
     typedef enum {
         UNCLASSIFIED        = 0,
+        IDK                 = 1,
+        GROUND              = 2,
         BATHYMETRY          = 40,
         SEA_SURFACE         = 41,
-        NUM_CLASSES         = 3
+        NUM_CLASSES         = 5
     } class_t;
 
     typedef enum {
@@ -64,13 +66,9 @@ struct Atl24Fields: public FieldMap<Field>
     } flag_t;
 
     FieldElement<bool>                      compact {true};                     // reduce number of fields from atl24
-    FieldEnumeration<class_t,NUM_CLASSES>   class_ph {false, true, false};      // list of desired bathymetry classes of photons
+    FieldEnumeration<class_t,NUM_CLASSES>   class_ph {false, false, false, true, false}; // list of desired bathymetry classes of photons
     FieldElement<double>                    confidence_threshold {0.0};         // filter based on confidence
-    FieldEnumeration<flag_t,NUM_FLAGS>      invalid_kd {true, true};            // filter on invalid kd flag
-    FieldEnumeration<flag_t,NUM_FLAGS>      invalid_wind_speed {true, true};    // filter on invalid wind speed
-    FieldEnumeration<flag_t,NUM_FLAGS>      low_confidence {true, true};        // filter on low confidence flag
     FieldEnumeration<flag_t,NUM_FLAGS>      night {true, true};                 // filter based on night flag
-    FieldEnumeration<flag_t,NUM_FLAGS>      sensor_depth_exceeded {true, true}; // filter based on sensor depth exceeded flag
     FieldList<string>                       anc_fields;                         // list of additional ATL24 fields
 
     Atl24Fields(void);
@@ -106,7 +104,16 @@ class Atl24Parameters: public Icesat2Parameters
          * Data
          *--------------------------------------------------------------------*/
 
-        Atl24Fields atl24;  // atl24 algorithm settings
+        // atl24 algorithm settings
+        Atl24Fields atl24;
+
+        // list of desired photon quality levels from atl03 (note different defaults from Atl03Parameters)
+        FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY> qualityPh {
+        //  0      1      2      3      4      5     6      7      8      9
+            true,  true,  true,  true,  true,  true, false, false, false, false,
+            true,  true,  true,  false, true,  true, false, false, false, false,
+            true,  true,  true,  false, true,  true, false
+        };
 };
 
 /******************************************************************************

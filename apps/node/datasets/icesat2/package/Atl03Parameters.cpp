@@ -157,45 +157,6 @@ void BlanketFields::fromLua (lua_State* L, int index)
 }
 
 /*----------------------------------------------------------------------------
- * Constructor - Atl24Fields
- *----------------------------------------------------------------------------*/
-Atl24Fields::Atl24Fields():
-    FieldMap<Field>({ {"compact",               &compact,               "Boolean flag indicating that only a compact set of fields should be returned"},
-                      {"class_ph",              &class_ph,              "List of ATL24 photon classifications that are to be included in the response"},
-                      {"confidence_threshold",  &confidence_threshold,  "Minimum confidence value of bathymetry photons to be returned (0.0 to 1.0)"},
-                      {"invalid_kd",            &invalid_kd,            "Boolean flag controlling whether photons with invalid Kd data is returned"},
-                      {"invalid_wind_speed",    &invalid_wind_speed,    "Boolean flag controlling whether photons with invalid wind speed data is returned"},
-                      {"low_confidence",        &low_confidence,        "Boolean flag controlling whether photons with low confidence should be returned (short cut for manually setting the confidence threshold)"},
-                      {"night",                 &night,                 "Boolean flag controlling whether photons collected at night should be returned"},
-                      {"sensor_depth_exceeded", &sensor_depth_exceeded, "Boolean flag controlling whether photons that exceeded the sensor depth should be returned"},
-                      {"anc_fields",            &anc_fields,            "Ancillary fields from the source granules to include in the response"} }),
-    provided(false)
-{
-}
-
-/*----------------------------------------------------------------------------
- * fromLua - Atl24Fields
- *----------------------------------------------------------------------------*/
-void Atl24Fields::fromLua (lua_State* L, int index)
-{
-    if(lua_istable(L, index))
-    {
-        FieldMap<Field>::fromLua(L, index);
-
-        if( invalid_kd.anyDisabled() ||
-            invalid_wind_speed.anyDisabled() ||
-            low_confidence.anyDisabled() ||
-            night.anyDisabled() ||
-            sensor_depth_exceeded.anyDisabled() )
-        {
-            compact = false;
-        }
-
-        provided = true;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void Atl03Parameters::fromLua (lua_State* L, int index)
@@ -380,6 +341,8 @@ string convertToJson(const Atl24Fields::class_t& v)
     switch(v)
     {
         case Atl24Fields::UNCLASSIFIED: return "\"unclassified\"";
+        case Atl24Fields::IDK:          return "\"i_dont_know\"";
+        case Atl24Fields::GROUND:       return "\"ground\"";
         case Atl24Fields::BATHYMETRY:   return "\"bathymetry\"";
         case Atl24Fields::SEA_SURFACE:  return "\"sea_surface\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid bathy class: %d", static_cast<int>(v));
@@ -394,6 +357,8 @@ int convertToLua(lua_State* L, const Atl24Fields::class_t& v)
     switch(v)
     {
         case Atl24Fields::UNCLASSIFIED: lua_pushstring(L, "unclassified");  break;
+        case Atl24Fields::IDK:          lua_pushstring(L, "i_dont_know");   break;
+        case Atl24Fields::GROUND:       lua_pushstring(L, "ground");        break;
         case Atl24Fields::BATHYMETRY:   lua_pushstring(L, "bathymetry");    break;
         case Atl24Fields::SEA_SURFACE:  lua_pushstring(L, "sea_surface");   break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl24 class: %d", static_cast<int>(v));
@@ -414,6 +379,8 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v)
     {
         const char* str = LuaObject::getLuaString(L, index);
         if     (StringLib::match(str, "unclassified"))      v = Atl24Fields::UNCLASSIFIED;
+        else if(StringLib::match(str, "i_dont_know"))       v = Atl24Fields::IDK;
+        else if(StringLib::match(str, "ground"))            v = Atl24Fields::GROUND;
         else if(StringLib::match(str, "bathymetry"))        v = Atl24Fields::BATHYMETRY;
         else if(StringLib::match(str, "sea_surface"))       v = Atl24Fields::SEA_SURFACE;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "bathy class is an invalid value: %s", str);
@@ -432,8 +399,10 @@ int convertToIndex(const Atl24Fields::class_t& v)
     switch(v)
     {
         case Atl24Fields::UNCLASSIFIED: return 0;
-        case Atl24Fields::BATHYMETRY:   return 1;
-        case Atl24Fields::SEA_SURFACE:  return 2;
+        case Atl24Fields::IDK:          return 1;
+        case Atl24Fields::GROUND:       return 2;
+        case Atl24Fields::BATHYMETRY:   return 3;
+        case Atl24Fields::SEA_SURFACE:  return 4;
         default:                        return -1;
     }
 }
@@ -446,8 +415,10 @@ void convertFromIndex(int index, Atl24Fields::class_t& v)
     switch(index)
     {
         case 0:     v = Atl24Fields::UNCLASSIFIED;  break;
-        case 1:     v = Atl24Fields::BATHYMETRY;    break;
-        case 2:     v = Atl24Fields::SEA_SURFACE;   break;
+        case 1:     v = Atl24Fields::IDK;           break;
+        case 2:     v = Atl24Fields::GROUND;        break;
+        case 3:     v = Atl24Fields::BATHYMETRY;    break;
+        case 4:     v = Atl24Fields::SEA_SURFACE;   break;
         default:    v = Atl24Fields::NUM_CLASSES;   break;
     }
 }

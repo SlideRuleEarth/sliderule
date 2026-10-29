@@ -68,23 +68,22 @@ class Atl24DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<int8_t>         class_ph;
-        FieldColumn<double>         confidence;
-        FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
+        FieldColumn<int32_t>        class_ph;
+        FieldColumn<float>          confidence;
         FieldColumn<float>          ellipse_h;
-        FieldColumn<uint8_t>        invalid_kd;
-        FieldColumn<uint8_t>        invalid_wind_speed;
+        FieldColumn<float>          kd;
         FieldColumn<double>         lat_ph {Field::Y_COLUMN};
         FieldColumn<double>         lon_ph {Field::X_COLUMN};
-        FieldColumn<uint8_t>        low_confidence_flag;
-        FieldColumn<uint8_t>        night_flag;
+        FieldColumn<int8_t>         night_flag;
         FieldColumn<float>          ortho_h {Field::Z_COLUMN};
-        FieldColumn<uint8_t>        sensor_depth_exceeded;
+        FieldColumn<int8_t>         quality_ph;
         FieldColumn<float>          sigma_thu;
         FieldColumn<float>          sigma_tvu;
         FieldColumn<float>          surface_h;
+        FieldColumn<float>          surface_roughness;
+        FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
         FieldColumn<double>         x_atc;
-        FieldColumn<float>          y_atc;
+        FieldColumn<double>         y_atc;
 
         /* DataFrame MetaData */
         FieldElement<uint8_t>       spot {0, Field::META_COLUMN};   // 1, 2, 3, 4, 5, 6
@@ -118,21 +117,20 @@ class Atl24DataFrame: public GeoDataFrame
 
                 H5Array<int8_t>     sc_orient;
 
-                H5Array<int8_t>     class_ph;
-                H5Array<double>     confidence;
+                H5Array<int32_t>    class_ph;
+                H5Array<float>      confidence;
                 H5Array<double>     delta_time;
                 H5Array<float>      ellipse_h;
-                H5Array<uint8_t>    invalid_kd;
-                H5Array<uint8_t>    invalid_wind_speed;
-                H5Array<uint8_t>    low_confidence_flag;
-                H5Array<uint8_t>    night_flag;
+                H5Array<float>      kd;
+                H5Array<int8_t>     night_flag;
                 H5Array<float>      ortho_h;
-                H5Array<uint8_t>    sensor_depth_exceeded;
+                H5Array<int8_t>     quality_ph;
                 H5Array<float>      sigma_thu;
                 H5Array<float>      sigma_tvu;
                 H5Array<float>      surface_h;
+                H5Array<float>      surface_roughness;
                 H5Array<double>     x_atc;
-                H5Array<float>      y_atc;
+                H5Array<double>     y_atc;
 
                 H5VarSet            anc_data;
         };
