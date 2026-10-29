@@ -268,6 +268,7 @@ void Icesat2Parameters::fromLua (lua_State* L, int index)
             {
                 mlog(CRITICAL, "Failed in request to AMS geolocation correction: %ld", rsps.code);
             }
+            delete [] rsps.response;
         }
         else if(geolocFields.correction.value == GeolocCorrFields::MANUAL)
         {
