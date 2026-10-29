@@ -520,7 +520,8 @@ const char* S3CurlIODriver::FORMAT = "s3";
 void S3CurlIODriver::init (void)
 {
     curlShare = curl_share_init();
-    curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+    // CURL_LOCK_DATA_CONNECT is intentionally not shared: libcurl does not
+    // support sharing the connection cache across concurrent threads
     curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
     curl_share_setopt(curlShare, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
     curl_share_setopt(curlShare, CURLSHOPT_LOCKFUNC, shareLock);
