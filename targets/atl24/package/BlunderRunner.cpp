@@ -141,7 +141,6 @@ bool BlunderRunner::run (GeoDataFrame* dataframe)
 
         // change classification
         df.class_ph[i] = Atl24Fields::UNCLASSIFIED;
-        df.low_confidence_flag[i] = 0;
     }
 
     // add metadata to dataframe

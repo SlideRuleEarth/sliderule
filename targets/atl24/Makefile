@@ -2,10 +2,13 @@ ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 VERSION ?= latest
-ATL24 ?= $(ROOT)/../atl24_v2_algorithms
+ATL24_BUILD = $(BUILD)/atl24
+ATL24_STAGE = $(BUILD)/stage
+ATL24_ALGO ?= $(ROOT)/../atl24_v2_algorithms
 BUCKET ?= s3://sliderule
 CONTAINER_REGISTRY ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
-ENVVER ?= $(shell git describe --abbrev --dirty --always --tags --long)
+ENVVER ?= $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
+TEST_GRANULE = ATL03_20181028071900_04530107_007_01.h5
 PROJECT_BUCKET = sliderule
 PROJECT_FOLDER = cf
 AWS_REGION = us-west-2
@@ -14,43 +17,49 @@ USERCFG ?=
 CYCLE ?=
 
 all:
-	make -j8 -C $(BUILD)
+	make -j8 -C $(ATL24_BUILD)
 
 config: prep
-	cd $(BUILD) && \
-	cmake -DCMAKE_BUILD_TYPE=Release -DATL24DIR=$(ATL24) $(USERCFG) $(MAKECFG) $(ROOT)/targets/atl24
+	cd $(ATL24_BUILD) && \
+	cmake -DCMAKE_BUILD_TYPE=Release -DATL24DIR=$(ATL24_ALGO) $(USERCFG) $(MAKECFG) $(ROOT)/targets/atl24
 
 config-stage-debug: prep
-	cd $(BUILD) && \
-	cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(ROOT)/stage/sliderule -DATL24DIR=$(ATL24) $(USERCFG) $(MAKECFG) $(ROOT)/targets/atl24
+	cd $(ATL24_BUILD) && \
+	cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(ROOT)/stage/sliderule -DATL24DIR=$(ATL24_ALGO) $(USERCFG) $(MAKECFG) $(ROOT)/targets/atl24
 
 config-stage-release: prep
-	cd $(BUILD) && \
-	cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/stage/sliderule -DATL24DIR=$(ATL24) $(USERCFG) $(MAKECFG) $(ROOT)/targets/atl24
+	cd $(ATL24_BUILD) && \
+	cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(ROOT)/stage/sliderule -DATL24DIR=$(ATL24_ALGO) $(USERCFG) $(MAKECFG) $(ROOT)/targets/atl24
 
 install:
-	make -C $(BUILD) install
+	make -C $(ATL24_BUILD) install
 
 uninstall:
-	xargs rm < $(BUILD)/install_manifest.txt
+	xargs rm < $(ATL24_BUILD)/install_manifest.txt
 
 prep:
-	mkdir -p $(BUILD)
+	mkdir -p $(ATL24_BUILD)
 
 selftest: install
 	make -C $(ROOT)/targets/slideruleearth run RUN_CMD=$(ROOT)/targets/atl24/selftests/test_runner.lua
 
 docker-atl24:
-	-rm -Rf $(STAGE)
-	mkdir -p $(STAGE)
-	rsync -a $(ROOT) $(STAGE)/sliderule --exclude build --exclude stage
-	rsync -a $(ATL24) $(STAGE) --exclude build --exclude stage
-	cp docker/atl24/Dockerfile $(STAGE)
-	cp docker/atl24/docker-entrypoint.sh $(STAGE)
-	cd $(STAGE) && docker build --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:atl24 .
+	-rm -Rf $(ATL24_STAGE)
+	mkdir -p $(ATL24_STAGE)
+	rsync -a $(ROOT) $(ATL24_STAGE)/sliderule --exclude build --exclude stage
+	rsync -a $(ATL24_ALGO) $(ATL24_STAGE) --exclude build --exclude stage
+	cp docker/atl24/Dockerfile $(ATL24_STAGE)
+	cp docker/atl24/docker-entrypoint.sh $(ATL24_STAGE)
+	cd $(ATL24_STAGE) && docker build --build-arg repo=$(CONTAINER_REGISTRY) -t $(CONTAINER_REGISTRY)/sliderule:atl24 .
 
 docker-atl24-push:
 	docker push $(CONTAINER_REGISTRY)/sliderule:atl24
+
+sips-run: install
+	LOG_FORMAT=FMT_TEXT \
+	ENVIRONMENT_VERSION=$(ENVVER) \
+	IPv4=localhost \
+	$(STAGE)/sliderule/bin/sliderule scripts/sips_atl24r3.lua $(TEST_GRANULE) /tmp
 
 test-docker-run:
 	docker run \
@@ -70,10 +79,10 @@ test-docker-run:
 		-e CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
 		--name atl24 --rm \
 		$(CONTAINER_REGISTRY)/sliderule:runner \
-		/usr/local/etc/sliderule/job_runner.lua $(ROOT)/targets/atl24/scripts/gen_atl24r3.lua ATL03_20181028071900_04530107_006_02.h5 /tmp
+		/usr/local/etc/sliderule/job_runner.lua $(ROOT)/targets/atl24/scripts/gen_atl24r3.lua $(TEST_GRANULE) /tmp
 
 test-local-run: install
-	make -C $(ROOT)/targets/slideruleearth job ARGS="$(ROOT)/targets/atl24/scripts/gen_atl24r3.lua ATL03_20191215112656_12150507_006_01.h5 /tmp"
+	make -C $(ROOT)/targets/slideruleearth job ARGS="$(ROOT)/targets/atl24/scripts/gen_atl24r3.lua $(TEST_GRANULE) /tmp"
 
 test-vset-run:
 	sliderule-runner submit atl24r3_vset scripts/gen_atl24r3.lua data/atl24r3_validation_set.txt --image sliderule:atl24
@@ -102,7 +111,7 @@ platinum-transfer: # needs NUM_GRANULES
 	python scripts/transfer_atl24r3.py --transfer $(NUM_GRANULES)
 
 clean:
-	- make -C $(BUILD) clean
+	- make -C $(ATL24_BUILD) clean
 
 distclean:
-	- rm -Rf $(BUILD)
+	- rm -Rf $(ATL24_BUILD)
