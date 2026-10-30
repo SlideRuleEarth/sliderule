@@ -110,13 +110,13 @@ with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
     for future in as_completed(futures):
         result = future.result()
         add_table(grid, result["grid"])
-#        for spot in ["1","2","3","4","5","6"]:
-#            if spot in result:
-#                summary = add_result(summary, result[spot] | result["granule"])
+        for spot in ["1","2","3","4","5","6"]:
+            if spot in result:
+                summary = add_result(summary, result[spot] | result["granule"])
         print(f"Added {result["granule"]["name"]}")
 
 # write grid to map
 write_map_file(grid, args.grid_file)
 
 # write summary out to csv
-#write_csv_file(summary, args.summary_file)
+write_csv_file(summary, args.summary_file)
