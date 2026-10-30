@@ -963,7 +963,6 @@ release: ## tag and release sliderule; needs RELEASE
 ########################
 
 docker-clean: ## clean out old version of docker images; needs VERSION
-	- docker image rm $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 	- docker image rm $(CONTAINER_REGISTRY)/sliderule:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/ilb:$(VERSION)
 	- docker image rm $(CONTAINER_REGISTRY)/monitor:$(VERSION)
