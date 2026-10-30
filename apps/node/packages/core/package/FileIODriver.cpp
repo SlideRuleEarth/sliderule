@@ -63,14 +63,23 @@ Asset::IODriver* FileIODriver::create (const Asset* _asset, const char* resource
  *----------------------------------------------------------------------------*/
 int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 {
-    /* Seek to New Position */
-    if(fseeko(ioFile, static_cast<off_t>(pos), SEEK_SET) != 0)
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to go to I/O position: 0x%lx", pos);
-    }
+    size_t bytes_read = 0;
 
-    /* Read Data */
-    return fread(data, 1, size, ioFile);
+    reader.lock();
+    {
+        /* Seek to New Position */
+        if(fseeko(ioFile, static_cast<off_t>(pos), SEEK_SET) != 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to go to I/O position: 0x%lx", pos);
+        }
+
+        /* Read Data */
+        bytes_read = fread(data, 1, size, ioFile);
+    }
+    reader.unlock();
+
+    /* Return */
+    return bytes_read;
 }
 
 /*----------------------------------------------------------------------------
@@ -79,10 +88,17 @@ int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 int64_t FileIODriver::size (void)
 {
     struct stat st;
-    if(fstat(fileno(ioFile), &st) != 0)
+
+    reader.lock();
     {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to get size of file: %s", filePath.c_str());
+        if(fstat(fileno(ioFile), &st) != 0)
+        {
+            reader.unlock();
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to get size of file: %s", filePath.c_str());
+        }
     }
+    reader.unlock();
+
     return static_cast<int64_t>(st.st_size);
 }
 

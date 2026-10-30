@@ -41,3 +41,20 @@ cd sliderule/targets/atl24
 make config-state-release
 make
 ```
+
+## Running Locally
+
+The SlideRule node application executes an ATL24 specific Lua script that reads in an ATL03 granule and outputs an ATL24 granule and XML file.  The ATL03 granule must reside in the `/data/ATLAS/` directory on the local machine.
+
+To test using the makefile target:
+```bash
+make sips-test
+```
+
+To run directly, the command is:
+```bash
+ATL03_GRANULE=ATL03_20181028071900_04530107_007_01.h5 # put here whatever ATL03 granule you want to process
+OUTPUT_DIR=/tmp # put here whatever output directory you want the ATL24 granules to go to
+ENVVER=`git describe --abbrev --dirty --always --tags --long`
+LOG_FORMAT=FMT_TEXT ENVIRONMENT_VERSION=$(ENVVER) IPv4=localhost sliderule/stage/sliderule/bin/sliderule scripts/sips_atl24r3.lua $(ATL03_GRANULE) $(OUTPUT_DIRECTORY)
+```

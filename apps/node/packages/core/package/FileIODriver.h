@@ -77,6 +77,7 @@ class FileIODriver: public Asset::IODriver
         const Asset*    asset;
         string          filePath;
         fileptr_t       ioFile;
+        Mutex           reader;
 };
 
 #endif  /* __file_io_driver__ */
