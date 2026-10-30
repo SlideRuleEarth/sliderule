@@ -10,7 +10,7 @@ local outdir                = arg[2]
 -- helper functions
 local function abort(errmsg)
     print(errmsg)
-    sys.abort(1)
+    sys.quit(1)
 end
 
 -- setup
@@ -139,3 +139,6 @@ if not xml_file then
 end
 xml_file:write(xml_content)
 xml_file:close()
+
+-- exit cleanly
+sys.quit(0)
