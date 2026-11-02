@@ -15,7 +15,7 @@ result_file = sys.argv[2]
 # constants
 TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 OUTPUT_BUCKET = "sliderule-public"
-OUTPUT_PREFIX = "atl06tv2"
+OUTPUT_PREFIX = "atl06tv3"
 
 # create S3 client
 s3 = boto3.client("s3")

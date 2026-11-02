@@ -18,13 +18,22 @@ s3 = boto3.client("s3")
 PARTITION_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "partition_runner.py")
 TILE_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tile_runner.py")
 
-# test site
+# northern test site
 greenland_poly = [
     {"lon": -27.20,    "lat": 73.48},
     {"lon": -27.20,    "lat": 74.08},
     {"lon": -29.75,    "lat": 74.08},
     {"lon": -29.75,    "lat": 73.48},
     {"lon": -27.20,    "lat": 73.48}
+]
+
+# southern test site
+antarctica_poly = [
+    {"lon": -151.86,    "lat": -87.51},
+    {"lon": -136.64,    "lat": -86.99},
+    {"lon": -146.35,    "lat": -86.27},
+    {"lon": -159.34,    "lat": -86.68},
+    {"lon": -151.86,    "lat": -87.51}
 ]
 
 # #####################################
@@ -125,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules.txt")
     parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles.txt")
     parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
-    parser.add_argument('--output_prefix',  type=str,               default="atl06tv2")
+    parser.add_argument('--output_prefix',  type=str,               default="atl06tv3")
     parser.add_argument('--verbose',        action='store_true',    default=False)
     parser.add_argument('--workers',        type=int,               default=8) # number of threads for partitioning, tiling, and reading
     parser.add_argument('--list_granules',  action='store_true',    default=False) # create list of granules to process (uses aoi and writes atl06_granules)
@@ -135,7 +144,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # route command
-    if args.list_granules:  list_atl06_granules(greenland_poly, args.atl06_granules, args.domain, args.cluster, args.verbose)
+    if args.list_granules:  list_atl06_granules(antarctica_poly, args.atl06_granules, args.domain, args.cluster, args.verbose)
     elif args.list_tiles:   list_atl06_tiles(args.output_bucket, args.output_prefix, args.atl06_tiles)
     elif args.partition:    run_workers(args.atl06_granules, PARTITION_RUNNER, args.workers)
     elif args.tile:         run_workers(args.atl06_tiles, TILE_RUNNER, args.workers)

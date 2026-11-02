@@ -8,7 +8,7 @@ import boto3
 import pyarrow as pa
 import pyarrow.parquet as pq
 import geopandas as gpd
-from datetime import datetime, timezone
+#from datetime import datetime, timezone
 from geopandas.io.arrow import _geopandas_to_arrow
 
 # arguments
@@ -19,7 +19,7 @@ result_file = sys.argv[2]
 SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
 ROW_GROUP_TARGET_SIZE_MB = 2 # MB
 OUTPUT_BUCKET = "sliderule-public"
-OUTPUT_PREFIX = "atl06tv2"
+OUTPUT_PREFIX = "atl06tv3"
 
 # create S3 client
 s3 = boto3.client("s3")
@@ -112,18 +112,19 @@ try:
         result["messages"].append(f"{len(gdf)} rows from {len(filenames)} files")
         gdf["cell_id"] = assign_cell_ids(gdf, SEGMENT_S2_CELL_LEVEL)
         gdf = gdf.set_index("cell_id").sort_index(kind="stable")
-        years = gpd.pd.to_datetime(gdf["time_ns"].to_numpy(), unit="ns", utc=True).year.to_numpy()
-
-        for year in range(2018, datetime.now(timezone.utc).year + 1):
-            year_gdf = gdf[years == year]
-            if len(year_gdf) == 0: continue
-            local_parquet_file = f"/tmp/ATL06T_{year}_{cell_id_str}.parquet"
-            remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{year}_{cell_id_str}.parquet"
-            write_optimized_parquet(year_gdf, local_parquet_file)
-            s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
-            result["outputs"].append(remote_parquet_file)
-            result["messages"].append(f"{len(year_gdf)} rows written for {year}")
-            os.remove(local_parquet_file)
+#        years = gpd.pd.to_datetime(gdf["time_ns"].to_numpy(), unit="ns", utc=True).year.to_numpy()
+#        for year in range(2018, datetime.now(timezone.utc).year + 1):
+#            year_gdf = gdf[years == year]
+#            if len(year_gdf) == 0: continue
+#            local_parquet_file = f"/tmp/ATL06T_{year}_{cell_id_str}.parquet"
+#            remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{year}_{cell_id_str}.parquet"
+        local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
+        remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
+        write_optimized_parquet(gdf, local_parquet_file)
+        s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
+        result["outputs"].append(remote_parquet_file)
+        result["messages"].append(f"{len(gdf)} rows written for {cell_id_str}")
+        os.remove(local_parquet_file)
 
     else:
 

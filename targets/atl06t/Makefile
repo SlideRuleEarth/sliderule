@@ -6,7 +6,7 @@ partition:
 	python scripts/build.py --partition
 
 partition-runner:
-	sliderule-runner submit atl06t_partition scripts/partition_runner.py /data/ATL0/atl06_granules.txt --image pysr:latest
+	sliderule-runner submit atl06t_partition scripts/partition_runner.py /data/ATL06/atl06_granules.txt --vcpus 1 --memory 8000 --image pysr:latest
 
 list-partitions:
 	python scripts/build.py --list_tiles
