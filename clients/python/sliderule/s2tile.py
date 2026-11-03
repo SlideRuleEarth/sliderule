@@ -307,7 +307,7 @@ class Reader:
         self.connection.execute(f"CREATE TABLE {poly_table} AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
         try:
             tiles = [row[0] for row in self.connection.execute(
-                f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {self.tile_level}))::UBIGINT", [wkt]).fetchall()
+                f"SELECT UNNEST(s2_covering_fixed_level(g, {self.tile_level}))::UBIGINT FROM {poly_table}").fetchall()
             ]
             if not names_only:
                 # get times
@@ -321,8 +321,8 @@ class Reader:
                     results = executor.map(
                         lambda tile_id: self.read_tile(tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns),
                         tiles)
-                    for i, ((year, cell), (gdf, status)) in enumerate(zip(tiles, results)):
-                        if verbose: print(f"Read [{i+1}/{len(tiles)}] tile {year} {cell:016X} - {status}")
+                    for i, (tile_id, (gdf, status)) in enumerate(zip(tiles, results)):
+                        if verbose: print(f"Read [{i+1}/{len(tiles)}] tile {tile_id:016X} - {status}")
                         if gdf is not None:
                             gdfs.append(gdf)
         finally:
