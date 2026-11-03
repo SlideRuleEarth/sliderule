@@ -155,6 +155,7 @@ https://conda.anaconda.org/conda-forge/linux-aarch64/proj-9.9.0-habe29b3_0.conda
 https://conda.anaconda.org/conda-forge/linux-aarch64/prometheus-cpp-1.3.0-h82622d3_1.conda#c540fbb9c88481110eb65542d97127f2
 https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.3-pyh5ded981_0.conda#8bf43ae1312e9b966063459e04c20fa7
 https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda#461219d1a5bd61342293efa2c0c90eac
+https://conda.anaconda.org/conda-forge/linux-aarch64/python-duckdb-1.5.6-py314h0b174d3_0.conda#97ac870c6cf7d6cfa5e817fc1b6b5a6c
 https://conda.anaconda.org/conda-forge/noarch/six-1.17.0-pyhe01879c_1.conda#3339e3b65d58accf4ca4fb8748ab16b3
 https://conda.anaconda.org/conda-forge/noarch/threadpoolctl-3.7.0-pyhc455866_0.conda#8c05910e780502e362d658f00f5ec10f
 https://conda.anaconda.org/conda-forge/noarch/xyzservices-2026.9.1-pyhd8ed1ab_0.conda#5d7c149ba9c728d4951f3fe6d3ce0f84
@@ -179,7 +180,6 @@ https://conda.anaconda.org/conda-forge/linux-aarch64/libgdal-core-3.13.3-h7cd0b4
 https://conda.anaconda.org/conda-forge/linux-aarch64/libgoogle-cloud-3.8.0-h2efc11c_0.conda#a20e63a2f4a5639b3cbfcc33ef4d9555
 https://conda.anaconda.org/conda-forge/linux-aarch64/libraqm-0.11.0-hd2f8911_0.conda#b193aa5a8bd7595c537c6e1916b7298d
 https://conda.anaconda.org/conda-forge/linux-aarch64/pandas-3.1.0-np2py314h484e89f_0.conda#e53073c329ea4a804f3f234ace16fc28
-https://conda.anaconda.org/conda-forge/linux-aarch64/python-duckdb-2.0.0-py314h4ac0071_0.conda#ff1c08ca7345a7da22c1df5873aad748
 https://conda.anaconda.org/conda-forge/linux-aarch64/scipy-1.18.1-py314hb3ba6a9_2.conda#ce2bafa00876d76020fa868e74cf9588
 https://conda.anaconda.org/conda-forge/linux-aarch64/shapely-2.2.0-py314h5e92adf_1.conda#2fffb6e840223d4c3483037645729e55
 https://conda.anaconda.org/conda-forge/noarch/urllib3-2.8.0-pyhd8ed1ab_0.conda#407a3d3778570bae8e8fcf554e803e43

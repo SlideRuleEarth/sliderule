@@ -2576,19 +2576,18 @@ package:
   category: main
   optional: false
 - name: python-duckdb
-  version: 2.0.0
+  version: 1.5.6
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=15'
     libstdcxx: '>=15'
-    numpy: '>=1.25,<3'
     python: '>=3.14,<3.15.0a0'
     python_abi: 3.14.*
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/python-duckdb-2.0.0-py314h4ac0071_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/python-duckdb-1.5.6-py314h0b174d3_0.conda
   hash:
-    md5: ff1c08ca7345a7da22c1df5873aad748
-    sha256: 268c88d672f05ae2f24d5cac094d1968204642f68b9ec2bc785a90e15afd39f2
+    md5: 97ac870c6cf7d6cfa5e817fc1b6b5a6c
+    sha256: 6da28f481da262cdcfebc1fe7e874ffba3b1d7ee55a394479ae06a1d4afb3531
   category: main
   optional: false
 - name: python_abi

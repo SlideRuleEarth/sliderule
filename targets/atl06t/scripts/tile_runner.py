@@ -112,12 +112,6 @@ try:
         result["messages"].append(f"{len(gdf)} rows from {len(filenames)} files")
         gdf["cell_id"] = assign_cell_ids(gdf, SEGMENT_S2_CELL_LEVEL)
         gdf = gdf.set_index("cell_id").sort_index(kind="stable")
-#        years = gpd.pd.to_datetime(gdf["time_ns"].to_numpy(), unit="ns", utc=True).year.to_numpy()
-#        for year in range(2018, datetime.now(timezone.utc).year + 1):
-#            year_gdf = gdf[years == year]
-#            if len(year_gdf) == 0: continue
-#            local_parquet_file = f"/tmp/ATL06T_{year}_{cell_id_str}.parquet"
-#            remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{year}_{cell_id_str}.parquet"
         local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
         remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
         write_optimized_parquet(gdf, local_parquet_file)

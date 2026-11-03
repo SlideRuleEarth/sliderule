@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - boto3
-  - python-duckdb
+  - python-duckdb<2 # geography community extension (S2 cells) is not yet published for duckdb 2.x
   - geopandas
   - pyarrow=24
   - shapely
