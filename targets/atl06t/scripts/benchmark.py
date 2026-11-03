@@ -15,40 +15,87 @@ from shapely import contains_xy
 from shapely.geometry import Polygon
 
 #
+# Arguments
+#
+parser = argparse.ArgumentParser(description="""ATL06 Tile Builder""")
+parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
+parser.add_argument('--cluster',        type=str,               default="developers")
+parser.add_argument('--bucket',         type=str,               default="sliderule-public")
+parser.add_argument('--prefix',         type=str,               default="atl06tv3")
+parser.add_argument('--earthaccess',    action='store_true',    default=False)
+parser.add_argument('--h5coro',         action='store_true',    default=False)
+parser.add_argument('--sliderule',      action='store_true',    default=False)
+parser.add_argument('--s2tile',         action='store_true',    default=False)
+parser.add_argument('--local',          action='store_true',    default=False)
+parser.add_argument('--time_spans',     action='store_true',    default=False)
+parser.add_argument('--aoi',            type=str,               default="greenland")
+args = parser.parse_args()
+
+#
 # AOIs
 #
-greenland_poly_50km2 = [
-    {"lon": -27.25979597144949,     "lat": 73.49716901328901},
-    {"lon": -27.25979597144949,     "lat": 73.56076480273342},
-    {"lon": -27.48407173814204,     "lat": 73.56076480273342},
-    {"lon": -27.48407173814204,     "lat": 73.49716901328901},
-    {"lon": -27.25979597144949,     "lat": 73.49716901328901}
-]
-greenland_poly_300km2 = [
-    {"lon": -27.219435431853217,    "lat": 73.49818164811984},
-    {"lon": -27.219435431853217,    "lat": 73.64424276904958},
-    {"lon": -27.80812065118551,     "lat": 73.64424276904958},
-    {"lon": -27.80812065118551,     "lat": 73.49818164811984},
-    {"lon": -27.219435431853217,    "lat": 73.49818164811984}
-]
-greenland_convex_poly_450km2 = [
-    {"lon": -29.127476024254214,    "lat": 73.73869799255206},
-    {"lon": -28.57131232009959,     "lat": 73.68944445330746},
-    {"lon": -28.398006201999944,    "lat": 73.76409914046496},
-    {"lon": -28.436079389819962,    "lat": 73.850847588515},
-    {"lon": -28.789962359255153,    "lat": 73.91373599019127},
-    {"lon": -29.256954649831314,    "lat": 73.86000697128824},
-    {"lon": -29.127476024254214,    "lat": 73.73869799255206}
-]
-greenland_poly_5000km2 = [
-    {"lon": -27.293532869741416,    "lat": 73.48761834293555},
-    {"lon": -27.293532869741416,    "lat": 74.0798487786565},
-    {"lon": -29.741987353437068,    "lat": 74.0798487786565},
-    {"lon": -29.741987353437068,    "lat": 73.48761834293555},
-    {"lon": -27.293532869741416,    "lat": 73.48761834293555}
-]
-aois = [greenland_poly_50km2, greenland_poly_300km2, greenland_convex_poly_450km2, greenland_poly_5000km2]
-names = ["Bbox50km2", "Bbox300km2", "Convex450km2", "Bbox5000km2"]
+polys = {
+    "greenland" : {
+        "Bbox50km2": [
+            {"lon": -27.25979597144949,     "lat": 73.49716901328901},
+            {"lon": -27.25979597144949,     "lat": 73.56076480273342},
+            {"lon": -27.48407173814204,     "lat": 73.56076480273342},
+            {"lon": -27.48407173814204,     "lat": 73.49716901328901},
+            {"lon": -27.25979597144949,     "lat": 73.49716901328901}
+        ],
+        "Bbox300km2": [
+            {"lon": -27.219435431853217,    "lat": 73.49818164811984},
+            {"lon": -27.219435431853217,    "lat": 73.64424276904958},
+            {"lon": -27.80812065118551,     "lat": 73.64424276904958},
+            {"lon": -27.80812065118551,     "lat": 73.49818164811984},
+            {"lon": -27.219435431853217,    "lat": 73.49818164811984}
+        ],
+        "Convex450km2": [
+            {"lon": -29.127476024254214,    "lat": 73.73869799255206},
+            {"lon": -28.57131232009959,     "lat": 73.68944445330746},
+            {"lon": -28.398006201999944,    "lat": 73.76409914046496},
+            {"lon": -28.436079389819962,    "lat": 73.850847588515},
+            {"lon": -28.789962359255153,    "lat": 73.91373599019127},
+            {"lon": -29.256954649831314,    "lat": 73.86000697128824},
+            {"lon": -29.127476024254214,    "lat": 73.73869799255206}
+        ],
+        "Bbox5000km2": [
+            {"lon": -27.293532869741416,    "lat": 73.48761834293555},
+            {"lon": -27.293532869741416,    "lat": 74.0798487786565},
+            {"lon": -29.741987353437068,    "lat": 74.0798487786565},
+            {"lon": -29.741987353437068,    "lat": 73.48761834293555},
+            {"lon": -27.293532869741416,    "lat": 73.48761834293555}
+        ]
+    },
+    "antarctica" : {
+        "Bbox50km2": [
+            {"lon": -145.6740999746769,     "lat": -86.77017082487883},
+            {"lon": -144.71490455261718,    "lat": -86.73238150176192},
+            {"lon": -145.32664951627441,    "lat": -86.68216031925881},
+            {"lon": -146.2780643571965,     "lat": -86.7193698909303},
+            {"lon": -145.6740999746769,     "lat": -86.77017082487883}
+        ],
+        "Bbox300km2": [
+            {"lon": -147.06343045985406,    "lat": -86.83690411200126},
+            {"lon": -144.79209365113724,    "lat": -86.75097547087802},
+            {"lon": -146.33930539572938,    "lat": -86.62049627004224},
+            {"lon": -148.55905432356855,    "lat": -86.70301545138857},
+            {"lon": -147.06343045985406,    "lat": -86.83690411200126}
+        ],
+        "Convex450km2": [
+            {"lon": -148.49117484589732,    "lat": -86.65536364330114},
+            {"lon": -149.8648748595424,     "lat": -86.75211342612057},
+            {"lon": -149.51467388586605,    "lat": -86.83547573017331},
+            {"lon": -147.6964317971983,     "lat": -86.82948929703882},
+            {"lon": -146.19497874424465,    "lat": -86.77060503864796},
+            {"lon": -145.71920973197888,    "lat": -86.68789287135104},
+            {"lon": -146.43847873389288,    "lat": -86.58801848073247},
+            {"lon": -148.49117484589732,    "lat": -86.65536364330114}
+        ]
+    }
+}
+aois = [polys[args.aoi][name] for name in polys[args.aoi]]
+names = [name for name in polys[args.aoi]]
 regions = {names[i]: sliderule.toregion(aois[i]) for i in range(len(aois))}
 
 #
@@ -166,7 +213,10 @@ def SlideRuleSubset(domain, cluster, name, region, start_time=None, end_time=Non
     if start_time: parms["t0"] = start_time
     if end_time: parms["t1"] = end_time
     gdf = sliderule.run("atl06x", parms, aoi=region["poly"], session=session)
-    print(f"SlideRule subsetted {name} / {len(gdf)} rows in {time.time() - start:.2f} seconds")
+    if gdf is not None:
+        print(f"SlideRule subsetted {name} / {len(gdf)} rows in {time.time() - start:.2f} seconds")
+    else:
+        print(f"SlideRule subsetted {name} / 0 rows in {time.time() - start:.2f} seconds")
 
 #
 # S2Tile
@@ -181,27 +231,10 @@ def S2TileSubset(reader, name, aoi, start_time=None, end_time=None):
         'h_li', 'segment_id', 'geometry'])
     print(f"S2TileReader subsetted {name} / {len(gdf)} rows in {time.time() - start:.2f} seconds")
 
-#
-# Benchmarks
-#
-parser = argparse.ArgumentParser(description="""ATL06 Tile Builder""")
-parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
-parser.add_argument('--cluster',        type=str,               default="developers")
-parser.add_argument('--bucket',         type=str,               default="sliderule-public")
-parser.add_argument('--prefix',         type=str,               default="atl06tv2")
-parser.add_argument('--earthaccess',    action='store_true',    default=False)
-parser.add_argument('--h5coro',         action='store_true',    default=False)
-parser.add_argument('--sliderule',      action='store_true',    default=False)
-parser.add_argument('--s2tile',         action='store_true',    default=False)
-parser.add_argument('--local',          action='store_true',    default=False)
-parser.add_argument('--time_spans',     action='store_true',    default=False)
-parser.add_argument('--aois',           nargs='+', type=int,    default=list(range(len(aois))))
-args = parser.parse_args()
-
 # EarthAccess - Spatial (can only be run one at a time due to memory)
 if args.earthaccess:
     earthaccess.login()
-    for i in args.aois:
+    for i in range(len(aois)):
        EarthAccessSubset(names[i], regions[names[i]]["poly"])
 
 # EarthAccess - Temporal
@@ -213,7 +246,7 @@ if args.earthaccess and args.time_spans:
 
 # H5Coro - Spatial
 if args.h5coro:
-    for i in args.aois:
+    for i in range(len(aois)):
         H5CoroSubset(names[i], regions[names[i]]["poly"])
 
 # H5Coro - Temporal
@@ -224,12 +257,12 @@ if args.h5coro and args.time_spans:
 
 # SlideRule Service - Spatial
 if args.sliderule:
-    for i in args.aois:
+    for i in range(len(aois)):
         SlideRuleSubset(args.domain, args.cluster, names[i], regions[names[i]])
 
 # SlideRule Local - Spatial
 if args.sliderule and args.local:
-    for i in args.aois:
+    for i in range(len(aois)):
         SlideRuleSubset("localhost", None, names[i], regions[names[i]])
 
 # SlideRule Service - Temporal
@@ -247,7 +280,7 @@ if args.sliderule and args.time_spans and args.local:
 # S2Tile - Spatial
 if args.s2tile:
     reader = s2tile.Reader(args.bucket, args.prefix)
-    for i in args.aois:
+    for i in range(len(aois)):
         S2TileSubset(reader, names[i], aois[i])
 
 # S2Tile - Temporal
