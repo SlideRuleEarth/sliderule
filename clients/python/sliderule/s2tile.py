@@ -246,11 +246,7 @@ class Reader:
     # read the rows of one tile inside the area of interest; returns (gdf or None, status)
     #
     def read_tile(self, tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns=None, time_column="time_ns"):
-        year, cell = tile_id
-        if year:
-            tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_{year}_S{cell:016X}.parquet"
-        else:
-            tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{cell:016X}.parquet"
+        tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
         try:
             fragment = PARQUET_FORMAT.make_fragment(tile_name, filesystem=self.s3_fs)
             metadata = fragment.metadata # reads the footer
@@ -260,7 +256,7 @@ class Reader:
             # e.g. a missing key read anonymously is reported as access denied; don't abort the remaining tiles
             return None, f"unable to open - {e}"
         schema = fragment.physical_schema
-        (interior_lo, interior_hi), (boundary_lo, boundary_hi), (lo, hi) = get_ranges(cell)
+        (interior_lo, interior_hi), (boundary_lo, boundary_hi), (lo, hi) = get_ranges(tile_id)
         time_range = Reader.raw_time_range(schema.field(time_column).type, t0, t1) if enable_time_filter else None
         row_groups = Reader.select_row_groups(lo, hi, metadata, time_range, time_column)
         if not row_groups:
@@ -297,7 +293,8 @@ class Reader:
     #
     # read tiles; columns is an optional list of columns to return (default all), the geometry column is always included
     #
-    def read_tiles(self, aoi, start=None, end=None, exact=True, verbose=False, columns=None):
+    def read_tiles(self, aoi, start=None, end=None, exact=True, verbose=False, columns=None, names_only=False):
+        gdfs = []
         if isinstance(columns, str):
             columns = [columns]
         # get set of S2 cells that cover area of interest
@@ -309,34 +306,31 @@ class Reader:
         poly_table = f"poly_geog_{uuid.uuid4().hex}"
         self.connection.execute(f"CREATE TABLE {poly_table} AS SELECT s2_prepare(s2_geogfromtext(?)) AS g", [wkt])
         try:
-            cells = [row[0] for row in self.connection.execute(
+            tiles = [row[0] for row in self.connection.execute(
                 f"SELECT UNNEST(s2_covering_fixed_level(s2_geogfromtext(?), {self.tile_level}))::UBIGINT", [wkt]).fetchall()
             ]
-            # get times
-            enable_time_filter = (start is not None) or (end is not None)
-            t0 = gpd.pd.to_datetime(start, utc=True) if start is not None else gpd.pd.to_datetime("2018-10-01", utc=True)
-            t1 = gpd.pd.to_datetime(end, utc=True) if end is not None else gpd.pd.Timestamp.now(tz="UTC")
-            if self.prefix == "atl06tv2":
-                years = range(t0.year, t1.year + 1)
-            else:
-                years = [None]
-            tiles = [(year, cell) for year in years for cell in cells]
-            # read all tiles corresponding to an S2 cell in the area of interest
-            cache, lock = {}, Lock()
-            get_ranges = lambda cell: self.cached_tile_ranges(cache, lock, cell, poly_table)
-            gdfs = []
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                results = executor.map(
-                    lambda tile_id: self.read_tile(tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns),
-                    tiles)
-                for i, ((year, cell), (gdf, status)) in enumerate(zip(tiles, results)):
-                    if verbose: print(f"Read [{i+1}/{len(tiles)}] tile {year} {cell:016X} - {status}")
-                    if gdf is not None:
-                        gdfs.append(gdf)
+            if not names_only:
+                # get times
+                enable_time_filter = (start is not None) or (end is not None)
+                t0 = gpd.pd.to_datetime(start, utc=True) if start is not None else gpd.pd.to_datetime("2018-10-01", utc=True)
+                t1 = gpd.pd.to_datetime(end, utc=True) if end is not None else gpd.pd.Timestamp.now(tz="UTC")
+                # read all tiles corresponding to an S2 cell in the area of interest
+                cache, lock = {}, Lock()
+                get_ranges = lambda cell: self.cached_tile_ranges(cache, lock, cell, poly_table)
+                with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    results = executor.map(
+                        lambda tile_id: self.read_tile(tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns),
+                        tiles)
+                    for i, ((year, cell), (gdf, status)) in enumerate(zip(tiles, results)):
+                        if verbose: print(f"Read [{i+1}/{len(tiles)}] tile {year} {cell:016X} - {status}")
+                        if gdf is not None:
+                            gdfs.append(gdf)
         finally:
             self.connection.execute(f"DROP TABLE IF EXISTS {poly_table}")
-        # combine tiles
-        if len(gdfs) > 0:
+        # return back to caller
+        if names_only:
+            return tiles
+        elif len(gdfs) > 0: # combine tiles
             return gpd.GeoDataFrame(gpd.pd.concat(gdfs), crs=gdfs[0].crs)
         else:
             return None
