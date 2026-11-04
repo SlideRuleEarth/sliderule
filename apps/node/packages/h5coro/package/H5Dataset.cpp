@@ -618,6 +618,13 @@ void H5Dataset::readDataset (info_t* info)
                     }
                     break;
                 }
+                default:
+                {
+                    if(H5CORO_ERROR_CHECKING)
+                    {
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid type size: %lu", typesize);
+                    }
+                }
             }
         }
         #endif

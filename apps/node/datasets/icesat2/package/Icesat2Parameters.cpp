@@ -229,8 +229,8 @@ void Icesat2Parameters::fromLua (lua_State* L, int index)
         if(geolocFields.correction.value == GeolocCorrFields::CONUS)
         {
             stages[STAGE_GEOLOC] = true;
-            FString path("ATL03/geoloc_corr/%s", resource.value.c_str());
-            AmsLib::rsps_t rsps = AmsLib::request(EndpointObject::GET, path.c_str(), NULL, timeout.value);
+            const FString path("ATL03/geoloc_corr/%s", resource.value.c_str());
+            const AmsLib::rsps_t rsps = AmsLib::request(EndpointObject::GET, path.c_str(), NULL, timeout.value);
             if(rsps.code == EndpointObject::OK)
             {
                 if(rsps.size > 0)
