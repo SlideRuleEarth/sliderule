@@ -7,6 +7,7 @@ dependencies:
   - python-duckdb<2 # geography community extension (S2 cells) is not yet published for duckdb 2.x
   - geopandas
   - pyarrow=24
+  - s3fs
   - shapely
   - sliderule
   - pip

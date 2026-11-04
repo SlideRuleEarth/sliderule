@@ -79,7 +79,7 @@ GeolocCorrFields::GeolocCorrFields():
 /*----------------------------------------------------------------------------
  * parseResource
  *
- *  ATLxx_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
+ *  ATLxx*_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
  *      YYYY    - year
  *      MM      - month
  *      DD      - day
@@ -103,12 +103,17 @@ void Atl03GranuleFields::parseResource (const char* resource)
         return; // not an ICESat-2 standard data product
     }
 
+    /* find offset of info (up to 10 characters from start) */
+    int offset = 5;
+    while(resource[offset] != '_' && offset < 10) offset++;
+    if(resource[offset] != '_') return; // not an ICESat-2 standard data product
+
     /* get year */
     char year_str[5];
-    year_str[0] = resource[6];
-    year_str[1] = resource[7];
-    year_str[2] = resource[8];
-    year_str[3] = resource[9];
+    year_str[0] = resource[offset + 1];
+    year_str[1] = resource[offset + 2];
+    year_str[2] = resource[offset + 3];
+    year_str[3] = resource[offset + 4];
     year_str[4] = '\0';
     if(StringLib::str2long(year_str, &val, 10))
     {
@@ -121,8 +126,8 @@ void Atl03GranuleFields::parseResource (const char* resource)
 
     /* get month */
     char month_str[3];
-    month_str[0] = resource[10];
-    month_str[1] = resource[11];
+    month_str[0] = resource[offset + 5];
+    month_str[1] = resource[offset + 6];
     month_str[2] = '\0';
     if(StringLib::str2long(month_str, &val, 10))
     {
@@ -135,8 +140,8 @@ void Atl03GranuleFields::parseResource (const char* resource)
 
     /* get day */
     char day_str[3];
-    day_str[0] = resource[12];
-    day_str[1] = resource[13];
+    day_str[0] = resource[offset + 7];
+    day_str[1] = resource[offset + 8];
     day_str[2] = '\0';
     if(StringLib::str2long(day_str, &val, 10))
     {
@@ -149,10 +154,10 @@ void Atl03GranuleFields::parseResource (const char* resource)
 
     /* get RGT */
     char rgt_str[5];
-    rgt_str[0] = resource[21];
-    rgt_str[1] = resource[22];
-    rgt_str[2] = resource[23];
-    rgt_str[3] = resource[24];
+    rgt_str[0] = resource[offset + 16];
+    rgt_str[1] = resource[offset + 17];
+    rgt_str[2] = resource[offset + 18];
+    rgt_str[3] = resource[offset + 19];
     rgt_str[4] = '\0';
     if(StringLib::str2long(rgt_str, &val, 10))
     {
@@ -165,8 +170,8 @@ void Atl03GranuleFields::parseResource (const char* resource)
 
     /* get cycle */
     char cycle_str[3];
-    cycle_str[0] = resource[25];
-    cycle_str[1] = resource[26];
+    cycle_str[0] = resource[offset + 20];
+    cycle_str[1] = resource[offset + 21];
     cycle_str[2] = '\0';
     if(StringLib::str2long(cycle_str, &val, 10))
     {
@@ -179,8 +184,8 @@ void Atl03GranuleFields::parseResource (const char* resource)
 
     /* get region */
     char region_str[3];
-    region_str[0] = resource[27];
-    region_str[1] = resource[28];
+    region_str[0] = resource[offset + 22];
+    region_str[1] = resource[offset + 23];
     region_str[2] = '\0';
     if(StringLib::str2long(region_str, &val, 10))
     {
@@ -193,9 +198,9 @@ void Atl03GranuleFields::parseResource (const char* resource)
 
     /* get version */
     char version_str[4];
-    version_str[0] = resource[30];
-    version_str[1] = resource[31];
-    version_str[2] = resource[32];
+    version_str[0] = resource[offset + 25];
+    version_str[1] = resource[offset + 26];
+    version_str[2] = resource[offset + 27];
     version_str[3] = '\0';
     if(StringLib::str2long(version_str, &val, 10))
     {

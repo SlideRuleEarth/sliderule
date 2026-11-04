@@ -137,7 +137,8 @@ class Session:
         rethrow         = False,
         github_token    = None,
         private_key     = PRIVATE_KEY,
-        user_service    = False):
+        user_service    = False,
+        is_public       = False):
         '''
         creates and configures a sliderule session
         '''
@@ -183,7 +184,7 @@ class Session:
         }
 
         # authenticate for non-public clusters
-        if ((self.cluster != self.PUBLIC_CLUSTER) and (self.cluster != None)) or user_service:
+        if ((self.cluster != self.PUBLIC_CLUSTER) and (self.cluster != None) and (not is_public)) or user_service:
             self.authenticate(github_token=github_token)
 
         # set service

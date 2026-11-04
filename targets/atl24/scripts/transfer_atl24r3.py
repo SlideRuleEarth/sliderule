@@ -134,6 +134,7 @@ try:
     # Get granules to process
     all_available_granules = args.granule and [args.granule] or list_bucket()
     granules_to_process = [granule for granule in all_available_granules if (granule not in cache or cache[granule]["status"] != Status.TX_INITIATED)]
+    granules_to_process = granules_to_process[:args.transfer]
     print(f"Preparing to transfer {len(granules_to_process)} granule(s) out of {len(all_available_granules)} granule(s)")
 
     # Get attributes for each granule to process
@@ -158,7 +159,7 @@ try:
 
     # Initialize loop variables
     granules_to_transfer = [granule for granule, entry in cache.items() if (entry["status"] == Status.TX_READY and granule in granules_to_process)]
-    num_granules_to_transfer = min(len(granules_to_transfer), args.transfer)
+    num_granules_to_transfer = len(granules_to_transfer)
     previous_cred_refresh = 0.0 # previous time
     print(f"Transferring {num_granules_to_transfer} of {len(granules_to_transfer)} granules ready to be transferred")
 

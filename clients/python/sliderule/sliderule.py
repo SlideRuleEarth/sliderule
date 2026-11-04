@@ -72,7 +72,8 @@ def init (
     log_handler=None,
     github_token=None,
     rethrow=False,
-    user_service=False):
+    user_service=False,
+    is_public=False):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -101,6 +102,8 @@ def init (
                         client rethrows exceptions to be handled by calling code
         user_service:   bool
                         requests use user associated asg connected to cluster
+        is_public:      bool
+                        treat a private cluster as public, i.e. do not attempt to authenticate
 
     Returns
     -------
@@ -124,7 +127,8 @@ def init (
         ttl=time_to_live,
         github_token=github_token,
         rethrow=rethrow,
-        user_service=user_service)
+        user_service=user_service,
+        is_public=is_public)
     # verify compatibility between client and server versions
     try:
         status = check_version(plugins=plugins)

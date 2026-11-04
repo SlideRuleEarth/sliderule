@@ -33,6 +33,17 @@ ASSETS = {
         api         = "cmr",
         formats     = {".h5"}
     },
+    ["icesat2-atl03ll"] = {
+        name        = "ATL03LL",
+        identity    = "nsidc-cloud",
+        driver      = "s3atlas",
+        path        = "nsidc-cumulus-prod-protected",
+        endpoint    = "s3.us-west-2.amazonaws.com",
+        provider    = "NSIDC_CPRD",
+        version     = "007",
+        api         = "cmr",
+        formats     = {".h5"}
+    },
     ["icesat2-atl06"] = {
         name        = "ATL06",
         identity    = "nsidc-cloud",

@@ -134,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules.txt")
     parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles.txt")
     parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
-    parser.add_argument('--output_prefix',  type=str,               default="atl06tv3")
+    parser.add_argument('--output_prefix',  type=str,               default="atl06tv4")
     parser.add_argument('--verbose',        action='store_true',    default=False)
     parser.add_argument('--workers',        type=int,               default=8) # number of threads for partitioning, tiling, and reading
     parser.add_argument('--list_granules',  action='store_true',    default=False) # create list of granules to process (uses aoi and writes atl06_granules)
