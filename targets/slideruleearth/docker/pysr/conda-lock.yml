@@ -348,18 +348,18 @@ package:
   category: main
   optional: false
 - name: boto3
-  version: 1.43.120
+  version: 1.43.123
   manager: conda
   platform: linux-aarch64
   dependencies:
-    botocore: '>=1.43.120,<1.44.0'
+    botocore: '>=1.43.123,<1.44.0'
     jmespath: '>=0.7.1,<2.0.0'
     python: '>=3.11'
     s3transfer: '>=0.19.0,<0.20.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.43.120-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.43.123-pyhd8ed1ab_0.conda
   hash:
-    md5: 1c0964113a196f42f0495729322ab2ee
-    sha256: 0f1ef25fd102e799ec158cc2690e47c31f03c32ef261a0d5a3664da5f35b9bfe
+    md5: ed55ab573122e132ccfcfb29cb7d1361
+    sha256: c1ca28c0c3456c315bc4d59c841238d3a89efc4b9fe02ff23db9d5049b441037
   category: main
   optional: false
 - name: botocore
