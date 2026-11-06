@@ -41,7 +41,7 @@ ALLOWED_SCOPES = {
     "guest":        {"sliderule:access", "monitor:access"},
     "affiliate":    {"sliderule:access", "monitor:access", "provisioner:access"},
     "member":       {"sliderule:access", "monitor:access", "provisioner:access", "runner:access"},
-    "developer":        {"sliderule:access", "monitor:access", "provisioner:access", "runner:access", "sliderule:admin"},
+    "developer":    {"sliderule:access", "monitor:access", "provisioner:access", "runner:access", "sliderule:admin"},
 }
 
 # Default maximum nodes for org roles
@@ -348,15 +348,15 @@ def contains_scope(scope, scopes_to_check, check="any"):
         raise RuntimeError("invalid check")
 
 
-def intersection_of_scope(scope_1, scope_2):
+def list_intersection(list_1, list_2):
     """
     return list of scopes that are contained in both
     """
-    scope_intersect = []
-    for s in scope_1:
-        if s in scope_2:
-            scope_intersect.append(s)
-    return scope_intersect
+    list_intersect = []
+    for e in list_1:
+        if e in list_2:
+            list_intersect.append(e)
+    return list_intersect
 
 
 def contains_redirect(redirect_uri, valid_redirect_hosts):
@@ -591,7 +591,7 @@ def create_auth_token(metadata):
     return token
 
 
-def authorize_user(authorization_str, scope):
+def authorize_user(authorization_str, scope, allowed_org_roles):
     """
     Build the authorization token and metadata for the user
     """
@@ -602,16 +602,20 @@ def authorize_user(authorization_str, scope):
         raise RuntimeError('Could not get GitHub username')
 
     # get user info (USERS_FILENAME)
-    user_info = get_user_file(username)
-    if not user_info:
-        raise RuntimeError('Could not get user info')
+    user_info = get_user_file(username) or {
+        "org_roles": ["guest"],
+        "clusters": []
+    }
 
     # get organizational roles
     org_roles = user_info['org_roles']
+    org_roles = list_intersection(org_roles, allowed_org_roles)
+    if len(org_roles) == 0: # downgrade to guest
+        org_roles = ["guest"]
     primary_role = org_roles[0]
 
     # restrict scope to those allowed
-    scope = intersection_of_scope(scope, ALLOWED_SCOPES[primary_role])
+    scope = list_intersection(scope, ALLOWED_SCOPES[primary_role])
 
     # get allowed clusters
     clusters = user_info['clusters']
@@ -935,7 +939,7 @@ def handle_token(event):
         # authenticate user (gets token and metadata)
         # note that scope is created in the above callback and verified there
         access_token = exchange_code_for_token(session_code["github_code"])
-        token, metadata = authorize_user(f'Bearer {access_token}', session_code["scope"])
+        token, metadata = authorize_user(f'Bearer {access_token}', session_code["scope"], ["guest", "affiliate", "member"])
     else:
         raise RuntimeError(f"unhandled grant type: {grant_type}")
 
@@ -1181,7 +1185,7 @@ def handle_device_poll(event):
     # Authenticate user to get token and metadata (device flow supports all scopes)
     access_token = data['access_token'] # throws unhandled exception if not present
     scope = parms.get('scope', ' '.join(ALLOWED_SCOPES["developer"])).split()
-    token, metadata = authorize_user(f'Bearer {access_token}', scope)
+    token, metadata = authorize_user(f'Bearer {access_token}', scope, ["guest", "affiliate", "member", "developer"])
 
     # Response with a successful authentication
     return json_response(200, {
@@ -1218,7 +1222,7 @@ def handle_pat_login(event):
         raise OAuthError(400, 'missing_pat', 'Personal Access Token (pat) is required')
 
     # Authenticate user to get your own session token/metadata
-    token, metadata = authorize_user(f'token {pat}', ALLOWED_SCOPES["member"])
+    token, metadata = authorize_user(f'token {pat}', ALLOWED_SCOPES["member"], ["guest", "affiliate", "member"])
     return json_response(200, {
         'status': 'success',
         'token': token,
@@ -1271,7 +1275,7 @@ def basic_callback(code, redirect_uri):
     """
     # Authenticate user (gets token and ignores metadata)
     access_token = exchange_code_for_token(code)
-    token, _ = authorize_user(f'Bearer {access_token}', ALLOWED_SCOPES["guest"])
+    token, _ = authorize_user(f'Bearer {access_token}', ALLOWED_SCOPES["guest"], ["guest"])
 
     # check redirect_uri against only the trusted redirect hosts
     # (since this is the basic authorization flow)
