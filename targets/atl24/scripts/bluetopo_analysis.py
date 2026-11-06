@@ -1,11 +1,16 @@
 import os
+import re
 import sys
 import time
 import json
+import zipfile
 import tempfile
 import traceback
+import urllib.request
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 import boto3
+import pyproj
 from botocore import UNSIGNED
 from botocore.config import Config
 import rasterio
@@ -75,10 +80,75 @@ def load_bluetopo_tiles():
     tiles = tiles[tiles["GeoTIFF_Link"].notna() & (tiles["GeoTIFF_Link"] != "")]
     return tiles.to_crs("EPSG:4326")
 
+# geoid grids used by bluetopo to realize its vertical datum (from the VERTICALDATUMWKT tag of each tile);
+# tiles without the tag are assumed to use GEOID12B like the rest of the CONUS/PRVI tiles
+GEOID_GRIDS = {
+    "g2012bu0": "us_noaa_g2012bu0.tif",     # GEOID12B CONUS (PROJ CDN)
+    "g2012bp0": "us_noaa_g2012bp0.tif",     # GEOID12B PR/VI (PROJ CDN)
+    "AK_17B": None,                         # xGEOID17B Alaska (VDatum, downloaded on demand)
+}
+GEOID_UNKNOWN = "unknown"
+GEOID_FALLBACK = ["g2012bu0", "g2012bp0"]
+XGEOID17B_URL = "https://vdatum.noaa.gov/download/data/vdatum_XGEOID17B.zip"
+XGEOID17B_MEMBER = "vdatum/core/xgeoid17b/AK_17B.gtx"
+
+# get the geoid grid name bluetopo used for a tile
+def bluetopo_geoid(src):
+    match = re.search(r"(" + "|".join(GEOID_GRIDS.keys()) + r")\.gtx", src.tags().get("VERTICALDATUMWKT", ""))
+    return match.group(1) if match else GEOID_UNKNOWN
+
+# path or PROJ CDN name of a geoid grid
+def geoid_grid_file(name, workdir):
+    if GEOID_GRIDS[name] is not None:
+        return GEOID_GRIDS[name]
+    grid_file = os.path.join(workdir, os.path.basename(XGEOID17B_MEMBER))
+    if not os.path.exists(grid_file):
+        zip_file = os.path.join(workdir, "xgeoid.zip")
+        urllib.request.urlretrieve(XGEOID17B_URL, zip_file)
+        with zipfile.ZipFile(zip_file) as z, z.open(XGEOID17B_MEMBER) as gtx, open(grid_file, "wb") as out:
+            out.write(gtx.read())
+        os.remove(zip_file)
+    return grid_file
+
+# geoid undulation (NAD83(2011) ellipsoid height of the vertical datum surface); inf outside the grid
+def geoid_undulation(name, longitude, latitude, workdir):
+    pipeline = ("+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad "
+                f"+step +proj=vgridshift +grids={geoid_grid_file(name, workdir)} +multiplier=1 "
+                "+step +proj=unitconvert +xy_in=rad +xy_out=deg")
+    _, _, undulation = pyproj.Transformer.from_pipeline(pipeline).transform(longitude, latitude, np.zeros(len(longitude)), errcheck=False)
+    return np.where(np.isfinite(undulation), undulation, np.nan)
+
+# correction to add to bluetopo depth to move it from the bluetopo vertical datum to the ATL24 orthometric heights:
+#   H_atl24 = H_bluetopo + N_bluetopo + (h_itrf2014 - h_nad83) - N_atl24, and depth = -H
+def bluetopo_depth_correction(longitude, latitude, geoids, atl24_geoid, epoch):
+    pyproj.network.set_network_enabled(True)
+    longitude, latitude = np.asarray(longitude, dtype=np.float64), np.asarray(latitude, dtype=np.float64)
+    undulation = np.full(len(longitude), np.nan)
+    with tempfile.TemporaryDirectory() as workdir:
+        for name in set(g for g in geoids if g is not None):
+            idx = np.flatnonzero(np.array([g == name for g in geoids]))
+            if name == GEOID_UNKNOWN:
+                for fallback in GEOID_FALLBACK:
+                    missing = idx[np.isnan(undulation[idx])]
+                    undulation[missing] = geoid_undulation(fallback, longitude[missing], latitude[missing], workdir)
+            else:
+                undulation[idx] = geoid_undulation(name, longitude[idx], latitude[idx], workdir)
+    nad83_to_itrf = pyproj.Transformer.from_crs("EPSG:6319", "EPSG:7912", always_xy=True, only_best=True) # NAD83(2011) -> ITRF2014, time dependent
+    _, _, frame_shift, _ = nad83_to_itrf.transform(longitude, latitude, np.zeros(len(longitude)), np.full(len(longitude), epoch), errcheck=False)
+    return atl24_geoid - undulation - np.where(np.isfinite(frame_shift), frame_shift, np.nan)
+
+# decimal year of the granule start time (ATL24_YYYYMMDDhhmmss_...)
+def granule_epoch(name):
+    start = datetime.strptime(name.split("_")[1], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+    year_start = datetime(start.year, 1, 1, tzinfo=timezone.utc)
+    year_end = datetime(start.year + 1, 1, 1, tzinfo=timezone.utc)
+    return start.year + (start - year_start).total_seconds() / (year_end - year_start).total_seconds()
+
 # sample bluetopo elevation and uncertainty bands at each longitude/latitude
 def sample_bluetopo(longitude, latitude, tiles):
     elevation = np.full(len(longitude), np.nan)
     uncertainty = np.full(len(longitude), np.nan)
+    geoids = np.full(len(longitude), None, dtype=object)
     points = gpd.GeoDataFrame({"idx": np.arange(len(longitude))}, geometry=gpd.points_from_xy(longitude, latitude), crs="EPSG:4326")
     points = points[np.isfinite(longitude) & np.isfinite(latitude)]
     hits = gpd.sjoin(points, tiles, how="inner", predicate="intersects").drop_duplicates(subset="idx") # points on shared tile edges match twice
@@ -93,7 +163,8 @@ def sample_bluetopo(longitude, latitude, tiles):
                 values = np.ma.filled(np.ma.asarray(values).astype(np.float64), np.nan)
                 elevation[idx] = values[:, 0]
                 uncertainty[idx] = values[:, 1]
-    return elevation, uncertainty
+                geoids[idx] = bluetopo_geoid(src)
+    return elevation, uncertainty, geoids
 
 # initialize result
 input_file = f"s3://sliderule-public/atl24r3/parquet/{granule}"
@@ -150,10 +221,15 @@ try:
 
     # sample bluetopo at each bin; depth is positive down (bluetopo elevation is negative below the vertical datum)
     bluetopo_tiles = load_bluetopo_tiles()
-    bluetopo_elevation, bluetopo_uncertainty = sample_bluetopo(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_tiles)
+    bluetopo_elevation, bluetopo_uncertainty, bluetopo_geoids = sample_bluetopo(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_tiles)
     bins["bluetopo_depth"] = -bluetopo_elevation
     bins["bluetopo_uncertainty"] = bluetopo_uncertainty
+    bins["bluetopo_geoid"] = bluetopo_geoids
     result["messages"].append(f"Sampled BlueTopo for {np.count_nonzero(~np.isnan(bluetopo_elevation))} of {len(bins)} bins")
+
+    # vertical datum correction; bluetopo_depth + bluetopo_correction is depth relative to the ATL24 (EGM2008) geoid
+    atl24_geoid = bin_mean(gdf["ellipse_h"].to_numpy() - gdf["geoid_corr_h"].to_numpy())
+    bins["bluetopo_correction"] = bluetopo_depth_correction(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_geoids, atl24_geoid, granule_epoch(granule))
 
     # write outputs
     result["outputs"].append(output_file)
