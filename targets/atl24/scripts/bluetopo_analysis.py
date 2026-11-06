@@ -1,4 +1,5 @@
 import os
+import io
 import re
 import sys
 import time
@@ -21,14 +22,54 @@ import pandas as pd
 import geopandas as gpd
 from sliderule import pysr
 
+############################
+# Globals
+############################
+
 # runner
 runner = pysr.Runner()
 
 # arguments
 granule, result_file = runner.arguments
 
-# globals
+# client
 s3 = boto3.client("s3")
+
+############################
+# Constants
+############################
+
+# spots in granule
+SPOTS = [1, 2, 3, 4, 5, 6]
+
+# max_signal_conf values counted per bin
+MAX_SIGNAL_CONF_VALUES = np.array([-2, -1, 0, 1, 2, 3, 4])
+
+# edges of the photon depth minus bluetopo depth histogram: (<-15), [-15,-7), [-7,-3), [-3,-1), [-1,0), [0,1), [1,3), [3,7), [7,15), (>=15)
+BLUETOPO_DELTA_EDGES = np.array([-15.0, -7.0, -3.0, -1.0, 0.0, 1.0, 3.0, 7.0, 15.0])
+
+# bluetopo dataset
+BLUETOPO_BUCKET = "noaa-ocs-nationalbathymetry-pds"
+BLUETOPO_PREFIX = "BlueTopo/"
+BLUETOPO_INDEX = "_BlueTopo_Tile_Scheme"
+BLUETOPO_ENDPOINT = "s3.us-east-1.amazonaws.com"
+BLUETOPO_REGION = "us-east-1"
+
+# geoid grids used by bluetopo to realize its vertical datum (from the VERTICALDATUMWKT tag of each tile);
+# tiles without the tag are assumed to use GEOID12B like the rest of the CONUS/PRVI tiles
+GEOID_GRIDS = {
+    "g2012bu0": "us_noaa_g2012bu0.tif",     # GEOID12B CONUS (PROJ CDN)
+    "g2012bp0": "us_noaa_g2012bp0.tif",     # GEOID12B PR/VI (PROJ CDN)
+    "AK_17B": None,                         # xGEOID17B Alaska (VDatum, downloaded on demand)
+}
+GEOID_UNKNOWN = "unknown"
+GEOID_FALLBACK = ["g2012bu0", "g2012bp0"]
+XGEOID17B_URL = "https://vdatum.noaa.gov/download/data/vdatum_XGEOID17B.zip"
+XGEOID17B_MEMBER = "vdatum/core/xgeoid17b/AK_17B.gtx"
+
+############################
+# Helper Functions
+############################
 
 # parse URL into bucket and subfolder
 def parse_url(url):
@@ -58,19 +99,6 @@ def bin_counts(categories, num_categories):
     counts = np.bincount(flat, minlength=len(bin_starts) * num_categories).reshape(len(bin_starts), num_categories)
     return list(counts)
 
-# max_signal_conf values counted per bin
-MAX_SIGNAL_CONF_VALUES = np.array([-2, -1, 0, 1, 2, 3, 4])
-
-# edges of the photon depth minus bluetopo depth histogram: (<-15), [-15,-7), [-7,-3), [-3,-1), [-1,0), [0,1), [1,3), [3,7), [7,15), (>=15)
-BLUETOPO_DELTA_EDGES = np.array([-15.0, -7.0, -3.0, -1.0, 0.0, 1.0, 3.0, 7.0, 15.0])
-
-# bluetopo dataset
-BLUETOPO_BUCKET = "noaa-ocs-nationalbathymetry-pds"
-BLUETOPO_PREFIX = "BlueTopo/"
-BLUETOPO_INDEX = "_BlueTopo_Tile_Scheme"
-BLUETOPO_ENDPOINT = "s3.us-east-1.amazonaws.com"
-BLUETOPO_REGION = "us-east-1"
-
 # load the most recent bluetopo tile scheme (only tiles that have a geotiff)
 def load_bluetopo_tiles():
     s3_unsigned = boto3.client("s3", region_name=BLUETOPO_REGION, endpoint_url=f"https://{BLUETOPO_ENDPOINT}", config=Config(signature_version=UNSIGNED))
@@ -84,18 +112,6 @@ def load_bluetopo_tiles():
         tiles = gpd.read_file(index_file, columns=["tile", "GeoTIFF_Link"])
     tiles = tiles[tiles["GeoTIFF_Link"].notna() & (tiles["GeoTIFF_Link"] != "")]
     return tiles.to_crs("EPSG:4326")
-
-# geoid grids used by bluetopo to realize its vertical datum (from the VERTICALDATUMWKT tag of each tile);
-# tiles without the tag are assumed to use GEOID12B like the rest of the CONUS/PRVI tiles
-GEOID_GRIDS = {
-    "g2012bu0": "us_noaa_g2012bu0.tif",     # GEOID12B CONUS (PROJ CDN)
-    "g2012bp0": "us_noaa_g2012bp0.tif",     # GEOID12B PR/VI (PROJ CDN)
-    "AK_17B": None,                         # xGEOID17B Alaska (VDatum, downloaded on demand)
-}
-GEOID_UNKNOWN = "unknown"
-GEOID_FALLBACK = ["g2012bu0", "g2012bp0"]
-XGEOID17B_URL = "https://vdatum.noaa.gov/download/data/vdatum_XGEOID17B.zip"
-XGEOID17B_MEMBER = "vdatum/core/xgeoid17b/AK_17B.gtx"
 
 # get the geoid grid name bluetopo used for a tile
 def bluetopo_geoid(src):
@@ -171,15 +187,18 @@ def sample_bluetopo(longitude, latitude, tiles):
                 geoids[idx] = bluetopo_geoid(src)
     return elevation, uncertainty, geoids
 
-# initialize result
-input_file = f"s3://sliderule-public/atl24r3/parquet/{granule}"
-output_file = f"s3://sliderule-public/atl24r3/bluetopo/{granule.replace('.parquet', '_bluetopo.parquet')}"
+############################
+# Main
+############################
 
 try:
+
     # read granule into GeoDataFrames
-    runner.message(f"Reading {granule}")
+    input_file = f"s3://sliderule-public/atl24r3/parquet/{granule}"
+    runner.message(f"Reading {input_file}")
     gdf = gpd.read_parquet(input_file, columns=[
         "geometry",
+        "spot",
         "class_ph",
         "x_atc",
         "geoid_corr_h",
@@ -193,63 +212,75 @@ try:
         "max_signal_conf"
     ])
 
-    # orthometric height of bathymetry photons only (NaN otherwise so they are excluded from bin means)
-    bathy_ortho_h = np.where(gdf["class_ph"].to_numpy() == 40, gdf["geoid_corr_h"].to_numpy(dtype=np.float64), np.nan)
+    # loop through each spot
+    for spot in SPOTS:
 
-    # create 10 meter along track bins
-    bin_size = 10.0
-    x_atc = gdf["x_atc"].to_numpy()
-    bin_id = np.floor(x_atc / bin_size).astype(np.int64)
-    bin_starts = np.flatnonzero(np.r_[True, bin_id[1:] != bin_id[:-1]]) if len(bin_id) > 0 else np.array([], dtype=np.int64)
-    if len(bin_starts) == 0:
-        raise RuntimeError("Dataframe did not include any bins")
+        # slice to just the current spot
+        spot_gdf = gdf[gdf["spot"] == spot]
 
-    # calculate per-bin statistics; each bin is [bin_starts[i], bin_starts[i+1])
-    runner.message(f"Binning {len(gdf)} rows of {granule}")
-    bins = pd.DataFrame({
-        "x_atc": bin_id[bin_starts] * bin_size,
-        "latitude": bin_mean(gdf.geometry.y.to_numpy()),
-        "longitude": bin_mean(gdf.geometry.x.to_numpy()),
-        "ortho_h": bin_mean(bathy_ortho_h),
-        "non_noise": np.logical_or.reduceat(gdf["class_ph"].to_numpy() != 0, bin_starts),
-        "max_confidence": np.fmax.reduceat(gdf["confidence"].to_numpy(dtype=np.float64), bin_starts),
-        "night": bin_mean((gdf["processing_flags"].to_numpy().astype(np.int64) & 0x20) != 0),
-        "kd": bin_mean(gdf["kd"].to_numpy()),
-        "surface_roughness": bin_mean(gdf["surface_roughness"].to_numpy()),
-    })
+        # orthometric height of bathymetry photons only (NaN otherwise so they are excluded from bin means)
+        bathy_ortho_h = np.where(spot_gdf["class_ph"].to_numpy() == 40, spot_gdf["geoid_corr_h"].to_numpy(dtype=np.float64), np.nan)
 
-    # counts of photons (all classes) per max_signal_conf value
-    runner.message(f"Counting max_signal_conf for {len(bins)} bins in {granule}")
-    max_signal_conf = gdf["max_signal_conf"].to_numpy(dtype=np.float64)
-    max_signal_conf_index = np.where(np.isin(max_signal_conf, MAX_SIGNAL_CONF_VALUES), max_signal_conf - MAX_SIGNAL_CONF_VALUES[0], -1)
-    bins["max_signal_conf_counts"] = bin_counts(max_signal_conf_index, len(MAX_SIGNAL_CONF_VALUES))
+        # create 10 meter along track bins
+        bin_size = 10.0
+        x_atc = spot_gdf["x_atc"].to_numpy()
+        bin_id = np.floor(x_atc / bin_size).astype(np.int64)
+        bin_starts = np.flatnonzero(np.r_[True, bin_id[1:] != bin_id[:-1]]) if len(bin_id) > 0 else np.array([], dtype=np.int64)
+        if len(bin_starts) == 0:
+            raise RuntimeError("Dataframe did not include any bins")
 
-    # sample bluetopo at each bin; depth is positive down (bluetopo elevation is negative below the vertical datum)
-    runner.message(f"Sampling BlueTopo for {len(bins)} bins in {granule}")
-    bluetopo_tiles = load_bluetopo_tiles()
-    bluetopo_elevation, bluetopo_uncertainty, bluetopo_geoids = sample_bluetopo(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_tiles)
-    bins["bluetopo_depth"] = -bluetopo_elevation
-    bins["bluetopo_uncertainty"] = bluetopo_uncertainty
-    bins["bluetopo_geoid"] = bluetopo_geoids
-    runner.message(f"Sampled BlueTopo for {np.count_nonzero(~np.isnan(bluetopo_elevation))} of {len(bins)} bins")
+        # calculate per-bin statistics; each bin is [bin_starts[i], bin_starts[i+1])
+        runner.message(f"Binning {len(spot_gdf)} rows of spot {spot}")
+        bins = pd.DataFrame({
+            "x_atc": bin_id[bin_starts] * bin_size,
+            "latitude": bin_mean(spot_gdf.geometry.y.to_numpy()),
+            "longitude": bin_mean(spot_gdf.geometry.x.to_numpy()),
+            "ortho_h": bin_mean(bathy_ortho_h),
+            "non_noise": np.logical_or.reduceat(spot_gdf["class_ph"].to_numpy() != 0, bin_starts),
+            "max_confidence": np.fmax.reduceat(spot_gdf["confidence"].to_numpy(dtype=np.float64), bin_starts),
+            "night": bin_mean((spot_gdf["processing_flags"].to_numpy().astype(np.int64) & 0x20) != 0),
+            "kd": bin_mean(spot_gdf["kd"].to_numpy()),
+            "surface_roughness": bin_mean(spot_gdf["surface_roughness"].to_numpy()),
+        })
 
-    # vertical datum correction; bluetopo_depth + bluetopo_correction is depth relative to the ATL24 (EGM2008) geoid
-    runner.message(f"Generating vertical datum correction for {granule}")
-    atl24_geoid = bin_mean(gdf["ellipse_h"].to_numpy() - gdf["geoid_corr_h"].to_numpy())
-    bins["bluetopo_correction"] = bluetopo_depth_correction(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_geoids, atl24_geoid, granule_epoch(granule))
+        # counts of photons (all classes) per max_signal_conf value
+        runner.message(f"Counting max_signal_conf for {len(bins)} bins in spot {spot}")
+        max_signal_conf = spot_gdf["max_signal_conf"].to_numpy(dtype=np.float64)
+        max_signal_conf_index = np.where(np.isin(max_signal_conf, MAX_SIGNAL_CONF_VALUES), max_signal_conf - MAX_SIGNAL_CONF_VALUES[0], -1)
+        bins["max_signal_conf_counts"] = bin_counts(max_signal_conf_index, len(MAX_SIGNAL_CONF_VALUES))
 
-    # calculate a delta between bluetopo and the atl24 bathymetry in the bin
-    runner.message(f"Calculating BlueTopo deltas for {len(bins)} bins in {granule}")
-    bins["bluetopo_residual"] = bins["ortho_h"] + bins["bluetopo_depth"] + bins["bluetopo_correction"]
+        # sample bluetopo at each bin; depth is positive down (bluetopo elevation is negative below the vertical datum)
+        runner.message(f"Sampling BlueTopo for {len(bins)} bins in spot {spot}")
+        bluetopo_tiles = load_bluetopo_tiles()
+        bluetopo_elevation, bluetopo_uncertainty, bluetopo_geoids = sample_bluetopo(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_tiles)
+        bins["bluetopo_depth"] = -bluetopo_elevation
+        bins["bluetopo_uncertainty"] = bluetopo_uncertainty
+        bins["bluetopo_geoid"] = bluetopo_geoids
+        runner.message(f"Sampled BlueTopo for {np.count_nonzero(~np.isnan(bluetopo_elevation))} of {len(bins)} bins in spot {spot}")
 
-    # histogram of photon depth (all classes) minus corrected bluetopo depth, both relative to the ATL24 (EGM2008) geoid
-    corrected_bluetopo_depth = (bins["bluetopo_depth"] + bins["bluetopo_correction"]).to_numpy()
-    bluetopo_delta = -gdf["geoid_corr_h"].to_numpy(dtype=np.float64) - corrected_bluetopo_depth[photon_bins()]
-    bluetopo_delta_index = np.where(np.isfinite(bluetopo_delta), np.searchsorted(BLUETOPO_DELTA_EDGES, bluetopo_delta, side="right"), -1)
-    bins["bluetopo_delta_hist"] = bin_counts(bluetopo_delta_index, len(BLUETOPO_DELTA_EDGES) + 1)
+        # vertical datum correction; bluetopo_depth + bluetopo_correction is depth relative to the ATL24 (EGM2008) geoid
+        runner.message(f"Generating vertical datum correction for spot {spot}")
+        atl24_geoid = bin_mean(spot_gdf["ellipse_h"].to_numpy() - spot_gdf["geoid_corr_h"].to_numpy())
+        bins["bluetopo_correction"] = bluetopo_depth_correction(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_geoids, atl24_geoid, granule_epoch(granule))
 
-    # write outputs
-    runner.output(output_file)
+        # calculate a delta between bluetopo and the atl24 bathymetry in the bin
+        runner.message(f"Calculating BlueTopo deltas for {len(bins)} bins in spot {spot}")
+        bins["bluetopo_residual"] = bins["ortho_h"] + bins["bluetopo_depth"] + bins["bluetopo_correction"]
+
+        # histogram of photon depth (all classes) minus corrected bluetopo depth, both relative to the ATL24 (EGM2008) geoid
+        corrected_bluetopo_depth = (bins["bluetopo_depth"] + bins["bluetopo_correction"]).to_numpy()
+        bluetopo_delta = -spot_gdf["geoid_corr_h"].to_numpy(dtype=np.float64) - corrected_bluetopo_depth[photon_bins()]
+        bluetopo_delta_index = np.where(np.isfinite(bluetopo_delta), np.searchsorted(BLUETOPO_DELTA_EDGES, bluetopo_delta, side="right"), -1)
+        bins["bluetopo_delta_hist"] = bin_counts(bluetopo_delta_index, len(BLUETOPO_DELTA_EDGES) + 1)
+
+        # write outputs
+        output_file = f"s3://sliderule-public/atl24r3/bluetopo/{granule.replace('.parquet', f'_spot{spot}.parquet')}"
+        runner.message(f"Writing {len(bins)} bins to {output_file}")
+        buffer = io.BytesIO()
+        bins.to_parquet(buffer, index=False)
+        bucket, key = parse_url(output_file)
+        s3.put_object(Bucket=bucket, Key=key, Body=buffer.getvalue(), ContentType="application/vnd.apache.parquet")
+        runner.output(output_file)
 
 except Exception:
 
