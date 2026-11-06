@@ -195,8 +195,8 @@ try:
         "max_signal_conf"
     ])
 
-    # add depth column to gdf
-    gdf["depth"] = gdf["surface_h"] - gdf["geoid_corr_h"]
+    # orthometric height of bathymetry photons only (NaN otherwise so they are excluded from bin means)
+    bathy_ortho_h = np.where(gdf["class_ph"].to_numpy() == 40, gdf["geoid_corr_h"].to_numpy(dtype=np.float64), np.nan)
 
     # create 10 meter along track bins
     bin_size = 10.0
@@ -211,7 +211,7 @@ try:
         "x_atc": bin_id[bin_starts] * bin_size,
         "latitude": bin_mean(gdf.geometry.y.to_numpy()),
         "longitude": bin_mean(gdf.geometry.x.to_numpy()),
-        "depth": bin_mean(gdf["depth"].to_numpy()),
+        "ortho_h": bin_mean(bathy_ortho_h),
         "non_noise": np.logical_or.reduceat(gdf["class_ph"].to_numpy() != 0, bin_starts),
         "max_confidence": np.fmax.reduceat(gdf["confidence"].to_numpy(dtype=np.float64), bin_starts),
         "night": bin_mean((gdf["processing_flags"].to_numpy().astype(np.int64) & 0x20) != 0),
@@ -230,6 +230,9 @@ try:
     # vertical datum correction; bluetopo_depth + bluetopo_correction is depth relative to the ATL24 (EGM2008) geoid
     atl24_geoid = bin_mean(gdf["ellipse_h"].to_numpy() - gdf["geoid_corr_h"].to_numpy())
     bins["bluetopo_correction"] = bluetopo_depth_correction(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_geoids, atl24_geoid, granule_epoch(granule))
+
+    # calculate a delta between bluetopo and the atl24 bathymetry in the bin
+    bins["bluetopo_residual"] = bins["ortho_h"] + bins["bluetopo_depth"] + bins["bluetopo_correction"]
 
     # write outputs
     result["outputs"].append(output_file)
