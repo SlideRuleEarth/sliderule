@@ -195,7 +195,7 @@ try:
 
     # assign cell ids
     gdf["cell_id"] = assign_cell_ids(gdf, TILE_S2_CELL_LEVEL)
-    gdf = gdf.reset_index().set_index("cell_id").sort_index(kind="stable")
+    gdf = gdf.set_index("cell_id").sort_index(kind="stable")
     cell_ids = gdf.index.unique()
 
     # write partitions for each cell id
@@ -206,8 +206,10 @@ try:
         l7_gdf.to_parquet(local_parquet_file, index=False)
         s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
         runner.output(remote_parquet_file)
-        runner.message(f"{len(gdf)} rows in {len(cell_ids)} partitions")
         os.remove(local_parquet_file)
+
+    # success
+    runner.message(f"{len(gdf)} rows in {len(cell_ids)} partitions")
 
 except RuntimeError as e:
 
