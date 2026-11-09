@@ -22,7 +22,25 @@ TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 NSIDC_BUCKET = "nsidc-cumulus-prod-protected"
 NSIDC_S3_CREDENTIALS = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
 ATLAS_SDP_EPOCH = np.datetime64("2018-01-01T00:00:00", "ns") # delta_time is seconds since this epoch; no leap seconds have occurred since
-BEAMS = {"gt1l": 10, "gt1r": 20, "gt2l": 30, "gt2r": 40, "gt3l": 50, "gt3r": 60} # integer ground track used by sliderule
+BEAMS = ["gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"]
+BEAM_TO_SPOT = {
+     0: {
+          "gt1l": 1,
+          "gt1r": 2,
+          "gt2l": 3,
+          "gt2r": 4,
+          "gt3l": 5,
+          "gt3r": 6
+     },
+     1: {
+          "gt1l": 6,
+          "gt1r": 5,
+          "gt2l": 4,
+          "gt2r": 3,
+          "gt3l": 2,
+          "gt3r": 1
+     }
+}
 SOURCE_COLUMNS = [
     "atl06_quality_summary",
     "delta_time",
@@ -120,6 +138,9 @@ def build_gdf(granule):
                          aws_secret_access_key=credentials["secretAccessKey"],
                          aws_session_token=credentials["sessionToken"])
     version = granule[30:33] # ATL06_YYYYMMDDHHMMSS_RRRRCCSS_VVV_RR.h5
+    rgt = int(granule[21:25], base=10)
+    cycle = int(granule[25:27], base=10)
+    region = int(granule[27:29], base=10)
     key = f"ATLAS/ATL06/{version}/{granule[6:10]}/{granule[10:12]}/{granule[12:14]}/{granule}"
     local_h5_file = f"/tmp/{granule}"
     nsidc.download_file(NSIDC_BUCKET, key, local_h5_file)
@@ -127,12 +148,17 @@ def build_gdf(granule):
     frames = []
     try:
         with h5py.File(local_h5_file, "r") as h5:
-            for beam, gt in BEAMS.items():
+            sc_orient = h5["orbit_info"]["sc_orient"][0]
+            for beam in BEAMS:
                 segments = h5.get(f"{beam}/land_ice_segments")
                 if segments is None: # beams without data are left out of the granule
                     continue
                 df = gpd.pd.DataFrame({column.split("/")[-1]: segments[column][:] for column in SOURCE_COLUMNS})
-                df["gt"] = np.uint8(gt)
+                df["beam"] = beam
+                df["spot"] = BEAM_TO_SPOT[sc_orient][beam]
+                df["rgt"] = rgt
+                df["cycle"] = cycle
+                df["region"] = region
                 frames.append(df)
     finally:
         os.remove(local_h5_file)
