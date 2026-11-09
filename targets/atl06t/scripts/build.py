@@ -3,7 +3,9 @@ import sys
 import json
 import argparse
 import subprocess
+import earthaccess
 import boto3
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sliderule import sliderule
 
@@ -120,6 +122,13 @@ def run_workers(input, script, workers):
     print(f"Partitioned {len(arguments) - len(failures)} of {len(arguments)} granules ({len(failures)} failed)")
     return results
 
+# get temporary s3 credentials for the nsidc bucket
+def get_credentials(secrets_file):
+    auth = earthaccess.login()
+    credentials = auth.get_s3_credentials(daac="NSIDC")
+    with open(secrets_file, "w") as file:
+        json.dump(credentials, file)
+    print(f"Secrets written to {secrets_file}")
 
 # #####################################
 # Main
@@ -131,6 +140,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""ATL06 Tile Builder""")
     parser.add_argument('--domain',         type=str,               default="localhost")
     parser.add_argument('--cluster',        type=str,               default=None)
+    parser.add_argument('--secrets_file',   type=str,               default=os.path.join(Path.home(), ".sliderule_secrets"))
     parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules.txt")
     parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles.txt")
     parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
@@ -141,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument('--list_tiles',     action='store_true',    default=False) # list all partitions
     parser.add_argument('--partition',      action='store_true',    default=False) # list all partitions
     parser.add_argument('--tile',           action='store_true',    default=False) # list all partitions
+    parser.add_argument('--credentials',    action='store_true',    default=False)
     args = parser.parse_args()
 
     # route command
@@ -148,3 +159,4 @@ if __name__ == "__main__":
     elif args.list_tiles:   list_atl06_tiles(args.output_bucket, args.output_prefix, args.atl06_tiles)
     elif args.partition:    run_workers(args.atl06_granules, PARTITION_RUNNER, args.workers)
     elif args.tile:         run_workers(args.atl06_tiles, TILE_RUNNER, args.workers)
+    elif args.credentials:  get_credentials(args.secrets_file)

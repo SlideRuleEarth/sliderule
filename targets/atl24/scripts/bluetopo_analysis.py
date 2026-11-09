@@ -212,6 +212,11 @@ try:
         "max_signal_conf"
     ])
 
+    # set all invalid values to NaNs
+    INVALID_VALUE = -24.0
+    for column in ["kd", "surface_roughness"]:
+        gdf.loc[gdf[column] == INVALID_VALUE, column] = np.nan
+
     # loop through each spot
     for spot in SPOTS:
 
@@ -235,7 +240,8 @@ try:
             "x_atc": bin_id[bin_starts] * bin_size,
             "latitude": bin_mean(spot_gdf.geometry.y.to_numpy()),
             "longitude": bin_mean(spot_gdf.geometry.x.to_numpy()),
-            "ortho_h": bin_mean(bathy_ortho_h),
+            "bathy_ortho_h": bin_mean(bathy_ortho_h),
+            "surface_h": bin_mean(spot_gdf["surface_h"].to_numpy()),
             "non_noise": np.logical_or.reduceat(spot_gdf["class_ph"].to_numpy() != 0, bin_starts),
             "max_confidence": np.fmax.reduceat(spot_gdf["confidence"].to_numpy(dtype=np.float64), bin_starts),
             "night": bin_mean((spot_gdf["processing_flags"].to_numpy().astype(np.int64) & 0x20) != 0),
@@ -260,12 +266,12 @@ try:
 
         # vertical datum correction; bluetopo_depth + bluetopo_correction is depth relative to the ATL24 (EGM2008) geoid
         runner.message(f"Generating vertical datum correction for spot {spot}")
-        atl24_geoid = bin_mean(spot_gdf["ellipse_h"].to_numpy() - spot_gdf["geoid_corr_h"].to_numpy())
-        bins["bluetopo_correction"] = bluetopo_depth_correction(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_geoids, atl24_geoid, granule_epoch(granule))
+        bins["atl24_geoid"] = bin_mean(spot_gdf["ellipse_h"].to_numpy() - spot_gdf["geoid_corr_h"].to_numpy())
+        bins["bluetopo_correction"] = bluetopo_depth_correction(bins["longitude"].to_numpy(), bins["latitude"].to_numpy(), bluetopo_geoids, bins["atl24_geoid"], granule_epoch(granule))
 
         # calculate a delta between bluetopo and the atl24 bathymetry in the bin
         runner.message(f"Calculating BlueTopo deltas for {len(bins)} bins in spot {spot}")
-        bins["bluetopo_residual"] = bins["ortho_h"] + bins["bluetopo_depth"] + bins["bluetopo_correction"]
+        bins["bluetopo_residual"] = bins["bathy_ortho_h"] + bins["bluetopo_depth"] + bins["bluetopo_correction"]
 
         # histogram of photon depth (all classes) minus corrected bluetopo depth, both relative to the ATL24 (EGM2008) geoid
         corrected_bluetopo_depth = (bins["bluetopo_depth"] + bins["bluetopo_correction"]).to_numpy()

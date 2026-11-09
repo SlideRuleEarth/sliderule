@@ -1,14 +1,10 @@
 import os
-import json
-import netrc
 import h5py
 import duckdb
 import traceback
 import boto3
-import requests
 import numpy as np
 import geopandas as gpd
-from urllib.parse import urlparse
 from sliderule import pysr
 
 # runner
@@ -108,35 +104,13 @@ SOURCE_COLUMNS = [
     "ground_track/y_atc",
 ]
 
-# create S3 client
-s3 = boto3.client("s3")
-
-# keeps basic auth on the redirect to earthdata login, which requests otherwise strips when the host changes
-class EarthdataSession(requests.Session):
-    def rebuild_auth(self, prepared_request, response):
-        if urlparse(prepared_request.url).hostname != "urs.earthdata.nasa.gov":
-            prepared_request.headers.pop("Authorization", None)
-
-# get temporary s3 credentials for the nsidc bucket
-def nsidc_credentials():
-    username, password = runner.secrets.get("earthdata_username"), runner.secrets.get("earthdata_password")
-    if not username or not password:
-        # local runs have no secrets file, so fall back to ~/.netrc
-        username, _, password = netrc.netrc().authenticators("urs.earthdata.nasa.gov")
-    with EarthdataSession() as session:
-        session.auth = (username, password)
-        response = session.get(NSIDC_S3_CREDENTIALS)
-        response.raise_for_status()
-        return json.loads(response.text) # served as text/html
-
 # build geodataframe
 def build_gdf(granule):
     # download h5 file to /tmp directory
-    credentials = nsidc_credentials()
     nsidc = boto3.client("s3", region_name="us-west-2",
-                         aws_access_key_id=credentials["accessKeyId"],
-                         aws_secret_access_key=credentials["secretAccessKey"],
-                         aws_session_token=credentials["sessionToken"])
+                         aws_access_key_id=runner.secrets.get("accessKeyId"),
+                         aws_secret_access_key=runner.secrets.get("secretAccessKey"),
+                         aws_session_token=runner.secrets.get("sessionToken"))
     version = granule[30:33] # ATL06_YYYYMMDDHHMMSS_RRRRCCSS_VVV_RR.h5
     rgt = int(granule[21:25], base=10)
     cycle = int(granule[25:27], base=10)
@@ -199,6 +173,7 @@ try:
     cell_ids = gdf.index.unique()
 
     # write partitions for each cell id
+    s3 = boto3.client("s3")
     for cell_id in cell_ids:
         l7_gdf = gdf[gdf.index == cell_id]
         local_parquet_file = f"/tmp/{granule.replace('.h5', '')}.S{cell_id:016X}.parquet"
