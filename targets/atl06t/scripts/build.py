@@ -94,7 +94,7 @@ def worker(argument, script):
     result_file = f"/tmp/{argument.split('/')[-1]}.json"
     if os.path.exists(result_file):
         os.remove(result_file)
-    proc = subprocess.run([sys.executable, script, argument, result_file], capture_output=True, text=True)
+    proc = subprocess.run([sys.executable, script, argument, result_file], capture_output=False, text=True)
     try:
         with open(result_file, "r") as file:
             result = json.load(file)
@@ -106,6 +106,7 @@ def worker(argument, script):
 # run worker
 def run_workers(input, script, workers):
     arguments = [argument.strip() for argument in open(input, "r") if argument.strip()]
+#    arguments = ["sliderule-public/atl06tv4/partitions/SA511C00000000000/"]
     results = {}
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(worker, argument, script): argument for argument in arguments}

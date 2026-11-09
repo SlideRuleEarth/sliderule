@@ -122,6 +122,7 @@ def build_streaming(filenames):
             geo_metadata = file_geo_metadata
             geometry_column = geo_metadata["primary_column"]
             if len(geo_metadata["columns"]) != 1 or geo_metadata["columns"][geometry_column]["encoding"] != "WKB":
+                runner.message(f"unsupported geo metadata: {len(geo_metadata["columns"])} {geo_metadata["columns"][geometry_column]["encoding"]}")
                 return None
             reference_crs = json.dumps(geo_metadata["columns"][geometry_column].get("crs"), sort_keys=True)
             for field in schema:
@@ -129,6 +130,7 @@ def build_streaming(filenames):
                     continue
                 if not (pa.types.is_integer(field.type) or pa.types.is_floating(field.type) or pa.types.is_boolean(field.type) or \
                         (pa.types.is_timestamp(field.type) and field.type.tz is None)):
+                    runner.message(f"unsupported field type: {field.type}")
                     return None
                 columns[field.name] = np.empty(num_rows, dtype=field.type.to_pandas_dtype())
         elif not table.schema.equals(schema) or \
@@ -137,13 +139,16 @@ def build_streaming(filenames):
              file_geo_metadata["columns"][geometry_column]["encoding"] != "WKB" or \
              json.dumps(file_geo_metadata["columns"][geometry_column].get("crs"), sort_keys=True) != reference_crs:
             # pandas would upcast mismatched columns on concat
+            runner.message(f"mismatched schema")
             return None
         if table.num_rows != rows:
+            runner.message(f"mismatched rows: {table.num_rows} != {rows}")
             return None
         for name, column in columns.items():
             values = table.column(name)
             # nulls in integer and boolean columns change the pandas dtype per file (e.g. int -> float64)
             if values.null_count > 0 and not (pa.types.is_floating(values.type) or pa.types.is_timestamp(values.type)):
+                runner.message(f"unsupported null elements: {values.null_count}")
                 return None
             # nulls become NaN / NaT, as they do when converting to pandas
             column[offset:offset + rows] = values.to_numpy()
@@ -173,14 +178,17 @@ def build_streaming(filenames):
         del geometry, geoms, bounds
         offset += rows
     if schema is None:
+        runner.message("No schema")
         return None
     if any(e is not None and e[0] == 0 for e in extremes):
         # which signed zero numpy reports as the min/max depends on the order of the values
+        runner.message("zero in extremes")
         return None
     wkb = pa.chunked_array(wkb_chunks, type=schema.field(geometry_column).type)
     del wkb_chunks
     if wkb.nbytes > WKB_CHUNK_LIMIT:
         # the original geometry column would have been split into multiple chunks, which changes the encoding
+        runner.message("unsupported multiple chunks")
         return None
 
     # sort order
