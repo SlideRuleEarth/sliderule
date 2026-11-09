@@ -46,8 +46,13 @@ class Runner:
     # constructor
     #
     def __init__ (self):
-        self.args = sys.argv[1:]
+        self.args = sys.argv[1:3] # argument, result file
         self.result_file = self.args[-1]
+        # job_runner.py passes a secrets file after the result file; local runs do not
+        self.secrets = {}
+        if len(sys.argv) > 3:
+            with open(sys.argv[3], "r") as file:
+                self.secrets = json.load(file)
         self.result = {
             "status": True,
             "build": "local",
@@ -79,13 +84,15 @@ class Runner:
     #
     # fail
     #
-    def fail(self):
+    def fail(self, msg=None):
+        if msg: self.message(msg)
         self.result["status"] = False
 
     #
     # succeed
     #
-    def succeed(self):
+    def succeed(self, msg=None):
+        if msg: self.message(msg)
         self.result["status"] = True
 
     #

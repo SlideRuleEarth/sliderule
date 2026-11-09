@@ -12,19 +12,38 @@ import shapely
 import pyarrow as pa
 import pyarrow.parquet as pq
 import geopandas as gpd
-#from datetime import datetime, timezone
 from geopandas.io.arrow import _geopandas_to_arrow, _arrow_to_geopandas, _validate_and_decode_metadata
+from sliderule import pysr
 
-# arguments
-partition = sys.argv[1]
-result_file = sys.argv[2]
+# runner
+runner = pysr.Runner()
+partition, result_file = runner.arguments
 
 # constants
-SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
-ROW_GROUP_TARGET_SIZE_MB = 2 # MB
-WKB_CHUNK_LIMIT = 2**31 - 2**24 # bytes; safely below the ~2 GiB at which pyarrow splits a binary column into multiple chunks
 OUTPUT_BUCKET = "sliderule-public"
 OUTPUT_PREFIX = "atl06tv4"
+SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
+ROW_GROUP_TARGET_SIZE_MB = 8 # MB
+ROW_BYTES_ESTIMATE = 150 # bytes; estimated compressed size of a row, only sizes the first row group
+WKB_CHUNK_LIMIT = 2**31 - 2**24 # bytes; safely below the ~2 GiB at which pyarrow splits a binary column into multiple chunks
+FIRST_COLUMNS = [ # written first in each row group so reads of them are contiguous
+    "cell_id",
+    "geometry",
+    "time_ns",
+    "atl06_quality_summary",
+    "delta_time",
+    "h_li",
+    "h_li_sigma",
+    "segment_id",
+    "h_rms_misfit",
+    "h_robust_sprd",
+    "n_fit_photons",
+    "msw_flag",
+    "x_atc",
+    "y_atc",
+    "dh_fit_dx",
+    "dh_fit_dy"
+]
 
 # create S3 client
 s3 = boto3.client("s3")
@@ -188,7 +207,10 @@ def write_optimized_parquet(schema, cell_ids, get_slice, output_file, target_byt
     cell_ids are the sorted cell ids of every row, and get_slice(start, end) returns those rows as an arrow table
     rows per row group adapt to the bytes actually written, so each group lands near target_bytes
     row groups are extended to the end of its last cell_id so no cell spans two groups
+    column chunks are written in schema order, so FIRST_COLUMNS are moved to the front
     """
+    order = [name for name in FIRST_COLUMNS if name in schema.names] + [name for name in schema.names if name not in FIRST_COLUMNS]
+    schema = pa.schema([schema.field(name) for name in order], metadata=schema.metadata)
     cell_idx = schema.get_field_index("cell_id")
     floats = [f.name for f in schema if pa.types.is_floating(f.type)]
     num_rows = len(cell_ids)
@@ -200,12 +222,12 @@ def write_optimized_parquet(schema, cell_ids, get_slice, output_file, target_byt
                               use_dictionary=[name for name in schema.names if name not in floats],
                               use_byte_stream_split=floats,
                               write_statistics=["cell_id", "time_ns"]) as writer:
-            start, rows = 0, 50_000
+            start, rows = 0, target_bytes // ROW_BYTES_ESTIMATE
             while start < num_rows:
                 end = min(start + rows, num_rows)
                 end = int(cell_ids.searchsorted(cell_ids[end - 1], side="right"))
                 before = sink.tell()
-                writer.write_table(get_slice(start, end), row_group_size=end - start)
+                writer.write_table(get_slice(start, end).select(order), row_group_size=end - start)
                 rows = max(1, int((end - start) * target_bytes / max(1, sink.tell() - before)))
                 start = end
 
@@ -213,48 +235,32 @@ def write_optimized_parquet(schema, cell_ids, get_slice, output_file, target_byt
 # Main
 # ##############
 
-result = {
-    "status": True,
-    "build": "local",
-    "start": time.time(),
-    "outputs": [],
-    "messages": []
-}
-
 try:
 
     cell_id_str = partition.split("/")[-2]
     filenames = list_bucket(f"s3://{partition}")
+    if len(filenames) == 0: raise RuntimeError("no files")
+    built = build_streaming(filenames)
+    if built is None:
+        runner.message("using in-memory build")
+        built = build_in_memory(filenames)
+    schema, cell_ids, get_slice = built
+    runner.message(f"{len(cell_ids)} rows from {len(filenames)} files")
+    local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
+    remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
+    write_optimized_parquet(schema, cell_ids, get_slice, local_parquet_file)
+    s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
+    runner.output(remote_parquet_file)
+    runner.message(f"{len(cell_ids)} rows written for {cell_id_str}")
+    os.remove(local_parquet_file)
 
-    if len(filenames) > 0:
+except RuntimeError as e:
 
-        built = build_streaming(filenames)
-        if built is None:
-            result["messages"].append("using in-memory build")
-            built = build_in_memory(filenames)
-        schema, cell_ids, get_slice = built
-        result["messages"].append(f"{len(cell_ids)} rows from {len(filenames)} files")
-        local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
-        remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
-        write_optimized_parquet(schema, cell_ids, get_slice, local_parquet_file)
-        s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
-        result["outputs"].append(remote_parquet_file)
-        result["messages"].append(f"{len(cell_ids)} rows written for {cell_id_str}")
-        os.remove(local_parquet_file)
-
-    else:
-
-        result["status"] = False
-        result["messages"].append("no files")
+    runner.fail(f"Exception: {e}")
 
 except Exception as e:
 
-    # errors
-    result["status"] = False
-    result["messages"].append(f"Unhandled exception: {traceback.format_exc()}")
-
+    runner.fail(f"Unhandled exception: {traceback.format_exc()}")
 
 # finish
-result["stop"] = time.time()
-with open(result_file, "w") as file:
-    json.dump(result, file)
+runner.finish()

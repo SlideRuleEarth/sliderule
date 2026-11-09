@@ -285,8 +285,7 @@ try:
 except Exception:
 
     # errors
-    runner.fail()
-    runner.message(f"Unhandled exception: {traceback.format_exc()}")
+    runner.fail(f"Unhandled exception: {traceback.format_exc()}")
 
 # finish
 runner.finish()

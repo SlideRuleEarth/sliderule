@@ -6,9 +6,10 @@ dependencies:
   - boto3
   - python-duckdb<2 # geography community extension (S2 cells) is not yet published for duckdb 2.x
   - geopandas
+  - h5py
   - pyarrow=24
   - rasterio
   - s3fs
+  - setuptools-scm
   - shapely
-  - sliderule
   - pip

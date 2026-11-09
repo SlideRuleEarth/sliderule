@@ -21,8 +21,9 @@ RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.
     && /root/miniforge3/bin/conda clean -afy
 RUN /env/bin/pip install build
 
-# install job runner script
-COPY job_runner.py /
+# install sliderule client
+COPY python /sliderule-client
+RUN cd /sliderule-client && SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SLIDERULE=0.0.0.0 /env/bin/pip install .
 
 # entry point
-ENTRYPOINT ["/env/bin/python", "job_runner.py"]
+ENTRYPOINT ["/env/bin/python", "/sliderule-client/scripts/job_runner.py"]
