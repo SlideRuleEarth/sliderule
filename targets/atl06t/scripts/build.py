@@ -106,7 +106,6 @@ def worker(argument, script):
 # run worker
 def run_workers(input, script, workers):
     arguments = [argument.strip() for argument in open(input, "r") if argument.strip()]
-#    arguments = ["sliderule-public/atl06tv4/partitions/SA511C00000000000/"]
     results = {}
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(worker, argument, script): argument for argument in arguments}
@@ -120,7 +119,7 @@ def run_workers(input, script, workers):
                 for message in result["messages"]:
                     print(f"    {message}")
     failures = [granule for granule, result in results.items() if not result["status"]]
-    print(f"Partitioned {len(arguments) - len(failures)} of {len(arguments)} granules ({len(failures)} failed)")
+    print(f"Processed {len(arguments) - len(failures)} of {len(arguments)} granules ({len(failures)} failed)")
     return results
 
 # get temporary s3 credentials for the nsidc bucket

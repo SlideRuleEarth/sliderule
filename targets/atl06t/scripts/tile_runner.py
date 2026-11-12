@@ -10,6 +10,7 @@ import s3fs
 import numpy as np
 import shapely
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import geopandas as gpd
 from geopandas.io.arrow import _geopandas_to_arrow, _arrow_to_geopandas, _validate_and_decode_metadata
@@ -100,19 +101,21 @@ def build_in_memory(filenames):
 
 # low memory approach: copies each file into preallocated numpy columns as it is read (so the tile is never held
 # twice), and only builds a GeoDataFrame one row group at a time; every conversion is the same one
-# build_in_memory performs, so the parquet file is byte-for-byte identical; returns None when that can't be
-# guaranteed so the caller can fall back to build_in_memory
+# build_in_memory performs, so the parquet file is byte-for-byte identical, except that string columns may be
+# encoded differently (never with different values); returns None when that can't be guaranteed so the caller
+# can fall back to build_in_memory
 def build_streaming(filenames):
     fs = s3fs.S3FileSystem()
     with ThreadPoolExecutor(max_workers=16) as executor:
         file_rows = list(executor.map(lambda filename: pq.read_metadata(filename, filesystem=fs).num_rows, filenames))
     num_rows = sum(file_rows)
-    columns = {} # non-geometry columns, preallocated
-    wkb_chunks = []
+    columns = {} # numeric columns, preallocated
+    chunks = {} # geometry and string columns, kept as arrow chunks
     lon, lat = np.empty(num_rows), np.empty(num_rows)
     schema, geo_metadata, geometry_column = None, None, None
     extremes = [None] * 4 # (value, row) of each component of the bounding box: minx, miny, maxx, maxy
     type_rows = {} # first row of each geometry type
+    valid_rows = {} # first non-null row of each chunked column
     offset = 0
     for filename, rows in zip(filenames, file_rows):
         table = pq.read_table(filename, filesystem=fs)
@@ -127,6 +130,10 @@ def build_streaming(filenames):
             reference_crs = json.dumps(geo_metadata["columns"][geometry_column].get("crs"), sort_keys=True)
             for field in schema:
                 if field.name == geometry_column:
+                    chunks[field.name] = []
+                    continue
+                if pa.types.is_string(field.type) or pa.types.is_large_string(field.type):
+                    chunks[field.name] = []
                     continue
                 if not (pa.types.is_integer(field.type) or pa.types.is_floating(field.type) or pa.types.is_boolean(field.type) or \
                         (pa.types.is_timestamp(field.type) and field.type.tz is None)):
@@ -152,7 +159,13 @@ def build_streaming(filenames):
                 return None
             # nulls become NaN / NaT, as they do when converting to pandas
             column[offset:offset + rows] = values.to_numpy()
-        wkb_chunks.extend(table.column(geometry_column).chunks)
+        for name, column_chunks in chunks.items():
+            values = table.column(name)
+            if name not in valid_rows:
+                row = pc.index(values.is_valid(), True).as_py()
+                if row >= 0:
+                    valid_rows[name] = offset + row
+            column_chunks.extend(values.chunks)
         # same conversion gpd.read_parquet performs, for the geometry column only
         geometry = _arrow_to_geopandas(table.select([geometry_column]), geo_metadata).geometry
         del table
@@ -184,12 +197,26 @@ def build_streaming(filenames):
         # which signed zero numpy reports as the min/max depends on the order of the values
         runner.message("zero in extremes")
         return None
-    wkb = pa.chunked_array(wkb_chunks, type=schema.field(geometry_column).type)
-    del wkb_chunks
-    if wkb.nbytes > WKB_CHUNK_LIMIT:
-        # the original geometry column would have been split into multiple chunks, which changes the encoding
+    chunked = {name: pa.chunked_array(column_chunks, type=schema.field(name).type) for name, column_chunks in chunks.items()}
+    del chunks
+    if chunked[geometry_column].nbytes > WKB_CHUNK_LIMIT:
+        # the original geometry column would have been split into multiple chunks, which changes the encoding;
+        # string columns are allowed to differ from build_in_memory in this way
         runner.message("unsupported multiple chunks")
         return None
+    chunk_offsets = {name: np.cumsum([0] + [len(chunk) for chunk in values.chunks]) for name, values in chunked.items()}
+
+    # ChunkedArray.take concatenates every chunk first, which copies the whole column on every call and
+    # overflows the 32-bit offsets of a string column past 2 GiB, so take from each chunk separately
+    def take(name, rows):
+        values, offsets = chunked[name], chunk_offsets[name]
+        chunk = np.searchsorted(offsets, rows, side="right") - 1
+        group = np.argsort(chunk, kind="stable")
+        sorted_chunks = chunk[group]
+        ids, starts = np.unique(sorted_chunks, return_index=True)
+        local_rows = np.split(rows[group] - offsets[sorted_chunks], starts[1:])
+        parts = [values.chunk(c).take(local) for c, local in zip(ids.tolist(), local_rows)]
+        return pa.concat_arrays(parts).take(np.argsort(group))
 
     # sort order
     cell_ids = assign_cell_ids(lon, lat, SEGMENT_S2_CELL_LEVEL)
@@ -197,17 +224,19 @@ def build_streaming(filenames):
     order = np.argsort(cell_ids, kind="stable") # same permutation as sort_index(kind="stable")
 
     def to_arrow(rows):
-        arrays = [wkb.take(rows) if field.name == geometry_column else pa.array(columns[field.name][rows], type=field.type) for field in schema]
+        arrays = [take(field.name, rows) if field.name in chunked else pa.array(columns[field.name][rows], type=field.type) for field in schema]
         gdf = _arrow_to_geopandas(pa.Table.from_arrays(arrays, schema=schema), geo_metadata)
         gdf.index = gpd.pd.Index(cell_ids[rows], name="cell_id")
         return _geopandas_to_arrow(gdf, index=True)
 
     # the schema (including the geo metadata) of the whole tile is the same as that of a subset of
-    # rows containing every geometry type and each extreme of the bounding box
-    representative_rows = np.array(sorted({0, *type_rows.values(), *(e[1] for e in extremes if e is not None)}))
+    # rows containing every geometry type, each extreme of the bounding box, and a non-null value of
+    # each string column (pandas converts a column of only nulls back to arrow as the null type)
+    representative_rows = np.array(sorted({0, *type_rows.values(), *valid_rows.values(), *(e[1] for e in extremes if e is not None)}))
     tile_schema = to_arrow(representative_rows).schema
     sorted_cell_ids = cell_ids[order]
-    return tile_schema, sorted_cell_ids, lambda start, end: to_arrow(order[start:end])
+    # a row group whose strings are all null comes back as the null type, so cast it to the tile's types
+    return tile_schema, sorted_cell_ids, lambda start, end: to_arrow(order[start:end]).cast(tile_schema)
 
 # write optimized parquet
 def write_optimized_parquet(schema, cell_ids, get_slice, output_file, target_bytes=ROW_GROUP_TARGET_SIZE_MB*1048576):
