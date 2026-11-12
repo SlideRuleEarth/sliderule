@@ -21,14 +21,14 @@ parser = argparse.ArgumentParser(description="""ATL06 Tile Builder""")
 parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
 parser.add_argument('--cluster',        type=str,               default="developers")
 parser.add_argument('--bucket',         type=str,               default="sliderule-public")
-parser.add_argument('--prefix',         type=str,               default="atl06tv3")
+parser.add_argument('--prefix',         type=str,               default="atl06tv4")
 parser.add_argument('--earthaccess',    action='store_true',    default=False)
 parser.add_argument('--h5coro',         action='store_true',    default=False)
 parser.add_argument('--sliderule',      action='store_true',    default=False)
 parser.add_argument('--s2tile',         action='store_true',    default=False)
 parser.add_argument('--local',          action='store_true',    default=False)
 parser.add_argument('--time_spans',     action='store_true',    default=False)
-parser.add_argument('--aoi',            type=str,               default="greenland")
+parser.add_argument('--aoi',            type=str,               default="antarctica")
 args = parser.parse_args()
 
 #
@@ -223,12 +223,27 @@ def SlideRuleSubset(domain, cluster, name, region, start_time=None, end_time=Non
 #
 def S2TileSubset(reader, name, aoi, start_time=None, end_time=None):
     start = time.time()
-    gdf = reader.read_tiles(aoi, start_time, end_time, columns=[
-        'time_ns', 'tide_ocean', 'region', 'gt', 'n_fit_photons',
-        'w_surface_window_final', 'atl06_quality_summary', 'rgt', 'r_eff',
-        'seg_azimuth', 'bsnow_h', 'h_robust_sprd', 'sigma_geo_h', 'h_li_sigma',
-        'dh_fit_dx', 'x_atc', 'spot', 'y_atc', 'srcid', 'bsnow_conf', 'cycle',
-        'h_li', 'segment_id', 'geometry'])
+    columns = [
+        "time_ns",
+        "atl06_quality_summary",
+        "delta_time",
+        "h_li",
+        "h_li_sigma",
+        "segment_id",
+        "h_rms_misfit",
+        "h_robust_sprd",
+        "n_fit_photons",
+        "msw_flag",
+        "x_atc",
+        "y_atc",
+        "dh_fit_dx",
+        "dh_fit_dy",
+        "e_bckgrd",
+        "layer_flag",
+        "tide_load",
+        "sigma_geo_xt"
+    ]
+    gdf = reader.read_tiles(aoi, start_time, end_time, columns=columns)
     print(f"S2TileReader subsetted {name} / {len(gdf)} rows in {time.time() - start:.2f} seconds")
 
 # EarthAccess - Spatial (can only be run one at a time due to memory)
