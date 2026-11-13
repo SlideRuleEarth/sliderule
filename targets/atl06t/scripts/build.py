@@ -21,10 +21,10 @@ parser.add_argument('--verbose',        action='store_true',    default=False) #
 parser.add_argument('--secrets_file',   type=str,               default=os.path.join(Path.home(), ".sliderule_secrets"))
 parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules.txt")
 parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles.txt")
+parser.add_argument('--atl06_cells',    type=str,               default="/data/ATL06/atl06_cells.txt") # cells to stat
 parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
 parser.add_argument('--output_prefix',  type=str,               default="atl06tv4")
 parser.add_argument('--aoi',            type=str,               default="full_greenland")
-parser.add_argument('--stat_level',     type=int,               default=14) # used by stat command; generates stats at this level
 parser.add_argument('--workers',        type=int,               default=8) # number of threads for partitioning, tiling, and reading
 parser.add_argument('--list_granules',  action='store_true',    default=False) # list granules to process (uses aoi and writes atl06_granules)
 parser.add_argument('--list_tiles',     action='store_true',    default=False) # list tiles to process (uses boto3 ls and writes atl06_tiles)
@@ -44,6 +44,7 @@ s3 = boto3.client("s3")
 # runner scripts
 PARTITION_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "partition_runner.py")
 TILE_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tile_runner.py")
+TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 
 # areas of interest
 aoi = {
@@ -97,6 +98,17 @@ def list_subfolders(url):
             subfolders.append(f"{bucket}/{common_prefix['Prefix']}")
     return subfolders
 
+# get the level of an s2 cell id from the position of its lowest set bit
+def s2_cell_level(cell_id):
+    lsb = cell_id & -cell_id
+    return 30 - ((lsb.bit_length() - 1) >> 1)
+
+# get the parent of an s2 cell id at the given level
+def s2_cell_parent(cell_id):
+    level = s2_cell_level(cell_id)
+    lsb = 1 << (2 * (30 - level))
+    return (cell_id & -lsb & 0xFFFFFFFFFFFFFFFF) | lsb
+
 # #####################################
 # Command Functions
 # #####################################
@@ -124,11 +136,17 @@ def list_atl06_tiles(bucket, prefix, output):
             file.write(f"{subfolder}\n")
 
 # generate stat files
-def generate_stats(atl06_tiles, stat_level):
+def generate_stats(atl06_tiles):
     paths = [path.strip() for path in open(atl06_tiles, "r") if path.strip()]
     tiles = [path.split("/")[-2] for path in paths]
-    file_level = {14: 7, 13: 6, 12: 5, 11: 4, 10: 3, 9: 2, 8: 1, 7: 0}[stat_level]
-    print(tiles)
+    cell_ids = [int(tile.lstrip("S"), 16) for tile in tiles]
+    files = {}
+    file_level = TILE_S2_CELL_LEVEL
+    while file_level >= 0:
+        files[file_level] = [f"S{cell_id:016X}" for cell_id in cell_ids]
+        cell_ids = list({s2_cell_parent(cell_id) for cell_id in cell_ids})
+        file_level -= 1
+    return files
 
 # run partition_runner.py on a single granule
 def worker(argument, script):
@@ -180,5 +198,5 @@ if args.list_granules:  list_atl06_granules(aoi[args.aoi], args.atl06_granules)
 elif args.list_tiles:   list_atl06_tiles(args.output_bucket, args.output_prefix, args.atl06_tiles)
 elif args.partition:    run_workers(args.atl06_granules, PARTITION_RUNNER, args.workers)
 elif args.tile:         run_workers(args.atl06_tiles, TILE_RUNNER, args.workers)
-elif args.stat:         generate_stats(args.atl06_tiles)
+elif args.stat:         d = generate_stats(args.atl06_tiles)
 elif args.credentials:  get_credentials(args.secrets_file)
