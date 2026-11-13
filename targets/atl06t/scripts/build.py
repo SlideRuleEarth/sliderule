@@ -124,9 +124,10 @@ def list_atl06_tiles(bucket, prefix, output):
             file.write(f"{subfolder}\n")
 
 # generate stat files
-def generate_stats(atl06_tiles):
+def generate_stats(atl06_tiles, stat_level):
     paths = [path.strip() for path in open(atl06_tiles, "r") if path.strip()]
     tiles = [path.split("/")[-2] for path in paths]
+    file_level = {14: 7, 13: 6, 12: 5, 11: 4, 10: 3, 9: 2, 8: 1, 7: 0}[stat_level]
     print(tiles)
 
 # run partition_runner.py on a single granule

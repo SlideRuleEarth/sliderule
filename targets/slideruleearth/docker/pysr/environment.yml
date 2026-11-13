@@ -9,7 +9,7 @@ dependencies:
   - h5py
   - pyarrow=24
   - rasterio
-  - s3fs
+  - s3fs>=2024 # older s3fs (0.4.x) is sync and does not retry SlowDown; without this the solver falls back to it when boto3 outpaces aiobotocore
   - setuptools-scm
   - shapely
   - pip
