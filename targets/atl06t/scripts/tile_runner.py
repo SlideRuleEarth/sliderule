@@ -18,7 +18,7 @@ from sliderule import pysr
 
 # runner
 runner = pysr.Runner()
-partition, result_file = runner.arguments
+partition = runner.arguments[0]
 
 # constants
 OUTPUT_BUCKET = "sliderule-public"

@@ -9,7 +9,7 @@ from sliderule import pysr
 
 # runner
 runner = pysr.Runner()
-granule, result_file = runner.arguments
+granule = runner.arguments[0]
 
 # constants
 OUTPUT_BUCKET = "sliderule-public"
