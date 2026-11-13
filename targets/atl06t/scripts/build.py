@@ -7,7 +7,7 @@ import earthaccess
 import boto3
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from sliderule import sliderule
+from sliderule import sliderule, s2tile
 
 # #####################################
 # Globals
@@ -21,16 +21,16 @@ parser.add_argument('--verbose',        action='store_true',    default=False) #
 parser.add_argument('--secrets_file',   type=str,               default=os.path.join(Path.home(), ".sliderule_secrets"))
 parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules.txt")
 parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles.txt")
-parser.add_argument('--atl06_cells',    type=str,               default="/data/ATL06/atl06_cells.txt") # cells to stat
+parser.add_argument('--atl06_stats',    type=str,               default="/data/ATL06/atl06_stats_l$LEVEL.txt") # format template
 parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
 parser.add_argument('--output_prefix',  type=str,               default="atl06tv4")
 parser.add_argument('--aoi',            type=str,               default="full_greenland")
 parser.add_argument('--workers',        type=int,               default=8) # number of threads for partitioning, tiling, and reading
 parser.add_argument('--list_granules',  action='store_true',    default=False) # list granules to process (uses aoi and writes atl06_granules)
 parser.add_argument('--list_tiles',     action='store_true',    default=False) # list tiles to process (uses boto3 ls and writes atl06_tiles)
+parser.add_argument('--list_stats',     action='store_true',    default=False) # list cells to process (uses atl06_tiles and writes atl06_stats)
 parser.add_argument('--partition',      action='store_true',    default=False) # create partitions from granules
 parser.add_argument('--tile',           action='store_true',    default=False) # create tiles from partitions
-parser.add_argument('--stat',           action='store_true',    default=False) # create stats from tiles
 parser.add_argument('--credentials',    action='store_true',    default=False) # write a credential file needed by some runners
 args = parser.parse_args()
 
@@ -103,9 +103,9 @@ def s2_cell_level(cell_id):
     lsb = cell_id & -cell_id
     return 30 - ((lsb.bit_length() - 1) >> 1)
 
-# get the parent of an s2 cell id at the given level
+# get the parent of an s2 cell id (one level up)
 def s2_cell_parent(cell_id):
-    level = s2_cell_level(cell_id)
+    level = s2_cell_level(cell_id) - 1
     lsb = 1 << (2 * (30 - level))
     return (cell_id & -lsb & 0xFFFFFFFFFFFFFFFF) | lsb
 
@@ -136,17 +136,19 @@ def list_atl06_tiles(bucket, prefix, output):
             file.write(f"{subfolder}\n")
 
 # generate stat files
-def generate_stats(atl06_tiles):
+def list_atl06_stats(atl06_tiles, atl06_stats):
     paths = [path.strip() for path in open(atl06_tiles, "r") if path.strip()]
-    tiles = [path.split("/")[-2] for path in paths]
-    cell_ids = [int(tile.lstrip("S"), 16) for tile in tiles]
-    files = {}
-    file_level = TILE_S2_CELL_LEVEL
-    while file_level >= 0:
-        files[file_level] = [f"S{cell_id:016X}" for cell_id in cell_ids]
-        cell_ids = list({s2_cell_parent(cell_id) for cell_id in cell_ids})
-        file_level -= 1
-    return files
+    cells = [path.split("/")[-2] for path in paths]
+    cell_ids = [int(cell.lstrip("S"), 16) for cell in cells]
+    tile_level = TILE_S2_CELL_LEVEL
+    while tile_level >= 0:
+        filename = atl06_stats.replace("$LEVEL", f"{tile_level}")
+        with open(filename, "w") as file:
+            for cell_id in cell_ids:
+                file.write(f"S{cell_id:016X}\n")
+        print(f"Wrote {len(cell_ids)} entries to {filename}")
+        cell_ids = list({s2tile.cell_parent(cell_id) for cell_id in cell_ids})
+        tile_level -= 1
 
 # run partition_runner.py on a single granule
 def worker(argument, script):
@@ -196,7 +198,7 @@ def get_credentials(secrets_file):
 # route command
 if args.list_granules:  list_atl06_granules(aoi[args.aoi], args.atl06_granules)
 elif args.list_tiles:   list_atl06_tiles(args.output_bucket, args.output_prefix, args.atl06_tiles)
+elif args.list_stats:   list_atl06_stats(args.atl06_tiles, args.atl06_stats)
 elif args.partition:    run_workers(args.atl06_granules, PARTITION_RUNNER, args.workers)
 elif args.tile:         run_workers(args.atl06_tiles, TILE_RUNNER, args.workers)
-elif args.stat:         d = generate_stats(args.atl06_tiles)
 elif args.credentials:  get_credentials(args.secrets_file)

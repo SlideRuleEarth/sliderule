@@ -54,6 +54,41 @@ PARQUET_FORMAT = ds.ParquetFileFormat(default_fragment_scan_options=ds.ParquetFr
     pre_buffer=True, cache_options=pa.CacheOptions(hole_size_limit=1 << 20, range_size_limit=64 << 20, lazy=False)))
 
 ###############################################################################
+# FUNCTIONS
+###############################################################################
+
+# get the level of an s2 cell id from the position of its lowest set bit
+def cell_level(cell_id):
+    lsb = cell_id & -cell_id
+    return 30 - ((lsb.bit_length() - 1) >> 1)
+
+# get the parent of an s2 cell id (one level up)
+def cell_parent(cell_id):
+    level = cell_level(cell_id) - 1
+    lsb = 1 << (2 * (30 - level))
+    return (cell_id & -lsb & 0xFFFFFFFFFFFFFFFF) | lsb
+
+# get the four children of an s2 cell id (one level down)
+def cell_children(cell_id):
+    lsb = cell_id & -cell_id
+    if lsb == 1:
+        raise ValueError(f"cell {cell_id:016X} is a leaf cell (level 30) and has no children")
+    child_lsb = lsb >> 2
+    return [cell_id - lsb + child_lsb * (2 * k + 1) for k in range(4)]
+
+# [lo, hi] range of cell ids covered by each cell (any level)
+def cell_ranges(cells):
+    ext = (cells & (~cells + np.uint64(1))) - np.uint64(1)
+    return cells - ext, cells + ext
+
+# mask of ids inside any of the sorted, disjoint [lo, hi] ranges
+def in_ranges(ids, lo, hi):
+    if len(lo) == 0:
+        return np.zeros(len(ids), bool)
+    k = np.searchsorted(lo, ids, side="right") - 1
+    return (k >= 0) & (ids <= hi[np.maximum(k, 0)])
+
+###############################################################################
 # CLASSES
 ###############################################################################
 
@@ -94,24 +129,6 @@ class Reader:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
-
-    #
-    # [lo, hi] range of cell ids covered by each cell (any level)
-    #
-    @staticmethod
-    def cell_ranges(cells):
-        ext = (cells & (~cells + np.uint64(1))) - np.uint64(1)
-        return cells - ext, cells + ext
-
-    #
-    # mask of ids inside any of the sorted, disjoint [lo, hi] ranges
-    #
-    @staticmethod
-    def in_ranges(ids, lo, hi):
-        if len(lo) == 0:
-            return np.zeros(len(ids), bool)
-        k = np.searchsorted(lo, ids, side="right") - 1
-        return (k >= 0) & (ids <= hi[np.maximum(k, 0)])
 
     #
     # split a tile into cells fully inside the aoi (mixed levels) and segment level cells crossing its edge
@@ -224,7 +241,7 @@ class Reader:
         # duckdb connections are not thread safe; a cursor is a separate connection to the same database
         with self.connection.cursor() as cursor:
             interior, boundary = Reader.classify_cells(cursor, poly_table, cell, self.tile_level, self.segment_level)
-        return Reader.cell_ranges(interior), Reader.cell_ranges(boundary), Reader.cell_ranges(np.sort(np.concatenate([interior, boundary])))
+        return cell_ranges(interior), cell_ranges(boundary), cell_ranges(np.sort(np.concatenate([interior, boundary])))
 
     #
     # tile ranges are the same for every year, so compute them once per cell and share them across threads
@@ -272,8 +289,8 @@ class Reader:
         table = fragment.subset(row_group_ids=row_groups).to_table(columns=read_columns)
         # filter on the raw columns before paying for geometry decoding and pandas conversion
         ids = table.column("cell_id").to_numpy().view(np.uint64)
-        interior = Reader.in_ranges(ids, interior_lo, interior_hi)
-        boundary = Reader.in_ranges(ids, boundary_lo, boundary_hi)
+        interior = in_ranges(ids, interior_lo, interior_hi)
+        boundary = in_ranges(ids, boundary_lo, boundary_hi)
         if time_range is not None:
             times = table.column(time_column).to_numpy().view(np.int64)
             in_time = (times >= time_range[0]) & (times <= time_range[1])
