@@ -43,9 +43,6 @@ from sliderule import sliderule
 # GLOBALS
 ###############################################################################
 
-TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
-SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
-S3_REGION = "us-west-2"
 TIME_UNIT_NS = {"s": 1_000_000_000, "ms": 1_000_000, "us": 1_000, "ns": 1}
 
 # pre-buffer the selected column chunks, coalescing ranges separated by holes up to 1MB; reading a little
@@ -100,10 +97,10 @@ class Reader:
     #
     # constructor
     #
-    def __init__ (self, bucket, prefix, region=S3_REGION, anonymous=False, max_workers=8, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
+    def __init__ (self, bucket, prefix, region, tile_level, segment_level, max_workers=8):
         self.bucket = bucket
         self.prefix = prefix
-        self.s3_fs = pafs.S3FileSystem(region=region, anonymous=anonymous)
+        self.s3_fs = pafs.S3FileSystem(region=region, anonymous=False)
         self.connection = duckdb.connect()
         try:
             # only go to the network to install the extension when it is not already available locally
@@ -134,7 +131,7 @@ class Reader:
     # split a tile into cells fully inside the aoi (mixed levels) and segment level cells crossing its edge
     #
     @staticmethod
-    def classify_cells(cursor, poly_table, tile_id, tile_level=TILE_S2_CELL_LEVEL, segment_level=SEGMENT_S2_CELL_LEVEL):
+    def classify_cells(cursor, poly_table, tile_id, tile_level, segment_level):
         interior, cells = [], np.array([tile_id], dtype=np.uint64)
         for lvl in range(tile_level, segment_level + 1):
             if len(cells) == 0:
@@ -260,10 +257,18 @@ class Reader:
         return future.result()
 
     #
+    # name of the tile to read for an s2 cell and time range; overridden by each dataset, empty means no tile
+    #
+    def tile_name(self, tile_id, t0, t1):
+        return ""
+
+    #
     # read the rows of one tile inside the area of interest; returns (gdf or None, status)
     #
     def read_tile(self, tile_id, get_ranges, poly_table, t0, t1, enable_time_filter, exact, columns=None, time_column="time_ns"):
-        tile_name = f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"
+        tile_name = self.tile_name(tile_id, t0, t1)
+        if not tile_name:
+            return None, "no tile"
         try:
             fragment = PARQUET_FORMAT.make_fragment(tile_name, filesystem=self.s3_fs)
             metadata = fragment.metadata # reads the footer
@@ -351,3 +356,30 @@ class Reader:
             return gpd.GeoDataFrame(gpd.pd.concat(gdfs), crs=gdfs[0].crs)
         else:
             return None
+
+###############################################################################
+# DATASETS
+###############################################################################
+
+class Atl06t(Reader):
+
+    BUCKET = "sliderule-public"
+    PREFIX = "atl06tv4"
+    TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
+    SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
+    S3_REGION = "us-west-2"
+
+    # constructor
+    def __init__ (self, max_workers=8):
+        super().__init__(
+            Atl06t.BUCKET,
+            Atl06t.PREFIX,
+            region=Atl06t.S3_REGION,
+            tile_level=Atl06t.TILE_S2_CELL_LEVEL,
+            segment_level=Atl06t.SEGMENT_S2_CELL_LEVEL,
+            max_workers=max_workers
+        )
+
+    # name of the tile to read for an s2 cell and time range
+    def tile_name(self, tile_id, t0, t1):
+        return f"{self.bucket}/{self.prefix}/tiles/ATL06T_S{tile_id:016X}.parquet"

@@ -294,13 +294,13 @@ if args.sliderule and args.time_spans and args.local:
 
 # S2Tile - Spatial
 if args.s2tile:
-    reader = s2tile.Reader(args.bucket, args.prefix)
+    reader = s2tile.Atl06t()
     for i in range(len(aois)):
         S2TileSubset(reader, names[i], aois[i])
 
 # S2Tile - Temporal
 if args.s2tile and args.time_spans:
-    reader = s2tile.Reader(args.bucket, args.prefix)
+    reader = s2tile.Atl06t()
     S2TileSubset(reader, names[1], aois[1], "2020-08-27", "2020-08-28")
     S2TileSubset(reader, names[1], aois[1], "2020-08-27", "2020-11-28")
     S2TileSubset(reader, names[1], aois[1], "2020-08-27", "2021-08-28")

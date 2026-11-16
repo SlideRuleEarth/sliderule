@@ -25,12 +25,15 @@ parser.add_argument('--atl06_stats',    type=str,               default="/data/A
 parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
 parser.add_argument('--output_prefix',  type=str,               default="atl06tv4")
 parser.add_argument('--aoi',            type=str,               default="full_greenland")
+parser.add_argument('--stat_level',     type=int,               default=6)
 parser.add_argument('--workers',        type=int,               default=8) # number of threads for partitioning, tiling, and reading
 parser.add_argument('--list_granules',  action='store_true',    default=False) # list granules to process (uses aoi and writes atl06_granules)
 parser.add_argument('--list_tiles',     action='store_true',    default=False) # list tiles to process (uses boto3 ls and writes atl06_tiles)
 parser.add_argument('--list_stats',     action='store_true',    default=False) # list cells to process (uses atl06_tiles and writes atl06_stats)
 parser.add_argument('--partition',      action='store_true',    default=False) # create partitions from granules
 parser.add_argument('--tile',           action='store_true',    default=False) # create tiles from partitions
+parser.add_argument('--stat',           action='store_true',    default=False) # create stats from tiles
+parser.add_argument('--stack',          action='store_true',    default=False) # stack stats from stat files
 parser.add_argument('--credentials',    action='store_true',    default=False) # write a credential file needed by some runners
 args = parser.parse_args()
 
@@ -44,7 +47,8 @@ s3 = boto3.client("s3")
 # runner scripts
 PARTITION_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "partition_runner.py")
 TILE_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tile_runner.py")
-TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
+STAT_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stat_runner.py")
+STACK_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stack_runner.py")
 
 # areas of interest
 aoi = {
@@ -140,7 +144,7 @@ def list_atl06_stats(atl06_tiles, atl06_stats):
     paths = [path.strip() for path in open(atl06_tiles, "r") if path.strip()]
     cells = [path.split("/")[-2] for path in paths]
     cell_ids = [int(cell.lstrip("S"), 16) for cell in cells]
-    tile_level = TILE_S2_CELL_LEVEL
+    tile_level = s2tile.Atl06t.TILE_S2_CELL_LEVEL
     while tile_level >= 0:
         filename = atl06_stats.replace("$LEVEL", f"{tile_level}")
         with open(filename, "w") as file:
@@ -167,6 +171,7 @@ def worker(argument, script):
 # run worker
 def run_workers(input, script, workers):
     arguments = [argument.strip() for argument in open(input, "r") if argument.strip()]
+    arguments = arguments[:1]
     results = {}
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(worker, argument, script): argument for argument in arguments}
@@ -201,4 +206,6 @@ elif args.list_tiles:   list_atl06_tiles(args.output_bucket, args.output_prefix,
 elif args.list_stats:   list_atl06_stats(args.atl06_tiles, args.atl06_stats)
 elif args.partition:    run_workers(args.atl06_granules, PARTITION_RUNNER, args.workers)
 elif args.tile:         run_workers(args.atl06_tiles, TILE_RUNNER, args.workers)
+elif args.stat:         run_workers(args.atl06_stats.replace("$LEVEL",f"7"), STAT_RUNNER, args.workers)
+elif args.stack:        run_workers(args.atl06_stats.replace("$LEVEL",f"{args.stat_level}"), STACK_RUNNER, args.workers)
 elif args.credentials:  get_credentials(args.secrets_file)

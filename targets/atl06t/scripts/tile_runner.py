@@ -14,16 +14,13 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import geopandas as gpd
 from geopandas.io.arrow import _geopandas_to_arrow, _arrow_to_geopandas, _validate_and_decode_metadata
-from sliderule import pysr
+from sliderule import pysr, s2tile
 
 # runner
 runner = pysr.Runner()
 partition = runner.arguments[0]
 
 # constants
-OUTPUT_BUCKET = "sliderule-public"
-OUTPUT_PREFIX = "atl06tv4"
-SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
 ROW_GROUP_TARGET_SIZE_MB = 8 # MB
 ROW_BYTES_ESTIMATE = 150 # bytes; estimated compressed size of a row, only sizes the first row group
 WKB_CHUNK_LIMIT = 2**31 - 2**24 # bytes; safely below the ~2 GiB at which pyarrow splits a binary column into multiple chunks
@@ -91,7 +88,7 @@ def build_in_memory(filenames):
     gdf = gpd.GeoDataFrame(gpd.pd.concat(gdfs, ignore_index=True), crs=gdfs[0].crs)
     del gdfs
     geometry = gdf.geometry.to_crs("EPSG:4326") # S2 is defined on geographic lon/lat, so reproject to WGS84 first
-    gdf["cell_id"] = assign_cell_ids(geometry.x.to_numpy(), geometry.y.to_numpy(), SEGMENT_S2_CELL_LEVEL)
+    gdf["cell_id"] = assign_cell_ids(geometry.x.to_numpy(), geometry.y.to_numpy(), s2tile.Atl06t.SEGMENT_S2_CELL_LEVEL)
     del geometry
     gdf = gdf.set_index("cell_id").sort_index(kind="stable")
     table = _geopandas_to_arrow(gdf, index=True)
@@ -219,7 +216,7 @@ def build_streaming(filenames):
         return pa.concat_arrays(parts).take(np.argsort(group))
 
     # sort order
-    cell_ids = assign_cell_ids(lon, lat, SEGMENT_S2_CELL_LEVEL)
+    cell_ids = assign_cell_ids(lon, lat, s2tile.Atl06t.SEGMENT_S2_CELL_LEVEL)
     del lon, lat
     order = np.argsort(cell_ids, kind="stable") # same permutation as sort_index(kind="stable")
 
@@ -284,9 +281,9 @@ try:
     schema, cell_ids, get_slice = built
     runner.message(f"{len(cell_ids)} rows from {len(filenames)} files")
     local_parquet_file = f"/tmp/ATL06T_{cell_id_str}.parquet"
-    remote_parquet_file = f"{OUTPUT_PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
+    remote_parquet_file = f"{s2tile.Atl06t.PREFIX}/tiles/ATL06T_{cell_id_str}.parquet"
     write_optimized_parquet(schema, cell_ids, get_slice, local_parquet_file)
-    s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
+    s3.upload_file(local_parquet_file, s2tile.Atl06t.BUCKET, remote_parquet_file)
     runner.output(remote_parquet_file)
     runner.message(f"{len(cell_ids)} rows written for {cell_id_str}")
     os.remove(local_parquet_file)

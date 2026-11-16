@@ -5,16 +5,13 @@ import traceback
 import boto3
 import numpy as np
 import geopandas as gpd
-from sliderule import pysr
+from sliderule import pysr, s2tile
 
 # runner
 runner = pysr.Runner()
 granule = runner.arguments[0]
 
 # constants
-OUTPUT_BUCKET = "sliderule-public"
-OUTPUT_PREFIX = "atl06tv4"
-TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
 NSIDC_BUCKET = "nsidc-cumulus-prod-protected"
 NSIDC_S3_CREDENTIALS = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
 ATLAS_SDP_EPOCH = np.datetime64("2018-01-01T00:00:00", "ns") # delta_time is seconds since this epoch; no leap seconds have occurred since
@@ -168,7 +165,7 @@ try:
         raise RuntimeError("no data")
 
     # assign cell ids
-    gdf["cell_id"] = assign_cell_ids(gdf, TILE_S2_CELL_LEVEL)
+    gdf["cell_id"] = assign_cell_ids(gdf, s2tile.Atl06t.TILE_S2_CELL_LEVEL)
     gdf = gdf.set_index("cell_id").sort_index(kind="stable")
     cell_ids = gdf.index.unique()
 
@@ -177,9 +174,9 @@ try:
     for cell_id in cell_ids:
         l7_gdf = gdf[gdf.index == cell_id]
         local_parquet_file = f"/tmp/{granule.replace('.h5', '')}.S{cell_id:016X}.parquet"
-        remote_parquet_file = f"{OUTPUT_PREFIX}/partitions/S{cell_id:016X}/{granule.replace('.h5', '.parquet')}"
+        remote_parquet_file = f"{s2tile.Atl06t.PREFIX}/partitions/S{cell_id:016X}/{granule.replace('.h5', '.parquet')}"
         l7_gdf.to_parquet(local_parquet_file, index=False)
-        s3.upload_file(local_parquet_file, OUTPUT_BUCKET, remote_parquet_file)
+        s3.upload_file(local_parquet_file, s2tile.Atl06t.BUCKET, remote_parquet_file)
         runner.output(remote_parquet_file)
         os.remove(local_parquet_file)
 
