@@ -25,10 +25,13 @@ def aggregate_stats(df, columns):
     grouped = df.groupby("cell_id")
     stats = grouped[columns].agg(["min", "max", "mean"])
     stats.columns = [f"{column}_{stat}" for column, stat in stats.columns]
-    stats["row_count"] = grouped.size()
-    stats["row_group_start"] = grouped["row_group"].min()
-    stats["row_group_end"] = grouped["row_group"].max()
-    return stats
+    extra = gpd.pd.DataFrame({
+        "row_count": grouped.size(),
+        "row_group_start": grouped["row_group"].min(),
+        "row_group_end": grouped["row_group"].max(),
+    })
+    # concat all at once rather than inserting columns one at a time, which fragments the frame
+    return gpd.pd.concat([stats, extra], axis=1)
 
 # build stat_level cell statistics from the segment level rows of a tile, indexed by the stat_level cell id;
 # the tile is read one row group at a time, and since its rows are sorted by cell_id each stat_level cell is
@@ -47,6 +50,7 @@ def build_stats(source_tile_filename, stat_level):
     lsb = np.uint64(1 << (2 * (30 - stat_level)))
     stats, pending = [], None
     for row_group in range(tile.num_row_groups):
+        print(f"Processing row group {row_group} of {tile.num_row_groups}")
         table = tile.read_row_group(row_group, columns=["cell_id", geometry_column, *columns])
         df = table.drop_columns(["cell_id", geometry_column]).to_pandas()
         geometry = gpd.GeoSeries.from_wkb(table.column(geometry_column).to_numpy(zero_copy_only=False), crs=crs)
@@ -78,7 +82,7 @@ try:
     # read in the source tile file
     source_tile_filename = f"{s2tile.Atl06t.BUCKET}/{s2tile.Atl06t.PREFIX}/tiles/ATL06T_S{cell_id:016X}.parquet"
     df = build_stats(source_tile_filename, s2tile.Atl06t.TILE_S2_CELL_LEVEL*2)
-    if df != None:
+    if df is not None:
         # output the stat tile file
         output_stat_filename = f"{s2tile.Atl06t.PREFIX}/stats/ATL06S_S{cell_id:016X}.parquet"
         local_parquet_file = f"/tmp/ATL06S_S{cell_id:016X}.parquet"

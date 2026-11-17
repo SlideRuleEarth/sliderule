@@ -171,7 +171,6 @@ def worker(argument, script):
 # run worker
 def run_workers(input, script, workers):
     arguments = [argument.strip() for argument in open(input, "r") if argument.strip()]
-    arguments = arguments[:1]
     results = {}
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(worker, argument, script): argument for argument in arguments}
