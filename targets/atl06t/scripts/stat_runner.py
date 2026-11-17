@@ -15,6 +15,9 @@ cell_id = int(runner.arguments[0].lstrip("S"), 16)
 # create S3 client
 s3 = boto3.client("s3")
 
+# constants
+STAT_LEVEL_DELTA = 7
+
 # ##############
 # Functions
 # ##############
@@ -81,9 +84,10 @@ try:
 
     # read in the source tile file
     source_tile_filename = f"{s2tile.Atl06t.BUCKET}/{s2tile.Atl06t.PREFIX}/tiles/ATL06T_S{cell_id:016X}.parquet"
-    df = build_stats(source_tile_filename, s2tile.Atl06t.TILE_S2_CELL_LEVEL*2)
+    df = build_stats(source_tile_filename, s2tile.Atl06t.TILE_S2_CELL_LEVEL + STAT_LEVEL_DELTA)
+
+    # output the stat tile file
     if df is not None:
-        # output the stat tile file
         output_stat_filename = f"{s2tile.Atl06t.PREFIX}/stats/ATL06S_S{cell_id:016X}.parquet"
         local_parquet_file = f"/tmp/ATL06S_S{cell_id:016X}.parquet"
         df.to_parquet(local_parquet_file)

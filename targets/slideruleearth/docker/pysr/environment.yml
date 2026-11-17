@@ -3,6 +3,7 @@ name: pysr
 channels:
   - conda-forge
 dependencies:
+  - python>=3.13
   - boto3
   - python-duckdb<2 # geography community extension (S2 cells) is not yet published for duckdb 2.x
   - geopandas
