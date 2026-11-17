@@ -49,22 +49,22 @@ def stack_stats(source_stat_filenames, stat_level):
     if len(existing) == 0:
         return None
     src = pd.concat([pd.read_parquet(filename, filesystem=fs) for filename in existing])
-    if "cell_id" not in src.columns:
-        src = src.reset_index() # stat files store cell_id as the index
+    # stat files store cell_id as the index; it is kept as a separate array rather than inserted as a
+    # column because inserting into the many-block concatenated frame fragments it
+    source_cell_ids = src.index if "cell_id" not in src.columns else src.pop("cell_id")
     # parent of each source cell at stat_level
     lsb = np.uint64(1 << (2 * (30 - stat_level)))
-    src["cell_id"] = (src["cell_id"].to_numpy(dtype=np.uint64) & ~(lsb - np.uint64(1))) | lsb
-    grouped = src.groupby("cell_id", sort=True)
+    cell_ids = pd.Series((source_cell_ids.to_numpy(dtype=np.uint64) & ~(lsb - np.uint64(1))) | lsb, name="cell_id")
+    src = src.reset_index(drop=True)
+    grouped = src.groupby(cell_ids, sort=True)
     stats = {}
     for column in src.columns:
-        if column == "cell_id":
-            continue
-        elif column.endswith("_min") or column == "row_group_start":
+        if column.endswith("_min") or column == "row_group_start":
             stats[column] = grouped[column].min()
         elif column.endswith("_max") or column == "row_group_end":
             stats[column] = grouped[column].max()
         elif column.endswith("_mean"):
-            stats[column] = weighted_mean(src[column], src["row_count"], src["cell_id"])
+            stats[column] = weighted_mean(src[column], src["row_count"], cell_ids)
         elif column == "row_count":
             stats[column] = grouped[column].sum()
         else:
