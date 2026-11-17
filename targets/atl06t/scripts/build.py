@@ -22,6 +22,7 @@ parser.add_argument('--secrets_file',   type=str,               default=os.path.
 parser.add_argument('--atl06_granules', type=str,               default="/data/ATL06/atl06_granules.txt")
 parser.add_argument('--atl06_tiles',    type=str,               default="/data/ATL06/atl06_tiles.txt")
 parser.add_argument('--atl06_stats',    type=str,               default="/data/ATL06/atl06_stats_l$LEVEL.txt") # format template
+parser.add_argument('--atl06_manifest', type=str,               default="/data/ATL06/manifest.json") # format template
 parser.add_argument('--output_bucket',  type=str,               default="sliderule-public")
 parser.add_argument('--output_prefix',  type=str,               default="atl06tv4")
 parser.add_argument('--aoi',            type=str,               default="full_greenland")
@@ -34,6 +35,7 @@ parser.add_argument('--partition',      action='store_true',    default=False) #
 parser.add_argument('--tile',           action='store_true',    default=False) # create tiles from partitions
 parser.add_argument('--stat',           action='store_true',    default=False) # create stats from tiles
 parser.add_argument('--stack',          action='store_true',    default=False) # stack stats from stat files
+parser.add_argument('--manifest',       action='store_true',    default=False) # generate manifest file
 parser.add_argument('--credentials',    action='store_true',    default=False) # write a credential file needed by some runners
 args = parser.parse_args()
 
@@ -195,6 +197,18 @@ def get_credentials(secrets_file):
         json.dump(credentials, file)
     print(f"Secrets written to {secrets_file}")
 
+# generate manifest file
+def generate_manifest(manifest_file):
+    with open(manifest_file, "w") as file:
+        json.dump({
+            "file_cell_level": s2tile.Atl06t.TILE_S2_CELL_LEVEL,
+            "data_cell_level": s2tile.Atl06t.SEGMENT_S2_CELL_LEVEL,
+            "stat_delta_level": s2tile.Atl06t.STAT_LEVEL_DELTA,
+            "stat_levels": [7, 8, 9, 10, 11, 12, 13, 14],
+            "file_tile_span": None
+        }, file)
+    s3.upload_file(manifest_file, s2tile.Atl06t.BUCKET, f"{s2tile.Atl06t.PREFIX}/manifest.json")
+
 # #####################################
 # Main
 # #####################################
@@ -208,3 +222,4 @@ elif args.tile:         run_workers(args.atl06_tiles, TILE_RUNNER, args.workers)
 elif args.stat:         run_workers(args.atl06_stats.replace("$LEVEL",f"7"), STAT_RUNNER, args.workers)
 elif args.stack:        run_workers(args.atl06_stats.replace("$LEVEL",f"{args.stat_level}"), STACK_RUNNER, args.workers)
 elif args.credentials:  get_credentials(args.secrets_file)
+elif args.manifest:     generate_manifest(args.atl06_manifest)

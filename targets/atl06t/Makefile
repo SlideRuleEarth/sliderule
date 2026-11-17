@@ -22,3 +22,6 @@ stat:
 
 stat-runner:
 	sliderule-runner submit atl06t_stat scripts/stat_runner.py /data/ATL06/atl06_stats_l7.txt --image pysr:unstable --vcpus 2 --memory 8000
+
+manifest:
+	python scripts/build.py --manifest

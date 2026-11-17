@@ -367,6 +367,7 @@ class Atl06t(Reader):
     PREFIX = "atl06tv4"
     TILE_S2_CELL_LEVEL = 7 # ~5188 km^2, 98K cells globally
     SEGMENT_S2_CELL_LEVEL = 18 # ~1150 m^2
+    STAT_LEVEL_DELTA = 7
     S3_REGION = "us-west-2"
 
     # constructor

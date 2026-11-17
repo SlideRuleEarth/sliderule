@@ -12,9 +12,6 @@ cell_id = int(runner.arguments[0].lstrip("S"), 16)
 # create S3 client
 s3 = boto3.client("s3")
 
-# constants
-STAT_LEVEL_DELTA = 7
-
 # ##############
 # Functions
 # ##############
@@ -81,7 +78,7 @@ try:
     # read input files into stacked dataframe
     child_cell_ids = s2tile.cell_children(cell_id)
     source_stat_filenames = [f"{s2tile.Atl06t.BUCKET}/{s2tile.Atl06t.PREFIX}/stats/ATL06S_S{child_cell_id:016X}.parquet" for child_cell_id in child_cell_ids]
-    stat_level = s2tile.cell_level(cell_id) + STAT_LEVEL_DELTA
+    stat_level = s2tile.cell_level(cell_id) + s2tile.Atl06t.STAT_LEVEL_DELTA
     df = stack_stats(source_stat_filenames, stat_level)
 
     # output the stat tile file
