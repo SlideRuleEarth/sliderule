@@ -25,5 +25,8 @@ RUN /env/bin/pip install build
 COPY python /sliderule-client
 RUN cd /sliderule-client && SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SLIDERULE=0.0.0.0 /env/bin/pip install .
 
+# install job runner
+COPY job_runner.py /job_runner.py
+
 # entry point
-ENTRYPOINT ["/env/bin/python", "/sliderule-client/scripts/job_runner.py"]
+ENTRYPOINT ["/env/bin/python", "/job_runner.py"]

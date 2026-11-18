@@ -742,7 +742,7 @@ runner-test: ## run runner tests
 ########################
 
 pysr-lock: ## update dependencies of pysr
-	cd docker/pysr && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/pysr && conda-lock -p linux-$(ARCH) -f $(ROOT)/apps/pysr/environment.yml
 	cd docker/pysr && conda-lock render -p linux-$(ARCH)
 
 pysr-docker: ## build pysr docker image; uses VERSION
@@ -750,6 +750,7 @@ pysr-docker: ## build pysr docker image; uses VERSION
 	mkdir -p $(PYSR_STAGE_DIR)
 	cp docker/pysr/Dockerfile.$(ARCH) $(PYSR_STAGE_DIR)/Dockerfile
 	cp docker/pysr/conda-* $(PYSR_STAGE_DIR)
+	cp $(ROOT)/apps/pysr/job_runner.py $(PYSR_STAGE_DIR)
 	rsync -a $(PYTHON_CLIENT_DIR) $(PYSR_STAGE_DIR) --exclude build --exclude .pytest_cache --exclude sliderule.egg-info --exclude __pycache__
 	cd $(PYSR_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/pysr:$(VERSION) .
 
