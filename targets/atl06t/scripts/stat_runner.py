@@ -19,6 +19,23 @@ s3 = boto3.client("s3")
 # Functions
 # ##############
 
+# ATL06 fills missing values with the largest value of the variable's type (3.4028235e+38 for float32, 127 for
+# int8, ...); replace them with NaN/NA so they are skipped by min, max, and mean. Integer columns always become
+# nullable so a column has the same type in every stat file whether or not it contained fill values
+def mask_fill_values(df):
+    columns = {}
+    for column, values in df.items():
+        if gpd.pd.api.types.is_float_dtype(values.dtype):
+            columns[column] = values.mask(values >= np.finfo(np.float32).max)
+        elif gpd.pd.api.types.is_integer_dtype(values.dtype):
+            name = values.dtype.name
+            nullable = values.astype("U" + name[1:].capitalize() if name.startswith("uint") else name.capitalize())
+            columns[column] = nullable.mask(nullable == np.iinfo(values.dtype).max)
+        else:
+            columns[column] = values
+    # build the frame all at once rather than replacing columns one at a time, which fragments it
+    return gpd.pd.DataFrame(columns, index=df.index)
+
 # min, max, and mean of each column (and of the geometry's x and y as lon and lat) for the rows of a group of
 # stat_level cells, along with the number of rows and the first and last row group they were read from
 def aggregate_stats(df, columns):
@@ -50,9 +67,9 @@ def build_stats(source_tile_filename, stat_level):
     lsb = np.uint64(1 << (2 * (30 - stat_level)))
     stats, pending = [], None
     for row_group in range(tile.num_row_groups):
-        print(f"Processing row group {row_group} of {tile.num_row_groups}")
+        print(f"Processing row group {row_group + 1} of {tile.num_row_groups}")
         table = tile.read_row_group(row_group, columns=["cell_id", geometry_column, *columns])
-        df = table.drop_columns(["cell_id", geometry_column]).to_pandas()
+        df = mask_fill_values(table.drop_columns(["cell_id", geometry_column]).to_pandas())
         geometry = gpd.GeoSeries.from_wkb(table.column(geometry_column).to_numpy(zero_copy_only=False), crs=crs)
         geometry = geometry.to_crs("EPSG:4326") # same reprojection tile_runner uses to assign cell ids
         df["lon"], df["lat"] = geometry.x.to_numpy(), geometry.y.to_numpy()
