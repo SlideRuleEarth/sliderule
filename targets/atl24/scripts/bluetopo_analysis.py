@@ -194,7 +194,7 @@ def sample_bluetopo(longitude, latitude, tiles):
 try:
 
     # read granule into GeoDataFrames
-    input_file = f"s3://sliderule-public/atl24r3/parquet/{granule}"
+    input_file = f"s3://sliderule-public/atl24r3/parquet/{granule.replace(".h5", ".parquet")}"
     runner.message(f"Reading {input_file}")
     gdf = gpd.read_parquet(input_file, columns=[
         "geometry",
@@ -280,7 +280,7 @@ try:
         bins["bluetopo_delta_hist"] = bin_counts(bluetopo_delta_index, len(BLUETOPO_DELTA_EDGES) + 1)
 
         # write outputs
-        output_file = f"s3://sliderule-public/atl24r3/bluetopo/{granule.replace('.parquet', f'_spot{spot}.parquet')}"
+        output_file = f"s3://sliderule-public/atl24r3/bluetopo/{granule.replace('.h5', f'_spot{spot}.parquet')}"
         runner.message(f"Writing {len(bins)} bins to {output_file}")
         buffer = io.BytesIO()
         bins.to_parquet(buffer, index=False)

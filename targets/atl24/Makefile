@@ -88,8 +88,7 @@ test-vset-run:
 	sliderule-runner submit atl24r3_vset scripts/gen_atl24r3.lua data/atl24r3_validation_set.txt --image sliderule:atl24
 
 bluetopo-run:
-	python scripts/bluetopo_analysis.py ATL24_20200531160408_10100702_007_01_003_01.parquet /tmp/bluetopo.json
-#	sliderule-runner submit atl24r3_bluetopo scripts/bluetopo_analysis /data/ATL24/atl24r3_granules.txt --image pysr:unstable
+	sliderule-runner submit b1 scripts/bluetopo_analysis.py /data/ATL24/atl24r3_bluetopo_granules.txt --image pysr:unstable --vcpus 2 --memory 8000
 
 platinum-run: # needs CYCLE
 	python scripts/gen_cycle_dataset.py $(CYCLE)
