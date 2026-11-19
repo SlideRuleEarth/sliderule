@@ -10,14 +10,6 @@ The Tiled ATL06 product organizes the data into ***files that map to S2 level 7 
 
 See the [S2 Geometry](https://s2geometry.io/devguide/s2cell_hierarchy) website for additional information.
 
-> **Background**
->
-> -> S2 operations are supported by community and commercial libraries with native support for C++, Python, JAVA, and DuckDB.
->
-> -> The S2 cell geometry has strong guarantees that make working with it easy for developers and users.  For example, a parent cell contains exactly the set of data contained by the union of its child cells, and data contained within a parent cell is contained only within a single child cell.
->
-> -> S2 cells use a Hilbert Curve ordering that correlates serial storage locality with spatial locality; this allows the data within the file to be organized in a way that minimizes the number of reads needed to retrieve a spatial area.
-
 ## Naming
 
 `s3://sliderule-products/atl06t/v4/tiles/ATL06T_S{CELL_ID:016X}.parquet`
@@ -28,14 +20,6 @@ where ***CELL_ID*** is the S2 Geometry level 7 cell ID written in ASCII hexadeci
 
 where ***CY*** stands for "Current Year".  These files are updated every 2 to 3 months as new data is released by the project.
 
-> **Background**
->
-> -> The deterministic naming of files precludes the need for a separate catalog or metadata service for spatial subsetting.  An S2 library can quickly and locally generate a list of level 7 cells that cover an area of interest, from which the list of ATL06T filenames can be derived.
->
-> -> Files that do not split across time favor workflows that start with a spatial query since they organize all of the data within a spatial region as close as possible in memory.  Temporal filters for reasonably sized spatial regions are still fast, but requests that do not have a spatial component will suffer from having to open up many tiles.
->
-> -> Keeping a separate set of files for the current year allows data to be added to the collection without reprocessing the entire dataset each time.  Once a year the entire dataset can be regenerated and optimized for spatial queries.
-
 ## Format
 
 Each tile is formatted as a **GeoParquet** file with the following characteristics:
@@ -45,17 +29,6 @@ Each tile is formatted as a **GeoParquet** file with the following characteristi
 * Only the `cell_id` and `time_ns` columns have footer statistics.
 * A small set of high priority columns are ordered as the first column chunks stored in each row group; all other column chunks are non-deterministically ordered afterwards by the default settings of the Arrow library.
 * String columns use dictionary encoding while all other columns use zStandard compression.
-
-
-> **Background**
->
-> -> GeoParquet is a columnar format optimized for analytical workflows with good support for S3 object storage access (Pandas, DuckDB, Spark, Dask, etc.).
->
-> -> The column chunks of the most used columns are stored first in the row group to minimize gaps in the range requests.  Arrow will merge ranges that are separated by some minimal gap; which is why requesting columns that are stored next to each other reduces the overread caused by merged ranges, while also minimizing the additional network requests caused by unmerged gaps.
->
-> -> The footer statistics are limited to only those columns used in the majority of queries in order to reduce the size of the footer.  Since every access to a parquet file must read the entire footer, the cost of this read is experienced by every query regardless if every part of the footer is used by the query.
->
-> -> The current generation of the tiled ATL06 product targets a maximum footer size of 25MB with a maximum of 5000 row groups.  These maximums are present in the dense polar regions.  At mid-latitudes some tiles have only a single row group.
 
 ## Data
 
@@ -171,3 +144,25 @@ The data in the statistics tiles are as follows:
 | {column}_min | minimum value for the column in this cell |
 | {column}_max | maximum value for the column in this cell |
 | {column}_mean | mean value for the column in this cell |
+
+## Background
+
+* S2 operations are supported by community and commercial libraries with native support for C++, Python, JAVA, and DuckDB.
+
+* The S2 cell geometry has strong guarantees that make working with it easy for developers and users.  For example, a parent cell contains exactly the set of data contained by the union of its child cells, and data contained within a parent cell is contained only within a single child cell.
+
+* S2 cells use a Hilbert Curve ordering that correlates serial storage locality with spatial locality; this allows the data within the file to be organized in a way that minimizes the number of reads needed to retrieve a spatial area.
+
+* The deterministic naming of files precludes the need for a separate catalog or metadata service for spatial subsetting.  An S2 library can quickly and locally generate a list of level 7 cells that cover an area of interest, from which the list of ATL06T filenames can be derived.
+
+* Files that do not split across time favor workflows that start with a spatial query since they organize all of the data within a spatial region as close as possible in memory.  Temporal filters for reasonably sized spatial regions are still fast, but requests that do not have a spatial component will suffer from having to open up many tiles.
+
+* Keeping a separate set of files for the current year allows data to be added to the collection without reprocessing the entire dataset each time.  Once a year the entire dataset can be regenerated and optimized for spatial queries.
+
+* GeoParquet is a columnar format optimized for analytical workflows with good support for S3 object storage access (Pandas, DuckDB, Spark, Dask, etc.).
+
+* The column chunks of the most used columns are stored first in the row group to minimize gaps in the range requests.  Arrow will merge ranges that are separated by some minimal gap; which is why requesting columns that are stored next to each other reduces the overread caused by merged ranges, while also minimizing the additional network requests caused by unmerged gaps.
+
+* The footer statistics are limited to only those columns used in the majority of queries in order to reduce the size of the footer.  Since every access to a parquet file must read the entire footer, the cost of this read is experienced by every query regardless if every part of the footer is used by the query.
+
+* The current generation of the tiled ATL06 product targets a maximum footer size of 25MB with a maximum of 5000 row groups.  These maximums are present in the dense polar regions.  At mid-latitudes some tiles have only a single row group.
