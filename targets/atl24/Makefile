@@ -89,6 +89,7 @@ test-vset-run:
 
 bluetopo-run:
 	sliderule-runner submit b1 scripts/bluetopo_analysis.py /data/ATL24/atl24r3_bluetopo_granules.txt --image pysr:unstable --vcpus 2 --memory 8000
+	sliderule-runner submit s1 scripts/bluetopo_sampling.py /data/ATL24/atl24r3_bluetopo_granules.txt --image pysr:unstable --vcpus 2 --memory 8000
 
 platinum-run: # needs CYCLE
 	python scripts/gen_cycle_dataset.py $(CYCLE)
