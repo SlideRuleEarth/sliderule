@@ -368,7 +368,7 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum, double epochYear
         delete sample;
         sample = NULL;
         ssError |= SS_RUNTIME_ERROR;
-        mlog(e.level(), "Error sampling: %s", e.what());
+//        mlog(e.level(), "Error sampling: %s", e.what());
     }
 
     return sample;

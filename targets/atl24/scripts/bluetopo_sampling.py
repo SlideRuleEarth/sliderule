@@ -1,27 +1,214 @@
-import sys
-from sliderule import sliderule
+import os
+import io
+import re
+import zipfile
+import tempfile
+import traceback
+import urllib.request
+from datetime import datetime, timezone
+from urllib.parse import urlparse
+import boto3
+import pyproj
+from botocore import UNSIGNED
+from botocore.config import Config
+import rasterio
+from rasterio.session import AWSSession
+from rasterio.warp import transform as warp_transform
+import numpy as np
+import geopandas as gpd
+from sliderule import pysr
 
-sliderule.init("localhost", organization=None, verbose=True)
+############################
+# Globals
+############################
 
-resources = [granule.strip().replace(".parquet", ".h5") for granule in open("/data/ATL24/atl24r3_bluetopo_granules.txt") if granule.strip()]
-print(f"Ready to process {len(resources)} granules")
+# runner
+runner = pysr.Runner()
 
-count = 1
-for resource in resources:
-    print(f"[{count}/{len(resources)}] Processing {resource}... ")
-    parms = {
-        "output": {
-            "asset": "sliderule-stage",
-            "path": f"atl24r3/bluetopo/{resource.replace('.h5', '_samples.parquet')}",
-            "format": "geoparquet",
-        },
-        "samples": {
-            "bluetopo": {
-                "asset": "bluetopo-bathy",
-                "bands": ["Elevation", "Uncertainty"]
-            }
-        }
-    }
-    rsps = sliderule.run("atl24x", parms, resources=[resource])
-    print(f"[{count}/{len(resources)}] Completed {rsps} ")
-    count += 1
+# arguments
+granule, result_file = runner.arguments
+
+# client
+s3 = boto3.client("s3")
+
+############################
+# Constants
+############################
+
+# bluetopo dataset
+BLUETOPO_BUCKET = "noaa-ocs-nationalbathymetry-pds"
+BLUETOPO_PREFIX = "BlueTopo/"
+BLUETOPO_INDEX = "_BlueTopo_Tile_Scheme"
+BLUETOPO_ENDPOINT = "s3.us-east-1.amazonaws.com"
+BLUETOPO_REGION = "us-east-1"
+
+# geoid grids used by bluetopo to realize its vertical datum (from the VERTICALDATUMWKT tag of each tile);
+# tiles without the tag are assumed to use GEOID12B like the rest of the CONUS/PRVI tiles
+GEOID_GRIDS = {
+    "g2012bu0": "us_noaa_g2012bu0.tif",     # GEOID12B CONUS (PROJ CDN)
+    "g2012bp0": "us_noaa_g2012bp0.tif",     # GEOID12B PR/VI (PROJ CDN)
+    "AK_17B": None,                         # xGEOID17B Alaska (VDatum, downloaded on demand)
+}
+GEOID_UNKNOWN = "unknown"
+GEOID_FALLBACK = ["g2012bu0", "g2012bp0"]
+XGEOID17B_URL = "https://vdatum.noaa.gov/download/data/vdatum_XGEOID17B.zip"
+XGEOID17B_MEMBER = "vdatum/core/xgeoid17b/AK_17B.gtx"
+
+############################
+# Helper Functions
+############################
+
+# parse URL into bucket and subfolder
+def parse_url(url):
+    path = url.split("s3://")[-1]
+    bucket = path.split("/")[0]
+    subfolder = '/'.join(path.split("/")[1:])
+    return bucket, subfolder
+
+# load the most recent bluetopo tile scheme (only tiles that have a geotiff)
+def load_bluetopo_tiles():
+    s3_unsigned = boto3.client("s3", region_name=BLUETOPO_REGION, endpoint_url=f"https://{BLUETOPO_ENDPOINT}", config=Config(signature_version=UNSIGNED))
+    paginator = s3_unsigned.get_paginator("list_objects_v2")
+    keys = [obj["Key"] for page in paginator.paginate(Bucket=BLUETOPO_BUCKET, Prefix=f"{BLUETOPO_PREFIX}{BLUETOPO_INDEX}/") for obj in page.get("Contents", []) if obj["Key"].endswith(".gpkg")]
+    if len(keys) == 0:
+        raise RuntimeError("Unable to find BlueTopo tile scheme")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        index_file = os.path.join(tmpdir, "tile_scheme.gpkg")
+        s3_unsigned.download_file(BLUETOPO_BUCKET, sorted(keys)[-1], index_file) # file names are timestamped
+        tiles = gpd.read_file(index_file, columns=["tile", "GeoTIFF_Link"])
+    tiles = tiles[tiles["GeoTIFF_Link"].notna() & (tiles["GeoTIFF_Link"] != "")]
+    return tiles.to_crs("EPSG:4326")
+
+# get the geoid grid name bluetopo used for a tile
+def bluetopo_geoid(src):
+    match = re.search(r"(" + "|".join(GEOID_GRIDS.keys()) + r")\.gtx", src.tags().get("VERTICALDATUMWKT", ""))
+    return match.group(1) if match else GEOID_UNKNOWN
+
+# path or PROJ CDN name of a geoid grid
+def geoid_grid_file(name, workdir):
+    if GEOID_GRIDS[name] is not None:
+        return GEOID_GRIDS[name]
+    grid_file = os.path.join(workdir, os.path.basename(XGEOID17B_MEMBER))
+    if not os.path.exists(grid_file):
+        zip_file = os.path.join(workdir, "xgeoid.zip")
+        urllib.request.urlretrieve(XGEOID17B_URL, zip_file)
+        with zipfile.ZipFile(zip_file) as z, z.open(XGEOID17B_MEMBER) as gtx, open(grid_file, "wb") as out:
+            out.write(gtx.read())
+        os.remove(zip_file)
+    return grid_file
+
+# geoid undulation (NAD83(2011) ellipsoid height of the vertical datum surface); inf outside the grid
+def geoid_undulation(name, longitude, latitude, workdir):
+    pipeline = ("+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad "
+                f"+step +proj=vgridshift +grids={geoid_grid_file(name, workdir)} +multiplier=1 "
+                "+step +proj=unitconvert +xy_in=rad +xy_out=deg")
+    _, _, undulation = pyproj.Transformer.from_pipeline(pipeline).transform(longitude, latitude, np.zeros(len(longitude)), errcheck=False)
+    return np.where(np.isfinite(undulation), undulation, np.nan)
+
+# correction to add to bluetopo depth to move it from the bluetopo vertical datum to the ATL24 orthometric heights:
+#   H_atl24 = H_bluetopo + N_bluetopo + (h_itrf2014 - h_nad83) - N_atl24, and depth = -H
+def bluetopo_depth_correction(longitude, latitude, geoids, atl24_geoid, epoch):
+    pyproj.network.set_network_enabled(True)
+    longitude, latitude = np.asarray(longitude, dtype=np.float64), np.asarray(latitude, dtype=np.float64)
+    undulation = np.full(len(longitude), np.nan)
+    with tempfile.TemporaryDirectory() as workdir:
+        for name in set(g for g in geoids if g is not None):
+            idx = np.flatnonzero(np.array([g == name for g in geoids]))
+            if name == GEOID_UNKNOWN:
+                for fallback in GEOID_FALLBACK:
+                    missing = idx[np.isnan(undulation[idx])]
+                    undulation[missing] = geoid_undulation(fallback, longitude[missing], latitude[missing], workdir)
+            else:
+                undulation[idx] = geoid_undulation(name, longitude[idx], latitude[idx], workdir)
+    nad83_to_itrf = pyproj.Transformer.from_crs("EPSG:6319", "EPSG:7912", always_xy=True, only_best=True) # NAD83(2011) -> ITRF2014, time dependent
+    _, _, frame_shift, _ = nad83_to_itrf.transform(longitude, latitude, np.zeros(len(longitude)), np.full(len(longitude), epoch), errcheck=False)
+    return atl24_geoid - undulation - np.where(np.isfinite(frame_shift), frame_shift, np.nan)
+
+# decimal year of the granule start time (ATL24_YYYYMMDDhhmmss_...)
+def granule_epoch(name):
+    start = datetime.strptime(name.split("_")[1], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+    year_start = datetime(start.year, 1, 1, tzinfo=timezone.utc)
+    year_end = datetime(start.year + 1, 1, 1, tzinfo=timezone.utc)
+    return start.year + (start - year_start).total_seconds() / (year_end - year_start).total_seconds()
+
+# sample bluetopo elevation and uncertainty bands at each longitude/latitude
+def sample_bluetopo(longitude, latitude, tiles):
+    elevation = np.full(len(longitude), np.nan)
+    uncertainty = np.full(len(longitude), np.nan)
+    geoids = np.full(len(longitude), None, dtype=object)
+    points = gpd.GeoDataFrame({"idx": np.arange(len(longitude))}, geometry=gpd.points_from_xy(longitude, latitude), crs="EPSG:4326")
+    points = points[np.isfinite(longitude) & np.isfinite(latitude)]
+    hits = gpd.sjoin(points, tiles, how="inner", predicate="intersects").drop_duplicates(subset="idx") # points on shared tile edges match twice
+    session = AWSSession(aws_unsigned=True, endpoint_url=BLUETOPO_ENDPOINT, region_name=BLUETOPO_REGION)
+    with rasterio.Env(session=session, GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR"):
+        for link, group in hits.groupby("GeoTIFF_Link"):
+            idx = group["idx"].to_numpy()
+            with rasterio.open(f"s3://{BLUETOPO_BUCKET}/{urlparse(link).path.lstrip('/')}") as src:
+                xs, ys = warp_transform("EPSG:4326", src.crs, longitude[idx], latitude[idx])
+                band = {name: i + 1 for i, name in enumerate(src.descriptions)}
+                values = np.array(list(src.sample(zip(xs, ys), indexes=[band["Elevation"], band["Uncertainty"]], masked=True)))
+                values = np.ma.filled(np.ma.asarray(values).astype(np.float64), np.nan)
+                elevation[idx] = values[:, 0]
+                uncertainty[idx] = values[:, 1]
+                geoids[idx] = bluetopo_geoid(src)
+    return elevation, uncertainty, geoids
+
+############################
+# Main
+############################
+
+try:
+
+    # read granule into GeoDataFrames
+    input_file = f"s3://sliderule-public/atl24r3/parquet/{granule}"
+    runner.message(f"Reading {input_file}")
+    gdf = gpd.read_parquet(input_file, columns=[
+        "geometry",
+        "x_atc",
+        "geoid_corr_h", # ortho_h
+        "ellipse_h",
+        "surface_h",
+        "surface_roughness",
+        "kd",
+        "confidence",
+        "sigma_tvu",
+        "processing_flags",
+        "class_ph",
+    ])
+
+    # subset to only bathy photons
+    bathy_gdf = gdf[gdf["class_ph"] == 40]
+
+    # add night column
+    bathy_gdf["night"] = (bathy_gdf["processing_flags"].to_numpy().astype(np.int64) & 0x20) != 0
+
+    # sample bluetopo at each photon; depth is positive down (bluetopo elevation is negative below the vertical datum)
+    runner.message(f"Sampling BlueTopo")
+    bluetopo_tiles = load_bluetopo_tiles()
+    bluetopo_elevation, bluetopo_uncertainty, bluetopo_geoids = sample_bluetopo(bathy_gdf.geometry.x.to_numpy(), bathy_gdf.geometry.y.to_numpy(), bluetopo_tiles)
+    bathy_gdf["bluetopo_depth"] = -bluetopo_elevation
+    bathy_gdf["bluetopo_uncertainty"] = bluetopo_uncertainty
+    bathy_gdf["bluetopo_geoid"] = bluetopo_geoids
+    runner.message(f"Sampled {np.count_nonzero(~np.isnan(bluetopo_elevation))} of {len(bathy_gdf)} photons")
+
+    # vertical datum correction; bluetopo_depth + bluetopo_correction is depth relative to the ATL24 (EGM2008) geoid
+    runner.message(f"Generating vertical datum correction")
+    bathy_gdf["atl24_geoid"] = bathy_gdf["ellipse_h"].to_numpy() - bathy_gdf["geoid_corr_h"].to_numpy()
+    bathy_gdf["bluetopo_correction"] = bluetopo_depth_correction(bathy_gdf.geometry.x.to_numpy(), bathy_gdf.geometry.y.to_numpy(), bluetopo_geoids, bathy_gdf["atl24_geoid"], granule_epoch(granule))
+
+    # write outputs
+    output_file = f"s3://sliderule-public/atl24r3/bluetopo/{granule.replace('.parquet', f'_samples.parquet')}"
+    runner.message(f"Writing {len(bathy_gdf)} photons to {output_file}")
+    buffer = io.BytesIO()
+    bathy_gdf.to_parquet(buffer, index=False)
+    bucket, key = parse_url(output_file)
+    s3.put_object(Bucket=bucket, Key=key, Body=buffer.getvalue(), ContentType="application/vnd.apache.parquet")
+    runner.output(output_file)
+
+except Exception:
+
+    # errors
+    runner.fail(f"Unhandled exception: {traceback.format_exc()}")
+
+# finish
+runner.finish()
