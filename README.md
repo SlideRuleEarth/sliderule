@@ -9,7 +9,7 @@ This repository is for SlideRule developers and contains the source code for the
 ## Repository Layout
 
 ```
-apps/node/          # C++ server (the main binary)
+apps/sliderule/          # C++ server (the main binary)
   packages/         # Core compile-time packages (core, arrow, aws, geo, h5coro, …)
   datasets/         # Mission-specific packages (icesat2, gedi, swot, …); cannot depend on other datasets
   scripts/          # Lua entry points: server.lua, test_runner.lua, job_runner.lua, openapi.lua
@@ -26,7 +26,7 @@ stage/sliderule/    # CMake install destination (staged for Docker)
 version.txt         # Single source of version truth (e.g. v5.4.4)
 ```
 
-## Cluster Node (apps/node)
+## Cluster Node (apps/sliderule)
 
 This is the primary application that performs all of the on-demand science data processing.  It runs in EC2 as a cluster of instances behind the Intelligent Load Balancer (apps/ilb).
 
@@ -72,7 +72,7 @@ make selftest
 
 ### Application Layout
 
-Inside the `apps/node` application there are the following important subdirectories:
+Inside the `apps/sliderule` application there are the following important subdirectories:
 *  __datasets__:  Contains packages specific to an earth science dataset or mission.  Datasets are implemented exactly like packages (see [packages](#packages)), yet are separated out into their own parent directory for emphasis. By convention, they are allowed to depend on any package in the *package* directory, but cannot depend on any other *dataset*.
 * __platforms__: Contains the C++ modules that implement an operating system abstraction layer which enables the framework to run on various platforms.
 * __packages__: Contains the C++ modules that implement the primary functions provided by the framework.  See [package list](packages/README.md) for a list of available packages. The [core](packages/core/README.md) package contains the fundamental framework classes and is not dependent on any other package.  Other packages should only be dependent on the core package or provide conditional compilation blocks that allow the package to be compiled in the absence of any package outside the core package. By convention, each package contains two files that are named identical to the package directory name: _{package}.cpp_, _{package}.h_.  The _CMakeLists.txt_ provides the object modules and any package specific definitions needed to compile the package.  It also defines the package's globally defined name used in conditional compilation blocks.  The _{package}.cpp_ file provides an initialization function named with the prototype `void init{package}(void)` that is used to initialize the package on startup.  The _{package}.h_ file exports the initialization function and anything else necessary to use the package. Any target that includes the package should only include the package's header file, and make a call to the package initialization function.

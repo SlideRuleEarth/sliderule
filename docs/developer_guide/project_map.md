@@ -52,8 +52,8 @@ The SlideRule project consists of two main repositories.
 
 - The [sliderule](https://github.com/SlideRuleEarth/sliderule) repository includes all source code for the deployment of sliderule
 
-  - [server](https://github.com/SlideRuleEarth/sliderule/tree/main/apps/node/packages): mission agnostic C++/Lua framework for processing science data
-  - [datasets](https://github.com/SlideRuleEarth/sliderule/tree/main/apps/node/datasets): mission specific data subsetting and processing algorithms
+  - [server](https://github.com/SlideRuleEarth/sliderule/tree/main/apps/sliderule/packages): mission agnostic C++/Lua framework for processing science data
+  - [datasets](https://github.com/SlideRuleEarth/sliderule/tree/main/apps/sliderule/datasets): mission specific data subsetting and processing algorithms
   - [python client](https://github.com/SlideRuleEarth/sliderule/tree/main/clients/python): the Python client code that allows users to easily interact with SlideRule from the Python language
   - [documentation](https://github.com/SlideRuleEarth/sliderule/tree/main/docs): source for our static website and user documentation
   - [infrastructure](https://github.com/SlideRuleEarth/sliderule/tree/main/targets/slideruleearth): infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud

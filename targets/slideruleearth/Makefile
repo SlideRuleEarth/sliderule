@@ -203,7 +203,7 @@ USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 RUNNER ?= # e.g. valgrind
 BUILD_CONFIG ?= release
 BUILD_CMD ?= sh -c "cd $(ROOT)/targets/slideruleearth && make config-$(BUILD_CONFIG) && make"
-RUN_CMD ?= $(ROOT)/apps/node/scripts/server.lua
+RUN_CMD ?= $(ROOT)/apps/sliderule/scripts/server.lua
 ARGS ?=
 
 CLANG_VER ?= ""
@@ -214,7 +214,7 @@ COMMON_CFG += -DUSE_HDF_PACKAGE=ON
 COMMON_CFG += $(USERCFG)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/apps/node/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/apps/sliderule/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += -DSKIP_STATIC_ANALYSIS=OFF      # ON to disable static analysis for faster debug builds, set to OFF before committing
 DEBUG_CFG += $(COMMON_CFG)
@@ -236,13 +236,13 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
 
 config: prep ## configure the node for typical development
-	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DSKIP_STATIC_ANALYSIS=ON $(ROOT)/apps/node
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DSKIP_STATIC_ANALYSIS=ON $(ROOT)/apps/sliderule
 
 config-debug: prep ## configure the node for running locally with debug symbols, tracing, optimizations off, static analysis, and address sanitizer
-	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)/apps/node
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)/apps/sliderule
 
 config-release: prep ## configure node to run a release version locally
-	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)/apps/node
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)/apps/sliderule
 
 run: ## run the node locally
 	LOG_FORMAT=FMT_TEXT \
@@ -295,10 +295,10 @@ job: ## execute the job runner locally
 	CLUSTER=localhost \
 	DOMAIN=localhost \
 	CONTAINER_REGISTRY=$(CONTAINER_REGISTRY) \
-	$(INSTALLDIR)/bin/sliderule $(ROOT)/apps/node/scripts/job_runner.lua $(ARGS)
+	$(INSTALLDIR)/bin/sliderule $(ROOT)/apps/sliderule/scripts/job_runner.lua $(ARGS)
 
 selftest: ## run the self test on the node code
-	make run RUN_CMD=$(ROOT)/apps/node/scripts/test_runner.lua
+	make run RUN_CMD=$(ROOT)/apps/sliderule/scripts/test_runner.lua
 
 openapi: ## bundle and lint the openapi docs for sliderule
 	make sliderule-openapi
@@ -309,7 +309,7 @@ openapi: ## bundle and lint the openapi docs for sliderule
 	make provisioner-openapi
 
 sliderule-openapi: ## build, bundle, and lint the open api docs for sliderule
-	make run RUN_CMD="$(ROOT)/apps/node/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
+	make run RUN_CMD="$(ROOT)/apps/sliderule/scripts/openapi.lua $(INSTALLDIR)/etc/sliderule/openapi/sliderule"
 	npx --yes @redocly/cli bundle $(INSTALLDIR)/etc/sliderule/openapi/sliderule/openapi.json -o $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 	- npx --yes @redocly/cli lint $(INSTALLDIR)/etc/sliderule/openapi/sliderule.json
 
@@ -399,8 +399,8 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/apps/ilb/haproxy.cfg $(ILB_STAGE_DIR)
 	cp $(ROOT)/apps/ilb/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/apps/ilb/analyzer.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/apps/node/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/apps/node/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/sliderule/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/apps/sliderule/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/ilb:$(VERSION) .
 
 monitor-docker: ## build monitor docker image; needs VERSION
