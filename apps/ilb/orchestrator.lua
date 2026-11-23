@@ -52,25 +52,6 @@ local function sort_by_locks(registry)
 end
 
 --
--- Global Mutex
---
-GlobalLock = 0
-GlobalMutex = { --core.mutex()
-    lock = function()
-        if GlobalLock == 1 then
-            core.log(core.err, "Concurrency failure - attempting to lock already locked context")
-        end
-        GlobalLock = 1
-    end,
-    unlock = function()
-        if GlobalLock == 0 then
-            core.log(core.err, "Concurrecy failure - attempting to unlock already unlocked context")
-        end
-        GlobalLock = 0
-    end
-}
-
---
 -- Service Catalog
 --
 --  {
@@ -137,7 +118,6 @@ StatData = {
     memberCounts = {}
 }
 
-
 --
 -- Constants
 --
@@ -183,9 +163,6 @@ local function api_register(applet)
         locks = 0
     }
 
-    -- start exclusion block
-    GlobalMutex.lock()
-
     -- create service in catalog (if necessary)
     if ServiceCatalog[service] == nil then                      -- if first time service is registered
         ServiceCatalog[service] = {}                            -- register service by adding it to catalog
@@ -218,9 +195,6 @@ local function api_register(applet)
 
     -- register member to service
     ServiceCatalog[service][address] = member
-
-    -- stop exclusion block
-    GlobalMutex.unlock()
 
     -- log registration
     if log_registration then
@@ -266,9 +240,6 @@ local function api_selflock(applet)
     local locksPerNode = request["locksPerNode"]
     local expiration = os.time() + timeout
 
-    -- start exclusion block
-    GlobalMutex.lock()
-
     -- update statistics
     StatData["numRequests"] = StatData["numRequests"] + 1
 
@@ -291,8 +262,6 @@ local function api_selflock(applet)
                 local transaction_id = TransactionId -- transaction id that get returned
                 TransactionTable[TransactionId] = transaction -- register transaction
                 TransactionId = TransactionId + 1
-                -- stop exclusion block
-                GlobalMutex.unlock()
                 -- send response
                 local response = string.format([[{"transaction": %d}]], transaction_id)
                 applet:set_status(200)
@@ -303,8 +272,6 @@ local function api_selflock(applet)
             else
                 -- count error
                 StatData["numFailures"] = StatData["numFailures"] + 1
-                -- stop exclusion block
-                GlobalMutex.unlock()
                 -- send response
                 core.log(core.err, string.format("Address %s in registry %s exceeded lock limit: %d", address, service, member["locks"]))
                 applet:set_status(503)
@@ -313,8 +280,6 @@ local function api_selflock(applet)
         else
             -- count error
             StatData["numFailures"] = StatData["numFailures"] + 1
-            -- stop exclusion block
-            GlobalMutex.unlock()
             -- send response
             core.log(core.err, string.format("Address %s not found in registry %s", address, service))
             applet:set_status(400)
@@ -323,8 +288,6 @@ local function api_selflock(applet)
     else
         -- count error
         StatData["numFailures"] = StatData["numFailures"] + 1
-        -- stop exclusion block
-        GlobalMutex.unlock()
         -- send response
         core.log(core.err, string.format("Service %s not found", service))
         applet:set_status(400)
@@ -361,9 +324,6 @@ local function api_lock(applet)
     local timeout = request["timeout"] < MaxTimeout and request["timeout"] or DefaultTimeout
     local locksPerNode = request["locksPerNode"] or 1
     local expiration = os.time() + timeout
-
-    -- start exclusion block
-    GlobalMutex.lock()
 
     -- update statistics
     StatData["numRequests"] = StatData["numRequests"] + 1
@@ -405,21 +365,15 @@ local function api_lock(applet)
                 -- goto next entry in address list
                 i = i + 1
             end
-            -- stop exclusion block
-            GlobalMutex.unlock()
         else
             -- count error
             StatData["numFailures"] = StatData["numFailures"] + 1
-            -- stop exclusion block
-            GlobalMutex.unlock()
             -- log error
             core.log(core.err, string.format("No addresses found in registry %s", service))
         end
     else
         -- count error
         StatData["numFailures"] = StatData["numFailures"] + 1
-        -- stop exclusion block
-        GlobalMutex.unlock()
         -- log error
         core.log(core.err, string.format("Service %s not found", service))
     end
@@ -461,9 +415,6 @@ local function api_unlock(applet)
     local error_messages = {}
     local num_transactions = 0
 
-    -- start exclusion block
-    GlobalMutex.lock()
-
     -- loop through each transaction
     for _,id in pairs(transactions) do
         num_transactions = num_transactions + 1
@@ -497,9 +448,6 @@ local function api_unlock(applet)
     -- update statistics
     StatData["numComplete"] = StatData["numComplete"] + num_transactions
     StatData["numFailures"] = StatData["numFailures"] + #error_messages
-
-    -- stop exclusion block
-    GlobalMutex.unlock()
 
     -- log error messages
     for _,msg in ipairs(error_messages) do
@@ -610,9 +558,6 @@ local function api_status(applet)
     -- initialize local variables
     local num_addresses = 0
 
-    -- start exclusion block
-    GlobalMutex.lock()
-
     -- loop through service registry and return number of addresses
     local service_registry = ServiceCatalog[service]
     if service_registry ~= nil then
@@ -620,9 +565,6 @@ local function api_status(applet)
             num_addresses = num_addresses + 1
         end
     end
-
-    -- stop exclusion block
-    GlobalMutex.unlock()
 
     -- send response
     local response = string.format([[{"nodes": %d}]], num_addresses)
@@ -664,9 +606,6 @@ local function backgroud_scrubber()
     while true do
         core.msleep(ScrubInterval * 1000)
         local now = os.time()
-
-        -- start exclusion block
-        GlobalMutex.lock()
 
         -- scrub expired member registrations
         for service, service_registry in pairs(ServiceCatalog) do
@@ -731,9 +670,6 @@ local function backgroud_scrubber()
         StatData["numTimeouts"] = StatData["numTimeouts"] + num_timeouts
         StatData["numActiveLocks"] = num_transactions
 
-        -- stop exclusion block
-        GlobalMutex.unlock()
-
         -- log error messages
         for _,msg in ipairs(error_messages) do
             core.log(core.err, msg)
@@ -749,9 +685,6 @@ local function orchestrator_next_node(txn)
 
     -- get service to retrieve nodes from
     local service = txn:get_var("txn.service")
-
-    -- start exclusion block
-    GlobalMutex.lock()
 
     -- get node with minimal locks
     local service_registry = ServiceCatalog[service]
@@ -773,9 +706,6 @@ local function orchestrator_next_node(txn)
             address = sorted_addresses[math.random(1, num_members_with_min_locks)]
         end
     end
-
-    -- stop exclusion block
-    GlobalMutex.unlock()
 
     -- return address to route request to
     return address

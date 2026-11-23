@@ -34,14 +34,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
 
 -- Rate Limiting Parameters
-RATELIMIT_WEEKLY_COUNT = {ip=50000, user=100000} -- maximum number of requests that can be made in one week
-RATELIMIT_BACKOFF_COUNT = {ip=10, user=100} -- after the max count is reached, this is the number of new requests that can be made before the next backoff
-RATELIMIT_BLOCK_PERIOD = {ip=600, user=600} -- user will not be able to make requests for this number of seconds
+RATELIMIT_WEEKLY_COUNT = 50000 -- maximum number of requests that can be made in one week
+RATELIMIT_BACKOFF_COUNT = 100 -- after the max count is reached, this is the number of new requests that can be made before the next backoff
+RATELIMIT_BLOCK_PERIOD = 600 -- user will not be able to make requests for this number of seconds
 
 -- Rate Limiting Data
-WeekOfLastRequest = {} -- "<ip_address or username>": <week number of last request>
-RequestCount = {} -- "<ip_address or username>": <number of accumulated requests in the week>
-BlockTime = {} -- "<ip_address or username>": <os time until which ip address will be blocked>
+WeekOfLastRequest = {} -- "<username>": <week number of last request>
+RequestCount = {} -- "<username>": <number of accumulated requests in the week>
+BlockTime = {} -- "<username>": <os time until which ip address will be blocked>
 
 -- Analysis Data
 EndpointMetric = {} -- "<endpoint>": <number of requests>
@@ -62,41 +62,43 @@ end
 -- Action: ratelimit
 --
 local function ratelimit(txn)
-    local client_ip = txn.sf:src()
     local username = txn:get_var("txn.sub")
     local service_request = txn:get_var("txn.requested_service")
-    local mode = username and #username > 0 and "user" or "ip"
-    local originator = (mode == "user") and username or client_ip
+
+    -- !!temporarily!! ignore rate limiting when username not present
+    if not username then
+        return
+    end
 
     -- check for user service request (which doesn't get rate limited)
-    if (mode == "user") and (username == service_request) then
+    if username == service_request then
         return
     end
 
     -- check blocked status
     local now = os.time()
-    if now <= (BlockTime[originator] or 0) then
+    if now <= (BlockTime[username] or 0) then
         txn:set_var("txn.block_this_ip", true)
         return
     end
 
     -- clear any blocks
-    BlockTime[originator] = nil
+    BlockTime[username] = nil
 
     -- track requests per ip
     local this_week_number = os.date("%V")
-    local last_week_number = WeekOfLastRequest[originator]
+    local last_week_number = WeekOfLastRequest[username]
     if this_week_number == last_week_number then
-        RequestCount[originator] = (RequestCount[originator] or 0) + 1
+        RequestCount[username] = (RequestCount[username] or 0) + 1
     else
-        RequestCount[originator] = 1
+        RequestCount[username] = 1
     end
-    WeekOfLastRequest[originator] = this_week_number
+    WeekOfLastRequest[username] = this_week_number
 
     -- check ip rates
-    if RequestCount[originator] >= RATELIMIT_WEEKLY_COUNT[mode] then
-        RequestCount[originator] = RequestCount[originator] - RATELIMIT_BACKOFF_COUNT[mode]
-        BlockTime[originator] = os.time() + RATELIMIT_BLOCK_PERIOD[mode]
+    if RequestCount[username] >= RATELIMIT_WEEKLY_COUNT then
+        RequestCount[username] = RequestCount[username] - RATELIMIT_BACKOFF_COUNT
+        BlockTime[username] = os.time() + RATELIMIT_BLOCK_PERIOD
     end
 
 end
