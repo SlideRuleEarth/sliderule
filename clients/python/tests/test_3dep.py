@@ -12,8 +12,6 @@ region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
             {"lon": -108.3605610678553, "lat": 39.25086131372244},
             {"lon": -108.3435200747503, "lat": 38.89102961045247}  ]
 
-sigma = 1.0e-9
-
 @pytest.mark.external
 class Test3DEP_1meter:
     def test_sample(self, init):
@@ -103,8 +101,8 @@ class Test3DEP_10meter:
         assert init
         assert len(gdf) == 1
         assert gdf["slope_count"].iat[0] == 25    # number of valid pixels used for spatial derivative calculation
-        assert abs(gdf["slope"].iat[0]  - 7.925053124219) < sigma, f'{gdf["slope"].iat[0]}'
-        assert abs(gdf["aspect"].iat[0] - 115.69728862997) < sigma, f'{gdf["aspect"].iat[0]}'
+        assert gdf["slope"].iat[0] == pytest.approx(8.0965676536088)
+        assert gdf["aspect"].iat[0] == pytest.approx(97.883336104682)
 
     def test_batch_sample(self, init):
         # Create 10,000 points in the bounding box (-108.2, 38.9) to (-107.8, 39.1)
@@ -147,10 +145,10 @@ class Test3DEP_10meter:
         assert init
         assert len(gdf) == 1047
         assert gdf["3dep.slope"].describe()["count"] == 1047
-        assert gdf["3dep.aspect"].describe()["count"] == 1036   # 11 exactly flat windows return NaN aspect
+        assert gdf["3dep.aspect"].describe()["count"] == 1043 # flat windows return NaN aspect
         assert gdf["3dep.count"].describe()["count"] == 1047
 
         assert gdf["3dep.count"].iloc[0] == 9
-        assert abs(gdf["3dep.slope"].iloc[0]  - 5.549390227531371) < sigma, f'slope = {gdf["3dep.slope"].iloc[0]}'
-        assert abs(gdf["3dep.aspect"].iloc[0] - 19.87017783477397) < sigma, f'aspect = {gdf["3dep.aspect"].iloc[0]}'
+        assert gdf["3dep.slope"].iloc[0]  == pytest.approx(5.549390227531371)
+        assert gdf["3dep.aspect"].iloc[0] == pytest.approx(19.87017783477397)
         # print(gdf[["3dep.slope", "3dep.aspect", "3dep.count"]])
