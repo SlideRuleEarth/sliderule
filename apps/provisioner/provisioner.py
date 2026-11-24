@@ -49,6 +49,8 @@ SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','sliderule
 
 MIN_TTL = 15 # minutes, for autoshutdown
 
+PUBLIC_SPOT_CAPACITY = 10 # spot nodes requested on top of the on-demand node capacity for public clusters
+
 # ###############################
 # Utilities
 # ###############################
@@ -430,6 +432,10 @@ def deploy_handler(rqst, kind):
         monitor_user_data = populate_user_data("monitor.sh", rqst, rqst["cluster"])
         node_user_data = populate_user_data("node.sh", rqst, rqst["cluster"])
 
+        # on-demand nodes are guaranteed; public clusters add best-effort spot nodes on top
+        spot_capacity = PUBLIC_SPOT_CAPACITY if rqst["is_public"] is True else 0
+        max_node_capacity = int(rqst["node_capacity"]) + spot_capacity
+
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
@@ -441,6 +447,7 @@ def deploy_handler(rqst, kind):
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
             {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "MaxNodeCapacity", "ParameterValue": str(max_node_capacity)},
             {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
             {"ParameterKey": "AlertStream", "ParameterValue": ALERT_STREAM},
             {"ParameterKey": "TelemetryStream", "ParameterValue": TELEMETRY_STREAM},

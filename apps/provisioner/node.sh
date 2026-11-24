@@ -57,6 +57,8 @@ services:
     restart: always
     pull_policy: if_not_present
     command: ["/usr/local/etc/sliderule/server.lua"]
+    # all node instance types have 32GB; the rest is left for the OS and the other services
+    mem_limit: 28g
     ulimits:
       nofile:
         soft: 8192

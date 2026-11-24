@@ -24,6 +24,8 @@ Parameters:
     Type: String
   NodeCapacity:
     Type: Number
+  MaxNodeCapacity:
+    Type: Number
   TTL:
     Type: Number
   AlertStream:
@@ -61,6 +63,12 @@ Parameters:
   ClusterCIDRBlock:
     Type: String
     Default: "10.0.0.0/17"
+  NodeInstanceType:
+    Type: String
+    Default: "m9g.2xlarge"
+  SpotMaxPrice:
+    Type: String
+    Default: "0.20"
 
 Conditions:
 
@@ -403,7 +411,7 @@ Resources:
       LaunchTemplateName: !Sub "${Cluster}-lt"
       LaunchTemplateData:
         ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
-        InstanceType: t4g.2xlarge
+        InstanceType: !Ref NodeInstanceType
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
@@ -422,16 +430,34 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AutoScalingGroupName: !Sub "${Cluster}-asg"
+      # NodeCapacity on-demand nodes are guaranteed; any capacity above that is
+      # spot only, and the ASG keeps retrying it while spot is unavailable or
+      # priced above SpotMaxPrice (it never falls back to on-demand)
       MinSize: !Ref NodeCapacity
-      MaxSize: !Ref NodeCapacity
-      DesiredCapacity: !Ref NodeCapacity
+      MaxSize: !Ref MaxNodeCapacity
+      DesiredCapacity: !Ref MaxNodeCapacity
       VPCZoneIdentifier:
         - !Ref ClusterSubnet
       HealthCheckType: EC2
       CapacityRebalance: true
-      LaunchTemplate:
-        LaunchTemplateId: !Ref NodeLaunchTemplate
-        Version: !GetAtt NodeLaunchTemplate.LatestVersionNumber
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandBaseCapacity: !Ref NodeCapacity
+          OnDemandPercentageAboveBaseCapacity: 0
+          # on-demand nodes use the first available type in Overrides (NodeInstanceType);
+          # spot nodes are bid across all of the Overrides
+          OnDemandAllocationStrategy: prioritized
+          SpotAllocationStrategy: price-capacity-optimized
+          SpotMaxPrice: !Ref SpotMaxPrice
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref NodeLaunchTemplate
+            Version: !GetAtt NodeLaunchTemplate.LatestVersionNumber
+          Overrides:
+            - InstanceType: !Ref NodeInstanceType
+            - InstanceType: m8g.2xlarge
+            - InstanceType: r9g.xlarge
+            - InstanceType: r8g.xlarge
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-node"

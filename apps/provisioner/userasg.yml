@@ -38,7 +38,7 @@ Resources:
       LaunchTemplateName: !Sub "${Cluster}-lt-${Username}"
       LaunchTemplateData:
         ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
-        InstanceType: t4g.2xlarge
+        InstanceType: m9g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
