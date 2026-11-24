@@ -174,6 +174,7 @@ try:
         "sigma_tvu",
         "processing_flags",
         "class_ph",
+        "spot"
     ])
 
     # subset to only bathy photons
