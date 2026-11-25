@@ -120,6 +120,9 @@ Deploys a cluster, either stand-alone or as user capacity (when `--user_service`
 * - `--node_capacity <int>`
   - `1`
   - Number of nodes to deploy.
+* - `--spot_capacity <int>`
+  - `0`
+  - Number of spot instances to request in addition to the nodes being deployed.
 * - `--ttl <int>`
   - `60`
   - Time-to-live of the cluster. The default of 60 corresponds to one hour.
@@ -135,6 +138,9 @@ sliderule-provisioner deploy
 
 # deploy a 4-node cluster named "mycluster" for two hours
 sliderule-provisioner deploy --cluster mycluster --node_capacity 4 --ttl 120
+
+# deploy a 4-node cluster with an additional 8 possible spot instances
+sliderule-provisioner deploy --cluster mycluster --node_capacity 4 --spot_capacity 8 --ttl 120
 
 # deploy dedicated user capacity
 sliderule-provisioner deploy --user_service
@@ -223,6 +229,8 @@ Reports the status of a cluster. The output is a concise summary; fields that ha
   - Whether the cluster is publicly accessible.
 * - `node_capacity`
   - Number of nodes the cluster was deployed with.
+* - `spot_capacity`
+  - Number of additional spot nodes requested when the cluster was deployed. These are best-effort, so `current_nodes` can be anywhere between `node_capacity` and `node_capacity` plus `spot_capacity`.
 * - `users`
   - For user capacity, the users of the service and their individual `auto_shutdown` times.
 ```

@@ -19,3 +19,6 @@ properties:
   node_capacity:
     type: string
     description: Configured node capacity.
+  spot_capacity:
+    type: string
+    description: Configured spot capacity requested in addition to the node capacity (absent for clusters deployed before spot support).

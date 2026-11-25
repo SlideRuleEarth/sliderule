@@ -125,6 +125,7 @@ class Session:
         domain          = PUBLIC_DOMAIN,
         cluster         = PUBLIC_CLUSTER,
         node_capacity   = None,
+        spot_capacity   = 0,
         ttl             = 60, # minutes
         verbose         = False,
         loglevel        = logging.INFO,
@@ -203,7 +204,7 @@ class Session:
 
         # auto-deploy when node capacity provided
         if isinstance(node_capacity, int) and node_capacity > 0:
-            self.scaleout(node_capacity, ttl)
+            self.scaleout(node_capacity, ttl, spot_capacity=spot_capacity)
 
     #
     #  source
@@ -384,9 +385,10 @@ class Session:
     #
     # scaleout
     #
-    def scaleout (self, node_capacity, ttl, version="latest", is_public=False, block=True):
+    def scaleout (self, node_capacity, ttl, version="latest", is_public=False, block=True, spot_capacity=0):
         '''
-        makes a deployment request to the SlideRule Provisioner and (optional, by default) waits for the cluster to reach the requested capacity
+        makes a deployment request to the SlideRule Provisioner and (optional, by default) waits for the cluster to reach the requested capacity;
+        spot_capacity nodes are requested in addition to node_capacity, but are best-effort so only node_capacity is waited on
         '''
         # Initial Conditions
         available_nodes = 0
@@ -411,7 +413,7 @@ class Session:
                 deploy_needed = False
                 if available_nodes < node_capacity:
                     # Deployment Request
-                    rsps = self.provisioner.deploy(is_public=is_public, node_capacity=node_capacity, ttl=ttl, version=version)
+                    rsps = self.provisioner.deploy(is_public=is_public, node_capacity=node_capacity, spot_capacity=spot_capacity, ttl=ttl, version=version)
                     inerror = "error" in rsps
                     self.logger.info(f'Requesting deployment of {self.cluster}: {"failed" if inerror else "succeeded"}')
                     if inerror: # error occurred
@@ -568,8 +570,8 @@ class Session:
             self.api_path_suffix = ""
             if self.session.service != self.session.cluster:
                 self.api_path_suffix += f"/{self.session.service}"
-        def deploy (self, *, is_public, node_capacity, ttl, version):
-            return self.session.gateway_request("deploy" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "ttl": ttl, "version": version})
+        def deploy (self, *, is_public, node_capacity, ttl, version, spot_capacity=0):
+            return self.session.gateway_request("deploy" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster, "is_public": is_public, "node_capacity": node_capacity, "spot_capacity": spot_capacity, "ttl": ttl, "version": version})
         def extend (self, *, ttl):
             return self.session.gateway_request("extend" + self.api_path_suffix, subdomain="provisioner", data={"cluster": self.session.cluster, "ttl": ttl})
         def destroy (self):

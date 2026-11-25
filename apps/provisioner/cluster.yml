@@ -72,9 +72,6 @@ Parameters:
   SpotCIDRBlockC:
     Type: String
     Default: "10.0.96.0/20"
-  NodeInstanceType:
-    Type: String
-    Default: "m9g.2xlarge"
   SpotMaxTotalPrice: # maximum hourly spend on spot nodes (e.g. 15 nodes x $0.20)
     Type: String
     Default: "3.00"
@@ -421,6 +418,8 @@ Resources:
           Value: !Ref IsPublic
         - Key: NodeCapacity
           Value: !Ref NodeCapacity
+        - Key: SpotCapacity
+          Value: !Ref SpotNodeCapacity
       UserData: !Ref IlbUserData
 
   #
@@ -461,7 +460,7 @@ Resources:
       LaunchTemplateName: !Sub "${Cluster}-lt"
       LaunchTemplateData:
         ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
-        InstanceType: !Ref NodeInstanceType
+        InstanceType: m9g.2xlarge
         IamInstanceProfile:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
@@ -529,10 +528,10 @@ Resources:
             LaunchTemplateId: !Ref NodeLaunchTemplate
             Version: !GetAtt NodeLaunchTemplate.LatestVersionNumber
           Overrides:
-            - { InstanceType: !Ref NodeInstanceType, SubnetId: !Ref ClusterSubnet }
-            - { InstanceType: !Ref NodeInstanceType, SubnetId: !Ref SpotSubnetA }
-            - { InstanceType: !Ref NodeInstanceType, SubnetId: !Ref SpotSubnetB }
-            - { InstanceType: !Ref NodeInstanceType, SubnetId: !Ref SpotSubnetC }
+            - { InstanceType: m9g.2xlarge, SubnetId: !Ref ClusterSubnet }
+            - { InstanceType: m9g.2xlarge, SubnetId: !Ref SpotSubnetA }
+            - { InstanceType: m9g.2xlarge, SubnetId: !Ref SpotSubnetB }
+            - { InstanceType: m9g.2xlarge, SubnetId: !Ref SpotSubnetC }
             - { InstanceType: m8g.2xlarge, SubnetId: !Ref ClusterSubnet }
             - { InstanceType: m8g.2xlarge, SubnetId: !Ref SpotSubnetA }
             - { InstanceType: m8g.2xlarge, SubnetId: !Ref SpotSubnetB }

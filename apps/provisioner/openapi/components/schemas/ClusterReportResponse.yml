@@ -15,6 +15,9 @@ additionalProperties:
       type: string
     node_capacity:
       type: string
+    spot_capacity:
+      type: string
+      nullable: true
     users:
       type: object
       additionalProperties:
@@ -25,4 +28,10 @@ additionalProperties:
             nullable: true
           current_nodes:
             type: integer
+          node_capacity:
+            type: string
+            nullable: true
+          spot_capacity:
+            type: string
+            nullable: true
       description: Per-user ASG details keyed by username.

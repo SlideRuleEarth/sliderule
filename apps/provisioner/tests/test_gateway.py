@@ -60,6 +60,44 @@ def test_invalid_node_capacity():
     assert rsps['statusCode'] == 403
 
 #
+# Test Spot Capacity
+#
+def test_invalid_spot_capacity():
+    rsps = lambda_gateway({
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "org_roles": '[member]',
+                        "aud": '[gsfc other]',
+                        "max_nodes": "20"
+                    }
+                }
+            }
+        },
+        "rawPath": "/",
+        "body": '{"cluster":"gsfc","node_capacity":"10","spot_capacity":"11"}'
+    }, None)
+    assert rsps['statusCode'] == 403 # node + spot capacity exceeds max nodes
+
+def test_request_without_capacity():
+    rsps = lambda_gateway({
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "org_roles": '[member]',
+                        "aud": '[gsfc]'
+                    }
+                }
+            }
+        },
+        "rawPath": "/info",
+        "body": '{"cluster":"gsfc"}'
+    }, None)
+    assert rsps['statusCode'] == 200 # non-deploy requests don't carry a node capacity
+
+#
 # Test TTL
 #
 def test_invalid_ttl():

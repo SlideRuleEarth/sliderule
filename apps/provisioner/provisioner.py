@@ -49,8 +49,6 @@ SYSTEM_KEYWORDS = ['login','provisioner','client','recorder','runner','sliderule
 
 MIN_TTL = 15 # minutes, for autoshutdown
 
-PUBLIC_SPOT_CAPACITY = 15 # spot nodes requested on top of the on-demand node capacity for public clusters
-
 # ###############################
 # Utilities
 # ###############################
@@ -379,11 +377,14 @@ def validate_request(event, info):
             print(f'Access denied to {info["username"]}, invalid cluster: {cluster}')
             return None
 
-    # check node_capacity
+    # check total requested capacity (only present on deploy requests)
     node_capacity = body.get("node_capacity")
-    if node_capacity and ((int(node_capacity) > info["maxNodes"]) or (int(node_capacity) < 1)):
-        print(f'Access denied to {info["username"]}, node capacity: {node_capacity}, max nodes: {info["maxNodes"]}')
-        return None
+    spot_capacity = body.get("spot_capacity") or 0
+    if node_capacity or spot_capacity:
+        total_requested_capacity = int(node_capacity or 0) + int(spot_capacity)
+        if (total_requested_capacity > info["maxNodes"]) or (int(node_capacity or 0) < 1) or (int(spot_capacity) < 0):
+            print(f'Access denied to {info["username"]}, node capacity: {node_capacity}, spot capacity: {spot_capacity}, max nodes: {info["maxNodes"]}')
+            return None
 
     # check ttl
     ttl = body.get("ttl")
@@ -398,6 +399,7 @@ def validate_request(event, info):
         "member": 'member' in info["orgRoles"],
         "cluster": cluster,
         "node_capacity": node_capacity,
+        "spot_capacity": spot_capacity,
         "ttl": ttl,
         "is_public": body.get("is_public", False),
         "version": body.get("version", "latest"),
@@ -432,9 +434,6 @@ def deploy_handler(rqst, kind):
         monitor_user_data = populate_user_data("monitor.sh", rqst, rqst["cluster"])
         node_user_data = populate_user_data("node.sh", rqst, rqst["cluster"])
 
-        # on-demand nodes are guaranteed; public clusters add best-effort spot nodes on top
-        spot_capacity = PUBLIC_SPOT_CAPACITY if rqst["is_public"] is True else 0
-
         # build parameters for stack creation
         state["parms"] = [
             {"ParameterKey": "Version", "ParameterValue": rqst["version"]},
@@ -446,7 +445,7 @@ def deploy_handler(rqst, kind):
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
             {"ParameterKey": "ScheduleLambdaArn", "ParameterValue": schedule_lambda_arn},
             {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
-            {"ParameterKey": "SpotNodeCapacity", "ParameterValue": str(spot_capacity)},
+            {"ParameterKey": "SpotNodeCapacity", "ParameterValue": str(rqst["spot_capacity"])},
             {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
             {"ParameterKey": "AlertStream", "ParameterValue": ALERT_STREAM},
             {"ParameterKey": "TelemetryStream", "ParameterValue": TELEMETRY_STREAM},
@@ -474,6 +473,8 @@ def deploy_handler(rqst, kind):
         # get parent stack resources
         resources = get_stack_resources(cluster_stack_name)
         cluster_subnet = resources["ClusterSubnet"]
+        # clusters deployed before the spot subnets existed only have the cluster subnet
+        spot_subnets = [cluster_subnet] + [resources[s] for s in ["SpotSubnetA", "SpotSubnetB", "SpotSubnetC"] if s in resources]
         cluster_node_sg = resources["ClusterNodeSG"]
         instance_profile = resources["InstanceProfile"]
 
@@ -482,8 +483,10 @@ def deploy_handler(rqst, kind):
             {"ParameterKey": "Cluster", "ParameterValue": rqst["cluster"]},
             {"ParameterKey": "Username", "ParameterValue": rqst["username"]},
             {"ParameterKey": "NodeCapacity", "ParameterValue": str(rqst["node_capacity"])},
+            {"ParameterKey": "SpotCapacity", "ParameterValue": str(rqst["spot_capacity"])},
             {"ParameterKey": "TTL", "ParameterValue": str(rqst["ttl"])},
             {"ParameterKey": "ClusterSubnet", "ParameterValue": cluster_subnet},
+            {"ParameterKey": "SpotSubnets", "ParameterValue": ",".join(spot_subnets)},
             {"ParameterKey": "ClusterNodeSG", "ParameterValue": cluster_node_sg},
             {"ParameterKey": "InstanceProfile", "ParameterValue": instance_profile},
             {"ParameterKey": "DestroyLambdaArn", "ParameterValue": destroy_lambda_arn},
@@ -615,7 +618,7 @@ def status_handler(rqst, kind):
         node_instances = get_instances_by_name(f'{rqst["cluster"]}-node')
         state["current_nodes"] = len(node_instances)
 
-        # get version and node capacity
+        # get version, node capacity, and spot capacity
         ilb_instance = get_instances_by_name(f'{rqst["cluster"]}-ilb')
         if len(ilb_instance) == 1:
             tags = ilb_instance[0]["Tags"]
@@ -626,6 +629,8 @@ def status_handler(rqst, kind):
                     state["is_public"] = tag["Value"]
                 if tag["Key"] == "NodeCapacity":
                     state["node_capacity"] = tag["Value"]
+                if tag["Key"] == "SpotCapacity":
+                    state["spot_capacity"] = tag["Value"]
 
     # status user asg
     elif kind == 'user':
@@ -634,6 +639,11 @@ def status_handler(rqst, kind):
         user_asg_stack_name = build_user_asg_stack_name(cluster_stack_name, rqst["username"])
         user_asg_stack = get_stack_description(user_asg_stack_name)
         state["response"] = clean_description(user_asg_stack)
+
+        # get node capacity and spot capacity from the stack parameters
+        parameters = {p["ParameterKey"]: p["ParameterValue"] for p in user_asg_stack.get("Parameters", [])}
+        state["node_capacity"] = parameters.get("NodeCapacity")
+        state["spot_capacity"] = parameters.get("SpotCapacity")
 
         # attempt to get auto-shutdown time
         user_asg_rule_name = scheduler.build_rule_name(user_asg_stack_name)
@@ -691,7 +701,7 @@ def report_clusters_handler(cluster):
             details = status_handler({"cluster": cluster_name}, 'cluster')
             if details["statusCode"] == 200:
                 status = json.loads(details["body"])
-                report[cluster_name] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity"] }
+                report[cluster_name] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "version", "is_public", "node_capacity", "spot_capacity"] }
                 # get asgs for cluster and status them
                 report[cluster_name]["users"] = {}
                 asg_stack_names = get_cluster_stack_names(build_cluster_stack_name(cluster_name))
@@ -703,7 +713,7 @@ def report_clusters_handler(cluster):
                         details = status_handler({"cluster": cluster_name, "username": username}, 'user')
                         if details["statusCode"] == 200:
                             status = json.loads(details["body"])
-                            report[cluster_name]["users"][username] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes"] }
+                            report[cluster_name]["users"][username] = { k: status.get(k) for k in ["auto_shutdown", "current_nodes", "node_capacity", "spot_capacity"] }
 
     # return success
     return json_response(200, report)

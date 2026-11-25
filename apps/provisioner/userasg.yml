@@ -9,10 +9,14 @@ Parameters:
     Type: String
   NodeCapacity:
     Type: Number
+  SpotCapacity:
+    Type: Number
   TTL:
     Type: Number
   ClusterSubnet:
     Type: String
+  SpotSubnets: # cluster subnet plus the cluster's spot subnets in the other availability zones
+    Type: CommaDelimitedList
   ClusterNodeSG:
     Type: String
   InstanceProfile:
@@ -29,6 +33,8 @@ Conditions:
   HasAutoShutdown: !And
     - !Not [!Equals [!Ref ScheduleLambdaArn, ""]]
     - !Not [!Equals [!Ref DestroyLambdaArn, ""]]
+
+  HasSpotCapacity: !Not [!Equals [!Ref SpotCapacity, "0"]]
 
 Resources:
 
@@ -66,6 +72,40 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref UserLaunchTemplate
         Version: !GetAtt UserLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: !Sub "${Cluster}-node-${Username}"
+          PropagateAtLaunch: true
+
+  UserSpotAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Condition: HasSpotCapacity
+    Properties:
+      AutoScalingGroupName: !Sub "${Cluster}-spot-asg-${Username}"
+      # best-effort spot nodes spread across all availability zones; MinSize is 0
+      # so stack creation doesn't fail when no spot capacity is available; there
+      # is no SpotMaxPrice (capped at the on-demand price) and no capacity
+      # rebalancing, so nodes are only replaced when actually interrupted
+      MinSize: 0
+      MaxSize: !Ref SpotCapacity
+      DesiredCapacity: !Ref SpotCapacity
+      VPCZoneIdentifier: !Ref SpotSubnets
+      HealthCheckType: EC2
+      CapacityRebalance: false
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandBaseCapacity: 0
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: price-capacity-optimized
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref UserLaunchTemplate
+            Version: !GetAtt UserLaunchTemplate.LatestVersionNumber
+          Overrides:
+            - InstanceType: m9g.2xlarge
+            - InstanceType: m8g.2xlarge
+            - InstanceType: r9g.xlarge
+            - InstanceType: r8g.xlarge
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-node-${Username}"

@@ -28,6 +28,7 @@ class Tool:
             "version": response.get("version"),
             "is_public": response.get("is_public"),
             "node_capacity": response.get("node_capacity"),
+            "spot_capacity": response.get("spot_capacity"),
             "users": response.get("users")
         }
         for date_field in ["creation_time", "auto_shutdown"]:
@@ -40,7 +41,7 @@ class Tool:
 
     # Deploy
     def deploy(self):
-        return self.session.provisioner.deploy(is_public=(self.args.is_public == "true"), node_capacity=self.args.node_capacity, ttl=self.args.ttl, version=self.args.version)
+        return self.session.provisioner.deploy(is_public=(self.args.is_public == "true"), node_capacity=self.args.node_capacity, spot_capacity=self.args.spot_capacity, ttl=self.args.ttl, version=self.args.version)
 
     # Extend
     def extend(self):
@@ -111,6 +112,7 @@ def main():
     deploy = subparsers.add_parser("deploy", parents=[common], help="deploy a cluster (stand-alone or as user capacity)")
     deploy.add_argument('--is_public',      type=str,   default="false")
     deploy.add_argument('--node_capacity',  type=int,   default=1)
+    deploy.add_argument('--spot_capacity',  type=int,   default=0)
     deploy.add_argument('--ttl',            type=int,   default=60) # 1 hour
     deploy.add_argument('--version',        type=str,   default="unstable")
     deploy.set_defaults(func=Tool.deploy)

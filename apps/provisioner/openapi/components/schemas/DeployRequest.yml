@@ -18,6 +18,12 @@ properties:
     maximum: 100
     description: Number of processing nodes to provision.
     example: 4
+  spot_capacity:
+    type: integer
+    minimum: 0
+    maximum: 100
+    description: Number of additional processing nodes to request as spot instances.
+    example: 8
   ttl:
     type: integer
     minimum: 15

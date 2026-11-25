@@ -463,7 +463,7 @@ cluster-docker-push: ## push all cluster images to container registries (and doc
 
 cluster-deploy-candidate: ## deploy candidate public cluster
 	@echo "Deploying cluster <$(PUBLIC_CLUSTER)-$(TIMESTAMP)>"
-	sliderule-provisioner deploy --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 5 --ttl 525600 --version latest
+	sliderule-provisioner deploy --domain $(DOMAIN) --cluster $(PUBLIC_CLUSTER)-$(TIMESTAMP) --is_public true --node_capacity 5 --spot_capacity 15 --ttl 525600 --version latest
 
 cluster-go-live: ## switch dns entry of public cluster
 	aws cloudformation deploy \

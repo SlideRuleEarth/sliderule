@@ -334,7 +334,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=Non
 #
 # scaleout
 #
-def scaleout(desired_nodes, time_to_live, session=None):
+def scaleout(desired_nodes, time_to_live, session=None, spot_nodes=0):
     '''
     Scale the cluster and wait for cluster to reach desired state
 
@@ -344,6 +344,8 @@ def scaleout(desired_nodes, time_to_live, session=None):
                         the desired number of nodes in the cluster
         time_to_live:   int
                         number of minutes for the desired nodes to run
+        spot_nodes:     int
+                        number of best-effort spot nodes to request in addition to desired_nodes (not waited on)
 
     Examples
     --------
@@ -351,7 +353,7 @@ def scaleout(desired_nodes, time_to_live, session=None):
         >>> sliderule.scaleout(4, 300)
     '''
     session = checksession(session)
-    return session.scaleout(desired_nodes, time_to_live)
+    return session.scaleout(desired_nodes, time_to_live, spot_capacity=spot_nodes)
 
 #
 # gps2utc
