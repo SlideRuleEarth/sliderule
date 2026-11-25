@@ -359,7 +359,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sliderule_members{job=\"orchestrator_app\"}",
+          "expr": "total_members_registered{job=\"orchestrator_app\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"

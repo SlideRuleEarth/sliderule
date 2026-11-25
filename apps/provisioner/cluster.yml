@@ -536,14 +536,6 @@ Resources:
             - { InstanceType: m8g.2xlarge, SubnetId: !Ref SpotSubnetA }
             - { InstanceType: m8g.2xlarge, SubnetId: !Ref SpotSubnetB }
             - { InstanceType: m8g.2xlarge, SubnetId: !Ref SpotSubnetC }
-            - { InstanceType: r9g.xlarge, SubnetId: !Ref ClusterSubnet }
-            - { InstanceType: r9g.xlarge, SubnetId: !Ref SpotSubnetA }
-            - { InstanceType: r9g.xlarge, SubnetId: !Ref SpotSubnetB }
-            - { InstanceType: r9g.xlarge, SubnetId: !Ref SpotSubnetC }
-            - { InstanceType: r8g.xlarge, SubnetId: !Ref ClusterSubnet }
-            - { InstanceType: r8g.xlarge, SubnetId: !Ref SpotSubnetA }
-            - { InstanceType: r8g.xlarge, SubnetId: !Ref SpotSubnetB }
-            - { InstanceType: r8g.xlarge, SubnetId: !Ref SpotSubnetC }
       TagSpecifications:
         - ResourceType: fleet
           Tags:

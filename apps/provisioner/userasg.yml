@@ -104,8 +104,6 @@ Resources:
           Overrides:
             - InstanceType: m9g.2xlarge
             - InstanceType: m8g.2xlarge
-            - InstanceType: r9g.xlarge
-            - InstanceType: r8g.xlarge
       Tags:
         - Key: Name
           Value: !Sub "${Cluster}-node-${Username}"

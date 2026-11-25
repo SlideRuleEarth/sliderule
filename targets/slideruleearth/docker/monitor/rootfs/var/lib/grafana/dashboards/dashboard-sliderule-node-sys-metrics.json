@@ -619,7 +619,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_network_transmit_bytes_total{device=\"ens5\",job=\"sliderule_node_sys\"}[1m])",
+          "expr": "rate(node_network_transmit_bytes_total{device=\"ens34\",job=\"sliderule_node_sys\"}[1m])",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -701,7 +701,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_network_receive_bytes_total{device=\"ens5\",job=\"sliderule_node_sys\"}[1m])",
+          "expr": "rate(node_network_receive_bytes_total{device=\"ens34\",job=\"sliderule_node_sys\"}[1m])",
           "interval": "",
           "legendFormat": "",
           "refId": "A"

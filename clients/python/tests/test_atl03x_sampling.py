@@ -91,7 +91,7 @@ class TestSampler:
             "samples": {"mosaic": {"asset": "arcticdem-strips", "algorithm": "NearestNeighbour", "zonal_stats": True, "slope_aspect": True, "with_flags": True}},
         }
         gdf = sliderule.run("atl03x", parms, resources=[resource])
-        mean_values = gdf["mosaic.value"].mean()
+        mean_values = np.stack(gdf["mosaic.value"].to_numpy()).mean(axis=0)
         mean_value = mean_values[~np.isnan(mean_values)].mean()
         assert init
         assert len(gdf) == 527

@@ -239,12 +239,22 @@ local function api_selflock(applet)
     local request = json.decode(body)
     local service = request["service"]
     local address = request["address"]
-    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or DefaultTimeout
-    local locksPerNode = request["locksPerNode"]
-    local expiration = os.time() + timeout
+    local timeout = request["timeout"] or DefaultTimeout
+    local locksPerNode = request["locksPerNode"] or 1
 
     -- update statistics
     StatData["numRequests"] = StatData["numRequests"] + 1
+
+    -- set expiration
+    if (timeout <= 0) or (timeout > MaxTimeout) then
+        timeout = MaxTimeout
+    end
+    local expiration = os.time() + timeout
+
+    -- range check locks per node
+    if locksPerNode <= 0 or locksPerNode > MaxLocksPerNode then
+        locksPerNode = MaxLocksPerNode
+    end
 
     -- get member using service and address provided in request
     local service_registry = ServiceCatalog[service]
@@ -324,12 +334,22 @@ local function api_lock(applet)
     local request = json.decode(body)
     local service = request["service"]
     local nodesNeeded = request["nodesNeeded"]
-    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or DefaultTimeout
+    local timeout = request["timeout"] or DefaultTimeout
     local locksPerNode = request["locksPerNode"] or 1
-    local expiration = os.time() + timeout
 
     -- update statistics
     StatData["numRequests"] = StatData["numRequests"] + 1
+
+    -- set expiration
+    if (timeout <= 0) or (timeout > MaxTimeout) then
+        timeout = MaxTimeout
+    end
+    local expiration = os.time() + timeout
+
+    -- range check locks per node
+    if locksPerNode <= 0 or locksPerNode > MaxLocksPerNode then
+        locksPerNode = MaxLocksPerNode
+    end
 
     -- loop through service registry and return addresses with least locks
     local member_list = {} -- list of member addresses returned
@@ -430,11 +450,11 @@ local function api_unlock(applet)
             if member ~= nil then
                 -- unlock member
                 if locksPerNode <= 0 or locksPerNode > MaxLocksPerNode then
-                    member["locks"] = 0
                     table.insert(error_messages, string.format("Transaction %d unlocked on address %s with invalid locks per node: %d", id, address, locksPerNode))
-                elseif member["locks"] < locksPerNode then
                     member["locks"] = 0
+                elseif member["locks"] < locksPerNode then
                     table.insert(error_messages, string.format("Transaction %d unlocked on address %s with insufficient locks: %d < %d", id, address, member["locks"], locksPerNode))
+                    member["locks"] = 0
                 else
                     member["locks"] = member["locks"] - locksPerNode
                 end
@@ -479,7 +499,7 @@ local function api_prometheus(applet)
     for member_metric,_ in pairs(StatData.memberCounts) do
         member_count_metric = member_count_metric .. string.format([[
 
-# TYPE %s counter
+# TYPE %s gauge
 %s %d
 ]], member_metric,
     member_metric,
@@ -503,7 +523,7 @@ num_timeouts %d
 # TYPE num_startups counter
 num_startups %d
 
-# TYPE num_active_locks counter
+# TYPE num_active_locks gauge
 num_active_locks %d
 %s
 ]], StatData["numRequests"],
@@ -611,12 +631,13 @@ local function backgroud_scrubber()
         local now = os.time()
 
         -- scrub expired member registrations
+        local total_num_members = 0
         for service, service_registry in pairs(ServiceCatalog) do
             -- build list of members to delete (expire)
-            local total_num_members = 0
+            local num_members = 0
             local members_to_delete = {}
             for address, member in pairs(service_registry) do
-                total_num_members = total_num_members + 1
+                num_members = num_members + 1
                 if member["expiration"] <= now then
                     table.insert(members_to_delete, address)
                 end
@@ -627,8 +648,10 @@ local function backgroud_scrubber()
             end
             -- set member count
             local member_metric = string.gsub(service, "-", "_").."_members"
-            StatData.memberCounts[member_metric] = total_num_members
+            StatData.memberCounts[member_metric] = num_members
+            total_num_members = total_num_members + num_members
         end
+        StatData.memberCounts["total_members_registered"] = total_num_members
 
         -- scrub timed-out transactions
         local num_timeouts = 0
