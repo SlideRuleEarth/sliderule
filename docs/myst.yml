@@ -16,6 +16,7 @@ project:
     - title: Getting Started
       children:
         - file: getting_started/Install.md
+        - file: getting_started/Account.md
         - file: getting_started/Getting-Started.md
         - file: getting_started/Examples.md
         - file: getting_started/Contributing.md
