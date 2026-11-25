@@ -11,5 +11,6 @@ dependencies:
   - matplotlib
   # conda-forge's node 26 reports itself as "26.x.y-alpha.0.0.0", which mystmd's semver check rejects
   - nodejs=24
-  - mystmd
+  # myst.yml uses the unpinned book-theme, which always resolves to the latest theme release and requires a recent mystmd
+  - mystmd>=1.13
   - pip
