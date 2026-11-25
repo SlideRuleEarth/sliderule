@@ -14,7 +14,8 @@ servers:
   - url: http://localhost
     description: Local development server
 
-security: []
+security:
+  - OAuth2: [sliderule:access]
 
 paths:
   /ams/ATL03/geoloc_corr/{name}:
@@ -39,6 +40,24 @@ paths:
     $ref: 'paths/3dep1m_id.yml'
 
 components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      description: >
+        OAuth2 authorization code flow. Clients must first register via the
+        registration endpoint to obtain client credentials before initiating
+        the authorization code flow.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://login.slideruleearth.io/auth/github/login
+          tokenUrl: https://login.slideruleearth.io/auth/github/token
+          scopes:
+            sliderule:access: Access to SlideRule cluster services
+      x-client-registration:
+        url: https://login.slideruleearth.io/auth/github/register
+        description: >
+          Dynamic client registration endpoint. Must be called before initiating
+          the authorization code flow to obtain a client_id and client_secret.
   schemas:
     Coordinate:
       $ref: 'components/schemas/Coordinate.yml'

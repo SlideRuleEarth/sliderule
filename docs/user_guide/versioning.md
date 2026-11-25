@@ -10,11 +10,11 @@ There are three primary ways to get the version of SlideRule:
 
 #### Web API
 
-Using any client able to speak HTTP, the `version` endpoint can be hit to retrieve the current version of SlideRule that is running.
+Using any client able to speak HTTP, the `version` endpoint can be hit to retrieve the current version of SlideRule that is running.  Note that starting with version 5.9.0, all services require authentication.
 
 For example:
 ```bash
-$ curl -sS https://sliderule.slideruleearth.io/source/version | jq
+$ curl -sS -H "Authorization: Bearer YOUR_ACCESS_TOKEN" https://sliderule.slideruleearth.io/source/version | jq
 ```
 has the following output:
 ```json

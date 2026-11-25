@@ -296,7 +296,7 @@ local function specification_root()
                 "name": "BSD 3-Clause",
                 "url": "https://opensource.org/licenses/BSD-3-Clause"
             },
-            "description": "APIs to process Earth science datasets in the cloud.  Most endpoints are public though some require authorization and payload signing.
+            "description": "APIs to process Earth science datasets in the cloud.  Most endpoints require authorization and some require payload signing.
                             Endpoints are grouped by series, which indentifies the endpoint's underlying implementation."
         },
         "servers": [

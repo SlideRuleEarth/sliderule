@@ -16,14 +16,15 @@ User **capacity requests** have been dropped from the scope of this system and w
 
 ### Users
 
-There are four levels of users that dictate the resources they are allowed to access:
+There are five levels of users that dictate the resources they are allowed to access:
 
 | Level | Privilege |
 |-------|-----------|
-| anonymous | access to public clusters with region-based rate limiting |
-| github member | access to public clusters with user-based rate limiting |
-| github organization member | access to private clusters with limited deployments |
-| administrator | access to private clusters without limits |
+| anonymous | access to specially configured clusters that allow anonymous access |
+| guest | access to public clusters with user-based rate limiting |
+| affiliate | access to public clusters and limited access to private clusters |
+| member | access to all SlideRule services with safeguards |
+| developer | unrestricted access to all SlideRule services |
 
 ### Functions
 

@@ -103,7 +103,7 @@ def init (
         user_service:   bool
                         requests use user associated asg connected to cluster
         is_public:      bool
-                        treat a private cluster as public, i.e. do not attempt to authenticate
+                        configure client for anonymous access, i.e. do not attempt to authenticate
 
     Returns
     -------

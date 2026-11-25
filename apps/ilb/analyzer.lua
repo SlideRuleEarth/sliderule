@@ -78,7 +78,7 @@ local function ratelimit(txn)
     local org_roles = txn:get_var("txn.org_roles")
 
     -- check for when rate limiting does not apply
-    if  (not username) or -- when username not present (on public clusters)
+    if  (not username) or -- when username not present (on clusters that allow anonymous access)
         (username == service_request) or -- when user service request (which doesn't get rate limited)
         ((org_roles or ""):find("member")) -- when user is an organizational member
     then return end

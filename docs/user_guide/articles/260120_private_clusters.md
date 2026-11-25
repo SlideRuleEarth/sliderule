@@ -1,6 +1,10 @@
 # Private Clusters
 
 :::{note}
+With release v5.9.0, SlideRule no longer supports anonymous access to the public cluster.  Anonymous access is still allowed on privately deployed clusters configured specifically to allow anonymous access.
+:::
+
+:::{note}
 With release v5.0.2, SlideRule has transitioned the management of private clusters from the django-based ***SlideRule Provisioning System*** which was deployed in AWS ECS, to the pure Python-based ***SlideRule Authenticator*** and ***SlideRule Provisioner*** which are deployed via AWS Lambda.  The main functions of the original system have been preserved, with a change in focus on clusters for individual users instead of organizations.  See release notes for full details: [Release v5.0.0](../../developer_guide/release_notes/release-2026-01-27-v05-00-00.md)
 :::
 
@@ -46,16 +50,19 @@ The _SlideRule Provisioner_ is available at https://provisioner.slideruleearth.i
 
 Access to SlideRule services is governed by user privilege level. Each level determines which clusters can be accessed, applicable rate limits, and available API endpoints.
 
-1. **Anonymous Users** can access public clusters only (e.g., https://sliderule.slideruleearth.io).
-   They are subject to the strictest rate limits and restricted access to certain endpoints.
+1. **Anonymous Users** can access clusters only on private clusters configured for anonymous access.
+   Anonymous access is not rate limited.
 
-2. **Authenticated GitHub Users** can access public clusters only, with partial endpoint restrictions.
-   They benefit from relaxed rate limits compared to anonymous users.
+2. **Guests** authenticate with their GitHub accounts and can access public clusters only, with partial endpoint restrictions.
+   They are rate limited on the public cluster and have restricted access to some endpoints.
 
-3. **SlideRuleEarth Members** may deploy and access a limited set of private clusters.
+3. **Affiliates** may deploy and access a limited set of private clusters.
+   They still have rate limits on the public cluster and may have restricted access to some endpoints.
+
+4. **Members** may deploy and access private clusters.
    They have no rate limits and full access to all endpoints.
 
-4. **SlideRuleEarth Owners** have unrestricted access to all clusters, including private deployments.
+5. **Developers** have unrestricted access to all clusters, including private deployments.
    They have no rate limits and full access to all endpoints.
 
 ### Typical Use Case
@@ -95,7 +102,7 @@ sliderule.init(github_token="<PAT>")
 
 #### Device Flow
 
-If a PAT key is not provided by one of the methods described above, and the SlideRule Python client is configured to access a private cluster, then the client code will automatically initiate the device flow authentication process.  The user will be interactively prompted to navigate to GitHub and enter a one-time verification code.  Once entered, the client will complete the authentication process.
+If a PAT key is not provided by one of the methods described above, and the SlideRule Python client is not configured to bypass authentication, then the client code will automatically initiate the device flow authentication process.  The user will be interactively prompted to navigate to GitHub and enter a one-time verification code.  Once entered, the client will complete the authentication process.
 
 
 ### Access

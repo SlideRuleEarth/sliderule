@@ -31,7 +31,7 @@ SlideRule relies heavily on external services for querying metadata for Earth sc
 Each processing request to SlideRule consists of these stages.
 
 Authentication
-:   If accessing the public SlideRule service, authentication is unnecessary.  But, if accessing a private cluster, the user authenticate themselves to the Authenticator which generates a JWT that identifies what they can and cannot do.
+:   Prior to accessing a SlideRule web service, the user authenticates themselves to the Authenticator which generates a JWT that identifies what they can and cannot do.
 
 Querying available data resources
 :   The datasets necessary to fulfill the request are queried using either geo-spatial or temporal filters, and a set of data resources (e.g. granules) are returned.  For example, for ICESat-2, a combination of SlideRule's internal AMS system and NASA’s CMR system is used to query which resources are available.

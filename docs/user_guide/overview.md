@@ -42,13 +42,6 @@ There are many endpoints in SlideRule (and more are added as new functionality i
 
 But there are cases when a user does want to supply the name of the endpoint explicitly in a processing request, and for that there are two Python functions provided: `sliderule.source` and `sliderule.run`.  The `sliderule.source` function provides the ability to call any endpoint directly.  The `sliderule.run` function is a high-level interface for making SlideRule requests that work on dataframes and always return a GeoDataFrame; because all of those endpoints are so similar, instead of having a separate Python function for each one, there is one Python function and the first parameter is a string specifying which endpoint to call (but note, unlike the `sliderule.source` function, the `sliderule.run` function only works with some endpoints).
 
-:::{note}
-As a fun exercise, if you have access to a bash shell and cURL, you can execute the `version` endpoint by issuing the following command at your shell prompt;  it will return the current version of the SlideRule software from the public cluster.
-```bash
-curl https://sliderule.slideruleearth.io/source/version
-```
-:::
-
 ### Parameters
 
 SlideRule is an ___on-demand___ science data processing system, which means that the processing steps performed on the data are executed only when a user makes a request.  Because of this, the user can control how that processing is performed by supplying parameters in their request.  Not all parameters need to be defined when making a request - typically only a few parameters are used for any given request; there are reasonable defaults used for each parameter so that only those parameters you want to customize need to be specified.
