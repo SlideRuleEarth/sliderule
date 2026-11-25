@@ -938,14 +938,12 @@ documentation-delete: ## deletes the documentation stack
 ########################
 
 release: ## tag and release sliderule; needs RELEASE
+	echo $(RELEASE) > $(ROOT)/version.txt
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
-	make ams-lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-lock.yml
-	make pysr-lock
 	git add $(ROOT)/targets/slideruleearth/docker/pysr/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth/docker/pysr/conda-lock.yml
-	echo $(RELEASE) > $(ROOT)/version.txt
 	git add $(ROOT)/version.txt
 	git commit -m "Version $(RELEASE)"
 	git tag -a $(RELEASE) -m "Version $(RELEASE)"
@@ -958,7 +956,7 @@ release: ## tag and release sliderule; needs RELEASE
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
 
-release-full: sliderule-buildenv-docker release ## full release including rebuilding build environment; needs RELEASE
+release-full: sliderule-buildenv-docker ams-lock pysr-lock release ## full release including updating all environments; needs RELEASE
 
 ########################
 # Clean Up Targets
