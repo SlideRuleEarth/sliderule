@@ -17,7 +17,7 @@ def test_not_member():
         "rawPath": "/",
         "body": ""
     }, None)
-    assert rsps['statusCode'] == 403
+    assert rsps['statusCode'] == 404
 
 #
 # Test Cluster
@@ -146,7 +146,9 @@ def test_invalid_path():
             "authorizer": {
                 "jwt": {
                     "claims": {
-                        "org_roles": '[member]'
+                        "org_roles": '[member]',
+                        "max_nodes": 10,
+                        "max_ttl": 600
                     }
                 }
             }

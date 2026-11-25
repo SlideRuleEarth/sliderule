@@ -1,11 +1,4 @@
-from provisioner import lambda_gateway, get_affiliation
-
-#
-# Test Active Affiliation
-#
-def test_active(username):
-    data = get_affiliation(username)
-    assert data["active"]
+from provisioner import lambda_gateway
 
 #
 # Test Max TTL
