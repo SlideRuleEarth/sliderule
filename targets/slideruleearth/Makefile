@@ -376,13 +376,14 @@ nodejs-test: ## run nodejs client unit tests against public cluster
 # Docker Build Targets
 ########################
 
-sliderule-buildenv-docker: ## build sliderule build environment docker image
+sliderule-buildenv-docker: ## build and push sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
 	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(CONTAINER_REGISTRY)/sliderule-buildenv:latest .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(CONTAINER_REGISTRY)/sliderule-buildenv:latest /bin/bash -c "cat /libdep.lock > /host/libdep-$(ARCH).lock"
+	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -937,7 +938,6 @@ documentation-delete: ## deletes the documentation stack
 ########################
 
 release: ## tag and release sliderule; needs RELEASE
-	make sliderule-buildenv-docker
 	git add $(ROOT)/targets/slideruleearth/docker/sliderule/libdep-${ARCH}.lock
 	make ams-lock
 	git add $(ROOT)/targets/slideruleearth/docker/ams/conda-linux-${ARCH}.lock
@@ -957,7 +957,8 @@ release: ## tag and release sliderule; needs RELEASE
 	make pysr-docker-push VERSION=latest
 	make cluster-docker VERSION=latest
 	make cluster-docker-push VERSION=latest
-	docker push $(CONTAINER_REGISTRY)/sliderule-buildenv:latest
+
+release-full: sliderule-buildenv-docker release ## full release including rebuilding build environment; needs RELEASE
 
 ########################
 # Clean Up Targets
