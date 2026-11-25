@@ -93,7 +93,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(successful_request_count{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(successful_requests{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -175,7 +175,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(failed_request_count{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(failed_requests{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -499,7 +499,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(untracked_request_count{job=\"analyzer_app\"}[1y])",
+          "expr": "max_over_time(untracked_requests{job=\"analyzer_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,

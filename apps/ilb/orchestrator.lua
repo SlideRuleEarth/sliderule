@@ -32,7 +32,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
 -- Imports
 --
-package.path = package.path .. ';/usr/local/etc/haproxy/?.lua'
+local HAPROXY_LUA_PATH = '/usr/local/etc/haproxy/?.lua'
+if not package.path:find(HAPROXY_LUA_PATH, 1, true) then
+    package.path = package.path .. ';' .. HAPROXY_LUA_PATH
+end
 local json = require("json")
 
 --

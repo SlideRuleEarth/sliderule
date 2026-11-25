@@ -30,6 +30,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
 
 --
+-- Imports
+--
+
+local HAPROXY_LUA_PATH = '/usr/local/etc/haproxy/?.lua'
+if not package.path:find(HAPROXY_LUA_PATH, 1, true) then
+    package.path = package.path .. ';' .. HAPROXY_LUA_PATH
+end
+
+local json = require("json")
+
+--
 -- Globals
 --
 
@@ -64,21 +75,18 @@ end
 local function ratelimit(txn)
     local username = txn:get_var("txn.sub")
     local service_request = txn:get_var("txn.requested_service")
+    local org_roles = txn:get_var("txn.org_roles")
 
-    -- !!temporarily!! ignore rate limiting when username not present
-    if not username then
-        return
-    end
-
-    -- check for user service request (which doesn't get rate limited)
-    if username == service_request then
-        return
-    end
+    -- check for when rate limiting does not apply
+    if  (not username) or -- when username not present (on public clusters)
+        (username == service_request) or -- when user service request (which doesn't get rate limited)
+        ((org_roles or ""):find("member")) -- when user is an organizational member
+    then return end
 
     -- check blocked status
     local now = os.time()
     if now <= (BlockTime[username] or 0) then
-        txn:set_var("txn.block_this_ip", true)
+        txn:set_var("txn.block_this_user", true)
         return
     end
 
@@ -86,14 +94,14 @@ local function ratelimit(txn)
     BlockTime[username] = nil
 
     -- track requests per ip
-    local this_week_number = os.date("%V")
-    local last_week_number = WeekOfLastRequest[username]
-    if this_week_number == last_week_number then
+    local this_week = os.date("%G-%V")
+    local last_week = WeekOfLastRequest[username]
+    if this_week == last_week then
         RequestCount[username] = (RequestCount[username] or 0) + 1
     else
         RequestCount[username] = 1
     end
-    WeekOfLastRequest[username] = this_week_number
+    WeekOfLastRequest[username] = this_week
 
     -- check ip rates
     if RequestCount[username] >= RATELIMIT_WEEKLY_COUNT then
@@ -146,19 +154,19 @@ local function api_prometheus(applet)
 
     -- build full response
     local response = string.format([[
-# TYPE successful_request_count counter
-successful_request_count %d
+# TYPE successful_requests counter
+successful_requests %d
 
-# TYPE untracked_request_count counter
-untracked_request_count %d
+# TYPE untracked_requests counter
+untracked_requests %d
 
-# TYPE failed_request_count counter
-failed_request_count %d
+# TYPE failed_requests counter
+failed_requests %d
 
-# TYPE unique_originators counter
+# TYPE unique_originators gauge
 unique_originators %d
 
-# TYPE blocked_originators counter
+# TYPE blocked_originators gauge
 blocked_originators %d
 %s
 ]], SuccessfulRequestCount,
@@ -177,8 +185,26 @@ blocked_originators %d
 end
 
 --
+-- API: /discovery/usage
+--
+--  Provide usage metrics
+--
+local function api_usage(applet)
+    -- build response
+    local usage = {users = RequestCount, blocked = BlockTime}
+    local response = json.encode(usage)
+    -- send response
+    applet:set_status(200)
+    applet:add_header("content-length", string.len(response))
+    applet:add_header("content-type", "application/json")
+    applet:start_response()
+    applet:send(response)
+end
+
+--
 -- Register with HAProxy
 --
 core.register_action("analyzer_ratelimit", { "http-req" }, ratelimit)
 core.register_action("analyzer_metric", { "http-res" }, metric)
 core.register_service("analyzer_prometheus", "http", api_prometheus)
+core.register_service("analyzer_usage", "http", api_usage)

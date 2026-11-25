@@ -13,17 +13,17 @@ get:
           schema:
             type: string
             example: |
-              # TYPE successful_request_count counter
-              successful_request_count 1000
+              # TYPE successful_requests counter
+              successful_requests 1000
 
-              # TYPE untracked_request_count counter
-              untracked_request_count 5
+              # TYPE untracked_requests counter
+              untracked_requests 5
 
-              # TYPE failed_request_count counter
-              failed_request_count 10
+              # TYPE failed_requests counter
+              failed_requests 10
 
-              # TYPE unique_originators counter
+              # TYPE unique_originators gauge
               unique_originators 50
 
-              # TYPE blocked_originators counter
+              # TYPE blocked_originators gauge
               blocked_originators 2
