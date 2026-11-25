@@ -52,7 +52,7 @@ RATELIMIT_BLOCK_PERIOD = 600 -- user will not be able to make requests for this 
 -- Rate Limiting Data
 WeekOfLastRequest = {} -- "<username>": <week number of last request>
 RequestCount = {} -- "<username>": <number of accumulated requests in the week>
-BlockTime = {} -- "<username>": <os time until which ip address will be blocked>
+BlockTime = {} -- "<username>": <os time until which user will be blocked>
 
 -- Analysis Data
 EndpointMetric = {} -- "<endpoint>": <number of requests>
@@ -93,7 +93,7 @@ local function ratelimit(txn)
     -- clear any blocks
     BlockTime[username] = nil
 
-    -- track requests per ip
+    -- track requests per user
     local this_week = os.date("%G-%V")
     local last_week = WeekOfLastRequest[username]
     if this_week == last_week then
@@ -103,7 +103,7 @@ local function ratelimit(txn)
     end
     WeekOfLastRequest[username] = this_week
 
-    -- check ip rates
+    -- check user rates
     if RequestCount[username] >= RATELIMIT_WEEKLY_COUNT then
         RequestCount[username] = RequestCount[username] - RATELIMIT_BACKOFF_COUNT
         BlockTime[username] = os.time() + RATELIMIT_BLOCK_PERIOD

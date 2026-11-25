@@ -184,8 +184,8 @@ class Session:
             'arrowrec.eof': Session.__arrowrec
         }
 
-        # authenticate for non-public clusters (default)
-        if not is_public:
+        # authenticate for non-public and non-local clusters (default)
+        if (not is_public) and (self.cluster != None):
             self.authenticate(github_token=github_token)
 
         # set service
